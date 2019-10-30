@@ -1800,8 +1800,7 @@ public abstract class TypeConstant
                 // the "extends" clause must specify a class identity
                 if (!typeExtends.isExplicitClassIdentity(true))
                     {
-                    log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
-                            constId.getPathString(),
+                    log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS, constId.getPathString(),
                             typeExtends.getValueString());
                     typeExtends = pool.typeObject();
                     break;
@@ -1810,7 +1809,8 @@ public abstract class TypeConstant
                 if (typeExtends.extendsClass(constId))
                     {
                     // some sort of circular loop
-                    log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL, constId.getPathString());
+                    log(errs, Severity.ERROR, VE_CYCLICAL_CONTRIBUTION, constId.getPathString(),
+                            "extends");
                     typeExtends = pool.typeObject();
                     break;
                     }
@@ -1872,8 +1872,7 @@ public abstract class TypeConstant
                     // verify that it is a mixin
                     if (typeExtends.getExplicitClassFormat() != Component.Format.MIXIN)
                         {
-                        log(errs, Severity.ERROR, VE_EXTENDS_NOT_MIXIN,
-                                typeExtends.getValueString(),
+                        log(errs, Severity.ERROR, VE_EXTENDS_NOT_MIXIN, typeExtends.getValueString(),
                                 constId.getPathString());
                         break;
                         }
@@ -1881,7 +1880,8 @@ public abstract class TypeConstant
                     if (typeExtends.extendsClass(constId))
                         {
                         // some sort of circular loop
-                        log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL, constId.getPathString());
+                        log(errs, Severity.ERROR, VE_CYCLICAL_CONTRIBUTION, constId.getPathString(),
+                                "extends");
                         break;
                         }
                     }

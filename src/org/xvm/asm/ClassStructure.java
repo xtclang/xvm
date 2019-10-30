@@ -51,6 +51,8 @@ import org.xvm.asm.op.Return_0;
 import org.xvm.asm.op.Return_1;
 import org.xvm.asm.op.Return_N;
 
+import org.xvm.compiler.Constants;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
@@ -59,6 +61,7 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xRef.RefHandle;
 
 import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -931,16 +934,18 @@ public class ClassStructure
                 ClassStructure clzContrib =
                         (ClassStructure) typeContrib.getSingleUnderlyingClass(true).getComponent();
 
-                if (m_fVisited)
+                if (m_FVisited != null && m_FVisited.booleanValue() == fAllowInto)
                     {
-                    // recursive contribution; it will be reported later
-                    return ResolutionResult.UNKNOWN;
+                    // recursive contribution
+                    collector.getErrorListener().log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
+                            new Object[] {getName(), contrib.getComposition().toString().toLowerCase()}, this);
+                    return ResolutionResult.ERROR;
                     }
 
-                m_fVisited = true;
+                m_FVisited = fAllowInto;
                 ResolutionResult result =
                         clzContrib.resolveContributedName(sName, access, collector, fAllowInto);
-                m_fVisited = false;
+                m_FVisited = null;
 
                 if (result != ResolutionResult.UNKNOWN)
                     {
@@ -3384,7 +3389,7 @@ public class ClassStructure
     /**
      * Recursion check for {@link #resolveContributedName}. Not thread-safe.
      */
-    private boolean m_fVisited;
+    private Boolean m_FVisited;
 
     /**
      * The name-to-type information for type parameters. The type constant is used to specify a

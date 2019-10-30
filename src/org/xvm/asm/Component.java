@@ -3311,6 +3311,14 @@ public abstract class Component
          * @param constant  either a PropertyConstant or a TypeParameterConstant
          */
         ResolutionResult resolvedConstant(Constant constant);
+
+        /**
+         * Provide an ErrorListener to report resolution issues to.
+         */
+        default ErrorListener getErrorListener()
+            {
+            return ErrorListener.BLACKHOLE;
+            }
         }
 
     /**

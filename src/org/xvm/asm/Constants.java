@@ -227,9 +227,9 @@ public interface Constants
      */
     public static final String VE_EXTENDS_NOT_CLASS                   = "VERIFY-10";
     /**
-     * {0} is part of a cyclical "extends" loop.
+     * Class {0} contains a cyclical {1} contribution.
      */
-    public static final String VE_EXTENDS_CYCLICAL                    = "VERIFY-11";
+    public static final String VE_CYCLICAL_CONTRIBUTION               = "VERIFY-11";
     /**
      * {0} mixes into {1}, but is extended by {2} that mixes into the incompatible type {3}.
      */

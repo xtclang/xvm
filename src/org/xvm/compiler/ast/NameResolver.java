@@ -676,6 +676,12 @@ public class NameResolver
         return ResolutionResult.RESOLVED;
         }
 
+    @Override
+    public ErrorListener getErrorListener()
+        {
+        return m_errs;
+        }
+
 
     // ----- inner classes -------------------------------------------------------------------------
 
