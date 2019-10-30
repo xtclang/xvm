@@ -1631,16 +1631,29 @@ public class NameExpression
 
                         case Property:
                             {
-                            // Example:
+                            // There are two examples of what we need to handle:
+                            // a) the property is a formal property and the name refers to its
+                            //    constraint's formal property:
                             //   class C<Element extends Array>
                             //       {
-                            //       construct()
+                            //       foo()
                             //           {
                             //           assert Element.Element.is(Type<Orderable>);
                             //           }
                             //       }
+                            // or
+                            // b) the name refers to a property on the Type object represented
+                            //    by this property:
+                            //   class C<Element>
+                            //       {
+                            //       foo()
+                            //           {
+                            //           Property[] props = Element.properties;
+                            //           }
+                            //       }
                             PropertyConstant idProp = (PropertyConstant) argLeft;
-                            if (idProp.isFormalType())
+                            if (idProp.isFormalType() &&
+                                    idProp.getConstraintType().containsGenericParam(sName))
                                 {
                                 constFormal = idProp;
                                 typeLeft    = typeLeft.getParamType(0);

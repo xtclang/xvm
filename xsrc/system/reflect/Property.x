@@ -110,10 +110,7 @@ const Property<Target, Referent, Implementation extends Ref<Referent>>
      */
     Implementation of(Target target)
         {
-//         for (Property!<> property : Target.properties)           // TODO GG - why doesn't this compile?
-//         for (Property!<> property : Target.toType().properties)  // TODO GG - why doesn't this compile?
-        Type t = Target;                                            // TODO GG - but this does?!? :D
-        for (Property!<> property : t.properties)
+         for (Property!<> property : Target.properties)
             {
             if (property == this)
                 {
