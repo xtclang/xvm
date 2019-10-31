@@ -11,7 +11,7 @@ const RTParameter<ParamType>(Int ordinal, String? name, Boolean formal, Boolean 
         {
         return name == null
                 ? False
-                : True, name.as(String);
+                : (True, name.as(String));
         }
 
     @Override

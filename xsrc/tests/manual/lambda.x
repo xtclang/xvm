@@ -29,7 +29,7 @@ module TestLambda.xqiz.it
         console.println("\n** testBasic()");
 
         function Int() f = () -> 4;
-        console.println($"f= {f};\nf()={f()}");
+        console.println($"f={f};\nf()={f()}");
         }
 
     // test with params

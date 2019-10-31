@@ -11,7 +11,7 @@ const RTReturn<ReturnType>(Int ordinal, String? name)
         {
         return name == null
                 ? False
-                : True, name.as(String);
+                : (True, name.as(String));
         }
 
     // Stringable implementation is a copy from Return interface
