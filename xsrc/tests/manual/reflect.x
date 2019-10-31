@@ -9,6 +9,7 @@ module TestReflection.xqiz.it
         testForm();
         testProps();
         testFuncs();
+        testFuncs2();
         }
 
     const Point(Int x, Int y);
@@ -126,5 +127,42 @@ module TestReflection.xqiz.it
         // val f6  =  foo(_, "hello");
         // val f6b = &foo(_, "hello");
         // val f7b = &foo(7, "hello");
+        }
+
+    void testFuncs2()
+        {
+        console.println("\n** testFuncs2");
+
+        const Point<Num extends Number>(Num x, Num y)
+            {
+            construct(Num x, Num y, String s)
+                {
+                construct Point(x, y);
+                console.println("hello: " + s);
+                }
+
+            Num sum.get()
+                {
+                return x + y;
+                }
+
+            Int foo()
+                {
+                return x.toInt() + y.toInt();
+                }
+            }
+
+        Point p = new Point<Int>(3, 4, "world");
+        console.println($"Point p={p}, sum={p.sum}, foo()={p.foo()}");
+
+        Type t = &p.actualType;
+        // TODO GG -> console.println($"Type={t}, methods={t.methods}, properties={t.properties}, foo={p.&foo()}");
+        console.println($"Type={t}");
+
+        // TODO GG
+        console.println($"foo={p.foo}");
+
+        // TODO CP
+        console.println($"methods={t.methods}, properties={t.properties}");
         }
     }
