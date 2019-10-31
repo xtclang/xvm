@@ -7,8 +7,7 @@ const MultiMethod<Target>(String name, Callable[] callables)
         // each callable must have the correct name and must be unique
         Each: for (Callable c : callables)
             {
-            // TODO GG assert:arg c.name == name;
-            assert:arg (c.is(Method) && c.name == name) || (c.is(Function) && c.name == name);
+            assert:arg c.name == name;
             assert:arg Each.first || !callables.lastIndexOf(c, Each.count-1);
             }
 
@@ -58,8 +57,7 @@ const MultiMethod<Target>(String name, Callable[] callables)
     @Op("+")
     MultiMethod!<Target> add(Callable callable)
         {
-        // TODO GG assert:arg callable.name == name;
-        assert:arg (callable.is(Method) && callable.name == name) || (callable.is(Function) && callable.name == name);
+        assert:arg callable.name == name;
         assert:arg !callables.contains(callable);
 
         return new MultiMethod<Target>(name, callables + callable);

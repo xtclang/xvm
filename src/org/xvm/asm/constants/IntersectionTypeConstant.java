@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Component;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Component.SimpleCollector;
@@ -29,7 +30,6 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.util.ListMap;
-import org.xvm.util.Severity;
 
 
 /**
@@ -506,6 +506,22 @@ public class IntersectionTypeConstant
                             }
                         }
                     }
+
+                // there is no common identity; at least one must be an interfaces, the allow it
+                // to be called as it was duck-typeable
+                boolean f1 = info1.getFormat() == Component.Format.INTERFACE;
+                boolean f2 = info2.getFormat() == Component.Format.INTERFACE;
+                if (f1 || f2)
+                    {
+                    if (f1)
+                        {
+                        map.put(prop1.getIdentity(), prop1);
+                        }
+                    else
+                        {
+                        map.put(prop2.getIdentity(), prop2);
+                        }
+                    }
                 }
             }
         return map;
@@ -549,6 +565,22 @@ public class IntersectionTypeConstant
                             map.put(id1, new MethodInfo(Arrays.copyOfRange(abody1, i1, c1)));
                             continue NextEntry;
                             }
+                        }
+                    }
+
+                // there is no common identity; at least one must be an interfaces, the allow it
+                // to be called as it was duck-typeable
+                boolean f1 = info1.getFormat() == Component.Format.INTERFACE;
+                boolean f2 = info2.getFormat() == Component.Format.INTERFACE;
+                if (f1 || f2)
+                    {
+                    if (f1)
+                        {
+                        map.put(method1.getIdentity(), method1);
+                        }
+                    else
+                        {
+                        map.put(method2.getIdentity(), method2);
                         }
                     }
                 }
