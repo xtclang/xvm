@@ -1002,16 +1002,18 @@ public class NameExpression
                 case BindTarget:
                     {
                     MethodConstant idMethod  = (MethodConstant) argRaw;
-                    Register       regTarget = new Register(ctx.getThisType(), Op.A_TARGET);
+                    Argument       argTarget = left == null
+                            ? new Register(ctx.getThisType(), Op.A_TARGET)
+                            : left.generateArgument(ctx, code, true, true, errs);
 
                     if (m_mapTypeParams == null)
                         {
-                        code.add(new MBind(regTarget, idMethod, argLVal));
+                        code.add(new MBind(argTarget, idMethod, argLVal));
                         }
                     else
                         {
                         Register regFn = createRegister(pool().typeFunction(), true);
-                        code.add(new MBind(regTarget, idMethod, regFn));
+                        code.add(new MBind(argTarget, idMethod, regFn));
                         bindTypeParameters(ctx, code, regFn, argLVal);
                         }
                     return;

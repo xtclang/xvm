@@ -156,13 +156,13 @@ module TestReflection.xqiz.it
         console.println($"Point p={p}, sum={p.sum}, foo()={p.foo()}");
 
         Type t = &p.actualType;
-        // TODO GG -> console.println($"Type={t}, methods={t.methods}, properties={t.properties}, foo={p.&foo()}");
+
+        // TODO: GG console.println($"Type={t}, foo={p.&foo()}");
         console.println($"Type={t}");
 
-        // TODO GG
         console.println($"foo={p.foo}");
 
         // TODO CP
-        console.println($"methods={t.methods}, properties={t.properties}");
+//        console.println($"methods={t.methods}, properties={t.properties}");
         }
     }
