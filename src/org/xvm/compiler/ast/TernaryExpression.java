@@ -388,7 +388,7 @@ public class TernaryExpression
 
                 if (fCheck)
                     {
-                    code.add(new JumpFalse(aArg[0], labelElse));
+                    addTrueCheck(code, aArg[0], labelElse);
                     }
                 code.add(new Return_N(aArg));
                 code.add(labelElse);
@@ -406,7 +406,7 @@ public class TernaryExpression
 
                 if (fCheck)
                     {
-                    code.add(new JumpFalse(aArg[0], labelElse));
+                    addTrueCheck(code, aArg[0], labelElse);
                     }
                 code.add(new Return_N(aArg));
                 code.add(labelElse);
@@ -427,7 +427,7 @@ public class TernaryExpression
 
                 if (fCheckThen)
                     {
-                    code.add(new JumpFalse(aArgThen[0], labelFalse));
+                    fCheckThen = addTrueCheck(code, aArgThen[0], labelFalse);
                     }
                 code.add(new Return_N(aArgThen));
                 code.add(labelElse);
@@ -436,7 +436,7 @@ public class TernaryExpression
 
                 if (fCheckElse)
                     {
-                    code.add(new JumpFalse(aArgElse[0], labelFalse));
+                    fCheckElse = addTrueCheck(code, aArgElse[0], labelFalse);
                     }
                 code.add(new Return_N(aArgElse));
 
@@ -547,6 +547,22 @@ public class TernaryExpression
                          ? atypeCond
                          : TypeConstant.NO_TYPES;
             }
+        }
+
+    /**
+     * Add a check for the "true" value for a conditional return;
+     *
+     * @return true if the check has been added; false if the check is not necessary
+     */
+    private boolean addTrueCheck(Code code, Argument arg, Label label)
+        {
+        if (arg.equals(pool().valTrue()))
+            {
+            return false;
+            }
+
+        code.add(new JumpFalse(arg, label));
+        return true;
         }
 
 

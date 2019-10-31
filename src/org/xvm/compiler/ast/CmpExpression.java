@@ -20,12 +20,16 @@ import org.xvm.asm.op.IsGte;
 import org.xvm.asm.op.IsLt;
 import org.xvm.asm.op.IsLte;
 import org.xvm.asm.op.IsNotEq;
+import org.xvm.asm.op.IsNotNull;
+import org.xvm.asm.op.IsNull;
 import org.xvm.asm.op.JumpEq;
 import org.xvm.asm.op.JumpGt;
 import org.xvm.asm.op.JumpGte;
 import org.xvm.asm.op.JumpLt;
 import org.xvm.asm.op.JumpLte;
 import org.xvm.asm.op.JumpNotEq;
+import org.xvm.asm.op.JumpNotNull;
+import org.xvm.asm.op.JumpNull;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
@@ -228,11 +232,13 @@ public class CmpExpression
                 }
             else if (expr1New instanceof NameExpression && type2.equals(pool().typeNull()))
                 {
-                fValid = checkNullComparison(ctx, (NameExpression) expr1New, errs);
+                m_fArg2Null = true;
+                fValid      = checkNullComparison(ctx, (NameExpression) expr1New, errs);
                 }
             else if (expr2New instanceof NameExpression && type1.equals(pool().typeNull()))
                 {
-                fValid = checkNullComparison(ctx, (NameExpression) expr2New, errs);
+                m_fArg1Null = true;
+                fValid      = checkNullComparison(ctx, (NameExpression) expr2New, errs);
                 }
             }
 
@@ -357,11 +363,15 @@ public class CmpExpression
             switch (operator.getId())
                 {
                 case COMP_EQ:
-                    op = new IsEq(arg1, arg2, argResult);
+                    op = m_fArg1Null ? new IsNull(arg2, argResult) :
+                         m_fArg2Null ? new IsNull(arg1, argResult) :
+                                       new IsEq(arg1, arg2, argResult);
                     break;
 
                 case COMP_NEQ:
-                    op = new IsNotEq(arg1, arg2, argResult);
+                    op = m_fArg1Null ? new IsNotNull(arg2, argResult) :
+                         m_fArg2Null ? new IsNotNull(arg1, argResult) :
+                                       new IsNotEq(arg1, arg2, argResult);
                     break;
 
                 case COMP_LT:
@@ -412,14 +422,25 @@ public class CmpExpression
                 {
                 case COMP_EQ:
                     op = fWhenTrue
-                            ? new JumpEq(arg1, arg2, label)
-                            : new JumpNotEq(arg1, arg2, label);
+                            ? (m_fArg1Null ? new JumpNull(arg2, label) :
+                               m_fArg2Null ? new JumpNull(arg1, label) :
+                                             new JumpEq  (arg1, arg2, label))
+
+                            : (m_fArg1Null ? new JumpNotNull(arg2, label) :
+                               m_fArg2Null ? new JumpNotNull(arg1, label) :
+                                             new JumpNotEq  (arg1, arg2, label));
                     break;
 
                 case COMP_NEQ:
                     op = fWhenTrue
-                            ? new JumpNotEq(arg1, arg2, label)
-                            : new JumpEq(arg1, arg2, label);
+                            ? (m_fArg1Null ? new JumpNotNull(arg2, label) :
+                               m_fArg2Null ? new JumpNotNull(arg1, label) :
+                                             new JumpNotEq  (arg1, arg2, label))
+
+                            : (m_fArg1Null ? new JumpNull(arg2, label) :
+                               m_fArg2Null ? new JumpNull(arg1, label) :
+                                             new JumpEq  (arg1, arg2, label));
+
                     break;
 
                 case COMP_LT:
@@ -465,4 +486,7 @@ public class CmpExpression
      * The common type used for the comparison.
      */
     protected TypeConstant m_typeCommon;
+
+    private transient boolean m_fArg1Null; // is the first arg equal to "Null"
+    private transient boolean m_fArg2Null; // is the second arg equal to "Null"
     }
