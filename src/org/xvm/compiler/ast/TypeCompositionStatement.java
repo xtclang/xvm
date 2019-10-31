@@ -1788,6 +1788,7 @@ public class TypeCompositionStatement
                 // set the synthetic flag so that the constructor knows to provide its own
                 // default implementation when it emits code
                 constructor.setSynthetic(true);
+                constructors = (MultiMethodStructure) constructor.getParent();
                 }
             }
 

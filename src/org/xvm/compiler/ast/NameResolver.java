@@ -309,6 +309,8 @@ public class NameResolver
                                 m_sName = m_iter.hasNext() ? m_iter.next() : null;
                                 break;
 
+                            case POSSIBLE:
+                                // should not be possible (no pun intended)
                             case ERROR:
                                 m_stage = Stage.ERROR;
                                 return Result.ERROR;
@@ -346,6 +348,8 @@ public class NameResolver
                                     // the component didn't know the name
                                     m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
                                     // break through
+                                case POSSIBLE:
+                                    // should not be possible
                                 case ERROR:
                                     m_stage = Stage.ERROR;
                                     return Result.ERROR;
