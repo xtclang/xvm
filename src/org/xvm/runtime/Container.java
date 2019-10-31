@@ -28,15 +28,16 @@ import org.xvm.asm.constants.VersionConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
+import org.xvm.runtime.template.xService;
+import org.xvm.runtime.template.xService.ServiceHandle;
+
 import org.xvm.runtime.template._native.xLocalClock;
 import org.xvm.runtime.template._native.xNanosTimer;
 import org.xvm.runtime.template._native.xTerminalConsole;
 
-import org.xvm.runtime.template.xService;
-import org.xvm.runtime.template.xService.ServiceHandle;
-import org.xvm.runtime.template.xFunction;
-import org.xvm.runtime.template.xFunction.FunctionHandle;
-import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
 import static org.xvm.asm.Op.A_STACK;
 
@@ -126,7 +127,7 @@ public class Container
             TypeConstant     typeModule = f_idModule.getType();
             ClassComposition clzModule  = m_templateModule.ensureClass(typeModule, typeModule);
             CallChain        chain      = clzModule.getMethodCallChain(idMethod.getSignature());
-            FunctionHandle   hFunction  = xFunction.makeHandle(chain, 0);
+            FunctionHandle   hFunction  = xRTFunction.makeHandle(chain, 0);
 
             FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle((frame, ah, iReturn) ->
                 {

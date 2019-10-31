@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template._native.reflect;
 
 
 import java.util.concurrent.CompletableFuture;
@@ -11,20 +11,27 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
-import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xInt64;
+import org.xvm.runtime.template.xNullable;
+import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xService.ServiceHandle;
+import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
@@ -32,39 +39,60 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 /**
  * Native Function implementation.
  */
-public class xFunction
-        extends ClassTemplate
+public class xRTFunction
+        extends xConst
     {
-    public static xFunction INSTANCE;
-    public static ClassConstant INCEPTION_CLASS;
+    public static xRTFunction INSTANCE;
 
-    public xFunction(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTFunction(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
 
         if (fInstance)
             {
             INSTANCE = this;
-            INCEPTION_CLASS = new NativeRebaseConstant(
-                (ClassConstant) structure.getIdentityConstant());
             }
-        }
-
-    @Override
-    public void initDeclared()
-        {
-        }
-
-    @Override
-    protected ClassConstant getInceptionClassConstant()
-        {
-        return this == INSTANCE ? INCEPTION_CLASS : getClassConstant();
         }
 
     @Override
     public boolean isGenericHandle()
         {
         return false;
+        }
+
+    @Override
+    public void initDeclared()
+        {
+        markNativeProperty("name");
+        markNativeProperty("params");
+        markNativeProperty("returns");
+        markNativeProperty("conditionalResult");
+        markNativeProperty("futureResult");
+
+        markNativeMethod("hasTemplate", null, null);
+        markNativeMethod("bind", new String[] {"Type<Object>", "reflect.Parameter", "Object"}, null);
+        markNativeMethod("bind", new String[] {"collections.Map<reflect.Parameter, Object>"}, null);
+        markNativeMethod("invoke", null, null);
+        markNativeMethod("invokeAsync", null, null);
+
+        getCanonicalType().invalidateTypeInfo();
+        }
+
+    @Override
+    public int createConstHandle(Frame frame, Constant constant)
+        {
+        if (constant instanceof MethodConstant)
+            {
+            MethodConstant  idFunc     = (MethodConstant) constant;
+            MethodStructure structFunc = (MethodStructure) idFunc.getComponent();
+
+            assert structFunc.isFunction();
+
+            frame.pushStack(new FunctionHandle(structFunc));
+            return Op.R_NEXT;
+            }
+
+        return super.createConstHandle(frame, constant);
         }
 
     @Override
@@ -77,43 +105,367 @@ public class xFunction
         }
 
     @Override
-    public int createConstHandle(Frame frame, Constant constant)
-        {
-        if (constant instanceof MethodConstant)
-            {
-            MethodConstant constFunction = (MethodConstant) constant;
-            MethodStructure function = (MethodStructure) constFunction.getComponent();
-
-            assert function.isFunction();
-
-            frame.pushStack(new FunctionHandle(function));
-            return Op.R_NEXT;
-            }
-
-        return super.createConstHandle(frame, constant);
-        }
-
-    @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         FunctionHandle hFunc = (FunctionHandle) hTarget;
 
         switch (sPropName)
             {
-            case "hash":
-                return frame.assignValue(iReturn, xInt64.makeHandle(hFunc.getMethod().hashCode()));
+            case "name":
+                return getNameProperty(frame, hFunc, iReturn);
+
+            case "params":
+                return getParamsProperty(frame, hFunc, iReturn);
+
+            case "returns":
+                return getReturnsProperty(frame, hFunc, iReturn);
+
+            case "conditionalResult":
+                return getConditionalResultProperty(frame, hFunc, iReturn);
+
+            case "futureResult":
+                return getFutureResultProperty(frame, hFunc, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
         {
-        FunctionHandle hFunction = (FunctionHandle) hTarget;
+        FunctionHandle hFunc = (FunctionHandle) hTarget;
+        switch (method.getName())
+            {
+            case "bind":
+                return doBind(frame, hFunc, hArg, iReturn);
+            case "invoke":
+                return doInvoke(frame, hFunc, hArg, iReturn);
+            case "invokeAsync":
+                return doInvokeAsync(frame, hFunc, hArg, iReturn);
+            }
 
-        return frame.assignValue(iReturn, xString.makeHandle(hFunction.getType().getValueString()));
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        FunctionHandle hFunc = (FunctionHandle) hTarget;
+        switch (method.getName())
+            {
+            case "bind":
+                return doBind(frame, hFunc, ahArg, iReturn);
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        FunctionHandle hFunc = (FunctionHandle) hTarget;
+        switch (method.getName())
+            {
+            case "hasTemplate":
+                return calcHasTemplate(frame, hFunc, aiReturn);
+            }
+
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+        }
+
+
+    // ----- property implementations --------------------------------------------------------------
+
+    /**
+     * Implements property: name.get()
+     */
+    public int getNameProperty(Frame frame, FunctionHandle hFunc, int iReturn)
+        {
+        MethodStructure      structFunc = hFunc.getMethod();
+        xString.StringHandle handle     = xString.makeHandle(structFunc.getName());
+        return frame.assignValue(iReturn, handle);
+        }
+
+    /**
+     * Implements property: params.get()
+     */
+    public int getParamsProperty(Frame frame, FunctionHandle hFunc, int iReturn)
+        {
+        return new RTArrayConstructor(hFunc.getMethod(), false, iReturn).doNext(frame);
+        }
+
+    /**
+     * Implements property: params.get()
+     */
+    public int getReturnsProperty(Frame frame, FunctionHandle hFunc, int iReturn)
+        {
+        return new RTArrayConstructor(hFunc.getMethod(), true, iReturn).doNext(frame);
+        }
+
+    /**
+     * Implements property: conditionalResult.get()
+     */
+    public int getConditionalResultProperty(Frame frame, FunctionHandle hFunc, int iReturn)
+        {
+        MethodStructure        structFunc = hFunc.getMethod();
+        xBoolean.BooleanHandle handle     = xBoolean.makeHandle(structFunc.isConditionalReturn());
+        return frame.assignValue(iReturn, handle);
+        }
+
+    /**
+     * Implements property: futureResult.get()
+     */
+    public int getFutureResultProperty(Frame frame, FunctionHandle hFunc, int iReturn)
+        {
+        xBoolean.BooleanHandle handle = xBoolean.makeHandle(hFunc.isAsync());
+        return frame.assignValue(iReturn, handle);
+        }
+
+
+    // ----- method implementations --------------------------------------------------------------
+
+    /**
+     * Method implementation: `Function!<> bind(Map<Parameter, Object> params)`
+     */
+    public int doBind(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
+        {
+        // TODO
+        throw new UnsupportedOperationException();
+        }
+
+    /**
+     * Method implementation: `Function!<> bind(Parameter<ParamType> param, ParamType value)`
+     */
+    public int doBind(Frame frame, FunctionHandle hFunc, ObjectHandle[] ahArg, int iReturn)
+        {
+        // TODO
+        throw new UnsupportedOperationException();
+        }
+
+    /**
+     * Method implementation: `@Op("()") ReturnTypes invoke(ParamTypes args)`
+     */
+    public int doInvoke(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
+        {
+        // TODO
+        throw new UnsupportedOperationException();
+        }
+
+    /**
+     * Method implementation: `FutureVar<ReturnTypes> invokeAsync(ParamTypes args)`
+     */
+    public int doInvokeAsync(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
+        {
+        // TODO
+        throw new UnsupportedOperationException();
+        }
+
+    /**
+     * Method implementation: `conditional MethodTemplate hasTemplate()`
+     */
+    public int calcHasTemplate(Frame frame, FunctionHandle hFunc, int[] aiReturn)
+        {
+        // TODO
+        throw new UnsupportedOperationException();
+        }
+
+
+    // ----- Template and ClassComposition caching and helpers -------------------------------------
+
+    /**
+     * @return the TypeConstant for a Return
+     */
+    public TypeConstant ensureReturnType()
+        {
+        TypeConstant type = RETURN_TYPE;
+        if (type == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            RETURN_TYPE = type = pool.ensureEcstasyTypeConstant("reflect.Return");
+            assert type != null;
+            }
+        return type;
+        }
+
+    /**
+     * @return the TypeConstant for an RTReturn
+     */
+    public TypeConstant ensureRTReturnType()
+        {
+        TypeConstant type = RTRETURN_TYPE;
+        if (type == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            RTRETURN_TYPE = type = pool.ensureEcstasyTypeConstant("_native.reflect.RTReturn");
+            assert type != null;
+            }
+        return type;
+        }
+
+    /**
+     * @return the TypeConstant for a Parameter
+     */
+    public TypeConstant ensureParamType()
+        {
+        TypeConstant type = PARAM_TYPE;
+        if (type == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            PARAM_TYPE = type = pool.ensureEcstasyTypeConstant("reflect.Parameter");
+            assert type != null;
+            }
+        return type;
+        }
+
+    /**
+     * @return the TypeConstant for an RTParameter
+     */
+    public TypeConstant ensureRTParamType()
+        {
+        TypeConstant type = RTPARAM_TYPE;
+        if (type == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            RTPARAM_TYPE = type = pool.ensureEcstasyTypeConstant("_native.reflect.RTParameter");
+            assert type != null;
+            }
+        return type;
+        }
+
+    /**
+     * @return the ClassTemplate for an RTReturn
+     */
+    public xConst ensureRTReturnTemplate()
+        {
+        xConst template = RTRETURN_TEMPLATE;
+        if (template == null)
+            {
+            RTRETURN_TEMPLATE = template = (xConst) f_templates.getTemplate(ensureRTReturnType());
+            assert template != null;
+            }
+        return template;
+        }
+
+    /**
+     * @return the ClassTemplate for an RTParameter
+     */
+    public xConst ensureRTParamTemplate()
+        {
+        xConst template = RTPARAM_TEMPLATE;
+        if (template == null)
+            {
+            RTPARAM_TEMPLATE = template = (xConst) f_templates.getTemplate(ensureRTParamType());
+            assert template != null;
+            }
+        return template;
+        }
+
+    /**
+     * @return the ClassTemplate for an Array of Return
+     */
+    public xArray ensureReturnArrayTemplate()
+        {
+        xArray template = RETURN_ARRAY_TEMPLATE;
+        if (template == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                    ensureReturnType());
+            RETURN_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeTypeArray));
+            assert template != null;
+            }
+        return template;
+        }
+
+    /**
+     * @return the ClassTemplate for an Array of Parameter
+     */
+    public xArray ensureParamArrayTemplate()
+        {
+        xArray template = PARAM_ARRAY_TEMPLATE;
+        if (template == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                    ensureParamType());
+            PARAM_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeTypeArray));
+            assert template != null;
+            }
+        return template;
+        }
+
+    /**
+     * @return the ClassComposition for an RTReturn of the specified type
+     */
+    public ClassComposition ensureRTReturn(TypeConstant typeValue)
+        {
+        assert typeValue != null;
+        ConstantPool pool = INSTANCE.pool();
+        TypeConstant typeRTReturn = pool.ensureParameterizedTypeConstant(ensureRTReturnType(), typeValue);
+        return f_templates.resolveClass(typeRTReturn);
+        }
+
+    /**
+     * @return the ClassComposition for a RTParameter of the specified type
+     */
+    public ClassComposition ensureRTParameter(TypeConstant typeValue)
+        {
+        assert typeValue != null;
+        ConstantPool pool = INSTANCE.pool();
+        TypeConstant typeRTParam = pool.ensureParameterizedTypeConstant(ensureRTParamType(), typeValue);
+        return f_templates.resolveClass(typeRTParam);
+        }
+
+    /**
+     * @return the ClassComposition for an Array of Return
+     */
+    public ClassComposition ensureReturnArray()
+        {
+        ClassComposition clz = RETURN_ARRAY;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeReturnArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                    ensureReturnType());
+            RETURN_ARRAY = clz = f_templates.resolveClass(typeReturnArray);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    /**
+     * @return the ClassComposition for an Array of Parameter
+     */
+    public ClassComposition ensureParamArray()
+        {
+        ClassComposition clz = PARAM_ARRAY;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeParamArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                    ensureParamType());
+            PARAM_ARRAY = clz = f_templates.resolveClass(typeParamArray);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    private TypeConstant RETURN_TYPE;
+    private TypeConstant PARAM_TYPE;
+    private TypeConstant RTRETURN_TYPE;
+    private TypeConstant RTPARAM_TYPE;
+
+    private xConst RTRETURN_TEMPLATE;
+    private xConst RTPARAM_TEMPLATE;
+
+    private xArray RETURN_ARRAY_TEMPLATE;
+    private xArray PARAM_ARRAY_TEMPLATE;
+
+    private ClassComposition RETURN_ARRAY;
+    private ClassComposition PARAM_ARRAY;
 
 
     // ----- Object handle -------------------------------------------------------------------------
@@ -182,9 +534,24 @@ public class xFunction
             return getMethod().getParamCount();
             }
 
+        public int getUnboundParamCount()
+            {
+            return getMethod().getParamCount();
+            }
+
+        public Parameter getUnboundParam(int i)
+            {
+            return getMethod().getParam(i);
+            }
+
         public int getVarCount()
             {
             return getMethod().getMaxVars();
+            }
+
+        public boolean isAsync()
+            {
+            return false;
             }
 
         // ----- FunctionHandle interface -----
@@ -431,10 +798,26 @@ public class xFunction
             return m_hDelegate.getParamCount();
             }
 
+        public int getUnboundParamCount()
+            {
+            return m_hDelegate.getUnboundParamCount();
+            }
+
+        public Parameter getUnboundParam(int i)
+            {
+            return m_hDelegate.getUnboundParam(i);
+            }
+
         @Override
         public int getVarCount()
             {
             return m_hDelegate.getVarCount();
+            }
+
+        @Override
+        public boolean isAsync()
+            {
+            return m_hDelegate.isAsync();
             }
 
         @Override
@@ -451,6 +834,9 @@ public class xFunction
             }
         }
 
+    /**
+     * TODO GG explain why this thing exists and where it is used and why it can't answer reflection questions
+     */
     public static class NativeFunctionHandle
             extends FunctionHandle
         {
@@ -461,6 +847,12 @@ public class xFunction
             super(INSTANCE.getCanonicalType(), null);
 
             f_op = op;
+            }
+
+        @Override
+        public boolean isAsync()
+            {
+            return false;
             }
 
         @Override
@@ -477,6 +869,16 @@ public class xFunction
 
         @Override
         public int getParamCount()
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        public int getUnboundParamCount()
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        public Parameter getUnboundParam(int i)
             {
             throw new UnsupportedOperationException();
             }
@@ -608,7 +1010,9 @@ public class xFunction
         protected TypeConstant m_type;
         }
 
-    // all parameter bound method or function (the target is not bound)
+    /**
+     * A function handle for which all parameters are bound.
+     */
     public static class FullyBoundHandle
             extends DelegatingHandle
         {
@@ -732,6 +1136,12 @@ public class xFunction
             }
 
         // ----- FunctionHandle interface ----------------------------------------------------------
+
+        @Override
+        public boolean isAsync()
+            {
+            return true;
+            }
 
         @Override
         protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
@@ -924,6 +1334,91 @@ public class xFunction
             // TODO replace with: assignFutureResults()
             return frame.call(Utils.createWaitFrame(frame, cfResult, aiReturn));
             }
+        }
+
+
+    // ----- inner class: RTArrayConstructor -------------------------------------------------------
+
+    class RTArrayConstructor
+            implements Frame.Continuation
+        {
+        RTArrayConstructor(MethodStructure structFunc, boolean fRetVals, int iReturn)
+            {
+            this.structFunc = structFunc;
+            this.fRetVals   = fRetVals;
+            this.template   = fRetVals ? ensureRTReturnTemplate()    : ensureRTParamTemplate();
+            this.cElements  = fRetVals ? structFunc.getReturnCount() : structFunc.getParamCount();
+            this.ahElement  = new ObjectHandle[cElements];
+            this.construct  = template.f_struct.findMethod("construct", fRetVals ? 2 : 5);
+            this.ahParams   = new ObjectHandle[fRetVals ? 2 : 5];
+            this.index      = -1;
+            this.iReturn    = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            ahElement[index] = frameCaller.popStack();
+            return doNext(frameCaller);
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (++index < cElements)
+                {
+                Parameter        param = fRetVals ? structFunc.getReturn(index) : structFunc.getParam(index);
+                TypeConstant     type  = param.getType();
+                ClassComposition clz   = fRetVals ? ensureRTReturn(type) : ensureRTParameter(type);
+                String           sName = param.getName();
+                ahParams[0] = xInt64.makeHandle(index);
+                ahParams[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
+                if (!fRetVals)
+                    {
+                    ahParams[2] = xBoolean.makeHandle(param.isTypeParameter());
+                    if (param.hasDefaultValue())
+                        {
+                        ahParams[3] = xBoolean.TRUE;
+                        ahParams[4] = frameCaller.getConstHandle(param.getDefaultValue());
+                        }
+                    else
+                        {
+                        ahParams[3] = xBoolean.FALSE;
+                        ahParams[4] = xNullable.NULL;
+                        }
+                    }
+
+                switch (template.construct(frameCaller, construct, clz, null, ahParams, Op.A_STACK))
+                    {
+                    case Op.R_NEXT:
+                        ahElement[index] = frameCaller.popStack();
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.addContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            xArray templateArray = fRetVals ? ensureReturnArrayTemplate() : ensureParamArrayTemplate();
+            ObjectHandle.ArrayHandle hArray = templateArray.createArrayHandle(ensureReturnArray(), ahElement);
+            return frameCaller.assignValue(iReturn, hArray);
+            }
+
+        private MethodStructure structFunc;
+        private int             cElements;
+        private boolean         fRetVals;
+        private ObjectHandle[]  ahElement;
+        private xConst          template;
+        private MethodStructure construct;
+        private ObjectHandle[]  ahParams;
+        private int             index;
+        private int             iReturn;
         }
 
 

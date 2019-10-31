@@ -23,9 +23,10 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xVar;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 
 /**
@@ -54,9 +55,9 @@ public class xFutureVar
         {
         COMPLETION = (xEnum) getChildTemplate("Completion");
 
-        markNativeMethod("whenComplete", new String[] {"Function"}, new String[] {"annotations.FutureVar!<Referent>"});
-        markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<Referent>"});
-        markNativeMethod("passTo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<Referent>"});
+        markNativeMethod("whenComplete", new String[] {"reflect.Function"}, new String[] {"annotations.FutureVar!<Referent>"});
+        markNativeMethod("thenDo", new String[] {"reflect.Function"}, new String[] {"annotations.FutureVar!<Referent>"});
+        markNativeMethod("passTo", new String[] {"reflect.Function"}, new String[] {"annotations.FutureVar!<Referent>"});
 
         markNativeMethod("get", VOID, new String[] {"Referent"});
         markNativeMethod("set", new String[] {"Referent"}, VOID);

@@ -1,5 +1,3 @@
-import Type.Access;
-
 /**
  * A Template is a representation of the compiled form of an Ecstasy `module`, `package`, `class`,
  * `const`, `enum`, `service`, `mixin`, or `interface`, or the constructs recursively contained

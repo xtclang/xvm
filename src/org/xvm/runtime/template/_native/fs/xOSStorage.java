@@ -29,14 +29,14 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xFunction;
-import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 /**
  * Native OSStorage implementation.
@@ -120,7 +120,7 @@ public class xOSStorage
 
         if (frame.f_context != hStorage.m_context)
             {
-            return xFunction.makeAsyncNativeHandle(method).
+            return xRTFunction.makeAsyncNativeHandle(method).
                 call1(frame, hTarget, new ObjectHandle[] {hArg}, iReturn);
             }
 
@@ -228,7 +228,7 @@ public class xOSStorage
         if (frame.f_context != hStorage.m_context)
             {
             // for now let's make sure all the calls are processed on the service fibers
-            return xFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
+            return xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
             }
 
         switch (method.getName())
@@ -246,7 +246,7 @@ public class xOSStorage
         if (frame.f_context != hStorage.m_context)
             {
             // for now let's make sure all the calls are processed on the service fibers
-            return xFunction.makeAsyncNativeHandle(method).callN(frame, hTarget, ahArg, aiReturn);
+            return xRTFunction.makeAsyncNativeHandle(method).callN(frame, hTarget, ahArg, aiReturn);
             }
 
         switch (method.getName())
@@ -364,7 +364,7 @@ public class xOSStorage
                 Path pathAbsolute = pathDir.resolve(pathRelative);
 
                 FunctionHandle hfnOnEvent =
-                        xFunction.makeHandle(s_methodOnEvent).bindTarget(context.hStorage);
+                        xRTFunction.makeHandle(s_methodOnEvent).bindTarget(context.hStorage);
 
                 StringHandle hPathDir  = xString.makeHandle(pathDir.toString());
                 StringHandle hPathNode = xString.makeHandle(pathAbsolute.toString());

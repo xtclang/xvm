@@ -35,24 +35,24 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-
 import org.xvm.runtime.Utils.BinaryAction;
 import org.xvm.runtime.Utils.InPlacePropertyBinary;
 import org.xvm.runtime.Utils.InPlacePropertyUnary;
 import org.xvm.runtime.Utils.UnaryAction;
 
-import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
-
 import org.xvm.runtime.template.InterfaceProxy;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xFunction.FullyBoundHandle;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xVar;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
+
+import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
 

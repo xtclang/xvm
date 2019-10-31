@@ -17,7 +17,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.xFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -115,7 +115,7 @@ public class MBind
             }
 
         return frame.assignValue(m_nRetValue, hTarget.getTemplate().isService() ?
-                xFunction.makeAsyncHandle(chain).bindTarget(hTarget) :
-                xFunction.makeHandle(chain, 0).bindTarget(hTarget));
+                xRTFunction.makeAsyncHandle(chain).bindTarget(hTarget) :
+                xRTFunction.makeHandle(chain, 0).bindTarget(hTarget));
         }
     }

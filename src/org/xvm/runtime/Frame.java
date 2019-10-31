@@ -24,14 +24,15 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils.ContinuationChain;
 
-import org.xvm.runtime.template.annotations.xFutureVar;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xFunction;
-import org.xvm.runtime.template.xFunction.FullyBoundHandle;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xRef.RefHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
+
+import org.xvm.runtime.template.annotations.xFutureVar;
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
@@ -365,7 +366,7 @@ public class Frame
             case Op.A_SUPER:
                 return f_hThis == null
                     ? makeDeferredException("Run-time error: no target")
-                    : xFunction.makeHandle(m_chain, m_nDepth).bind(poolContext(), 0, f_hThis);
+                    : xRTFunction.makeHandle(m_chain, m_nDepth).bind(poolContext(), 0, f_hThis);
 
             case Op.A_TARGET:
                 return f_hTarget == null

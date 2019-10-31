@@ -13,12 +13,12 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ProxyComposition;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template._native.reflect.xRTFunction;
 
 
 /**
@@ -75,7 +75,7 @@ public class InterfaceProxy
             hTarget = hProxy.m_hTarget;
             return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, iReturn);
             }
-        return xFunction.makeAsyncHandle(chain).call1(frame, hTarget, ahVar, iReturn);
+        return xRTFunction.makeAsyncHandle(chain).call1(frame, hTarget, ahVar, iReturn);
         }
 
     @Override
@@ -87,7 +87,7 @@ public class InterfaceProxy
             hTarget = hProxy.m_hTarget;
             return hTarget.getTemplate().invokeT(frame, chain, hTarget, ahVar, iReturn);
             }
-        return xFunction.makeAsyncHandle(chain).callT(frame, hTarget, ahVar, iReturn);
+        return xRTFunction.makeAsyncHandle(chain).callT(frame, hTarget, ahVar, iReturn);
         }
 
     @Override
@@ -99,7 +99,7 @@ public class InterfaceProxy
             hTarget = hProxy.m_hTarget;
             return hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, aiReturn);
             }
-        return xFunction.makeAsyncHandle(chain).callN(frame, hTarget, ahVar, aiReturn);
+        return xRTFunction.makeAsyncHandle(chain).callN(frame, hTarget, ahVar, aiReturn);
         }
 
     @Override

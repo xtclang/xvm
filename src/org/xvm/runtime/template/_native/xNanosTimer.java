@@ -21,11 +21,12 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.LongLong;
 import org.xvm.runtime.template.xBaseInt128.LongLongHandle;
-import org.xvm.runtime.template.xFunction;
-import org.xvm.runtime.template.xFunction.FunctionHandle;
-import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xUInt128;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
 import org.xvm.util.ListSet;
 
@@ -95,7 +96,7 @@ public class xNanosTimer
                 {
                 if (frame.f_context != hTimer.m_context)
                     {
-                    return xFunction.makeAsyncNativeHandle(method).
+                    return xRTFunction.makeAsyncNativeHandle(method).
                         call1(frame, hTarget, ahArg, iReturn);
                     }
 

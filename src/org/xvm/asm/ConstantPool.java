@@ -1094,7 +1094,6 @@ public class ConstantPool
             case "Enum":
             case "Enumeration":
             case "Exception":
-            case "Function":
             case "FPLiteral":
             case "IllegalArgument":
             case "IllegalState":
@@ -1186,6 +1185,7 @@ public class ConstantPool
                 break;
 
             case "Class":
+            case "Function":
             case "Property":
             case "Method":
                 sPkg = "reflect";

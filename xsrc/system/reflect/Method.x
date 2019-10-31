@@ -5,57 +5,54 @@ import collections.HashSet;
  * parameter types, and a number of return types. A method can be bound to a particular target (of
  * a type containing the method) in order to obtain an invocable function.
  */
-const Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
+interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
+        extends Signature<ParamTypes, ReturnTypes>
     {
-    /**
-     * The method's name.
-     */
-    String name;
-
-    /**
-     * True if the method has a conditional return. A conditional return is one that conditionally
-     * has a value. As such, the return value has one additional Boolean value prepended to the
-     * return tuple, and the remainder of the tuple is only available iff the Boolean value is True.
-     * An attempt to access the remainder of the values in the return tuple will result in an
-     * exception if the Boolean value (the first element of the tuple) is False.
-     */
-    Boolean conditionalReturn;
-
-    enum Access {Public, Protected, Private}
-
     /**
      * Method access.
      */
-    Access access;
+    @RO Access access;
 
-    // -----
-//
-//    /**
-//     * If this method represents a property, return that information, otherwise `Null`.
-//     *
-//     * TODO note about compile time types
-//     */
-//    @Lazy Property? property.calc()
-//        {
-//        if (ReturnTypes.size == 1 && ReturnTypes[0].isA(Ref) && ParamTypes.size == 0)
-//            {
-//            if (MultiMethod getters := ReturnTypes[0].multimethods.get("get"))
-//                {
-//                for (Method<> getter : getters.methods)
-//                    {
-//                    if (getter.ReturnTypes.size == 1 && getter.ParamTypes.size == 0)
-//                        {
-//                        return new Property /* TODO <ReturnTypes[0]> */ (
-//                            getter.as(Method<Object, Tuple<>, Tuple<Ref>>));
-//                        }
-//                    }
-//                }
-//
-//            assert false;
-//            }
-//
-//        return null;
-//        }
+
+    // ----- dynamic invocation support ------------------------------------------------------------
+
+    /**
+     * Given an object reference of a type that contains this method, obtain the invocable function
+     * that corresponds to this method on that object.
+     */
+    Function<ParamTypes, ReturnTypes> bindTarget(Target target);
+
+    /**
+     * Given an object reference of a type that contains this method, invoke that method passing
+     * the specified arguments, and returning the results.
+     *
+     * @param target  the object reference to invoke this method on
+     * @param args    a tuple of the arguments to invoke the method
+     *
+     * @return the return values from the method
+     */
+    ReturnTypes invoke(Target target, ParamTypes args)
+        {
+        return bindTarget(target).invoke(args);
+        }
+
+    /**
+     * Given an object reference of a type that contains this method, invoke that method
+     * asynchronously (if possible) passing the specified arguments, and returning the results as
+     * a future result.
+     *
+     * @param target  the object reference to invoke this method on
+     * @param args    a tuple of the arguments to invoke the method
+     *
+     * @return a future tuple of the return values from the method
+     */
+    FutureVar<ReturnTypes> invokeAsync(Target target, ParamTypes args)
+        {
+        return bindTarget(target).invokeAsync(args);
+        }
+
+
+    // ----- type comparison support ---------------------------------------------------------------
 
     /**
      * Determine if this method _consumes_ a formal type with the specified name.
@@ -241,38 +238,11 @@ const Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends T
      * Return an array of formal type names for the parameter type at the specified index.
      * If the parameter type is not a formal one, this method will return false.
      */
-    conditional String[] formalParamNames(Int i)
-         {
-         TODO -- native
-         }
+    conditional String[] formalParamNames(Int i);
 
     /**
      * Return an array of formal type names for the return type at the specified index.
      * If the return type is not a formal one, this method will return false.
      */
-    conditional String[] formalReturnNames(Int i)
-         {
-         TODO -- native
-         }
-
-    // ----- dynamic behavior ----------------------------------------------------------------------
-
-    /**
-     * Given an object reference of a type that contains this method, obtain the invocable function
-     * that corresponds to this method on that object.
-     */
-    Function<ParamTypes, ReturnTypes> bindTarget(Target target)
-        {
-        // this can not be abstract .. maybe "&target.getFunction(this)" or something like that?
-        TODO;
-        }
-
-    /**
-     * Given an object reference of a type that contains this method, invoke that method passing
-     * the specified arguments, and returning the results.
-     */
-    ReturnTypes invoke(Target target, ParamTypes args)
-        {
-        return bindTarget(target).invoke(args);
-        }
+    conditional String[] formalReturnNames(Int i);
     }

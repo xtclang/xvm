@@ -16,8 +16,9 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xNullable;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 
 /**

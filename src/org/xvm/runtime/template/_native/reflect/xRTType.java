@@ -27,16 +27,13 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.reflect.xMethod;
-
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
-import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xString;
 
+import org.xvm.runtime.template.collections.xArray;
 
 /**
  * Native Type implementation.
@@ -178,11 +175,23 @@ public class xRTType
         }
 
     @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
         {
         switch (method.getName())
             {
+            case "add":
+                return invokeAdd(frame, hTarget, hArg, iReturn);
+
+            case "sub":
+                return invokeSub(frame, hTarget, hArg, iReturn);
+
+            case "and":
+                return invokeAnd(frame, hTarget, hArg, iReturn);
+
+            case "or":
+                return invokeOr(frame, hTarget, hArg, iReturn);
+
             case "purify":
                 {
                 // TODO GG
@@ -190,7 +199,7 @@ public class xRTType
                 }
             }
 
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override
@@ -244,6 +253,34 @@ public class xRTType
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+        }
+
+    @Override
+    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        // TODO
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        // TODO
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        // TODO
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        // TODO
+        throw new UnsupportedOperationException();
         }
 
 
@@ -311,9 +348,9 @@ public class xRTType
      */
     public int getConstructorsProperty(Frame frame, TypeHandle hType, int iReturn)
         {
-        TypeConstant                        typeTarget  = hType.getDataType();
-        Map<MethodConstant, MethodInfo>     mapMethods  = typeTarget.ensureTypeInfo().getMethods();
-        ArrayList<xFunction.FunctionHandle> listHandles = new ArrayList<>();
+        TypeConstant                          typeTarget  = hType.getDataType();
+        Map<MethodConstant, MethodInfo>       mapMethods  = typeTarget.ensureTypeInfo().getMethods();
+        ArrayList<xRTFunction.FunctionHandle> listHandles = new ArrayList<>();
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
             MethodInfo info = entry.getValue();
@@ -323,8 +360,8 @@ public class xRTType
                 // listHandles.add(xFunction.makeHandle(info.getHead().getMethodStructure()));
                 }
             }
-        xFunction.FunctionHandle[] ahFunctions = listHandles.toArray(new xFunction.FunctionHandle[0]);
-        ObjectHandle.ArrayHandle   hArray      = ensureMethodArrayTemplate().createArrayHandle(
+        xRTFunction.FunctionHandle[] ahFunctions = listHandles.toArray(new xRTFunction.FunctionHandle[0]);
+        ObjectHandle.ArrayHandle     hArray      = ensureMethodArrayTemplate().createArrayHandle(
                 ensureMethodArray(typeTarget), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
@@ -343,19 +380,19 @@ public class xRTType
      */
     public int getFunctionsProperty(Frame frame, TypeHandle hType, int iReturn)
         {
-        TypeConstant                        typeTarget  = hType.getDataType();
-        Map<MethodConstant, MethodInfo>     mapMethods  = typeTarget.ensureTypeInfo().getMethods();
-        ArrayList<xFunction.FunctionHandle> listHandles = new ArrayList<>(mapMethods.size());
+        TypeConstant                          typeTarget  = hType.getDataType();
+        Map<MethodConstant, MethodInfo>       mapMethods  = typeTarget.ensureTypeInfo().getMethods();
+        ArrayList<xRTFunction.FunctionHandle> listHandles = new ArrayList<>(mapMethods.size());
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
             MethodInfo info = entry.getValue();
             if (info.isFunction())
                 {
-                listHandles.add(xFunction.makeHandle(info.getHead().getMethodStructure()));
+                listHandles.add(xRTFunction.makeHandle(info.getHead().getMethodStructure()));
                 }
             }
-        xFunction.FunctionHandle[] ahFunctions = listHandles.toArray(new xFunction.FunctionHandle[0]);
-        ObjectHandle.ArrayHandle   hArray      = ensureMethodArrayTemplate().createArrayHandle(
+        xRTFunction.FunctionHandle[] ahFunctions = listHandles.toArray(new xRTFunction.FunctionHandle[0]);
+        ObjectHandle.ArrayHandle     hArray      = ensureMethodArrayTemplate().createArrayHandle(
                 ensureMethodArray(typeTarget), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
@@ -365,18 +402,18 @@ public class xRTType
      */
     public int getMethodsProperty(Frame frame, TypeHandle hType, int iReturn)
         {
-        TypeConstant                    typeTarget  = hType.getDataType();
-        Map<MethodConstant, MethodInfo> mapMethods  = typeTarget.ensureTypeInfo().getMethods();
-        ArrayList<xMethod.MethodHandle> listHandles = new ArrayList<>(mapMethods.size());
+        TypeConstant                      typeTarget  = hType.getDataType();
+        Map<MethodConstant, MethodInfo>   mapMethods  = typeTarget.ensureTypeInfo().getMethods();
+        ArrayList<xRTMethod.MethodHandle> listHandles = new ArrayList<>(mapMethods.size());
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
             MethodInfo info = entry.getValue();
             if (!info.isFunction() && !info.isConstructor())
                 {
-                listHandles.add(xMethod.makeHandle(typeTarget, entry.getKey()));
+                listHandles.add(xRTMethod.makeHandle(typeTarget, entry.getKey()));
                 }
             }
-        xMethod.MethodHandle[]   ahMethods = listHandles.toArray(new xMethod.MethodHandle[0]);
+        xRTMethod.MethodHandle[] ahMethods = listHandles.toArray(new xRTMethod.MethodHandle[0]);
         ObjectHandle.ArrayHandle hArray    = ensureMethodArrayTemplate().createArrayHandle(
                 ensureMethodArray(typeTarget), ahMethods);
         return frame.assignValue(iReturn, hArray);

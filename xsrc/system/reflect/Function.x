@@ -1,0 +1,70 @@
+/**
+ * A Function represents a unit of invocation. A function (usually) has a name, parameters, and
+ * return values.
+ *
+ * To bind (or partially bind) a function, use one of the [bind] methods. This is also referred to
+ * as _partial application_ of a function.
+ *
+ * To invoke a function, use [invoke], passing a compatible tuple of arguments. To invoke a
+ * function that permits asynchronous execution (if the function represents something that executes
+ * within the scope of another service), use [invokeAsync] instead.
+ */
+interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
+        extends Signature<ParamTypes, ReturnTypes>
+    {
+    // ----- dynamic invocation support ------------------------------------------------------------
+
+    /**
+     * Binds a single parameter of the Function, resulting in a new Function that does not contain
+     * that parameter.
+     *
+     * @param param  a parameter of this function
+     * @param value  a corresponding argument value
+     *
+     * @return the new function that results from binding the specified parameter
+     */
+    <ParamType> Function!<> bind(Parameter<ParamType> param, ParamType value);
+
+    /**
+     * Binds any number of parameters of the Function, resulting in a new Function that does not
+     * contain any of those parameters.
+     *
+     * @param params  a map from parameter to argument value for each parameter to bind
+     *
+     * @return a function that represents the result of binding the specified parameters
+     *
+     * @throws IllegalArgument  if a parameter is specified that cannot be found on this function
+     * @throws TypeMismatch  if an argument value is not the type required for the corresponding
+     *         parameter
+     * @throws UnboundFormalParameter  if an attempt is made to bind a parameter that depends on
+     *         formal type parameters before all of those formal type parameters have been bound
+     */
+    Function!<> bind(Map<Parameter, Object> params);
+
+    /**
+     * Invokes the function passing the specified arguments as a Tuple that matches the function's
+     * `ParamTypes`, and returns a Tuple that matches the function's `ReturnTypes`.
+     *
+     * @param args  a tuple of the arguments to invoke the function
+     *
+     * @return a tuple of the return values from the function
+     *
+     * @throws UnboundFormalParameter  if an attempt is made to bind a non-formal parameter before
+     *         all of the formal type parameters have been bound
+     */
+    @Op("()")
+    ReturnTypes invoke(ParamTypes args);
+
+    /**
+     * Invoke the function with the specified arguments, obtaining a future result. It is possible
+     * that the function will be executed in a synchronous manner and that the future will have
+     * completed by the time that this method returns; this will occur, for example, if the function
+     * does not actually represent a service invocation, or if the runtime chooses to execute a
+     * service invocation synchronously.
+     *
+     * @param args  a tuple of the arguments to invoke the function
+     *
+     * @return a future tuple of the return values from the function
+     */
+    FutureVar<ReturnTypes> invokeAsync(ParamTypes args);
+    }

@@ -8,6 +8,7 @@ module TestReflection.xqiz.it
         testMaskReveal();
         testForm();
         testProps();
+        testFuncs();
         }
 
     const Point(Int x, Int y);
@@ -85,8 +86,11 @@ module TestReflection.xqiz.it
     void testForm()
         {
         console.println("\n** testForm");
-        Type t = String;
-        console.println($"t={t}, form={t.form}");
+        Type[] types = [String, Object, Char, Clock, Const, Date, Appender];
+        for (Type t : types)
+            {
+            console.println($"t={t}, form={t.form}");
+            }
         }
 
     void testProps()
@@ -100,5 +104,27 @@ module TestReflection.xqiz.it
             {
             console.println($"prop={prop}");
             }
+        }
+
+    void testFuncs()
+        {
+        console.println("\n** testFuncs");
+
+        val f = testFuncs;
+        console.println($"func name={f.name}");
+        console.println($"func type={&f.actualType}");
+
+        // TODO GG - we regressed the "&" and "_" bind-but-do-not-invoke functionality
+        void foo(Int x, String s) {}
+        // val f2 = &foo(1, "hello");
+        val f3  =  foo;
+        val f3b = &foo;
+        // val f4  =  foo(_, _);
+        // val f4b = &foo(_, _);
+        // val f5  =  foo(1, _);
+        // val f5b = &foo(1, _);
+        // val f6  =  foo(_, "hello");
+        // val f6b = &foo(_, "hello");
+        // val f7b = &foo(7, "hello");
         }
     }

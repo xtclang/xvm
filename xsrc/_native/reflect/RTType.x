@@ -1,3 +1,4 @@
+import Ecstasy.reflect.Access;
 import Ecstasy.reflect.Annotation;
 import Ecstasy.reflect.MultiMethod;
 
@@ -34,11 +35,11 @@ const RTType<DataType, OuterType>
     @Override @Op("+") Type!<> add(Type!<> that)                         { TODO("native"); }
     @Override @Op("+") Type!<> add(Method... methods)                    { TODO("native"); }
     @Override @Op("+") Type!<> add(Property... properties)               { TODO("native"); }
-    @Override @Op("|") Type!<> or(Type!<> that)                          { TODO("native"); }
-    @Override @Op("&") Type!<> and(Type!<> that)                         { TODO("native"); }
     @Override @Op("-") Type!<> sub(Type!<> that)                         { TODO("native"); }
     @Override @Op("-") Type!<> sub(Method... methods)                    { TODO("native"); }
     @Override @Op("-") Type!<> sub(Property... properties)               { TODO("native"); }
+    @Override @Op("&") Type!<> and(Type!<> that)                         { TODO("native"); }
+    @Override @Op("|") Type!<> or(Type!<> that)                          { TODO("native"); }
 
     // natural code:
     //   Boolean isA(Type!<> that)

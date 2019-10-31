@@ -27,12 +27,13 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
-import org.xvm.runtime.template.xFunction;
-import org.xvm.runtime.template.xFunction.FullyBoundHandle;
 import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xString.StringHandle;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
 
@@ -112,7 +113,7 @@ public abstract class Utils
 
         return methodFinally == null
             ? FullyBoundHandle.NO_OP
-            : xFunction.makeHandle(methodFinally).bindArguments(ahArg);
+            : xRTFunction.makeHandle(methodFinally).bindArguments(ahArg);
         }
 
 

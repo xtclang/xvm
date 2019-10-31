@@ -18,7 +18,6 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
@@ -26,7 +25,8 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.xFunction.FunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 
 /**
@@ -126,7 +126,7 @@ public class xService
         {
         return frame.f_context == ((ServiceHandle) hTarget).m_context ?
             super.invoke1(frame, chain, hTarget, ahVar, iReturn) :
-            xFunction.makeAsyncHandle(chain).call1(frame, hTarget, ahVar, iReturn);
+            xRTFunction.makeAsyncHandle(chain).call1(frame, hTarget, ahVar, iReturn);
         }
 
     @Override
@@ -134,7 +134,7 @@ public class xService
         {
         return frame.f_context == ((ServiceHandle) hTarget).m_context ?
             super.invokeT(frame, chain, hTarget, ahVar, iReturn) :
-            xFunction.makeAsyncHandle(chain).callT(frame, hTarget, ahVar, iReturn);
+            xRTFunction.makeAsyncHandle(chain).callT(frame, hTarget, ahVar, iReturn);
         }
 
     @Override
@@ -142,7 +142,7 @@ public class xService
         {
         return frame.f_context == ((ServiceHandle) hTarget).m_context ?
             super.invokeN(frame, chain, hTarget, ahVar, aiReturn) :
-            xFunction.makeAsyncHandle(chain).callN(frame, hTarget, ahVar, aiReturn);
+            xRTFunction.makeAsyncHandle(chain).callN(frame, hTarget, ahVar, aiReturn);
         }
 
     @Override

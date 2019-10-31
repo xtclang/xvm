@@ -2,11 +2,13 @@ import collections.Collection;
 import collections.ListMap;
 import collections.Set;
 
+import reflect.Access;
 import reflect.Annotation;
 import reflect.Class;
 import reflect.InvalidType;
 import reflect.Method;
 import reflect.MultiMethod;
+import reflect.Parameter;
 import reflect.Property;
 
 /**
@@ -128,12 +130,6 @@ interface Type<DataType, OuterType>
          */
         Sequence
         }
-
-    /**
-     * `Access` is an enumeration of the modifiers that can be used on top of a type to specify
-     * a different view of the underlying type.
-     */
-    enum Access {Public, Protected, Private, Struct}
 
 
     // ----- state representation ------------------------------------------------------------------
@@ -694,7 +690,7 @@ interface Type<DataType, OuterType>
                     {
                     assert fn.ParamTypes[0].as(Type) == OuterType;
                     return True, fn.as(function DataType(OuterType)).
-                        bind(fn.params[0].as(Function.Parameter<OuterType>), outer)
+                        bind(fn.params[0].as(Parameter<OuterType>), outer)
                             .as(function DataType());
                     }
                 }
@@ -730,7 +726,7 @@ interface Type<DataType, OuterType>
                     {
                     assert fn.ParamTypes[0].as(Type) == OuterType;
                     return True, fn.as(function DataType(OuterType, Struct)).
-                        bind(fn.params[0].as(Function.Parameter<OuterType>), outer)
+                        bind(fn.params[0].as(Parameter<OuterType>), outer)
                             .as(function DataType(Struct));
                     }
                 }

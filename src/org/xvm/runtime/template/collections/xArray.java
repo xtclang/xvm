@@ -13,7 +13,6 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ArrayConstant;
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -35,9 +34,10 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xString.StringHandle;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 
 /**

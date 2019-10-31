@@ -23,8 +23,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xFunction.FunctionHandle;
-import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xService.PropertyOperation;
@@ -33,6 +31,9 @@ import org.xvm.runtime.template.xService.PropertyOperation01;
 import org.xvm.runtime.template.xService.PropertyOperation11;
 import org.xvm.runtime.template.xService.ServiceHandle;
 import org.xvm.runtime.template.xString.StringHandle;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
 
 /**

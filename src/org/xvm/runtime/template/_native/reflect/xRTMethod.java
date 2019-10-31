@@ -1,4 +1,4 @@
-package org.xvm.runtime.template.reflect;
+package org.xvm.runtime.template._native.reflect;
 
 
 import org.xvm.asm.ClassStructure;
@@ -14,56 +14,53 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.runtime.ClassComposition;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xString;
-
-import org.xvm.runtime.template._native.reflect.xRTType;
 
 
 /**
  * TODO:
  */
-public class xMethod
-        extends ClassTemplate
+public class xRTMethod
+    extends xConst
     {
-    public static xMethod INSTANCE;
+    public static xRTMethod INSTANCE;
     public static TypeConstant TYPE;
-
     public static xEnum ACCESS;
 
-    public xMethod(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTMethod(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
 
         if (fInstance)
             {
             INSTANCE = this;
-            TYPE = getCanonicalType();
+            TYPE     = getCanonicalType();
             }
-        }
-
-    @Override
-    public void initDeclared()
-        {
-        ACCESS = (xEnum) getChildTemplate("Access");
-
-        markNativeProperty("name");
-        markNativeProperty("conditionalReturn");
-        markNativeProperty("access");
-
-        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override
     public boolean isGenericHandle()
         {
         return false;
+        }
+
+    @Override
+    public void initDeclared()
+        {
+        ACCESS = (xEnum) f_templates.getTemplate("reflect.Access");
+
+        markNativeProperty("name");
+        markNativeProperty("conditionalResult");
+        markNativeProperty("access");
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

@@ -19,15 +19,17 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.LongLong;
-import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 import org.xvm.runtime.template.xBaseInt128.LongLongHandle;
-import org.xvm.runtime.template.xFunction.FunctionHandle;
-import org.xvm.runtime.template.xFunction.NativeFunctionHandle;
 import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xUInt128;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
+
+import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 
 
 /**

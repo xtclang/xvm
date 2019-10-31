@@ -18,8 +18,8 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.xFunction;
-import org.xvm.runtime.template.xFunction.FunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -114,7 +114,7 @@ public class FBind
                     {
                     throw new IllegalStateException();
                     }
-                hFunction = xFunction.makeHandle(chain, frame.m_nDepth + 1);
+                hFunction = xRTFunction.makeHandle(chain, frame.m_nDepth + 1);
                 }
             else if (m_nFunctionId < CONSTANT_OFFSET)
                 {
@@ -123,7 +123,7 @@ public class FBind
                     {
                     return R_EXCEPTION;
                     }
-                hFunction = xFunction.makeHandle(function);
+                hFunction = xRTFunction.makeHandle(function);
                 }
             else
                 {

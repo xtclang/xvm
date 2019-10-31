@@ -10,6 +10,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -181,7 +182,8 @@ public class ObjectHeap
                 return f_poolRoot.ensureEcstasyTypeConstant("_native.reflect.RTProperty");
 
             case Method:
-                return f_poolRoot.typeFunction(); // TODO RTFunction
+                return f_poolRoot.ensureEcstasyTypeConstant(((MethodConstant) constValue).isFunction()
+                        ? "_native.reflect.RTFunction" : "_native.reflect.RTMethod");
 
             case AnnotatedType:
             case ParameterizedType:
