@@ -18,12 +18,10 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
@@ -34,6 +32,8 @@ import org.xvm.runtime.template.xService.ServiceHandle;
 import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
+
+import org.xvm.runtime.template.collections.xArray;
 
 
 /**
@@ -1406,7 +1406,8 @@ public class xRTFunction
                 }
 
             xArray templateArray = fRetVals ? ensureReturnArrayTemplate() : ensureParamArrayTemplate();
-            ObjectHandle.ArrayHandle hArray = templateArray.createArrayHandle(ensureReturnArray(), ahElement);
+            ObjectHandle.ArrayHandle hArray = templateArray.createArrayHandle(
+                    fRetVals ? ensureReturnArray() : ensureParamArray(), ahElement);
             return frameCaller.assignValue(iReturn, hArray);
             }
 
