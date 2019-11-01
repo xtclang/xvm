@@ -172,7 +172,7 @@ module TestReflection.xqiz.it
             console.println($"func={f}");
             }
 
-        // TODO GG
+        // TODO GG p.&foo()
         console.println($"\nfoo={p.&foo}");
 
         // TODO CP

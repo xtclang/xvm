@@ -344,19 +344,19 @@ public class xRTSignature
         return clz;
         }
 
-    private TypeConstant RETURN_TYPE;
-    private TypeConstant PARAM_TYPE;
-    private TypeConstant RTRETURN_TYPE;
-    private TypeConstant RTPARAM_TYPE;
+    static private TypeConstant RETURN_TYPE;
+    static private TypeConstant PARAM_TYPE;
+    static private TypeConstant RTRETURN_TYPE;
+    static private TypeConstant RTPARAM_TYPE;
 
-    private xConst RTRETURN_TEMPLATE;
-    private xConst RTPARAM_TEMPLATE;
+    static private xConst RTRETURN_TEMPLATE;
+    static private xConst RTPARAM_TEMPLATE;
 
-    private xArray RETURN_ARRAY_TEMPLATE;
-    private xArray PARAM_ARRAY_TEMPLATE;
+    static private xArray RETURN_ARRAY_TEMPLATE;
+    static private xArray PARAM_ARRAY_TEMPLATE;
 
-    private ClassComposition RETURN_ARRAY;
-    private ClassComposition PARAM_ARRAY;
+    static private ClassComposition RETURN_ARRAY;
+    static private ClassComposition PARAM_ARRAY;
 
 
     // ----- Object handle -------------------------------------------------------------------------

@@ -14,10 +14,8 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.util.Handy;
@@ -87,18 +85,22 @@ public class xRTMethod
         TypeConstant      typeRet    = pool.ensureParameterizedTypeConstant(pool.typeTuple(), sig.getRawReturns());
         TypeConstant      typeArg    = pool.ensureParameterizedTypeConstant(pool.typeTuple(), sig.getRawParams());
         TypeConstant      typeMethod = pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget, typeArg, typeRet);
-        // REVIEW GG actual vs mask type here?
-        ClassComposition  clzMethod  = INSTANCE.ensureClass(typeMethod);
 
-        return new MethodHandle(clzMethod, idMethod, typeMethod);
+        return new MethodHandle(typeMethod, idMethod);
         }
 
+    /**
+     * Method handle.
+     *
+     * Similarly to the {@link xRTFunction.FunctionHandle}, all Method handles are based on the same
+     * canonical ClassComposition, but carry the actual type as a part of their state,
+     */
     public static class MethodHandle
             extends SignatureHandle
         {
-        protected MethodHandle(TypeComposition clazz, MethodConstant idMethod, TypeConstant type)
+        protected MethodHandle(TypeConstant type, MethodConstant idMethod)
             {
-            super(clazz, idMethod, (MethodStructure) idMethod.getComponent(), type);
+            super(INSTANCE.getCanonicalClass(), idMethod, (MethodStructure) idMethod.getComponent(), type);
             }
 
         public TypeConstant getTargetType()
