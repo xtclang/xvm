@@ -238,7 +238,7 @@ public abstract class Utils
 
     // ----- "local property or DeferredCallHandle as an argument" support -----
 
-    static public class GetArguments
+    public static class GetArguments
                 implements Frame.Continuation
         {
         public GetArguments(ObjectHandle[] ahArg, Frame.Continuation continuation)
@@ -285,7 +285,7 @@ public abstract class Utils
         private int index = -1;
         }
 
-    static public class AssignValues
+    public static class AssignValues
             implements Frame.Continuation
         {
         public AssignValues(int[] aiReturn, ObjectHandle[] ahValue)
@@ -338,7 +338,7 @@ public abstract class Utils
         private int index = -1;
         }
 
-    static public class ReturnValues
+    public static class ReturnValues
             implements Frame.Continuation
         {
         public ReturnValues(int[] aiReturn, ObjectHandle[] ahValue, boolean[] afDynamic)
@@ -394,7 +394,7 @@ public abstract class Utils
         private int index = -1;
         }
 
-    static public class ContinuationChain
+    public static class ContinuationChain
             implements Frame.Continuation
         {
         public ContinuationChain(Frame.Continuation step0)

@@ -193,11 +193,11 @@ public abstract class OSFileNode
 
     // ----- constants -----------------------------------------------------------------------------
 
-    static private ClassComposition s_clzOSDir;
-    static private ClassComposition s_clzOSDirStruct;
-    static private MethodStructure  s_constructorDir;
+    private static ClassComposition s_clzOSDir;
+    private static ClassComposition s_clzOSDirStruct;
+    private static MethodStructure  s_constructorDir;
 
-    static private ClassComposition s_clzOSFile;
-    static private ClassComposition s_clzOSFileStruct;
-    static private MethodStructure  s_constructorFile;
+    private static ClassComposition s_clzOSFile;
+    private static ClassComposition s_clzOSFileStruct;
+    private static MethodStructure  s_constructorFile;
     }

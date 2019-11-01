@@ -385,7 +385,7 @@ const UInt16
         }
 
     // maxvalue = 65_535 (5 digits)
-    static private UInt16[] sizeArray =
+    private static UInt16[] sizeArray =
          [
          9, 99, 999, 9_999, 65_535
          ];

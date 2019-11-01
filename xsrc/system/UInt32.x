@@ -387,7 +387,7 @@ const UInt32
         }
 
     // maxvalue = 4_294_967_295 (10 digits)
-    static private UInt32[] sizeArray =
+    private static UInt32[] sizeArray =
          [
          9, 99, 999, 9_999, 99_999, 999_999,
          9_999_999, 99_999_999, 999_999_999,

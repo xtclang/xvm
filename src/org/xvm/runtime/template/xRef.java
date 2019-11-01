@@ -764,7 +764,7 @@ public class xRef
     /**
      * Helper class for calculating the referent equality.
      */
-    static protected class CompareReferents
+    protected static class CompareReferents
             implements Frame.Continuation
         {
         public CompareReferents(RefHandle hRef1, RefHandle hRef2, xRef template, int iReturn)

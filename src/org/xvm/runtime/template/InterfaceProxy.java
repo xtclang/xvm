@@ -27,7 +27,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
 public class InterfaceProxy
         extends xService
     {
-    static public InterfaceProxy INSTANCE;
+    public static InterfaceProxy INSTANCE;
 
     public InterfaceProxy(TemplateRegistry templates)
         {

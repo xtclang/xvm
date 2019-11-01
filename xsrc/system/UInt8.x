@@ -382,7 +382,7 @@ const UInt8
             }
         }
 
-    static private UInt8[] sizeArray =
+    private static UInt8[] sizeArray =
          [
          9, 99, 255
          ];

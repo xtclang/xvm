@@ -389,7 +389,7 @@ const UInt64
         }
 
     // maxvalue = 18_446_744_073_709_551_615 (20 digits)
-    static private UInt64[] sizeArray =
+    private static UInt64[] sizeArray =
          [
          9, 99, 999, 9_999, 99_999, 999_999,
          9_999_999, 99_999_999, 999_999_999, 9_999_999_999, 99_999_999_999, 999_999_999_999,

@@ -168,9 +168,9 @@ public class xCPFileStore
 
     // ----- constants -----------------------------------------------------------------------------
 
-    static private ClassComposition s_clz;
-    static private ClassComposition s_clzStruct;
-    static private MethodStructure  s_constructor;
+    private static ClassComposition s_clz;
+    private static ClassComposition s_clzStruct;
+    private static MethodStructure  s_constructor;
 
 
     // ----- data members --------------------------------------------------------------------------

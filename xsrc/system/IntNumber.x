@@ -243,7 +243,7 @@ const IntNumber
     /**
      * Calculate the string size for the specified IntNumber and type specific size array.
      */
-    static protected <IntType extends IntNumber> Int calculateStringSize(IntType n, IntType[] sizeArray)
+    protected static <IntType extends IntNumber> Int calculateStringSize(IntType n, IntType[] sizeArray)
         {
         for (Int index = 0; true; index++)
             {
