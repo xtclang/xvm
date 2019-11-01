@@ -232,7 +232,7 @@ public class xRTType
                 {
                 return type.isModifyingType()
                         ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                                makeHandle(type.getUnderlyingType()))
+                                type.getUnderlyingType().getTypeHandle())
                         : frame.assignValues(aiReturn, xBoolean.FALSE, null);
                 }
 
@@ -246,8 +246,8 @@ public class xRTType
                 {
                 return type.isModifyingType()
                         ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                                makeHandle(type.getUnderlyingType()),
-                                makeHandle(type.getUnderlyingType2()))
+                                type.getUnderlyingType().getTypeHandle(),
+                                type.getUnderlyingType2().getTypeHandle())
                         : frame.assignValues(aiReturn, xBoolean.FALSE, null, null);
                 }
             }
@@ -295,8 +295,7 @@ public class xRTType
      */
     public static TypeHandle makeHandle(TypeConstant type)
         {
-        ConstantPool pool = ConstantPool.getCurrentPool();
-        return new TypeHandle(INSTANCE.ensureParameterizedClass(pool, type, pool.typeObject()));
+        return new TypeHandle(INSTANCE.ensureClass(type.getType()));
         }
 
     /**
@@ -485,7 +484,7 @@ public class xRTType
         TypeHandle[] ahTypes = new TypeHandle[aUnderlying.length];
         for (int i = 0, c = ahTypes.length; i < c; ++i)
             {
-            ahTypes[i] = makeHandle(aUnderlying[i]);
+            ahTypes[i] = aUnderlying[i].getTypeHandle();
             }
 
         ObjectHandle.ArrayHandle hArray = ensureTypeArrayTemplate().createArrayHandle(ensureTypeArray(), ahTypes);
@@ -512,9 +511,10 @@ public class xRTType
     public int calcContained(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         TypeConstant typeTarget = hType.getDataType();
-        if (typeTarget.isVirtualChild() || typeTarget.isAnonymousClass()) // REVIEW GG
+        // REVIEW CP: include PropertyClassTypeConstant?
+        if (typeTarget.isVirtualChild() || typeTarget.isAnonymousClass())
             {
-            TypeHandle hParent = makeHandle(typeTarget.getParentType());
+            TypeHandle hParent = typeTarget.getParentType().getTypeHandle();
             return frame.assignValues(aiReturn, xBoolean.TRUE, hParent);
             }
         else
