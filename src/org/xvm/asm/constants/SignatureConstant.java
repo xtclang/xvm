@@ -404,10 +404,9 @@ public class SignatureConstant
      * @return the type of the method that corresponds to this SignatureConstant for the specified
      *         target type
      */
-    public TypeConstant asMethodType(TypeConstant typeTarget)
+    public TypeConstant asMethodType(ConstantPool pool, TypeConstant typeTarget)
         {
-        ConstantPool pool = getConstantPool();
-        return pool.ensureParameterizedTypeConstant(pool.typeMap(), typeTarget,
+        return pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget,
                 pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstParams),
                 pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstReturns));
         }

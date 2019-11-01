@@ -80,13 +80,9 @@ public class xRTMethod
     public static MethodHandle makeHandle(TypeConstant typeTarget, MethodConstant idMethod)
         {
         ConstantPool pool = ConstantPool.getCurrentPool();
+        TypeConstant type = idMethod.getSignature().asMethodType(pool, typeTarget);
 
-        SignatureConstant sig        = idMethod.getSignature();
-        TypeConstant      typeRet    = pool.ensureParameterizedTypeConstant(pool.typeTuple(), sig.getRawReturns());
-        TypeConstant      typeArg    = pool.ensureParameterizedTypeConstant(pool.typeTuple(), sig.getRawParams());
-        TypeConstant      typeMethod = pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget, typeArg, typeRet);
-
-        return new MethodHandle(typeMethod, idMethod);
+        return new MethodHandle(type, idMethod);
         }
 
     /**
