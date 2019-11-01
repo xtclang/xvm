@@ -152,7 +152,7 @@ public class AnnotatedTypeExpression
             }
 
         TypeConstant typeReferent  = ensureTypeConstant(ctx);
-        TypeConstant typeReference = pool.ensureParameterizedTypeConstant(pool.typeType(), typeReferent);
+        TypeConstant typeReference = typeReferent.getType();
 
         if (fValid)
             {

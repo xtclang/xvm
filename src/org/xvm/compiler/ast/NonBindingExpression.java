@@ -74,8 +74,7 @@ public class NonBindingExpression
         {
         return type == null || typeRequired == null
                 ? TypeFit.Fit
-                : type.testFit(ctx, pool().ensureParameterizedTypeConstant(
-                    pool().typeType(), typeRequired), errs);
+                : type.testFit(ctx, typeRequired.getType(), errs);
         }
 
     @Override
@@ -93,8 +92,7 @@ public class NonBindingExpression
             }
         else
             {
-            ConstantPool   pool        = pool();
-            TypeConstant   typeReqType = pool.ensureParameterizedTypeConstant(pool.typeType(), typeRequired);
+            TypeConstant   typeReqType = typeRequired.getType();
             TypeExpression exprNewType = (TypeExpression) exprOldType.validate(ctx, typeReqType, errs);
             if (exprNewType == null)
                 {

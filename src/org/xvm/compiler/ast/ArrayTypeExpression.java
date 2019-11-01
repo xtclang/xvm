@@ -95,9 +95,7 @@ public class ArrayTypeExpression
 
         // array[capacity] is a fixed size array and is allowed only for types with default values
         TypeConstant typeArray   = exprNew.ensureTypeConstant(ctx);
-        TypeConstant typeElement = typeArray.getParamsCount() > 0
-                ? typeArray.getParamTypesArray()[0]
-                : pool().typeObject();
+        TypeConstant typeElement = typeArray.getParamType(0);
 
         if (typeElement.getDefaultValue() == null)
             {

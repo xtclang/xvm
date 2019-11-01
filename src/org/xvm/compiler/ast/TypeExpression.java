@@ -218,8 +218,7 @@ public abstract class TypeExpression
             throw new IllegalStateException("type has not yet been determined for this: " + this);
             }
 
-        ConstantPool pool = pool();
-        return pool.ensureParameterizedTypeConstant(pool.typeType(), type);
+        return type.getType();
         }
 
     @Override
@@ -233,9 +232,8 @@ public abstract class TypeExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        ConstantPool pool          = pool();
         TypeConstant typeReferent  = ensureTypeConstant(ctx);
-        TypeConstant typeReference = pool.ensureParameterizedTypeConstant(pool.typeType(), typeReferent);
+        TypeConstant typeReference = typeReferent.getType();
         return finishValidation(typeRequired, typeReference, TypeFit.Fit, typeReferent, errs);
         }
 

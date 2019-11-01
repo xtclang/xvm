@@ -148,7 +148,7 @@ public class ListExpression
         TypeExpression exprOldType = type;
         if (exprOldType != null)
             {
-            TypeConstant   typeArrayType = pool.ensureParameterizedTypeConstant(pool.typeType(), pool.typeSequence());
+            TypeConstant   typeArrayType = pool.typeSequence().getType();
             TypeExpression exprNewType   = (TypeExpression) exprOldType.validate(ctx, typeArrayType, errs);
             if (exprNewType == null)
                 {

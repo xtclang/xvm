@@ -699,8 +699,7 @@ public class NamedTypeExpression
             else
                 {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                    pool.ensureParameterizedTypeConstant(pool.typeType(),
-                        pool.typeObject()).getValueString(), typeParam.getValueString());
+                        pool.typeType().getValueString(), typeParam.getValueString());
                 fValid = false;
                 }
             }

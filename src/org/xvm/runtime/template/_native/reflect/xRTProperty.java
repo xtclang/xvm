@@ -75,7 +75,7 @@ public class xRTProperty
             PropertyConstant propTarget = (PropertyConstant) constant;
 
             // TODO
-//            TypeConstant typeData = propTarget.getParamTypesArray()[0].
+//            TypeConstant typeData = propTarget.getParamType(0)).
 //                resolveGenerics(pool, frame.getGenericsResolver());
 //            frame.pushStack(typeData.getTypeHandle());
             return Op.R_NEXT;

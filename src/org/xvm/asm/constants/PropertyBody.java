@@ -113,7 +113,7 @@ public class PropertyBody
         TypeConstant typeActual = infoFormal.getActualType();
         TypeConstant typeType   = struct != null && struct.getIdentityConstant().isTypeSequenceTypeParameter()
                 ? struct.getType() // for the turtle type property, the actual type is ignored
-                : pool.ensureParameterizedTypeConstant(pool.typeType(), typeActual);
+                : typeActual.getType();
 
         m_structProp    = struct;
         m_impl          = Implementation.Native;

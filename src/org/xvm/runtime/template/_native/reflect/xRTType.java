@@ -100,7 +100,7 @@ public class xRTType
             TypeConstant typeTarget = (TypeConstant) constant;
             assert typeTarget.isA(pool.typeType());
 
-            TypeConstant typeData = typeTarget.getParamTypesArray()[0].
+            TypeConstant typeData = typeTarget.getParamType(0).
                     resolveGenerics(pool, frame.getGenericsResolver());
             frame.pushStack(typeData.getTypeHandle());
             return Op.R_NEXT;
@@ -296,7 +296,7 @@ public class xRTType
     public static TypeHandle makeHandle(TypeConstant type)
         {
         ConstantPool pool = ConstantPool.getCurrentPool();
-        return new TypeHandle(INSTANCE.ensureParameterizedClass(pool, type));
+        return new TypeHandle(INSTANCE.ensureParameterizedClass(pool, type, pool.typeObject()));
         }
 
     /**
@@ -313,6 +313,10 @@ public class xRTType
         public TypeConstant getDataType()
             {
             return getType().getParamType(0);
+            }
+        public TypeConstant getOuterType()
+            {
+            return getType().getParamType(1);
             }
         }
 

@@ -148,7 +148,7 @@ public class MapExpression
         TypeExpression exprOldType = type;
         if (exprOldType != null)
             {
-            TypeConstant   typeMapType = pool.ensureParameterizedTypeConstant(pool.typeType(), pool.typeMap());
+            TypeConstant   typeMapType = pool.typeMap().getType();
             TypeExpression exprNewType = (TypeExpression) exprOldType.validate(ctx, typeMapType, errs);
             if (exprNewType == null)
                 {

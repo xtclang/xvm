@@ -299,7 +299,7 @@ public class xClass
 
         public TypeConstant getPublicType()
             {
-            return getType().getParamTypesArray()[0];
+            return getType().getParamType(0);
             }
 
         @Override

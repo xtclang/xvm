@@ -1127,7 +1127,7 @@ public class Frame
 
         // Ref<Referent> -> Referent
         assert !info.isWaiting();
-        return info.getType().getParamTypesArray()[0];
+        return info.getType().getParamType(0);
         }
 
     public ClassComposition resolveClass(int iArg)
@@ -2063,13 +2063,7 @@ public class Frame
                 typeArray = frame.getLocalType(nTargetReg, null);
                 }
 
-            if (typeArray.isParamsSpecified())
-                {
-                return typeArray.isTuple()
-                    ? typeArray.getParamTypesArray()[iAuxId]
-                    : typeArray.getParamTypesArray()[0];
-                }
-            return frame.poolCode().typeObject();
+            return typeArray.getParamType(typeArray.isTuple() ? iAuxId : 0);
             }
         };
 
@@ -2089,8 +2083,7 @@ public class Frame
             TypeConstant typeTarget = frame.getLocalType(nTargetReg, null);
 
             return typeTarget.containsGenericParam(constProperty.getName())
-                ? poolCtx.ensureParameterizedTypeConstant(poolCtx.typeType(),
-                    constProperty.getFormalType().resolveGenerics(poolCtx, typeTarget))
+                ? constProperty.getFormalType().resolveGenerics(poolCtx, typeTarget).getType()
                 : constProperty.getType().resolveGenerics(poolCtx, typeTarget);
             }
         };

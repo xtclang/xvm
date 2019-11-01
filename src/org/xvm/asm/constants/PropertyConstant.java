@@ -98,7 +98,7 @@ public class PropertyConstant
         TypeConstant typeConstraint = getType();
         assert typeConstraint.isEcstasy("Type") && typeConstraint.isParamsSpecified();
 
-        typeConstraint = typeConstraint.getParamTypesArray()[0];
+        typeConstraint = typeConstraint.getParamType(0);
 
         if (!typeConstraint.isParamsSpecified() && typeConstraint.isSingleUnderlyingClass(true))
             {

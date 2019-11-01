@@ -293,13 +293,13 @@ public class xArray
                     ObjectHandle hSupplier = ahVar[1];
                     // we could get here either naturally (e.g. new Array<String>(7, "");)
                     // or via the ArrayExpression (e.g. new Int[7])
+                    TypeConstant typeEl = clzArray.getType().getParamType(0);
                     if (hSupplier == ObjectHandle.DEFAULT)
                         {
-                        TypeConstant typeEl = clzArray.getType().getParamTypesArray()[0];
                         ObjectHandle hValue = frame.getConstHandle(typeEl.getDefaultValue());
                         fill(hArray, cSize, hValue);
                         }
-                    else if (hSupplier.getType().isA(clzArray.getType().getParamTypesArray()[0]))
+                    else if (hSupplier.getType().isA(typeEl))
                         {
                         fill(hArray, cSize, hSupplier);
                         }
@@ -378,7 +378,7 @@ public class xArray
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         // hArg is either Iterable<Element> or Element
-        return hArg.getType().isA(hTarget.getType().getParamTypesArray()[0])
+        return hArg.getType().isA(hTarget.getType().getParamType(0))
                 ? addElement(frame, hTarget, hArg, iReturn)
                 : addElements(frame, hTarget, hArg, iReturn);
         }
@@ -515,7 +515,7 @@ public class xArray
 
         // use the compile-time element type
         // and compare arrays elements one-by-one
-        TypeConstant typeEl = clazz.getType().getParamTypesArray()[0];
+        TypeConstant typeEl = clazz.getType().getParamType(0);
 
         int[] holder = new int[] {0}; // the index holder
         return new Equals(ah1, ah2, typeEl, cElements, holder, iReturn).doNext(frame);

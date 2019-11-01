@@ -642,7 +642,7 @@ public class ForEachStatement
         // code simplification for intrinsic sequential types
         if (m_exprRValue.isConstant())
             {
-            switch (m_exprRValue.getType().getParamTypesArray()[0].getEcstasyClassName())
+            switch (m_exprRValue.getType().getParamType(0).getEcstasyClassName())
                 {
                 case "Bit":
                 case "Nibble":

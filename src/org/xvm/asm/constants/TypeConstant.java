@@ -584,8 +584,7 @@ public abstract class TypeConstant
         // Type<X> + Type<Y> == Type<X + Y>
         return this.isTypeOfType() && this.getParamsCount() > 0 &&
                that.isTypeOfType() && that.getParamsCount() > 0
-                ? pool.ensureParameterizedTypeConstant(pool.typeType(),
-                    this.getParamType(0).combine(pool, that.getParamType(0)))
+                ? this.getParamType(0).combine(pool, that.getParamType(0)).getType()
                 : pool.ensureUnionTypeConstant(this, that);
         }
 
@@ -617,8 +616,7 @@ public abstract class TypeConstant
         // Type<X> | Type<Y> == Type<X | Y>
         return this.isTypeOfType() && this.getParamsCount() > 0 &&
                that.isTypeOfType() && that.getParamsCount() > 0
-                ? pool.ensureParameterizedTypeConstant(pool.typeType(),
-                    this.getParamType(0).intersect(pool, that.getParamType(0)))
+                ? this.getParamType(0).intersect(pool, that.getParamType(0)).getType()
                 : pool.ensureIntersectionTypeConstant(this, that);
         }
 
@@ -641,8 +639,7 @@ public abstract class TypeConstant
         // Type<X> - Type<Y> == Type<X - Y>
         return this.isTypeOfType() && this.getParamsCount() > 0 &&
                that.isTypeOfType() && that.getParamsCount() > 0
-                ? pool.ensureParameterizedTypeConstant(pool.typeType(),
-                    this.getParamType(0).subtract(pool, that.getParamType(0)))
+                ? this.getParamType(0).subtract(pool, that.getParamType(0)).getType()
                 : this;
         }
 
@@ -4021,7 +4018,7 @@ public abstract class TypeConstant
                         this.getValueString(), sParam);
                 }
             else if (!info.isFormalType() ||
-                     !info.getType().getParamTypesArray()[0].isA(param.getConstraintType()))
+                     !info.getType().getParamType(0).isA(param.getConstraintType()))
                 {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,
                         this.getValueString(), sParam);
@@ -4793,10 +4790,10 @@ public abstract class TypeConstant
                 return Relation.INCOMPATIBLE;
                 }
 
-            TypeConstant typeLP = typeLeft.getParamTypesArray()[0];
-            TypeConstant typeLR = typeLeft.getParamTypesArray()[1];
-            TypeConstant typeRP = typeRight.getParamTypesArray()[0];
-            TypeConstant typeRR = typeRight.getParamTypesArray()[1];
+            TypeConstant typeLP = typeLeft.getParamType(0);
+            TypeConstant typeLR = typeLeft.getParamType(1);
+            TypeConstant typeRP = typeRight.getParamType(0);
+            TypeConstant typeRR = typeRight.getParamType(1);
 
             assert typeLP.isTuple() && typeLR.isTuple() && typeRP.isTuple() && typeRR.isTuple();
 
@@ -4813,8 +4810,8 @@ public abstract class TypeConstant
             // functions do not produce, so we cannot have "weak" relations
             for (int i = 0; i < cLP; i++)
                 {
-                TypeConstant typeL = typeLP.getParamTypesArray()[i];
-                TypeConstant typeR = typeRP.getParamTypesArray()[i];
+                TypeConstant typeL = typeLP.getParamType(i);
+                TypeConstant typeR = typeRP.getParamType(i);
                 if (!typeL.isA(typeR))
                     {
                     return Relation.INCOMPATIBLE;
@@ -4823,8 +4820,8 @@ public abstract class TypeConstant
 
             for (int i = 0; i < cLR; i++)
                 {
-                TypeConstant typeL = typeLR.getParamTypesArray()[i];
-                TypeConstant typeR = typeRR.getParamTypesArray()[i];
+                TypeConstant typeL = typeLR.getParamType(i);
+                TypeConstant typeR = typeRR.getParamType(i);
                 if (!typeR.isA(typeL))
                     {
                     return Relation.INCOMPATIBLE;
@@ -5484,7 +5481,7 @@ public abstract class TypeConstant
     public TypeConstant getType()
         {
         ConstantPool pool = getConstantPool();
-        return pool.ensureParameterizedTypeConstant(pool.typeType(), this);
+        return pool.ensureParameterizedTypeConstant(pool.typeType(), this, pool.typeObject());
         }
 
     @Override

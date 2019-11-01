@@ -133,9 +133,7 @@ public class ArrayConstant
 
             if (typeOut.getDefiningConstant().equals(pool.clzArray()))
                 {
-                TypeConstant typeEl = typeOut.getParamsCount() == 0
-                    ? pool.typeObject()
-                    : typeOut.getParamTypesArray()[0];
+                TypeConstant typeEl = typeOut.getParamType(0);
 
                 Constant[] aconstIn  = getValue();
                 int        cValues   = aconstIn.length;

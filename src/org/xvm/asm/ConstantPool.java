@@ -3278,7 +3278,7 @@ public class ConstantPool
                     && typeFunction.isParamsSpecified()
                     && typeFunction.getParamsCount() > 0)
                 {
-                TypeConstant typeParams = typeFunction.getParamTypesArray()[0];
+                TypeConstant typeParams = typeFunction.getParamType(0);
                 if (typeParams.isA(typeTuple()) && typeParams.isParamsSpecified())
                     {
                     return typeParams.getParamTypesArray();
@@ -3304,7 +3304,7 @@ public class ConstantPool
                     && typeFunction.isParamsSpecified()
                     && typeFunction.getParamsCount() > 1)
                 {
-                TypeConstant typeParams = typeFunction.getParamTypesArray()[1];
+                TypeConstant typeParams = typeFunction.getParamType(1);
                 if (typeParams.isA(typeTuple()) && typeParams.isParamsSpecified())
                     {
                     return typeParams.getParamTypesArray();
@@ -3329,8 +3329,8 @@ public class ConstantPool
         {
         assert typeFn.isA(typeFunction()) && typeFn.getParamsCount() > 0;
 
-        TypeConstant typeP = typeFn.getParamTypesArray()[0];
-        TypeConstant typeR = typeFn.getParamTypesArray()[1];
+        TypeConstant typeP = typeFn.getParamType(0);
+        TypeConstant typeR = typeFn.getParamType(1);
 
         int cParamsNew = typeP.getParamsCount() - 1;
         assert typeP.isTuple() && iParam <= cParamsNew;

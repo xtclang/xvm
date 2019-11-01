@@ -919,7 +919,7 @@ public class NameExpression
                             : ((ParentClassConstant) argRaw).getDepth();
 
                     TypeConstant typeRef      = getType();
-                    TypeConstant typeReferent = typeRef.getParamTypesArray()[0];
+                    TypeConstant typeReferent = typeRef.getParamType(0);
 
                     Register regTemp = createRegister(typeReferent, false);
                     code.add(new MoveThis(cSteps, regTemp));
@@ -1095,7 +1095,7 @@ public class NameExpression
                 else
                     {
                     typeRef   = getType();
-                    typeOuter = typeRef.getParamTypesArray()[0];
+                    typeOuter = typeRef.getParamType(0);
                     cSteps    = argRaw instanceof ThisClassConstant
                             ? 0
                             : ((ParentClassConstant) argRaw).getDepth();
@@ -1919,7 +1919,7 @@ public class NameExpression
                         }
 
                     m_plan = Plan.TypeOfClass;
-                    return pool.ensureParameterizedTypeConstant(pool.typeType(), type);
+                    return type.getType();
                     }
                 else
                     {
@@ -2055,7 +2055,7 @@ public class NameExpression
 
                 m_plan = Plan.TypeOfTypedef;
                 TypeConstant typeRef = ((TypedefConstant) constant).getReferredToType();
-                return pool.ensureParameterizedTypeConstant(pool.typeType(), typeRef);
+                return typeRef.getType();
                 }
 
             case Method:

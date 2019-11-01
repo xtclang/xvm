@@ -238,8 +238,7 @@ public class TupleExpression
 
         if (type != null)
             {
-            TypeConstant typeTupleType = pool.ensureParameterizedTypeConstant(
-                    pool.typeType(), pool.typeTuple());
+            TypeConstant typeTupleType = pool.typeTuple().getType();
 
             TypeExpression exprOld = type;
             TypeExpression exprNew = (TypeExpression) exprOld.validate(ctx, typeTupleType, errs);

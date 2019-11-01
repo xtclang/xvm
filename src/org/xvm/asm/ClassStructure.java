@@ -524,7 +524,7 @@ public class ClassStructure
         // check for turtles, for example: "ElementTypes extends Tuple<ElementTypes>"
         if (typeConstraint.getParamsCount() >= 1 &&
                 typeConstraint.isTuple() &&
-                typeConstraint.getParamTypesArray()[0].getValueString().equals(sName))
+                typeConstraint.getParamType(0).getValueString().equals(sName))
             {
             typeConstraint = pool.ensureTypeSequenceTypeConstant();
             }
@@ -2926,7 +2926,7 @@ public class ClassStructure
             //  which needs to be created UnresolvedTypeConstant first and resolved later
             ConstantPool pool     = getConstantPool();
             TypeConstant typeThis = pool.ensureThisTypeConstant(getIdentityConstant(), null);
-            TypeConstant typeType = pool.ensureParameterizedTypeConstant(pool.typeType(), typeThis);
+            TypeConstant typeType = typeThis.getType();
 
             Parameter[] aParam = new Parameter[1 + cParams];
 

@@ -520,9 +520,7 @@ public class NameResolver
                 return null;
                 }
 
-            TypeConstant typeParam = type.isParamsSpecified()
-                    ? type.getParamTypesArray()[0]
-                    : getPool().typeObject();
+            TypeConstant typeParam = type.getParamType(0);
             if (typeParam.isSingleDefiningConstant())
                 {
                 id        = typeParam.getDefiningConstant();

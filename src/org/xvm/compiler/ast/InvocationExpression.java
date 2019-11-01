@@ -367,7 +367,7 @@ public class InvocationExpression
                         {
                         break;
                         }
-                    atypeReturn[i] = typeParam.getParamTypesArray()[0];
+                    atypeReturn[i] = typeParam.getParamType(0);
                     }
                 }
 
@@ -390,7 +390,7 @@ public class InvocationExpression
                 assert typeFn.isA(pool.typeFunction());
                 if (m_fCall)
                     {
-                    return typeFn.getParamTypesArray()[F_RETS].getParamTypesArray();
+                    return typeFn.getParamType(F_RETS).getParamTypesArray();
                     }
 
                 if (m_fBindParams)
@@ -578,7 +578,7 @@ public class InvocationExpression
                     {
                     int          ixType      = fCond ? i + 1 : i;
                     TypeConstant typeTypeReq = i < cRequired
-                            ? pool.ensureParameterizedTypeConstant(pool.typeType(), atypeRequired[ixType])
+                            ? atypeRequired[ixType].getType()
                             : pool.typeType();
 
                     TypeExpression exprOld = listRedundant.get(i);
@@ -595,7 +595,7 @@ public class InvocationExpression
                             //          _subsumed_ by this InvocationExpression
                             listRedundant.set(i, exprNew);
                             }
-                        atypeReturn[ixType] = exprNew.getType().getParamTypesArray()[0];
+                        atypeReturn[ixType] = exprNew.getType().getParamType(0);
                         }
                     }
                 }
@@ -683,7 +683,7 @@ public class InvocationExpression
                 TypeConstant[] atypeResult;
                 if (m_fCall)
                     {
-                    atypeResult = typeFn.getParamTypesArray()[F_RETS].getParamTypesArray();
+                    atypeResult = typeFn.getParamType(F_RETS).getParamTypesArray();
                     }
                 else
                     {

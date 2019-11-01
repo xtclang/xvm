@@ -246,7 +246,7 @@ public class Parameter
         if (m_regDeref == null)
             {
             TypeConstant typeVar = getType();
-            TypeConstant typeVal = typeVar.getParamTypesArray()[0];
+            TypeConstant typeVal = typeVar.getParamType(0);
             m_regDeref = new Register(typeVal);
             }
 

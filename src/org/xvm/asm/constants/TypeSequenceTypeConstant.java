@@ -145,7 +145,7 @@ public class TypeSequenceTypeConstant
                         return Relation.IS_A;
 
                     case 1:
-                        if (typeLeft.getParamTypesArray()[0].equals(pool.typeType()))
+                        if (typeLeft.getParamType(0).equals(pool.typeType()))
                             {
                             // Iterable<Type> iter = ElementTypes;
                             return Relation.IS_A;
