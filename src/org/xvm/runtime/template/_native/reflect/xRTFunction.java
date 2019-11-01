@@ -468,13 +468,28 @@ public class xRTFunction
     public static class NativeFunctionHandle
             extends FunctionHandle
         {
-        final protected xService.NativeOperation f_op;
+        public NativeFunctionHandle(xService.NativeOperation op, TypeConstant type, String sName, Parameter[] aParams)
+            {
+            super(type, null);
+
+            f_op      = op;
+            f_sName   = sName;
+            f_aParams = aParams;
+            }
 
         public NativeFunctionHandle(xService.NativeOperation op)
             {
             super(INSTANCE.getCanonicalType(), null);
 
-            f_op = op;
+            f_op      = op;
+            f_sName   = "native";
+            f_aParams = Parameter.NO_PARAMS;
+            }
+
+        @Override
+        public String getName()
+            {
+            return f_sName;
             }
 
         @Override
@@ -498,17 +513,17 @@ public class xRTFunction
         @Override
         public int getParamCount()
             {
-            throw new UnsupportedOperationException();
+            return f_aParams.length;
             }
 
         public int getReturnCount()
             {
-            throw new UnsupportedOperationException();
+            return getParamCount();
             }
 
         public Parameter getParam(int iArg)
             {
-            throw new UnsupportedOperationException();
+            return f_aParams[iArg];
             }
 
         @Override
@@ -520,8 +535,25 @@ public class xRTFunction
         @Override
         public String toString()
             {
-            return "Native function: " + f_op;
+            StringBuilder sb = new StringBuilder();
+            sb.append(getName())
+              .append('(');
+            for (int i = 0, c = getParamCount(); i < c; ++i)
+                {
+                if (i > 0)
+                    {
+                    sb.append(", ");
+                    }
+                sb.append(getParam(i));
+                }
+            sb.append(")=")
+              .append(f_op);
+            return sb.toString();
             }
+
+        final protected xService.NativeOperation f_op;
+        final protected String                   f_sName;
+        final protected Parameter[]              f_aParams;
         }
 
     // one parameter bound function
@@ -983,7 +1015,7 @@ public class xRTFunction
     /**
      * @return true iff all the arguments are immutable
      */
-    static private boolean validateImmutable(ServiceContext ctx, MethodStructure method,
+    private static boolean validateImmutable(ServiceContext ctx, MethodStructure method,
                                              ObjectHandle[] ahArg)
         {
         // Note: this logic could be moved to ServiceContext.sendInvokeXXX()

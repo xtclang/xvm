@@ -3255,7 +3255,7 @@ public class ConstantPool
      *
      * @return the function type
      */
-    public TypeConstant buildFunctionType(TypeConstant[] atypeParams, TypeConstant[] atypeReturns)
+    public TypeConstant buildFunctionType(TypeConstant[] atypeParams, TypeConstant... atypeReturns)
         {
         return ensureParameterizedTypeConstant(
                 typeFunction(),

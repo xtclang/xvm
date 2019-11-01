@@ -10,6 +10,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
@@ -31,7 +32,10 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
+import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 
@@ -313,6 +317,7 @@ public class xRTType
             {
             return getType().getParamType(0);
             }
+
         public TypeConstant getOuterType()
             {
             return getType().getParamType(1);
@@ -351,22 +356,145 @@ public class xRTType
      */
     public int getConstructorsProperty(Frame frame, TypeHandle hType, int iReturn)
         {
-        TypeConstant                          typeTarget  = hType.getDataType();
-        Map<MethodConstant, MethodInfo>       mapMethods  = typeTarget.ensureTypeInfo().getMethods();
-        ArrayList<xRTFunction.FunctionHandle> listHandles = new ArrayList<>();
-        for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
+        // the actual construction process uses a "construct" function as a structural initializer
+        // and an optional "finally" method as a post-object-instantiation (i.e. first time that
+        // "this" object exists) method. reflection hides this complicated process, and instead
+        // pretends that each constructor is a factory function that returns an instance of the
+        // target type. since each constructor has its own unique sequence of parameter types, the
+        // exact type of a resulting array of these factory functions is not expressible, so instead
+        // we use "Array<Function<<>, <TargetType>>>", i.e. an array of functions that have zero or
+        // more parameters and return the TargetType
+
+        // to have constructors, the type must be a class, it must not be abstract, it must not be a
+        // singleton, and all three of these conditions are checked by TypeInfo.isNewable().
+        // additionally,
+        // TODO GG it must be part of the type system of the current container (which means that the
+        //         type is a class of a module that is loaded in this container, or shared with this
+        //         container from its parent container, or loaded in a container that is nested
+        //         within this container)
+        // TODO verify that pure type is not newable
+        TypeConstant typeTarget = hType.getDataType();
+        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+
+        // each of the generated constructor functions (not the "construct" functions) for a virtual
+        // child will require a parent reference to be passed as the first argument
+        TypeConstant typeParent = null;
+        if (infoTarget.isVirtualChild())
             {
-            MethodInfo info = entry.getValue();
-            if (info.isConstructor())
-                {
-                // TODO we need to create a factory "T function(a,b,c,...)" that does a "return new T(a,b,c,...)"
-                // listHandles.add(xFunction.makeHandle(info.getHead().getMethodStructure()));
-                }
+            typeParent = hType.getOuterType();
+            assert typeParent != null;
+            assert !typeParent.equals(pool().typeObject());
             }
-        xRTFunction.FunctionHandle[] ahFunctions = listHandles.toArray(new xRTFunction.FunctionHandle[0]);
-        ObjectHandle.ArrayHandle     hArray      = ensureMethodArrayTemplate().createArrayHandle(
-                ensureMethodArray(typeTarget), ahFunctions);
+
+        FunctionHandle[] ahFunctions;
+        if (infoTarget.isNewable())
+            {
+            ConstantPool pool       = frame.poolContext();
+            TypeConstant typeStruct = pool.ensureAccessTypeConstant(typeTarget, Constants.Access.STRUCT);
+
+            ArrayList<FunctionHandle> listHandles   = new ArrayList<>();
+            boolean                   fStructConstr = false;
+            for (MethodConstant idConstr : infoTarget.findMethods("construct", -1, TypeInfo.MethodKind.Constructor))
+                {
+                TypeConstant[] atypeParams = idConstr.getRawParams();
+                if (atypeParams.length == 1 && atypeParams[0].equals(typeStruct))
+                    {
+                    fStructConstr = true;
+                    }
+
+                MethodInfo      infoMethod = infoTarget.getMethodById(idConstr);
+                MethodStructure method     = infoMethod.getTopmostMethodStructure(infoTarget);
+                Parameter[]     aParams    = method.getParamArray();
+
+                // each constructor function will be of a certain type, which differs only in the
+                // additional parameters that each constructor has; for a virtual child, all of the
+                // parameters are shifted to the right by one to prepend a "parent" parameter
+                if (typeParent != null)
+                    {
+                    int cParams = atypeParams.length;
+                    assert cParams == aParams.length;
+
+                    // add the required parent reference as a parameter type
+                    TypeConstant[] atypeNew = new TypeConstant[cParams + 1];
+                    atypeNew[0] = typeParent;
+                    System.arraycopy(atypeParams, 0, atypeNew, 1, cParams);
+
+                    // add the required parent reference as a parameter
+                    Parameter[] aParamsNew = new Parameter[cParams + 1];
+                    aParamsNew[0] = new Parameter(pool, typeParent, "0", null, false, 0, false);
+                    for (int i = 0; i < cParams; ++i)
+                        {
+                        Parameter param = aParams[i];
+                        assert !param.isTypeParameter();
+                        aParamsNew[i+1] = new Parameter(pool, param.getType(), param.getName(),
+                                param.getDefaultValue(), false, i+1, false);
+                        }
+
+                    atypeParams = atypeNew;
+                    aParams     = aParamsNew;
+                    }
+
+                TypeConstant typeConstr = pool.buildFunctionType(atypeParams, typeTarget);
+                listHandles.add(new xRTFunction.NativeFunctionHandle(
+                        new Constructor(), typeConstr, "construct", aParams));
+                }
+
+            if (!fStructConstr)
+                {
+                // add a struct constructor (e.g. for deserialization)
+                TypeConstant[] atypeParams;
+                Parameter[]    aParams;
+                if (typeParent == null)
+                    {
+                    atypeParams = new TypeConstant[] {typeStruct};
+                    aParams     = new Parameter[]
+                                    {
+                                    new Parameter(pool, typeStruct, "0", null, false, 0, false)
+                                    };
+                    }
+                else
+                    {
+                    atypeParams = new TypeConstant[] {typeParent, typeStruct};
+                    aParams     = new Parameter[]
+                                    {
+                                    new Parameter(pool, typeParent, "0", null, false, 0, false),
+                                    new Parameter(pool, typeStruct, "1", null, false, 1, false)
+                                    };
+                    }
+
+                TypeConstant typeConstr = pool.buildFunctionType(atypeParams, typeTarget);
+                listHandles.add(new xRTFunction.NativeFunctionHandle(
+                        new Constructor(), typeConstr, "construct", aParams));
+                }
+
+            ahFunctions = listHandles.toArray(new FunctionHandle[0]);
+            }
+        else
+            {
+            ahFunctions = new FunctionHandle[0];
+            }
+
+        ObjectHandle.ArrayHandle hArray = ensureFunctionArrayTemplate().createArrayHandle(
+                ensureConstructorArray(typeTarget, typeParent), ahFunctions);
         return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
+     * TODO GG
+     */
+    public class Constructor
+        implements xService.NativeOperation
+        {
+        public Constructor()
+            {
+            // TODO
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle[] ahArg, int iReturn)
+            {
+            return 0;
+            }
         }
 
     /**
@@ -383,9 +511,9 @@ public class xRTType
      */
     public int getFunctionsProperty(Frame frame, TypeHandle hType, int iReturn)
         {
-        TypeConstant                          typeTarget  = hType.getDataType();
-        Map<MethodConstant, MethodInfo>       mapMethods  = typeTarget.ensureTypeInfo().getMethods();
-        ArrayList<xRTFunction.FunctionHandle> listHandles = new ArrayList<>(mapMethods.size());
+        TypeConstant                    typeTarget  = hType.getDataType();
+        Map<MethodConstant, MethodInfo> mapMethods  = typeTarget.ensureTypeInfo().getMethods();
+        ArrayList<FunctionHandle>       listHandles = new ArrayList<>(mapMethods.size());
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
             MethodInfo info = entry.getValue();
@@ -394,8 +522,8 @@ public class xRTType
                 listHandles.add(xRTFunction.makeHandle(info.getHead().getMethodStructure()));
                 }
             }
-        xRTFunction.FunctionHandle[] ahFunctions = listHandles.toArray(new xRTFunction.FunctionHandle[0]);
-        ObjectHandle.ArrayHandle     hArray      = ensureFunctionArrayTemplate().createArrayHandle(
+        FunctionHandle[]         ahFunctions = listHandles.toArray(new FunctionHandle[0]);
+        ObjectHandle.ArrayHandle hArray      = ensureFunctionArrayTemplate().createArrayHandle(
                 ensureFunctionArray(), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
@@ -644,10 +772,10 @@ public class xRTType
         return template;
         }
 
-    private xArray TYPE_ARRAY_TEMPLATE;
-    private xArray PROPERTY_ARRAY_TEMPLATE;
-    private xArray METHOD_ARRAY_TEMPLATE;
-    private xArray FUNCTION_ARRAY_TEMPLATE;
+    private static xArray TYPE_ARRAY_TEMPLATE;
+    private static xArray PROPERTY_ARRAY_TEMPLATE;
+    private static xArray METHOD_ARRAY_TEMPLATE;
+    private static xArray FUNCTION_ARRAY_TEMPLATE;
 
 
     // ----- ClassComposition caching and helpers --------------------------------------------------
@@ -727,22 +855,40 @@ public class xRTType
         }
 
     /**
-     * @return the ClassComposition for an Array of Constructor
+     * @return the TypeConstant for a Constructor
      */
-    public ClassComposition ensureConstructorArray(TypeConstant typeTarget)
+    public TypeConstant ensureConstructorType(TypeConstant typeTarget, TypeConstant typeParent)
         {
         assert typeTarget != null;
         ConstantPool pool = ConstantPool.getCurrentPool();
-        TypeConstant typeConstructorArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                pool.ensureParameterizedTypeConstant(pool.typeFunction(), pool.typeTuple(),
-                pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeTarget)));
-        ClassComposition clz = f_templates.resolveClass(typeConstructorArray);
-        return clz;
+        TypeConstant typeParams  = typeParent == null
+                ? pool.typeTuple()
+                : pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeParent);
+        TypeConstant typeReturns = pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeTarget);
+        return pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeParams, typeReturns);
         }
 
-    private ClassComposition TYPE_ARRAY;
-    private ClassComposition CONSTANT_ARRAY;
-    private ClassComposition FUNCTION_ARRAY;
+    /**
+     * @return the ClassComposition for an Array of Constructor
+     */
+    public ClassComposition ensureConstructorArray(TypeConstant typeTarget, TypeConstant typeParent)
+        {
+        ConstantPool pool = ConstantPool.getCurrentPool();
+
+        assert typeTarget != null;
+        if (typeParent == null)
+            {
+            typeParent = pool.typeObject();
+            }
+
+        TypeConstant typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                ensureConstructorType(typeTarget, typeParent));
+        return f_templates.resolveClass(typeArray);
+        }
+
+    private static ClassComposition TYPE_ARRAY;
+    private static ClassComposition CONSTANT_ARRAY;
+    private static ClassComposition FUNCTION_ARRAY;
 
 
     // ----- helpers -------------------------------------------------------------------------------

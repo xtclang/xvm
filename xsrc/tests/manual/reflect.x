@@ -167,11 +167,11 @@ module TestReflection.xqiz.it
         console.println($"{funcs.size} functions:");
         for (Function f : funcs)
             {
-            assert:debug;
             console.println($"func={f}");
             }
 
         // TODO CP
         console.println($"methods={t.methods}, properties={t.properties}");
+        console.println($"constructors={t.constructors}");
         }
     }
