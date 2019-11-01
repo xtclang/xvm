@@ -5,34 +5,31 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.TypeInfo;
+
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.template.xConst;
-import org.xvm.runtime.template.xEnum;
-import org.xvm.runtime.template.xString;
+import org.xvm.util.Handy;
 
 
 /**
- * TODO:
+ * Native Method implementation.
  */
 public class xRTMethod
-    extends xConst
+        extends xRTSignature
     {
     public static xRTMethod INSTANCE;
-    public static TypeConstant TYPE;
-    public static xEnum ACCESS;
 
     public xRTMethod(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -41,26 +38,17 @@ public class xRTMethod
         if (fInstance)
             {
             INSTANCE = this;
-            TYPE     = getCanonicalType();
             }
-        }
-
-    @Override
-    public boolean isGenericHandle()
-        {
-        return false;
         }
 
     @Override
     public void initDeclared()
         {
-        ACCESS = (xEnum) f_templates.getTemplate("reflect.Access");
-
-        markNativeProperty("name");
-        markNativeProperty("conditionalResult");
         markNativeProperty("access");
 
-        getCanonicalType().invalidateTypeInfo();
+        // TODO
+
+        super.initDeclared();
         }
 
     @Override
@@ -82,14 +70,12 @@ public class xRTMethod
 
         switch (sPropName)
             {
-            case "name":
-                return frame.assignValue(iReturn, xString.makeHandle(hMethod.f_idMethod.getName()));
-
             case "access":
                 Constants.Access access  = hMethod.getMethodInfo().getAccess();
                 ObjectHandle     hAccess = xRTType.INSTANCE.makeAccessHandle(frame, access);
                 return frame.assignValue(iReturn, hAccess);
             }
+
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
@@ -97,24 +83,22 @@ public class xRTMethod
         {
         ConstantPool pool = ConstantPool.getCurrentPool();
 
-        SignatureConstant sig       = idMethod.getSignature();
-        TypeConstant      typeRet   = pool.ensureParameterizedTypeConstant(pool.typeTuple(), sig.getRawReturns());
-        TypeConstant      typeArg   = pool.ensureParameterizedTypeConstant(pool.typeTuple(), sig.getRawParams());
-        ClassComposition  clzMethod = INSTANCE.ensureParameterizedClass(pool, typeTarget, typeArg, typeRet);
+        SignatureConstant sig        = idMethod.getSignature();
+        TypeConstant      typeRet    = pool.ensureParameterizedTypeConstant(pool.typeTuple(), sig.getRawReturns());
+        TypeConstant      typeArg    = pool.ensureParameterizedTypeConstant(pool.typeTuple(), sig.getRawParams());
+        TypeConstant      typeMethod = pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget, typeArg, typeRet);
+        // REVIEW GG actual vs mask type here?
+        ClassComposition  clzMethod  = INSTANCE.ensureClass(typeMethod);
 
-        return new MethodHandle(clzMethod, idMethod);
+        return new MethodHandle(clzMethod, idMethod, typeMethod);
         }
 
     public static class MethodHandle
-            extends ObjectHandle
+            extends SignatureHandle
         {
-        public final MethodConstant f_idMethod;
-
-        protected MethodHandle(TypeComposition clazz, MethodConstant idMethod)
+        protected MethodHandle(TypeComposition clazz, MethodConstant idMethod, TypeConstant type)
             {
-            super(clazz);
-
-            f_idMethod = idMethod;
+            super(clazz, idMethod, (MethodStructure) idMethod.getComponent(), type);
             }
 
         public TypeConstant getTargetType()
@@ -133,9 +117,27 @@ public class xRTMethod
             }
 
         @Override
+        public boolean equals(Object obj)
+            {
+            if (obj == this)
+                {
+                return true;
+                }
+
+            if (obj instanceof MethodHandle)
+                {
+                MethodHandle that = (MethodHandle) obj;
+                return Handy.equals(this.f_idMethod, that.f_idMethod)
+                    && Handy.equals(this.f_type    , that.f_type    );
+                }
+
+            return false;
+            }
+
+        @Override
         public String toString()
             {
-            return super.toString() + f_idMethod;
+            return "Method: " + getMethod();
             }
         }
     }

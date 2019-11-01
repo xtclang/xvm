@@ -392,8 +392,8 @@ public class xRTType
                 }
             }
         xRTFunction.FunctionHandle[] ahFunctions = listHandles.toArray(new xRTFunction.FunctionHandle[0]);
-        ObjectHandle.ArrayHandle     hArray      = ensureMethodArrayTemplate().createArrayHandle(
-                ensureMethodArray(typeTarget), ahFunctions);
+        ObjectHandle.ArrayHandle     hArray      = ensureFunctionArrayTemplate().createArrayHandle(
+                ensureFunctionArray(), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -670,7 +670,7 @@ public class xRTType
     public ClassComposition ensurePropertyArray(TypeConstant typeTarget)
         {
         assert typeTarget != null;
-        ConstantPool pool = INSTANCE.pool();
+        ConstantPool pool = ConstantPool.getCurrentPool();
         TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                 pool.ensureParameterizedTypeConstant(pool.typeProperty(), typeTarget));
         ClassComposition clz = f_templates.resolveClass(typePropertyArray);
@@ -699,7 +699,7 @@ public class xRTType
     public ClassComposition ensureMethodArray(TypeConstant typeTarget)
         {
         assert typeTarget != null;
-        ConstantPool pool = INSTANCE.pool();
+        ConstantPool pool = ConstantPool.getCurrentPool();
         TypeConstant typeMethodArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                 pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget));
         ClassComposition clz = f_templates.resolveClass(typeMethodArray);
@@ -728,7 +728,7 @@ public class xRTType
     public ClassComposition ensureConstructorArray(TypeConstant typeTarget)
         {
         assert typeTarget != null;
-        ConstantPool pool = INSTANCE.pool();
+        ConstantPool pool = ConstantPool.getCurrentPool();
         TypeConstant typeConstructorArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                 pool.ensureParameterizedTypeConstant(pool.typeFunction(), pool.typeTuple(),
                 pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeTarget)));

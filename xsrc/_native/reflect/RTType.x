@@ -65,8 +65,8 @@ const RTType<DataType, OuterType>
         // TODO GG - I shouldn't need to tell it that it is mapping to Int
         // return 6 + properties.iterator().map(p -> p.estimateStringLength()).reduce(0, sum)
         //          + methods   .iterator().map(m -> m.estimateStringLength()).reduce(0, sum);
-        return 6 + properties.iterator().map<Iterator<Int>>(p -> p.estimateStringLength()).reduce(0, sum)
-                 + methods   .iterator().map<Iterator<Int>>(m -> m.estimateStringLength()).reduce(0, sum);
+        return 6 + properties.iterator().map<Iterator<Int>>(p -> p.name.size+2).reduce(0, sum)
+                 + methods   .iterator().map<Iterator<Int>>(m -> m.name.size+4).reduce(0, sum);
         }
 
     @Override
@@ -91,7 +91,7 @@ const RTType<DataType, OuterType>
                     {
                     appender.add(", ");
                     }
-                property.appendTo(appender);
+                property.name.appendTo(appender);
                 }
 
             for (Method method : methods)
@@ -104,7 +104,8 @@ const RTType<DataType, OuterType>
                     {
                     appender.add(", ");
                     }
-                method.appendTo(appender);
+                method.name.appendTo(appender);
+                appender.add("())");
                 }
 
             appender.add(']');

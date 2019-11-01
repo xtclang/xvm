@@ -150,19 +150,32 @@ module TestReflection.xqiz.it
                 {
                 return x.toInt() + y.toInt();
                 }
+
+            static String bar(Int n)
+                {
+                return n.toString();
+                }
             }
 
         Point p = new Point<Int>(3, 4, "world");
         console.println($"Point p={p}, sum={p.sum}, foo()={p.foo()}");
 
         Type t = &p.actualType;
-
-        // TODO: GG console.println($"Type={t}, foo={p.&foo()}");
+        // TODO GG -> console.println($"Type={t}, methods={t.methods}, properties={t.properties}, foo={p.&foo()}");
         console.println($"Type={t}");
 
-        console.println($"foo={p.foo}");
+        Function[] funcs = t.functions;
+        console.println($"{funcs.size} functions:");
+        for (Function f : funcs)
+            {
+            assert:debug;
+            console.println($"func={f}");
+            }
+
+        // TODO GG
+        console.println($"\nfoo={p.&foo}");
 
         // TODO CP
-//        console.println($"methods={t.methods}, properties={t.properties}");
+        console.println($"\nmethods={t.methods}, properties={t.properties}");
         }
     }
