@@ -121,7 +121,7 @@ public class xRTSignature
      */
     public int getParamsProperty(Frame frame, SignatureHandle hFunc, int iReturn)
         {
-        return new RTArrayConstructor(hFunc.getMethod(), false, iReturn).doNext(frame);
+        return new RTArrayConstructor(hFunc, false, iReturn).doNext(frame);
         }
 
     /**
@@ -129,7 +129,7 @@ public class xRTSignature
      */
     public int getReturnsProperty(Frame frame, SignatureHandle hFunc, int iReturn)
         {
-        return new RTArrayConstructor(hFunc.getMethod(), true, iReturn).doNext(frame);
+        return new RTArrayConstructor(hFunc, true, iReturn).doNext(frame);
         }
 
     /**
@@ -369,11 +369,6 @@ public class xRTSignature
         {
         // ----- constructors -----------------------------------------------------------------
 
-        protected SignatureHandle(TypeComposition clz, MethodStructure function)
-            {
-            this(clz, function.getIdentityConstant(), function, function.getIdentityConstant().getType());
-            }
-
         protected SignatureHandle(TypeComposition clz, MethodConstant idMethod, MethodStructure method, TypeConstant type)
             {
             super(clz);
@@ -432,17 +427,24 @@ public class xRTSignature
 
         public int getParamCount()
             {
-            return getMethod().getParamCount();
+            MethodStructure method = getMethod();
+            return method == null ? 0 : method.getParamCount();
             }
 
-        public int getUnboundParamCount()
+        public int getReturnCount()
             {
-            return getMethod().getParamCount();
+            MethodStructure method = getMethod();
+            return method == null ? 0 : method.getReturnCount();
             }
 
-        public Parameter getUnboundParam(int i)
+        public Parameter getParam(int iArg)
             {
-            return getMethod().getParam(i);
+            return getMethod().getParam(iArg);
+            }
+
+        public Parameter getReturn(int iArg)
+            {
+            return getMethod().getReturn(iArg);
             }
 
         public int getVarCount()
@@ -522,12 +524,12 @@ public class xRTSignature
     class RTArrayConstructor
             implements Frame.Continuation
         {
-        RTArrayConstructor(MethodStructure method, boolean fRetVals, int iReturn)
+        protected RTArrayConstructor(SignatureHandle hMethod, boolean fRetVals, int iReturn)
             {
-            this.method     = method;
+            this.hMethod    = hMethod;
             this.fRetVals   = fRetVals;
-            this.template   = fRetVals ? ensureRTReturnTemplate()    : ensureRTParamTemplate();
-            this.cElements  = method == null ? 0 : fRetVals ? method.getReturnCount() : method.getParamCount();
+            this.template   = fRetVals ? ensureRTReturnTemplate() : ensureRTParamTemplate();
+            this.cElements  = fRetVals ? hMethod.getReturnCount() : hMethod.getParamCount();
             this.ahElement  = new ObjectHandle[cElements];
             this.construct  = template.f_struct.findMethod("construct", fRetVals ? 2 : 5);
             this.ahParams   = new ObjectHandle[fRetVals ? 2 : 5];
@@ -546,7 +548,7 @@ public class xRTSignature
             {
             while (++index < cElements)
                 {
-                Parameter        param = fRetVals ? method.getReturn(index) : method.getParam(index);
+                Parameter        param = fRetVals ? hMethod.getReturn(index) : hMethod.getParam(index);
                 TypeConstant     type  = param.getType();
                 ClassComposition clz   = fRetVals ? ensureRTReturn(type) : ensureRTParameter(type);
                 String           sName = param.getName();
@@ -591,7 +593,7 @@ public class xRTSignature
             return frameCaller.assignValue(iReturn, hArray);
             }
 
-        private MethodStructure method;
+        private SignatureHandle hMethod;
         private int             cElements;
         private boolean         fRetVals;
         private ObjectHandle[]  ahElement;

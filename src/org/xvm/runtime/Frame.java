@@ -1644,8 +1644,7 @@ public class Frame
                     // simply show the calling function
                     MethodStructure fnCaller = fiber.f_fnCaller;
                     sb.append("\n  ")
-                      .append(formatFrameDetails(fiberCaller.f_context, fnCaller,
-                              iPC, fnCaller == null ? null : fnCaller.getOps(), null));
+                      .append(formatFrameDetails(fiberCaller.f_context, fnCaller, -1, null, null));
                     break;
                     }
                 fiber = fiberCaller;

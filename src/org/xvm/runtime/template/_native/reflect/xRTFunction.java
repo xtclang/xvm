@@ -249,14 +249,14 @@ public class xRTFunction
             MethodStructure     method   = getMethod();
             if (method != null)
                 {
-                Parameter parameter = method.getParam(iArg + calculateShift(iArg));
+                Parameter parameter = getParam(iArg);
                 if (parameter.isTypeParameter())
                     {
                     TypeHandle hType = (TypeHandle) hArg;
                     resolver = sName ->
                         sName.equals(parameter.getName())
-                        ? hType.getDataType()
-                        : null;
+                            ? hType.getDataType()
+                            : null;
                     }
                 }
 
@@ -267,7 +267,9 @@ public class xRTFunction
         /**
          * Calculate a shift for a given argument index indicating the difference between
          * the specified argument index and the actual index of the function parameter that
-         * corresponds to this argument.
+         * corresponds to this argument. This allows to retrieve the parameter info as follows:
+         * <p/>
+         * {@code Parameter param = getMethod().getParam(iArg + calculateShift(iArg));}
          *
          * @param iArg the argument to calculate the shift of
          *
@@ -424,14 +426,14 @@ public class xRTFunction
             return m_hDelegate.getParamCount();
             }
 
-        public int getUnboundParamCount()
+        public int getReturnCount()
             {
-            return m_hDelegate.getUnboundParamCount();
+            return m_hDelegate.getReturnCount();
             }
 
-        public Parameter getUnboundParam(int i)
+        public Parameter getParam(int iArg)
             {
-            return m_hDelegate.getUnboundParam(i);
+            return m_hDelegate.getParam(iArg);
             }
 
         @Override
@@ -499,12 +501,12 @@ public class xRTFunction
             throw new UnsupportedOperationException();
             }
 
-        public int getUnboundParamCount()
+        public int getReturnCount()
             {
             throw new UnsupportedOperationException();
             }
 
-        public Parameter getUnboundParam(int i)
+        public Parameter getParam(int iArg)
             {
             throw new UnsupportedOperationException();
             }
@@ -593,7 +595,7 @@ public class xRTFunction
             {
             if (m_iArg >= 0)
                 {
-                int cMove = getParamCount() - (m_iArg + 1); // number of args to move to the right
+                int cMove = super.getParamCount() - (m_iArg + 1); // number of args to move to the right
                 if (cMove > 0)
                     {
                     System.arraycopy(ahVar, m_iArg, ahVar, m_iArg + 1, cMove);
@@ -602,6 +604,19 @@ public class xRTFunction
                 }
 
             super.addBoundArguments(ahVar);
+            }
+
+        @Override
+        public int getParamCount()
+            {
+            int cParams = super.getParamCount();
+            return m_iArg == -1 ? cParams : cParams - 1;
+            }
+
+        @Override
+        public Parameter getParam(int iArg)
+            {
+            return getMethod().getParam(iArg + calculateShift(iArg));
             }
 
         @Override
