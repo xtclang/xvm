@@ -1592,8 +1592,16 @@ public class InvocationExpression
 
             TypeConstant typeFn = atypeReturn[0];
 
-            atypeReturn = pool.extractFunctionReturns(typeFn);
-            if (atypeReturn == null)
+            if (typeFn.isA(pool.typeFunction()))
+                {
+                atypeReturn = pool.extractFunctionReturns(typeFn);
+                }
+            else if (pool.typeFunction().isA(typeFn)) // e.g. Object
+                {
+                // whatever the invocation finds is going to work
+                atypeReturn = TypeConstant.NO_TYPES;
+                }
+            else
                 {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE, "Function", typeFn.getValueString());
                 return null;

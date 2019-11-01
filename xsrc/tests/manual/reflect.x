@@ -115,18 +115,17 @@ module TestReflection.xqiz.it
         console.println($"func name={f.name}");
         console.println($"func type={&f.actualType}");
 
-        // TODO GG - we regressed the "&" and "_" bind-but-do-not-invoke functionality
         void foo(Int x, String s) {}
-        // val f2 = &foo(1, "hello");
-        val f3  =  foo;
-        val f3b = &foo;
-        // val f4  =  foo(_, _);
-        // val f4b = &foo(_, _);
-        // val f5  =  foo(1, _);
-        // val f5b = &foo(1, _);
-        // val f6  =  foo(_, "hello");
-        // val f6b = &foo(_, "hello");
-        // val f7b = &foo(7, "hello");
+
+        val f2  = &foo(1, "hello");  console.println($"f2  = {f2 } -> {f2 ()}");
+        val f3  =  foo;              console.println($"f3  = {f3 } -> {f3 (1, "hello")}");
+        val f3b = &foo;              console.println($"f3b = {f3b} -> {f3b(1, "hello")}");
+        val f4  =  foo(_, _);        console.println($"f4  = {f4 } -> {f4 (1, "hello")}");
+        val f4b = &foo(_, _);        console.println($"f4b = {f4b} -> {f4b(1, "hello")}");
+        val f5  =  foo(1, _);        console.println($"f5  = {f5 } -> {f5 ("hello")}");
+        val f5b = &foo(1, _);        console.println($"f5b = {f5b} -> {f5b("hello")}");
+        val f6  =  foo(_, "hello");  console.println($"f6  = {f6 } -> {f6 (1)}");
+        val f6b = &foo(_, "hello");  console.println($"f6b = {f6b} -> {f6b(1)}");
         }
 
     void testFuncs2()
@@ -161,7 +160,7 @@ module TestReflection.xqiz.it
         console.println($"Point p={p}, sum={p.sum}, foo()={p.foo()}");
 
         Type t = &p.actualType;
-        // TODO GG -> console.println($"Type={t}, methods={t.methods}, properties={t.properties}, foo={p.&foo()}");
+        console.println($"Type={t}, foo={p.&foo()}");
         console.println($"Type={t}");
 
         Function[] funcs = t.functions;
@@ -172,10 +171,7 @@ module TestReflection.xqiz.it
             console.println($"func={f}");
             }
 
-        // TODO GG p.&foo()
-        console.println($"\nfoo={p.&foo}");
-
         // TODO CP
-        console.println($"\nmethods={t.methods}, properties={t.properties}");
+        console.println($"methods={t.methods}, properties={t.properties}");
         }
     }
