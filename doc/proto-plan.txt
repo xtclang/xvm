@@ -9,13 +9,7 @@
 
 - createConst() processing for Set, Map etc.
 
-- Property and Method native implementation
-
-- Class, Type native implementation
-
 - a new VAR_D like op-code to provide additional parameters (e.g. injection name)
-
-- Type: by-method comparison
 
 - Move op-code: "safe wrapper" logic
 
@@ -69,6 +63,12 @@
         }
     }
 
+- allow NEW_G to use dynamic type; that would allow the following:
+    Array createArray(Type type)
+        {
+        return new Array<type.DataType>();
+        }
+
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
@@ -76,5 +76,3 @@ $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
     (hence the use of ConcurrentHashMap in TemplateRegistry and synchronization in TypeComposition)
 
 - DelegatingIterator could use delegation, but how to describe the delegating type?
-
-
