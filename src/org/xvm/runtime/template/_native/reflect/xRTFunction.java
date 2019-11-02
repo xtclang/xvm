@@ -177,7 +177,8 @@ public class xRTFunction
 
         protected FunctionHandle(TypeConstant type, MethodStructure function)
             {
-            super(INSTANCE.getCanonicalClass(), function == null ? null : function.getIdentityConstant(), function, type);
+            super(INSTANCE.getCanonicalClass(),
+                    function == null ? null : function.getIdentityConstant(), function, type);
             }
 
         protected FunctionHandle(CallChain chain, int nDepth)
@@ -368,7 +369,19 @@ public class xRTFunction
         @Override
         public String toString()
             {
-            return "Function: " + getMethod();
+            StringBuilder sb = new StringBuilder();
+            sb.append(getName())
+              .append('(');
+            for (int i = 0, c = getParamCount(); i < c; ++i)
+                {
+                if (i > 0)
+                    {
+                    sb.append(", ");
+                    }
+                sb.append(getParam(i).getName());
+                }
+            sb.append(")");
+            return sb.toString();
             }
         }
 
@@ -426,14 +439,34 @@ public class xRTFunction
             return m_hDelegate.getParamCount();
             }
 
+        @Override
+        public Parameter getParam(int iArg)
+            {
+            return m_hDelegate.getParam(iArg);
+            }
+
+        @Override
+        public TypeConstant getParamType(int iArg)
+            {
+            return m_hDelegate.getParamType(iArg);
+            }
+
+        @Override
         public int getReturnCount()
             {
             return m_hDelegate.getReturnCount();
             }
 
-        public Parameter getParam(int iArg)
+        @Override
+        public Parameter getReturn(int iArg)
             {
-            return m_hDelegate.getParam(iArg);
+            return m_hDelegate.getReturn(iArg);
+            }
+
+        @Override
+        public TypeConstant getReturnType(int iArg)
+            {
+            return m_hDelegate.getReturnType(iArg);
             }
 
         @Override
@@ -463,39 +496,16 @@ public class xRTFunction
         }
 
     /**
-     * TODO GG explain why this thing exists and where it is used and why it can't answer reflection questions
+     * Native function handle is always fully bound.
      */
     public static class NativeFunctionHandle
             extends FunctionHandle
         {
-        public NativeFunctionHandle(xService.NativeOperation op, TypeConstant type, String sName, Parameter[] aParams)
-            {
-            super(type, null);
-
-            f_op      = op;
-            f_sName   = sName;
-            f_aParams = aParams;
-            }
-
         public NativeFunctionHandle(xService.NativeOperation op)
             {
             super(INSTANCE.getCanonicalType(), null);
 
-            f_op      = op;
-            f_sName   = "native";
-            f_aParams = Parameter.NO_PARAMS;
-            }
-
-        @Override
-        public String getName()
-            {
-            return f_sName;
-            }
-
-        @Override
-        public boolean isAsync()
-            {
-            return false;
+            f_op = op;
             }
 
         @Override
@@ -505,55 +515,12 @@ public class xRTFunction
             }
 
         @Override
-        public MethodStructure getMethod()
-            {
-            throw new UnsupportedOperationException();
-            }
-
-        @Override
-        public int getParamCount()
-            {
-            return f_aParams.length;
-            }
-
-        public int getReturnCount()
-            {
-            return getParamCount();
-            }
-
-        public Parameter getParam(int iArg)
-            {
-            return f_aParams[iArg];
-            }
-
-        @Override
-        public int getVarCount()
-            {
-            return getParamCount();
-            }
-
-        @Override
         public String toString()
             {
-            StringBuilder sb = new StringBuilder();
-            sb.append(getName())
-              .append('(');
-            for (int i = 0, c = getParamCount(); i < c; ++i)
-                {
-                if (i > 0)
-                    {
-                    sb.append(", ");
-                    }
-                sb.append(getParam(i));
-                }
-            sb.append(")=")
-              .append(f_op);
-            return sb.toString();
+            return "NativeFunctionHandle";
             }
 
         final protected xService.NativeOperation f_op;
-        final protected String                   f_sName;
-        final protected Parameter[]              f_aParams;
         }
 
     // one parameter bound function
@@ -652,6 +619,13 @@ public class xRTFunction
             }
 
         @Override
+        public TypeConstant getParamType(int iArg)
+            {
+            TypeConstant typeFn = getType(); // the type already reflects bound arguments
+            return typeFn.getConstantPool().extractFunctionParams(typeFn)[iArg];
+            }
+
+        @Override
         public boolean equals(Object obj)
             {
             if (super.equals(obj) && obj instanceof SingleBoundHandle)
@@ -676,11 +650,6 @@ public class xRTFunction
          * The bound argument value.
          */
         protected ObjectHandle m_hArg;
-
-        /**
-         * Cached resolved type of a partially bound function represented by this handler.
-         */
-        protected TypeConstant m_type;
         }
 
     /**

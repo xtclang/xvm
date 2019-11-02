@@ -10,7 +10,6 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -101,7 +100,7 @@ public class xRTMethod
 
         public TypeConstant getTargetType()
             {
-            return getType().resolveGenericType("TargetType");
+            return getType().resolveGenericType("Target");
             }
 
         public TypeInfo getTargetInfo()
@@ -112,6 +111,18 @@ public class xRTMethod
         public MethodInfo getMethodInfo()
             {
             return getTargetInfo().getMethodById(f_idMethod);
+            }
+
+        @Override
+        public TypeConstant getParamType(int iArg)
+            {
+            return getMethodInfo().getIdentity().getSignature().getRawParams()[iArg];
+            }
+
+        @Override
+        public TypeConstant getReturnType(int iArg)
+            {
+            return getMethodInfo().getIdentity().getSignature().getRawReturns()[iArg];
             }
 
         @Override

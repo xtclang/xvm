@@ -369,7 +369,8 @@ public class xRTSignature
         {
         // ----- constructors -----------------------------------------------------------------
 
-        protected SignatureHandle(TypeComposition clz, MethodConstant idMethod, MethodStructure method, TypeConstant type)
+        protected SignatureHandle(TypeComposition clz, MethodConstant idMethod,
+                                  MethodStructure method, TypeConstant type)
             {
             super(clz);
 
@@ -413,7 +414,7 @@ public class xRTSignature
                 return id.getName();
                 }
 
-            return "?";
+            return "native";
             }
 
         public MethodStructure getMethod()
@@ -431,15 +432,21 @@ public class xRTSignature
             return method == null ? 0 : method.getParamCount();
             }
 
+        public Parameter getParam(int iArg)
+            {
+            return getMethod().getParam(iArg);
+            }
+
+        public TypeConstant getParamType(int iArg)
+            {
+            TypeConstant typeFn = getType();
+            return typeFn.getConstantPool().extractFunctionParams(typeFn)[iArg];
+            }
+
         public int getReturnCount()
             {
             MethodStructure method = getMethod();
             return method == null ? 0 : method.getReturnCount();
-            }
-
-        public Parameter getParam(int iArg)
-            {
-            return getMethod().getParam(iArg);
             }
 
         public Parameter getReturn(int iArg)
@@ -447,9 +454,16 @@ public class xRTSignature
             return getMethod().getReturn(iArg);
             }
 
+        public TypeConstant getReturnType(int iArg)
+            {
+            TypeConstant typeFn = getType();
+            return typeFn.getConstantPool().extractFunctionReturns(typeFn)[iArg];
+            }
+
         public int getVarCount()
             {
-            return getMethod().getMaxVars();
+            MethodStructure method = getMethod();
+            return method == null ? 0 : method.getMaxVars();
             }
 
         public boolean isAsync()
@@ -548,9 +562,9 @@ public class xRTSignature
             {
             while (++index < cElements)
                 {
-                Parameter        param = fRetVals ? hMethod.getReturn(index) : hMethod.getParam(index);
-                TypeConstant     type  = param.getType();
-                ClassComposition clz   = fRetVals ? ensureRTReturn(type) : ensureRTParameter(type);
+                Parameter        param = fRetVals ? hMethod.getReturn(index)     : hMethod.getParam(index);
+                TypeConstant     type  = fRetVals ? hMethod.getReturnType(index) : hMethod.getParamType(index);
+                ClassComposition clz   = fRetVals ? ensureRTReturn(type)         : ensureRTParameter(type);
                 String           sName = param.getName();
                 ahParams[0] = xInt64.makeHandle(index);
                 ahParams[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);

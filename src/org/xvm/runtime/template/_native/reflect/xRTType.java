@@ -32,7 +32,6 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
-import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
@@ -389,22 +388,23 @@ public class xRTType
         FunctionHandle[] ahFunctions;
         if (infoTarget.isNewable())
             {
-            ConstantPool pool       = frame.poolContext();
-            TypeConstant typeStruct = pool.ensureAccessTypeConstant(typeTarget, Constants.Access.STRUCT);
+            ConstantPool     pool       = frame.poolContext();
+            TypeConstant     typeStruct = pool.ensureAccessTypeConstant(typeTarget, Constants.Access.STRUCT);
+            ClassComposition clzTarget  = f_templates.resolveClass(typeTarget);
 
             ArrayList<FunctionHandle> listHandles   = new ArrayList<>();
             boolean                   fStructConstr = false;
             for (MethodConstant idConstr : infoTarget.findMethods("construct", -1, TypeInfo.MethodKind.Constructor))
                 {
-                TypeConstant[] atypeParams = idConstr.getRawParams();
+                MethodInfo      infoMethod  = infoTarget.getMethodById(idConstr);
+                MethodStructure constructor = infoMethod.getTopmostMethodStructure(infoTarget);
+                Parameter[]     aParams     = constructor.getParamArray();
+
+                TypeConstant[] atypeParams = infoMethod.getSignature().getRawParams();
                 if (atypeParams.length == 1 && atypeParams[0].equals(typeStruct))
                     {
                     fStructConstr = true;
                     }
-
-                MethodInfo      infoMethod = infoTarget.getMethodById(idConstr);
-                MethodStructure method     = infoMethod.getTopmostMethodStructure(infoTarget);
-                Parameter[]     aParams    = method.getParamArray();
 
                 // each constructor function will be of a certain type, which differs only in the
                 // additional parameters that each constructor has; for a virtual child, all of the
@@ -435,8 +435,8 @@ public class xRTType
                     }
 
                 TypeConstant typeConstr = pool.buildFunctionType(atypeParams, typeTarget);
-                listHandles.add(new xRTFunction.NativeFunctionHandle(
-                        new Constructor(), typeConstr, "construct", aParams));
+                listHandles.add(
+                        new ConstructorHandle(clzTarget, typeConstr, constructor, aParams, typeParent != null));
                 }
 
             if (!fStructConstr)
@@ -463,8 +463,8 @@ public class xRTType
                     }
 
                 TypeConstant typeConstr = pool.buildFunctionType(atypeParams, typeTarget);
-                listHandles.add(new xRTFunction.NativeFunctionHandle(
-                        new Constructor(), typeConstr, "construct", aParams));
+                listHandles.add(
+                        new ConstructorHandle(clzTarget, typeConstr, null, aParams, typeParent != null));
                 }
 
             ahFunctions = listHandles.toArray(new FunctionHandle[0]);
@@ -480,21 +480,79 @@ public class xRTType
         }
 
     /**
-     * TODO GG
+     * FunctionHandle that represents a constructor function.
      */
-    public class Constructor
-        implements xService.NativeOperation
+    public static class ConstructorHandle
+            extends FunctionHandle
         {
-        public Constructor()
+        public ConstructorHandle(ClassComposition clzTarget, TypeConstant typeConstruct,
+                                 MethodStructure constructor, Parameter[] aParams, boolean fParent)
             {
-            // TODO
+            super(typeConstruct, constructor);
+
+            f_clzTarget   = clzTarget;
+            f_constructor = constructor;
+            f_aParams     = aParams;
+            f_fParent     = fParent;
             }
 
         @Override
-        public int invoke(Frame frame, ObjectHandle[] ahArg, int iReturn)
+        public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
             {
-            return 0;
+            ObjectHandle hParent = null;
+            if (f_fParent)
+                {
+                hParent = ahArg[0];
+                System.arraycopy(ahArg, 1, ahArg, 0, ahArg.length-1);
+                }
+
+            return f_clzTarget.getTemplate().construct(
+                    frame, f_constructor, f_clzTarget, hParent, ahArg, iReturn);
             }
+
+        @Override
+        public String getName()
+            {
+            return "construct";
+            }
+
+        @Override
+        public int getParamCount()
+            {
+            return f_aParams.length;
+            }
+
+        @Override
+        public Parameter getParam(int iArg)
+            {
+            return f_aParams[iArg];
+            }
+
+        @Override
+        public int getReturnCount()
+            {
+            return 1;
+            }
+
+        @Override
+        public Parameter getReturn(int iArg)
+            {
+            assert iArg == 0;
+            TypeConstant typeTarget = f_clzTarget.getType();
+            return new Parameter(typeTarget.getConstantPool(), typeTarget, null, null, true, 0, false);
+            }
+
+        @Override
+        public TypeConstant getReturnType(int iArg)
+            {
+            assert iArg == 0;
+            return f_clzTarget.getType();
+            }
+
+        final private ClassComposition f_clzTarget;
+        final private MethodStructure  f_constructor;
+        final protected Parameter[]    f_aParams;
+        final private boolean          f_fParent;
         }
 
     /**
