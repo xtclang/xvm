@@ -8,8 +8,8 @@ module TestReflection.xqiz.it
         testMaskReveal();
         testForm();
         testProps();
-        testFuncs();
-        testFuncs2();
+//        testFuncs();
+//        testFuncs2();
         }
 
     const Point(Int x, Int y);
@@ -99,11 +99,15 @@ module TestReflection.xqiz.it
         console.println("\n** testProps");
         const Point(Int x, Int y);
 
+        Point p = new Point(123, 456);
+        console.println($"Point p={p}");
+
         Type t = Point;
         console.println($"Point type={t}");
         for (Property prop : t.properties)
             {
             console.println($"prop={prop}");
+            console.println($"prop.get(p)={prop.get(p)}");
             }
         }
 

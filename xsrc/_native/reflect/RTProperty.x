@@ -2,57 +2,22 @@
  * This is the native runtime implementation of Property.
  */
 const RTProperty<Target, Referent, Implementation extends Ref<Referent>>
-            (String    name,
-             Boolean   constant,
-             Referent? value,
-             Boolean   suppressVar,
-             Boolean   formal,
-             Boolean   hasField,
-             Boolean   injected,
-             Boolean   lazy,
-             Boolean   atomic,
-             Boolean   abstract)
-        extends Property<Target, Referent, Implementation>
-            (name, constant, value, suppressVar, formal, hasField, injected, lazy, atomic, abstract)
+        implements Property<Target, Referent, Implementation>
     {
-    @Override
-    String name;
+    @Override @RO String  name                  .get() { TODO("native"); }
+    @Override @RO Boolean readOnly              .get() { TODO("native"); }
+    @Override @RO Boolean hasUnreachableSetter  .get() { TODO("native"); }
+    @Override @RO Boolean formal                .get() { TODO("native"); }
+    @Override @RO Boolean hasField              .get() { TODO("native"); }
+    @Override @RO Boolean injected              .get() { TODO("native"); }
+    @Override @RO Boolean lazy                  .get() { TODO("native"); }
+    @Override @RO Boolean atomic                .get() { TODO("native"); }
+    @Override @RO Boolean abstract              .get() { TODO("native"); }
 
-    @Override
-    conditional Referent isConstant();
-
-    @Override
-    Boolean readOnly;
-
-    @Override
-    Boolean hasUnreachableSetter;
-
-    @Override
-    Boolean formal;
-
-    @Override
-    Boolean hasField;
-
-    @Override
-    Boolean injected;
-
-    @Override
-    Boolean lazy;
-
-    @Override
-    Boolean atomic;
-
-    @Override
-    Boolean abstract;
-
-    @Override
-    Implementation of(Target target);
-
-    @Override
-    Referent get(Target target);
-
-    @Override
-    void set(Target target, Referent value);
+    @Override conditional Referent isConstant()        { TODO("native"); }
+    @Override Implementation of(Target target)         { TODO("native"); }
+    @Override Referent get(Target target)              { TODO("native"); }
+    @Override void set(Target target, Referent value)  { TODO("native"); }
 
 
     // ----- Stringable methods --------------------------------------------------------------------
@@ -60,12 +25,14 @@ const RTProperty<Target, Referent, Implementation extends Ref<Referent>>
     @Override
     Int estimateStringLength()
         {
-        return name.size;
+        return Referent.estimateStringLength() + 1 + name.size;
         }
 
     @Override
     void appendTo(Appender<Char> appender)
         {
-        appender.add(name);
+        Referent.appendTo(appender);
+        appender.add(' ')
+                .add(name);
         }
     }

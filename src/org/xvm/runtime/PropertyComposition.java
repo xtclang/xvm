@@ -34,7 +34,7 @@ public class PropertyComposition
      * @param clzParent  the parent's ClassComposition
      * @param infoProp   the property name
      */
-    protected PropertyComposition(ClassComposition clzParent, PropertyInfo infoProp)
+    public PropertyComposition(ClassComposition clzParent, PropertyInfo infoProp)
         {
         f_clzParent = clzParent;
         f_infoProp  = infoProp;
@@ -264,6 +264,38 @@ public class PropertyComposition
     public boolean isLazy()
         {
         return f_infoProp.isLazy();
+        }
+
+    /**
+     * @return the PropertyInfo for this property composition
+     */
+    public PropertyInfo getPropertyInfo()
+        {
+        return f_infoProp;
+        }
+
+    /**
+     * @return the ClassComposition for this property composition
+     */
+    public ClassComposition getPropertyClass()
+        {
+        return f_clzRef;
+        }
+
+    /**
+     * @return the ClassComposition for the parent
+     */
+    public ClassComposition getParentComposition()
+        {
+        return f_clzParent;
+        }
+
+    /**
+     * @return the TypeInfo for the parent
+     */
+    public TypeInfo getParentInfo()
+        {
+        return f_infoParent;
         }
 
 

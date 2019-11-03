@@ -4,18 +4,24 @@ package org.xvm.runtime.template._native.reflect;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.PropertyComposition;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xString;
 
@@ -68,16 +74,24 @@ public class xRTProperty
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
+        // TODO CP - identity mode for property name needs to emit a constant that provides enough
+        //           info (e.g. a PropertyClassTypeConstant)
+
+        // @deprecated compiler should no longer emit PropertyConstant for identity mode TODO remove
         if (constant instanceof PropertyConstant)
             {
-            ConstantPool pool = frame.poolContext();
+            ConstantPool        pool         = constant.getConstantPool();  // note: purposeful
+            PropertyConstant    idProp       = (PropertyConstant) constant;
+            TypeConstant        typeTarget   = idProp.getClassIdentity().getType();
+            TypeInfo            infoTarget   = typeTarget.ensureTypeInfo();
+            PropertyInfo        infoProp     = infoTarget.findProperty(idProp);
+            TypeConstant        typeReferent = infoProp.getType();
+            TypeConstant        typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, idProp);
+            TypeConstant        typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
+                                                    typeTarget, typeReferent, typeImpl);
+            ObjectHandle        hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
 
-            PropertyConstant propTarget = (PropertyConstant) constant;
-
-            // TODO
-//            TypeConstant typeData = propTarget.getParamType(0)).
-//                resolveGenerics(pool, frame.getGenericsResolver());
-//            frame.pushStack(typeData.getTypeHandle());
+            frame.pushStack(hProperty);
             return Op.R_NEXT;
             }
 
@@ -92,26 +106,75 @@ public class xRTProperty
         switch (sPropName)
             {
             case "abstract":
-                return getAbstractProperty(frame, hThis, iReturn);
+                return getPropertyAbstract(frame, hThis, iReturn);
+
             case "atomic":
-                return getAtomicProperty(frame, hThis, iReturn);
+                return getPropertyAtomic(frame, hThis, iReturn);
+
             case "formal":
-                return getFormalProperty(frame, hThis, iReturn);
+                return getPropertyFormal(frame, hThis, iReturn);
+
             case "hasField":
-                return getHasFieldProperty(frame, hThis, iReturn);
+                return getPropertyHasField(frame, hThis, iReturn);
+
             case "hasUnreachableSetter":
-                return getHasUnreachableSetterProperty(frame, hThis, iReturn);
+                return getPropertyHasUnreachableSetter(frame, hThis, iReturn);
+
             case "injected":
-                return getInjectedProperty(frame, hThis, iReturn);
+                return getPropertyInjected(frame, hThis, iReturn);
+
             case "lazy":
-                return getLazyProperty(frame, hThis, iReturn);
+                return getPropertyLazy(frame, hThis, iReturn);
+
             case "name":
-                return getNameProperty(frame, hThis, iReturn);
+                return getPropertyName(frame, hThis, iReturn);
+
             case "readOnly":
-                return getReadOnlyProperty(frame, hThis, iReturn);
+                return getPropertyReadOnly(frame, hThis, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "of":
+                return invokeOf(frame, (PropertyHandle) hTarget, hArg, iReturn);
+
+            case "get":
+                return invokeGet(frame, (PropertyHandle) hTarget, hArg, iReturn);
+            }
+
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "set":
+                return invokeSet(frame, (PropertyHandle) hTarget, ahArg, iReturn);
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        switch (method.getName())
+            {
+            case "isConstant":
+                return invokeIsConstant(frame, (PropertyHandle) hTarget, aiReturn);
+            }
+
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
 
@@ -172,63 +235,70 @@ public class xRTProperty
     /**
      * Implements property: abstract.get()
      */
-    public int getAbstractProperty(Frame frame, PropertyHandle hProp, int iReturn)
+    public int getPropertyAbstract(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        return frame.assignValue(iReturn, null); // TODO
+        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().isAbstract());
+        return frame.assignValue(iReturn, hValue);
         }
 
     /**
      * Implements property: atomic.get()
      */
-    public int getAtomicProperty(Frame frame, PropertyHandle hProp, int iReturn)
+    public int getPropertyAtomic(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        return frame.assignValue(iReturn, null); // TODO
+        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().isAtomic());
+        return frame.assignValue(iReturn, hValue);
         }
 
     /**
      * Implements property: formal.get()
      */
-    public int getFormalProperty(Frame frame, PropertyHandle hProp, int iReturn)
+    public int getPropertyFormal(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        return frame.assignValue(iReturn, null); // TODO
+        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().isFormalType());
+        return frame.assignValue(iReturn, hValue);
         }
 
     /**
      * Implements property: hasField.get()
      */
-    public int getHasFieldProperty(Frame frame, PropertyHandle hProp, int iReturn)
+    public int getPropertyHasField(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        return frame.assignValue(iReturn, null); // TODO
+        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().hasField());
+        return frame.assignValue(iReturn, hValue);
         }
 
     /**
      * Implements property: hasUnreachableSetter.get()
      */
-    public int getHasUnreachableSetterProperty(Frame frame, PropertyHandle hProp, int iReturn)
+    public int getPropertyHasUnreachableSetter(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        return frame.assignValue(iReturn, null); // TODO
+        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().isSetterUnreachable());
+        return frame.assignValue(iReturn, hValue);
         }
 
     /**
      * Implements property: injected.get()
      */
-    public int getInjectedProperty(Frame frame, PropertyHandle hProp, int iReturn)
+    public int getPropertyInjected(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        return frame.assignValue(iReturn, null); // TODO
+        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().isInjected());
+        return frame.assignValue(iReturn, hValue);
         }
 
     /**
      * Implements property: lazy.get()
      */
-    public int getLazyProperty(Frame frame, PropertyHandle hProp, int iReturn)
+    public int getPropertyLazy(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        return frame.assignValue(iReturn, null); // TODO
+        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().isLazy());
+        return frame.assignValue(iReturn, hValue);
         }
 
     /**
      * Implements property: name.get()
      */
-    public int getNameProperty(Frame frame, PropertyHandle hProp, int iReturn)
+    public int getPropertyName(Frame frame, PropertyHandle hProp, int iReturn)
         {
         return frame.assignValue(iReturn, xString.makeHandle(hProp.getPropertyConstant().getName()));
         }
@@ -236,8 +306,66 @@ public class xRTProperty
     /**
      * Implements property: readOnly.get()
      */
-    public int getReadOnlyProperty(Frame frame, PropertyHandle hProp, int iReturn)
+    public int getPropertyReadOnly(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        return frame.assignValue(iReturn, null); // TODO
+        ObjectHandle hValue = xBoolean.makeHandle(!hProp.getPropertyInfo().isVar());
+        return frame.assignValue(iReturn, hValue);
+        }
+
+
+    // ----- method implementations ----------------------------------------------------------------
+
+    /**
+     * Implementation for: {@code conditional Referent isConstant()}.
+     */
+    public int invokeIsConstant(Frame frame, PropertyHandle hProp, int[] aiReturn)
+        {
+        ObjectHandle hValue = null; // TODO
+
+        return hValue == null
+                ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
+                : frame.assignValues(aiReturn, xBoolean.TRUE, hValue);
+        }
+
+    /**
+     * Implementation for: {@code Implementation of(Target)}.
+     */
+    public int invokeOf(Frame frame, PropertyHandle hProp, ObjectHandle hArg, int iReturn)
+        {
+//        ClassComposition    clzParent = f_templates.resolveClass(typeTarget);
+//        PropertyInfo        infoProp  = entry.getValue();
+//        PropertyComposition clzProp   = new PropertyComposition(clzParent, infoProp);
+//        ObjectHandle        hProperty = xRTProperty.INSTANCE.makeHandle(clzProp);
+//
+//        // assemble the PropertyComposition
+//        PropertyConstant    idProp     = (PropertyConstant) constant;
+//        IdentityConstant    idParent   = idProp.getClassIdentity();
+//        TypeConstant        typeParent = idParent.getType();
+//        TypeInfo            infoParent = typeParent.ensureTypeInfo();
+//        PropertyInfo        infoProp   = infoParent.findProperty(idProp);
+//        ClassComposition    clzParent  = f_templates.resolveClass(typeParent);
+//        PropertyComposition clzProp    = new PropertyComposition(clzParent, infoProp);
+//
+
+        ObjectHandle hValue = null; // TODO
+        return frame.assignValue(iReturn, hValue);
+        }
+
+    /**
+     * Implementation for: {@code Referent get(Target)}.
+     */
+    public int invokeGet(Frame frame, PropertyHandle hProp, ObjectHandle hArg, int iReturn)
+        {
+        ObjectHandle hValue = null; // TODO
+        return frame.assignValue(iReturn, hValue);
+        }
+
+    /**
+     * Implementation for: {@code void set(Target, Referent)}.
+     */
+    public int invokeSet(Frame frame, PropertyHandle hProp, ObjectHandle[] ahArg, int iReturn)
+        {
+        // TODO
+        return Op.R_NEXT;
         }
     }
