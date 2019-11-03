@@ -23,6 +23,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
@@ -607,6 +608,13 @@ public class NamedTypeExpression
                 // or a narrowed formal type (Element + Stringable)
                 ctx.useGenericType(names.get(0).getValueText(), errs);
                 }
+
+            if (m_fExternalTypedef && type.containsGenericType(true))
+                {
+                TypeConstant typeParent =
+                    ((TypedefConstant) m_constId).getParentConstant().getType();
+                type = type.resolveGenerics(pool, typeParent.normalizeParameters(pool));
+                }
             }
         else
             {
@@ -623,7 +631,29 @@ public class NamedTypeExpression
 
                 for (Token name : names)
                     {
-                    type = pool.ensureVirtualChildTypeConstant(type, name.getValueText());
+                    TypeInfo infoLeft = type.ensureTypeInfo(errs);
+                    String   sName    = name.getValueText();
+
+                    // is it a typedef?
+                    TypeConstant typeChild = infoLeft.getTypedefType(sName);
+                    if (typeChild != null)
+                        {
+                        // resolve the typedef in the context of its container
+                        type = typeChild.resolveGenerics(pool, infoLeft.getType());
+                        continue;
+                        }
+
+                    // is it a virtual child?
+                    typeChild = infoLeft.getVirtualChildType(sName);
+                    if (typeChild != null)
+                        {
+                        type = typeChild;
+                        continue;
+                        }
+
+                    log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+                    fValid = false;
+                    break;
                     }
                 }
             }
@@ -786,7 +816,22 @@ public class NamedTypeExpression
                 }
 
             case Typedef:
-                return ((TypedefConstant) constTarget).getReferredToType();
+                {
+                TypedefConstant idTypedef = (TypedefConstant) constTarget;
+                TypeConstant     typeRef  = idTypedef.getReferredToType();
+                IdentityConstant idFrom   = idTypedef.getParentConstant();
+                IdentityConstant idClass  = getComponent().getContainingClass().getIdentityConstant();
+
+                if (!idFrom.isNestMateOf(idClass))
+                    {
+                    // we are "importing" a typedef from an outside class and need to resolve all
+                    // formal types to their canonical values; but we cannot do it until all names
+                    // are resolved
+                    m_fExternalTypedef = true;
+                    }
+
+                return typeRef;
+                }
 
             case UnresolvedName:
                 return m_typeUnresolved =
@@ -966,6 +1011,7 @@ public class NamedTypeExpression
     protected transient NameResolver   m_resolver;
     protected transient Constant       m_constId;
     protected transient boolean        m_fVirtualChild;
+    protected transient boolean        m_fExternalTypedef;
     private   transient NameExpression m_exprDynamic;
 
     // unresolved constant that may have been created by this statement

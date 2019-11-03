@@ -87,6 +87,14 @@ public class ArrayTypeExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        TypeExpression exprTypeOld = type;
+        TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, pool().typeType(), errs);
+        if (exprTypeNew == null)
+            {
+            return null;
+            }
+        type = exprTypeNew;
+
         ArrayTypeExpression exprNew = (ArrayTypeExpression) super.validate(ctx, typeRequired, errs);
         if (exprNew == null || dims == 0)
             {

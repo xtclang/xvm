@@ -320,7 +320,7 @@ public class NewExpression
 
                 assert exprType.isVirtualChild();
 
-                typeTarget = infoLeft.getChildType(sChild);
+                typeTarget = infoLeft.getVirtualChildType(sChild);
                 if (typeTarget == null)
                     {
                     log(errs, Severity.ERROR, Constants.VE_NEW_UNRELATED_PARENT,

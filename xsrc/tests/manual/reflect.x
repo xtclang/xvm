@@ -156,7 +156,7 @@ module TestReflection.xqiz.it
                 }
             }
 
-        Point p = new Point<Int>(3, 4, "world");
+        Point<Int> p = new Point(3, 4, "world");
         console.println($"Point p={p}, sum={p.sum}, foo()={p.foo()}");
 
         Type t = &p.actualType;

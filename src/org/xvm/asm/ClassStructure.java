@@ -405,25 +405,37 @@ public class ClassStructure
      */
     public ClassStructure getVirtualChild(String sName)
         {
-        return getVirtualChildImpl(sName, true);
+        Component child = findChild(sName, true);
+        return child instanceof ClassStructure &&
+            ((ClassStructure) child).isVirtualChild()
+                ? (ClassStructure) child
+                : null;
         }
 
     /**
-     * Implementation of {@link #getVirtualChild(String)}
+     * Get a typedef structure by the specified name on this class or any of its contributions.
+     *
+     * @param sName  the typedef name
+     *
+     * @return a typedef structure or null if not found
      */
-    private ClassStructure getVirtualChildImpl(String sName, boolean fAllowInto)
+    public TypedefStructure getTypedDef(String sName)
+        {
+        Component child = findChild(sName, true);
+        return child instanceof TypedefStructure
+                ? (TypedefStructure) child
+                : null;
+        }
+
+    /**
+     * Find a child with a given name in the class or any of its contributions.
+     */
+    private Component findChild(String sName, boolean fAllowInto)
         {
         Component child = getChild(sName);
-        if (child instanceof ClassStructure)
-            {
-            ClassStructure clzChild = (ClassStructure) child;
-            return clzChild.isVirtualChild() ? clzChild : null;
-            }
-
         if (child != null)
             {
-            // not a class
-            return null;
+            return child;
             }
 
         for (Contribution contrib : getContributionsAsList())
@@ -451,10 +463,10 @@ public class ClassStructure
                     {
                     ClassStructure clzContrib = (ClassStructure)
                             typeContrib.getSingleUnderlyingClass(true).getComponent();
-                    ClassStructure clzChild = clzContrib.getVirtualChildImpl(sName, false);
-                    if (clzChild != null)
+                    child = clzContrib.findChild(sName, false);
+                    if (child != null)
                         {
-                        return clzChild;
+                        return child;
                         }
                     break;
                     }

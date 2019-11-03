@@ -22,6 +22,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody.Implementation;
@@ -803,13 +804,13 @@ public class TypeInfo
         }
 
     /**
-     * Look up a nested type by its name.
+     * Look up a nested virtual child type by its name.
      *
      * @param sName  the name of the child
      *
      * @return the type of the child iff it exists and is visible; null otherwise
      */
-    public TypeConstant getChildType(String sName)
+    public TypeConstant getVirtualChildType(String sName)
         {
         // TODO: if this info represents a virtual child by itself (f_struct == null),
         // there must be a way to confirm the child existence
@@ -827,7 +828,14 @@ public class TypeInfo
      */
     public TypeConstant getTypedefType(String sName)
         {
-        // TODO
+        if (f_struct != null)
+            {
+            TypedefStructure typedef = f_struct.getTypedDef(sName);
+            if (typedef != null)
+                {
+                return typedef.getType();
+                }
+            }
         return null;
         }
 
