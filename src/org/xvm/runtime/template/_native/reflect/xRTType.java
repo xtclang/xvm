@@ -957,7 +957,7 @@ public class xRTType
         assert typeTarget != null;
         ConstantPool pool = ConstantPool.getCurrentPool();
         TypeConstant typeParams  = typeParent == null
-                ? pool.typeTuple()
+                ? pool.ensureParameterizedTypeConstant(pool.typeTuple(), TypeConstant.NO_TYPES)
                 : pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeParent);
         TypeConstant typeReturns = pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeTarget);
         return pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeParams, typeReturns);
@@ -971,10 +971,6 @@ public class xRTType
         ConstantPool pool = ConstantPool.getCurrentPool();
 
         assert typeTarget != null;
-        if (typeParent == null)
-            {
-            typeParent = pool.typeObject();
-            }
 
         TypeConstant typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                 ensureConstructorType(typeTarget, typeParent));

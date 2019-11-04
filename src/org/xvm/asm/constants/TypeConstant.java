@@ -4771,7 +4771,8 @@ public abstract class TypeConstant
 
             // Function<TupleRP, TupleRR> is assignable to Function<TupleLP, TupleLR> iff
             // (RP/RR - right parameters/return, LP/LR - left parameter/return)
-            // 1) TupleLP has the same arity as TupleRP
+            // 1) TupleLP has less or equal arity arity as TupleRP
+            //    (assuming there are default values and relying on the run-time checks)
             // 2) every parameter type on the right should be assignable to a corresponding parameter
             //    on the left (e.g. "function void (Number)" is assignable to "function void (Int)")
             // 3) TupleLR has less or equal arity than TupleRR
@@ -4781,7 +4782,7 @@ public abstract class TypeConstant
             int cR = typeRight.getParamsCount();
             if (cL == 0)
                 {
-                // Function <- Function<RP, RR> is allowed
+                // Function<> <-- Function<RP, RR> is allowed
                 return Relation.IS_A;
                 }
             if (cL != 2 || cR != 2)
@@ -4802,7 +4803,7 @@ public abstract class TypeConstant
             int cRP = typeRP.getParamsCount();
             int cRR = typeRR.getParamsCount();
 
-            if (cLP != cRP || cLR > cRR)
+            if (cLP > cRP || cLR > cRR)
                 {
                 return Relation.INCOMPATIBLE;
                 }
