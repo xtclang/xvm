@@ -1,14 +1,12 @@
 package org.xvm.runtime.template._native.reflect;
 
 
-import java.util.Collections;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -19,16 +17,12 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.PropertyComposition;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.TypeComposition;
-
 import org.xvm.runtime.Utils;
+
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xString;
-
-import static org.xvm.asm.Op.isDeferred;
 
 
 /**
@@ -333,33 +327,18 @@ public class xRTProperty
 
         PropertyConstant  idProp      = hProp.getPropertyConstant();
         SingletonConstant idSingleton = idProp.getConstantPool().ensureSingletonConstConstant(idProp);
-        ObjectHandle      hValue      = idSingleton.getHandle();
-        if (hValue == null)
+        ObjectHandle      hValue      = frame.getConstHandle(idSingleton);
+
+        if (Op.isDeferred(hValue))
             {
-            Constant constVal = info.getInitialValue();
-            if (constVal != null)
-                {
-                hValue = frame.getConstHandle(constVal);
-                idSingleton.setHandle(hValue);
-                }
-            }
-        if (hValue != null)
-            {
-            return frame.assignValues(aiReturn, xBoolean.TRUE, hValue);
+            ObjectHandle[] ahTarget = new ObjectHandle[] {hValue};
+            Frame.Continuation stepNext = frameCaller ->
+                frame.assignValues(aiReturn, xBoolean.TRUE, ahTarget[0]);
+
+            return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
             }
 
-        // need to run the initializer for the property, which has to be done as a continuation
-        // TODO GG REVIEW
-        Frame.Continuation continuation = new Frame.Continuation()
-            {
-            public int proceed(Frame frameCaller)
-                {
-                ObjectHandle hValue = idSingleton.getHandle();
-                return frame.assignValues(aiReturn, xBoolean.TRUE, hValue);
-                }
-            };
-
-        return Utils.initConstants(frame, Collections.singletonList(idSingleton), continuation);
+        return frame.assignValues(aiReturn, xBoolean.TRUE, hValue);
         }
 
     /**
