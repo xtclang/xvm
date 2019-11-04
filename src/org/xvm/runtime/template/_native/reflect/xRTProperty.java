@@ -79,16 +79,16 @@ public class xRTProperty
         // @deprecated compiler should no longer emit PropertyConstant for identity mode TODO remove
         if (constant instanceof PropertyConstant)
             {
-            ConstantPool        pool         = constant.getConstantPool();  // note: purposeful
-            PropertyConstant    idProp       = (PropertyConstant) constant;
-            TypeConstant        typeTarget   = idProp.getClassIdentity().getType();
-            TypeInfo            infoTarget   = typeTarget.ensureTypeInfo();
-            PropertyInfo        infoProp     = infoTarget.findProperty(idProp);
-            TypeConstant        typeReferent = infoProp.getType();
-            TypeConstant        typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, idProp);
-            TypeConstant        typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
-                                                    typeTarget, typeReferent, typeImpl);
-            ObjectHandle        hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
+            ConstantPool     pool         = constant.getConstantPool();  // note: purposeful
+            PropertyConstant idProp       = (PropertyConstant) constant;
+            TypeConstant     typeTarget   = idProp.getClassIdentity().getType();
+            TypeInfo         infoTarget   = typeTarget.ensureTypeInfo();
+            PropertyInfo     infoProp     = infoTarget.findProperty(idProp);
+            TypeConstant     typeReferent = infoProp.getType();
+            TypeConstant     typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, idProp);
+            TypeConstant     typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
+                                                typeTarget, typeReferent, typeImpl);
+            ObjectHandle     hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
 
             frame.pushStack(hProperty);
             return Op.R_NEXT;
@@ -346,23 +346,9 @@ public class xRTProperty
      */
     public int invokeOf(Frame frame, PropertyHandle hProp, ObjectHandle hArg, int iReturn)
         {
-//        ClassComposition    clzParent = f_templates.resolveClass(typeTarget);
-//        PropertyInfo        infoProp  = entry.getValue();
-//        PropertyComposition clzProp   = new PropertyComposition(clzParent, infoProp);
-//        ObjectHandle        hProperty = xRTProperty.INSTANCE.makeHandle(clzProp);
-//
-//        // assemble the PropertyComposition
-//        PropertyConstant    idProp     = (PropertyConstant) constant;
-//        IdentityConstant    idParent   = idProp.getClassIdentity();
-//        TypeConstant        typeParent = idParent.getType();
-//        TypeInfo            infoParent = typeParent.ensureTypeInfo();
-//        PropertyInfo        infoProp   = infoParent.findProperty(idProp);
-//        ClassComposition    clzParent  = f_templates.resolveClass(typeParent);
-//        PropertyComposition clzProp    = new PropertyComposition(clzParent, infoProp);
-//
-
-        ObjectHandle hValue = null; // TODO
-        return frame.assignValue(iReturn, hValue);
+        PropertyConstant idProp   = hProp.getPropertyConstant();
+        PropertyInfo     infoProp = hProp.getPropertyInfo();
+        return hArg.getTemplate().createPropertyRef(frame, hArg, idProp, !infoProp.isVar(), iReturn);
         }
 
     /**

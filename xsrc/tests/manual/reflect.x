@@ -104,15 +104,18 @@ module TestReflection.xqiz.it
             static String foo() {return "3.14";}
             }
 
-        Point p = new Point(123, 456);
-        console.println($"Point p={p}");
+        Point point = new Point(123, 456);
+        console.println($"Point point={point}");
 
         Type<Point> t = Point;
         console.println($"Point type={t}");
         for (Property<Point> prop : t.properties)
             {
             console.println($"prop={prop}");
-            console.println($"prop.get(p)={prop.get(p)}");
+            console.println($"prop.get(point)={prop.get(point)}");
+
+            Ref impl = prop.of(point);
+            console.println($"Ref={impl}, type={impl.actualType}, get()={impl.get()}");
             }
 
         for (Property prop : t.constants)
