@@ -1,6 +1,7 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import java.util.Collections;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -11,6 +12,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -21,6 +23,7 @@ import org.xvm.runtime.PropertyComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xString;
@@ -322,11 +325,41 @@ public class xRTProperty
      */
     public int invokeIsConstant(Frame frame, PropertyHandle hProp, int[] aiReturn)
         {
-        ObjectHandle hValue = null; // TODO
+        PropertyInfo info = hProp.getPropertyInfo();
+        if (!info.isConstant())
+            {
+            return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+            }
 
-        return hValue == null
-                ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
-                : frame.assignValues(aiReturn, xBoolean.TRUE, hValue);
+        PropertyConstant  idProp      = hProp.getPropertyConstant();
+        SingletonConstant idSingleton = idProp.getConstantPool().ensureSingletonConstConstant(idProp);
+        ObjectHandle      hValue      = idSingleton.getHandle();
+        if (hValue == null)
+            {
+            Constant constVal = info.getInitialValue();
+            if (constVal != null)
+                {
+                hValue = frame.getConstHandle(constVal);
+                idSingleton.setHandle(hValue);
+                }
+            }
+        if (hValue != null)
+            {
+            return frame.assignValues(aiReturn, xBoolean.TRUE, hValue);
+            }
+
+        // need to run the initializer for the property, which has to be done as a continuation
+        // TODO GG REVIEW
+        Frame.Continuation continuation = new Frame.Continuation()
+            {
+            public int proceed(Frame frameCaller)
+                {
+                ObjectHandle hValue = idSingleton.getHandle();
+                return frame.assignValues(aiReturn, xBoolean.TRUE, hValue);
+                }
+            };
+
+        return Utils.initConstants(frame, Collections.singletonList(idSingleton), continuation);
         }
 
     /**
@@ -368,7 +401,9 @@ public class xRTProperty
      */
     public int invokeSet(Frame frame, PropertyHandle hProp, ObjectHandle[] ahArg, int iReturn)
         {
-        // TODO
-        return Op.R_NEXT;
+        ObjectHandle     hTarget = ahArg[0];
+        PropertyConstant idProp  = hProp.getPropertyConstant();
+        ObjectHandle     hValue  = ahArg[1];
+        return hTarget.getTemplate().setPropertyValue(frame, hTarget, idProp, hValue);
         }
     }

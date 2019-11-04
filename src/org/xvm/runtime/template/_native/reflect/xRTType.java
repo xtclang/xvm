@@ -139,39 +139,37 @@ public class xRTType
         switch (sPropName)
             {
             case "childTypes":
-                return getChildTypesProperty(frame, hThis, iReturn);
+                return getPropertyChildTypes(frame, hThis, iReturn);
 
             case "constants":
-                return getConstantsProperty(frame, hThis, iReturn);
+                return getPropertyConstants(frame, hThis, iReturn);
 
             case "constructors":
-                return getConstructorsProperty(frame, hThis, iReturn);
+                return getPropertyConstructors(frame, hThis, iReturn);
 
             case "explicitlyImmutable":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(
-                        hThis.getDataType().isImmutabilitySpecified()));
+                return getPropertyExplicitlyImmutable(frame, hThis, iReturn);
 
             case "form":
-                return getFormProperty(frame, hThis, iReturn);
+                return getPropertyForm(frame, hThis, iReturn);
 
             case "functions":
-                return getFunctionsProperty(frame, hThis, iReturn);
+                return getPropertyFunctions(frame, hThis, iReturn);
 
             case "methods":
-                return getMethodsProperty(frame, hThis, iReturn);
+                return getPropertyMethods(frame, hThis, iReturn);
 
             case "multimethods":
-                return getMultimethodsProperty(frame, hThis, iReturn);
+                return getPropertyMultimethods(frame, hThis, iReturn);
 
             case "properties":
-                return getPropertiesProperty(frame, hThis, iReturn);
+                return getPropertyProperties(frame, hThis, iReturn);
 
             case "recursive":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(
-                        hThis.getDataType().containsRecursiveType()));
+                return getPropertyRecursive(frame, hThis, iReturn);
 
             case "underlyingTypes":
-                return getUnderlyingTypesProperty(frame, hThis, iReturn);
+                return getPropertyUnderlyingTypes(frame, hThis, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -329,7 +327,7 @@ public class xRTType
     /**
      * Implements property: childTypes.get()
      */
-    public int getChildTypesProperty(Frame frame, TypeHandle hType, int iReturn)
+    public int getPropertyChildTypes(Frame frame, TypeHandle hType, int iReturn)
         {
         TypeConstant typeTarget = hType.getDataType();
         TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
@@ -341,19 +339,39 @@ public class xRTType
     /**
      * Implements property: constants.get()
      */
-    public int getConstantsProperty(Frame frame, TypeHandle hType, int iReturn)
+    public int getPropertyConstants(Frame frame, TypeHandle hType, int iReturn)
         {
-        TypeConstant typeTarget = hType.getDataType();
-        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+        TypeConstant                        typeTarget = hType.getDataType();
+        TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
+        Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
+        ArrayList<ObjectHandle>             listProps  = new ArrayList<>(mapProps.size());
+        ConstantPool                        pool       = frame.poolContext();
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
+            {
+            PropertyInfo propinfo = entry.getValue();
+            if (!propinfo.isConstant())
+                {
+                continue;
+                }
 
-        ObjectHandle.ArrayHandle hArray = null; // TODO - ask GG if these are in TypeInfo.getProperties()
+            TypeConstant typeReferent = propinfo.getType();
+            TypeConstant typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, entry.getKey());
+            TypeConstant typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
+                typeTarget, typeReferent, typeImpl);
+            ObjectHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
+
+            listProps.add(hProperty);
+            }
+
+        ObjectHandle.ArrayHandle hArray = ensurePropertyArrayTemplate().createArrayHandle(
+                ensurePropertyArray(typeTarget), listProps.toArray(new ObjectHandle[0]));
         return frame.assignValue(iReturn, hArray);
         }
 
     /**
      * Implements property: constructors.get()
      */
-    public int getConstructorsProperty(Frame frame, TypeHandle hType, int iReturn)
+    public int getPropertyConstructors(Frame frame, TypeHandle hType, int iReturn)
         {
         // the actual construction process uses a "construct" function as a structural initializer
         // and an optional "finally" method as a post-object-instantiation (i.e. first time that
@@ -556,9 +574,17 @@ public class xRTType
         }
 
     /**
+     * Implements property: explicitlyImmutable.get()
+     */
+    public int getPropertyExplicitlyImmutable(Frame frame, TypeHandle hType, int iReturn)
+        {
+        return frame.assignValue(iReturn, xBoolean.makeHandle(hType.getDataType().isImmutabilitySpecified()));
+        }
+
+    /**
      * Implements property: form.get()
      */
-    public int getFormProperty(Frame frame, TypeHandle hType, int iReturn)
+    public int getPropertyForm(Frame frame, TypeHandle hType, int iReturn)
         {
         ObjectHandle hForm = makeFormHandle(frame, hType.getDataType());
         return frame.assignValue(iReturn, hForm);
@@ -567,7 +593,7 @@ public class xRTType
     /**
      * Implements property: functions.get()
      */
-    public int getFunctionsProperty(Frame frame, TypeHandle hType, int iReturn)
+    public int getPropertyFunctions(Frame frame, TypeHandle hType, int iReturn)
         {
         TypeConstant                    typeTarget  = hType.getDataType();
         Map<MethodConstant, MethodInfo> mapMethods  = typeTarget.ensureTypeInfo().getMethods();
@@ -589,7 +615,7 @@ public class xRTType
     /**
      * Implements property: methods.get()
      */
-    public int getMethodsProperty(Frame frame, TypeHandle hType, int iReturn)
+    public int getPropertyMethods(Frame frame, TypeHandle hType, int iReturn)
         {
         TypeConstant                      typeTarget  = hType.getDataType();
         Map<MethodConstant, MethodInfo>   mapMethods  = typeTarget.ensureTypeInfo().getMethods();
@@ -611,7 +637,7 @@ public class xRTType
     /**
      * Implements property: multimethods.get()
      */
-    public int getMultimethodsProperty(Frame frame, TypeHandle hType, int iReturn)
+    public int getPropertyMultimethods(Frame frame, TypeHandle hType, int iReturn)
         {
         TypeConstant typeTarget = hType.getDataType();
         TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
@@ -623,34 +649,45 @@ public class xRTType
     /**
      * Implements property: properties.get()
      */
-    public int getPropertiesProperty(Frame frame, TypeHandle hType, int iReturn)
+    public int getPropertyProperties(Frame frame, TypeHandle hType, int iReturn)
         {
         TypeConstant                        typeTarget = hType.getDataType();
         TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
         Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
-        ObjectHandle[]                      ahProps    = new ObjectHandle[mapProps.size()];
+        ArrayList<ObjectHandle>             listProps  = new ArrayList<>(mapProps.size());
         ConstantPool                        pool       = frame.poolContext();
-        int                                 cProps     = 0;
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
             {
-            PropertyInfo     propinfo     = entry.getValue();
-            TypeConstant     typeReferent = propinfo.getType();
-            TypeConstant     typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, entry.getKey());
-            TypeConstant     typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
-                                                    typeTarget, typeReferent, typeImpl);
-            ObjectHandle     hProperty   = xRTProperty.INSTANCE.makeHandle(typeProperty);
+            PropertyInfo propinfo     = entry.getValue();
+            if (propinfo.isConstant())
+                {
+                continue;
+                }
+            TypeConstant typeReferent = propinfo.getType();
+            TypeConstant typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, entry.getKey());
+            TypeConstant typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
+                                                typeTarget, typeReferent, typeImpl);
+            ObjectHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
 
-            ahProps[cProps++] = hProperty;
+            listProps.add(hProperty);
             }
         ObjectHandle.ArrayHandle hArray = ensurePropertyArrayTemplate().createArrayHandle(
-                ensurePropertyArray(typeTarget), ahProps);
+                ensurePropertyArray(typeTarget), listProps.toArray(new ObjectHandle[0]));
         return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
+     * Implements property: recursive.get()
+     */
+    public int getPropertyRecursive(Frame frame, TypeHandle hType, int iReturn)
+        {
+        return frame.assignValue(iReturn, xBoolean.makeHandle(hType.getDataType().containsRecursiveType()));
         }
 
     /**
      * Implements property: underlyingTypes.get()
      */
-    public int getUnderlyingTypesProperty(Frame frame, TypeHandle hType, int iReturn)
+    public int getPropertyUnderlyingTypes(Frame frame, TypeHandle hType, int iReturn)
         {
         TypeConstant   typeTarget  = hType.getDataType();
         TypeConstant[] aUnderlying = TypeConstant.NO_TYPES;

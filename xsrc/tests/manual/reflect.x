@@ -97,7 +97,12 @@ module TestReflection.xqiz.it
     void testProps()
         {
         console.println("\n** testProps");
-        const Point(Int x, Int y);
+        const Point(Int x, Int y)
+            {
+            static Int    ONE = 1;
+            static String PI = foo();
+            static String foo() {return "3.14";}
+            }
 
         Point p = new Point(123, 456);
         console.println($"Point p={p}");
@@ -108,6 +113,19 @@ module TestReflection.xqiz.it
             {
             console.println($"prop={prop}");
             console.println($"prop.get(p)={prop.get(p)}");
+            }
+
+        for (Property prop : t.constants)
+            {
+            console.println($"constant={prop}");
+            if (Object o := prop.isConstant())
+                {
+                console.println($"value={o}");
+                }
+            else
+                {
+                console.println("error!");
+                }
             }
         }
 
