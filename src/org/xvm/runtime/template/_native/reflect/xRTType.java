@@ -25,6 +25,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
@@ -33,6 +34,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
@@ -284,9 +286,15 @@ public class xRTType
     public static TypeHandle makeHandle(TypeConstant type, TypeConstant typeOuter)
         {
         ClassComposition clzType = INSTANCE.ensureClass(type.getType());
-        clzType.ensureAutoInitializer();
         // TODO - implement outer type
-        return new TypeHandle(clzType);
+
+        // unfortunately, "makeHandle" is called from places where we cannot easily invoke the
+        // default initializer, so we need to do it by hand
+        TypeHandle    hType  = new TypeHandle(clzType);
+        GenericHandle hMulti = (GenericHandle) hType.getField("multimethods");
+        hMulti.setField("calculate", xNullable.NULL);
+        hMulti.setField("assignable", xBoolean.FALSE);
+        return hType;
         }
 
     /**
