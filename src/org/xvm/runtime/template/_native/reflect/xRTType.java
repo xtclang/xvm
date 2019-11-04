@@ -59,12 +59,6 @@ public class xRTType
         }
 
     @Override
-    public boolean isGenericHandle()
-        {
-        return false;
-        }
-
-    @Override
     public void initDeclared()
         {
         markNativeProperty("childTypes");
@@ -276,14 +270,30 @@ public class xRTType
      */
     public static TypeHandle makeHandle(TypeConstant type)
         {
-        return new TypeHandle(INSTANCE.ensureClass(type.getType()));
+        return makeHandle(type, null);
+        }
+
+    /**
+     * Obtain a {@link TypeHandle} for the specified type.
+     *
+     * @param type       the {@link TypeConstant} to obtain a {@link TypeHandle} for
+     * @param typeOuter  the {@link TypeConstant} for the parent of the virtual child, or null
+     *
+     * @return the resulting {@link TypeHandle}
+     */
+    public static TypeHandle makeHandle(TypeConstant type, TypeConstant typeOuter)
+        {
+        ClassComposition clzType = INSTANCE.ensureClass(type.getType());
+        clzType.ensureAutoInitializer();
+        // TODO - implement outer type
+        return new TypeHandle(clzType);
         }
 
     /**
      * Inner class: TypeHandle. This is a handle to a native type.
      */
     public static class TypeHandle
-        extends ObjectHandle
+        extends ObjectHandle.GenericHandle
         {
         protected TypeHandle(TypeComposition clazz)
             {

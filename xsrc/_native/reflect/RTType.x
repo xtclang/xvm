@@ -54,30 +54,30 @@ const RTType<DataType, OuterType>
     @Lazy Map<String, MultiMethod<DataType>> multimethods.calc()
         {
         import collections.HashMap;
-        
+
         Map<String, MultiMethod<DataType>> multis = new HashMap();
 
-        Map<String, MultiMethod<DataType>>.Entry append(
-                MultiMethod<DataType>.Callable           callable,
-                Map<String, MultiMethod<DataType>>.Entry entry)
-            {
-            entry.value = entry.exists
-                    ? entry.value + callable
-                    : new MultiMethod<DataType>(callable.name, [callable]);
-            return entry;
-            }
+//        Map<String, MultiMethod<DataType>>.Entry append(
+//                MultiMethod<DataType>.Callable           callable,
+//                Map<String, MultiMethod<DataType>>.Entry entry)
+//            {
+//            entry.value = entry.exists
+//                    ? entry.value + callable
+//                    : new MultiMethod<DataType>(callable.name, [callable]);
+//            return entry;
+//            }
+//
+//        for (Method<DataType> method : methods)
+//            {
+//            multis.process(method.name, append(method, _));
+//            }
+//
+//        for (Function func : functions)
+//            {
+//            multis.process(func.name, append(func, _));
+//            }
 
-        for (Method<DataType> method : methods)
-            {
-            multis.process(method.name, append(method, _));
-            }
-
-        for (Function func : functions)
-            {
-            multis.process(func.name, append(func, _));
-            }
-
-        return multis.ensureImmutable(True);
+        return multis; // .ensureImmutable(True);
         }
 
 
