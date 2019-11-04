@@ -72,19 +72,19 @@ public class xRTSignature
         switch (sPropName)
             {
             case "name":
-                return getNameProperty(frame, hFunc, iReturn);
+                return getPropertyName(frame, hFunc, iReturn);
 
             case "params":
-                return getParamsProperty(frame, hFunc, iReturn);
+                return getPropertyParams(frame, hFunc, iReturn);
 
             case "returns":
-                return getReturnsProperty(frame, hFunc, iReturn);
+                return getPropertyReturns(frame, hFunc, iReturn);
 
             case "conditionalResult":
-                return getConditionalResultProperty(frame, hFunc, iReturn);
+                return getPropertyConditionalResult(frame, hFunc, iReturn);
 
             case "futureResult":
-                return getFutureResultProperty(frame, hFunc, iReturn);
+                return getPropertyFutureResult(frame, hFunc, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -98,7 +98,7 @@ public class xRTSignature
         switch (method.getName())
             {
             case "hasTemplate":
-                return calcHasTemplate(frame, hFunc, aiReturn);
+                return invokeHasTemplate(frame, hFunc, aiReturn);
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -110,7 +110,7 @@ public class xRTSignature
     /**
      * Implements property: name.get()
      */
-    public int getNameProperty(Frame frame, SignatureHandle hFunc, int iReturn)
+    public int getPropertyName(Frame frame, SignatureHandle hFunc, int iReturn)
         {
         xString.StringHandle handle = xString.makeHandle(hFunc.getName());
         return frame.assignValue(iReturn, handle);
@@ -119,7 +119,7 @@ public class xRTSignature
     /**
      * Implements property: params.get()
      */
-    public int getParamsProperty(Frame frame, SignatureHandle hFunc, int iReturn)
+    public int getPropertyParams(Frame frame, SignatureHandle hFunc, int iReturn)
         {
         return new RTArrayConstructor(hFunc, false, iReturn).doNext(frame);
         }
@@ -127,7 +127,7 @@ public class xRTSignature
     /**
      * Implements property: params.get()
      */
-    public int getReturnsProperty(Frame frame, SignatureHandle hFunc, int iReturn)
+    public int getPropertyReturns(Frame frame, SignatureHandle hFunc, int iReturn)
         {
         return new RTArrayConstructor(hFunc, true, iReturn).doNext(frame);
         }
@@ -135,7 +135,7 @@ public class xRTSignature
     /**
      * Implements property: conditionalResult.get()
      */
-    public int getConditionalResultProperty(Frame frame, SignatureHandle hFunc, int iReturn)
+    public int getPropertyConditionalResult(Frame frame, SignatureHandle hFunc, int iReturn)
         {
         MethodStructure        structFunc = hFunc.getMethod();
         xBoolean.BooleanHandle handle     = xBoolean.makeHandle(structFunc.isConditionalReturn());
@@ -145,7 +145,7 @@ public class xRTSignature
     /**
      * Implements property: futureResult.get()
      */
-    public int getFutureResultProperty(Frame frame, SignatureHandle hFunc, int iReturn)
+    public int getPropertyFutureResult(Frame frame, SignatureHandle hFunc, int iReturn)
         {
         xBoolean.BooleanHandle handle = xBoolean.makeHandle(hFunc.isAsync());
         return frame.assignValue(iReturn, handle);
@@ -157,7 +157,7 @@ public class xRTSignature
     /**
      * Method implementation: `conditional MethodTemplate hasTemplate()`
      */
-    public int calcHasTemplate(Frame frame, SignatureHandle hFunc, int[] aiReturn)
+    public int invokeHasTemplate(Frame frame, SignatureHandle hFunc, int[] aiReturn)
         {
         // TODO
         throw new UnsupportedOperationException();

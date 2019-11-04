@@ -195,5 +195,6 @@ module TestReflection.xqiz.it
         // TODO CP
         console.println($"methods={t.methods}, properties={t.properties}");
         console.println($"constructors={t.constructors}");
+        console.println($"multimethods={t.multimethods}");
         }
     }

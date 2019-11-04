@@ -24,6 +24,7 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
@@ -35,6 +36,7 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 
@@ -72,7 +74,6 @@ public class xRTType
         markNativeProperty("form");
         markNativeProperty("functions");
         markNativeProperty("methods");
-        markNativeProperty("multimethods");
         markNativeProperty("properties");
         markNativeProperty("recursive");
         markNativeProperty("underlyingTypes");
@@ -134,42 +135,38 @@ public class xRTType
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        TypeHandle hThis = (TypeHandle) hTarget;
-
+        TypeHandle hType = (TypeHandle) hTarget;
         switch (sPropName)
             {
             case "childTypes":
-                return getPropertyChildTypes(frame, hThis, iReturn);
+                return getPropertyChildTypes(frame, hType, iReturn);
 
             case "constants":
-                return getPropertyConstants(frame, hThis, iReturn);
+                return getPropertyConstants(frame, hType, iReturn);
 
             case "constructors":
-                return getPropertyConstructors(frame, hThis, iReturn);
+                return getPropertyConstructors(frame, hType, iReturn);
 
             case "explicitlyImmutable":
-                return getPropertyExplicitlyImmutable(frame, hThis, iReturn);
+                return getPropertyExplicitlyImmutable(frame, hType, iReturn);
 
             case "form":
-                return getPropertyForm(frame, hThis, iReturn);
+                return getPropertyForm(frame, hType, iReturn);
 
             case "functions":
-                return getPropertyFunctions(frame, hThis, iReturn);
+                return getPropertyFunctions(frame, hType, iReturn);
 
             case "methods":
-                return getPropertyMethods(frame, hThis, iReturn);
-
-            case "multimethods":
-                return getPropertyMultimethods(frame, hThis, iReturn);
+                return getPropertyMethods(frame, hType, iReturn);
 
             case "properties":
-                return getPropertyProperties(frame, hThis, iReturn);
+                return getPropertyProperties(frame, hType, iReturn);
 
             case "recursive":
-                return getPropertyRecursive(frame, hThis, iReturn);
+                return getPropertyRecursive(frame, hType, iReturn);
 
             case "underlyingTypes":
-                return getPropertyUnderlyingTypes(frame, hThis, iReturn);
+                return getPropertyUnderlyingTypes(frame, hType, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -179,25 +176,23 @@ public class xRTType
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
         {
+        TypeHandle hType = (TypeHandle) hTarget;
         switch (method.getName())
             {
             case "add":
-                return invokeAdd(frame, hTarget, hArg, iReturn);
+                return invokeAdd(frame, hType, hArg, iReturn);
 
             case "sub":
-                return invokeSub(frame, hTarget, hArg, iReturn);
+                return invokeSub(frame, hType, hArg, iReturn);
 
             case "and":
-                return invokeAnd(frame, hTarget, hArg, iReturn);
+                return invokeAnd(frame, hType, hArg, iReturn);
 
             case "or":
-                return invokeOr(frame, hTarget, hArg, iReturn);
+                return invokeOr(frame, hType, hArg, iReturn);
 
             case "purify":
-                {
-                // TODO GG
-                break;
-                }
+                return invokePurify(frame, hType, iReturn);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -207,50 +202,35 @@ public class xRTType
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn)
         {
-        TypeHandle   hType = (TypeHandle) hTarget;
-        TypeConstant type  = hType.getDataType();
+        TypeHandle hType = (TypeHandle) hTarget;
         switch (method.getName())
             {
             case "accessSpecified":
-                return type.isAccessSpecified()
-                            ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                                    makeAccessHandle(frame, type.getAccess()))
-                            : frame.assignValues(aiReturn, xBoolean.FALSE, null);
+                return invokeAccessSpecified(frame, hType, aiReturn);
 
             case "annotated":
-                return calcAnnotated(frame, hType, aiReturn);
+                return invokeAnnotated(frame, hType, aiReturn);
 
             case "contained":
-                return calcContained(frame, hType, aiReturn);
+                return invokeContained(frame, hType, aiReturn);
 
             case "fromClass":
-                return calcFromClass(frame, hType, aiReturn);
+                return invokeFromClass(frame, hType, aiReturn);
 
             case "fromProperty":
-                return calcFromProperty(frame, hType, aiReturn);
+                return invokeFromProperty(frame, hType, aiReturn);
 
             case "modifying":
-                {
-                return type.isModifyingType()
-                        ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                                type.getUnderlyingType().getTypeHandle())
-                        : frame.assignValues(aiReturn, xBoolean.FALSE, null);
-                }
+                return invokeModifying(frame, hType, aiReturn);
 
             case "named":
-                return calcNamed(frame, type, aiReturn);
+                return invokeNamed(frame, hType, aiReturn);
 
             case "parameterized":
-                return calcParameterized(frame, hType, aiReturn);
+                return invokeParameterized(frame, hType, aiReturn);
 
             case "relational":
-                {
-                return type.isModifyingType()
-                        ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                                type.getUnderlyingType().getTypeHandle(),
-                                type.getUnderlyingType2().getTypeHandle())
-                        : frame.assignValues(aiReturn, xBoolean.FALSE, null, null);
-                }
+                return invokeRelational(frame, hType, aiReturn);
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -332,7 +312,7 @@ public class xRTType
         TypeConstant typeTarget = hType.getDataType();
         TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
 
-        ObjectHandle.ArrayHandle hArray = null; // TODO
+        ArrayHandle hArray = null; // TODO
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -363,7 +343,7 @@ public class xRTType
             listProps.add(hProperty);
             }
 
-        ObjectHandle.ArrayHandle hArray = ensurePropertyArrayTemplate().createArrayHandle(
+        ArrayHandle hArray = ensurePropertyArrayTemplate().createArrayHandle(
                 ensurePropertyArray(typeTarget), listProps.toArray(new ObjectHandle[0]));
         return frame.assignValue(iReturn, hArray);
         }
@@ -492,7 +472,7 @@ public class xRTType
             ahFunctions = new FunctionHandle[0];
             }
 
-        ObjectHandle.ArrayHandle hArray = ensureFunctionArrayTemplate().createArrayHandle(
+        ArrayHandle hArray = ensureFunctionArrayTemplate().createArrayHandle(
                 ensureConstructorArray(typeTarget, typeParent), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
@@ -606,8 +586,8 @@ public class xRTType
                 listHandles.add(xRTFunction.makeHandle(info.getHead().getMethodStructure()));
                 }
             }
-        FunctionHandle[]         ahFunctions = listHandles.toArray(new FunctionHandle[0]);
-        ObjectHandle.ArrayHandle hArray      = ensureFunctionArrayTemplate().createArrayHandle(
+        FunctionHandle[] ahFunctions = listHandles.toArray(new FunctionHandle[0]);
+        ArrayHandle      hArray      = ensureFunctionArrayTemplate().createArrayHandle(
                 ensureFunctionArray(), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
@@ -617,9 +597,9 @@ public class xRTType
      */
     public int getPropertyMethods(Frame frame, TypeHandle hType, int iReturn)
         {
-        TypeConstant                      typeTarget  = hType.getDataType();
-        Map<MethodConstant, MethodInfo>   mapMethods  = typeTarget.ensureTypeInfo().getMethods();
-        ArrayList<xRTMethod.MethodHandle> listHandles = new ArrayList<>(mapMethods.size());
+        TypeConstant                    typeTarget  = hType.getDataType();
+        Map<MethodConstant, MethodInfo> mapMethods  = typeTarget.ensureTypeInfo().getMethods();
+        ArrayList<MethodHandle>         listHandles = new ArrayList<>(mapMethods.size());
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
             MethodInfo info = entry.getValue();
@@ -628,21 +608,9 @@ public class xRTType
                 listHandles.add(xRTMethod.makeHandle(typeTarget, entry.getKey()));
                 }
             }
-        xRTMethod.MethodHandle[] ahMethods = listHandles.toArray(new xRTMethod.MethodHandle[0]);
-        ObjectHandle.ArrayHandle hArray    = ensureMethodArrayTemplate().createArrayHandle(
+        MethodHandle[] ahMethods = listHandles.toArray(new MethodHandle[0]);
+        ArrayHandle    hArray    = ensureMethodArrayTemplate().createArrayHandle(
                 ensureMethodArray(typeTarget), ahMethods);
-        return frame.assignValue(iReturn, hArray);
-        }
-
-    /**
-     * Implements property: multimethods.get()
-     */
-    public int getPropertyMultimethods(Frame frame, TypeHandle hType, int iReturn)
-        {
-        TypeConstant typeTarget = hType.getDataType();
-        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
-
-        ObjectHandle.ArrayHandle hArray = null; // TODO
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -671,7 +639,7 @@ public class xRTType
 
             listProps.add(hProperty);
             }
-        ObjectHandle.ArrayHandle hArray = ensurePropertyArrayTemplate().createArrayHandle(
+        ArrayHandle hArray = ensurePropertyArrayTemplate().createArrayHandle(
                 ensurePropertyArray(typeTarget), listProps.toArray(new ObjectHandle[0]));
         return frame.assignValue(iReturn, hArray);
         }
@@ -710,7 +678,7 @@ public class xRTType
             ahTypes[i] = aUnderlying[i].getTypeHandle();
             }
 
-        ObjectHandle.ArrayHandle hArray = ensureTypeArrayTemplate().createArrayHandle(ensureTypeArray(), ahTypes);
+        ArrayHandle hArray = ensureTypeArrayTemplate().createArrayHandle(ensureTypeArray(), ahTypes);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -718,9 +686,20 @@ public class xRTType
     // ----- method implementations ----------------------------------------------------------------
 
     /**
+     * Implementation for: {@code conditional Access accessSpecified()}.
+     */
+    public int invokeAccessSpecified(Frame frame, TypeHandle hType, int[] aiReturn)
+        {
+        TypeConstant type = hType.getDataType();
+        return type.isAccessSpecified()
+                ? frame.assignValues(aiReturn, xBoolean.TRUE, makeAccessHandle(frame, type.getAccess()))
+                : frame.assignValues(aiReturn, xBoolean.FALSE, null);
+        }
+
+    /**
      * Implementation for: {@code conditional Annotation annotated()}.
      */
-    public int calcAnnotated(Frame frame, TypeHandle hType, int[] aiReturn)
+    public int invokeAnnotated(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         ObjectHandle hAnnotation = null; // TODO
         return hAnnotation == null
@@ -731,7 +710,7 @@ public class xRTType
     /**
      * Implementation for: {@code conditional Type!<> contained()}.
      */
-    public int calcContained(Frame frame, TypeHandle hType, int[] aiReturn)
+    public int invokeContained(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         TypeConstant typeTarget = hType.getDataType();
         // REVIEW CP: include PropertyClassTypeConstant?
@@ -749,7 +728,7 @@ public class xRTType
     /**
      * Implementation for: {@code conditional Class fromClass()}.
      */
-    public int calcFromClass(Frame frame, TypeHandle hType, int[] aiReturn)
+    public int invokeFromClass(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         ObjectHandle hClass = null; // TODO
         return hClass == null
@@ -760,7 +739,7 @@ public class xRTType
     /**
      * Implementation for: {@code conditional Property fromProperty()}.
      */
-    public int calcFromProperty(Frame frame, TypeHandle hType, int[] aiReturn)
+    public int invokeFromProperty(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         ObjectHandle hProp = null; // TODO
         return hProp == null
@@ -769,11 +748,23 @@ public class xRTType
         }
 
     /**
+     * Implementation for: {@code conditional Type!<> modifying()}.
+     */
+    public int invokeModifying(Frame frame, TypeHandle hType, int[] aiReturn)
+        {
+        TypeConstant type  = hType.getDataType();
+        return type.isModifyingType()
+                ? frame.assignValues(aiReturn, xBoolean.TRUE, type.getUnderlyingType().getTypeHandle())
+                : frame.assignValues(aiReturn, xBoolean.FALSE, null);
+        }
+
+    /**
      * Implementation for: {@code conditional String named()}.
      */
-    public int calcNamed(Frame frame, TypeConstant type, int[] aiReturn)
+    public int invokeNamed(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        String sName = null;
+        String       sName = null;
+        TypeConstant type  = hType.getDataType();
         if (type.isSingleDefiningConstant())
             {
             Constant id = type.getDefiningConstant();
@@ -791,13 +782,34 @@ public class xRTType
     /**
      * Implementation for: {@code conditional Type!<>[] parameterized()}.
      */
-    public int calcParameterized(Frame frame, TypeHandle hType, int[] aiReturn)
+    public int invokeParameterized(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         // type.isParamsSpecified() frame.assignValues(aiReturn, xBoolean.TRUE, null) // TODO type.getParamTypesArray())
         ObjectHandle hParams = null; // TODO
         return hParams == null
             ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
             : frame.assignValues(aiReturn, xBoolean.TRUE, hParams);
+        }
+
+    /**
+     * Implementation for: {@code conditional Type!<> purify()}.
+     */
+    public int invokePurify(Frame frame, TypeHandle hType, int iReturn)
+        {
+        return frame.assignValue(iReturn, hType); // TODO GG - implement Pure type constant etc.
+        }
+
+    /**
+     * Implementation for: {@code conditional (Type!<>, Type!<>) relational()}.
+     */
+    public int invokeRelational(Frame frame, TypeHandle hType, int[] aiReturn)
+        {
+        TypeConstant type = hType.getDataType();
+        return type.isModifyingType()
+                ? frame.assignValues(aiReturn, xBoolean.TRUE,
+                        type.getUnderlyingType().getTypeHandle(),
+                        type.getUnderlyingType2().getTypeHandle())
+                : frame.assignValues(aiReturn, xBoolean.FALSE, null, null);
         }
 
 

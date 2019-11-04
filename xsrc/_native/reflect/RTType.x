@@ -12,7 +12,6 @@ const RTType<DataType, OuterType>
     @Override @RO Type[] underlyingTypes                          .get() { TODO("native"); }
     @Override @RO Property<DataType>[] properties                 .get() { TODO("native"); }
     @Override @RO Property[] constants                            .get() { TODO("native"); }
-    @Override @RO Map<String, MultiMethod<DataType>> multimethods .get() { TODO("native"); }
     @Override @RO Method<DataType>[] methods                      .get() { TODO("native"); }
     @Override @RO Function[] functions                            .get() { TODO("native"); }
     @Override @RO Constructor[] constructors                      .get() { TODO("native"); }
@@ -50,6 +49,37 @@ const RTType<DataType, OuterType>
     //   DataType cast(Object o)
     //   conditional function DataType() defaultConstructor(OuterType? outer = Null)
     //   conditional function DataType(Struct) structConstructor(OuterType? outer = Null)
+
+    @Override
+    @Lazy Map<String, MultiMethod<DataType>> multimethods.calc()
+        {
+        import collections.HashMap;
+        
+        Map<String, MultiMethod<DataType>> multis = new HashMap();
+
+        Map<String, MultiMethod<DataType>>.Entry append(
+                MultiMethod<DataType>.Callable           callable,
+                Map<String, MultiMethod<DataType>>.Entry entry)
+            {
+            entry.value = entry.exists
+                    ? entry.value + callable
+                    : new MultiMethod<DataType>(callable.name, [callable]);
+            return entry;
+            }
+
+        for (Method<DataType> method : methods)
+            {
+            multis.process(method.name, append(method, _));
+            }
+
+        for (Function func : functions)
+            {
+            multis.process(func.name, append(func, _));
+            }
+
+        return multis.ensureImmutable(True);
+        }
+
 
     // ----- Stringable methods --------------------------------------------------------------------
 

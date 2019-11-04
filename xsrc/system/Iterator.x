@@ -342,7 +342,7 @@ interface Iterator<Element>
      *
      * @return a new iterator representing the concatenation of the two iterators
      */
-    Iterator concat(Iterator! that)
+    Iterator! concat(Iterator! that)
         {
         if (that.knownEmpty())
             {
