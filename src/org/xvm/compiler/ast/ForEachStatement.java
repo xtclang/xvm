@@ -451,9 +451,7 @@ public class ForEachStatement
         // regardless of the validity of the R-Value let's mark the L-Value as assigned
         exprLVal.markAssignment(ctx, false, errs);
 
-        // the statement block does not need its own scope (because the for() statement is a scope)
         StatementBlock blockOld = block;
-        blockOld.suppressScope();
 
         // while the block doesn't get its own scope, it only sees the "true" fork of the condition
         ctx = ctx.enterFork(true);

@@ -8,8 +8,8 @@ module TestReflection.xqiz.it
         testMaskReveal();
         testForm();
         testProps();
-//        testFuncs();
-//        testFuncs2();
+        testFuncs();
+        testFuncs2();
         }
 
     const Point(Int x, Int y);

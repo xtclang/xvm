@@ -358,9 +358,7 @@ public class ForStatement
         // the statement block is equivalent to "if ... then"
         ctx = ctx.enterFork(true);
 
-        // the statement block does not need its own scope (because the for() statement is a scope)
         StatementBlock blockOld = block;
-        blockOld.suppressScope();
         StatementBlock blockNew = (StatementBlock) blockOld.validate(ctx, errs);
         if (blockNew != blockOld)
             {
