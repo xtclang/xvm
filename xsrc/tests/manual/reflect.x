@@ -102,9 +102,9 @@ module TestReflection.xqiz.it
         Point p = new Point(123, 456);
         console.println($"Point p={p}");
 
-        Type t = Point;
+        Type<Point> t = Point;
         console.println($"Point type={t}");
-        for (Property prop : t.properties)
+        for (Property<Point> prop : t.properties)
             {
             console.println($"prop={prop}");
             console.println($"prop.get(p)={prop.get(p)}");

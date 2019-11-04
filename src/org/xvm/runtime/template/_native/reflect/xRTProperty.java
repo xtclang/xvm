@@ -25,6 +25,8 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xString;
 
+import static org.xvm.asm.Op.isDeferred;
+
 
 /**
  * Native Property implementation.
@@ -356,8 +358,9 @@ public class xRTProperty
      */
     public int invokeGet(Frame frame, PropertyHandle hProp, ObjectHandle hArg, int iReturn)
         {
-        ObjectHandle hValue = null; // TODO
-        return frame.assignValue(iReturn, hValue);
+        ObjectHandle     hTarget = hArg;
+        PropertyConstant idProp  = hProp.getPropertyConstant();
+        return hTarget.getTemplate().getPropertyValue(frame, hTarget, idProp, iReturn);
         }
 
     /**
