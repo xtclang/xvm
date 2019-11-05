@@ -2202,21 +2202,21 @@ public class Context
             errs = errs.branch();
 
             Argument arg = super.resolveRegularName(ctxFrom, sName, name, errs);
-            if (arg != null)
-                {
-                // first attempt succeeded
-                return arg;
-                }
 
-            SimpleCollector collector = new SimpleCollector();
-            if (m_typeLeft.resolveContributedName(sName, collector) == ResolutionResult.RESOLVED)
+            // TargetInfo carries a "local" view of the name and has a preference over the
+            // inference; otherwise, the inference takes precedence
+            if (!(arg instanceof TargetInfo))
                 {
-                // second attempt succeeded
-                return collector.getResolvedConstant();
+                SimpleCollector collector = new SimpleCollector();
+                if (m_typeLeft.resolveContributedName(sName, collector) == ResolutionResult.RESOLVED)
+                    {
+                    // inference succeeded
+                    return collector.getResolvedConstant();
+                    }
                 }
 
             errs.merge();
-            return null;
+            return arg;
             }
 
         @Override

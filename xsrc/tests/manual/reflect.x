@@ -262,7 +262,7 @@ module TestReflection.xqiz.it
             case Pure:
                 break;
 
-            case Type.Form.Class: // TODO GG why "Type.Form." required?
+            case Class:
 // TODO CP assert Class clz := type.fromClass();
 
 //                Class.Composition cmp = clz.composition;
@@ -273,7 +273,7 @@ module TestReflection.xqiz.it
 //                cmp.template.name;
                 break;
 
-            case Type.Form.Property:  // TODO GG
+            case Property:
             case Child:
             case FormalProperty:
             case FormalParameter:
@@ -322,7 +322,7 @@ module TestReflection.xqiz.it
                 return sb.toString();
 
             case Typedef:
-            case Type.Form.Sequence: // TODO GG
+            case Sequence:
                 break;
 
             default:
