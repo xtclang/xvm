@@ -16,12 +16,12 @@ module TestReflection.xqiz.it
     void testTypeStrings()
         {
         console.println("\n** testTypeStrings");
-        // REVIEW GG I had to put the types into Type<> form because otherwise some are unparseable (as values) e.g. String? looks like a short circuit expression ... will it still produce the right types?
+
         String[] names = [    "String",     "String?",     "String|Int",     "Ref",     "Ref<Int>",      "Var<Int?>",     "Int+Ref",     "Var-Ref"];
         Type[]   types = [Type<String>, Type<String?>, Type<String|Int>, Type<Ref>, Type<Ref<Int> >, Type<Var<Int?>>, Type<Int+Ref>, Type<Var-Ref>];
         Each: for (Type type : types)
             {
-            console.println($"{names[Each.count]}={formatType(type)}");
+            console.println($"{names[Each.count]}={formatType(type.DataType)}");
             }
         }
 
@@ -271,7 +271,7 @@ module TestReflection.xqiz.it
 
             case Intersection:
                 assert (Type t1, Type t2) := type.relational();
-                return $"{formatType(t1)} |33 {formatType(t2)}";
+                return $"{formatType(t1)} | {formatType(t2)}";
 
             case Union:
                 assert (Type t1, Type t2) := type.relational();
