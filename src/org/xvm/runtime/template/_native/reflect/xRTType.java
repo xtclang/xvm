@@ -39,6 +39,7 @@ import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
+import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 
@@ -362,7 +363,7 @@ public class xRTType
             }
 
         ArrayHandle hArray = ensurePropertyArrayTemplate().createArrayHandle(
-                ensurePropertyArray(typeTarget), listProps.toArray(new ObjectHandle[0]));
+                ensureConstantArray(), listProps.toArray(new ObjectHandle[0]));
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -598,8 +599,9 @@ public class xRTType
         ArrayList<FunctionHandle>       listHandles = new ArrayList<>(mapMethods.size());
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
-            MethodInfo info = entry.getValue();
-            if (info.isFunction())
+            MethodConstant id   = entry.getKey();
+            MethodInfo     info = entry.getValue();
+            if (info.isFunction() && id.getNestedDepth() == 2)
                 {
                 listHandles.add(xRTFunction.makeHandle(info.getHead().getMethodStructure()));
                 }
@@ -620,10 +622,11 @@ public class xRTType
         ArrayList<MethodHandle>         listHandles = new ArrayList<>(mapMethods.size());
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
-            MethodInfo info = entry.getValue();
-            if (!info.isFunction() && !info.isConstructor())
+            MethodConstant idMethod = entry.getKey();
+            MethodInfo     info     = entry.getValue();
+            if (!info.isFunction() && !info.isConstructor() && idMethod.getNestedDepth() == 2)
                 {
-                listHandles.add(xRTMethod.makeHandle(typeTarget, entry.getKey()));
+                listHandles.add(xRTMethod.makeHandle(typeTarget, idMethod));
                 }
             }
         MethodHandle[] ahMethods = listHandles.toArray(new MethodHandle[0]);
@@ -644,18 +647,18 @@ public class xRTType
         ConstantPool                        pool       = frame.poolContext();
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
             {
-            PropertyInfo propinfo     = entry.getValue();
-            if (propinfo.isConstant())
+            PropertyConstant idProp   = entry.getKey();
+            PropertyInfo     propinfo = entry.getValue();
+            if (!propinfo.isConstant() && idProp.getNestedDepth() == 1)
                 {
-                continue;
-                }
-            TypeConstant typeReferent = propinfo.getType();
-            TypeConstant typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, entry.getKey());
-            TypeConstant typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
+                TypeConstant  typeReferent = propinfo.getType();
+                TypeConstant  typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, idProp);
+                TypeConstant  typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
                                                 typeTarget, typeReferent, typeImpl);
-            ObjectHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
+                PropertyHandle hProperty   = xRTProperty.INSTANCE.makeHandle(typeProperty);
 
-            listProps.add(hProperty);
+                listProps.add(hProperty);
+                }
             }
         ArrayHandle hArray = ensurePropertyArrayTemplate().createArrayHandle(
                 ensurePropertyArray(typeTarget), listProps.toArray(new ObjectHandle[0]));
@@ -759,10 +762,28 @@ public class xRTType
      */
     public int invokeFromProperty(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        ObjectHandle hProp = null; // TODO
-        return hProp == null
-            ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
-            : frame.assignValues(aiReturn, xBoolean.TRUE, hProp);
+        TypeConstant type = hType.getDataType();
+        if (type.isSingleDefiningConstant())
+            {
+            Constant constDef = type.getDefiningConstant();
+            if (constDef instanceof PropertyConstant)
+                {
+                PropertyConstant idProp        = (PropertyConstant) constDef;
+                ConstantPool      pool         = idProp.getConstantPool();  // note: purposeful
+                TypeConstant      typeTarget   = idProp.getClassIdentity().getType();
+                TypeInfo          infoTarget   = typeTarget.ensureTypeInfo();
+                PropertyInfo      infoProp     = infoTarget.findProperty(idProp);
+                TypeConstant      typeReferent = infoProp.getType();
+                TypeConstant      typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, idProp);
+                TypeConstant      typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
+                                                    typeTarget, typeReferent, typeImpl);
+                PropertyHandle    hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
+
+                return frame.assignValues(aiReturn, xBoolean.TRUE, hProperty);
+                }
+            }
+
+        return frame.assignValues(aiReturn, xBoolean.FALSE, null);
         }
 
     /**
@@ -802,11 +823,22 @@ public class xRTType
      */
     public int invokeParameterized(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        // type.isParamsSpecified() frame.assignValues(aiReturn, xBoolean.TRUE, null) // TODO type.getParamTypesArray())
-        ObjectHandle hParams = null; // TODO
-        return hParams == null
-            ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
-            : frame.assignValues(aiReturn, xBoolean.TRUE, hParams);
+        TypeConstant type = hType.getDataType();
+        if (!type.isParamsSpecified())
+            {
+            return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+            }
+
+        TypeConstant[] atypes  = type.getParamTypesArray();
+        int            cTypes  = atypes.length;
+        TypeHandle[]   ahTypes = new TypeHandle[cTypes];
+        for (int i = 0; i < cTypes; ++i)
+            {
+            ahTypes[i] = makeHandle(atypes[i]);
+            }
+
+        ArrayHandle hArray = ensureTypeArrayTemplate().createArrayHandle(ensureTypeArray(), ahTypes);
+        return frame.assignValues(aiReturn, xBoolean.TRUE, hArray);
         }
 
     /**
@@ -930,8 +962,7 @@ public class xRTType
         ConstantPool pool = ConstantPool.getCurrentPool();
         TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                 pool.ensureParameterizedTypeConstant(pool.typeProperty(), typeTarget));
-        ClassComposition clz = f_templates.resolveClass(typePropertyArray);
-        return clz;
+        return f_templates.resolveClass(typePropertyArray);
         }
 
     /**
@@ -959,8 +990,7 @@ public class xRTType
         ConstantPool pool = ConstantPool.getCurrentPool();
         TypeConstant typeMethodArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                 pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget));
-        ClassComposition clz = f_templates.resolveClass(typeMethodArray);
-        return clz;
+        return f_templates.resolveClass(typeMethodArray);
         }
 
     /**

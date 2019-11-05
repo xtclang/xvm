@@ -37,7 +37,13 @@ package reflect
      * `Access` is an enumeration of the modifiers that can be used on top of a type to specify
      * a different view of the underlying type.
      */
-    enum Access {Public, Protected, Private, Struct}
+    enum Access(String keyword)
+        {
+        Public   ("public"),
+        Protected("protected"),
+        Private  ("private"),
+        Struct   ("struct")
+        }
 
     /**
      * An Argument represents a value for a parameter. The argument optionally supports a name that

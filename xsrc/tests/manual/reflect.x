@@ -4,6 +4,7 @@ module TestReflection.xqiz.it
 
     void run()
         {
+        testTypeStrings();
         testInstanceOf();
         testMaskReveal();
         testForm();
@@ -12,6 +13,18 @@ module TestReflection.xqiz.it
         testFuncs2();
         }
 
+    void testTypeStrings()
+        {
+        console.println("\n** testTypeStrings");
+        // REVIEW GG I had to put the types into Type<> form because otherwise some are unparseable (as values) e.g. String? looks like a short circuit expression ... will it still produce the right types?
+        String[] names = [    "String",     "String?",     "String|Int",     "Ref",     "Ref<Int>",      "Var<Int?>",     "Int+Ref",     "Var-Ref"];
+        Type[]   types = [Type<String>, Type<String?>, Type<String|Int>, Type<Ref>, Type<Ref<Int> >, Type<Var<Int?>>, Type<Int+Ref>, Type<Var-Ref>];
+        Each: for (Type type : types)
+            {
+            console.println($"{names[Each.count]}={formatType(type)}");
+            }
+        }
+        
     const Point(Int x, Int y);
 
     void testInstanceOf()
@@ -102,20 +115,50 @@ module TestReflection.xqiz.it
             static Int    ONE = 1;
             static String PI = foo();
             static String foo() {return "3.14";}
+
+            Int x
+                {
+                void foo() {}
+                }
             }
 
         Point point = new Point(123, 456);
         console.println($"Point point={point}");
 
         Type<Point> t = Point;
-        console.println($"Point type={t}");
+        console.println($"Point type={formatType(t)}");
         for (Property<Point> prop : t.properties)
             {
             console.println($"prop={prop}");
-            console.println($"prop.get(point)={prop.get(point)}");
+//            console.println($"prop.get(point)={prop.get(point)}");
 
             Ref impl = prop.of(point);
-            console.println($"Ref={impl}, type={impl.actualType}, get()={impl.get()}");
+//            console.println($"Ref={impl}, type={impl.actualType}, get()={impl.get()}");
+
+            Type typeImpl = &impl.actualType;
+            if (Property prop2 := typeImpl.fromProperty())
+                {
+                console.println($"impl.fromProp={prop2}");
+                // TODO val={prop2.get(point)}");
+                }
+            else
+                {
+                console.println("not from property?!?!");
+                }
+            }
+
+        Ref impl = point.&x;
+        console.println($"Ref={impl}, type={formatType(impl.actualType)}, get()={impl.get()}");
+
+        Type typeImpl = &impl.actualType;
+        if (Property prop2 := typeImpl.fromProperty())
+            {
+            console.println($"impl.fromProp={prop2}");
+            // TODO val={prop2.get(point)}");
+            }
+        else
+            {
+            console.println("not from property?!?!");
             }
 
         for (Property prop : t.constants)
@@ -195,9 +238,97 @@ module TestReflection.xqiz.it
             console.println($"func={f}");
             }
 
-        // TODO CP
         console.println($"methods={t.methods}, properties={t.properties}");
         console.println($"constructors={t.constructors}");
         console.println($"multimethods={t.multimethods}");
+        }
+
+    String formatType(Type type)
+        {
+        Type.Form form = type.form; // TODO GG this causes deferred init problem ...
+//2019-11-04 20:43:13.404 Service "TestReflection.xqiz.it" (id=0), fiber 0: Unhandled exception at at formatType(Ecstasy:Type); line=247
+//java.lang.NullPointerException
+//	at org.xvm.runtime.ObjectHandle.getType(ObjectHandle.java:135)
+//	at org.xvm.runtime.Frame.assignValue(Frame.java:604)
+//	at org.xvm.runtime.template._native.reflect.xRTType.getPropertyForm(xRTType.java:589)
+//	at org.xvm.runtime.template._native.reflect.xRTType.invokeNativeGet(xRTType.java:151)
+//	at org.xvm.runtime.ClassTemplate.getPropertyValue(ClassTemplate.java:831)
+//	at org.xvm.runtime.template._native.reflect.xRTType.getPropertyValue(xRTType.java:129)
+//	at org.xvm.asm.op.P_Get.process(P_Get.java:119)
+//	at org.xvm.runtime.ServiceContext.execute(ServiceContext.java:250)
+        switch (form)
+            {
+            case Pure:
+                break;
+
+            case Type.Form.Class: // TODO GG why "Type.Form." required?
+// TODO CP assert Class clz := type.fromClass();
+
+//                Class.Composition cmp = clz.composition;
+//                while ((Annotation annotation, cmp) := cmp.deannotate())
+//                    {
+//                    // print out annotation
+//                    }
+//                cmp.template.name;
+                break;
+                
+            case Type.Form.Property:  // TODO GG
+            case Child:
+            case FormalProperty:
+            case FormalParameter:
+            case FormalChild:
+                break;
+
+            case Intersection:
+                assert (Type t1, Type t2) := type.relational();
+                return $"{formatType(t1)} | {formatType(t2)}";
+
+            case Union:
+                assert (Type t1, Type t2) := type.relational();
+                return $"{formatType(t1)} + {formatType(t2)}";
+
+            case Difference:
+                assert (Type t1, Type t2) := type.relational();
+                return $"{formatType(t1)} - {formatType(t2)}";
+
+            case Immutable:
+                assert Type t1 := type.modifying();
+                return $"immutable {formatType(t1)}";
+
+            case Access:
+                assert val access := type.accessSpecified();
+                assert Type t1 := type.modifying();
+                return $"{formatType(t1)}:{access.keyword}";
+
+            case Annotated:
+                break;
+
+            case Parameterized:
+                assert Type[] params := type.parameterized();
+                assert Type   t1     := type.modifying();
+                StringBuffer sb = new StringBuffer();
+                sb.append(formatType(t1))
+                  .append('<');
+                EachParam: for (Type param : params)
+                    {
+                    if (!EachParam.first)
+                        {
+                        sb.append(", ");
+                        }
+                    sb.append(formatType(param));
+                    }
+                sb.append('>');
+                return sb.toString();
+
+            case Typedef:
+            case Type.Form.Sequence: // TODO GG
+                break;
+
+            default:
+                assert;
+            }
+
+        // TODO
+        return type.toString();
         }
     }

@@ -1046,10 +1046,10 @@ public abstract class ClassTemplate
     /**
      * Increment the property value and retrieve the new value.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param iReturn    the register id to place a result of the operation into
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1062,16 +1062,16 @@ public abstract class ClassTemplate
             return hRef.getVarSupport().invokeVarPreInc(frame, hRef, iReturn);
             }
         return new InPlacePropertyUnary(
-            UnaryAction.INC, this, hTarget, idProp, false, iReturn).doNext(frame);
+                UnaryAction.INC, this, hTarget, idProp, false, iReturn).doNext(frame);
         }
 
     /**
      * Retrieve the property value and then increment it.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param iReturn    the register id to place a result of the operation into
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1084,16 +1084,16 @@ public abstract class ClassTemplate
             return hRef.getVarSupport().invokeVarPostInc(frame, hRef, iReturn);
             }
         return new InPlacePropertyUnary(
-            UnaryAction.INC, this, hTarget, idProp, true, iReturn).doNext(frame);
+                UnaryAction.INC, this, hTarget, idProp, true, iReturn).doNext(frame);
         }
 
     /**
      * Decrement the property value and retrieve the new value.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param iReturn    the register id to place a result of the operation into
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1106,16 +1106,16 @@ public abstract class ClassTemplate
             return hRef.getVarSupport().invokeVarPreDec(frame, hRef, iReturn);
             }
         return new InPlacePropertyUnary(
-            UnaryAction.DEC, this, hTarget, idProp, false, iReturn).doNext(frame);
+                UnaryAction.DEC, this, hTarget, idProp, false, iReturn).doNext(frame);
         }
 
     /**
      * Retrieve the property value and then decrement it.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param iReturn    the register id to place a result of the operation into
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1128,16 +1128,16 @@ public abstract class ClassTemplate
             return hRef.getVarSupport().invokeVarPostDec(frame, hRef, iReturn);
             }
         return new InPlacePropertyUnary(
-            UnaryAction.DEC, this, hTarget, idProp, true, iReturn).doNext(frame);
+                UnaryAction.DEC, this, hTarget, idProp, true, iReturn).doNext(frame);
         }
 
     /**
      * Add the specified argument to the property value.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param hArg       the argument handle
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1151,16 +1151,16 @@ public abstract class ClassTemplate
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.ADD, this, hTarget, idProp, hArg).doNext(frame);
+                BinaryAction.ADD, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
      * Subtract the specified argument from the property value.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param hArg       the argument handle
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1174,16 +1174,16 @@ public abstract class ClassTemplate
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.SUB, this, hTarget, idProp, hArg).doNext(frame);
+                BinaryAction.SUB, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
      * Multiply the property value by the specified argument.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param hArg       the argument handle
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1197,16 +1197,16 @@ public abstract class ClassTemplate
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.MUL, this, hTarget, idProp, hArg).doNext(frame);
+                BinaryAction.MUL, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
      * Divide the property value by the specified argument.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param hArg       the argument handle
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1220,16 +1220,16 @@ public abstract class ClassTemplate
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.DIV, this, hTarget, idProp, hArg).doNext(frame);
+                BinaryAction.DIV, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
      * Mod the property value by the specified argument.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param hArg       the argument handle
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1243,16 +1243,16 @@ public abstract class ClassTemplate
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.MOD, this, hTarget, idProp, hArg).doNext(frame);
+                BinaryAction.MOD, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
      * Shift-left the property value by the specified argument.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param hArg       the argument handle
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1266,16 +1266,16 @@ public abstract class ClassTemplate
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.SHL, this, hTarget, idProp, hArg).doNext(frame);
+                BinaryAction.SHL, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
      * Shift-right the property value by the specified argument.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param hArg       the argument handle
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1289,16 +1289,16 @@ public abstract class ClassTemplate
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.SHR, this, hTarget, idProp, hArg).doNext(frame);
+                BinaryAction.SHR, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
      * Unsigned shift-right the property value by the specified argument.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param hArg       the argument handle
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1312,16 +1312,16 @@ public abstract class ClassTemplate
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.USHR, this, hTarget, idProp, hArg).doNext(frame);
+                BinaryAction.USHR, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
      * "And" the property value with the specified argument.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param hArg       the argument handle
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1335,16 +1335,16 @@ public abstract class ClassTemplate
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.AND, this, hTarget, idProp, hArg).doNext(frame);
+                BinaryAction.AND, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
      * "Or" the property value with the specified argument.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param hArg       the argument handle
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1358,16 +1358,16 @@ public abstract class ClassTemplate
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.OR, this, hTarget, idProp, hArg).doNext(frame);
+                BinaryAction.OR, this, hTarget, idProp, hArg).doNext(frame);
         }
 
     /**
      * Exclusive-or the property value with the specified argument.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target handle
-     * @param idProp  the property name
-     * @param hArg       the argument handle
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param idProp   the property name
+     * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1381,7 +1381,7 @@ public abstract class ClassTemplate
             }
 
         return new InPlacePropertyBinary(
-            BinaryAction.XOR, this, hTarget, idProp, hArg).doNext(frame);
+                BinaryAction.XOR, this, hTarget, idProp, hArg).doNext(frame);
         }
 
 
@@ -1390,11 +1390,11 @@ public abstract class ClassTemplate
     /**
      * Create a property Ref or Var for the specified target and property.
      *
-     * @param frame       the ConstantPool to place a potentially created new type into
-     * @param hTarget    the target handle
-     * @param idProp  the property constant
-     * @param fRO        true iff a Ref is required; Var otherwise
-     * @param iReturn    the register to place the result in
+     * @param frame    the ConstantPool to place a potentially created new type into
+     * @param hTarget  the target handle
+     * @param idProp   the property constant
+     * @param fRO      true iff a Ref is required; Var otherwise
+     * @param iReturn  the register to place the result in
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1822,7 +1822,7 @@ public abstract class ClassTemplate
         if (method == null)
             {
             System.err.println("Missing method " + f_sName + "." + sName +
-                Arrays.toString(asParamType) + "->" + Arrays.toString(asRetType));
+                    Arrays.toString(asParamType) + "->" + Arrays.toString(asRetType));
             }
         else
             {
