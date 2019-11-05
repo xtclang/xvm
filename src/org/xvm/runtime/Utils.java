@@ -235,6 +235,32 @@ public abstract class Utils
         return hEnum;
         }
 
+    /**
+     * A helper method for native code that needs to assign EnumHandle values retrieved
+     * via {@link xEnum#getEnumByName} or {@link xEnum#getEnumByOrdinal}.
+     *
+     * @param frame    the current frame
+     * @param hEnum    the Enum handle
+     * @param iReturn  the register to assign the value into
+     *
+     * @return one of R_EXCEPTION, R_NEXT or R_CALL values
+     */
+    public static int assignInitializedEnum(Frame frame, EnumHandle hEnum, int iReturn)
+        {
+        ObjectHandle hValue = ensureInitializedEnum(frame, hEnum);
+
+        if (Op.isDeferred(hValue))
+            {
+            ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
+            Frame.Continuation stepNext = frameCaller ->
+                frameCaller.assignValue(iReturn, ahValue[0]);
+
+            return new GetArguments(ahValue, stepNext).doNext(frame);
+            }
+
+        return frame.assignValue(iReturn, hValue);
+        }
+
 
     // ----- "local property or DeferredCallHandle as an argument" support -----
 

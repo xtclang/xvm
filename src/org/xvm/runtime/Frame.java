@@ -721,6 +721,7 @@ public class Frame
                         default:
                             throw new IllegalStateException();
                         }
+                    break;
 
                 case 1:
                     return assignValue(anVar[i], ahValue[i]);

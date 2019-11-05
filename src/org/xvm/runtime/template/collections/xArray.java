@@ -394,10 +394,9 @@ public class xArray
                 return frame.assignValue(iReturn, xInt64.makeHandle(hArray.getCapacity()));
 
             case "mutability":
-                {
-                EnumHandle hEnum = MUTABILITY.getEnumByOrdinal(hArray.m_mutability.ordinal());
-                return frame.assignValue(iReturn, Utils.ensureInitializedEnum(frame, hEnum));
-                }
+                return Utils.assignInitializedEnum(frame,
+                    MUTABILITY.getEnumByOrdinal(hArray.m_mutability.ordinal()), iReturn);
+
             case "size":
                 return frame.assignValue(iReturn, xInt64.makeHandle(hArray.m_cSize));
             }

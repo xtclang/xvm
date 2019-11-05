@@ -113,7 +113,7 @@ public class xFutureVar
                     cf.isCompletedExceptionally() ?
                         COMPLETION.getEnumByName("Error") :
                         COMPLETION.getEnumByName("Result");
-                return frame.assignValue(iReturn, Utils.ensureInitializedEnum(frame, hValue));
+                return Utils.assignInitializedEnum(frame, hValue, iReturn);
                 }
 
             case "notify":
