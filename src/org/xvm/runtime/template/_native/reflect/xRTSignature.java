@@ -400,6 +400,11 @@ public class xRTSignature
             return f_type;
             }
 
+        public MethodConstant getMethodId()
+            {
+            return f_idMethod;
+            }
+
         public String getName()
             {
             MethodStructure method = getMethod();

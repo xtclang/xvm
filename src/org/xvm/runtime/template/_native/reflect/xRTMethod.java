@@ -13,12 +13,16 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.util.Handy;
+import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.collections.xTuple.TupleHandle;
+
+import org.xvm.util.Handy;
 
 /**
  * Native Method implementation.
@@ -43,7 +47,11 @@ public class xRTMethod
         {
         markNativeProperty("access");
 
-        // TODO
+        markNativeMethod("formalParamNames" , null, null);
+        markNativeMethod("formalReturnNames", null, null);
+        markNativeMethod("bindTarget"       , null, null);
+        markNativeMethod("invoke"           , null, null);
+        markNativeMethod("invokeAsync"      , null, null);
 
         super.initDeclared();
         }
@@ -64,17 +72,156 @@ public class xRTMethod
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         MethodHandle hMethod = (MethodHandle) hTarget;
-
         switch (sPropName)
             {
             case "access":
-                Constants.Access access  = hMethod.getMethodInfo().getAccess();
-                ObjectHandle     hAccess = xRTType.INSTANCE.makeAccessHandle(frame, access);
-                return frame.assignValue(iReturn, hAccess);
+                return getPropertyAccess(frame, hMethod, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
+
+    @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
+        {
+        MethodHandle hMethod = (MethodHandle) hTarget;
+        switch (method.getName())
+            {
+            case "bindTarget":
+                return invokeBindTarget(frame, hMethod, hArg, iReturn);
+            }
+
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        MethodHandle hMethod = (MethodHandle) hTarget;
+        switch (method.getName())
+            {
+            case "invoke":
+                return invokeInvoke(frame, hMethod, ahArg, iReturn);
+
+            case "invokeAsync":
+                return invokeInvokeAsync(frame, hMethod, ahArg, iReturn);
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        MethodHandle hMethod = (MethodHandle) hTarget;
+        switch (method.getName())
+            {
+            case "formalParamNames":
+                return invokeFormalParamNames(frame, hMethod, aiReturn);
+
+            case "formalReturnNames":
+                return invokeFormalReturnNames(frame, hMethod, aiReturn);
+            }
+
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+        }
+
+
+    // ----- property implementations --------------------------------------------------------------
+
+    /**
+     * Implements property: access.get()
+     */
+    public int getPropertyAccess(Frame frame, MethodHandle hMethod, int iReturn)
+        {
+        Constants.Access access  = hMethod.getMethodInfo().getAccess();
+        ObjectHandle     hAccess = xRTType.INSTANCE.makeAccessHandle(frame, access);
+        return frame.assignValue(iReturn, hAccess);
+        }
+
+
+    // ----- method implementations ----------------------------------------------------------------
+
+    /**
+     * Implementation for: {@code Function<ParamTypes, ReturnTypes> bindTarget(Target target)}.
+     */
+    public int invokeBindTarget(Frame frame, MethodHandle hMethod, ObjectHandle hArg, int iReturn)
+        {
+        // TODO
+        return 0;
+        }
+
+    /**
+     * Implementation for: {@code ReturnTypes invoke(Target target, ParamTypes args)}.
+     */
+    public int invokeInvoke(Frame frame, MethodHandle hMethod, ObjectHandle[] ahArg, int iReturn)
+        {
+        ObjectHandle    hTarget  = ahArg[0];
+        TupleHandle     hTuple   = (TupleHandle) ahArg[1];
+        ObjectHandle[]  ahPass   = hTuple.m_ahValue;            // TODO GG+CP do we need to check these?
+        TypeComposition clazz    = hTarget.getComposition();
+        MethodConstant  idMethod = hMethod.getMethodId();
+        MethodStructure method   = hMethod.getMethod();
+        if (method == null)
+            {
+            method = (MethodStructure) idMethod.getComponent();
+            }
+
+        CallChain chain;
+        if (method != null && method.getAccess() == Constants.Access.PRIVATE)
+            {
+            chain = new CallChain(method);
+            }
+        else
+            {
+            Object nid = idMethod.resolveNestedIdentity(frame.poolContext(), frame.getGenericsResolver());
+
+            chain = clazz.getMethodCallChain(nid);
+            if (chain.getDepth() == 0)
+                {
+                // TODO: create an exception throwing chain
+                throw new IllegalStateException("No call chain for method \"" + idMethod.getValueString() +
+                    "\" on " + hTarget.getType().getValueString() + frame.getStackTrace());
+                }
+            }
+
+        return chain.isNative()
+                ? hTarget.getTemplate().invokeNativeT(frame, chain.getTop(), hTarget, ahPass, iReturn)
+                : hTarget.getTemplate().invokeT(frame, chain, hTarget, ahPass, iReturn);
+        }
+
+    /**
+     * Implementation for: {@code FutureVar<ReturnTypes> invokeAsync(Target target, ParamTypes args)}.
+     */
+    public int invokeInvokeAsync(Frame frame, MethodHandle hMethod, ObjectHandle[] ahArg, int iReturn)
+        {
+        // TODO
+        return 0;
+        }
+
+    /**
+     * Implementation for: {@code conditional String[] formalParamNames(Int i)}.
+     */
+    public int invokeFormalParamNames(Frame frame, MethodHandle hMethod, int[] aiReturn)
+        {
+        // TODO
+        return 0;
+        }
+
+    /**
+     * Implementation for: {@code conditional String[] formalReturnNames(Int i)}.
+     */
+    public int invokeFormalReturnNames(Frame frame, MethodHandle hMethod, int[] aiReturn)
+        {
+        // TODO
+        return 0;
+        }
+
+
+    // ----- Object handle -------------------------------------------------------------------------
 
     public static MethodHandle makeHandle(TypeConstant typeTarget, MethodConstant idMethod)
         {

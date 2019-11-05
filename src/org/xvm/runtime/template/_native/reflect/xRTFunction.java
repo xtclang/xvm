@@ -91,11 +91,13 @@ public class xRTFunction
         switch (method.getName())
             {
             case "bind":
-                return doBind(frame, hFunc, hArg, iReturn);
+                return invokeBind(frame, hFunc, hArg, iReturn);
+
             case "invoke":
-                return doInvoke(frame, hFunc, hArg, iReturn);
+                return invokeInvoke(frame, hFunc, hArg, iReturn);
+
             case "invokeAsync":
-                return doInvokeAsync(frame, hFunc, hArg, iReturn);
+                return invokeInvokeAsync(frame, hFunc, hArg, iReturn);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -109,7 +111,7 @@ public class xRTFunction
         switch (method.getName())
             {
             case "bind":
-                return doBind(frame, hFunc, ahArg, iReturn);
+                return invokeBind(frame, hFunc, ahArg, iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -121,7 +123,7 @@ public class xRTFunction
     /**
      * Method implementation: `Function!<> bind(Map<Parameter, Object> params)`
      */
-    public int doBind(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
+    public int invokeBind(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
         {
         // TODO
         throw new UnsupportedOperationException();
@@ -130,7 +132,7 @@ public class xRTFunction
     /**
      * Method implementation: `Function!<> bind(Parameter<ParamType> param, ParamType value)`
      */
-    public int doBind(Frame frame, FunctionHandle hFunc, ObjectHandle[] ahArg, int iReturn)
+    public int invokeBind(Frame frame, FunctionHandle hFunc, ObjectHandle[] ahArg, int iReturn)
         {
         // TODO
         throw new UnsupportedOperationException();
@@ -139,7 +141,7 @@ public class xRTFunction
     /**
      * Method implementation: `@Op("()") ReturnTypes invoke(ParamTypes args)`
      */
-    public int doInvoke(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
+    public int invokeInvoke(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
         {
         // TODO
         throw new UnsupportedOperationException();
@@ -148,7 +150,7 @@ public class xRTFunction
     /**
      * Method implementation: `FutureVar<ReturnTypes> invokeAsync(ParamTypes args)`
      */
-    public int doInvokeAsync(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
+    public int invokeInvokeAsync(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
         {
         // TODO
         throw new UnsupportedOperationException();

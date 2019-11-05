@@ -244,6 +244,14 @@ public abstract class IdentityConstant
                 : null;
         }
 
+    /**
+     * TODO GG doc
+     *
+     * @param pool
+     * @param resolver
+     *
+     * @return
+     */
     public Object resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver)
         {
         return isNested()

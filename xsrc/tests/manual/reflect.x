@@ -227,7 +227,7 @@ module TestReflection.xqiz.it
         Point<Int> p = new Point(3, 4, "world");
         console.println($"Point p={p}, sum={p.sum}, foo()={p.foo()}");
 
-        Type t = &p.actualType;
+        val t = &p.actualType;
         console.println($"Type={t}, foo={p.&foo()}");
         console.println($"Type={t}");
 
@@ -241,6 +241,17 @@ module TestReflection.xqiz.it
         console.println($"methods={t.methods}, properties={t.properties}");
         console.println($"constructors={t.constructors}");
         console.println($"multimethods={t.multimethods}");
+
+        // TODO CP figure out how to make this work: val method = Point.foo;
+        for (val method : t.methods)
+            {
+            if (method.name == "foo")
+                {
+                console.println($"method={method}");
+                // TODO CP console.println($"method.invoke(p)={method.invoke(p, Tuple:())}");
+                }
+            }
+
         }
 
     String formatType(Type type)
