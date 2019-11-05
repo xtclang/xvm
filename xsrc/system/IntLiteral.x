@@ -332,51 +332,6 @@ const IntLiteral(String text)
         }
 
 
-    // ----- other Number-like operations ----------------------------------------------------------
-
-    @Op("+")
-    Int64 add(Int64 n)
-        {
-        return this.toInt() + n;
-        }
-
-    /**
-     * Subtraction: Subtract another number from this number, and return the result.
-     */
-    @Op("-")
-    Int64 sub(Int64 n)
-        {
-        return this.toInt() - n;
-        }
-
-    /**
-     * Multiplication: Multiply this number by another number, and return the result.
-     */
-    @Op("*")
-    Int64 mul(Int64 n)
-        {
-        return this.toInt() * n;
-        }
-
-    /**
-     * Division: Divide this number by another number, and return the result.
-     */
-    @Op("/")
-    Int64 div(Int64 n)
-        {
-        return this.toInt() / n;
-        }
-
-    /**
-     * Modulo: Return the modulo that would result from dividing this number by another number.
-     */
-    @Op("%")
-    Int64 mod(Int64 n)
-        {
-        return this.toInt() % n;
-        }
-
-
     // ----- Sequential ----------------------------------------------------------------------------
 
     @Override

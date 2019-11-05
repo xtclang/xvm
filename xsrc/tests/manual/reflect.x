@@ -24,7 +24,7 @@ module TestReflection.xqiz.it
             console.println($"{names[Each.count]}={formatType(type)}");
             }
         }
-        
+
     const Point(Int x, Int y);
 
     void testInstanceOf()
@@ -245,17 +245,7 @@ module TestReflection.xqiz.it
 
     String formatType(Type type)
         {
-        Type.Form form = type.form; // TODO GG this causes deferred init problem ...
-//2019-11-04 20:43:13.404 Service "TestReflection.xqiz.it" (id=0), fiber 0: Unhandled exception at at formatType(Ecstasy:Type); line=247
-//java.lang.NullPointerException
-//	at org.xvm.runtime.ObjectHandle.getType(ObjectHandle.java:135)
-//	at org.xvm.runtime.Frame.assignValue(Frame.java:604)
-//	at org.xvm.runtime.template._native.reflect.xRTType.getPropertyForm(xRTType.java:589)
-//	at org.xvm.runtime.template._native.reflect.xRTType.invokeNativeGet(xRTType.java:151)
-//	at org.xvm.runtime.ClassTemplate.getPropertyValue(ClassTemplate.java:831)
-//	at org.xvm.runtime.template._native.reflect.xRTType.getPropertyValue(xRTType.java:129)
-//	at org.xvm.asm.op.P_Get.process(P_Get.java:119)
-//	at org.xvm.runtime.ServiceContext.execute(ServiceContext.java:250)
+        Type.Form form = type.form;
         switch (form)
             {
             case Pure:
@@ -271,7 +261,7 @@ module TestReflection.xqiz.it
 //                    }
 //                cmp.template.name;
                 break;
-                
+
             case Type.Form.Property:  // TODO GG
             case Child:
             case FormalProperty:
@@ -281,7 +271,7 @@ module TestReflection.xqiz.it
 
             case Intersection:
                 assert (Type t1, Type t2) := type.relational();
-                return $"{formatType(t1)} | {formatType(t2)}";
+                return $"{formatType(t1)} |33 {formatType(t2)}";
 
             case Union:
                 assert (Type t1, Type t2) := type.relational();

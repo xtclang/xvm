@@ -64,9 +64,6 @@ module TestFiles.xqiz.it
         @Inject Directory curDir;
         console.println($"curDir={curDir}");
 
-        @Inject Clock clock;
-        assert curDir.accessed.date == clock.now.date;
-
         console.println($"{curDir.name} content:");
         for (String name : curDir.names())
             {

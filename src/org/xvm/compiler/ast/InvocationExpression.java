@@ -362,8 +362,7 @@ public class InvocationExpression
                 for (int i = 0; i < cRedundant; ++i)
                     {
                     TypeConstant typeParam = listRedundant.get(i).getImplicitType(ctx);
-                    if (typeParam == null || !typeParam.isA(pool().typeType())
-                                          || typeParam.getParamsCount() != 1)
+                    if (typeParam == null || !typeParam.isA(pool().typeType()))
                         {
                         break;
                         }
