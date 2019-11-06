@@ -7,36 +7,26 @@ import java.util.List;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
-
 import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.compiler.Token;
 
 
 /**
- * A type expression for a function. This corresponds to the "function" keyword.
+ * A type expression TODO
  */
-public class FunctionTypeExpression
+public class TupleTypeExpression
         extends TypeExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public FunctionTypeExpression(Token function, List<Parameter> returnValues,
-            List<TypeExpression> params, long lEndPos)
+    public TupleTypeExpression(List<TypeExpression> params, long lStartPos, long lEndPos)
         {
-        this.function     = function;
-        this.returnValues = returnValues;
         this.paramTypes   = params;
+        this.lStartPos    = lStartPos;
         this.lEndPos      = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
-
-    public List<Parameter> getReturnValues()
-        {
-        return returnValues;
-        }
 
     public List<TypeExpression> getParamTypes()
         {
@@ -46,7 +36,7 @@ public class FunctionTypeExpression
     @Override
     public long getStartPosition()
         {
-        return function.getStartPosition();
+        return lStartPos;
         }
 
     @Override
@@ -68,9 +58,8 @@ public class FunctionTypeExpression
     protected TypeConstant instantiateTypeConstant(Context ctx)
         {
         ConstantPool pool = pool();
-        return pool.ensureClassTypeConstant(pool.clzFunction(), null,
-                toTupleType(toTypeConstantArray(paramTypes)),
-                toTupleType(toParamTypeConstantArray(returnValues)));
+        return pool.ensureParameterizedTypeConstant(pool.typeTuple(),
+                FunctionTypeExpression.toTypeConstantArray(paramTypes));
         }
 
     @Override
@@ -97,34 +86,6 @@ public class FunctionTypeExpression
                 : null;
         }
 
-    private TypeConstant toTupleType(TypeConstant[] aconstTypes)
-        {
-        ConstantPool pool = pool();
-        return pool.ensureClassTypeConstant(pool.clzTuple(), null, aconstTypes);
-        }
-
-    static TypeConstant[] toTypeConstantArray(List<TypeExpression> list)
-        {
-        int            c      = list.size();
-        TypeConstant[] aconst = new TypeConstant[c];
-        for (int i = 0; i < c; ++i)
-            {
-            aconst[i] = list.get(i).ensureTypeConstant();
-            }
-        return aconst;
-        }
-
-    private static TypeConstant[] toParamTypeConstantArray(List<Parameter> list)
-        {
-        int            c      = list.size();
-        TypeConstant[] aconst = new TypeConstant[c];
-        for (int i = 0; i < c; ++i)
-            {
-            aconst[i] = list.get(i).getType().ensureTypeConstant();
-            }
-        return aconst;
-        }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -133,34 +94,7 @@ public class FunctionTypeExpression
         {
         StringBuilder sb = new StringBuilder();
 
-        sb.append("function ");
-
-        if (returnValues.isEmpty())
-            {
-            sb.append("void");
-            }
-        else if (returnValues.size() == 1)
-            {
-            sb.append(returnValues.get(0));
-            }
-        else
-            {
-            boolean first = true;
-            for (Parameter param : returnValues)
-                {
-                if (first)
-                    {
-                    first = false;
-                    }
-                else
-                    {
-                    sb.append(", ");
-                    }
-                sb.append(param);
-                }
-            }
-
-        sb.append(" (");
+        sb.append('<');
 
         boolean first = true;
         for (TypeExpression type : paramTypes)
@@ -176,7 +110,7 @@ public class FunctionTypeExpression
             sb.append(type);
             }
 
-        sb.append(')');
+        sb.append('>');
 
         return sb.toString();
         }
@@ -190,10 +124,9 @@ public class FunctionTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token                function;
-    protected List<Parameter>      returnValues;
     protected List<TypeExpression> paramTypes;
+    protected long                 lStartPos;
     protected long                 lEndPos;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(FunctionTypeExpression.class, "returnValues", "paramTypes");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(TupleTypeExpression.class, "paramTypes");
     }

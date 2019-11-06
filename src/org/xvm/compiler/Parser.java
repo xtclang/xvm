@@ -510,7 +510,7 @@ public class Parser
                 Token name = expect(Id.IDENTIFIER);
 
                 // optional type parameters
-                List<TypeExpression> typeParams = parseTypeParameterTypeList(false);
+                List<TypeExpression> typeParams = parseTypeParameterTypeList(false, true);
 
                 // argument list
                 List<Expression> args = parseArgumentList(false, false, false);
@@ -1127,7 +1127,7 @@ public class Parser
             Expression exprCondition, Token doc, List<Token> modifiers, List<Annotation> annotations,
             List<Parameter> typeVars, Token conditional, List<Parameter> returns, Token name)
         {
-        List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false);
+        List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false, true);
         List<Parameter>      params           = parseParameterList(true);
         long                 lEndPos          = getLastMatch().getEndPosition();
         StatementBlock       body             = match(Id.SEMICOLON) == null ? parseStatementBlock() : null;
@@ -3038,11 +3038,14 @@ public class Parser
                             Token                name    = expect(Id.IDENTIFIER);
                             long                 lEndPos = name.getEndPosition();
                             List<TypeExpression> params  = null;
-                            if (peek().getId() == Id.COMP_LT)
+
+                            Token tokPeekLT = match(Id.COMP_LT);
+                            if (tokPeekLT != null)
                                 {
+                                putBack(tokPeekLT);
                                 try (SafeLookAhead attempt = new SafeLookAhead())
                                     {
-                                    params = parseTypeParameterTypeList(true);
+                                    params = parseTypeParameterTypeList(true, true);
                                     if (attempt.isClean())
                                         {
                                         attempt.keepResults();
@@ -3270,7 +3273,7 @@ public class Parser
                     {
                     // have to build the expression for the trailing name
                     NameExpression expr = new NameExpression(left, nameNDR, name,
-                            parseTypeParameterTypeList(false), lEndPos);
+                            parseTypeParameterTypeList(false, true), lEndPos);
 
                     // construct is added to the end of the list if it was specified
                     if (construct != null)
@@ -3316,11 +3319,13 @@ public class Parser
                 // test to see if there is a type parameter list (implying the expression is a type,
                 // or a name of a method specifying "redundant return types"
                 List<TypeExpression> params = null;
-                if (peek().getId() == Id.COMP_LT)
+                Token tokPeekLT = match(Id.COMP_LT);
+                if (tokPeekLT != null)
                     {
+                    putBack(tokPeekLT);
                     try (SafeLookAhead attempt = new SafeLookAhead())
                         {
-                        params = parseTypeParameterTypeList(true);
+                        params = parseTypeParameterTypeList(true, true);
                         if (attempt.isClean())
                             {
                             attempt.keepResults();
@@ -4339,7 +4344,7 @@ public class Parser
                 }
 
             // TypeParameterTypeList
-            List<TypeExpression> params = parseTypeParameterTypeList(false);
+            List<TypeExpression> params = parseTypeParameterTypeList(false, true);
 
             if (expr == null)
                 {
@@ -4615,7 +4620,7 @@ public class Parser
      *
      * @return a list of zero or more types, or null if there were no angle brackets
      */
-    List<TypeExpression> parseTypeParameterTypeList(boolean required)
+    List<TypeExpression> parseTypeParameterTypeList(boolean required, boolean fAllowTypeSequence)
         {
         List<TypeExpression> types = null;
         if (match(Id.COMP_LT, required) != null)
@@ -4626,7 +4631,7 @@ public class Parser
                 }
             else
                 {
-                types = parseTypeExpressionList();
+                types = parseTypeExpressionList(fAllowTypeSequence);
                 expect(Id.COMP_GT);
                 }
             }
@@ -4644,15 +4649,28 @@ public class Parser
      *
      * @return a list of type expressions
      */
-    List<TypeExpression> parseTypeExpressionList()
+    List<TypeExpression> parseTypeExpressionList(boolean fAllowTypeSequence)
         {
         List<TypeExpression> types = new ArrayList<>();
-        types.add(parseTypeExpression());
-        while (match(Id.COMMA) != null)
+        while (true)
             {
-            types.add(parseTypeExpression());
+            if (!types.isEmpty() && match(Id.COMMA) == null)
+                {
+                return types;
+                }
+
+            if (fAllowTypeSequence && peek().getId() == Id.COMP_LT)
+                {
+                Token tokStart = peek();
+                List<TypeExpression> listSeq = parseTypeParameterTypeList(true, false);
+                Token tokEnd   = getLastMatch();
+                types.add(new TupleTypeExpression(listSeq, tokStart.getStartPosition(), tokEnd.getEndPosition()));
+                }
+            else
+                {
+                types.add(parseTypeExpression());
+                }
             }
-        return types;
         }
 
 
@@ -4727,7 +4745,7 @@ public class Parser
             {
             types = peek().getId() == Id.R_PAREN
                     ? Collections.EMPTY_LIST
-                    : parseTypeExpressionList();
+                    : parseTypeExpressionList(false);
             expect(Id.R_PAREN);
             }
         return types;
@@ -5221,7 +5239,20 @@ public class Parser
     protected void putBack(Token token)
         {
         assert m_tokenPutBack == null;
-        m_tokenPutBack = token.desensitize();
+
+        // undo context sensitive keyword conversion
+        token = token.desensitize();
+
+        // undo peeling conversion
+        Token tokenUnpeeled = token.anneal(m_token);
+        if (tokenUnpeeled == null)
+            {
+            m_tokenPutBack = token;
+            }
+        else
+            {
+            m_token = tokenUnpeeled;
+            }
         }
 
     private class Mark
@@ -5237,8 +5268,8 @@ public class Parser
         {
         Mark mark = new Mark();
         mark.pos     = m_lexer.getPosition();
-        mark.token   = m_token;
-        mark.putBack = m_tokenPutBack;
+        mark.token   = m_token        == null ? null : m_token       .clone();
+        mark.putBack = m_tokenPutBack == null ? null : m_tokenPutBack.clone();;
         mark.doc     = m_doc;
         mark.noRec   = m_fAvoidRecovery;
         return mark;

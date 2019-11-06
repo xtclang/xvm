@@ -17,6 +17,7 @@ import static org.xvm.util.Handy.appendString;
  * Representation of a language token.
  */
 public class Token
+        implements Cloneable
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -196,9 +197,10 @@ public class Token
      */
     public Token peel(Id id, Source source)
         {
+        Id newId = null;
+
         if (id == Id.COMP_GT)
             {
-            Id newId;
             switch (m_id)
                 {
                 default:
@@ -224,23 +226,71 @@ public class Token
                     newId = Id.ASN;
                     break;
                 }
+            }
+        else if (id == Id.COMP_LT)
+            {
+            switch (m_id)
+                {
+                default:
+                    return null;
 
-            // get the location of "this" token
-            long start  = m_lStartPos;
+                case SHL_ASN:
+                    newId = Id.COMP_LTEQ;
+                    break;
 
-            // get the location of the end of the new peeled token / start of this token (adjusted)
-            long current = source.getPosition();
-            source.setPosition(start);
-            source.next();
-            long middle = source.getPosition();
-            source.setPosition(current);
+                case SHL:
+                    newId = Id.COMP_LT;
+                    break;
 
-            // adjust this token
-            m_lStartPos = middle;
-            m_id        = newId;
+                // note: there are no legitimate use cases for peeling "<" off of "<=" or "<=>"
+                // case COMP_LTEQ:
+                //     newId = Id.ASN;
+                //     break;
+                }
+            }
 
-            // return the new token
-            return new Token(start, middle, id);
+        if (newId == null)
+            {
+            return null;
+            }
+
+        // get the location of "this" token
+        long start  = m_lStartPos;
+
+        // get the location of the end of the new peeled token / start of this token (adjusted)
+        long current = source.getPosition();
+        source.setPosition(start);
+        source.next();
+        long middle = source.getPosition();
+        source.setPosition(current);
+
+        // adjust this token
+        m_lStartPos = middle;
+        m_id        = newId;
+
+        // return the new token
+        return new Token(start, middle, id);
+        }
+
+    /**
+     * Allow a token to be "un-peeled off" from the front of that following token, if possible.
+     *
+     * @param that  the token following this token
+     *
+     * @return the new token, or null if the two tokens cannot be annealed
+     */
+    public Token anneal(Token that)
+        {
+        if (m_id == Id.COMP_LT && this.m_lEndPos == that.m_lStartPos)
+            {
+            switch (that.m_id)
+                {
+                case COMP_LTEQ:
+                    return new Token(this.m_lStartPos, that.m_lEndPos, Id.SHL_ASN);
+
+                case COMP_LT:
+                    return new Token(this.m_lStartPos, that.m_lEndPos, Id.SHL);
+                }
             }
 
         return null;
@@ -362,6 +412,18 @@ public class Token
             }
 
         return sb.toString();
+        }
+
+    public Token clone()
+        {
+        try
+            {
+            return (Token) super.clone();
+            }
+        catch (CloneNotSupportedException e)
+            {
+            throw new IllegalStateException(e);
+            }
         }
 
 

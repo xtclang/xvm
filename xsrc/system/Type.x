@@ -51,9 +51,7 @@ interface Type<DataType, OuterType>
     {
     // ----- inner classes -------------------------------------------------------------------------
 
-    typedef Tuple<> NoParams;
-    typedef Tuple<DataType> ConstructorReturn;
-    typedef Function<NoParams, ConstructorReturn> Constructor;
+    typedef Function<<>, <DataType>> Constructor;
 
     /**
      * There are a number of different forms that a type can take. Each form has a different

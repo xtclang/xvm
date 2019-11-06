@@ -77,8 +77,12 @@ TypeParameterTypeList
     "<" TypeExpressionList ">"
 
 TypeExpressionList
+    TypeExpressionListElement
+    TypeExpressionList "," TypeExpressionListElement
+
+TypeExpressionListElement
+    TypeParameterTypeList                                       # indicates a "type sequence type"
     TypeExpression
-    TypeExpressionList "," TypeExpression
 
 #
 # compilation unit

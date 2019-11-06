@@ -15,10 +15,9 @@ import org.xvm.asm.GenericTypeResolver;
  * a sequence (tuple) of types.
  * <p/>
  * Examples of such a constraint in Ecstasy are:
- * <pre>
- *  interface Tuple<ElementTypes>
- *  const Method<TargetType, ParamTypes, ReturnTypes>
- * </pre>
+ *
+ * <li>{@code interface Tuple<ElementTypes extends Tuple<ElementTypes>>}</li>
+ * <li>{@code interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>}</li>
  */
 public class TypeSequenceTypeConstant
         extends TypeConstant

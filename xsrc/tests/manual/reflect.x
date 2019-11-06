@@ -4,6 +4,7 @@ module TestReflection.xqiz.it
 
     void run()
         {
+        testFuncType();
         testTypeStrings();
         testInstanceOf();
         testMaskReveal();
@@ -11,6 +12,25 @@ module TestReflection.xqiz.it
         testProps();
         testFuncs();
         testFuncs2();
+        }
+
+    Function<<Int, String>, <Int>> foo()
+        {
+        TODO §
+        }
+
+    void testFuncType()
+        {
+        console.println("\n** testFuncType");
+
+        static Int bar(Int n, String s) {return 0;}
+
+        Function<<Int, String>, <Int>> f = bar;
+        Function<<Int, String>, <Int>> f2 = bar.as(Function<<Int, String>, <Int>>);
+        if (bar.is(Function<<Int, String>, <Int>>))
+            {
+            Int x = 1;
+            }
         }
 
     void testTypeStrings()
@@ -227,7 +247,7 @@ module TestReflection.xqiz.it
         Point<Int> p = new Point(3, 4, "world");
         console.println($"Point p={p}, sum={p.sum}, foo()={p.foo()}");
 
-        val t = &p.actualType;
+        val t = &p.actualType.as(Type<Point<Int>>);
         console.println($"Type={t}, foo={p.&foo()}");
         console.println($"Type={t}");
 
@@ -248,7 +268,7 @@ module TestReflection.xqiz.it
             if (method.name == "foo")
                 {
                 console.println($"method={method}");
-                // TODO CP console.println($"method.invoke(p)={method.invoke(p, Tuple:())}");
+                // console.println($"method.invoke(p)={method.as(TODO).invoke(p, Tuple:())}");
                 }
             }
 
