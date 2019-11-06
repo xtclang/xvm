@@ -515,7 +515,7 @@ public class xRTType
             }
 
         @Override
-        public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+        public int callT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
             {
             ObjectHandle hParent = null;
             if (f_fParent)
@@ -524,8 +524,26 @@ public class xRTType
                 System.arraycopy(ahArg, 1, ahArg, 0, ahArg.length-1);
                 }
 
-            return f_clzTarget.getTemplate().construct(
-                    frame, f_constructor, f_clzTarget, hParent, ahArg, iReturn);
+            int iResult = f_clzTarget.getTemplate().construct(
+                    frame, f_constructor, f_clzTarget, hParent, ahArg, Op.A_STACK);
+            switch (iResult)
+                {
+                case Op.R_NEXT:
+                    return frame.assignTuple(iReturn, frame.popStack());
+
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        frameCaller.assignTuple(iReturn, frame.popStack()));
+                    // fall through
+                default:
+                    return iResult;
+                }
+            }
+
+        @Override
+        protected ObjectHandle[] prepareVars(ObjectHandle[] ahArg)
+            {
+            throw new IllegalStateException();
             }
 
         @Override

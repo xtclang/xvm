@@ -147,12 +147,15 @@ public class xRTFunction
         {
         TupleHandle    hTuple = (TupleHandle) hArg;
         ObjectHandle[] ahArg  = hTuple.m_ahValue;
-        if (ahArg.length != hFunc.getParamCount())
+        int            cArgs  = ahArg.length;
+
+        if (cArgs != hFunc.getParamCount())
             {
             return frame.raiseException("Invalid tuple argument");
             }
 
-        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, hFunc.getVarCount());
+        int            cVars = hFunc.getVarCount();
+        ObjectHandle[] ahVar = cArgs == cVars ? ahArg.clone() : Utils.ensureSize(ahArg, cVars);
 
         return hFunc.callT(frame, null, ahVar, iReturn);
         }

@@ -740,7 +740,7 @@ public class Frame
      *
      * @return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK
      */
-    public int assignTuple(int nVar, ObjectHandle[] ahValue)
+    public int assignTuple(int nVar, ObjectHandle... ahValue)
         {
         ClassComposition clazz = ensureClass(getVarInfo(nVar).getType());
 
