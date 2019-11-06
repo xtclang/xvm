@@ -29,6 +29,7 @@ import java.util.Vector;
 import org.xvm.asm.Constant.Format;
 
 import org.xvm.asm.constants.*;
+import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.type.Decimal;
@@ -3246,6 +3247,137 @@ public class ConstantPool
 
 
     // ----- TypeConstant helpers  -----------------------------------------------------------------
+
+    /**
+     * While it's known that both left and right types are functions
+     * ({@code type.getSingleUnderlyingClass(true).equals(clzFunction());}), calculate whether
+     * the {@code typeFnRight} is assignable to {@code typeFnLeft}.
+     *
+     * @return one of {@link Relation} constants
+     */
+    public Relation checkFunctionCompatibility(TypeConstant typeFnLeft, TypeConstant typeFnRight)
+        {
+        return checkFunctionOrMethodCompatibility(typeFnLeft, typeFnRight, false);
+        }
+
+    /**
+     * While it's known that both left and right types are methods
+     * ({@code type.getSingleUnderlyingClass(true).equals(clzMethod());}), calculate whether
+     * the {@code typeMethRight} is assignable to {@code typeMethLeft}.
+     *
+     * @return one of {@link Relation} constants
+     */
+    public Relation checkMethodCompatibility(TypeConstant typeMethLeft, TypeConstant typeMethRight)
+        {
+        return checkFunctionOrMethodCompatibility(typeMethLeft, typeMethRight, true);
+        }
+
+    private Relation checkFunctionOrMethodCompatibility(TypeConstant typeLeft, TypeConstant typeRight,
+                                                        boolean fMethod)
+        {
+        // the only modification that is allowed on the Function is "this:class"
+        if (typeLeft.isSingleDefiningConstant() && typeRight.isSingleDefiningConstant())
+            {
+            Constant constIdLeft  = typeLeft.getDefiningConstant();
+            Constant constIdRight = typeRight.getDefiningConstant();
+            if (constIdLeft.getFormat()  == Format.ThisClass &&
+                constIdRight.getFormat() == Format.ThisClass)
+                {
+                // to allow assignment of this:class(X) to this:class(Function),
+                // X should be a Function or an Object
+                typeRight = typeRight.resolveAutoNarrowing(this, false, null);
+                typeLeft  = typeLeft .resolveAutoNarrowing(this, false, null);
+
+                if (typeRight.equals(typeObject()))
+                    {
+                    return Relation.IS_A;
+                    }
+                // continue with auto-narrowing resolved
+                }
+            }
+
+        // Function<TupleRP, TupleRR> is assignable to Function<TupleLP, TupleLR> iff
+        // (RP/RR - right parameters/return, LP/LR - left parameter/return)
+        // 1) TupleLP has less or equal arity arity as TupleRP
+        //    (assuming there are default values and relying on the run-time checks)
+        // 2) every parameter type on the right should be assignable to a corresponding parameter
+        //    on the left (e.g. "function void (Number)" is assignable to "function void (Int)")
+        // 3) TupleLR has less or equal arity than TupleRR
+        // 4) every return type on the left should be assignable to a corresponding return
+        //    on the right (e.g. "function Int ()" is assignable to "function Number ()")
+        //
+        // The same rules apply to Method<Target, TupleP, TupleR>,
+
+        int ixParams, ixReturns, cMinParams, cMaxParams;
+        if (fMethod)
+            {
+            TypeConstant typeTargetL = typeLeft .getParamType(0);
+            TypeConstant typeTargetR = typeRight.getParamType(0);
+            if (!typeTargetR.isA(typeTargetL))
+                {
+                return Relation.INCOMPATIBLE;
+                }
+
+            ixParams = 1; ixReturns = 2; cMinParams = 1; cMaxParams = 3;
+            }
+        else
+            {
+            ixParams = 0; ixReturns = 1; cMinParams = 0; cMaxParams = 2;
+            }
+
+        int cL = typeLeft .getParamsCount();
+        int cR = typeRight.getParamsCount();
+        if (cL <= cMinParams)
+            {
+            // Function<> <-- Function<RP, RR> is allowed
+            return Relation.IS_A;
+            }
+        if (cL != cMaxParams || cR != cMaxParams)
+            {
+            // either cR == 0 or a compilation error; not our responsibility to report
+            return Relation.INCOMPATIBLE;
+            }
+
+        TypeConstant typeLP = typeLeft .getParamType(ixParams);
+        TypeConstant typeLR = typeLeft .getParamType(ixReturns);
+        TypeConstant typeRP = typeRight.getParamType(ixParams);
+        TypeConstant typeRR = typeRight.getParamType(ixReturns);
+
+        assert typeLP.isTuple() && typeLR.isTuple() && typeRP.isTuple() && typeRR.isTuple();
+
+        int cLP = typeLP.getParamsCount();
+        int cLR = typeLR.getParamsCount();
+        int cRP = typeRP.getParamsCount();
+        int cRR = typeRR.getParamsCount();
+
+        if (cLP > cRP || cLR > cRR)
+            {
+            return Relation.INCOMPATIBLE;
+            }
+
+        // functions do not produce, so we cannot have "weak" relations
+        for (int i = 0; i < cLP; i++)
+            {
+            TypeConstant typeL = typeLP.getParamType(i);
+            TypeConstant typeR = typeRP.getParamType(i);
+            if (!typeL.isA(typeR))
+                {
+                return Relation.INCOMPATIBLE;
+                }
+            }
+
+        for (int i = 0; i < cLR; i++)
+            {
+            TypeConstant typeL = typeLR.getParamType(i);
+            TypeConstant typeR = typeRR.getParamType(i);
+            if (!typeR.isA(typeL))
+                {
+                return Relation.INCOMPATIBLE;
+                }
+            }
+
+        return Relation.IS_A;
+        }
 
     /**
      * Build a TypeConstant for a function.

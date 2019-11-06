@@ -4742,93 +4742,22 @@ public abstract class TypeConstant
 
         if (idLeft.equals(pool.clzFunction()))
             {
-            // the only modification that is allowed on the Function is "this:class"
-            if (typeLeft.isSingleDefiningConstant() && typeRight.isSingleDefiningConstant())
+            if (!idRight.equals(idLeft))
                 {
-                Constant constIdLeft  = typeLeft.getDefiningConstant();
-                Constant constIdRight = typeRight.getDefiningConstant();
-                if (constIdLeft.getFormat()  == Format.ThisClass &&
-                    constIdRight.getFormat() == Format.ThisClass)
-                    {
-                    // to allow assignment of this:class(X) to this:class(Function),
-                    // X should be a Function or an Object
-                    typeRight = typeRight.resolveAutoNarrowing(pool, false, null);
-                    typeLeft  = typeLeft.resolveAutoNarrowing(pool, false, null);
-
-                    if (typeRight.equals(pool.typeObject()))
-                        {
-                        return Relation.IS_A;
-                        }
-                    // continue with auto-narrowing resolved
-                    }
-                }
-
-            if (!idRight.equals(pool.clzFunction()))
-                {
-                // nothing is assignable to a Function
+                // nothing is assignable to a Function except a Function
                 return Relation.INCOMPATIBLE;
                 }
+            return pool.checkFunctionCompatibility(typeLeft, typeRight);
+            }
 
-            // Function<TupleRP, TupleRR> is assignable to Function<TupleLP, TupleLR> iff
-            // (RP/RR - right parameters/return, LP/LR - left parameter/return)
-            // 1) TupleLP has less or equal arity arity as TupleRP
-            //    (assuming there are default values and relying on the run-time checks)
-            // 2) every parameter type on the right should be assignable to a corresponding parameter
-            //    on the left (e.g. "function void (Number)" is assignable to "function void (Int)")
-            // 3) TupleLR has less or equal arity than TupleRR
-            // 4) every return type on the left should be assignable to a corresponding return
-            //    on the right (e.g. "function Int ()" is assignable to "function Number ()")
-            int cL = typeLeft.getParamsCount();
-            int cR = typeRight.getParamsCount();
-            if (cL == 0)
+        if (idLeft.equals(pool.clzMethod()))
+            {
+            if (!idRight.equals(idLeft))
                 {
-                // Function<> <-- Function<RP, RR> is allowed
-                return Relation.IS_A;
-                }
-            if (cL != 2 || cR != 2)
-                {
-                // either cR == 0 or a compilation error; not our responsibility to report
+                // nothing is assignable to a Method except a Method
                 return Relation.INCOMPATIBLE;
                 }
-
-            TypeConstant typeLP = typeLeft.getParamType(0);
-            TypeConstant typeLR = typeLeft.getParamType(1);
-            TypeConstant typeRP = typeRight.getParamType(0);
-            TypeConstant typeRR = typeRight.getParamType(1);
-
-            assert typeLP.isTuple() && typeLR.isTuple() && typeRP.isTuple() && typeRR.isTuple();
-
-            int cLP = typeLP.getParamsCount();
-            int cLR = typeLR.getParamsCount();
-            int cRP = typeRP.getParamsCount();
-            int cRR = typeRR.getParamsCount();
-
-            if (cLP > cRP || cLR > cRR)
-                {
-                return Relation.INCOMPATIBLE;
-                }
-
-            // functions do not produce, so we cannot have "weak" relations
-            for (int i = 0; i < cLP; i++)
-                {
-                TypeConstant typeL = typeLP.getParamType(i);
-                TypeConstant typeR = typeRP.getParamType(i);
-                if (!typeL.isA(typeR))
-                    {
-                    return Relation.INCOMPATIBLE;
-                    }
-                }
-
-            for (int i = 0; i < cLR; i++)
-                {
-                TypeConstant typeL = typeLR.getParamType(i);
-                TypeConstant typeR = typeRR.getParamType(i);
-                if (!typeR.isA(typeL))
-                    {
-                    return Relation.INCOMPATIBLE;
-                    }
-                }
-            return Relation.IS_A;
+            return pool.checkMethodCompatibility(typeLeft, typeRight);
             }
 
         return null;
