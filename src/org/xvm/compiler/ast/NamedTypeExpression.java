@@ -861,11 +861,6 @@ public class NamedTypeExpression
         else
             {
             TypeConstant type = left.ensureTypeConstant(ctx);
-            if (type.containsUnresolved())
-                {
-                return m_typeUnresolved =
-                    new UnresolvedTypeConstant(pool, (UnresolvedNameConstant) m_constId);
-                }
 
             switch (m_constId.getFormat())
                 {
@@ -877,7 +872,15 @@ public class NamedTypeExpression
                     return type;
 
                 case Typedef:
-                     return m_constId.getType();
+                    {
+                    // resolve the typedef in the context of the referring type
+                    TypeConstant typeTypedef = ((TypedefConstant) m_constId).getReferredToType();
+                    return typeTypedef.resolveGenerics(pool, type);
+                    }
+
+                case UnresolvedName:
+                    return m_typeUnresolved =
+                        new UnresolvedTypeConstant(pool, (UnresolvedNameConstant) m_constId);
 
                 default:
                     // invalid name; leave unresolved to be reported later
