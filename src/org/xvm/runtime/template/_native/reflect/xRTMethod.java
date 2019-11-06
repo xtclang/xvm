@@ -150,8 +150,11 @@ public class xRTMethod
      */
     public int invokeBindTarget(Frame frame, MethodHandle hMethod, ObjectHandle hArg, int iReturn)
         {
-        // TODO
-        return 0;
+        CallChain chain = hMethod.getCallChain(frame, hArg);
+
+        return frame.assignValue(iReturn, hArg.getTemplate().isService()
+                ? xRTFunction.makeAsyncHandle(chain).bindTarget(hArg)
+                : xRTFunction.makeHandle(chain, 0).bindTarget(hArg));
         }
 
     /**
@@ -159,34 +162,10 @@ public class xRTMethod
      */
     public int invokeInvoke(Frame frame, MethodHandle hMethod, ObjectHandle[] ahArg, int iReturn)
         {
-        ObjectHandle    hTarget  = ahArg[0];
-        TupleHandle     hTuple   = (TupleHandle) ahArg[1];
-        ObjectHandle[]  ahPass   = hTuple.m_ahValue;            // TODO GG+CP do we need to check these?
-        TypeComposition clazz    = hTarget.getComposition();
-        MethodConstant  idMethod = hMethod.getMethodId();
-        MethodStructure method   = hMethod.getMethod();
-        if (method == null)
-            {
-            method = (MethodStructure) idMethod.getComponent();
-            }
-
-        CallChain chain;
-        if (method != null && method.getAccess() == Constants.Access.PRIVATE)
-            {
-            chain = new CallChain(method);
-            }
-        else
-            {
-            Object nid = idMethod.resolveNestedIdentity(frame.poolContext(), frame.getGenericsResolver());
-
-            chain = clazz.getMethodCallChain(nid);
-            if (chain.getDepth() == 0)
-                {
-                // TODO: create an exception throwing chain
-                throw new IllegalStateException("No call chain for method \"" + idMethod.getValueString() +
-                    "\" on " + hTarget.getType().getValueString() + frame.getStackTrace());
-                }
-            }
+        ObjectHandle   hTarget = ahArg[0];
+        TupleHandle    hTuple  = (TupleHandle) ahArg[1];
+        ObjectHandle[] ahPass  = hTuple.m_ahValue;            // TODO GG+CP do we need to check these?
+        CallChain      chain   = hMethod.getCallChain(frame, hTarget);
 
         return chain.isNative()
                 ? hTarget.getTemplate().invokeNativeT(frame, chain.getTop(), hTarget, ahPass, iReturn)
@@ -198,8 +177,8 @@ public class xRTMethod
      */
     public int invokeInvokeAsync(Frame frame, MethodHandle hMethod, ObjectHandle[] ahArg, int iReturn)
         {
-        // TODO
-        return 0;
+        // TODO GG
+        throw new UnsupportedOperationException("TODO");
         }
 
     /**
@@ -208,7 +187,7 @@ public class xRTMethod
     public int invokeFormalParamNames(Frame frame, MethodHandle hMethod, int[] aiReturn)
         {
         // TODO
-        return 0;
+        throw new UnsupportedOperationException("TODO");
         }
 
     /**
@@ -217,7 +196,7 @@ public class xRTMethod
     public int invokeFormalReturnNames(Frame frame, MethodHandle hMethod, int[] aiReturn)
         {
         // TODO
-        return 0;
+        throw new UnsupportedOperationException("TODO");
         }
 
 
@@ -272,6 +251,35 @@ public class xRTMethod
             return getMethodInfo().getIdentity().getSignature().getRawReturns()[iArg];
             }
 
+        CallChain getCallChain(Frame frame, ObjectHandle hTarget)
+            {
+            CallChain chain;
+            TypeComposition clazz    = hTarget.getComposition();
+            MethodConstant  idMethod = getMethodId();
+            MethodStructure method   = getMethod();
+            if (method == null)
+                {
+                method = (MethodStructure) idMethod.getComponent();
+                }
+
+            if (method != null && method.getAccess() == Constants.Access.PRIVATE)
+                {
+                chain = new CallChain(method);
+                }
+            else
+                {
+                Object nid = idMethod.resolveNestedIdentity(frame.poolContext(), frame.getGenericsResolver());
+
+                chain = clazz.getMethodCallChain(nid);
+                if (chain.getDepth() == 0)
+                    {
+                    // TODO: create an exception throwing chain
+                    throw new IllegalStateException("No call chain for method \"" + idMethod.getValueString() +
+                        "\" on " + hTarget.getType().getValueString() + frame.getStackTrace());
+                    }
+                }
+            return chain;
+            }
         @Override
         public boolean equals(Object obj)
             {

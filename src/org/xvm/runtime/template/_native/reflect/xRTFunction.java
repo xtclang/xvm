@@ -27,6 +27,8 @@ import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
+import org.xvm.runtime.template.collections.xTuple.TupleHandle;
+
 
 /**
  * Native Function implementation.
@@ -143,8 +145,16 @@ public class xRTFunction
      */
     public int invokeInvoke(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
         {
-        // TODO
-        throw new UnsupportedOperationException();
+        TupleHandle    hTuple = (TupleHandle) hArg;
+        ObjectHandle[] ahArg  = hTuple.m_ahValue;
+        if (ahArg.length != hFunc.getParamCount())
+            {
+            return frame.raiseException("Invalid tuple argument");
+            }
+
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, hFunc.getVarCount());
+
+        return hFunc.callT(frame, null, ahVar, iReturn);
         }
 
     /**
@@ -152,7 +162,7 @@ public class xRTFunction
      */
     public int invokeInvokeAsync(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
         {
-        // TODO
+        // TODO GG
         throw new UnsupportedOperationException();
         }
 

@@ -203,7 +203,10 @@ module TestReflection.xqiz.it
         console.println($"func name={f.name}");
         console.println($"func type={&f.actualType}");
 
-        void foo(Int x, String s) {}
+        void foo(Int x, String s)
+            {
+            console.println($" -> in foo() x={x}, s={s}");
+            }
 
         val f2  = &foo(1, "hello");  console.println($"f2  = {f2 } -> {f2 ()}");
         val f3  =  foo;              console.println($"f3  = {f3 } -> {f3 (1, "hello")}");
@@ -214,6 +217,10 @@ module TestReflection.xqiz.it
         val f5b = &foo(1, _);        console.println($"f5b = {f5b} -> {f5b("hello")}");
         val f6  =  foo(_, "hello");  console.println($"f6  = {f6 } -> {f6 (1)}");
         val f6b = &foo(_, "hello");  console.println($"f6b = {f6b} -> {f6b(1)}");
+
+        f2.invoke(Tuple:());
+        f4.invoke((42.toInt(), "goodbye"));
+        // f4.invoke((42, "goodbye"));   <-- note: this does not compile (TODO GG?)
         }
 
     void testFuncs2()
