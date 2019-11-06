@@ -826,17 +826,33 @@ public class TypeInfo
      *
      * @return the type of the typedef iff it exists and is visible; null otherwise
      */
-    public TypeConstant getTypedefType(String sName)
+    public TypeConstant getTypedefType(ConstantPool pool, String sName)
         {
         if (f_struct != null)
             {
             TypedefStructure typedef = f_struct.getTypedDef(sName);
             if (typedef != null)
                 {
-                return typedef.getType();
+                // resolve the typedef in the context of this [container] type
+                return typedef.getType().resolveGenerics(pool, getType());
                 }
             }
         return null;
+        }
+
+    /**
+     * Calculate a child type for a given name.
+     *
+     * @param sName  the name of the child
+     *
+     * @return the type of the typedef, a virtual child or null if neither exists
+     */
+    public TypeConstant calculateChildType(ConstantPool pool, String sName)
+        {
+        TypeConstant typeTypedef = getTypedefType(pool, sName);
+        return typeTypedef == null
+                ? getVirtualChildType(sName)
+                : typeTypedef;
         }
 
     /**

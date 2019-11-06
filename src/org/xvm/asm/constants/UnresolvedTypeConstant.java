@@ -402,10 +402,6 @@ public class UnresolvedTypeConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        if (isTypeResolved())
-            {
-            m_type = (TypeConstant) pool.register(m_type);
-            }
         throw new IllegalStateException();
         }
 
@@ -413,14 +409,7 @@ public class UnresolvedTypeConstant
     protected void assemble(DataOutput out)
             throws IOException
         {
-        if (isTypeResolved())
-            {
-            getResolvedType().assemble(out);
-            }
-        else
-            {
-            throw new IllegalStateException(toString());
-            }
+        throw new IllegalStateException(toString());
         }
 
     @Override

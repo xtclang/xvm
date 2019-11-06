@@ -16,6 +16,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -341,54 +342,30 @@ public class NamedTypeExpression
             return (TypeConstant) constId;
             }
 
-        ConstantPool pool = pool();
-
         // constId has been already "auto-narrowed" by resolveNames()
-        TypeConstant type;
-        if (left == null)
+        ConstantPool pool = pool();
+        TypeConstant type = calculateDefaultType(ctx, constId);
+
+        if (listParams != null)
             {
-            type = calculateDefaultType(ctx, constId);
-            if (listParams != null)
+            int            cParams     = listParams.size();
+            TypeConstant[] atypeParams = new TypeConstant[cParams];
+            for (int i = 0; i < cParams; ++i)
                 {
-                int            cParams     = listParams.size();
-                TypeConstant[] atypeParams = new TypeConstant[cParams];
-                for (int i = 0; i < cParams; ++i)
-                    {
-                    atypeParams[i] = listParams.get(i).ensureTypeConstant(ctx);
-                    }
-
-                type = pool.ensureParameterizedTypeConstant(type, atypeParams);
+                atypeParams[i] = listParams.get(i).ensureTypeConstant(ctx);
                 }
 
-            if (access != null && access != Access.PUBLIC)
-                {
-                type = pool.ensureAccessTypeConstant(type, access);
-                }
-
-            if (immutable != null)
-                {
-                type = pool.ensureImmutableTypeConstant(type);
-                }
+            type = pool.ensureParameterizedTypeConstant(type, atypeParams);
             }
-        else
+
+        if (access != null && access != Access.PUBLIC)
             {
-            type = left.ensureTypeConstant(ctx);
+            type = pool.ensureAccessTypeConstant(type, access);
+            }
 
-            for (Token name : names)
-                {
-                type = pool.ensureVirtualChildTypeConstant(type, name.getValueText());
-                }
-
-            if (listParams != null)
-                {
-                int            cParams    = listParams.size();
-                TypeConstant[] atypParams = new TypeConstant[cParams];
-                for (int i = 0; i < cParams; ++i)
-                    {
-                    atypParams[i] = listParams.get(i).ensureTypeConstant(ctx);
-                    }
-                type = pool.ensureParameterizedTypeConstant(type, atypParams);
-                }
+        if (immutable != null)
+            {
+            type = pool.ensureImmutableTypeConstant(type);
             }
 
         if (type.containsUnresolved())
@@ -634,26 +611,13 @@ public class NamedTypeExpression
                     TypeInfo infoLeft = type.ensureTypeInfo(errs);
                     String   sName    = name.getValueText();
 
-                    // is it a typedef?
-                    TypeConstant typeChild = infoLeft.getTypedefType(sName);
-                    if (typeChild != null)
+                    type = infoLeft.calculateChildType(pool, sName);
+                    if (type == null)
                         {
-                        // resolve the typedef in the context of its container
-                        type = typeChild.resolveGenerics(pool, infoLeft.getType());
-                        continue;
+                        log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+                        fValid = false;
+                        break;
                         }
-
-                    // is it a virtual child?
-                    typeChild = infoLeft.getVirtualChildType(sName);
-                    if (typeChild != null)
-                        {
-                        type = typeChild;
-                        continue;
-                        }
-
-                    log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
-                    fValid = false;
-                    break;
                     }
                 }
             }
@@ -744,153 +708,183 @@ public class NamedTypeExpression
      */
     protected TypeConstant calculateDefaultType(Context ctx, Constant constTarget)
         {
-        // in a context of "this compilation unit", an absence of type parameters
-        // is treated as "formal types" (only for virtual children).
-        // Consider an example:
-        //
-        //  class Parent<T0>
-        //    {
-        //    void foo()
-        //       {
-        //       Parent p;  // (1) means Parent<T0>
-        //       Child1 c1; // (2) means Child1<Parent<T0>>
-        //       Child2 c2; // (3) means Child2<Parent<T0>, ?>
-        //       Child3 c3; // (3) means naked Child3 type
-        //       }
-        //
-        //    class Child1
-        //      {
-        //      void foo()
-        //         {
-        //         Parent p;  // (4) means Parent<T0>
-        //         Child1 c1; // (5) means Child1<Parent<T0>>
-        //         Child2 c2; // (6) means Child2<Parent<T0>, ?>
-        //         }
-        //      }
-        //
-        //    class Child2<T2>
-        //      {
-        //      void foo()
-        //         {
-        //         Parent p;  // (4) means Parent<T0>
-        //         Child2 c2; // (5) means Child1<Parent<T0>, T2>
-        //         Child1 c1; // (7) means Child1<Parent<T0>>
-        //         }
-        //      }
-        //    }
-        //
-
         ConstantPool pool = pool();
 
-        ClassConstant idTarget;
-        switch (constTarget.getFormat())
+        if (left == null)
             {
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                idTarget = (ClassConstant) ((PseudoConstant) constTarget).getDeclarationLevelClass();
-                break;
+            // in a context of "this compilation unit", an absence of type parameters
+            // is treated as "formal types" (only for virtual children).
+            // Consider an example:
+            //
+            //  class Parent<T0>
+            //    {
+            //    void foo()
+            //       {
+            //       Parent p;  // (1) means Parent<T0>
+            //       Child1 c1; // (2) means Child1<Parent<T0>>
+            //       Child2 c2; // (3) means Child2<Parent<T0>, ?>
+            //       Child3 c3; // (3) means naked Child3 type
+            //       }
+            //
+            //    class Child1
+            //      {
+            //      void foo()
+            //         {
+            //         Parent p;  // (4) means Parent<T0>
+            //         Child1 c1; // (5) means Child1<Parent<T0>>
+            //         Child2 c2; // (6) means Child2<Parent<T0>, ?>
+            //         }
+            //      }
+            //
+            //    class Child2<T2>
+            //      {
+            //      void foo()
+            //         {
+            //         Parent p;  // (4) means Parent<T0>
+            //         Child2 c2; // (5) means Child1<Parent<T0>, T2>
+            //         Child1 c1; // (7) means Child1<Parent<T0>>
+            //         }
+            //      }
+            //    }
+            //
 
-            case Class:
-                idTarget = (ClassConstant) constTarget;
-                break;
-
-            case Property:
+            ClassConstant idTarget;
+            switch (constTarget.getFormat())
                 {
-                PropertyConstant idProp = (PropertyConstant) constTarget;
-                assert idProp.isFormalType();
+                case ThisClass:
+                case ParentClass:
+                case ChildClass:
+                    idTarget = (ClassConstant) ((PseudoConstant) constTarget).getDeclarationLevelClass();
+                    break;
 
-                if (ctx != null)
+                case Class:
+                    idTarget = (ClassConstant) constTarget;
+                    break;
+
+                case Property:
                     {
-                    // see if the FormalType was narrowed
-                    Argument arg = ctx.getVar(idProp.getName());
-                    if (arg != null)
+                    PropertyConstant idProp = (PropertyConstant) constTarget;
+                    assert idProp.isFormalType();
+
+                    if (ctx != null)
                         {
-                        TypeConstant typeType = arg.getType();
-                        assert typeType.isTypeOfType();
-                        return typeType.getParamType(0);
+                        // see if the FormalType was narrowed
+                        Argument arg = ctx.getVar(idProp.getName());
+                        if (arg != null)
+                            {
+                            TypeConstant typeType = arg.getType();
+                            assert typeType.isTypeOfType();
+                            return typeType.getParamType(0);
+                            }
+                        }
+
+                    return idProp.getFormalType();
+                    }
+
+                case Typedef:
+                    {
+                    TypedefConstant idTypedef = (TypedefConstant) constTarget;
+                    TypeConstant     typeRef  = idTypedef.getReferredToType();
+                    IdentityConstant idFrom   = idTypedef.getParentConstant();
+                    IdentityConstant idClass  = getComponent().getContainingClass().getIdentityConstant();
+
+                    if (!idFrom.isNestMateOf(idClass))
+                        {
+                        // we are "importing" a typedef from an outside class and need to resolve all
+                        // formal types to their canonical values; but we cannot do it until all names
+                        // are resolved
+                        m_fExternalTypedef = true;
+                        }
+
+                    return typeRef;
+                    }
+
+                case UnresolvedName:
+                    return m_typeUnresolved =
+                            new UnresolvedTypeConstant(pool, (UnresolvedNameConstant) constTarget);
+
+                case TypeParameter:
+                default:
+                    idTarget = null;
+                    break;
+                }
+
+            TypeConstant   typeTarget = null;
+            Component      component  = getComponent();
+            ClassStructure clzClass   = component.getContainingClass();
+            if (idTarget != null && clzClass != null)
+                {
+                IdentityConstant idClass   = clzClass.getIdentityConstant();
+                ClassStructure   clzTarget = (ClassStructure) idTarget.getComponent();
+
+                if (idTarget.isNestMateOf(idClass))
+                    {
+                    if (clzTarget.isVirtualChild())
+                        {
+                        ClassConstant  idBase  = ((ClassConstant) idClass).getOutermost();
+                        ClassStructure clzBase = (ClassStructure) idBase.getComponent();
+
+                        typeTarget = createVirtualTypeConstant(clzBase, clzTarget, true);
+                        assert typeTarget != null;
+                        }
+                    else
+                        {
+                        // the target is the base class itself or some of it's contributions
+                        // (e.g. HashMap or Map if we are inside of HashMap);
+                        // default to the formal type unless the type parameters are explicitly
+                        // specified by this expression or the context is static (e.g. function)
+                        if (clzTarget.isParameterized() && paramTypes == null && !component.isStatic())
+                            {
+                            typeTarget = pool.ensureClassTypeConstant(constTarget, null,
+                                clzTarget.getFormalType().getParamTypesArray());
+                            }
+                        }
+
+                    if (ctx != null && typeTarget != null)
+                        {
+                        typeTarget = typeTarget.resolveGenerics(pool, ctx.getFormalTypeResolver());
                         }
                     }
-
-                return idProp.getFormalType();
-                }
-
-            case Typedef:
-                {
-                TypedefConstant idTypedef = (TypedefConstant) constTarget;
-                TypeConstant     typeRef  = idTypedef.getReferredToType();
-                IdentityConstant idFrom   = idTypedef.getParentConstant();
-                IdentityConstant idClass  = getComponent().getContainingClass().getIdentityConstant();
-
-                if (!idFrom.isNestMateOf(idClass))
+                else if (clzTarget.isVirtualChild())
                     {
-                    // we are "importing" a typedef from an outside class and need to resolve all
-                    // formal types to their canonical values; but we cannot do it until all names
-                    // are resolved
-                    m_fExternalTypedef = true;
-                    }
-
-                return typeRef;
-                }
-
-            case UnresolvedName:
-                return m_typeUnresolved =
-                        new UnresolvedTypeConstant(pool, (UnresolvedNameConstant) constTarget);
-
-            case TypeParameter:
-            default:
-                idTarget = null;
-                break;
-            }
-
-        TypeConstant   typeTarget = null;
-        Component      component  = getComponent();
-        ClassStructure clzClass   = component.getContainingClass();
-        if (idTarget != null && clzClass != null)
-            {
-            IdentityConstant idClass   = clzClass.getIdentityConstant();
-            ClassStructure   clzTarget = (ClassStructure) idTarget.getComponent();
-
-            if (idTarget.isNestMateOf(idClass))
-                {
-                if (clzTarget.isVirtualChild())
-                    {
-                    ClassConstant  idBase  = ((ClassConstant) idClass).getOutermost();
+                    ClassConstant  idBase  = idTarget.getAutoNarrowingBase();
                     ClassStructure clzBase = (ClassStructure) idBase.getComponent();
 
-                    typeTarget = createVirtualTypeConstant(clzBase, clzTarget, true);
-                    assert typeTarget != null;
-                    }
-                else
-                    {
-                    // the target is the base class itself or some of it's contributions
-                    // (e.g. HashMap or Map if we are inside of HashMap);
-                    // default to the formal type unless the type parameters are explicitly
-                    // specified by this expression or the context is static (e.g. function)
-                    if (clzTarget.isParameterized() && paramTypes == null && !component.isStatic())
-                        {
-                        typeTarget = pool.ensureClassTypeConstant(constTarget, null,
-                            clzTarget.getFormalType().getParamTypesArray());
-                        }
-                    }
-
-                if (ctx != null && typeTarget != null)
-                    {
-                    typeTarget = typeTarget.resolveGenerics(pool, ctx.getFormalTypeResolver());
+                    typeTarget = createVirtualTypeConstant(clzBase, clzTarget, false);
                     }
                 }
-            else if (clzTarget.isVirtualChild())
-                {
-                ClassConstant  idBase  = idTarget.getAutoNarrowingBase();
-                ClassStructure clzBase = (ClassStructure) idBase.getComponent();
 
-                typeTarget = createVirtualTypeConstant(clzBase, clzTarget, false);
+            return typeTarget == null
+                    ? pool.ensureTerminalTypeConstant(constTarget)
+                    : typeTarget;
+            }
+        else
+            {
+            TypeConstant type = left.ensureTypeConstant(ctx);
+            if (type.containsUnresolved())
+                {
+                return m_typeUnresolved =
+                    new UnresolvedTypeConstant(pool, (UnresolvedNameConstant) m_constId);
+                }
+
+            switch (m_constId.getFormat())
+                {
+                case Class:
+                    for (Token name : names)
+                        {
+                        type = pool.ensureVirtualChildTypeConstant(type, name.getValueText());
+                        }
+                    return type;
+
+                case Typedef:
+                     return m_constId.getType();
+
+                default:
+                    // invalid name; leave unresolved to be reported later
+                    return new UnresolvedTypeConstant(pool,
+                            new UnresolvedNameConstant(pool, getNames(), false));
                 }
             }
-
-        return typeTarget == null
-                ? pool.ensureTerminalTypeConstant(constTarget)
-                : typeTarget;
         }
 
     private TypeConstant createVirtualTypeConstant(ClassStructure clzBase, ClassStructure clzTarget, boolean fFormal)
