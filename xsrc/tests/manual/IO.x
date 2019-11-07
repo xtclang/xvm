@@ -7,8 +7,10 @@ module TestIO
     import Ecstasy.io.JavaDataInput;
     import Ecstasy.io.Reader;
     import Ecstasy.io.UTF8Reader;
+    import Ecstasy.web.json.Doc;
     import Ecstasy.web.json.Lexer;
     import Ecstasy.web.json.Lexer.Token;
+    import Ecstasy.web.json.Parser;
 
     @Inject Console console;
 
@@ -18,6 +20,7 @@ module TestIO
         testJavaUTF();
         testUTF8Reader();
         testJSONLex();
+        testJSONParse();
         }
 
     void testInputStream()
@@ -77,26 +80,28 @@ module TestIO
         console.println($"(eof) position={pos} line={in.lineNumber}");
         }
 
+    static String ExampleJSON =
+            `|{
+             |   "name" : "Bob",
+             |   "age" : 23,
+             |   "married" : true,
+             |   "parent" : false,
+             |   "reason" : null,
+             |   "fav_nums" : [ 17, 42 ],
+             |   "probability" : 0.10,
+             |   "dog" :
+             |      {
+             |      "name" : "Spot",
+             |      "age" : 7
+             |      }
+             |}
+            ;
+
     void testJSONLex()
         {
         console.println("\n*** testJSONLex()");
 
-        Reader reader = new CharArrayReader(
-               `|{
-                |   "name" : "Bob",
-                |   "age" : 23,
-                |   "married" : true,
-                |   "parent" : false,
-                |   "reason" : null,
-                |   "fav_nums" : [ 17, 42 ],
-                |   "probability" : 0.10,
-                |   "dog" :
-                |      {
-                |      "name" : "Spot",
-                |      "age" : 7,
-                |      }
-                |}
-                );
+        Reader reader = new CharArrayReader(ExampleJSON);
 
         Lexer lexer = new Lexer(reader);
         while (Token tok := lexer.next())
@@ -105,5 +110,17 @@ module TestIO
             }
 
         console.println($"(eof) position={reader.position}");
+        }
+
+    void testJSONParse()
+        {
+        console.println("\n*** testJSONParse()");
+
+        Reader reader = new CharArrayReader(ExampleJSON);
+        Parser parser = new Parser(reader);
+        while (Doc doc := parser.next())
+            {
+            console.println($"doc={doc}");
+            }
         }
     }
