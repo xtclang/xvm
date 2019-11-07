@@ -50,6 +50,7 @@ class HashMap<Key, Value>
         mutability = Mutable;
         }
 
+
     // ----- internal state ------------------------------------------------------------------------
 
     /**
@@ -498,12 +499,6 @@ class HashMap<Key, Value>
                 }
 
             return this, removed;
-            }
-
-        @Override
-        EntrySet clone()
-            {
-            TODO
             }
         }
 
