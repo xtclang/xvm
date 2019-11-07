@@ -1957,7 +1957,8 @@ public class InvocationExpression
             if (exprLeft instanceof NameExpression && typeLeft.isA(pool.typeFunction()))
                 {
                 // it appears that they try to use a variable or property, but have a function instead
-                if (errsTemp.hasError(Compiler.MISSING_METHOD))
+                if (errsTemp.hasError(Compiler.MISSING_METHOD) &&
+                        infoLeft.findMethods(sName, -1, MethodKind.Any).isEmpty())
                     {
                     NameExpression   exprFn   = (NameExpression) exprLeft;
                     IdentityConstant idParent;
