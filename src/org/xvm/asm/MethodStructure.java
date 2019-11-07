@@ -610,21 +610,24 @@ public class MethodStructure
                     }
                 }
 
-            for (int iR = 0; iR < cReturns; iR++)
+            for (int iR = 0; iR < cMethodReturns; iR++)
                 {
                 TypeConstant typeFormal = atypeMethodReturns[iR];
-                TypeConstant typeActual = atypeReturns[iR];
+                TypeConstant typeActual = iR < cReturns ? atypeReturns[iR] : null;
 
-                if (typeActual != null)
+                if (typeActual == null)
                     {
-                    TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
-                    if (checkConflict(typeResolved, sName, mapTypeParams))
-                        {
-                        // different arguments cause the formal type to resolve into
-                        // incompatible types
-                        mapTypeParams.remove(sName);
-                        continue NextParameter;
-                        }
+                    // anything is allowed to match; don't leave the formal parameters unresolved
+                    typeActual = getConstantPool().typeObject();
+                    }
+
+                TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
+                if (checkConflict(typeResolved, sName, mapTypeParams))
+                    {
+                    // different arguments cause the formal type to resolve into
+                    // incompatible types
+                    mapTypeParams.remove(sName);
+                    continue NextParameter;
                     }
                 }
 

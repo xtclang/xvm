@@ -4297,6 +4297,11 @@ public abstract class TypeConstant
             return typeRight.calculateRelation(typeLeftResolved);
             }
 
+        if (typeLeft instanceof RecursiveTypeConstant)
+            {
+            return calculateRelation(((RecursiveTypeConstant) typeLeft).getReferredToType());
+            }
+
         // WARNING: thread-unsafe
         Map<TypeConstant, Relation> mapRelations = ensureRelationMap();
 

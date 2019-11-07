@@ -177,6 +177,12 @@ public class RecursiveTypeConstant
         }
 
     @Override
+    public Relation calculateRelation(TypeConstant typeLeft)
+        {
+        return getReferredToType().calculateRelation(typeLeft);
+        }
+
+    @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
         return getReferredToType().calculateRelationToLeft(typeLeft);
