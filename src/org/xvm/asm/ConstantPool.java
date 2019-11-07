@@ -3249,27 +3249,61 @@ public class ConstantPool
     // ----- TypeConstant helpers  -----------------------------------------------------------------
 
     /**
-     * While it's known that both left and right types are functions
-     * ({@code type.getSingleUnderlyingClass(true).equals(clzFunction());}), calculate whether
-     * the {@code typeFnRight} is assignable to {@code typeFnLeft}.
+     * While it's known that the left type is a function:
+     * <pre>
+     *    {@code typeLeft.getSingleUnderlyingClass(true).equals(clzFunction())}
+     * </pre>
+     * and the right type has a single underlying class:
+     * <pre>
+     *    {@code typeRight.isSingleUnderlyingClass(true))}
+     * </pre>
+     * calculate whether the {@code typeRight} is assignable to {@code typeLeft}.
      *
      * @return one of {@link Relation} constants
      */
-    public Relation checkFunctionCompatibility(TypeConstant typeFnLeft, TypeConstant typeFnRight)
+    public Relation checkFunctionCompatibility(TypeConstant typeLeft, TypeConstant typeRight)
         {
-        return checkFunctionOrMethodCompatibility(typeFnLeft, typeFnRight, false);
+        IdentityConstant idRight = typeRight.getSingleUnderlyingClass(true);
+        if (!idRight.equals(clzFunction()))
+            {
+            // compare the "naked" contribution
+            ClassStructure clzRight = (ClassStructure) idRight.getComponent();
+            if (clzRight.findContribution(typeFunction(), idRight.getType(), true) != Relation.IS_A)
+                {
+                return Relation.INCOMPATIBLE;
+                }
+            }
+
+        return checkFunctionOrMethodCompatibility(typeLeft, typeRight, false);
         }
 
     /**
-     * While it's known that both left and right types are methods
-     * ({@code type.getSingleUnderlyingClass(true).equals(clzMethod());}), calculate whether
-     * the {@code typeMethRight} is assignable to {@code typeMethLeft}.
+     * While it's known that the left type is a method:
+     * <pre>
+     *    {@code typeLeft.getSingleUnderlyingClass(true).equals(clz.Method())}
+     * </pre>
+     * and the right type has a single underlying class:
+     * <pre>
+     *    {@code typeRight.isSingleUnderlyingClass(true))}
+     * </pre>
+     * the {@code typeRight} is assignable to {@code typeLeft}.
      *
      * @return one of {@link Relation} constants
      */
-    public Relation checkMethodCompatibility(TypeConstant typeMethLeft, TypeConstant typeMethRight)
+    public Relation checkMethodCompatibility(TypeConstant typeLeft, TypeConstant typeRight)
         {
-        return checkFunctionOrMethodCompatibility(typeMethLeft, typeMethRight, true);
+        IdentityConstant idRight = typeRight.getSingleUnderlyingClass(true);
+        if (!idRight.equals(clzMethod()))
+            {
+            // compare the "naked" contribution
+            ClassStructure clzRight = (ClassStructure) idRight.getComponent();
+            if (clzRight.findContribution(typeMethod(), idRight.getType(), true) != Relation.IS_A)
+                {
+                return Relation.INCOMPATIBLE;
+                }
+            }
+
+        return checkFunctionOrMethodCompatibility(typeLeft, typeRight, true);
         }
 
     private Relation checkFunctionOrMethodCompatibility(TypeConstant typeLeft, TypeConstant typeRight,

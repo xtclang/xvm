@@ -4742,21 +4742,11 @@ public abstract class TypeConstant
 
         if (idLeft.equals(pool.clzFunction()))
             {
-            if (!idRight.equals(idLeft))
-                {
-                // nothing is assignable to a Function except a Function
-                return Relation.INCOMPATIBLE;
-                }
             return pool.checkFunctionCompatibility(typeLeft, typeRight);
             }
 
         if (idLeft.equals(pool.clzMethod()))
             {
-            if (!idRight.equals(idLeft))
-                {
-                // nothing is assignable to a Method except a Method
-                return Relation.INCOMPATIBLE;
-                }
             return pool.checkMethodCompatibility(typeLeft, typeRight);
             }
 
