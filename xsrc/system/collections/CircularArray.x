@@ -539,10 +539,4 @@ class CircularArray<Element>
 
         return this;
         }
-
-    @Override
-    CircularArray clone()
-        {
-        TODO
-        }
     }

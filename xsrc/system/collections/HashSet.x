@@ -1,73 +1,38 @@
+/**
+ * An implementation of a Set that is backed by a HashMap.
+ */
 class HashSet<Element>
-        implements Set<Element>
+        extends MapSet<Element>
+        // TODO variably mutable implementations to match HashMap
     {
-    construct()
+    construct(Collection<Element>? values = Null)
         {
-        assert(Element.is(Type<Hashable>));
-
-        this.hasher = new NaturalHasher<Element>();
-        }
-
-    construct(Collection<Element> elements)
-        {
-        construct HashSet();
-        }
-    finally
-        {
-        addAll(elements);
-        }
-
-    construct(Hasher<Element> hasher)
-        {
-        this.hasher = hasher;
-        }
-
-    construct(Hasher<Element> hasher, Collection<Element> elements)
-        {
-        construct HashSet(hasher);
-        }
-    finally
-        {
-        addAll(elements);
-        }
-
-    public/private Hasher<Element> hasher;
-
-    private class Entry(Element value, Entry? next);
-
-    private Entry?[] buckets;
-
-    @Override
-    public/private Int size;
-
-    @Override
-    Boolean contains(Element value)
-        {
-        Int nHash   = hasher.hashOf(value);
-        Int nBucket = nHash % buckets.size;
-
-        Entry? entry = buckets[nBucket];
-        while (entry != null)
+        HashMap<Element, Nullable> map = new HashMap(values?.size : 0);
+        for (Element value : values?)
             {
-            if (hasher.areEqual(value, entry.value))
-                {
-                return true;
-                }
-            entry = entry.next;
+            map.put(value, Null);
             }
+        construct MapSet(map);
+        }
 
-        return false;
+    construct(Hasher<Element> hasher, Collection<Element>? values = Null)
+        {
+        HashMap<Element, Nullable> map = new HashMap(hasher, values?.size : 0);
+        for (Element value : values?)
+            {
+            map.put(value, Null);
+            }
+        construct MapSet(map);
+        }
+
+    private construct(Map<Element, Nullable> map)
+        {
+        construct MapSet(map);
         }
 
     @Override
-    Iterator<Element> iterator()
+    protected HashSet setFor(Map<Element, Nullable> map)
         {
-        TODO
-        }
-
-    @Override
-    HashSet clone()
-        {
-        return new HashSet(this);
+        return new HashSet(map);
         }
     }

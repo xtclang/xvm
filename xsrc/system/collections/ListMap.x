@@ -403,12 +403,6 @@ class ListMap<Key, Value>
             this.ListMap.clear();
             return this;
             }
-
-        @Override
-        Set<Key> clone()
-            {
-            TODO could this just wrap a clone of the array of keys with a ListSet?
-            }
         }
 
 
@@ -666,12 +660,6 @@ class ListMap<Key, Value>
             return this;
             }
 
-        @Override
-        Set<Entry> clone()
-            {
-            TODO
-            }
-
         /**
          * TODO
          */
@@ -800,12 +788,6 @@ class ListMap<Key, Value>
             verifyMutable();
             this.ListMap.clear();
             return this;
-            }
-
-        @Override
-        Collection<Value> clone()
-            {
-            TODO
             }
         }
     }
