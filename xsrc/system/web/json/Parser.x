@@ -3,6 +3,7 @@ import io.Reader;
 import io.Reader.Position;
 
 import collections.ListMap;
+import collections.HashSet;
 
 import Lexer.Id;
 import Lexer.Token;
@@ -82,10 +83,10 @@ class Parser
                 return take().value;
 
             case ArrayEnter:
-                return parseArray().as(Doc); // TODO GG should not require ".as(Doc)"
+                return parseArray();
 
             case ObjectEnter:
-                return parseObject().as(Doc); // TODO GG should not require ".as(Doc)"
+                return parseObject();
             }
 
         throw eof
@@ -115,13 +116,34 @@ class Parser
         expect(ObjectEnter);
         if (!match(ObjectExit))
             {
+            Set<String>? dups = Null;
             do
                 {
                 String name = expect(StrVal).value.as(String);
                 Token  sep  = expect(Colon);
                 Doc    doc  = parseDoc();
-                // TODO check for duplicate name (error?) - check JSON spec
-                map.put(name, doc);
+
+                map.process(name, entry ->
+                    {
+                    if (entry.exists)
+                        {
+                        // there is a duplicate name, which is not explicitly forbidden by the JSON
+                        // spec, so store all of the values that share this name in an array
+                        if (dups == Null)
+                            {
+                            dups = new HashSet<String>();
+                            }
+                        Doc[] values = dups.addIfAbsent(entry.key)
+                                ? (new Doc[]).add(entry.value)
+                                : entry.value.as((Doc[]));
+                        entry.value = values.add(doc);
+                        }
+                    else
+                        {
+                        entry.value = doc;
+                        }
+                    return Null;
+                    });
                 }
             while (match(Comma));
             expect(ObjectExit);

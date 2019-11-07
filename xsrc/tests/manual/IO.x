@@ -92,7 +92,8 @@ module TestIO
              |   "dog" :
              |      {
              |      "name" : "Spot",
-             |      "age" : 7
+             |      "age" : 7,
+             |      "name" : "George"
              |      }
              |}
             ;
