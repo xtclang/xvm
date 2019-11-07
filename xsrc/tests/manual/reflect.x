@@ -219,8 +219,7 @@ module TestReflection.xqiz.it
         val f6b = &foo(_, "hello");  console.println($"f6b = {f6b} -> {f6b(1)}");
 
         f2.invoke(Tuple:());
-        f4.invoke((42.toInt(), "goodbye"));
-        // f4.invoke((42, "goodbye"));   <-- note: this does not compile (TODO GG?)
+        f4.invoke((42, "goodbye"));
         }
 
     void testFuncs2()

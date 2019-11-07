@@ -1098,7 +1098,7 @@ public abstract class AstNode
             setMethods = infoTarget.findMethods(sMethodName, typeTupleArg.getParamsCount(), kind);
 
             ErrorListener errsTempT = errs.branch();
-            collectMatchingMethods(ctx, infoTarget, setMethods, null, fCall,
+            collectMatchingMethods(ctx, infoTarget, setMethods, listExprArgs, fCall,
                     mapNamedExpr, atypeReturn, setIs, setConvert, errsTempT);
 
             if (!setIs.isEmpty())

@@ -146,6 +146,12 @@ public class TupleExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    protected boolean hasSingleValueImpl()
+        {
+        return false;
+        }
+
+    @Override
     protected boolean hasMultiValueImpl()
         {
         return true;
@@ -210,12 +216,20 @@ public class TupleExpression
         TypeConstant typeTuple = getImplicitType(ctx);
         if (atypeRequired.length == 1)
             {
-            TypeFit fit = calcFit(ctx, typeTuple, atypeRequired[0]);
-            if (fit.isFit())
+            TypeConstant typeRequired = atypeRequired[0];
+            if (typeRequired.isTuple())
                 {
-                return fit;
+                atypeRequired = typeRequired.getParamTypesArray();
                 }
-            // fall through
+            else
+                {
+                TypeFit fit = calcFit(ctx, typeTuple, typeRequired);
+                if (fit.isFit())
+                    {
+                    return fit;
+                    }
+                // fall through
+                }
             }
 
         return calcFitMulti(ctx, typeTuple.getParamTypesArray(), atypeRequired);
