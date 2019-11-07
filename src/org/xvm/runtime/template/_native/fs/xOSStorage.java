@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -207,7 +208,7 @@ public class xOSStorage
                 Path pathDir = Paths.get(hPathStringDir.getStringValue());
                 try
                     {
-                    ensureWatchDaemon().register(pathDir, hStorage);
+                    ensureWatchDaemon(pool()).register(pathDir, hStorage);
                     return Op.R_NEXT;
                     }
                 catch (IOException e)
@@ -273,14 +274,14 @@ public class xOSStorage
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    protected static synchronized WatchServiceDaemon ensureWatchDaemon()
+    protected static synchronized WatchServiceDaemon ensureWatchDaemon(ConstantPool pool)
         {
         WatchServiceDaemon daemonWatch = s_daemonWatch;
         if (daemonWatch == null)
             {
             try
                 {
-                daemonWatch = s_daemonWatch = new WatchServiceDaemon();
+                daemonWatch = s_daemonWatch = new WatchServiceDaemon(pool);
                 daemonWatch.start();
                 }
             catch (IOException e)
@@ -300,13 +301,14 @@ public class xOSStorage
     protected static class WatchServiceDaemon
             extends Thread
         {
-        public WatchServiceDaemon()
+        public WatchServiceDaemon(ConstantPool pool)
                 throws IOException
             {
             super("WatchServiceDaemon");
 
             setDaemon(true);
 
+            f_pool       = pool;
             f_service    = FileSystems.getDefault().newWatchService();
             f_mapWatches = new ConcurrentHashMap<>();
             }
@@ -331,6 +333,7 @@ public class xOSStorage
             {
             try
                 {
+                ConstantPool.setCurrentPool(f_pool);
                 while (true)
                     {
                     processKey(f_service.take());
@@ -415,6 +418,7 @@ public class xOSStorage
             public final ServiceHandle hStorage;
             }
 
+        private final ConstantPool                f_pool;
         private final Map<WatchKey, WatchContext> f_mapWatches;
         private final WatchService                f_service;
         }
