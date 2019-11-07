@@ -25,13 +25,7 @@ class HashMap<Key, Value>
     construct(Int initCapacity = 0)
         {
         assert(Key.is(Type<Hashable>));
-
-        this.hasher = new NaturalHasher<Key>();
-
-        // allocate the initial capacity
-        (Int bucketCount, this.growAt) = calcBucketCount(initCapacity);
-        buckets    = new HashEntry?[bucketCount];
-        mutability = Mutable;
+        construct HashMap(new NaturalHasher<Key>(), initCapacity);
         }
 
     /**
