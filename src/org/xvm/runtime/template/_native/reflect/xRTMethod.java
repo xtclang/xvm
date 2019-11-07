@@ -14,10 +14,10 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
-
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
@@ -54,6 +54,22 @@ public class xRTMethod
         markNativeMethod("invokeAsync"      , null, null);
 
         super.initDeclared();
+        }
+
+    @Override
+    public ClassComposition ensureClass(TypeConstant typeActual)
+        {
+        // see explanation at xRTFunction.ensureClass()
+        ConstantPool pool = typeActual.getConstantPool();
+
+        assert typeActual.isA(pool.typeMethod());
+
+        TypeConstant typeTarget = typeActual.getParamType(0);
+        TypeConstant typeP      = pool.ensureParameterizedTypeConstant(pool.typeTuple());
+        TypeConstant typeR      = typeActual.getParamType(2);
+        TypeConstant typeClz    = pool.ensureParameterizedTypeConstant(
+                                        pool.typeMethod(), typeTarget, typeP, typeR);
+        return super.ensureClass(typeClz);
         }
 
     @Override
@@ -213,15 +229,15 @@ public class xRTMethod
     /**
      * Method handle.
      *
-     * Similarly to the {@link xRTFunction.FunctionHandle}, all Method handles are based on the same
-     * canonical ClassComposition, but carry the actual type as a part of their state,
+     * Similarly to the {@link xRTFunction.FunctionHandle}, all Method handles are based on a
+     * "fully bound" type and carry the actual type as a part of their state,
      */
     public static class MethodHandle
             extends SignatureHandle
         {
         protected MethodHandle(TypeConstant type, MethodConstant idMethod)
             {
-            super(INSTANCE.getCanonicalClass(), idMethod, (MethodStructure) idMethod.getComponent(), type);
+            super(INSTANCE.ensureClass(type), idMethod, (MethodStructure) idMethod.getComponent(), type);
             }
 
         public TypeConstant getTargetType()

@@ -15,6 +15,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
@@ -57,6 +58,23 @@ public class xRTFunction
         markNativeMethod("invokeAsync", null, null);
 
         super.initDeclared();
+        }
+
+    @Override
+    public ClassComposition ensureClass(TypeConstant typeActual)
+        {
+        // from the run-time perspective, a function type is equivalent to its "full bound" type
+        // (where there are no parameters) and the responsibility to check the parameter types
+        // lies on the "invoke" implementation
+        ConstantPool pool = typeActual.getConstantPool();
+
+        assert typeActual.isA(pool.typeFunction());
+
+        TypeConstant typeP   = pool.ensureParameterizedTypeConstant(pool.typeTuple());
+        TypeConstant typeR   = typeActual.getParamType(1);
+        TypeConstant typeClz = pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeP, typeR);
+
+        return super.ensureClass(typeClz);
         }
 
     @Override
@@ -154,6 +172,8 @@ public class xRTFunction
             return frame.raiseException("Invalid tuple argument");
             }
 
+        // TODO GG: check the arg types, defaults etc.
+
         int            cVars = hFunc.getVarCount();
         ObjectHandle[] ahVar = cArgs == cVars ? ahArg.clone() : Utils.ensureSize(ahArg, cVars);
 
@@ -174,13 +194,12 @@ public class xRTFunction
 
     /**
      * Function handle.
-     *
-     * Note that while for any other type it holds true that a canonical type is assignable from
-     * any parameterized type based on the same defining constant, it's not so for functions.
-     * For example, Function<<><>> is not assignable from Function<<Int><>>.
-     *
-     * As a result, all Function handles are based on the same canonical ClassComposition, but
-     * carry the actual type as a part of their state,
+     * <p>
+     * Function types have quite specialized "isA" rules mostly due to the fact that functions
+     * may allow default parameters, but the type itself has no knowledge about that.
+     * <p>
+     * As a result, all Function handles are based on a "fully bound" type, but carry the actual
+     * type as a part of their state,
      */
     public static class FunctionHandle
             extends SignatureHandle
@@ -192,13 +211,13 @@ public class xRTFunction
 
         protected FunctionHandle(TypeConstant type, MethodStructure function)
             {
-            super(INSTANCE.getCanonicalClass(),
+            super(INSTANCE.ensureClass(type),
                     function == null ? null : function.getIdentityConstant(), function, type);
             }
 
         protected FunctionHandle(CallChain chain, int nDepth)
             {
-            super(INSTANCE.getCanonicalClass(), chain, nDepth);
+            super(INSTANCE.ensureClass(chain.getMethod(nDepth).getIdentityConstant().getType()), chain, nDepth);
             }
 
 
@@ -678,7 +697,7 @@ public class xRTFunction
 
         protected FullyBoundHandle(FunctionHandle hDelegate, ObjectHandle[] ahArg)
             {
-            super(INSTANCE.getCanonicalType(), hDelegate);
+            super(hDelegate == null ? INSTANCE.getCanonicalType() : hDelegate.getType(), hDelegate);
 
             f_ahArg = ahArg;
             }

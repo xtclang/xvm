@@ -279,6 +279,21 @@ module TestReflection.xqiz.it
                 }
             }
 
+        for (val constructor : t.constructors)
+            {
+            switch (constructor.params.size)
+                {
+                case 2:
+                    Tuple<Point<Int>> p2 = constructor.invoke((1, 2));
+                    console.println($"construct(1,2)={p2[0]}");
+                    break;
+
+                case 3:
+                    Tuple<Point<Int>> p3 = constructor.invoke((1, 2, "there"));
+                    console.println($"construct(1,2,\"there\")={p3[0]}");
+                    break;
+                }
+            }
         }
 
     String formatType(Type type)
