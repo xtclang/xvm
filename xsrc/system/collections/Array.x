@@ -527,15 +527,6 @@ class Array<Element>
         }
 
     @Override
-    Array clone()
-        {
-        return mutability.persistent && delegate == null
-                ? this                          // a persistent array is its own shallow clone
-                : new Array(mutability, this);  // create a copy with this array's mutability
-        }
-
-
-    @Override
     @Op("+")
     Array add(Element element)
         {

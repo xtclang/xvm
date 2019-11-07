@@ -70,12 +70,6 @@ class EntryKeys<Key, Value>(Map<Key, Value> map)
         return this;
         }
 
-    @Override
-    EntryKeys clone()
-        {
-        TODO
-        }
-
     /**
      * Some operations require that the containing Map be Mutable; this method throws an exception
      * if the Map is not Mutable.

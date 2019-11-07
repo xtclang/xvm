@@ -74,12 +74,6 @@ class KeyEntries<Key, Value>(Map<Key, Value> map)
         return this;
         }
 
-    @Override
-    KeyEntries clone()
-        {
-        TODO
-        }
-
     /**
      * Some operations require that the containing Map be Mutable; this method throws an exception
      * if the Map is not Mutable.
