@@ -14,14 +14,7 @@ class HashSet<Element>
     construct(Iterable<Element>? values = Null)
         {
         assert(Element.is(Type<Hashable>));
-        // TODO use this instead of the code below: construct HashSet(new NaturalHasher<Element>(), values);
-        Hasher<Element> hasher = new NaturalHasher<Element>();
-        HashMap<Element, Nullable> map = new HashMap(hasher, values?.size : 0);
-        for (Element value : values?)
-            {
-            map.put(value, Null);
-            }
-        construct MapSet(map);
+        construct HashSet(new NaturalHasher<Element>(), values);
         }
 
     /**
