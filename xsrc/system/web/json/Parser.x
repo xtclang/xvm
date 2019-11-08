@@ -41,12 +41,12 @@ class Parser
     // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * The underlying Reader.
+     * The underlying Lexer.
      */
     protected/private Lexer lexer;
 
     /**
-     * The underlying Reader.
+     * The next Token to process.
      */
     protected/private Token? token = Null;
 

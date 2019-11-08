@@ -39,7 +39,7 @@ interface Set<Element>
 
     /**
      * The "symmetric difference" operator determines the elements that are present in only this
-     * set or the othet set, but not both.
+     * set or the other set, but not both.
      *
      *   A ^ B = (A - B) | (B - A)
      *
