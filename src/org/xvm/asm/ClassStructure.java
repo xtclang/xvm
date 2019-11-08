@@ -1702,6 +1702,16 @@ public class ClassStructure
                         }
                     continue;
                     }
+
+                if (typeLeft.isFormalType())
+                    {
+                    // the left type is formal (e.g. "HashSet.Element") and right "isA" left;
+                    // therefore, the right must be some narrowing of that formal type, for example:
+                    // (Element + Hashable), which warrants a "weak" assignment, such as:
+                    // Consumer<Element> <- Consumer<Element + Hashable>
+                    fWeak = true;
+                    continue;
+                    }
                 }
 
             // this parameter didn't match
