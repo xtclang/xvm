@@ -163,19 +163,54 @@ public class xRTFunction
      */
     public int invokeInvoke(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
         {
-        TupleHandle    hTuple = (TupleHandle) hArg;
-        ObjectHandle[] ahArg  = hTuple.m_ahValue;
-        int            cArgs  = ahArg.length;
+        TupleHandle    hTuple  = (TupleHandle) hArg;
+        ObjectHandle[] ahArg   = hTuple.m_ahValue;
+        int            cArgs   = ahArg.length;
+        int            cParams = hFunc.getParamCount();
+        int            cVars   = hFunc.getVarCount();
+        ObjectHandle[] ahVar   = cArgs == cVars ? ahArg.clone() : Utils.ensureSize(ahArg, cVars);
 
-        if (cArgs != hFunc.getParamCount())
+        if (cArgs != cParams)
             {
-            return frame.raiseException("Invalid tuple argument");
+            boolean fValid = cArgs < cParams;
+            if (fValid)
+                {
+                // check if there are default args of the function
+                MethodStructure method = hFunc.getMethod();
+                if (method != null)
+                    {
+                    for (int i = cArgs; i < cParams; i++)
+                        {
+                        Parameter param = hFunc.getParam(i);
+                        if (param.hasDefaultValue())
+                            {
+                            ahVar[i] = ObjectHandle.DEFAULT;
+                            }
+                        else
+                            {
+                            fValid = false;
+                            break;
+                            }
+                        }
+                    }
+                }
+
+            if (!fValid)
+                {
+                return frame.raiseException("Invalid tuple argument");
+                }
             }
 
-        // TODO GG: check the arg types, defaults etc.
-
-        int            cVars = hFunc.getVarCount();
-        ObjectHandle[] ahVar = cArgs == cVars ? ahArg.clone() : Utils.ensureSize(ahArg, cVars);
+        for (int i = 0; i < cArgs; i++)
+            {
+            TypeConstant typeParam = hFunc.getParamType(i);
+            TypeConstant typeArg   = ahArg[i].getType();
+            if (!typeParam.isA(typeArg))
+                {
+                return frame.raiseException(
+                    xException.illegalCast(frame, typeArg.getValueString()));
+                }
+            }
 
         return hFunc.callT(frame, null, ahVar, iReturn);
         }
