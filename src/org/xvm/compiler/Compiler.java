@@ -1186,6 +1186,10 @@ public class Compiler
      */
     public static final String PROPERTY_NAME_COLLISION             = "COMPILER-143";
     /**
+     * Function {0} refers to a generic type {1}.
+     */
+    public static final String GENERIC_TYPE_NOT_ALLOWED            = "COMPILER-144";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

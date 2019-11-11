@@ -60,7 +60,7 @@ mixin WatchVar<Referent>
      * The `normalize` method is used to turn the "either" of a no-parameter function and a
      * one-parameter function, into the "always" of a one-parameter function.
      */
-    static function void (Referent) normalize(function void () | function void (Referent) notify)
+    static <Referent> function void (Referent) normalize(function void () | function void (Referent) notify)
         {
         return notify.is(function void (Referent)) ? notify : v -> notify();
         }

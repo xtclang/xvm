@@ -15,8 +15,8 @@ import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -823,8 +823,10 @@ public class NamedTypeExpression
                         {
                         ClassConstant  idBase  = ((ClassConstant) idClass).getOutermost();
                         ClassStructure clzBase = (ClassStructure) idBase.getComponent();
+                        boolean        fFormal = !(component instanceof MethodStructure &&
+                                                    ((MethodStructure) component).isFunction());
 
-                        typeTarget = createVirtualTypeConstant(clzBase, clzTarget, true);
+                        typeTarget = createVirtualTypeConstant(clzBase, clzTarget, fFormal);
                         assert typeTarget != null;
                         }
                     else

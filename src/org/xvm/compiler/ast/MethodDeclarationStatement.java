@@ -517,6 +517,27 @@ public class MethodDeclarationStatement
         MethodStructure method = (MethodStructure) getComponent();
         if (method != null)
             {
+            if (method.isFunction())
+                {
+                // make sure functions don't using any generic types
+                for (TypeConstant type : method.getIdentityConstant().getRawParams())
+                    {
+                    if (type.containsGenericType(true))
+                        {
+                        log(errs, Severity.ERROR, Compiler.GENERIC_TYPE_NOT_ALLOWED,
+                                method.getName(), type.getValueString());
+                        }
+                    }
+                for (TypeConstant type : method.getIdentityConstant().getRawReturns())
+                    {
+                    if (type.containsGenericType(true))
+                        {
+                        log(errs, Severity.ERROR, Compiler.GENERIC_TYPE_NOT_ALLOWED,
+                                method.getName(), type.getValueString());
+                        }
+                    }
+                }
+
             // sort out which annotations go on the method, and which belong to the return type
             if (!method.resolveAnnotations() || !method.resolveTypedefs())
                 {
