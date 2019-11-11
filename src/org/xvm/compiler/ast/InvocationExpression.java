@@ -1939,17 +1939,17 @@ public class InvocationExpression
                 List<Expression> listArgs = new ArrayList<>(args);
                 listArgs.add(0, exprLeft);
 
-                ErrorListener errsTempB = errs.branch();
+                errsTemp = errs.branch();
 
                 arg = findMethod(ctx, infoLeft, sName, listArgs, MethodKind.Function, m_fCall, false,
-                            atypeReturn, errsTempB);
+                            atypeReturn, errsTemp);
                 if (arg != null)
                     {
                     m_argMethod   = arg;
                     m_method      = getMethod(infoLeft, arg);
                     m_fBindTarget = false;
                     m_fBjarne     = true;
-                    errsTempB.merge();
+                    errsTemp.merge();
                     return arg;
                     }
                 }
