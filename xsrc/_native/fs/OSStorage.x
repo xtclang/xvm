@@ -115,7 +115,14 @@ service OSStorage
     // called natively
     private void onEvent(String pathStringDir, String pathStringNode, Boolean isFile, Int eventId)
         {
-        FileWatcher.Event event = FileWatcher.Event.values[eventId];
+        // FileWatcher.Event event = FileWatcher.Event.values[eventId]; TODO: restore when Enumeration works again
+        FileWatcher.Event event = switch (eventId)
+            {
+            case 0: Created;
+            case 1: Modified;
+            case 2: Deleted;
+            default: TODO
+            };
 
         if (FileWatcher?[] watchers := allWatchers.get(pathStringDir))
             {
