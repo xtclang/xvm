@@ -200,54 +200,27 @@ public class xByteArray
         }
 
     @Override
-    protected int addElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+    protected void addElement(ArrayHandle hTarget, ObjectHandle hElement)
         {
-        ByteArrayHandle hArray = (ByteArrayHandle) hTarget;
-        int            ixNext = hArray.m_cSize;
+        ByteArrayHandle hArray  = (ByteArrayHandle) hTarget;
+        int             ixNext  = hArray.m_cSize;
+        byte[]          abValue = hArray.m_abValue;
 
-        switch (hArray.m_mutability)
-            {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
-            case FixedSize:
-                return frame.raiseException(xException.readOnly(frame));
-
-            case Persistent:
-                // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation(frame));
-            }
-
-        byte[] abValue = hArray.m_abValue;
         if (ixNext == abValue.length)
             {
             abValue = hArray.m_abValue = grow(hArray.m_abValue, ixNext + 1);
             }
         hArray.m_cSize++;
 
-        abValue[ixNext] = (byte) ((JavaLong) hValue).getValue();
-        return frame.assignValue(iReturn, hArray); // return this
+        abValue[ixNext] = (byte) ((JavaLong) hElement).getValue();
         }
 
     @Override
-    protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+    protected void addElements(ArrayHandle hTarget, ObjectHandle hElements)
         {
-        ByteArrayHandle hArray = (ByteArrayHandle) hTarget;
+        ByteArrayHandle hArray    = (ByteArrayHandle) hTarget;
+        ByteArrayHandle hArrayAdd = (ByteArrayHandle) hElements;
 
-        switch (hArray.m_mutability)
-            {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
-            case FixedSize:
-                return frame.raiseException(xException.readOnly(frame));
-
-            case Persistent:
-                // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation(frame));
-            }
-
-        ByteArrayHandle hArrayAdd = (ByteArrayHandle) hValue;
         int    cNew  = hArrayAdd.m_cSize;
         byte[] abNew = hArrayAdd.m_abValue;
 
@@ -263,8 +236,6 @@ public class xByteArray
             hArray.m_cSize += cNew;
             System.arraycopy(abNew, 0, abArray, cArray, cNew);
             }
-
-        return frame.assignValue(iReturn, hArray);
         }
 
     @Override

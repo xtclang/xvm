@@ -182,70 +182,43 @@ public class xCharArray
         }
 
     @Override
-    protected int addElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+    protected void addElement(ArrayHandle hTarget, ObjectHandle hElement)
         {
-        CharArrayHandle hArray = (CharArrayHandle) hTarget;
-        int            ixNext = hArray.m_cSize;
+        CharArrayHandle hArray   = (CharArrayHandle) hTarget;
+        int             ixNext   = hArray.m_cSize;
+        char[]          achValue = hArray.m_achValue;
 
-        switch (hArray.m_mutability)
-            {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
-            case FixedSize:
-                return frame.raiseException(xException.readOnly(frame));
-
-            case Persistent:
-                // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation(frame));
-            }
-
-        char[] achValue = hArray.m_achValue;
         if (ixNext == achValue.length)
             {
             achValue = hArray.m_achValue = grow(hArray.m_achValue, ixNext + 1);
             }
         hArray.m_cSize++;
 
-        achValue[ixNext] = (char) ((JavaLong) hValue).getValue();
-        return frame.assignValue(iReturn, hArray); // return this
+        achValue[ixNext] = (char) ((JavaLong) hElement).getValue();
         }
 
     @Override
-    protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+    protected void addElements(ArrayHandle hTarget, ObjectHandle hElements)
         {
         CharArrayHandle hArray = (CharArrayHandle) hTarget;
 
-        switch (hArray.m_mutability)
-            {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
-            case FixedSize:
-                return frame.raiseException(xException.readOnly(frame));
-
-            case Persistent:
-                // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation(frame));
-            }
-
         int    cNew;
         char[] achNew;
-        if (hValue instanceof StringHandle)
+        if (hElements instanceof StringHandle)
             {
-            achNew = ((StringHandle) hValue).getValue();
+            achNew = ((StringHandle) hElements).getValue();
             cNew   = achNew.length;
             }
-        else if (hValue instanceof CharArrayHandle)
+        else if (hElements instanceof CharArrayHandle)
             {
-            CharArrayHandle hArrayAdd = (CharArrayHandle) hValue;
+            CharArrayHandle hArrayAdd = (CharArrayHandle) hElements;
             cNew   = hArrayAdd.m_cSize;
             achNew = hArrayAdd.m_achValue;
             }
         else
             {
             // TODO GG
-            throw new UnsupportedOperationException("need to implement add(Iterable<Char>) support for type: " + hValue.getType());
+            throw new UnsupportedOperationException("need to implement add(Iterable<Char>) support for type: " + hElements.getType());
             }
 
         if (cNew > 0)
@@ -260,8 +233,6 @@ public class xCharArray
             hArray.m_cSize += cNew;
             System.arraycopy(achNew, 0, achArray, cArray, cNew);
             }
-
-        return frame.assignValue(iReturn, hArray);
         }
 
     @Override

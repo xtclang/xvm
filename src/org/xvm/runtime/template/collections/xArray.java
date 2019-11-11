@@ -558,31 +558,51 @@ public class xArray
      */
     protected int addElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
-        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
-        int                ixNext = hArray.m_cSize;
+        ArrayHandle hArray     = (ArrayHandle) hTarget;
+        Mutability  mutability = null;
 
         switch (hArray.m_mutability)
             {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
             case FixedSize:
                 return frame.raiseException(xException.readOnly(frame));
 
+            case Constant:
             case Persistent:
-                // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation(frame));
+                mutability = hArray.m_mutability;
+                hArray     = createCopy(hArray, Mutability.Mutable);
+                break;
             }
 
-        ObjectHandle[] ahValue = hArray.m_ahValue;
+        addElement(hArray, hValue);
+
+        if (mutability != null)
+            {
+            hArray.m_mutability = mutability;
+            }
+
+        return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
+     * Add an element to the array.
+     *
+     * @param hTarget   the array
+     * @param hElement  the element to add
+     *
+     */
+    protected void addElement(ArrayHandle hTarget, ObjectHandle hElement)
+        {
+        GenericArrayHandle hArray  = (GenericArrayHandle) hTarget;
+        int                ixNext  = hArray.m_cSize;
+        ObjectHandle[]     ahValue = hArray.m_ahValue;
+
         if (ixNext == ahValue.length)
             {
             ahValue = hArray.m_ahValue = grow(ahValue, ixNext + 1);
             }
         hArray.m_cSize++;
 
-        ahValue[ixNext] = hValue;
-        return frame.assignValue(iReturn, hArray); // return this
+        ahValue[ixNext] = hElement;
         }
 
     /**
@@ -590,22 +610,43 @@ public class xArray
      */
     protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
-        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
+        ArrayHandle hArray     = (ArrayHandle) hTarget;
+        Mutability  mutability = null;
 
         switch (hArray.m_mutability)
             {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
             case FixedSize:
                 return frame.raiseException(xException.readOnly(frame));
 
+            case Constant:
             case Persistent:
-                // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation(frame));
+                mutability = hArray.m_mutability;
+                hArray     = createCopy(hArray, Mutability.Mutable);
+                break;
             }
 
-        GenericArrayHandle hArrayAdd = (GenericArrayHandle) hValue;
+        addElements(hArray, hValue);
+
+        if (mutability != null)
+            {
+            hArray.m_mutability = mutability;
+            }
+
+        return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
+     * Add an array of elements to the array.
+     *
+     * @param hTarget    the array
+     * @param hElements  the array of values to add
+     *
+     * @return the resulting array handle
+     */
+    protected void addElements(ArrayHandle hTarget, ObjectHandle hElements)
+        {
+        GenericArrayHandle hArray    = (GenericArrayHandle) hTarget;
+        GenericArrayHandle hArrayAdd = (GenericArrayHandle) hElements;
 
         int cThat = hArrayAdd.m_cSize;
         if (cThat > 0)
@@ -620,7 +661,6 @@ public class xArray
             hArray.m_cSize += cThat;
             System.arraycopy(hArrayAdd.m_ahValue, 0, ahThis, cThis, cThat);
             }
-        return frame.assignValue(iReturn, hArray); // return this
         }
 
     /**

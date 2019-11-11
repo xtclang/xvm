@@ -178,54 +178,26 @@ public abstract class BitBasedArray
         }
 
     @Override
-    protected int addElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+    protected void addElement(ArrayHandle hTarget, ObjectHandle hElement)
         {
-        BitArrayHandle hArray = (BitArrayHandle) hTarget;
-        int            ixNext = hArray.m_cSize;
+        BitArrayHandle hArray  = (BitArrayHandle) hTarget;
+        int            ixNext  = hArray.m_cSize;
+        byte[]         abValue = hArray.m_abValue;
 
-        switch (hArray.m_mutability)
-            {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
-            case FixedSize:
-                return frame.raiseException(xException.readOnly(frame));
-
-            case Persistent:
-                // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation(frame));
-            }
-
-        byte[] abValue = hArray.m_abValue;
         if (ixNext == abValue.length)
             {
             abValue = hArray.m_abValue = grow(hArray.m_abValue, ixNext + 1);
             }
         hArray.m_cSize++;
 
-        setBit(abValue, ixNext, isSet(hValue));
-        return frame.assignValue(iReturn, hArray);
+        setBit(abValue, ixNext, isSet(hElement));
         }
 
     @Override
-    protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+    protected void addElements(ArrayHandle hTarget, ObjectHandle hElements)
         {
-        BitArrayHandle hArray = (BitArrayHandle) hTarget;
-
-        switch (hArray.m_mutability)
-            {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
-            case FixedSize:
-                return frame.raiseException(xException.readOnly(frame));
-
-            case Persistent:
-                // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation(frame));
-            }
-
-        BitArrayHandle hArrayAdd = (BitArrayHandle) hValue;
+        BitArrayHandle hArray    = (BitArrayHandle) hTarget;
+        BitArrayHandle hArrayAdd = (BitArrayHandle) hElements;
 
         int cAdd = hArrayAdd.m_cSize;
         if (cAdd > 0)
@@ -245,8 +217,6 @@ public abstract class BitBasedArray
                 setBit(abThis, cThis + iBit, getBit(abAdd, iBit));
                 }
             }
-
-        return frame.assignValue(iReturn, hArray);
         }
 
     @Override

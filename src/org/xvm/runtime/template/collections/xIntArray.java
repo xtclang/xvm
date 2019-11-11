@@ -181,54 +181,26 @@ public class xIntArray
         }
 
     @Override
-    protected int addElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+    protected void addElement(ArrayHandle hTarget, ObjectHandle hElement)
         {
-        IntArrayHandle hArray = (IntArrayHandle) hTarget;
-        int            ixNext = hArray.m_cSize;
+        IntArrayHandle hArray  = (IntArrayHandle) hTarget;
+        int            ixNext  = hArray.m_cSize;
+        long[]         alValue = hArray.m_alValue;
 
-        switch (hArray.m_mutability)
-            {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
-            case FixedSize:
-                return frame.raiseException(xException.readOnly(frame));
-
-            case Persistent:
-                // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation(frame));
-            }
-
-        long[] alValue = hArray.m_alValue;
         if (ixNext == alValue.length)
             {
             alValue = hArray.m_alValue = grow(hArray.m_alValue, ixNext + 1);
             }
         hArray.m_cSize++;
 
-        alValue[ixNext] = ((JavaLong) hValue).getValue();
-        return frame.assignValue(iReturn, hArray); // return this
+        alValue[ixNext] = ((JavaLong) hElement).getValue();
         }
 
     @Override
-    protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+    protected void addElements(ArrayHandle hTarget, ObjectHandle hElements)
         {
-        IntArrayHandle hArray = (IntArrayHandle) hTarget;
-
-        switch (hArray.m_mutability)
-            {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
-            case FixedSize:
-                return frame.raiseException(xException.readOnly(frame));
-
-            case Persistent:
-                // TODO: implement
-                return frame.raiseException(xException.unsupportedOperation(frame));
-            }
-
-        IntArrayHandle hArrayAdd = (IntArrayHandle) hValue;
+        IntArrayHandle hArray    = (IntArrayHandle) hTarget;
+        IntArrayHandle hArrayAdd = (IntArrayHandle) hElements;
 
         int cAdd = hArrayAdd.m_cSize;
         if (cAdd > 0)
@@ -243,8 +215,6 @@ public class xIntArray
             hArray.m_cSize = cNew;
             System.arraycopy(hArrayAdd.m_alValue, 0, alThis, cThis, cAdd);
             }
-
-        return frame.assignValue(iReturn, hArray);
         }
 
     @Override
