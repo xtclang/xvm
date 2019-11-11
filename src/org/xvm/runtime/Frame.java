@@ -1160,6 +1160,12 @@ public class Frame
             {
             type = type.resolveAutoNarrowing(pool, false, f_hThis.getType());
             }
+
+        if (type.containsGenericType(true))
+            {
+            // soft assertion
+            System.err.println("ERROR: Unresolved type " + type);
+            }
         return type;
         }
 
