@@ -117,8 +117,17 @@ module TestIO
         {
         console.println("\n*** testJSONParse()");
 
+        console.println("no dups:");
         Reader reader = new CharArrayReader(ExampleJSON);
-        Parser parser = new Parser(reader);
+        Parser parser = new Parser(reader, False);
+        while (Doc doc := parser.next())
+            {
+            console.println($"doc={doc}");
+            }
+
+        console.println("collate dups:");
+        reader = new CharArrayReader(ExampleJSON);
+        parser = new Parser(reader, True);
         while (Doc doc := parser.next())
             {
             console.println($"doc={doc}");
