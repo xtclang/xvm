@@ -7,18 +7,14 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
-
-import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
@@ -146,20 +142,9 @@ public class Invoke_TN
 
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
         {
-        CallChain chain = getCallChain(frame, hTarget);
-        MethodStructure method = chain.getTop();
-
-        if (ahArg.length != method.getParamCount())
-            {
-            return frame.raiseException("Invalid tuple argument");
-            }
-
         checkReturnRegisters(frame, hTarget);
 
-        return chain.isNative()
-            ? hTarget.getTemplate().invokeNativeNN(frame, method, hTarget, ahArg, m_anRetValue)
-            : hTarget.getTemplate().invokeN(frame, chain, hTarget,
-                Utils.ensureSize(ahArg, method.getMaxVars()), m_anRetValue);
+        return getCallChain(frame, hTarget).invoke(frame, hTarget, ahArg, m_anRetValue);
         }
 
     @Override

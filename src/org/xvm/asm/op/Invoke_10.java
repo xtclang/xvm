@@ -11,7 +11,6 @@ import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -128,15 +127,7 @@ public class Invoke_10
 
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = getCallChain(frame, hTarget);
-        if (chain.isNative())
-            {
-            return hTarget.getTemplate().invokeNative1(frame, chain.getTop(), hTarget, hArg, A_IGNORE);
-            }
-
-        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-        ahVar[0] = hArg;
-        return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, A_IGNORE);
+        return getCallChain(frame, hTarget).invoke(frame, hTarget, hArg, A_IGNORE);
         }
 
     @Override

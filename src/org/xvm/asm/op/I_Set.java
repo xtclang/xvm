@@ -16,7 +16,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.IndexSupport;
-import org.xvm.runtime.template.xException;
 
 
 /**
@@ -76,10 +75,10 @@ public class I_Set
             saveOpChain(hTarget.getType(), chain);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[Math.max(chain.getMaxVars(), 2)];
         ahVar[0] = hIndex;
         ahVar[1] = hValue;
 
-        return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, Op.A_IGNORE);
+        return chain.invoke(frame, hTarget, ahVar, Op.A_IGNORE);
         }
     }

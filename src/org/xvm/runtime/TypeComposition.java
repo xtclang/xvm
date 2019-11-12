@@ -163,7 +163,7 @@ public interface TypeComposition
     /**
      * @param nidMethod  the method identity (SignatureConstant or NestedIdentity)
      *
-     * @return a call chain for the method.*
+     * @return a call chain for the method
      */
     CallChain getMethodCallChain(Object nidMethod);
 

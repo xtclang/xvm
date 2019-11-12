@@ -11,13 +11,10 @@ import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
-
-import org.xvm.runtime.template._native.reflect.xRTFunction;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -106,16 +103,12 @@ public class MBind
 
     protected int proceed(Frame frame, ObjectHandle hTarget)
         {
-        CallChain chain = getCallChain(frame, hTarget);
-
         if (frame.isNextRegister(m_nRetValue))
             {
             // do we need a precise type?
             frame.introduceResolvedVar(m_nRetValue, frame.poolContext().typeFunction());
             }
 
-        return frame.assignValue(m_nRetValue, hTarget.getTemplate().isService() ?
-                xRTFunction.makeAsyncHandle(chain).bindTarget(hTarget) :
-                xRTFunction.makeHandle(chain, 0).bindTarget(hTarget));
+        return getCallChain(frame, hTarget).bindTarget(frame, hTarget, m_nRetValue);
         }
     }

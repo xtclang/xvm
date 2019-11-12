@@ -16,7 +16,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.IndexSupport;
-import org.xvm.runtime.template.xException;
 
 
 /**
@@ -88,9 +87,6 @@ public class I_Get
             frame.introduceResolvedVar(m_nTarget, method.getReturnTypes()[0]);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
-        ahVar[0] = hIndex;
-
-        return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, m_nRetValue);
+        return chain.invoke(frame, hTarget, hIndex, m_nRetValue);
         }
     }

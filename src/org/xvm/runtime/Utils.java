@@ -158,16 +158,7 @@ public abstract class Utils
     public static int callMethod(Frame frame, ObjectHandle hValue, SignatureConstant sig,
                                  ObjectHandle... ahArg)
         {
-        TypeComposition clzValue = hValue.getComposition();
-        CallChain       chain    = clzValue.getMethodCallChain(sig);
-
-        if (chain.isNative())
-            {
-            return clzValue.getTemplate().invokeNativeN(frame, chain.getTop(), hValue, ahArg, Op.A_STACK);
-            }
-
-        ObjectHandle[] ahVar = ensureSize(ahArg, chain.getTop().getMaxVars());
-        return clzValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Op.A_STACK);
+        return hValue.getComposition().getMethodCallChain(sig).invoke(frame, hValue, ahArg, Op.A_STACK);
         }
 
     /**

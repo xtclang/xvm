@@ -7,20 +7,16 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
-import org.xvm.runtime.template.xException;
-
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -135,18 +131,7 @@ public class Invoke_T0
 
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
         {
-        CallChain chain = getCallChain(frame, hTarget);
-        MethodStructure method = chain.getTop();
-
-        if (ahArg.length != method.getParamCount())
-            {
-            return frame.raiseException("Invalid tuple argument");
-            }
-
-        return chain.isNative()
-            ? hTarget.getTemplate().invokeNativeN(frame, method, hTarget, ahArg, A_IGNORE)
-            : hTarget.getTemplate().invoke1(frame, chain, hTarget,
-                Utils.ensureSize(ahArg, method.getMaxVars()), A_IGNORE);
+        return getCallChain(frame, hTarget).invoke(frame, hTarget, ahArg, A_IGNORE);
         }
 
     @Override

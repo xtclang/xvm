@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -125,17 +124,16 @@ public class Invoke_NN
 
     protected int resolveArgs(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
         {
-        CallChain chain = getCallChain(frame, hTarget);
-        MethodStructure method = chain.getTop();
-
         checkReturnRegisters(frame, hTarget);
+
+        CallChain chain = getCallChain(frame, hTarget);
 
         ObjectHandle[] ahVar;
         if (ahArg == null)
             {
             try
                 {
-                ahVar = frame.getArguments(m_anArgValue, method.getMaxVars());
+                ahVar = frame.getArguments(m_anArgValue, chain.getMaxVars());
                 if (ahVar == null)
                     {
                     if (m_nTarget == A_STACK)
@@ -152,23 +150,16 @@ public class Invoke_NN
             }
         else
             {
-            ahVar = Utils.ensureSize(ahArg, method.getMaxVars());
+            ahVar = Utils.ensureSize(ahArg, chain.getMaxVars());
             }
 
         if (anyDeferred(ahVar))
             {
             Frame.Continuation stepNext = frameCaller ->
-                complete(frameCaller, chain, hTarget, ahVar);
+                chain.invoke(frameCaller, hTarget, ahVar, m_anRetValue);
             return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
             }
-        return complete(frame, chain, hTarget, ahVar);
-        }
-
-    protected int complete(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar)
-        {
-        return chain.isNative()
-             ? hTarget.getTemplate().invokeNativeNN(frame, chain.getTop(), hTarget, ahVar, m_anRetValue)
-             : hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
+        return chain.invoke(frame, hTarget, ahVar, m_anRetValue);
         }
 
     @Override

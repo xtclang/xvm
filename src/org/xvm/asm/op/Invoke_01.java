@@ -7,12 +7,10 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -105,19 +103,8 @@ public class Invoke_01
 
     protected int complete(Frame frame, ObjectHandle hTarget)
         {
-        CallChain chain = getCallChain(frame, hTarget);
-        MethodStructure method = chain.getTop();
-
         checkReturnRegister(frame, hTarget);
 
-        if (chain.isNative())
-            {
-            return hTarget.getTemplate().invokeNativeN(frame, method, hTarget,
-                Utils.OBJECTS_NONE, m_nRetValue);
-            }
-
-        ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
-
-        return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, m_nRetValue);
+        return getCallChain(frame, hTarget).invoke(frame, hTarget, m_nRetValue);
         }
     }

@@ -1294,7 +1294,7 @@ public class Frame
         {
         int cArgs = aiArg.length;
 
-        assert cArgs <= cVars;
+        cVars = Math.max(cArgs, cVars);
 
         ObjectHandle[] ahArg = new ObjectHandle[cVars];
 

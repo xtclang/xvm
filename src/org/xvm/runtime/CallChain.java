@@ -7,6 +7,10 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodBody.Implementation;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction;
 
 
 /**
@@ -43,7 +47,16 @@ public class CallChain
 
     public MethodStructure getTop()
         {
-        return f_aMethods[0].getMethodStructure();
+        return f_aMethods.length == 0
+                ? null
+                : f_aMethods[0].getMethodStructure();
+        }
+
+    public int getMaxVars()
+        {
+        return f_aMethods.length == 0
+                ? 0
+                : f_aMethods[0].getMethodStructure().getMaxVars();
         }
 
     public MethodStructure getSuper(Frame frame)
@@ -74,20 +87,32 @@ public class CallChain
         return (PropertyStructure) f_aMethods[0].getIdentity().getNamespace().getComponent();
         }
 
-    // natural chain invocation with zero args and one return value
+    /**
+     * Chain invocation with zero args and one return value.
+     */
     public int invoke(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        assert !isNative();
+        if (isNative())
+            {
+            return hTarget.getTemplate().
+                invokeNativeN(frame, getTop(), hTarget, Utils.OBJECTS_NONE, iReturn);
+            }
 
         ObjectHandle[] ahVar = new ObjectHandle[getTop().getMaxVars()];
 
         return hTarget.getTemplate().invoke1(frame, this, hTarget, ahVar, iReturn);
         }
 
-    // natural chain invocation with one arg and one return value
+    /**
+     * Chain invocation with one arg and one return value.
+     */
     public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        assert !isNative();
+        if (isNative())
+            {
+            return hTarget.getTemplate().
+                invokeNative1(frame, getTop(), hTarget, hArg, iReturn);
+            }
 
         ObjectHandle[] ahVar = new ObjectHandle[getTop().getMaxVars()];
         ahVar[0] = hArg;
@@ -95,10 +120,16 @@ public class CallChain
         return hTarget.getTemplate().invoke1(frame, this, hTarget, ahVar, iReturn);
         }
 
-    // natural chain invocation with one arg and multiple return values
+    /**
+     * Chain invocation with one arg and multiple return values.
+     */
     public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
         {
-        assert !isNative();
+        if (isNative())
+            {
+            return hTarget.getTemplate().
+                invokeNativeNN(frame, getTop(), hTarget, new ObjectHandle[]{hArg}, aiReturn);
+            }
 
         ObjectHandle[] ahVar = new ObjectHandle[getTop().getMaxVars()];
         ahVar[0] = hArg;
@@ -106,6 +137,83 @@ public class CallChain
         return hTarget.getTemplate().invokeN(frame, this, hTarget, ahVar, aiReturn);
         }
 
+    /**
+     * Chain invocation with multiple arg and single return value.
+     */
+    public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+        {
+        if (isNative())
+            {
+            return hTarget.getTemplate().
+                invokeNativeN(frame, getTop(), hTarget, ahArg, iReturn);
+            }
+
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, getTop().getMaxVars());
+
+        return hTarget.getTemplate().invoke1(frame, this, hTarget, ahVar, iReturn);
+        }
+
+    /**
+     * Chain invocation with multiple arg and multiple return values.
+     */
+    public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        if (isNative())
+            {
+            return hTarget.getTemplate().
+                invokeNativeNN(frame, getTop(), hTarget, ahArg, aiReturn);
+            }
+
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, getTop().getMaxVars());
+
+        return hTarget.getTemplate().invokeN(frame, this, hTarget, ahVar, aiReturn);
+        }
+
+    /**
+     * Chain invocation with a single arg and single return tuple value.
+     */
+    public int invokeT(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        if (isNative())
+            {
+            return hTarget.getTemplate().
+                invokeNativeT(frame, getTop(), hTarget, new ObjectHandle[] {hArg}, iReturn);
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[getTop().getMaxVars()];
+        ahVar[0] = hArg;
+
+        return hTarget.getTemplate().invokeT(frame, this, hTarget, ahVar, iReturn);
+        }
+
+    /**
+     * Chain invocation with multiple arg and single return tuple value.
+     */
+    public int invokeT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+        {
+        if (isNative())
+            {
+            return hTarget.getTemplate().invokeNativeT(frame, getTop(), hTarget, ahArg, iReturn);
+            }
+
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, getTop().getMaxVars());
+
+        return hTarget.getTemplate().invokeT(frame, this, hTarget, ahVar, iReturn);
+        }
+
+    /**
+     * Target binding.
+     */
+    public int bindTarget(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        return frame.assignValue(iReturn, hTarget.getTemplate().isService() ?
+                xRTFunction.makeAsyncHandle(this).bindTarget(hTarget) :
+                xRTFunction.makeHandle(this, 0).bindTarget(hTarget));
+        }
+
+    /**
+     * Super invocation with no arguments and a single return.
+     */
     public int callSuper01(Frame frame, int iReturn)
         {
         ObjectHandle hThis = frame.getThis();
@@ -135,6 +243,9 @@ public class CallChain
             }
         }
 
+    /**
+     * Super invocation with a single arguments and no returns.
+     */
     public int callSuper10(Frame frame, ObjectHandle hArg)
         {
         ObjectHandle hThis = frame.getThis();
@@ -165,8 +276,10 @@ public class CallChain
             }
         }
 
-    public int callSuperN1(Frame frame, ObjectHandle[] ahArg, int iReturn,
-                           boolean fReturnTuple)
+    /**
+     * Super invocation with multiple arguments and a single return.
+     */
+    public int callSuperN1(Frame frame, ObjectHandle[] ahArg, int iReturn, boolean fReturnTuple)
         {
         ObjectHandle hThis = frame.getThis();
         int nDepth = frame.m_nDepth + 1;
@@ -195,6 +308,9 @@ public class CallChain
             }
         }
 
+    /**
+     * Super invocation with multiple arguments and multiple returns.
+     */
     public int callSuperNN(Frame frame, ObjectHandle[] ahArg, int[] aiReturn)
         {
         ObjectHandle hThis = frame.getThis();
@@ -215,5 +331,50 @@ public class CallChain
             default:
                 throw new IllegalStateException();
             }
+        }
+
+    public static class ExceptionChain
+            extends CallChain
+        {
+        public ExceptionChain(MethodConstant idMethod, TypeConstant typeTarget)
+            {
+            super(MethodBody.NO_BODIES);
+
+            f_idMethod   = idMethod;
+            f_typeTarget = typeTarget;
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, int iReturn)
+            {
+            return throwException(frame);
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+            {
+            return throwException(frame);
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+            {
+            return throwException(frame);
+            }
+
+        @Override
+        public int bindTarget(Frame frame, ObjectHandle hTarget, int iReturn)
+            {
+            return throwException(frame);
+            }
+
+        private int throwException(Frame frame)
+            {
+            return frame.raiseException("Missing method \"" + f_idMethod.getValueString() +
+                        "\" on " + f_typeTarget.getValueString());
+            }
+
+        private final MethodConstant f_idMethod;
+        private final TypeConstant   f_typeTarget;
         }
     }

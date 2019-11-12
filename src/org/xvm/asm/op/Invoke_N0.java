@@ -87,7 +87,7 @@ public class Invoke_N0
                 {
                 // we won't know the number of method vars until later,
                 // will have to resize the arg array then
-                ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
+                ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, 0);
                 if (ahArg == null)
                     {
                     return R_REPEAT;
@@ -116,7 +116,7 @@ public class Invoke_N0
             {
             try
                 {
-                ahVar = frame.getArguments(m_anArgValue, chain.getTop().getMaxVars());
+                ahVar = frame.getArguments(m_anArgValue, chain.getMaxVars());
                 if (ahVar == null)
                     {
                     if (m_nTarget == A_STACK)
@@ -133,23 +133,16 @@ public class Invoke_N0
             }
         else
             {
-            ahVar = Utils.ensureSize(ahArg, chain.getTop().getMaxVars());
+            ahVar = ahArg;
             }
 
         if (anyDeferred(ahVar))
             {
             Frame.Continuation stepNext = frameCaller ->
-                complete(frameCaller, chain, hTarget, ahVar);
+                chain.invoke(frameCaller, hTarget, ahVar, A_IGNORE);
             return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
             }
-        return complete(frame, chain, hTarget, ahVar);
-        }
-
-    protected int complete(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar)
-        {
-        return chain.isNative()
-             ? hTarget.getTemplate().invokeNativeN(frame, chain.getTop(), hTarget, ahVar, A_IGNORE)
-             : hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, A_IGNORE);
+        return chain.invoke(frame, hTarget, ahVar, A_IGNORE);
         }
 
     @Override
