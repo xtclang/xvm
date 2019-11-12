@@ -1238,27 +1238,33 @@ public class TypeInfo
 
             for (MethodBody body : methodTest.getChain())
                 {
-                SignatureConstant sigTest;
-
-                sigTest = body.getSignature();
-                if (sigTest.equals(sig) || sigTest.isSubstitutableFor(sig, typeThis))
+                // test the actual body signature
+                SignatureConstant sigTest0 = body.getSignature();
+                if (sigTest0.equals(sig) || sigTest0.isSubstitutableFor(sig, typeThis))
                     {
                     mapBySig.putIfAbsent(sig, methodTest);
                     return methodTest;
                     }
 
-                sigTest = body.getIdentity().getSignature();
-                if (sigTest.equals(sig) || sigTest.isSubstitutableFor(sig, typeThis))
+                // test the resolved identity signature
+                SignatureConstant sigTest1 = resolveMethodConstant(body.getIdentity(), methodTest).getSignature();
+                if (sigTest1.equals(sig) || sigTest1.isSubstitutableFor(sig, typeThis))
                     {
                     mapBySig.putIfAbsent(sig, methodTest);
                     return methodTest;
                     }
 
-                sigTest = resolveMethodConstant(body.getIdentity(), methodTest).getSignature();
-                if (sigTest.equals(sig) || sigTest.isSubstitutableFor(sig, typeThis))
+                // test the canonical identity signature
+                SignatureConstant sigTest2 = body.getIdentity().getSignature();
+                if (sigTest2.containsGenericTypes())
                     {
-                    mapBySig.putIfAbsent(sig, methodTest);
-                    return methodTest;
+                    sigTest2 = sigTest2.resolveGenericTypes(pool(), getCanonicalResolver());
+
+                    if (sigTest2.equals(sig) || sigTest2.isSubstitutableFor(sig, typeThis))
+                        {
+                        mapBySig.putIfAbsent(sig, methodTest);
+                        return methodTest;
+                        }
                     }
                 }
             }
@@ -2113,7 +2119,21 @@ public class TypeInfo
 
     // ----- internal helpers ----------------------------------------------------------------------
 
-    public static Annotation[] validateAnnotations(Annotation[] annotations)
+    private GenericTypeResolver getCanonicalResolver()
+        {
+        GenericTypeResolver resolver = m_resolverCanonical;
+        if (resolver == null)
+            {
+            m_resolverCanonical = resolver = sName ->
+                {
+                ParamInfo param = getTypeParams().get(sName);
+                return param == null ? null : param.getConstraintType();
+                };
+            }
+        return resolver;
+        }
+
+    private static Annotation[] validateAnnotations(Annotation[] annotations)
         {
         if (annotations == null)
             {
@@ -2131,7 +2151,7 @@ public class TypeInfo
         return annotations;
         }
 
-    public static Annotation[] mergeAnnotations(Annotation[] anno1, Annotation[] anno2)
+    private static Annotation[] mergeAnnotations(Annotation[] anno1, Annotation[] anno2)
         {
         if (anno1.length == 0)
             {
@@ -2150,7 +2170,7 @@ public class TypeInfo
         return list.toArray(Annotation.NO_ANNOTATIONS);
         }
 
-    public static void appendAnnotations(ArrayList<Annotation> list, Annotation[] aAnno, Set<Constant> setPresent)
+    private static void appendAnnotations(ArrayList<Annotation> list, Annotation[] aAnno, Set<Constant> setPresent)
         {
         for (Annotation anno : aAnno)
             {
@@ -2367,4 +2387,5 @@ public class TypeInfo
     private transient Map<String, Set<MethodConstant>> m_mapOps;
     private transient Map<String, Set<MethodConstant>> m_mapMethodsByName;
     private transient Map<IdentityConstant, Map<String, PropertyInfo>> m_mapNestedProperties;
+    private transient GenericTypeResolver              m_resolverCanonical;
     }

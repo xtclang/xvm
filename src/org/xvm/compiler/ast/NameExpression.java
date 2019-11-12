@@ -2022,7 +2022,7 @@ public class NameExpression
                 if (isIdentityMode(ctx, false))
                     {
                     m_plan = Plan.None;
-                    // TODO parameterized type of Property<TargetType, PropertyType>
+                    // TODO parameterized type of Property<Target, Referent, Implementation>
                     return pool.typeProperty();
                     }
 
