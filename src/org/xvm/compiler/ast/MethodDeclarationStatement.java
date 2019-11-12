@@ -302,7 +302,6 @@ public class MethodDeclarationStatement
                 boolean      fConstructor = isConstructor();
                 boolean      fFinally     = isConstructorFinally();
                 boolean      fFunction    = isStatic(modifiers) || fConstructor;
-                Access       access       = getDefaultAccess();
                 ConstantPool pool         = container.getConstantPool();
 
                 // build array of annotations
@@ -357,6 +356,9 @@ public class MethodDeclarationStatement
                     }
 
                 org.xvm.asm.Parameter[] aParams = buildParameters(pool);
+                Access                  access  = container instanceof MethodStructure
+                                                    ? Access.PRIVATE
+                                                    : getDefaultAccess();
 
                 boolean fUsesSuper = !fFunction && !fFinally && access != Access.PRIVATE && usesSuper();
                 MethodStructure method;
