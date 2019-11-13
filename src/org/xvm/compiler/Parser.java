@@ -3422,7 +3422,8 @@ public class Parser
                         else
                             {
                             // just a parenthesized expression
-                            return expr;
+                            return new ParenthesizedExpression(expr,
+                                    tokLParen.getStartPosition(), getLastMatch().getEndPosition());
                             }
 
                     case IDENTIFIER:

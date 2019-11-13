@@ -1,55 +1,38 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
 
 
 /**
- * Used for named arguments.
+ * Used for parenthesized expressions.
  */
-public class LabeledExpression
+public class ParenthesizedExpression
         extends DelegatingExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public LabeledExpression(Token name, Expression expr)
+    public ParenthesizedExpression(Expression expr, long lStartPos, long lEndPos)
         {
         super(expr);
 
-        this.name = name;
+        m_lStartPos = lStartPos;
+        m_lEndPos   = lEndPos;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    /**
-     * @return the token that provides the label (the name) for the expression
-     */
-    public Token getNameToken()
-        {
-        return name;
-        }
-
-    /**
-     * @return the label name
-     */
-    public String getName()
-        {
-        return name.getValueText();
-        }
-
     @Override
     public long getStartPosition()
         {
-        return name.getStartPosition();
+        return m_lStartPos;
         }
 
     @Override
     public long getEndPosition()
         {
-        return expr.getEndPosition();
+        return m_lEndPos;
         }
 
     @Override
@@ -64,13 +47,17 @@ public class LabeledExpression
     @Override
     public String toString()
         {
-        return name + " = " + expr;
+        return "(" + expr + ")";
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private Token name;
+    /**
+     * The start and end positions.
+     */
+    private long m_lStartPos;
+    private long m_lEndPos;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(LabeledExpression.class, "expr");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(ParenthesizedExpression.class, "expr");
     }
