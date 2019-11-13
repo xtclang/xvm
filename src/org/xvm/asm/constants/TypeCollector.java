@@ -4,6 +4,7 @@ package org.xvm.asm.constants;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
@@ -125,7 +126,7 @@ public class TypeCollector
         ArrayList<TypeConstant> listSingle = m_listSingle;
         if (listSingle != null)
             {
-            // this is just the opposite of constainsUnknown(), since we know that otherwise the
+            // this is just the opposite of containsUnknown(), since we know that otherwise the
             // single-format list is uniform
             for (TypeConstant type : listSingle)
                 {
@@ -283,7 +284,7 @@ public class TypeCollector
 
         List<TypeConstant> listTypes = getSingle();
         int cTypes = listTypes.size();
-        if (cTypes == 0 || listTypes.stream().anyMatch(e -> e == null))
+        if (cTypes == 0 || listTypes.stream().anyMatch(Objects::isNull))
             {
             return null;
             }
