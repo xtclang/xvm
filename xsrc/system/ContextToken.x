@@ -8,7 +8,7 @@ const ContextToken<TokenType extends immutable Object>
         {
         // store off the previous contextToken; it will be replaced by this contextToken, and restored when
         // this contextToken is closed
-        previousContextToken = this:service.findContextToken<ContextToken?>(name);
+        previousContextToken = this:service.findContextToken(name);
 
 //        startTime = clock.time;
 //        deadline  = startTime + duration;
@@ -36,9 +36,9 @@ const ContextToken<TokenType extends immutable Object>
     /**
      * Find a contextToken for a given name for the current service.
      */
-    ContextToken? current.get()
+    ContextToken!<>? current.get()
         {
-        return this:service.findContextToken<ContextToken?>(name);
+        return this:service.findContextToken(name);
         }
 
     /**
