@@ -1190,6 +1190,10 @@ public class Compiler
      */
     public static final String GENERIC_TYPE_NOT_ALLOWED            = "COMPILER-144";
     /**
+     * Unresolvable type parameter(s): {0}.
+     */
+    public static final String TYPE_PARAMS_UNRESOLVABLE            = "COMPILER-145";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

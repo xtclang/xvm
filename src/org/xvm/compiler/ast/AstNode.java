@@ -1275,7 +1275,7 @@ public abstract class AstNode
             if (cTypeParams > 0)
                 {
                 ListMap<String, TypeConstant> mapTypeParams =
-                        method.resolveTypeParameters(atypeArgs, atypeReturn);
+                        method.resolveTypeParameters(atypeArgs, atypeReturn, true);
                 if (mapTypeParams.size() < cTypeParams)
                     {
                     // different arguments/returns cause the formal type to resolve into
@@ -1365,7 +1365,7 @@ public abstract class AstNode
                 {
                 // re-resolve the type parameters since we could have narrowed some
                 ListMap<String, TypeConstant> mapTypeParams =
-                        method.resolveTypeParameters(atypeArgs, atypeReturn);
+                        method.resolveTypeParameters(atypeArgs, atypeReturn, true);
                 if (mapTypeParams.size() < cTypeParams)
                     {
                     // different arguments/returns cause the formal type to resolve into

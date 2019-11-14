@@ -2088,12 +2088,12 @@ public class NameExpression
                         {
                         TypeConstant[]  atypeArgs = pool.extractFunctionParams(typeDesired);
                         ListMap<String, TypeConstant> mapTypeParams =
-                            method.resolveTypeParameters(atypeArgs, TypeConstant.NO_TYPES);
+                            method.resolveTypeParameters(atypeArgs, TypeConstant.NO_TYPES, false);
 
                         if (mapTypeParams.size() < cTypeParams)
                             {
-                            // TODO: need a better error
-                            log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                            log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
+                                    method.collectUnresolvedTypeParameters(mapTypeParams.keySet()));
                             return null;
                             }
 

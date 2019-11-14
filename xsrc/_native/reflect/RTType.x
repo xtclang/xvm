@@ -92,11 +92,11 @@ const RTType<DataType, OuterType>
             }
 
         function Int sum(Int, Int) = (n1, n2) -> n1 + n2 + 2;
-        // TODO GG - I shouldn't need to tell it that it is mapping to Int
-        // return 6 + properties.iterator().map(p -> p.estimateStringLength()).reduce(0, sum)
-        //          + methods   .iterator().map(m -> m.estimateStringLength()).reduce(0, sum);
-        return 6 + properties.iterator().map<Iterator<Int>>(p -> p.name.size+2).reduce(0, sum)
-                 + methods   .iterator().map<Iterator<Int>>(m -> m.name.size+4).reduce(0, sum);
+// TODO GG:
+//        return 6 + properties.iterator().map(p -> p.name.size+2).reduce(0, sum)
+//                 + methods   .iterator().map(m -> m.name.size+4).reduce(0, sum);
+        return properties.iterator().map(p -> p.name.size+2).reduce(0, sum) +
+               methods   .iterator().map(m -> m.name.size+4).reduce(0, sum) + 6;
         }
 
     @Override

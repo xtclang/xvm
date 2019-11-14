@@ -788,11 +788,11 @@ public class InvocationExpression
                         {
                         // re-resolve against the validated types
                         mapTypeParams = method.resolveTypeParameters(atypeArgs,
-                                m_fCall ? atypeReturn : TypeConstant.NO_TYPES);
+                                m_fCall ? atypeReturn : TypeConstant.NO_TYPES, false);
                         if (mapTypeParams.size() < cTypeParams)
                             {
-                            // TODO: need a better error
-                            log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                            log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
+                                    method.collectUnresolvedTypeParameters(mapTypeParams.keySet()));
                             break Validate;
                             }
 
@@ -2238,8 +2238,8 @@ public class InvocationExpression
      * @return a type parameter resolver for a given method and array of return types
      *         or null if the type parameters could not be resolved
      */
-    private GenericTypeResolver makeTypeParameterResolver(Context ctx, MethodStructure method,
-                                                          TypeConstant[] atypeReturn)
+    private GenericTypeResolver makeTypeParameterResolver(
+            Context ctx, MethodStructure method, TypeConstant[] atypeReturn)
         {
         int            cArgs     = args.size();
         TypeConstant[] atypeArgs = new TypeConstant[cArgs];
@@ -2249,7 +2249,7 @@ public class InvocationExpression
             }
 
         Map<String, TypeConstant> mapTypeParams =
-                method.resolveTypeParameters(atypeArgs, atypeReturn);
+                method.resolveTypeParameters(atypeArgs, atypeReturn, true);
 
         return mapTypeParams.size() == method.getTypeParamCount()
                 ? mapTypeParams::get

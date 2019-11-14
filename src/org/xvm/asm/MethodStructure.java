@@ -15,12 +15,14 @@ import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -567,12 +569,15 @@ public class MethodStructure
      *
      * @param atypeArgs     the actual argument types
      * @param atypeReturns  (optional) the actual return types
+     * @param fAllowFormal  if false, all type parameters must be fully resolved; otherwise place
+     *                      a corresponding {@link PendingTypeConstant} to the resolution map
      *
      * @return a ListMap of the resolved types in the natural order, keyed by the names;
      *         conflicting types will be not in the map
      */
     public ListMap<String, TypeConstant> resolveTypeParameters(TypeConstant[] atypeArgs,
-                                                               TypeConstant[] atypeReturns)
+                                                               TypeConstant[] atypeReturns,
+                                                               boolean        fAllowFormal)
         {
         int                           cTypeParams   = getTypeParamCount();
         ListMap<String, TypeConstant> mapTypeParams = new ListMap<>(cTypeParams);
@@ -612,26 +617,45 @@ public class MethodStructure
                 TypeConstant typeFormal = atypeMethodReturns[iR];
                 TypeConstant typeActual = iR < cReturns ? atypeReturns[iR] : null;
 
-                if (typeActual == null)
+                if (typeActual != null)
                     {
-                    // anything is allowed to match; don't leave the formal parameters unresolved
-                    typeActual = getConstantPool().typeObject();
-                    }
-
-                TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
-                if (checkConflict(typeResolved, sName, mapTypeParams))
-                    {
-                    continue NextParameter;
+                    TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
+                    if (checkConflict(typeResolved, sName, mapTypeParams))
+                        {
+                        continue NextParameter;
+                        }
                     }
                 }
 
-            if (!mapTypeParams.containsKey(sName))
+            if (!mapTypeParams.containsKey(sName) && fAllowFormal)
                 {
-                // no extra knowledge; keep the formal parameter type
-                mapTypeParams.put(sName, param.asTypeParameterType(getIdentityConstant()));
+                // no extra knowledge; assume that anything goes
+                ConstantPool pool           = getConstantPool();
+                TypeConstant typeConstraint = param.getType().resolveConstraints(pool).getParamType(0);
+                TypeConstant typePending    = new PendingTypeConstant(pool, typeConstraint);
+                mapTypeParams.put(sName, typePending);
                 }
             }
         return mapTypeParams;
+        }
+
+    /**
+     * Collect a list of unresolved type parameter names. Used for error reporting only.
+     */
+    public List<String> collectUnresolvedTypeParameters(Set<String> setResolved)
+        {
+        int          cTypeParams    = getTypeParamCount();
+        List<String> listUnresolved = new ArrayList<>(cTypeParams);
+
+        for (int iT = 0; iT < cTypeParams; iT++)
+            {
+            String sName = getParam(iT).getName();
+            if (!setResolved.contains(sName))
+                {
+                listUnresolved.add(sName);
+                }
+            }
+        return listUnresolved;
         }
 
     /**
