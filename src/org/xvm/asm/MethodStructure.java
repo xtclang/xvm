@@ -602,9 +602,6 @@ public class MethodStructure
                     TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
                     if (checkConflict(typeResolved, sName, mapTypeParams))
                         {
-                        // different arguments cause the formal type to resolve into
-                        // incompatible types
-                        mapTypeParams.remove(sName);
                         continue NextParameter;
                         }
                     }
@@ -624,9 +621,6 @@ public class MethodStructure
                 TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
                 if (checkConflict(typeResolved, sName, mapTypeParams))
                     {
-                    // different arguments cause the formal type to resolve into
-                    // incompatible types
-                    mapTypeParams.remove(sName);
                     continue NextParameter;
                     }
                 }
@@ -643,7 +637,7 @@ public class MethodStructure
     /**
      * Put the resolved formal type in the specified map and ensure that there is no conflict.
      *
-     * @return true iff there is a conflict
+     * @return true iff there is a conflict, in which case the mapping is removed
      */
     private static boolean checkConflict(TypeConstant typeResult, String sFormalName,
                                          Map<String, TypeConstant> mapTypeParams)
@@ -656,6 +650,9 @@ public class MethodStructure
                 typeResult = Op.selectCommonType(typePrev, typeResult, ErrorListener.BLACKHOLE);
                 if (typeResult == null)
                     {
+                    // different arguments cause the formal type to resolve into
+                    // incompatible types
+                    mapTypeParams.remove(sFormalName);
                     return true;
                     }
                 }

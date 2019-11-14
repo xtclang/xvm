@@ -482,7 +482,7 @@ public class TerminalTypeConstant
         if (constId instanceof FormalConstant)
             {
             FormalConstant constFormal  = (FormalConstant) constId;
-            return constFormal.getConstraintType();
+            return constFormal.getConstraintType().resolveConstraints(pool);
             }
 
         return this;
@@ -618,15 +618,17 @@ public class TerminalTypeConstant
                         //   Int[] array = ...
                         //   Int   hash = Array<Int>.hashCode(array);
                         // requires having the the actual type of "Array<Int>" to resolve the type
-                        // parameter "CompileType" with the constraint type (Hasher<Element>)
+                        // parameter "CompileType" with the constraint type Hasher<Element>
                         // to the resolved type of "Hasher<Int>"
                         //
                         // To do that, first let's pretend that the types match and resolve
                         // the constraint type using that knowledge and only then validate
                         // the actual type against the resolved constraint.
 
+                        ConstantPool pool = getConstantPool();
                         TypeConstant typeConstraint = idTypeParam.getConstraintType().
-                            resolveGenerics(getConstantPool(),
+                            resolveConstraints(pool).
+                            resolveGenerics(pool,
                                 sName -> sFormalName.equals(sName) ? typeActual : null);
                         return typeActual.isA(typeConstraint)
                                 ? typeActual
@@ -641,8 +643,10 @@ public class TerminalTypeConstant
                 PropertyConstant idProp = (PropertyConstant) constant;
                 if (idProp.getName().equals(sFormalName))
                     {
+                    ConstantPool pool = getConstantPool();
                     TypeConstant typeConstraint = idProp.getConstraintType().
-                        resolveGenerics(getConstantPool(),
+                        resolveConstraints(pool).
+                        resolveGenerics(pool,
                             sName -> sFormalName.equals(sName) ? typeActual : null);
                     return typeActual.isA(typeConstraint)
                             ? typeActual

@@ -798,18 +798,26 @@ public class InvocationExpression
 
                         Argument[] aargTypeParam = new Argument[mapTypeParams.size()];
                         int ix = 0;
-                        for (TypeConstant type : mapTypeParams.values())
+                        for (TypeConstant typeArg : mapTypeParams.values())
                             {
-                            TypeConstant typeArgType    = type.getType();
-                            TypeConstant typeMethodType = idMethod.getRawParams()[ix];
-                            if (!typeArgType.isA(typeMethodType))
+                            TypeConstant typeParam = idMethod.getRawParams()[ix].getParamType(0);
+
+                            // there's a possibility that type parameter constraints refer to
+                            // previous type parameters, for example:
+                            //   <T1 extends Base, T2 extends T1> foo(T1 v1, T2 v2) {...}
+                            if (typeParam.containsTypeParameter(true))
+                                {
+                                typeParam = typeParam.resolveGenerics(pool, mapTypeParams::get);
+                                }
+
+                            if (!typeArg.isA(typeParam))
                                 {
                                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                                        typeMethodType.getValueString(),
-                                        typeArgType.getValueString());
+                                        typeParam.getValueString(),
+                                        typeArg.getValueString());
                                 break Validate;
                                 }
-                            aargTypeParam[ix++] = typeArgType;
+                            aargTypeParam[ix++] = typeArg.getType();
                             }
                         m_aargTypeParams = aargTypeParam;
                         }
