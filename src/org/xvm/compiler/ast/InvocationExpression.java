@@ -1927,16 +1927,24 @@ public class InvocationExpression
             // - methods are included because there is a left and it is NOT identity-mode
             // - functions are NOT included because the left is NOT identity-mode
             TypeInfo      infoLeft = typeLeft.ensureTypeInfo(errs);
-            ErrorListener errsTemp = errs.branch();
+            ErrorListener errsMain = errs.branch();
 
             Argument arg = findCallable(ctx, infoLeft, sName, MethodKind.Method, false,
-                                atypeReturn, errsTemp);
-            if (arg instanceof MethodConstant)
+                                atypeReturn, errsMain);
+            if (arg != null)
                 {
-                m_argMethod   = arg;
-                m_method      = getMethod(infoLeft, arg);
-                m_fBindTarget = m_method != null;
-                errsTemp.merge();
+                if (arg instanceof MethodConstant)
+                    {
+                    m_argMethod   = arg;
+                    m_method      = getMethod(infoLeft, arg);
+                    m_fBindTarget = m_method != null;
+                    }
+                else
+                    {
+                    // just return the property; the rest will be handled by the caller
+                    assert arg instanceof PropertyConstant;
+                    }
+                errsMain.merge();
                 return arg;
                 }
 
@@ -1947,17 +1955,17 @@ public class InvocationExpression
                 List<Expression> listArgs = new ArrayList<>(args);
                 listArgs.add(0, exprLeft);
 
-                errsTemp = errs.branch();
+                ErrorListener errsAlt = errs.branch();
 
                 arg = findMethod(ctx, infoLeft, sName, listArgs, MethodKind.Function, m_fCall, false,
-                            atypeReturn, errsTemp);
+                            atypeReturn, errsAlt);
                 if (arg != null)
                     {
                     m_argMethod   = arg;
                     m_method      = getMethod(infoLeft, arg);
                     m_fBindTarget = false;
                     m_fBjarne     = true;
-                    errsTemp.merge();
+                    errsAlt.merge();
                     return arg;
                     }
                 }
@@ -1965,7 +1973,7 @@ public class InvocationExpression
             if (exprLeft instanceof NameExpression && typeLeft.isA(pool.typeFunction()))
                 {
                 // it appears that they try to use a variable or property, but have a function instead
-                if (errsTemp.hasError(Compiler.MISSING_METHOD) &&
+                if (errsMain.hasError(Compiler.MISSING_METHOD) &&
                         infoLeft.findMethods(sName, -1, MethodKind.Any).isEmpty())
                     {
                     NameExpression   exprFn   = (NameExpression) exprLeft;
@@ -1995,12 +2003,12 @@ public class InvocationExpression
 
                     if (idParent != null)
                         {
-                        log(errsTemp, Severity.ERROR, Compiler.SUSPICIOUS_FUNCTION_USE,
+                        log(errsMain, Severity.ERROR, Compiler.SUSPICIOUS_FUNCTION_USE,
                                 exprFn.getName(), idParent.getValueString());
                         }
                     }
                 }
-            errsTemp.merge();
+            errsMain.merge();
             }
 
         return null;

@@ -996,7 +996,9 @@ public class CommandLine
             }
 
         // determine if the errors are bad enough to quit
-        if (error || (!deferred.isEmpty() && opts.strictLevel == Options.Strictness.Stickler))
+        if (error || (!deferred.isEmpty() &&
+                (opts.strictLevel == Options.Strictness.Normal ||
+                 opts.strictLevel == Options.Strictness.Stickler)))
             {
             err("xtc: Terminating.");
             System.exit(1);
