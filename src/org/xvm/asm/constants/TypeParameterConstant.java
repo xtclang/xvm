@@ -116,7 +116,7 @@ public class TypeParameterConstant
             return typeConstraint;
             }
 
-        assert typeConstraint.isTypeOfType();
+        assert typeConstraint.isTypeOfType() && typeConstraint.isParamsSpecified();
 
         typeConstraint = typeConstraint.getParamType(0);
         if (!typeConstraint.isParamsSpecified() && typeConstraint.isSingleUnderlyingClass(true))

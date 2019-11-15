@@ -43,7 +43,9 @@ public abstract class FormalConstant
         }
 
     /**
-     * @return the constraint type for this formal constant
+     * Obtain the constraint type of the formal type represented by this constant.
+     *
+     * @return the constraint type
      */
     public abstract TypeConstant getConstraintType();
 
