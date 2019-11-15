@@ -92,11 +92,9 @@ const RTType<DataType, OuterType>
             }
 
         function Int sum(Int, Int) = (n1, n2) -> n1 + n2 + 2;
-// TODO GG:
-//        return 6 + properties.iterator().map(p -> p.name.size+2).reduce(0, sum)
-//                 + methods   .iterator().map(m -> m.name.size+4).reduce(0, sum);
-        return properties.iterator().map(p -> p.name.size+2).reduce(0, sum) +
-               methods   .iterator().map(m -> m.name.size+4).reduce(0, sum) + 6;
+
+        return 6 + properties.iterator().map(p -> p.name.size+2).reduce(0, sum)
+                 + methods   .iterator().map(m -> m.name.size+4).reduce(0, sum);
         }
 
     @Override

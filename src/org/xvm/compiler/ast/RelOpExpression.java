@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.xvm.asm.Constant;
@@ -36,6 +37,7 @@ import org.xvm.asm.op.GP_Sub;
 import org.xvm.asm.op.GP_Xor;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -394,6 +396,15 @@ public class RelOpExpression
 
         // using the inferred types (if any), validate the expressions
         TypeConstant type1Req = guessLeftType(ctx, typeRequired);
+
+        Expression expr1Copy = null;
+        if (type1Req == null)
+            {
+            // since we couldn't figure out the required type,
+            // create a backup copy just in case we need to re-validate
+            expr1Copy = (Expression) expr1.clone();
+            }
+
         Expression   expr1New = expr1.validate(ctx, type1Req, errs);
         TypeConstant type1Act = null;
         if (expr1New == null)
@@ -429,9 +440,10 @@ public class RelOpExpression
         int            cExpected    = fMulti ? 2 : 1;
         int            cResults     = cExpected;
         TypeConstant[] atypeResults = null;
-        ErrorListener  errsTemp     = errs.branch();
-        MethodConstant idOp         = findOpMethod(type1Act, type2Act, typeRequired, errsTemp);
+        ErrorListener  errsAct      = errs.branch(); // if nothing else works, report these
+        MethodConstant idOp         = findOpMethod(type1Act, type2Act, typeRequired, errsAct);
 
+        findAlternative:
         if (idOp == null)
             {
             // try to resolve the formal types and see if there is an op that matches
@@ -442,14 +454,50 @@ public class RelOpExpression
                 type1Act = type1Act.resolveConstraints(pool);
                 type2Act = type2Act.resolveConstraints(pool);
 
-                idOp = findOpMethod(type1Act, type2Act, typeRequired, ErrorListener.BLACKHOLE);
+                ErrorListener errsAlt = errs.branch();
+                idOp = findOpMethod(type1Act, type2Act, typeRequired, errsAlt);
+                if (idOp != null)
+                    {
+                    errsAct = errsAlt;
+                    break findAlternative;
+                    }
                 }
 
-            if (idOp == null)
+            if (type1Req == null && !Objects.equals(type1Act, type2Act))
                 {
-                errsTemp.merge();
+                // there is new knowledge about the type of the expr2 that we didn't have
+                // when validated expr1; let's try to re-validate it using the saved off copy
+                ErrorListener errsAlt = errs.branch();
+                if (!new StageMgr(expr1Copy, Stage.Validated, errsAlt).fastForward(20))
+                    {
+                    break findAlternative;
+                    }
+
+                expr1New = expr1Copy.validate(ctx, type2Act, errsAlt);
+                if (expr1New == null)
+                    {
+                    break findAlternative;
+                    }
+
+                type1Act = expr1New.getType();
+                idOp     = findOpMethod(type1Act, type2Act, typeRequired, errsAlt);
+                if (idOp != null)
+                    {
+                    // it worked! replace the old "expr1" with the validated copy
+                    expr1.discard(true);
+                    expr1     = expr1New;
+                    expr1Copy = null;
+                    errsAct   = errsAlt;
+                    break findAlternative;
+                    }
                 }
             }
+
+        if (expr1Copy != null)
+            {
+            expr1Copy.discard(true);
+            }
+        errsAct.merge();
 
         if (idOp != null)
             {
@@ -460,7 +508,8 @@ public class RelOpExpression
             {
             if (cResults < cExpected)
                 {
-                operator.log(errs, getSource(), Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cExpected, cResults);
+                operator.log(errs, getSource(), Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
+                        cExpected, cResults);
                 }
 
             TypeConstant[] atypeFake = fMulti
@@ -468,6 +517,7 @@ public class RelOpExpression
                     : new TypeConstant[] {type1Act};
             return finishValidations(atypeRequired, atypeFake, TypeFit.NoFit, null, errs);
             }
+
         m_idOp = idOp;
 
         // determine if the result of this expression is itself constant
