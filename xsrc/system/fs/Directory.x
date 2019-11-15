@@ -67,8 +67,6 @@ interface Directory
      */
     Boolean deleteRecursively();
 
-    typedef function void () Cancellable;
-
     /**
      * Watch this directory and everything nested under directories under this directory, and report
      * any events related to any such directory.

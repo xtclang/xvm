@@ -34,6 +34,7 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody.Implementation;
@@ -1490,10 +1491,12 @@ public abstract class TypeConstant
         Map<MethodConstant   , MethodInfo  > mapMethods     = new HashMap<>();
         Map<Object           , PropertyInfo> mapVirtProps   = new HashMap<>(); // keyed by nested id
         Map<Object           , MethodInfo  > mapVirtMethods = new HashMap<>(); // keyed by nested id
+        Map<String           , ChildInfo   > mapChildren    = new HashMap<>(); // keyed by name
+        // note that the mapChildren keys may be '.' delim'd in the case of a "prop.class"
 
         fComplete &= collectMemberInfo(constId, struct, mapTypeParams,
                 listProcess, listmapClassChain, listmapDefaultChain,
-                mapProps, mapMethods, mapVirtProps, mapVirtMethods, errs);
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren, errs);
 
         // validate the type parameters against the properties
         checkTypeParameterProperties(mapTypeParams, mapVirtProps, errs);
@@ -1502,7 +1505,7 @@ public abstract class TypeConstant
                 Annotation.NO_ANNOTATIONS,
                 typeExtends, typeRebase, typeInto,
                 listProcess, listmapClassChain, listmapDefaultChain,
-                mapProps, mapMethods, mapVirtProps, mapVirtMethods,
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 fComplete ? Progress.Complete : Progress.Incomplete);
 
         return atypeCondInc == null || !fComplete
@@ -1634,7 +1637,7 @@ public abstract class TypeConstant
                 false, infoPri.getTypeParams(), infoPri.getClassAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
-                mapProps, mapMethods, mapVirtProps, Collections.EMPTY_MAP,
+                mapProps, mapMethods, mapVirtProps, Collections.EMPTY_MAP, Collections.EMPTY_MAP,   // TODO mapChildren
                 fIncomplete ? Progress.Incomplete : Progress.Complete);
         }
 
@@ -2423,6 +2426,7 @@ public abstract class TypeConstant
      * @param mapMethods           methods of the class
      * @param mapVirtProps         the virtual properties of the type, keyed by nested id
      * @param mapVirtMethods       the virtual methods of the type, keyed by nested id
+     * @param mapChildren          the child types of the class
      * @param errs                 the error list to log any errors to
      *
      * @return true iff the processing was able to obtain all of its dependencies
@@ -2438,11 +2442,13 @@ public abstract class TypeConstant
             Map<MethodConstant  , MethodInfo  > mapMethods,
             Map<Object, PropertyInfo>           mapVirtProps,
             Map<Object, MethodInfo  >           mapVirtMethods,
+            Map<String, ChildInfo   >           mapChildren,
             ErrorListener                       errs)
         {
         ConstantPool pool        = getConstantPool();
         boolean      fIncomplete = false;
         boolean      fNative     = constId instanceof NativeRebaseConstant;
+        boolean      fAfterSelf  = false;
 
         for (int i = listProcess.size()-1; i >= 0; --i)
             {
@@ -2450,6 +2456,7 @@ public abstract class TypeConstant
 
             Map<PropertyConstant, PropertyInfo> mapContribProps;
             Map<MethodConstant  , MethodInfo  > mapContribMethods;
+            Map<String          , ChildInfo   > mapContribChildren;
 
             TypeConstant     typeContrib = contrib.getTypeConstant();
             Composition      composition = contrib.getComposition();
@@ -2458,8 +2465,9 @@ public abstract class TypeConstant
 
             if (fSelf)
                 {
-                mapContribProps   = new HashMap<>();
-                mapContribMethods = new HashMap<>();
+                mapContribProps    = new HashMap<>();
+                mapContribMethods  = new HashMap<>();
+                mapContribChildren = new HashMap<>();
 
                 int nBaseRank = mapProps.size();
 
@@ -2467,7 +2475,7 @@ public abstract class TypeConstant
 
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
                 if (!createMemberInfo(constId, isInterface(constId, struct), struct, mapTypeParams,
-                        mapContribProps, mapContribMethods, listExplode, nBaseRank, errs))
+                        mapContribProps, mapContribMethods, mapContribChildren, listExplode, nBaseRank, errs))
                     {
                     fIncomplete = true;
                     errs        = ErrorListener.BLACKHOLE;
@@ -2528,8 +2536,9 @@ public abstract class TypeConstant
                         break;
                     }
 
-                mapContribProps   = infoContrib.getProperties();
-                mapContribMethods = infoContrib.getMethods();
+                mapContribProps    = infoContrib.getProperties();
+                mapContribMethods  = infoContrib.getMethods();
+                mapContribChildren = infoContrib.getChildInfosByName();
 
                 if (composition != Composition.Into)
                     {
@@ -2642,6 +2651,30 @@ public abstract class TypeConstant
                         typeContrib, mapContribMethods, errs);
                 }
 
+            // process children
+            if (!mapContribChildren.isEmpty())
+                {
+                for (Entry<String, ChildInfo> entry : mapContribChildren.entrySet())
+                    {
+                    String    sName       = entry.getKey();
+                    ChildInfo infoContrib = entry.getValue();
+                    ChildInfo infoPrev    = mapChildren.putIfAbsent(sName, infoContrib);
+                    if (infoPrev != null)
+                        {
+                        ChildInfo infoNew = infoPrev.layerOn(infoContrib);
+                        if (infoNew == null)
+                            {
+                            log(errs, Severity.ERROR, VE_CHILD_COLLISION,
+                                    constId,
+                                    sName,
+                                    contrib.getTypeConstant(),
+                                    infoPrev.getIdentity());
+                            }
+                        mapChildren.put(sName, infoNew);
+                        }
+                    }
+                }
+
             if (fSelf && fNative)
                 {
                 // the type info that we are creating is a "native rebase"; it may have already
@@ -2664,6 +2697,8 @@ public abstract class TypeConstant
                         }
                     }
                 }
+
+            fAfterSelf |= fSelf;
             }
 
         return !fIncomplete;
@@ -2843,7 +2878,7 @@ public abstract class TypeConstant
         for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
             {
             layerOnProp(constId, fSelf, idDelegate, mapProps, mapVirtProps,
-                typeContrib, entry.getKey(), entry.getValue(), errs);
+                    typeContrib, entry.getKey(), entry.getValue(), errs);
             }
         }
 
@@ -3439,6 +3474,8 @@ public abstract class TypeConstant
      * @param mapTypeParams  the map of type parameters
      * @param mapProps       the properties of the class
      * @param mapMethods     the methods of the class
+     * @param mapChildren    the child types of the class
+     * @param listExplode    used to collect the list of properties that must be "exploded"
      * @param nBaseRank      the base rank for any properties added by "this" class
      * @param errs           the error list to log any errors to
      *
@@ -3451,6 +3488,7 @@ public abstract class TypeConstant
             Map<Object          , ParamInfo>    mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant  , MethodInfo>   mapMethods,
+            Map<String, ChildInfo>              mapChildren,
             List<PropertyConstant>              listExplode,
             int                                 nBaseRank,
             ErrorListener                       errs)
@@ -3527,14 +3565,28 @@ public abstract class TypeConstant
                     if (!method.getIdentityConstant().isLambda())
                         {
                         fComplete &= createMemberInfo(constId, fInterface, method, mapTypeParams,
-                                mapProps, mapMethods, listExplode, nBaseRank, errs);
+                                mapProps, mapMethods, mapChildren, listExplode, nBaseRank, errs);
                         }
                     }
                 }
             else if (child instanceof PropertyStructure)
                 {
                 fComplete &= createMemberInfo(constId, fInterface, child, mapTypeParams,
-                        mapProps, mapMethods, listExplode, nBaseRank, errs);
+                        mapProps, mapMethods, mapChildren, listExplode, nBaseRank, errs);
+                }
+            else if (child instanceof ClassStructure || child instanceof TypedefStructure)
+                {
+                String sName = child.getIdentityConstant().getNestedName();
+                if (sName != null)
+                    {
+                    // it should not be possible for there to be more than one at this level with
+                    // the same name
+                    if (mapChildren.containsKey(sName))
+                        {
+                        log(errs, Severity.ERROR, VE_NAME_COLLISION, constId, sName);
+                        }
+                    mapChildren.put(sName, new ChildInfo(child));
+                    }
                 }
             }
 
@@ -4075,7 +4127,7 @@ public abstract class TypeConstant
                     info.getExtends(), info.getRebases(), info.getInto(),
                     info.getContributionList(), info.getClassChain(), info.getDefaultChain(),
                     info.getProperties(), info.getMethods(),
-                    info.getVirtProperties(), info.getVirtMethods(),
+                    info.getVirtProperties(), info.getVirtMethods(), info.getChildInfosByName(),
                     Progress.Incomplete);
                 }
 
@@ -4121,6 +4173,7 @@ public abstract class TypeConstant
         Map<MethodConstant  , MethodInfo  > mapMethods     = new HashMap<>(infoSource.getMethods());
         Map<Object          , PropertyInfo> mapVirtProps   = new HashMap<>(infoSource.getVirtProperties());
         Map<Object          , MethodInfo  > mapVirtMethods = new HashMap<>(infoSource.getVirtMethods());
+        Map<String          , ChildInfo   > mapChildren    = new HashMap<>(infoSource.getChildInfosByName());
 
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapMixinProps.entrySet())
             {
@@ -4134,11 +4187,13 @@ public abstract class TypeConstant
                     entry.getKey(), entry.getValue(), errs);
             }
 
+        // TODO handle mapChildren
+
         return new TypeInfo(typeOrigin, cInvalidations, structBase, 0, false, mapMixinParams,
                 listClassAnnos == null ? null : listClassAnnos.toArray(Annotation.NO_ANNOTATIONS),
                 infoMixin.getExtends(), infoMixin.getRebases(), infoMixin.getInto(),
                 infoMixin.getContributionList(), infoMixin.getClassChain(), infoMixin.getDefaultChain(),
-                mapProps, mapMethods, mapVirtProps, mapVirtMethods,
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 Progress.Complete);
         }
 

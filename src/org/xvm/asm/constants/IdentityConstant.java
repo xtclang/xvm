@@ -234,6 +234,33 @@ public abstract class IdentityConstant
         }
 
     /**
+     * @return a dot-delimited sequence of names that identify this constant _within_ a class, or
+     *         null if there is a method interposed between this constant and the containing class
+     */
+    public String getNestedName()
+        {
+        IdentityConstant idParent = getParentConstant();
+        switch (idParent.getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+                return getName();
+
+            case MultiMethod:
+                return idParent.getNestedName();
+
+            case Property:
+                return idParent.getNestedName() + '.' + getName();
+
+            case Typedef:       // this is not supposed to be possible
+            case Method:        // nothing is visible inside a method from the outside
+            default:
+                return null;
+            }
+        }
+
+    /**
      * @return an object that identifies this constant relative to the class within which it nests,
      *         or null if this constant refers to a class structure
      */

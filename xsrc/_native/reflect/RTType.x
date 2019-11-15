@@ -15,7 +15,7 @@ const RTType<DataType, OuterType>
     @Override @RO Method<DataType>[] methods                      .get() { TODO("native"); }
     @Override @RO Function[] functions                            .get() { TODO("native"); }
     @Override @RO Constructor[] constructors                      .get() { TODO("native"); }
-    @Override @RO Type!<>[] childTypes                            .get() { TODO("native"); }
+    @Override @RO Map<String, Type!<>> childTypes                 .get() { TODO("native"); }
     @Override @RO Boolean recursive                               .get() { TODO("native"); }
     @Override @RO Boolean explicitlyImmutable                     .get() { TODO("native"); }
 

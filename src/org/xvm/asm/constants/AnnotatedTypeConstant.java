@@ -296,7 +296,7 @@ public class AnnotatedTypeConstant
                         info.getContributionList(), info.getClassChain(), info.getDefaultChain(),
                         info.getProperties(), info.getMethods(),
                         info.getVirtProperties(), info.getVirtMethods(),
-                        info.getProgress());
+                        info.getChildInfosByName(), info.getProgress());
             }
         }
 

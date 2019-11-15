@@ -555,6 +555,16 @@ public interface Constants
      * A virtual child {0} cannot be found on {1}.
      */
     public static final String VE_VIRTUAL_CHILD_MISSING               = "VERIFY-94";
+    /**
+     * {0} contains more than one component with the name {1}.
+     */
+    public static final String VE_NAME_COLLISION                      = "VERIFY-95";
+    /**
+     * While resolving {0}, a child with the name {1} from the contribution {2} collided with an
+     * existing child {3}.
+     */
+    public static final String VE_CHILD_COLLISION                     = "VERIFY-96";
+
 
     // ----- miscellaneous -------------------------------------------------------------------------
 

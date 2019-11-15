@@ -57,6 +57,7 @@ public class TypeInfo
      * @param mapMethods           the methods of the type
      * @param mapVirtProps         the virtual properties of the type, keyed by nested id
      * @param mapVirtMethods       the virtual methods of the type, keyed by nested id
+     * @param mapChildren          the child types of the type, keyed by name (also by prop.name)
      * @param progress             the Progress for this TypeInfo
      */
     public TypeInfo(
@@ -77,6 +78,7 @@ public class TypeInfo
             Map<MethodConstant, MethodInfo>     mapMethods,
             Map<Object, PropertyInfo>           mapVirtProps,
             Map<Object, MethodInfo>             mapVirtMethods,
+            Map<String, ChildInfo>              mapChildren,
             Progress                            progress)
         {
         assert type                 != null;
@@ -105,6 +107,7 @@ public class TypeInfo
         f_mapVirtProps        = mapVirtProps;
         f_mapMethods          = mapMethods;
         f_mapVirtMethods      = mapVirtMethods;
+        f_mapChildren         = mapChildren;
         f_progress            = progress;
 
         // pre-populate the method lookup caches
@@ -163,6 +166,7 @@ public class TypeInfo
         f_mapVirtProps        = infoConstraint.f_mapVirtProps;
         f_mapMethods          = infoConstraint.f_mapMethods;
         f_mapVirtMethods      = infoConstraint.f_mapVirtMethods;
+        f_mapChildren         = infoConstraint.f_mapChildren;
         f_progress            = Progress.Complete;
 
         f_cacheById  = infoConstraint.f_cacheById;
@@ -242,6 +246,19 @@ public class TypeInfo
                 }
             }
 
+        Map<String, ChildInfo> mapChildren = new HashMap<>();
+        for (Entry<String, ChildInfo> entry : f_mapChildren.entrySet())
+            {
+            String    sName = entry.getKey();
+            ChildInfo child = entry.getValue();
+            // note that the child is null if there has been a name collision that prevents the
+            // name from being used at this level
+            if (child == null || child.getAccess().isAsAccessibleAs(access))
+                {
+                mapChildren.put(sName, child);
+                }
+            }
+
         TypeConstant typeExtends = limitAccess(f_typeExtends, access);
         TypeConstant typeRebases = limitAccess(f_typeRebases, access);
         TypeConstant typeInto    = limitAccess(f_typeInto,    access);
@@ -250,7 +267,7 @@ public class TypeInfo
                 f_mapTypeParams, f_aannoClass,
                 typeExtends, typeRebases, typeInto,
                 f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
-                mapProps, mapMethods, mapVirtProps, mapVirtMethods, f_progress);
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren, f_progress);
         }
 
     /**
@@ -310,7 +327,7 @@ public class TypeInfo
                     f_mapTypeParams, f_aannoClass,
                     f_typeExtends, f_typeRebases, f_typeInto,
                     f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
-                    mapProps, mapMethods, mapVirtProps, mapVirtMethods, f_progress);
+                    mapProps, mapMethods, mapVirtProps, mapVirtMethods, f_mapChildren, f_progress);
 
             if (f_progress == Progress.Complete)
                 {
@@ -367,7 +384,7 @@ public class TypeInfo
                     f_mapTypeParams, f_aannoClass,
                     f_typeExtends, f_typeRebases, f_typeInto,
                     f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
-                    mapProps, mapMethods, mapVirtProps, mapVirtMethods, f_progress);
+                    mapProps, mapMethods, mapVirtProps, mapVirtMethods, f_mapChildren, f_progress);
 
             if (f_progress == Progress.Complete)
                 {
@@ -1953,6 +1970,14 @@ public class TypeInfo
         return methodMatch;
         }
 
+    /**
+     * @return a map of information about child types of this type, keyed by name
+     */
+    public Map<String, ChildInfo> getChildInfosByName()
+        {
+        return f_mapChildren;
+        }
+
     private ConstantPool pool()
         {
         return f_type.getConstantPool();
@@ -2366,6 +2391,12 @@ public class TypeInfo
      * {@link IdentityConstant#resolveNestedIdentity(ConstantPool, GenericTypeResolver)}.
      */
     private final Map<Object, MethodInfo> f_mapVirtMethods;
+
+    /**
+     * The information about child types of this type, keyed by name. In the case of types nested
+     * under properties, the name will be dot-delimited, such as "prop.name".
+     */
+    private final Map<String, ChildInfo> f_mapChildren;
 
     /**
      * The methods of the type, indexed by signature. This will not include nested methods, such

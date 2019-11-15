@@ -200,13 +200,13 @@ interface Type<DataType, OuterType>
      */
     @RO Constructor[] constructors;
 
-    /** TODO update doc
+    /**
      * If this type is a class type, and the class has child classes, then this provides the types
      * of those child classes. Child classes are technically not part of the type definition, but
      * are provided here for convenience, because otherwise it would be relatively difficult to
      * gather this information.
      */
-    @RO Type!<>[] childTypes;
+    @RO Map<String, Type!<>> childTypes;
 
 //    /**
 //     * A class contains a variety of items, each identified by a unique name:

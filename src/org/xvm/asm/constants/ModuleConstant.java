@@ -182,6 +182,12 @@ public class ModuleConstant
         throw new IllegalStateException(this.toString());
         }
 
+    @Override
+    public String getNestedName()
+        {
+        return null;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

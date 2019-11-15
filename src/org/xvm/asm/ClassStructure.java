@@ -156,6 +156,29 @@ public class ClassStructure
         }
 
     /**
+     * Check if this class is annotated as "Override".
+     *
+     * @return true iff this class is annotated with {@code @Override}
+     */
+    public boolean isExplicitlyOverride()
+        {
+        for (Contribution contrib : getContributionsAsList())
+            {
+            if (contrib.getComposition() == Composition.Incorporates)
+                {
+                TypeConstant type = contrib.getTypeConstant();
+
+                if (type.isSingleUnderlyingClass(false) &&
+                    type.getSingleUnderlyingClass(false).equals(getConstantPool().clzOverride()))
+                    {
+                    return true;
+                    }
+                }
+            }
+        return false;
+        }
+
+    /**
      * @return true iff this class is a module, package, or class whose immediate parent is a module
      *         or package
      */

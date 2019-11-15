@@ -320,3 +320,81 @@ String?         <-- this has two (!!!) origin classes, but it should still be de
 
 static (Int, String) foo();         // Function<<>, <Int, String>>
 static Tuple<Int, String> foo();    // Function<<>, <Tuple<Int, String>>>
+
+
+// ----- children
+
+interface I1
+    {
+    interface I2
+        {
+        }
+
+    interface C3    // named for the purpose of causing a collision in this example
+        {
+        }
+    }
+
+interface I1b
+        extends I1
+    {
+    @Override
+    interface I2    // implicit or explicit (@Override required)
+        {
+        }
+    }
+
+class C1
+        implements I1b
+    {
+    interface I3
+        {
+        }
+
+    class C2
+        {
+        }
+    }
+
+class C1b
+        extends C1
+        incorporates M1b    // error (collision with C3)
+    {
+    @Override
+    interface I3    // implicit or explicit (@Override required)
+        {
+        }
+
+    @Override
+    class C2        // implicit or explicit (@Override required)
+        {
+        }
+
+    class C3        // this SHOULD BE (must be) an error
+        {
+        }
+    }
+
+mixin M1
+        into C1
+    {
+    mixin M2
+            into C2
+        {
+        }
+    }
+
+mixin M1b
+        extends M1
+    {
+    @Override
+    mixin M2        // implicit or explicit (@Override required)
+        {
+        }
+         
+    class C3
+        {
+        }
+    }
+
+// also note that typedef names will be in this same namespace
