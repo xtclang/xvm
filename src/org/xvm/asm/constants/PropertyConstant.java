@@ -83,12 +83,6 @@ public class PropertyConstant
 
     // ----- FormalConstant methods ----------------------------------------------------------------
 
-    /**
-     * Dereference a property constant that is used for a type parameter, to obtain the constraint
-     * type of that type parameter.
-     *
-     * @return the constraint type of the type parameter
-     */
     @Override
     public TypeConstant getConstraintType()
         {
@@ -96,7 +90,8 @@ public class PropertyConstant
 
         // the type of the property must be "Type<X>", so return X
         TypeConstant typeConstraint = getType();
-        assert typeConstraint.isEcstasy("Type") && typeConstraint.isParamsSpecified();
+
+        assert typeConstraint.isTypeOfType() && typeConstraint.isParamsSpecified();
 
         typeConstraint = typeConstraint.getParamType(0);
 

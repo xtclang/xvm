@@ -84,12 +84,6 @@ public class FormalTypeChildConstant
 
     // ----- FormalConstant methods ----------------------------------------------------------------
 
-    /**
-     * Dereference a property constant that is used for a type parameter, to obtain the constraint
-     * type of that type parameter.
-     *
-     * @return the constraint type of the type parameter
-     */
     @Override
     public TypeConstant getConstraintType()
         {
