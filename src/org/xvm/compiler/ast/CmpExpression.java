@@ -299,7 +299,7 @@ public class CmpExpression
             boolean fFormal1 = type1.containsFormalType(true);
             boolean fFormal2 = type2.containsFormalType(true);
 
-            if (fFormal1 || fFormal2)
+            if (fFormal1 ^ fFormal2)
                 {
                 if (fFormal1)
                     {

@@ -969,6 +969,12 @@ public abstract class TypeConstant
             return true;
             }
 
+        if (this.isTypeOfType() && that.isTypeOfType())
+            {
+            // Type types are always comparable
+            return true;
+            }
+
         // we also allow a comparison of a nullable type to the base type; for example:
         // String? s1 = ...
         // String  s2 = ...
@@ -1003,6 +1009,12 @@ public abstract class TypeConstant
         if (typeThis.equals(typeThat) || fThatIsConstant && typeThat.isA(typeThis))
             {
             return findFunctionInfo(pool.sigCompare()) != null;
+            }
+
+        if (this.isTypeOfType() && that.isTypeOfType())
+            {
+            // Type types are always comparable
+            return true;
             }
 
         return false;
@@ -4494,7 +4506,7 @@ public abstract class TypeConstant
                     return Relation.IS_A;
                     }
 
-                // the typeRight is a formal parameter type and cannot have any modifiers
+                // the typeRight is a generic type and cannot have any modifiers
                 assert typeRight instanceof TerminalTypeConstant;
                 return idRight.getConstraintType().calculateRelation(typeLeft);
                 }

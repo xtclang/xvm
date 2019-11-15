@@ -1096,6 +1096,12 @@ public abstract class Op
                 return type2;
                 }
 
+            if (type1.isTypeOfType() && type2.isTypeOfType())
+                {
+                // types are always comparable
+                return type1.getConstantPool().typeType();
+                }
+
             TypeInfo info1 = type1.ensureTypeInfo(errs);
             if (info1.getFormat() == Format.ENUMVALUE && type2.isAssignableTo(info1.getExtends()))
                 {
