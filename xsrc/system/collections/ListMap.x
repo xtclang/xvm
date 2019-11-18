@@ -45,7 +45,9 @@ class ListMap<Key, Value>
         {
         listKeys = keys;
         listVals = vals;
+
         // TODO various checks, and do we need to copy the array(s) if they aren't immutable?
+        assert keys.size == vals.size;
         }
     finally
         {

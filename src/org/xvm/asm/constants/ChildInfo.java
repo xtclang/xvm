@@ -81,6 +81,14 @@ public class ChildInfo
         }
 
     /**
+     * @return the underlying child structure
+     */
+    public Component getComponent()
+        {
+        return f_child;
+        }
+
+    /**
      * Determine if this ChildInfo and another ChildInfo are referring to the same component.
      *
      * @param that  another ChildInfo by the same name

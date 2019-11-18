@@ -19,13 +19,10 @@ import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
-
-import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -117,13 +114,34 @@ public class VirtualChildTypeConstant
         }
 
     /**
-     * @return the child ClassStructure associated with this type
+     * @return the child ClassStructure associated with this type, or (if there is none), the first
+     *        one encountered walking "up" the super chain
      */
-    public ClassStructure getChildStructure()
+    protected ClassStructure getChildStructure()
         {
-        ClassStructure parent = (ClassStructure)
-                m_typeParent.getSingleUnderlyingClass(true).getComponent();
-        return parent.getVirtualChild(getChildName());
+        TypeConstant typeParent = getParentType();
+        String       sChild     = getChildName();
+        ClassStructure parent = (ClassStructure) typeParent.getSingleUnderlyingClass(true).getComponent();
+        if (parent != null)
+            {
+            ClassStructure child = parent.getVirtualChild(sChild);
+            if (child != null)
+                {
+                return child;
+                }
+            }
+
+        ChildInfo info = typeParent.ensureTypeInfo().getChildInfosByName().get(sChild);
+        if (info != null)
+            {
+            Component child = info.getComponent();
+            if (child instanceof ClassStructure)
+                {
+                return (ClassStructure) child;
+                }
+            }
+
+        throw new IllegalStateException("unknown child " + sChild + " of type " + typeParent);
         }
 
 
@@ -481,23 +499,6 @@ public class VirtualChildTypeConstant
         writePackedLong(out, m_constName.getPosition());
         }
 
-    @Override
-    public boolean validate(ErrorListener errs)
-        {
-        if (!isValidated())
-            {
-            // the child must exists
-            if (getChildStructure() == null)
-                {
-                log(errs, Severity.ERROR, VE_VIRTUAL_CHILD_MISSING,
-                                m_constName.getValue(), m_typeParent.getValueString());
-                return true;
-                }
-            return super.validate(errs);
-            }
-
-        return false;
-        }
 
     // ----- Object methods ------------------------------------------------------------------------
 

@@ -12,12 +12,15 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
+import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
+import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -42,6 +45,9 @@ import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
 import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
 
 import org.xvm.runtime.template.collections.xArray;
+
+import org.xvm.util.ListMap;
+
 
 /**
  * Native Type implementation.
@@ -329,11 +335,32 @@ public class xRTType
      */
     public int getPropertyChildTypes(Frame frame, TypeHandle hType, int iReturn)
         {
-        TypeConstant typeTarget = hType.getDataType();
-        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
-
-        ArrayHandle hArray = null; // TODO
-        return frame.assignValue(iReturn, hArray);
+        TypeConstant                      typeTarget  = hType.getDataType();
+        TypeInfo                          infoTarget  = typeTarget.ensureTypeInfo();
+        boolean                           fDeepParams = typeTarget.isParameterizedDeep();
+        ConstantPool                      poolDft     = pool();
+        ConstantPool                      poolCtx     = frame.poolContext();
+        Map<String, ChildInfo>            mapInfos    = infoTarget.getChildInfosByName();
+        Map<StringConstant, TypeConstant> mapResult   = new ListMap<>();
+        for (Map.Entry<String, ChildInfo> entry : mapInfos.entrySet())
+            {
+            String sName = entry.getKey();
+            TypeConstant typeChild = infoTarget.calculateChildType(poolCtx, sName);
+            if (typeChild == null)
+                {
+                ChildInfo    child   = entry.getValue();
+                TypeConstant typeRaw = child.getIdentity().getType();
+                typeChild = typeRaw.isVirtualChild()
+                        ? poolCtx.ensureVirtualChildTypeConstant(typeTarget, sName)
+                        : typeRaw;
+                }
+            mapResult.put(poolDft.ensureStringConstant(sName), typeChild.getType());
+            }
+        TypeConstant typeResult  = poolDft.ensureImmutableTypeConstant(
+                poolDft.ensureParameterizedTypeConstant(poolDft.typeMap(), poolDft.typeString(), poolDft.typeType()));
+        MapConstant  constResult = poolDft.ensureMapConstant(typeResult, mapResult);
+        ObjectHandle hResult     = frame.f_context.f_heapGlobal.ensureConstHandle(frame, constResult);
+        return frame.assignValue(iReturn, hResult);
         }
 
     /**

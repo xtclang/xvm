@@ -821,43 +821,6 @@ public class TypeInfo
         }
 
     /**
-     * Look up a nested virtual child type by its name.
-     *
-     * @param sName  the name of the child
-     *
-     * @return the type of the child iff it exists and is visible; null otherwise
-     */
-    public TypeConstant getVirtualChildType(String sName)
-        {
-        // TODO: if this info represents a virtual child by itself (f_struct == null),
-        // there must be a way to confirm the child existence
-        return f_struct == null || f_struct.getVirtualChild(sName) == null
-                ? null
-                : pool().ensureVirtualChildTypeConstant(f_type, sName);
-        }
-
-    /**
-     * Look up a nested typedef by its name.
-     *
-     * @param sName  the name of the typedef
-     *
-     * @return the type of the typedef iff it exists and is visible; null otherwise
-     */
-    public TypeConstant getTypedefType(ConstantPool pool, String sName)
-        {
-        if (f_struct != null)
-            {
-            TypedefStructure typedef = f_struct.getTypedDef(sName);
-            if (typedef != null)
-                {
-                // resolve the typedef in the context of this [container] type
-                return typedef.getType().resolveGenerics(pool, getType());
-                }
-            }
-        return null;
-        }
-
-    /**
      * Calculate a child type for a given name.
      *
      * @param sName  the name of the child
@@ -866,10 +829,26 @@ public class TypeInfo
      */
     public TypeConstant calculateChildType(ConstantPool pool, String sName)
         {
-        TypeConstant typeTypedef = getTypedefType(pool, sName);
-        return typeTypedef == null
-                ? getVirtualChildType(sName)
-                : typeTypedef;
+        ChildInfo childinfo = f_mapChildren.get(sName);
+        if (childinfo == null)
+            {
+            return null;
+            }
+
+        // check if the child is a typedef
+        Component child = childinfo.getComponent();
+        if (child instanceof TypedefStructure)
+            {
+            // resolve the typedef in the context of the referring type
+            TypeConstant typeTypedef = ((TypedefConstant) child.getIdentityConstant()).getReferredToType();
+            return typeTypedef.resolveGenerics(pool, f_type);
+            }
+
+        // otherwise it must be a class
+        ClassStructure clz = (ClassStructure) child;
+        return clz.isVirtualChild()
+                ? pool.ensureVirtualChildTypeConstant(f_type, sName)
+                : clz.getIdentityConstant().getType();
         }
 
     /**

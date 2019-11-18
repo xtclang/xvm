@@ -49,7 +49,7 @@ public class MapConstant
      * @param constType   the data type of the map
      * @param map         the map of keys to values
      */
-    public MapConstant(ConstantPool pool, TypeConstant constType, Map<Constant, Constant> map)
+    public MapConstant(ConstantPool pool, TypeConstant constType, Map<? extends Constant, ? extends Constant> map)
         {
         this(pool, Format.Map, constType, map.keySet().toArray(new Constant[map.size()]), map.values().toArray(new Constant[map.size()]));
         }

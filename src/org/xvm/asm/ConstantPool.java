@@ -682,7 +682,7 @@ public class ConstantPool
      *
      * @return the MapConstant representing the Map
      */
-    public MapConstant ensureMapConstant(TypeConstant constType, Map<Constant, Constant> map)
+    public MapConstant ensureMapConstant(TypeConstant constType, Map<? extends Constant, ? extends Constant> map)
         {
         // TODO validations
         return new MapConstant(this, constType, map);

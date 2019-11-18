@@ -12,6 +12,7 @@ module TestReflection.xqiz.it
         testProps();
         testFuncs();
         testFuncs2();
+        testChildTypes();
         }
 
     Function<<Int, String>, <Int>> foo()
@@ -295,6 +296,17 @@ module TestReflection.xqiz.it
             }
         }
 
+    void testChildTypes()
+        {
+        console.println("\n** testChildTypes");
+
+        Type[] types = [Nullable, Map, Ecstasy.collections.HashMap, Type, Class];
+        for (Type type : types)
+            {
+            console.println($"{type} children: {type.childTypes}");
+            }
+        }
+
     String formatType(Type type)
         {
         Type.Form form = type.form;
@@ -305,7 +317,6 @@ module TestReflection.xqiz.it
 
             case Class:
 // TODO CP assert Class clz := type.fromClass();
-
 //                Class.Composition cmp = clz.composition;
 //                while ((Annotation annotation, cmp) := cmp.deannotate())
 //                    {

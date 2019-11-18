@@ -436,21 +436,6 @@ public class ClassStructure
         }
 
     /**
-     * Get a typedef structure by the specified name on this class or any of its contributions.
-     *
-     * @param sName  the typedef name
-     *
-     * @return a typedef structure or null if not found
-     */
-    public TypedefStructure getTypedDef(String sName)
-        {
-        Component child = findChild(sName, true);
-        return child instanceof TypedefStructure
-                ? (TypedefStructure) child
-                : null;
-        }
-
-    /**
      * Find a child with a given name in the class or any of its contributions.
      */
     private Component findChild(String sName, boolean fAllowInto)
