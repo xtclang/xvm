@@ -13,17 +13,17 @@ module TestNesting.xqiz.it
         console.println("\n** testSimple()");
         new BOuter().bar();
         new DOuter().bar();
-        new BOuter().new Inner().foo();
+        new BOuter().new InnerC().foo();
         }
 
     class BOuter
         {
         void bar()
             {
-            new Inner().foo();
+            new InnerC().foo();
             }
 
-        class Inner
+        class InnerC
             {
             void foo()
                 {
@@ -36,7 +36,7 @@ module TestNesting.xqiz.it
             extends BOuter
         {
         @Override
-        class Inner
+        class InnerC
             {
             @Override
             void foo()
