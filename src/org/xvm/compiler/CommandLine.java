@@ -901,9 +901,6 @@ public class CommandLine
                     }
                 catch (Exception e)
                     {
-                    deferred.add("xtc: Exception (" + e
-                        + ") occurred while attempting to read module file \""
-                        + file.getAbsolutePath() + "\"");
                     fUseExisting = false;
                     }
                 }
