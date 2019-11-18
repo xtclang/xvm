@@ -343,7 +343,7 @@ public class MapConstant
         {
         m_constType = (TypeConstant) pool.register(m_constType);
         m_aconstKey = registerConstants(pool, m_aconstKey);
-        m_aconstVal = registerConstants(pool, m_aconstKey);
+        m_aconstVal = registerConstants(pool, m_aconstVal);
         }
 
     @Override

@@ -152,7 +152,6 @@ public class ObjectHeap
             case VarDec:
             case Array:
             case UInt8Array:
-            case Map:
             case Tuple:
             case Path:
             case FileStore:
@@ -166,6 +165,9 @@ public class ObjectHeap
             case Version:
             case Module:
                 return constValue.getType();
+
+            case Map:
+                return f_poolRoot.ensureEcstasyTypeConstant("collections.ListMap");
 
             case Set:
             case MapEntry:
