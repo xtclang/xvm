@@ -342,22 +342,14 @@ public class xRTType
         ConstantPool                      poolCtx     = frame.poolContext();
         Map<String, ChildInfo>            mapInfos    = infoTarget.getChildInfosByName();
         Map<StringConstant, TypeConstant> mapResult   = new ListMap<>();
-        for (Map.Entry<String, ChildInfo> entry : mapInfos.entrySet())
+        for (String sName : mapInfos.keySet())
             {
-            String sName = entry.getKey();
             TypeConstant typeChild = infoTarget.calculateChildType(poolCtx, sName);
-            if (typeChild == null)
-                {
-                ChildInfo    child   = entry.getValue();
-                TypeConstant typeRaw = child.getIdentity().getType();
-                typeChild = typeRaw.isVirtualChild()
-                        ? poolCtx.ensureVirtualChildTypeConstant(typeTarget, sName)
-                        : typeRaw;
-                }
             mapResult.put(poolDft.ensureStringConstant(sName), typeChild.getType());
             }
         TypeConstant typeResult  = poolDft.ensureImmutableTypeConstant(
-                poolDft.ensureParameterizedTypeConstant(poolDft.typeMap(), poolDft.typeString(), poolDft.typeType()));
+                poolDft.ensureParameterizedTypeConstant(poolDft.typeMap(),
+                        poolDft.typeString(), poolDft.typeType()));
         MapConstant  constResult = poolDft.ensureMapConstant(typeResult, mapResult);
         ObjectHandle hResult     = frame.f_context.f_heapGlobal.ensureConstHandle(frame, constResult);
         return frame.assignValue(iReturn, hResult);
