@@ -1304,11 +1304,10 @@ public class TypeInfo
             }
 
         // try to find a method with the same signature
-        infoMethod = f_mapVirtMethods.get(id.resolveNestedIdentity(pool(), f_type));
+        infoMethod = getMethodByNestedId(id.resolveNestedIdentity(pool(), f_type));
         if (infoMethod != null)
             {
             f_cacheById.put(id, infoMethod);
-            f_cacheByNid.put(id.getNestedIdentity(), infoMethod);
             }
 
         return infoMethod;

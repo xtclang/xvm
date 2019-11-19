@@ -882,8 +882,12 @@ public class StatementBlock
                                 isConstructor() ? Access.STRUCT : Access.PRIVATE);
                             }
 
-                        infoPrev = info = typeClz.ensureTypeInfo(errs);
-                        if (errs.isAbortDesired())
+                        ErrorListener errsTemp = errs.branch();
+
+                        infoPrev = info = typeClz.ensureTypeInfo(errsTemp);
+
+                        errsTemp.merge();
+                        if (errsTemp.hasSeriousErrors())
                             {
                             // the info could not be calculated correctly; using it may result
                             // in confusing error messages

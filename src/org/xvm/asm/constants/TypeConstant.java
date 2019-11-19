@@ -2448,7 +2448,6 @@ public abstract class TypeConstant
         ConstantPool pool        = getConstantPool();
         boolean      fIncomplete = false;
         boolean      fNative     = constId instanceof NativeRebaseConstant;
-        boolean      fAfterSelf  = false;
 
         for (int i = listProcess.size()-1; i >= 0; --i)
             {
@@ -2700,8 +2699,6 @@ public abstract class TypeConstant
                         }
                     }
                 }
-
-            fAfterSelf |= fSelf;
             }
 
         return !fIncomplete;
