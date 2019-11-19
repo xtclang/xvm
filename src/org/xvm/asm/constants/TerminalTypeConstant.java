@@ -627,7 +627,6 @@ public class TerminalTypeConstant
 
                         ConstantPool pool = getConstantPool();
                         TypeConstant typeConstraint = idTypeParam.getConstraintType().
-                            resolveConstraints(pool).
                             resolveGenerics(pool,
                                 sName -> sFormalName.equals(sName) ? typeActual : null);
                         return typeActual.isA(typeConstraint)
@@ -645,7 +644,6 @@ public class TerminalTypeConstant
                     {
                     ConstantPool pool = getConstantPool();
                     TypeConstant typeConstraint = idProp.getConstraintType().
-                        resolveConstraints(pool).
                         resolveGenerics(pool,
                             sName -> sFormalName.equals(sName) ? typeActual : null);
                     return typeActual.isA(typeConstraint)

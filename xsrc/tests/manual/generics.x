@@ -8,6 +8,7 @@ module TestGenerics.xqiz.it
 
         testArrayType();
         testVirtualChild();
+        testTypeParams();
         }
 
     void testArrayType()
@@ -103,5 +104,24 @@ module TestGenerics.xqiz.it
     class Derived<DerivedType>
             extends Base<DerivedType>
         {
+        }
+
+    class Derived2<Derived2Type>
+            extends Derived<Derived2Type>
+        {
+        }
+
+    void testTypeParams()
+        {
+        Derived<String>  d1 = new Derived();
+        Derived2<String> d2 = new Derived2();
+
+        foo(d1, d2, d2);
+        }
+
+    <CompileType1 extends Base, CompileType2 extends CompileType1, CompileType3 extends CompileType2>
+            void foo(CompileType1 c1, CompileType2 c2, CompileType3 c3)
+        {
+        assert c2.as(CompileType1) != c1;
         }
     }
