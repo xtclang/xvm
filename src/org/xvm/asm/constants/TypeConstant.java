@@ -2670,7 +2670,10 @@ public abstract class TypeConstant
                                     contrib.getTypeConstant(),
                                     infoPrev.getIdentity());
                             }
-                        mapChildren.put(sName, infoNew);
+                        else
+                            {
+                            mapChildren.put(sName, infoNew);
+                            }
                         }
                     }
                 }
