@@ -427,8 +427,8 @@ public class AnonInnerClass
         // The idea behind this method is to transform the original expression to another
         // synthetic TypeCompositionStatement that looks like this:
         //
-        //  class Map:1<Map:1.Element>
-        //          implements Map<Map:1.Element, Int>
+        //  class Map:1<Map:1.Key extends C.ElType>
+        //          implements Map<Map:1.Key, Int>
         //      {
         //      ...
         //      }
@@ -454,7 +454,6 @@ public class AnonInnerClass
             return exprThis;
             }
 
-        ConstantPool         pool       = idBase.getConstantPool();
         long                 ofEnd      = exprThis.getEndPosition();
         List<Parameter>      listFormal = new ArrayList<>(cFormalTypes);
         List<TypeExpression> listImpl   = new ArrayList<>(cFormalTypes);
@@ -462,24 +461,30 @@ public class AnonInnerClass
         for (Map.Entry<StringConstant, TypeConstant> entry : clzBase.getTypeParamsAsList())
             {
             StringConstant constName      = entry.getKey();
-            TypeConstant   typeConstraint = entry.getValue();
+            TypeConstant   typeConstraint = exprThis.ensureTypeConstant().
+                                                resolveGenericType(constName.getValue());
+            if (typeConstraint == null || !typeConstraint.containsFormalType(true))
+                {
+                continue;
+                }
 
-            Token          tok            = genToken(exprThis, constName.getValue());
-            TypeExpression exprParam      = new NamedTypeExpression(null,
+            Token          tok       = genToken(exprThis, constName.getValue());
+            TypeExpression exprParam = new NamedTypeExpression(null,
                     Collections.singletonList(tok), null, null, null, ofEnd);
 
             listImpl.add(exprParam);
 
-            TypeExpression exprExtends = null;
-            if (!typeConstraint.equals(pool.typeObject()))
-                {
-                Token tokExtends = genToken(exprThis, typeConstraint.getValueString());
+            Token          tokExtends  = genToken(exprThis, typeConstraint.getValueString());
+            TypeExpression exprExtends = new NamedTypeExpression(null,
+                Collections.singletonList(tokExtends), null, null, null, ofEnd);
+            exprExtends.setTypeConstant(typeConstraint);
 
-                exprExtends = new NamedTypeExpression(null,
-                    Collections.singletonList(tokExtends), null, null, null, ofEnd);
-                exprExtends.setTypeConstant(typeConstraint);
-                }
             listFormal.add(new Parameter(exprExtends, tok));
+            }
+
+        if (listFormal.isEmpty())
+            {
+            return exprThis;
             }
 
          m_listParams = listFormal;

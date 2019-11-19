@@ -783,10 +783,10 @@ public class NamedTypeExpression
 
                 case Typedef:
                     {
-                    TypedefConstant idTypedef = (TypedefConstant) constTarget;
-                    TypeConstant     typeRef  = idTypedef.getReferredToType();
-                    IdentityConstant idFrom   = idTypedef.getParentConstant();
-                    IdentityConstant idClass  = getComponent().getContainingClass().getIdentityConstant();
+                    TypedefConstant  idTypedef = (TypedefConstant) constTarget;
+                    TypeConstant     typeRef   = idTypedef.getReferredToType();
+                    IdentityConstant idFrom    = idTypedef.getParentConstant();
+                    IdentityConstant idClass   = getComponent().getContainingClass().getIdentityConstant();
 
                     if (!idFrom.isNestMateOf(idClass))
                         {

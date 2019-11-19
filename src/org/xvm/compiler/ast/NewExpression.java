@@ -217,7 +217,7 @@ public class NewExpression
             if (anon == null)
                 {
                 ensureInnerClass(ctx, AnonPurpose.RoughDraft, errs);
-                typeTarget  = type.ensureTypeConstant(ctx);
+                typeTarget = type.ensureTypeConstant(ctx);
                 }
             else
                 {
