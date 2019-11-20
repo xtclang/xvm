@@ -88,7 +88,17 @@ public class ListExpression
             }
 
         // see if there is an implicit element type
-        TypeConstant typeArray = typeExplicit == null ? pool().typeArray() : typeExplicit;
+        TypeConstant typeArray   = typeExplicit == null ? pool().typeArray() : typeExplicit;
+        TypeConstant typeElement = getImplicitElementType(ctx);
+        if (typeElement != null)
+            {
+            typeArray = pool().ensureParameterizedTypeConstant(typeArray, typeElement);
+            }
+        return typeArray;
+        }
+
+    private TypeConstant getImplicitElementType(Context ctx)
+        {
         int cElements = exprs.size();
         if (cElements > 0)
             {
@@ -97,27 +107,26 @@ public class ListExpression
                 {
                 aElementTypes[i] = exprs.get(i).getImplicitType(ctx);
                 }
-            TypeConstant typeElement = TypeCollector.inferFrom(aElementTypes, pool());
-            if (typeElement != null)
-                {
-                typeArray = pool().ensureParameterizedTypeConstant(typeArray, typeElement);
-                }
+            return TypeCollector.inferFrom(aElementTypes, pool());
             }
-
-        return typeArray;
+        return null;
         }
 
     @Override
     protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
         {
-        ConstantPool pool = pool();
-
-        if (type == null && typeOut != null && typeOut.isA(pool.typeSequence()))
+        if (exprs.isEmpty())
             {
-            // matching the logic in "validate": if there is a required element type,
-            // we'll force the expressions to convert to that type if necessary
-            typeIn = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                        typeOut.resolveGenericType("Element"));
+            // an empty list fits any type
+            return TypeFit.Fit;
+            }
+
+        ConstantPool pool = pool();
+        if (typeOut != null && typeOut.isA(pool.typeSequence()) &&
+            typeIn  != null && typeIn .isA(pool.typeSequence()))
+            {
+            typeOut = typeOut.resolveGenericType("Element");
+            typeIn  = typeIn .resolveGenericType("Element");
             }
         return super.calcFit(ctx, typeIn, typeOut);
         }
@@ -130,89 +139,68 @@ public class ListExpression
         List<Expression> listExprs   = exprs;
         int              cExprs      = listExprs.size();
         boolean          fConstant   = true;
-        TypeConstant     typeActual  = pool.typeArray();
         TypeConstant     typeElement = null;
 
-        if (typeRequired != null && typeRequired.isA(pool.typeSequence())
-                                 && typeRequired.isParamsSpecified())
+        if (typeRequired != null)
             {
-            // if there is a required element type, then we'll use that to force the expressions to
-            // convert to that type if necessary
             typeElement = typeRequired.resolveGenericType("Element");
-            if (typeElement != null)
-                {
-                typeActual = pool.ensureParameterizedTypeConstant(typeActual, typeElement);
-                }
             }
 
-        TypeExpression exprOldType = type;
-        if (exprOldType != null)
+        if (typeElement == null || typeElement.equals(pool.typeObject()))
             {
-            TypeConstant   typeArrayType = pool.typeSequence().getType();
-            TypeExpression exprNewType   = (TypeExpression) exprOldType.validate(ctx, typeArrayType, errs);
-            if (exprNewType == null)
+            typeElement = getImplicitElementType(ctx);
+            }
+
+        if (typeElement == null)
+            {
+            typeElement = pool.typeObject();
+            }
+
+        TypeExpression exprTypeOld = type;
+        if (exprTypeOld != null)
+            {
+            TypeConstant   typeSeqType = pool.typeSequence().getType();
+            TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, typeSeqType, errs);
+            if (exprTypeNew == null)
                 {
                 fit       = TypeFit.NoFit;
                 fConstant = false;
                 }
             else
                 {
-                if (exprNewType != exprOldType)
+                if (exprTypeNew != exprTypeOld)
                     {
-                    type = exprNewType;
+                    type = exprTypeNew;
                     }
-                typeActual = exprNewType.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
+                typeElement = exprTypeNew.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool).
+                        resolveGenericType("Element");
+                }
+            }
 
-                TypeConstant typeElementTemp = typeActual.resolveGenericType("Element");
-                if (typeElementTemp == null)
+        TypeConstant typeActual = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeElement);
+        if (cExprs > 0)
+            {
+            ctx = ctx.enterList();
+            for (int i = 0; i < cExprs; ++i)
+                {
+                Expression exprOld = listExprs.get(i);
+                Expression exprNew = exprOld.validate(ctx, typeElement, errs);
+                if (exprNew == null)
                     {
-                    if (typeElement != null)
-                        {
-                        typeActual = pool.ensureParameterizedTypeConstant(typeActual, typeElement);
-                        }
+                    fit       = TypeFit.NoFit;
+                    fConstant = false;
                     }
                 else
                     {
-                    typeElement = typeElementTemp;
+                    if (exprNew != exprOld)
+                        {
+                        listExprs.set(i, exprNew);
+                        }
+                    fConstant &= exprNew.isConstant();
                     }
                 }
+            ctx = ctx.exit();
             }
-
-        if (typeElement == null && cExprs > 0)
-            {
-            // try to determine the element type
-            TypeConstant[] aElementTypes = new TypeConstant[cExprs];
-            for (int i = 0; i < cExprs; ++i)
-                {
-                aElementTypes[i] = listExprs.get(i).getImplicitType(ctx);
-                }
-            typeElement = TypeCollector.inferFrom(aElementTypes, pool);
-            if (typeElement != null)
-                {
-                typeActual = typeActual.adoptParameters(pool, new TypeConstant[] {typeElement});
-                }
-            }
-
-        ctx = ctx.enterList();
-        for (int i = 0; i < cExprs; ++i)
-            {
-            Expression exprOld = listExprs.get(i);
-            Expression exprNew = exprOld.validate(ctx, typeElement, errs);
-            if (exprNew == null)
-                {
-                fit       = TypeFit.NoFit;
-                fConstant = false;
-                }
-            else
-                {
-                if (exprNew != exprOld)
-                    {
-                    listExprs.set(i, exprNew);
-                    }
-                fConstant &= exprNew.isConstant();
-                }
-            }
-        ctx = ctx.exit();
 
         // build a constant if it's a known container type and all of the elements are constants
         Constant constVal = null;

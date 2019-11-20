@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component.ResolutionCollector;
+import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -560,6 +562,27 @@ public class ParameterizedTypeConstant
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         return pool.ensureParameterizedTypeConstant(type, m_atypeParams);
+        }
+
+    @Override
+    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
+        {
+        ResolutionResult result = super.resolveContributedName(sName, collector);
+        if (result == ResolutionResult.RESOLVED)
+            {
+            return result;
+            }
+
+        for (TypeConstant typeParam : m_atypeParams)
+            {
+            ResolutionResult resultParam = typeParam.resolveContributedName(sName, collector);
+            if (resultParam == ResolutionResult.RESOLVED)
+                {
+                return resultParam;
+                }
+            }
+
+        return result;
         }
 
     @Override
