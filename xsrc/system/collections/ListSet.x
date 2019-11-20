@@ -2,38 +2,45 @@
  * ListSet is an implementation of a Set on top of an Array to maintain the order of
  * insertion.
  */
-class ListSet<Element extends Hashable>
-         implements Set<Element>
-         implements MutableAble, PersistentAble, ImmutableAble
+class ListSet<Element>
+         extends MapSet<Element>
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct(Int initCapacity = 0)
+    /**
+     * Construct a ListSet that optionally contains an initial set of values. The [NaturalHasher]
+     * implementation will be used.
+     *
+     * @param values (optional) initial values to store in the ListSet
+     */
+    construct()
         {
-        TODO
+        assert(Element.is(Type<Hashable>));
+        construct ListSet(new NaturalHasher<Element>());
         }
 
-    construct(Element[] elements)
+    construct(Iterable<Element> values)
         {
-        TODO
+        assert(Element.is(Type<Hashable>));
+        construct ListSet(new NaturalHasher<Element>(), values);
         }
 
-    @Override
-    Int size.get()
+    /**
+     * Construct a ListSet that relies on an external hasher, and optionally contains an initial set
+     * of values.
+     *
+     * @param hasher        the [Hasher] to use for the values stored in the set
+     * @param values        (optional) initial values to store in the ListSet
+     * @param initCapacity  (optional) initial capacity of the ListSet
+     */
+    construct(Hasher<Element> hasher, Iterable<Element>? values = Null, Int initCapacity = 0)
         {
-        TODO;
-        }
-
-    @Override
-    Iterator<Element> iterator()
-        {
-        TODO;
-        }
-
-    @Override
-    ListSet ensureMutable()
-        {
-        TODO;
+        HashMap<Element, Nullable> map = new HashMap(hasher, values?.size : initCapacity);
+        for (Element value : values?)
+            {
+            map.put(value, Null);
+            }
+        construct MapSet(map);
         }
 
     /**
@@ -47,14 +54,8 @@ class ListSet<Element extends Hashable>
         }
 
     @Override
-    ListSet ensurePersistent(Boolean inPlace = false)
+    protected ListSet setFor(Map<Element, Nullable> map)
         {
-        TODO;
-        }
-
-    @Override
-    immutable ListSet<Element> ensureImmutable(Boolean inPlace = false)
-        {
-        TODO;
+        return new ListSet(map);
         }
     }
