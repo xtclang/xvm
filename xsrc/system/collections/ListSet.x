@@ -36,6 +36,16 @@ class ListSet<Element extends Hashable>
         TODO;
         }
 
+    /**
+     * (Internal) Construct a ListSet that delegates storage to the specified map.
+     *
+     * @param map   the map to delegate storage to
+     */
+    private construct(Map<Element, Nullable> map)
+        {
+        construct MapSet(map);
+        }
+
     @Override
     ListSet ensurePersistent(Boolean inPlace = false)
         {

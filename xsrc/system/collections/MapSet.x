@@ -4,6 +4,7 @@
  */
 class MapSet<Element>
         implements Set<Element>
+        implements ImmutableAble
     {
     construct(Map<Element, Nullable> map)
         {
@@ -216,5 +217,15 @@ class MapSet<Element>
     MapSet symmetricDifference(Set!<Element> values)
         {
         TODO
+        }
+
+    // ----- ImmutableAble interface ---------------------------------------------------------------
+
+    @Override
+    immutable MapSet ensureImmutable(Boolean inPlace = False)
+        {
+        return inPlace
+                ? makeImmutable()
+                : setFor(map).makeImmutable();
         }
     }
