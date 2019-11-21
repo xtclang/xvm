@@ -23,6 +23,7 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
@@ -135,6 +136,15 @@ public class xRTFunction
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    @Override
+    protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+        {
+        FunctionHandle hFunc = (FunctionHandle) hTarget;
+
+        // for now, simply use an identity hash code
+        return frame.assignValue(iReturn, xInt64.makeHandle(hFunc.hashCode()));
         }
 
 
@@ -420,22 +430,6 @@ public class xRTFunction
             }
 
         @Override
-        public boolean equals(Object obj)
-            {
-            if (obj == this)
-                {
-                return true;
-                }
-
-            if (obj instanceof FunctionHandle)
-                {
-                FunctionHandle that = (FunctionHandle) obj;
-                return this.getMethod().equals(that.getMethod());
-                }
-            return false;
-            }
-
-        @Override
         public String toString()
             {
             StringBuilder sb = new StringBuilder();
@@ -548,13 +542,6 @@ public class xRTFunction
         public boolean isAsync()
             {
             return m_hDelegate.isAsync();
-            }
-
-        @Override
-        public boolean equals(Object obj)
-            {
-            return super.equals(obj) && obj instanceof DelegatingHandle &&
-                m_hDelegate.equals(((DelegatingHandle) obj).m_hDelegate);
             }
 
         @Override
@@ -692,20 +679,6 @@ public class xRTFunction
             {
             TypeConstant typeFn = getType(); // the type already reflects bound arguments
             return typeFn.getConstantPool().extractFunctionParams(typeFn)[iArg];
-            }
-
-        @Override
-        public boolean equals(Object obj)
-            {
-            if (super.equals(obj) && obj instanceof SingleBoundHandle)
-                {
-                ObjectHandle hArgThis = m_hArg;
-                ObjectHandle hArgThat = ((SingleBoundHandle) obj).m_hArg;
-
-                return hArgThis.isNativeEqual() && hArgThat.isNativeEqual() &&
-                    hArgThis.equals(hArgThat);
-                }
-            return false;
             }
 
         /**

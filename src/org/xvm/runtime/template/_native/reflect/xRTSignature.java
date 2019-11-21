@@ -392,6 +392,12 @@ public class xRTSignature
             f_nDepth   = nDepth;
             }
 
+        @Override
+        public boolean isNativeEqual()
+            {
+            return false;
+            }
+
         // ----- fields -----------------------------------------------------------------------
 
         @Override
@@ -477,32 +483,6 @@ public class xRTSignature
             }
 
         // ----- Object methods --------------------------------------------------------------------
-
-        @Override
-        public int hashCode()
-            {
-            return f_idMethod == null ? -17 : f_idMethod.hashCode();
-            }
-
-        @Override
-        public boolean equals(Object obj)
-            {
-            if (obj == this)
-                {
-                return true;
-                }
-
-            if (obj.getClass() == SignatureHandle.class)
-                {
-                SignatureHandle that = (SignatureHandle) obj;
-                return this.getMethod().equals(that.getMethod());
-                }
-            else
-                {
-                // let the sub-class answer the question
-                return obj.equals(this);
-                }
-            }
 
         @Override
         public String toString()

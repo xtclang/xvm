@@ -296,23 +296,6 @@ public class xRTMethod
                 }
             return chain;
             }
-        @Override
-        public boolean equals(Object obj)
-            {
-            if (obj == this)
-                {
-                return true;
-                }
-
-            if (obj instanceof MethodHandle)
-                {
-                MethodHandle that = (MethodHandle) obj;
-                return Handy.equals(this.f_idMethod, that.f_idMethod)
-                    && Handy.equals(this.f_type    , that.f_type    );
-                }
-
-            return false;
-            }
 
         @Override
         public String toString()
