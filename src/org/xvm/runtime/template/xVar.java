@@ -7,6 +7,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
+import org.xvm.asm.constants.SignatureConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -21,7 +22,7 @@ import org.xvm.runtime.Utils.UnaryAction;
 
 
 /**
- * TODO:
+ * Native Var implementation.
  */
 public class xVar
         extends xRef
@@ -45,6 +46,7 @@ public class xVar
     @Override
     public void initDeclared()
         {
+        s_sigSet = f_struct.findMethod("set", 1).getIdentityConstant().getSignature();
         }
 
     @Override
@@ -62,7 +64,7 @@ public class xVar
         switch (method.getName())
             {
             case "set":
-                return setReferent(frame, hThis, hArg);
+                return setReferentImpl(frame, hThis, true, hArg);
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
@@ -108,28 +110,40 @@ public class xVar
     @Override
     public int setReferent(Frame frame, RefHandle hTarget, ObjectHandle hValue)
         {
-        switch (hTarget.m_iVar)
+        return setReferentImpl(frame, hTarget, false, hValue);
+        }
+
+    protected int setReferentImpl(Frame frame, RefHandle hRef, boolean fNative, ObjectHandle hValue)
+        {
+        switch (hRef.m_iVar)
             {
             case RefHandle.REF_REFERENT:
-                return setInternal(frame, hTarget, hValue);
+                {
+                if (fNative)
+                    {
+                    hRef.setReferent(hValue);
+                    return Op.R_NEXT;
+                    }
+                return invokeSetReferent(frame, hRef, hValue);
+                }
 
             case RefHandle.REF_REF:
                 {
-                RefHandle hDelegate = (RefHandle) hTarget.getReferent();
-                return hTarget.getVarSupport().setReferent(frame, hDelegate, hValue);
+                RefHandle hDelegate = (RefHandle) hRef.getReferent();
+                return hRef.getVarSupport().setReferent(frame, hDelegate, hValue);
                 }
 
             case RefHandle.REF_PROPERTY:
                 {
-                ObjectHandle hDelegate = hTarget.getReferent();
+                ObjectHandle hDelegate = hRef.getReferent();
                 return hDelegate.getTemplate().setPropertyValue(
-                    frame, hDelegate, hTarget.getPropertyId(), hTarget);
+                    frame, hDelegate, hRef.getPropertyId(), hRef);
                 }
 
             case RefHandle.REF_ARRAY:
                 {
-                IndexedRefHandle hIndexedRef = (IndexedRefHandle) hTarget;
-                ObjectHandle hArray = hTarget.getReferent();
+                IndexedRefHandle hIndexedRef = (IndexedRefHandle) hRef;
+                ObjectHandle hArray = hRef.getReferent();
                 IndexSupport template = (IndexSupport) hArray.getTemplate();
 
                 return template.assignArrayValue(frame, hArray, hIndexedRef.f_lIndex, hValue);
@@ -137,8 +151,8 @@ public class xVar
 
             default:
                 {
-                Frame frameRef = hTarget.m_frame;
-                int   nVar     = hTarget.m_iVar;
+                Frame frameRef = hRef.m_frame;
+                int   nVar     = hRef.m_iVar;
                 assert frameRef != null && nVar >= 0;
 
                 frameRef.f_ahVar[nVar] = hValue;
@@ -147,10 +161,15 @@ public class xVar
             }
         }
 
-    protected int setInternal(Frame frame, RefHandle hRef, ObjectHandle hValue)
+    /**
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
+     */
+    protected int invokeSetReferent(Frame frame, RefHandle hRef, ObjectHandle hValue)
         {
-        hRef.setReferent(hValue);
-        return Op.R_NEXT;
+        CallChain chain = hRef.getComposition().getMethodCallChain(s_sigSet);
+        return chain.isExplicit()
+            ? chain.invoke(frame, hRef, hValue, Op.A_IGNORE)
+            : setReferentImpl(frame, hRef, true, hValue);
         }
 
     public int invokeVarAdd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
@@ -250,4 +269,8 @@ public class xVar
             ? new InPlaceVarBinary(BinaryAction.XOR, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    protected static SignatureConstant s_sigSet;
     }

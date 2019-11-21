@@ -19,12 +19,13 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.runtime.AnnotationSupport;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.xRef;
 
 import org.xvm.util.Severity;
 
@@ -445,7 +446,15 @@ public class AnnotatedTypeConstant
         OpSupport support = m_support;
         if (support == null)
             {
-            support = m_support = new AnnotationSupport(this, registry);
+            TypeConstant     typeBase    = getUnderlyingType();
+            IdentityConstant constIdAnno = (IdentityConstant) getAnnotation().getAnnotationClass();
+            OpSupport        supportAnno = registry.getTemplate(constIdAnno);
+
+            // if the annotation itself is native, it overrides the base type template (support);
+            // for now all native Ref implementations extend xRef
+            m_support = support = supportAnno instanceof xRef
+                    ? supportAnno.getTemplate(typeBase)
+                    : typeBase.getOpSupport(registry);
             }
         return support;
         }

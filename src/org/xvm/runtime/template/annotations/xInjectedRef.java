@@ -51,7 +51,7 @@ public class xInjectedRef
         }
 
     @Override
-    protected int getInternal(Frame frame, RefHandle hTarget, int iReturn)
+    protected int invokeGetReferent(Frame frame, RefHandle hTarget, int iReturn)
         {
         InjectedHandle hInjected = (InjectedHandle) hTarget;
         ObjectHandle   hValue    = hInjected.getReferent();

@@ -336,7 +336,7 @@ public class xAtomicIntNumber
         }
 
     @Override
-    protected int getInternal(Frame frame, RefHandle hTarget, int iReturn)
+    protected int invokeGetReferent(Frame frame, RefHandle hTarget, int iReturn)
         {
         AtomicIntVarHandle hAtomic = (AtomicIntVarHandle) hTarget;
         AtomicLong atomicValue = hAtomic.m_atomicValue;
@@ -347,7 +347,7 @@ public class xAtomicIntNumber
         }
 
     @Override
-    protected int setInternal(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+    protected int invokeSetReferent(Frame frame, RefHandle hTarget, ObjectHandle hValue)
         {
         AtomicIntVarHandle hAtomic = (AtomicIntVarHandle) hTarget;
         AtomicLong atomicValue = hAtomic.m_atomicValue;

@@ -223,7 +223,7 @@ public class RecursiveTypeConstant
     @Override
     public OpSupport getOpSupport(TemplateRegistry registry)
         {
-        return getConstantPool().typeObject().getOpSupport(registry);
+        throw new UnsupportedOperationException();
         }
 
 

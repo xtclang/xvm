@@ -15,8 +15,10 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
@@ -59,6 +61,8 @@ public class xRef
     @Override
     public void initDeclared()
         {
+        s_sigGet = f_struct.findMethod("get", 0).getIdentityConstant().getSignature();
+
         markNativeMethod("equals", null, BOOLEAN);
 
         getCanonicalType().invalidateTypeInfo();
@@ -163,7 +167,7 @@ public class xRef
         switch (method.getName())
             {
             case "get":
-                return getReferent(frame, hRef, iReturn);
+                return getReferentImpl(frame, hRef, true, iReturn);
 
             case "equals":
                 {
@@ -224,28 +228,47 @@ public class xRef
     @Override
     public int getReferent(Frame frame, RefHandle hTarget, int iReturn)
         {
-        switch (hTarget.m_iVar)
+        return getReferentImpl(frame, hTarget, false, iReturn);
+        }
+
+    /**
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
+     */
+    protected int getReferentImpl(Frame frame, RefHandle hRef, boolean fNative, int iReturn)
+        {
+        ObjectHandle hValue;
+        switch (hRef.m_iVar)
             {
             case RefHandle.REF_REFERENT:
-                return getInternal(frame, hTarget, iReturn);
+                {
+                if (fNative)
+                    {
+                    hValue = hRef.getReferent();
+                    }
+                else
+                    {
+                    return invokeGetReferent(frame, hRef, iReturn);
+                    }
+                break;
+                }
 
             case RefHandle.REF_REF:
                 {
-                RefHandle hReferent = (RefHandle) hTarget.getReferent();
-                return hTarget.getVarSupport().getReferent(frame, hReferent, iReturn);
+                RefHandle hDelegate = (RefHandle) hRef.getReferent();
+                return hDelegate.getVarSupport().getReferent(frame, hDelegate, iReturn);
                 }
 
             case RefHandle.REF_PROPERTY:
                 {
-                ObjectHandle hReferent = hTarget.getReferent();
-                return hReferent.getTemplate().getPropertyValue(
-                    frame, hReferent, hTarget.getPropertyId(), iReturn);
+                ObjectHandle hDelegate = hRef.getReferent();
+                return hDelegate.getTemplate().getPropertyValue(
+                    frame, hDelegate, hRef.getPropertyId(), iReturn);
                 }
 
             case RefHandle.REF_ARRAY:
                 {
-                IndexedRefHandle hIndexedRef = (IndexedRefHandle) hTarget;
-                ObjectHandle     hArray      = hTarget.getReferent();
+                IndexedRefHandle hIndexedRef = (IndexedRefHandle) hRef;
+                ObjectHandle     hArray      = hRef.getReferent();
                 IndexSupport     template    = (IndexSupport) hArray.getTemplate();
 
                 return template.extractArrayValue(frame, hArray, hIndexedRef.f_lIndex, iReturn);
@@ -253,27 +276,29 @@ public class xRef
 
             default:
                 {
-                Frame frameRef = hTarget.m_frame;
-                int   nVar     = hTarget.m_iVar;
+                Frame frameRef = hRef.m_frame;
+                int   nVar     = hRef.m_iVar;
                 assert frameRef != null && nVar >= 0;
 
-                ObjectHandle hValue = frameRef.f_ahVar[nVar];
-                return hValue == null
-                    ? frame.raiseException(xException.unassignedReference(frame))
-                    : frame.assignValue(iReturn, hValue);
+                hValue = frameRef.f_ahVar[nVar];
+                break;
                 }
             }
+
+        return hValue == null
+                ? frame.raiseException(xException.unassignedReference(frame))
+                : frame.assignValue(iReturn, hValue);
         }
 
     /**
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    protected int getInternal(Frame frame, RefHandle hRef, int iReturn)
+    protected int invokeGetReferent(Frame frame, RefHandle hRef, int iReturn)
         {
-        ObjectHandle hValue = hRef.getReferent();
-        return hValue == null
-            ? frame.raiseException(xException.unassignedReference(frame))
-            : frame.assignValue(iReturn, hValue);
+        CallChain chain = hRef.getComposition().getMethodCallChain(s_sigGet);
+        return chain.isExplicit()
+            ? chain.invoke(frame, hRef, iReturn)
+            : getReferentImpl(frame, hRef, true, iReturn);
         }
 
     @Override
@@ -839,4 +864,8 @@ public class xRef
         private ObjectHandle hReferent2;
         private int index = -1;
         }
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    protected static SignatureConstant s_sigGet;
     }

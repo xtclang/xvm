@@ -331,7 +331,7 @@ public class xFutureVar
         }
 
     @Override
-    protected int getInternal(Frame frame, RefHandle hTarget, int iReturn)
+    protected int invokeGetReferent(Frame frame, RefHandle hTarget, int iReturn)
         {
         FutureHandle hFuture = (FutureHandle) hTarget;
 
@@ -367,7 +367,7 @@ public class xFutureVar
         }
 
     @Override
-    protected int setInternal(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+    protected int invokeSetReferent(Frame frame, RefHandle hTarget, ObjectHandle hValue)
         {
         FutureHandle hFuture = (FutureHandle) hTarget;
 
