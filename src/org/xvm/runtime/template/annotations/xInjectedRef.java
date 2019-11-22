@@ -1,10 +1,13 @@
 package org.xvm.runtime.template.annotations;
 
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
-
+import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
@@ -13,7 +16,6 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xRef;
 
 
@@ -47,7 +49,15 @@ public class xInjectedRef
             {
             throw new IllegalArgumentException("Name is not present");
             }
-        return new InjectedHandle(clazz, sName);
+
+        AnnotatedTypeConstant typeInject = (AnnotatedTypeConstant) clazz.getType();
+        Annotation            anno       = typeInject.getAnnotation();
+        Constant[]            aParams    = anno.getParams();
+        String                sResource  = aParams.length > 0
+                ? ((StringConstant) aParams[0]).getValue()
+                : sName;
+
+        return new InjectedHandle(clazz, sName, sResource);
         }
 
     @Override
@@ -59,10 +69,10 @@ public class xInjectedRef
             {
             TypeConstant typeEl = hInjected.getType().resolveGenericType("Referent");
 
-            hValue = frame.f_context.f_container.getInjectable(frame, hInjected.getName(), typeEl);
+            hValue = frame.f_context.f_container.getInjectable(frame, hInjected.getResourceName(), typeEl);
             if (hValue == null)
                 {
-                return frame.raiseException("Unknown injectable property " + hInjected.getName());
+                return frame.raiseException("Unknown injectable property " + hInjected.getResourceName());
                 }
 
             if (hValue instanceof DeferredCallHandle)
@@ -88,11 +98,21 @@ public class xInjectedRef
     public static class InjectedHandle
             extends RefHandle
         {
-        protected InjectedHandle(TypeComposition clazz, String sName)
+        protected InjectedHandle(TypeComposition clazz, String sVarName, String sResourceName)
             {
-            super(clazz, sName);
+            super(clazz, sVarName);
 
-            m_fMutable = false;
+            f_sResource = sResourceName;
+            m_fMutable  = false;
             }
+
+        public String getResourceName()
+            {
+            return f_sResource;
+            }
+
+        // ----- fields ----------------------------------------------------------------------------
+
+        private final String f_sResource;
         }
     }

@@ -198,7 +198,7 @@ public abstract class Composition
          *
          * @param annotation  the Annotation to create an Incorporates for
          */
-        public Incorporates(Annotation annotation)
+        public Incorporates(AnnotationExpression annotation)
             {
             this(null, new Token(annotation.getStartPosition(), annotation.getStartPosition(),
                     Token.Id.INCORPORATES), annotation.type, annotation.args, null);

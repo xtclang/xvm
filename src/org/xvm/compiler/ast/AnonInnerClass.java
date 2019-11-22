@@ -110,7 +110,7 @@ public class AnonInnerClass
     /**
      * @return the Annotations suggested for the anonymous inner class
      */
-    public List<Annotation> getAnnotations()
+    public List<AnnotationExpression> getAnnotations()
         {
         return m_listAnnos == null ? Collections.EMPTY_LIST : m_listAnnos;
         }
@@ -191,7 +191,7 @@ public class AnonInnerClass
      *
      * @param anno  the annotation
      */
-    protected void addAnnotation(Annotation anno)
+    protected void addAnnotation(AnnotationExpression anno)
         {
         assert anno != null;
         ensureAnnotations().add(anno);
@@ -231,7 +231,7 @@ public class AnonInnerClass
             case AnnotatedType:
                 {
                 addContribution(exprType, type.getUnderlyingType());
-                addAnnotation(new Annotation(((AnnotatedTypeConstant) type).getAnnotation(), exprType));
+                addAnnotation(new AnnotationExpression(((AnnotatedTypeConstant) type).getAnnotation(), exprType));
                 return;
                 }
 
@@ -322,9 +322,9 @@ public class AnonInnerClass
     /**
      * @return a mutable non-null list of annotations
      */
-    private List<Annotation> ensureAnnotations()
+    private List<AnnotationExpression> ensureAnnotations()
         {
-        List<Annotation> list = m_listAnnos;
+        List<AnnotationExpression> list = m_listAnnos;
         if (list == null)
             {
             m_listAnnos = list = new ArrayList<>();
@@ -519,7 +519,7 @@ public class AnonInnerClass
             sb.append("**ERROR** ");
             }
 
-        for (Annotation anno : getAnnotations())
+        for (AnnotationExpression anno : getAnnotations())
             {
             sb.append(anno)
               .append(' ');
@@ -576,7 +576,7 @@ public class AnonInnerClass
     /**
      * The annotations that have been collected for the AnonInnerClass.
      */
-    private List<Annotation> m_listAnnos;
+    private List<AnnotationExpression> m_listAnnos;
 
     /**
      * The type parameters that have been collected for the AnonInnerClass.

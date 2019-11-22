@@ -80,20 +80,20 @@ public class TypeCompositionStatement
     // ----- constructors --------------------------------------------------------------------------
 
     public TypeCompositionStatement(
-            Source            source,
-            long              lStartPos,
-            long              lEndPos,
-            Expression        condition,
-            List<Token>       modifiers,
-            List<Annotation>  annotations,
-            Token             category,
-            Token             name,
-            List<Token>       qualified,
-            List<Parameter>   typeParams,
-            List<Parameter>   constructorParams,
-            List<Composition> compositions,
-            StatementBlock    body,
-            Token             doc)
+            Source                     source,
+            long                       lStartPos,
+            long                       lEndPos,
+            Expression                 condition,
+            List<Token>                modifiers,
+            List<AnnotationExpression> annotations,
+            Token                      category,
+            Token                      name,
+            List<Token>                qualified,
+            List<Parameter>            typeParams,
+            List<Parameter>            constructorParams,
+            List<Composition>          compositions,
+            StatementBlock             body,
+            Token                      doc)
         {
         super(lStartPos, lEndPos);
 
@@ -115,14 +115,14 @@ public class TypeCompositionStatement
      * Used by enumeration value declarations.
      */
     public TypeCompositionStatement(
-            List<Annotation>     annotations,
-            Token                name,
-            List<TypeExpression> typeArgs,
-            List<Expression>     args,
-            StatementBlock       body,
-            Token                doc,
-            long                 lStartPos,
-            long                 lEndPos)
+            List<AnnotationExpression> annotations,
+            Token                      name,
+            List<TypeExpression>       typeArgs,
+            List<Expression>           args,
+            StatementBlock             body,
+            Token                      doc,
+            long                       lStartPos,
+            long                       lEndPos)
         {
         super(lStartPos, lEndPos);
 
@@ -139,16 +139,16 @@ public class TypeCompositionStatement
      * Used by anonymous inner class declarations.
      */
     public TypeCompositionStatement(
-            NewExpression     parent,
-            List<Annotation>  annotations,
-            Token             category,
-            Token             name,
-            List<Parameter>   typeParams,
-            List<Composition> compositions,
-            List<Expression>  args,
-            StatementBlock    body,
-            long              lStartPos,
-            long              lEndPos)
+            NewExpression              parent,
+            List<AnnotationExpression> annotations,
+            Token                      category,
+            Token                      name,
+            List<Parameter>            typeParams,
+            List<Composition>          compositions,
+            List<Expression>           args,
+            StatementBlock             body,
+            long                       lStartPos,
+            long                       lEndPos)
         {
         super(lStartPos, lEndPos);
 
@@ -794,7 +794,7 @@ public class TypeCompositionStatement
                 }
             for (int i = annotations.size()-1; i >= 0; --i)
                 {
-                Annotation annotation = annotations.get(i);
+                AnnotationExpression annotation = annotations.get(i);
                 annotation.ensureAnnotation(pool);
                 compositions.add(new Composition.Incorporates(annotation));
                 }
@@ -1611,9 +1611,9 @@ public class TypeCompositionStatement
                 if (annotations != null)
                     {
                     ClassConstant clzOverride  = pool().clzOverride();
-                    for (Annotation annotation : annotations)
+                    for (AnnotationExpression annotation : annotations)
                         {
-                        if (Handy.equals(clzOverride, annotation.getType().ensureTypeConstant()
+                        if (Handy.equals(clzOverride, annotation.toTypeExpression().ensureTypeConstant()
                                 .getSingleUnderlyingClass(false)))
                             {
                             fHasOverride = true;
@@ -2361,7 +2361,7 @@ public class TypeCompositionStatement
             {
             if (annotations != null)
                 {
-                for (Annotation annotation : annotations)
+                for (AnnotationExpression annotation : annotations)
                     {
                     sb.append(annotation)
                       .append(' ');
@@ -2421,7 +2421,7 @@ public class TypeCompositionStatement
 
             if (annotations != null)
                 {
-                for (Annotation annotation : annotations)
+                for (AnnotationExpression annotation : annotations)
                     {
                     sb.append(annotation)
                       .append(' ');
@@ -2606,21 +2606,21 @@ public class TypeCompositionStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Source               source;
-    protected Expression           condition;
-    protected List<Token>          modifiers;
-    protected List<Annotation>     annotations;
-    protected Token                category;
-    protected Token                name;
-    protected List<Token>          qualified;
-    protected List<Parameter>      typeParams;
-    protected List<Parameter>      constructorParams;
-    protected List<TypeExpression> typeArgs;
-    protected List<Expression>     args;
-    protected List<Composition>    compositions;
-    protected StatementBlock       body;
-    protected Token                doc;
-    protected StatementBlock       enclosed;
+    protected Source                     source;
+    protected Expression                 condition;
+    protected List<Token>                modifiers;
+    protected List<AnnotationExpression> annotations;
+    protected Token                      category;
+    protected Token                      name;
+    protected List<Token>                qualified;
+    protected List<Parameter>            typeParams;
+    protected List<Parameter>            constructorParams;
+    protected List<TypeExpression>       typeArgs;
+    protected List<Expression>           args;
+    protected List<Composition>          compositions;
+    protected StatementBlock             body;
+    protected Token                      doc;
+    protected StatementBlock             enclosed;
 
     /**
      * True iff this is an anonymous inner class.

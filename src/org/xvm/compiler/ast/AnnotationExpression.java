@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.Component.Format;
@@ -14,6 +15,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -21,6 +23,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
@@ -33,14 +36,14 @@ import org.xvm.util.Severity;
 
 
 /**
- * An annotation is a type annotation and an optional argument list.
+ * A type annotation is used for type annotations with an optional argument list.
  */
-public class Annotation
-        extends AstNode
+public class AnnotationExpression
+        extends Expression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public Annotation(NamedTypeExpression type, List<Expression> args, long lStartPos, long lEndPos)
+    public AnnotationExpression(NamedTypeExpression type, List<Expression> args, long lStartPos, long lEndPos)
         {
         this.type      = type;
         this.args      = args;
@@ -48,7 +51,7 @@ public class Annotation
         this.lEndPos   = lEndPos;
         }
 
-    public Annotation(org.xvm.asm.Annotation anno, AstNode node)
+    public AnnotationExpression(Annotation anno, AstNode node)
         {
         this.m_anno    = anno;
         this.m_node    = node;
@@ -59,7 +62,8 @@ public class Annotation
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    public NamedTypeExpression getType()
+    @Override
+    public NamedTypeExpression toTypeExpression()
         {
         NamedTypeExpression expr = type;
         if (expr == null)
@@ -115,18 +119,17 @@ public class Annotation
      *
      * @return an XVM Annotation
      */
-    public org.xvm.asm.Annotation ensureAnnotation(ConstantPool pool)
+    public Annotation ensureAnnotation(ConstantPool pool)
         {
         if (m_anno != null)
             {
             return m_anno;
             }
 
-        Constant         constClass  = getType().getIdentityConstant();
+        Constant         constClass  = toTypeExpression().getIdentityConstant();
         List<Expression> args        = getArguments();
         Constant[]       aconstArgs  = Constant.NO_CONSTS;
         int              cArgs       = args == null ? 0 : args.size();
-        Constant         constNoIdea = null;
         if (cArgs > 0)
             {
             aconstArgs = new Constant[cArgs];
@@ -135,7 +138,9 @@ public class Annotation
                 Expression exprArg = args.get(iArg);
                 if (exprArg.alreadyReached(Stage.Validated))
                     {
-                    aconstArgs[iArg] = exprArg.toConstant();
+                    aconstArgs[iArg] = exprArg.isConstant()
+                            ? exprArg.toConstant()
+                            : exprArg.getType(); // TODO REMOVE HACK
                     }
                 else if (exprArg instanceof LiteralExpression
                         && ((LiteralExpression) exprArg).getLiteral().getId() == Id.LIT_STRING)
@@ -146,22 +151,13 @@ public class Annotation
                     }
                 else
                     {
-                    if (constNoIdea == null)
-                        {
-                        constNoIdea = pool.ensureStringConstant("???");
-                        }
-                    aconstArgs[iArg] = constNoIdea;
+                    aconstArgs[iArg] = new UnresolvedNameConstant(pool,
+                            ((NameExpression) exprArg).collectNames(1), false);
                     }
                 }
             }
 
-        org.xvm.asm.Annotation anno = pool.ensureAnnotation(constClass, aconstArgs);
-        if (constNoIdea != null)
-            {
-            anno.markUnresolved();
-            }
-        m_anno = anno;
-        return anno;
+        return m_anno = pool.ensureAnnotation(constClass, aconstArgs);
         }
 
 
@@ -170,7 +166,7 @@ public class Annotation
     @Override
     public void validateContent(StageMgr mgr, ErrorListener errs)
         {
-        org.xvm.asm.Annotation anno = m_anno;
+        Annotation anno = m_anno;
         assert anno != null;
 
         Constant constAnno = anno.getAnnotationClass();
@@ -193,6 +189,11 @@ public class Annotation
         if (!mgr.processChildren())
             {
             mgr.requestRevisit();
+            return;
+            }
+
+        if (getCodeContainer() != null)
+            {
             return;
             }
 
@@ -240,8 +241,7 @@ public class Annotation
             MethodConstant idConstruct = infoAnno.findConstructor(atypeArgs, asArgNames);
             if (idConstruct == null)
                 {
-                // TODO uncomment this after we bother to create constructors :D
-                // log(errs, Severity.ERROR, Compiler.ANNOTATION_DECL_UNRESOLVABLE, idAnno.getName());
+                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getName());
                 }
             else if (cArgs > 0)
                 {
@@ -279,6 +279,92 @@ public class Annotation
                 anno.resolveParams(aconstArgs);
                 }
             }
+        }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        List<Expression>  listArgs   = getArguments();
+        int               cArgs      = listArgs == null ? 0 : listArgs.size();
+        String[]          asArgNames = null;
+        boolean           fNameErr   = false;
+        TypeConstant[]    atypeArgs  = TypeConstant.NO_TYPES;
+        boolean           fValid     = true;
+
+        if (cArgs > 0)
+            {
+            // build a list of argument types and names (used later to try to find an appropriate
+            // annotation constructor)
+            atypeArgs = new TypeConstant[cArgs];
+
+            for (int iArg = 0; iArg < cArgs; ++iArg)
+                {
+                Expression exprArgOld = listArgs.get(iArg);
+                Expression exprArgNew = exprArgOld.validate(ctx, null, errs);
+
+                if (exprArgNew == null)
+                    {
+                    fValid = false;
+                    continue;
+                    }
+
+                if (exprArgNew != exprArgOld)
+                    {
+                    listArgs.set(iArg, exprArgNew);
+                    }
+
+                if (exprArgNew instanceof LabeledExpression)
+                    {
+                    if (asArgNames == null)
+                        {
+                        asArgNames = new String[cArgs];
+                        }
+                    asArgNames[iArg] = ((LabeledExpression) exprArgNew).getName();
+                    }
+                else if (asArgNames != null && !fNameErr)
+                    {
+                    // there was already at least one arg with a name, so all trailing args MUST
+                    // have a name
+                    exprArgNew.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, iArg);
+                    fNameErr = true;
+                    fValid   = false;
+                    }
+
+                atypeArgs[iArg] = exprArgNew.getType();
+                }
+            }
+
+        if (fValid)
+            {
+            m_anno = null;  // force a re-generation of the annotation
+
+            ConstantPool  pool         = pool();
+            Annotation    anno         = ensureAnnotation(pool);
+            ClassConstant idAnno       = (ClassConstant) anno.getAnnotationClass();
+            TypeConstant  typeAnno     = idAnno.getType(); // TerminalType
+            TypeConstant  typeInferred = inferTypeFromRequired(typeAnno, typeRequired);
+            TypeConstant  typeTarget   = typeInferred == null ? typeAnno : typeInferred;
+
+            if (idAnno.equals(pool.clzInject()) && cArgs == 0)
+                {
+                // the "resourceName" will come from the variable/property name
+                return finishValidation(typeRequired, typeTarget, TypeFit.Fit, null, errs);
+                }
+
+            TypeInfo infoAnno = typeTarget.ensureTypeInfo(errs);
+
+            MethodConstant idConstruct = findMethod(ctx, infoAnno, "construct", listArgs,
+                    TypeInfo.MethodKind.Constructor, true, false, null, errs);
+            if (idConstruct != null)
+                {
+                typeTarget = pool.ensureAnnotatedTypeConstant(typeRequired, anno);
+                return finishValidation(typeRequired, typeTarget, TypeFit.Fit, null, errs);
+                }
+
+            log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getName());
+            }
+
+        return null;
         }
 
 
@@ -351,13 +437,13 @@ public class Annotation
         @Override
         public Source getSource()
             {
-            return Annotation.this.getSource();
+            return AnnotationExpression.this.getSource();
             }
 
         @Override
         public ConstantPool pool()
             {
-            return Annotation.this.pool();
+            return AnnotationExpression.this.pool();
             }
 
         @Override
@@ -393,14 +479,14 @@ public class Annotation
         @Override
         protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs)
             {
-            return new NameResolver(Annotation.this, sName).forceResolve(errs);
+            return new NameResolver(AnnotationExpression.this, sName).forceResolve(errs);
             }
 
         @Override
         protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
             {
             return sName.equals("this:module")
-                    ? Annotation.this.getComponent().getIdentityConstant().getModuleConstant()
+                    ? AnnotationExpression.this.getComponent().getIdentityConstant().getModuleConstant()
                     : null;
             }
 
@@ -433,8 +519,8 @@ public class Annotation
 
     // these two fields allow us to pretend to be an Annotation by generating a type on the fly, if
     // necessary
-    private transient AstNode                m_node;
-    private transient org.xvm.asm.Annotation m_anno;
+    private transient AstNode    m_node;
+    private transient Annotation m_anno;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(Annotation.class, "type", "args");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(AnnotationExpression.class, "type", "args");
     }

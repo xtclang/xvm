@@ -3,9 +3,15 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.xvm.asm.Annotation;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Constants;
@@ -21,7 +27,7 @@ public class AnnotatedTypeExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public AnnotatedTypeExpression(Annotation annotation, TypeExpression type)
+    public AnnotatedTypeExpression(AnnotationExpression annotation, TypeExpression type)
         {
         this.annotation = annotation;
         this.type       = type;
@@ -33,7 +39,7 @@ public class AnnotatedTypeExpression
     /**
      * @return the annotation
      */
-    Annotation getAnnotation()
+    AnnotationExpression getAnnotation()
         {
         return annotation;
         }
@@ -45,22 +51,71 @@ public class AnnotatedTypeExpression
      */
     public boolean isDisassociated()
         {
-        return m_fDisassociateAnnotation;
+        return m_fDisassociate;
         }
 
     /**
-     * This method allows a VariableDeclarationStatement (for example) to steal the annotation from
-     * the type expression, if the annotation applies to the variable and not the type. One example
-     * would be "@Inject Int i;", in which case the "Int" is not annotated (it is the variable "i"
-     * that is annotated).
-     *
-     * @return the annotation
+     * TODO
      */
-    public Annotation disassociateAnnotation()
+    public boolean isIntoRef()
         {
-        m_fDisassociateAnnotation = true;
-        resetTypeConstant();
-        return annotation;
+        return m_fDisassociate
+            || ((type instanceof AnnotatedTypeExpression)
+                && ((AnnotatedTypeExpression) type).isIntoRef());
+        }
+
+    /**
+     * TODO
+     */
+    public boolean isVar()
+        {
+        return m_fVar
+            || ((type instanceof AnnotatedTypeExpression)
+                && ((AnnotatedTypeExpression) type).isVar());
+        }
+
+    /**
+     * TODO
+     */
+    public boolean isInjected()
+        {
+        return m_fInjected
+            || ((type instanceof AnnotatedTypeExpression)
+                && ((AnnotatedTypeExpression) type).isInjected());
+        }
+
+    /**
+     * TODO
+     */
+    public boolean isFinal()
+        {
+        return m_fFinal
+            || ((type instanceof AnnotatedTypeExpression)
+                && ((AnnotatedTypeExpression) type).isFinal());
+        }
+
+    /**
+     * TODO
+     */
+    public List<AnnotationExpression> getRefAnnotations()
+        {
+        List<AnnotationExpression> list = new ArrayList<>();
+        collectRefAnnotations(list);
+        return list;
+        }
+
+    protected void collectRefAnnotations(List<AnnotationExpression> list)
+        {
+        if (m_fDisassociate)
+            {
+            list.add(annotation);
+            }
+
+        // REVIEW in what order?
+        if (type instanceof AnnotatedTypeExpression)
+            {
+            ((AnnotatedTypeExpression) type).collectRefAnnotations(list);
+            }
         }
 
     @Override
@@ -120,9 +175,15 @@ public class AnnotatedTypeExpression
         //    the underlying type is unchanged by this AnnotatedTypeExpression
         ConstantPool pool           = pool();
         TypeConstant typeUnderlying = type.ensureTypeConstant(ctx);
+
+        Annotation   anno     = annotation.ensureAnnotation(pool());
+        TypeConstant typeAnno = anno.getAnnotationType();
+
+        m_fDisassociate = typeAnno.getExplicitClassInto().isIntoVariableType();
+
         return isDisassociated()
                 ? typeUnderlying    // our annotation is not added to the underlying type constant
-                : pool.ensureAnnotatedTypeConstant(typeUnderlying, annotation.ensureAnnotation(pool));
+                : pool.ensureAnnotatedTypeConstant(typeUnderlying, anno);
         }
 
     @Override
@@ -136,44 +197,77 @@ public class AnnotatedTypeExpression
     // ----- Expression methods --------------------------------------------------------------------
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired,
-            ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        boolean        fValid  = true;
         ConstantPool   pool    = pool();
         TypeExpression typeNew = (TypeExpression) type.validate(ctx, pool().typeType(), errs);
+
         if (typeNew == null)
             {
-            fValid = false;
+            return null;
             }
-        else
-            {
-            type = typeNew;
-            }
+
+        type = typeNew;
 
         TypeConstant typeReferent  = ensureTypeConstant(ctx);
         TypeConstant typeReference = typeReferent.getType();
 
-        if (fValid)
+        Annotation   anno     = annotation.ensureAnnotation(pool);
+        TypeConstant typeAnno = anno.getAnnotationType();
+        TypeConstant typeReq;
+
+        // the annotation must mix in to the Var (if it's disassociated), or into the underlying
+        // type otherwise
+        if (m_fDisassociate)
             {
-            // the annotation must mix in to the Var (if it's disassociated), or into the underlying
-            // type otherwise
-            Annotation             annoAst  = getAnnotation();
-            org.xvm.asm.Annotation annoAsm  = annoAst.ensureAnnotation(pool);
-            TypeConstant           typeAnno = annoAsm.getAnnotationType();
-            if (!  (isDisassociated() && typeAnno.getExplicitClassInto().isIntoVariableType()
-                || !isDisassociated() && typeReferent.isA(typeAnno.ensureTypeInfo(errs).getInto())))
+            Constant clzAnno = anno.getAnnotationClass();
+            if (clzAnno.equals(pool.clzInject()))
                 {
-                annoAst.log(errs, Severity.ERROR, Constants.VE_ANNOTATION_INCOMPATIBLE,
-                        type.ensureTypeConstant(ctx).getValueString(),
-                        annoAsm.getAnnotationClass().getValueString(),
-                        typeAnno.ensureTypeInfo(errs).getInto().getValueString());
-                fValid = false;
+                if (isIntoRef())
+                    {
+                    // TODO log error - Inject is not compatible with any other var annotations
+                    }
+
+                // @Inject implies assignment & final
+                m_fFinal = m_fInjected = true;
                 }
+            else if (clzAnno.equals(pool.clzFinal()))
+                {
+                if (isFinal())
+                    {
+                    // TODO log error - already final
+                    }
+
+                m_fFinal = true;
+                }
+
+            m_fVar  = typeAnno.getIntoVariableType().isA(pool.typeVar());
+            typeReq = pool.ensureParameterizedTypeConstant(
+                m_fVar ? pool.typeVar() : pool.typeRef(), typeReferent);
+            }
+        else if (typeReferent.isA(typeAnno.ensureTypeInfo(errs).getInto()))
+            {
+            typeReq = ((AnnotatedTypeConstant) typeReferent).getAnnotationType();
+            }
+        else
+            {
+            log(errs, Severity.ERROR, Constants.VE_ANNOTATION_INCOMPATIBLE,
+                    type.ensureTypeConstant(ctx).getValueString(),
+                    anno.getAnnotationClass().getValueString(),
+                    typeAnno.ensureTypeInfo(errs).getInto().getValueString());
+            return null;
             }
 
-        return finishValidation(typeRequired, typeReference, fValid ? TypeFit.Fit : TypeFit.NoFit,
-                typeReferent, errs);
+        AnnotationExpression exprOld = annotation;
+        AnnotationExpression exprNew = (AnnotationExpression) exprOld.validate(ctx, typeReq, errs);
+        if (exprNew == null)
+            {
+            return null;
+            }
+
+        annotation = exprNew;
+
+        return finishValidation(typeRequired, typeReference, TypeFit.Fit, typeReferent, errs);
         }
 
 
@@ -200,10 +294,13 @@ public class AnnotatedTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Annotation     annotation;
-    protected TypeExpression type;
+    protected AnnotationExpression annotation;
+    protected TypeExpression       type;
 
-    private boolean m_fDisassociateAnnotation;
+    private transient boolean m_fDisassociate;
+    private transient boolean m_fVar;
+    private transient boolean m_fInjected;
+    private transient boolean m_fFinal;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AnnotatedTypeExpression.class,
             "annotation", "type");

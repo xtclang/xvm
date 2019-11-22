@@ -6,7 +6,8 @@ module TestFiles.xqiz.it
     import X.fs.Path;
     import X.fs.FileStore;
 
-    @Inject Console console;
+    @Inject            Console   console;
+    @Inject("storage") FileStore store;
 
     void run()
         {
@@ -48,18 +49,16 @@ module TestFiles.xqiz.it
         {
         console.println("\n** testInject()");
 
-        @Inject FileStore storage;
+        console.println($"readOnly={store.readOnly}");
+        console.println($"capacity={store.capacity}");
+        assert store.bytesFree <= store.capacity;
+        assert store.bytesUsed <= store.capacity;
 
-        console.println($"readOnly={storage.readOnly}");
-        console.println($"capacity={storage.capacity}");
-        assert storage.bytesFree <= storage.capacity;
-        assert storage.bytesUsed <= storage.capacity;
+        @Inject("rootDir") Directory root;
+        console.println($"root={root} created {root.created}");
 
-        @Inject Directory rootDir;
-        console.println($"rootDir={rootDir} created {rootDir.created}");
-
-        @Inject Directory homeDir;
-        console.println($"homeDir={homeDir}");
+        @Inject("homeDir") Directory home;
+        console.println($"home={home}");
 
         @Inject Directory curDir;
         console.println($"curDir={curDir}");

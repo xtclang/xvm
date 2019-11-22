@@ -876,7 +876,7 @@ public abstract class ClassTemplate
                 PropertyInfo prop = info.findProperty(idProp);
 
                 hValue = frame.f_context.f_container.getInjectable(
-                        frame, idProp.getName(), prop.getType());
+                        frame, prop.getInjectedResourceName(), prop.getType());
                 if (hValue != null)
                     {
                     if (hValue instanceof DeferredCallHandle)

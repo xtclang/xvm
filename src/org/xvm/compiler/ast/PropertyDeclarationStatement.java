@@ -51,17 +51,17 @@ public class PropertyDeclarationStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public PropertyDeclarationStatement(long             lStartPos,
-                                        long             lEndPos,
-                                        Expression       condition,
-                                        List<Token>      modifiers,
-                                        List<Annotation> annotations,
-                                        TypeExpression   type,
-                                        Token            name,
-                                        Token            tokAsn,
-                                        Expression       value,
-                                        StatementBlock   body,
-                                        Token            doc)
+    public PropertyDeclarationStatement(long                       lStartPos,
+                                        long                       lEndPos,
+                                        Expression                 condition,
+                                        List<Token>                modifiers,
+                                        List<AnnotationExpression> annotations,
+                                        TypeExpression             type,
+                                        Token                      name,
+                                        Token                      tokAsn,
+                                        Expression                 value,
+                                        StatementBlock             body,
+                                        Token                      doc)
         {
         super(lStartPos, lEndPos);
 
@@ -73,7 +73,7 @@ public class PropertyDeclarationStatement
             if (typeNext instanceof AnnotatedTypeExpression)
                 {
                 // remove the annotation from the type chain, and add it to the list of annotations
-                Annotation anno = ((AnnotatedTypeExpression) type).getAnnotation();
+                AnnotationExpression anno = ((AnnotatedTypeExpression) type).getAnnotation();
                 anno.setParent(this);
                 if (annotations == null || annotations.isEmpty())
                     {
@@ -337,7 +337,7 @@ public class PropertyDeclarationStatement
         if (annotations != null)
             {
             ConstantPool pool = pool();
-            for (Annotation annotation : annotations)
+            for (AnnotationExpression annotation : annotations)
                 {
                 prop.addAnnotation(annotation.ensureAnnotation(pool));
                 }
@@ -557,7 +557,7 @@ public class PropertyDeclarationStatement
 
         if (annotations != null)
             {
-            for (Annotation annotation : annotations)
+            for (AnnotationExpression annotation : annotations)
                 {
                 sb.append(annotation)
                   .append(' ');
@@ -625,15 +625,15 @@ public class PropertyDeclarationStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Expression         condition;
-    protected List<Token>        modifiers;
-    protected List<Annotation>   annotations;
-    protected TypeExpression     type;
-    protected Token              name;
-    protected Token              tokAsn;
-    protected Expression         value;
-    protected StatementBlock     body;
-    protected Token              doc;
+    protected Expression                 condition;
+    protected List<Token>                modifiers;
+    protected List<AnnotationExpression> annotations;
+    protected TypeExpression             type;
+    protected Token                      name;
+    protected Token                      tokAsn;
+    protected Expression                 value;
+    protected StatementBlock             body;
+    protected Token                      doc;
 
     protected transient MethodDeclarationStatement initializer;
     protected transient boolean                    fSynthetic;

@@ -195,8 +195,9 @@ public class Parser
         long  lStartPos = peek().getStartPosition();
 
         // modifiers (including annotations)
-        List<Token> modifiers = null;
-        List<Annotation> annotations = null;
+        List<Token>                modifiers   = null;
+        List<AnnotationExpression> annotations = null;
+
         List[] twoLists = parseModifiers();
         if (twoLists != null)
             {
@@ -212,7 +213,8 @@ public class Parser
      * (This is just a continuation of the above method.)
      */
     TypeCompositionStatement parseTypeDeclarationStatementAfterModifiers(long lStartPos,
-            Expression exprCondition, Token doc, List<Token> modifiers, List<Annotation> annotations)
+                Expression exprCondition, Token doc, List<Token> modifiers,
+                List<AnnotationExpression> annotations)
         {
         // category & name
         Token category;
@@ -491,10 +493,10 @@ public class Parser
                 long lStartPos = peek().getStartPosition();
 
                 // annotations
-                List<Annotation> annotations = null;
+                List<AnnotationExpression> annotations = null;
                 while (true)
                     {
-                    Annotation annotation = parseAnnotation(false);
+                    AnnotationExpression annotation = parseAnnotation(false);
                     if (annotation == null)
                         {
                         break;
@@ -741,8 +743,9 @@ public class Parser
         // method starts with annotations/modifiers
         // property starts with annotations/modifiers
         // type-composition starts with annotations/modifiers
-        List<Token>      modifiers   = null;
-        List<Annotation> annotations = null;
+        List<Token>                modifiers   = null;
+        List<AnnotationExpression> annotations = null;
+
         List[] twoLists = parseModifiers(true);
         if (twoLists != null)
             {
@@ -778,7 +781,7 @@ public class Parser
                 // evaluate annotations
                 if (annotations != null)
                     {
-                    for (Annotation annotation : annotations)
+                    for (AnnotationExpression annotation : annotations)
                         {
                         annotation.log(m_errorListener, Severity.ERROR, Compiler.ANNOTATION_UNEXPECTED);
                         }
@@ -1084,7 +1087,8 @@ public class Parser
      *
      * @return a VariableDeclarationStatement
      */
-    Statement parseVariableDeclarationAfterName(List<Annotation> annotations, TypeExpression type, Token name)
+    Statement parseVariableDeclarationAfterName(List<AnnotationExpression> annotations,
+                                                TypeExpression type, Token name)
         {
         Expression value = null;
         Token      op    = match(Id.ASN);
@@ -1099,7 +1103,7 @@ public class Parser
             {
             for (int i = annotations.size() - 1; i >= 0; --i)
                 {
-                Annotation annotation = annotations.get(i);
+                AnnotationExpression annotation = annotations.get(i);
                 type = new AnnotatedTypeExpression(annotation, type);
                 }
             }
@@ -1123,8 +1127,8 @@ public class Parser
      *
      * @return a MethodDeclarationStatement
      */
-    MethodDeclarationStatement parseMethodDeclarationAfterName(long lStartPos,
-            Expression exprCondition, Token doc, List<Token> modifiers, List<Annotation> annotations,
+    MethodDeclarationStatement parseMethodDeclarationAfterName(long lStartPos, Expression exprCondition,
+            Token doc, List<Token> modifiers, List<AnnotationExpression> annotations,
             List<Parameter> typeVars, Token conditional, List<Parameter> returns, Token name)
         {
         List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false, true);
@@ -1167,7 +1171,7 @@ public class Parser
      */
     PropertyDeclarationStatement parsePropertyDeclarationFinish(long lStartPos,
             Expression exprCondition, Token doc, List<Token> modifiers,
-            List<Annotation> annotations, TypeExpression type, Token name)
+            List<AnnotationExpression> annotations, TypeExpression type, Token name)
         {
         Token          tokAsn = null;
         Expression     value  = null;
@@ -4232,7 +4236,7 @@ public class Parser
      */
     AnnotatedTypeExpression parseAnnotatedTypeExpression()
         {
-        Annotation annotation = parseAnnotation(true);
+        AnnotationExpression annotation = parseAnnotation(true);
         TypeExpression type = parseTypeExpression();
 
         return new AnnotatedTypeExpression(annotation, type);
@@ -4431,10 +4435,10 @@ public class Parser
      */
     List[] parseModifiers(boolean couldBeProperty)
         {
-        List<Token>      modifiers   = null;
-        List<Annotation> annotations = null;
-        boolean          err         = false;
-        Token            access      = null;
+        List<Token>                modifiers   = null;
+        List<AnnotationExpression> annotations = null;
+        boolean                    err         = false;
+        Token                      access      = null;
         while (true)
             {
             switch (peek().getId())
@@ -4522,7 +4526,7 @@ public class Parser
      *
      * @return an annotation, or null if no annotation was encountered
      */
-    Annotation parseAnnotation(boolean required)
+    AnnotationExpression parseAnnotation(boolean required)
         {
         long lStartPos = peek().getStartPosition();
         if (match(Id.AT, required) == null)
@@ -4545,7 +4549,7 @@ public class Parser
             }
 
         long lEndPos = args == null ? type.getEndPosition() : getLastMatch().getEndPosition();
-        return new Annotation(type, args, lStartPos, lEndPos);
+        return new AnnotationExpression(type, args, lStartPos, lEndPos);
         }
 
     /**

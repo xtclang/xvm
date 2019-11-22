@@ -3,10 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.ArrayList;
 import java.util.List;
 
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -74,23 +72,8 @@ public class VariableDeclarationStatement
      */
     public boolean hasRefAnnotations()
         {
-        return m_listRefAnnotations != null && !m_listRefAnnotations.isEmpty();
-        }
-
-    /**
-     * @return true iff the variable is known to be final
-     */
-    public boolean isFinal()
-        {
-        return m_fFinal;
-        }
-
-    /**
-     * @return true iff the variable is known to be Injected
-     */
-    public boolean isInjected()
-        {
-        return m_fInjected;
+        return type instanceof AnnotatedTypeExpression &&
+                !((AnnotatedTypeExpression) type).getRefAnnotations().isEmpty();
         }
 
     /**
@@ -169,60 +152,10 @@ public class VariableDeclarationStatement
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
-        // before validating the type, disassociate any annotations that do not apply to the
-        // underlying type
-        ConstantPool   pool      = pool();
-        TypeExpression typeOld   = type;
-        TypeExpression typeEach  = typeOld;
-        boolean        fVar      = false;
-        while (typeEach != null)
-            {
-            if (typeEach instanceof AnnotatedTypeExpression)
-                {
-                Annotation             annoAst = ((AnnotatedTypeExpression) typeEach).getAnnotation();
-                org.xvm.asm.Annotation annoAsm = annoAst.ensureAnnotation(pool());
-                if (annoAsm.containsUnresolved())
-                    {
-                    // this can only happen if there was an error already reported
-                    return null;
-                    }
-
-                TypeConstant typeInto = annoAsm.getAnnotationType().getExplicitClassInto();
-                if (typeInto.isIntoVariableType())
-                    {
-                    // steal the annotation from the type held _in_ the variable
-                    ((AnnotatedTypeExpression) typeEach).disassociateAnnotation();
-
-                    // add the annotation to the type _of_ the variable implementation itself
-                    if (m_listRefAnnotations == null)
-                        {
-                        m_listRefAnnotations = new ArrayList<>();
-                        }
-                    m_listRefAnnotations.add(annoAst);
-                    fVar |= typeInto.getIntoVariableType().isA(pool.typeVar());
-
-                    Constant clzAnno = annoAsm.getAnnotationClass();
-                    if (clzAnno.equals(pool.clzInject()))
-                        {
-                        if (m_fInjected)
-                            {
-                            // TODO log error
-                            }
-
-                        // @Inject implies assignment & final
-                        m_fFinal = m_fInjected = true;
-                        }
-                    else if (clzAnno.equals(pool.clzFinal()))
-                        {
-                        m_fFinal = true;
-                        }
-                    }
-                }
-
-            typeEach = typeEach.unwrapIntroductoryType();
-            }
-
+        ConstantPool   pool    = pool();
+        TypeExpression typeOld = type;
         TypeExpression typeNew = (TypeExpression) typeOld.validate(ctx, pool.typeType(), errs);
+
         if (typeNew == null)
             {
             return null;
@@ -235,24 +168,32 @@ public class VariableDeclarationStatement
 
         m_reg = new Register(typeVar);
         ctx.registerVar(name, m_reg, errs);
-        if (m_fInjected)
-            {
-            ctx.markVarWrite(name, errs);
-            m_reg.markEffectivelyFinal();
-            }
 
-        // for DVAR registers, specify the DVAR "register type" (separate from the type of the value
-        // that gets held in the register)
-        if (m_listRefAnnotations != null)
+        if (typeNew instanceof AnnotatedTypeExpression)
             {
-            TypeConstant typeReg = pool.ensureParameterizedTypeConstant(
-                    fVar ? pool.typeVar() : pool.typeRef(), typeVar);
-            for (int i = m_listRefAnnotations.size() - 1; i >= 0; --i)
+            AnnotatedTypeExpression exprAnno = (AnnotatedTypeExpression) typeNew;
+
+            if (exprAnno.isInjected())
                 {
-                typeReg = pool.ensureAnnotatedTypeConstant(
-                        typeReg, m_listRefAnnotations.get(i).ensureAnnotation(pool));
+                ctx.markVarWrite(name, errs);
+                m_reg.markEffectivelyFinal();
                 }
-            m_reg.specifyRegType(typeReg);
+
+            // for DVAR registers, specify the DVAR "register type" (separate from the type of the value
+            // that gets held in the register)
+            List<AnnotationExpression> listRefAnnotations = exprAnno.getRefAnnotations();
+            if (listRefAnnotations != null)
+                {
+                boolean fVar = exprAnno.isVar();
+                TypeConstant typeReg = pool.ensureParameterizedTypeConstant(
+                        fVar ? pool.typeVar() : pool.typeRef(), typeVar);
+                for (int i = listRefAnnotations.size() - 1; i >= 0; --i)
+                    {
+                    typeReg = pool.ensureAnnotatedTypeConstant(
+                            typeReg, listRefAnnotations.get(i).ensureAnnotation(pool));
+                    }
+                m_reg.specifyRegType(typeReg);
+                }
             }
 
         return this;
@@ -312,11 +253,8 @@ public class VariableDeclarationStatement
     protected Token          name;
     protected boolean        term;
 
-    private transient boolean          m_fFinal;
-    private transient boolean          m_fInjected;
-    private transient Register         m_reg;
-    private transient List<Annotation> m_listRefAnnotations;
-    private transient NameExpression   m_exprName;
+    private transient Register       m_reg;
+    private transient NameExpression m_exprName;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VariableDeclarationStatement.class, "type");
     }

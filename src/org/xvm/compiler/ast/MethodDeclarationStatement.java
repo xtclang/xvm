@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -47,21 +48,21 @@ public class MethodDeclarationStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public MethodDeclarationStatement(long                 lStartPos,
-                                      long                 lEndPos,
-                                      Expression           condition,
-                                      List<Token>          modifiers,
-                                      List<Annotation>     annotations,
-                                      List<Parameter>      typeParams,
-                                      Token                conditional,
-                                      List<Parameter>      returns,
-                                      Token                name,
-                                      List<TypeExpression> redundant,
-                                      List<Parameter>      params,
-                                      StatementBlock       body,
-                                      Token                tokFinally,
-                                      StatementBlock       bodyFinally,
-                                      Token                doc)
+    public MethodDeclarationStatement(long                       lStartPos,
+                                      long                       lEndPos,
+                                      Expression                 condition,
+                                      List<Token>                modifiers,
+                                      List<AnnotationExpression> annotations,
+                                      List<Parameter>            typeParams,
+                                      Token                      conditional,
+                                      List<Parameter>            returns,
+                                      Token                      name,
+                                      List<TypeExpression>       redundant,
+                                      List<Parameter>            params,
+                                      StatementBlock             body,
+                                      Token                      tokFinally,
+                                      StatementBlock             bodyFinally,
+                                      Token                      doc)
         {
         super(lStartPos, lEndPos);
 
@@ -305,7 +306,7 @@ public class MethodDeclarationStatement
                 ConstantPool pool         = container.getConstantPool();
 
                 // build array of annotations
-                org.xvm.asm.Annotation[] aAnnotations = buildAnnotations(pool);
+                Annotation[] aAnnotations = buildAnnotations(pool);
 
                 // build array of return types
                 org.xvm.asm.Parameter[] aReturns;
@@ -436,7 +437,7 @@ public class MethodDeclarationStatement
                     {
                     // this is a short-hand property method
                     PropertyStructure property = (PropertyStructure) container;
-                    List<Annotation> annotations =
+                    List<AnnotationExpression> annotations =
                         ((PropertyDeclarationStatement) getParent().getParent()).annotations; // TODO: replace
 
                     MethodStructure methodSuper = findRefMethod(property, annotations, sName, params, errs);
@@ -444,9 +445,9 @@ public class MethodDeclarationStatement
                         {
                         if (annotations != null)
                             {
-                            for (Annotation anno : annotations)
+                            for (AnnotationExpression anno : annotations)
                                 {
-                                TypeConstant type = anno.getType().getTypeConstant();
+                                TypeConstant type = anno.toTypeExpression().getTypeConstant();
                                 if (type != null && type.containsUnresolved())
                                     {
                                     mgr.requestRevisit();
@@ -502,7 +503,7 @@ public class MethodDeclarationStatement
                     org.xvm.asm.Parameter[] aParams = buildParameters(pool);
 
                     // the parameters were already matched; no need to re-check
-                    org.xvm.asm.Annotation[] annos = new org.xvm.asm.Annotation[]
+                    Annotation[] annos = new Annotation[]
                             {pool.ensureAnnotation(pool.clzOverride())};
                     MethodStructure method = container.createMethod(
                             false, methodSuper.getAccess(), annos, aReturns, sName, aParams,
@@ -582,9 +583,9 @@ public class MethodDeclarationStatement
                     : aReturns[0]).getType();
             while (typeRet instanceof AnnotatedTypeConstant)
                 {
-                AnnotatedTypeConstant  typeAnno = (AnnotatedTypeConstant) typeRet;
-                org.xvm.asm.Annotation anno     = typeAnno.getAnnotation();
-                TypeConstant           typeInto = anno.getAnnotationType().getExplicitClassInto();
+                AnnotatedTypeConstant typeAnno = (AnnotatedTypeConstant) typeRet;
+                Annotation            anno     = typeAnno.getAnnotation();
+                TypeConstant          typeInto = anno.getAnnotationType().getExplicitClassInto();
 
                 if (typeInto.isIntoClassType()    ||
                     typeInto.isIntoPropertyType() ||
@@ -684,13 +685,13 @@ public class MethodDeclarationStatement
 
     // ----- internal ------------------------------------------------------------------------------
 
-    protected org.xvm.asm.Annotation[] buildAnnotations(ConstantPool pool)
+    protected Annotation[] buildAnnotations(ConstantPool pool)
         {
-        org.xvm.asm.Annotation[] aAnnotations = org.xvm.asm.Annotation.NO_ANNOTATIONS;
+        Annotation[] aAnnotations = Annotation.NO_ANNOTATIONS;
         if (annotations != null)
             {
             int cAnnotations = annotations.size();
-            aAnnotations = new org.xvm.asm.Annotation[cAnnotations];
+            aAnnotations = new Annotation[cAnnotations];
             for (int i = 0; i < cAnnotations; ++i)
                 {
                 aAnnotations[i] = annotations.get(i).ensureAnnotation(pool);
@@ -742,7 +743,7 @@ public class MethodDeclarationStatement
      *
      * @return the matching methods structure of null if none is found
      */
-    protected MethodStructure findRefMethod(PropertyStructure property, List<Annotation> annotations,
+    protected MethodStructure findRefMethod(PropertyStructure property, List<AnnotationExpression> annotations,
             String sMethName, List<Parameter> params, ErrorListener errs)
         {
         ConstantPool pool = property.getConstantPool();
@@ -773,11 +774,11 @@ public class MethodDeclarationStatement
 
         if (annotations != null)
             {
-            for (Iterator<Annotation> iter = annotations.iterator(); iter.hasNext();)
+            for (Iterator<AnnotationExpression> iter = annotations.iterator(); iter.hasNext();)
                 {
-                Annotation annotation = iter.next();
+                AnnotationExpression annotation = iter.next();
 
-                String        sAnnotation = annotation.getType().getName();
+                String        sAnnotation = annotation.toTypeExpression().getName();
                 ClassConstant constClass  = (ClassConstant) pool.getImplicitlyImportedIdentity(sAnnotation);
                 if (constClass == null)
                     {
@@ -873,7 +874,7 @@ public class MethodDeclarationStatement
 
         if (annotations != null)
             {
-            for (Annotation annotation : annotations)
+            for (AnnotationExpression annotation : annotations)
                 {
                 sb.append(annotation)
                         .append(' ');
@@ -1057,17 +1058,17 @@ public class MethodDeclarationStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Expression           condition;
-    protected List<Token>          modifiers;
-    protected List<Annotation>     annotations;
-    protected List<Parameter>      typeParams;
-    protected Token                conditional;
-    protected List<Parameter>      returns;
-    protected Token                name;
-    protected List<TypeExpression> redundant;
-    protected List<Parameter>      params;
-    protected StatementBlock       body;
-    protected Token                doc;
+    protected Expression                 condition;
+    protected List<Token>                modifiers;
+    protected List<AnnotationExpression> annotations;
+    protected List<Parameter>            typeParams;
+    protected Token                      conditional;
+    protected List<Parameter>            returns;
+    protected Token                      name;
+    protected List<TypeExpression>       redundant;
+    protected List<Parameter>            params;
+    protected StatementBlock             body;
+    protected Token                      doc;
 
     private transient Token          m_tokFinally;
     private transient StatementBlock m_bodyFinally;

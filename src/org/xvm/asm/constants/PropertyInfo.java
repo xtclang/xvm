@@ -1179,6 +1179,19 @@ public class PropertyInfo
         return FInjected.booleanValue();
         }
 
+    /**
+     * @return the injected resource name
+     */
+    public String getInjectedResourceName()
+        {
+        assert isInjected();
+
+        Constant[] aParams = getRefAnnotations()[0].getParams();
+        return aParams.length > 0
+                ? ((StringConstant) aParams[0]).getValue()
+                : getName();
+        }
+
 
     // ----- helpers -------------------------------------------------------------------------------
 
