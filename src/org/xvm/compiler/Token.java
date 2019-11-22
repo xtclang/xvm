@@ -521,7 +521,7 @@ public class Token
         DO           ("do"             ),
         ELSE         ("else"           ),
         ENUM         ("enum"           ),
-        EXTENDS      ("extends"        ),
+        EXTENDS      ("extends"        , true),
         FINALLY      ("finally"        ),
         FOR          ("for"            ),
         FUNCTION     ("function"       ),

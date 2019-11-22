@@ -351,7 +351,14 @@ public class Parser
             // the keywords below require "match()" to extract them, because they are context
             // sensitive
             Token keyword;
-            if ((keyword = match(Id.IMPLEMENTS)) != null)
+            if ((keyword = match(Id.EXTENDS)) != null)
+                {
+                TypeExpression   type = parseTypeExpression();
+                List<Expression> args = parseArgumentList(false, false, false);
+                compositions.add(new Composition.Extends(exprCondition, keyword, type, args));
+                fAny = true;
+                }
+            else if ((keyword = match(Id.IMPLEMENTS)) != null)
                 {
                 do
                     {
@@ -419,16 +426,6 @@ public class Parser
                 {
                 switch (peek().getId())
                     {
-                    case EXTENDS:
-                        {
-                                         keyword = expect(Id.EXTENDS);
-                        TypeExpression   type    = parseTypeExpression();
-                        List<Expression> args    = parseArgumentList(false, false, false);
-                        compositions.add(new Composition.Extends(exprCondition, keyword, type, args));
-                        fAny = true;
-                        }
-                        break;
-
                     case IMPORT:
                     case IMPORT_EMBED:
                     case IMPORT_REQ:
