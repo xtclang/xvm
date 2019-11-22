@@ -1,4 +1,3 @@
-import reflect.ClassTemplate;
 import reflect.ClassTemplate.Composition;
 
 /**

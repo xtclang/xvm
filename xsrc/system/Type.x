@@ -338,7 +338,7 @@ interface Type<DataType, OuterType>
     /**
      * TODO
      */
-    @RO TypeTemplate typeConstant;
+    @RO TypeTemplate template;
 
 
     // ----- type operations -----------------------------------------------------------------------
