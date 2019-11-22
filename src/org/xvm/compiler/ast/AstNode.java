@@ -1961,6 +1961,7 @@ public abstract class AstNode
                         }
                     else
                         {
+                        assert next instanceof AstNode;
                         value = next;
                         return true;
                         }

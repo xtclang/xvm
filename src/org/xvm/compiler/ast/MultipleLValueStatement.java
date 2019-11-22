@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.Argument;
@@ -334,12 +335,12 @@ public class MultipleLValueStatement
         @Override
         public TypeConstant[] getImplicitTypes(Context ctx)
             {
-            Expression[]   aExprs = ensureExpressions();
-            int            cTypes = aExprs.length;
-            TypeConstant[] aTypes = new TypeConstant[cTypes];
+            List<Expression> listExprs = ensureExpressions();
+            int              cTypes    = listExprs.size();
+            TypeConstant[]   aTypes    = new TypeConstant[cTypes];
             for (int i = 0; i < cTypes; ++i)
                 {
-                aTypes[i] = aExprs[i].getImplicitType(ctx);
+                aTypes[i] = listExprs.get(i).getImplicitType(ctx);
                 }
             return aTypes;
             }
@@ -347,9 +348,9 @@ public class MultipleLValueStatement
         @Override
         public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
             {
-            int          cReq   = atypeRequired == null ? 0 : atypeRequired.length;
-            Expression[] aExprs = ensureExpressions();
-            int          cExprs = aExprs.length;
+            int              cReq      = atypeRequired == null ? 0 : atypeRequired.length;
+            List<Expression> listExprs = ensureExpressions();
+            int              cExprs    = listExprs.size();
             if (cReq > cExprs)
                 {
                 return TypeFit.NoFit;
@@ -358,7 +359,7 @@ public class MultipleLValueStatement
             TypeFit fit = TypeFit.Fit;
             for (int i = 0; i < cReq; ++i)
                 {
-                TypeFit fitSingle = aExprs[i].testFit(ctx, atypeRequired[i], errs);
+                TypeFit fitSingle = listExprs.get(i).testFit(ctx, atypeRequired[i], errs);
                 if (!fitSingle.isFit())
                     {
                     return TypeFit.NoFit;
@@ -375,13 +376,13 @@ public class MultipleLValueStatement
             {
             TypeFit fit = TypeFit.Fit;
 
-            Expression[]   aExpressions = ensureExpressions();
-            int            cExpressions = aExpressions.length;
-            TypeConstant[] atypeActual  = new TypeConstant[cExpressions];
-            int            cRequired    = atypeRequired == null ? 0 : atypeRequired.length;
-            for (int i = 0; i < cExpressions; ++i)
+            List<Expression> listExprs   = ensureExpressions();
+            int              cExprs      = listExprs.size();
+            TypeConstant[]   atypeActual = new TypeConstant[cExprs];
+            int              cRequired   = atypeRequired == null ? 0 : atypeRequired.length;
+            for (int i = 0; i < cExprs; ++i)
                 {
-                Expression exprOld = aExpressions[i];
+                Expression exprOld = listExprs.get(i);
                 Expression exprNew = exprOld.validate(ctx, i < cRequired ? atypeRequired[i] : null, errs);
                 if (exprNew == null)
                     {
@@ -392,7 +393,7 @@ public class MultipleLValueStatement
                     {
                     if (exprNew != exprOld)
                         {
-                        aExpressions[i] = exprNew;
+                        listExprs.set(i, exprNew);
                         }
                     if (atypeActual != null)
                         {
@@ -420,15 +421,15 @@ public class MultipleLValueStatement
         @Override
         public Assignable[] generateAssignables(Context ctx, Code code, ErrorListener errs)
             {
-            Expression[] aExprs = ensureExpressions();
-            int          cExprs = aExprs.length;
-            Assignable[] aLVals = new Assignable[cExprs];
+            List<Expression> listExprs = ensureExpressions();
+            int              cExprs    = listExprs.size();
+            Assignable[]     aLVals    = new Assignable[cExprs];
             for (int i = 0; i < cExprs; ++i)
                 {
                 // TODO check grounding labels? for each one, we need to pipe RValues into "the blackhole" or into
                 // TODO the underlying assignable, which means that we'll need a temporary to hold the value
 
-                aLVals[i] = aExprs[i].generateAssignable(ctx, code, errs);
+                aLVals[i] = listExprs.get(i).generateAssignable(ctx, code, errs);
                 }
             return aLVals;
             }
@@ -530,23 +531,23 @@ public class MultipleLValueStatement
             }
 
         /**
-         * @return an array of underlying LValue expressions
+         * @return a list of underlying LValue expressions
          */
-        Expression[] ensureExpressions()
+        List<Expression> ensureExpressions()
             {
-            Expression[] aExprs = this.exprs;
-            if (aExprs == null)
+            List<Expression> listExprs = this.exprs;
+            if (listExprs == null)
                 {
                 List<AstNode> LVals  = MultipleLValueStatement.this.LVals;
                 int           cExprs = LVals.size();
-                aExprs = new Expression[cExprs];
+                listExprs = new ArrayList<>(cExprs);
                 for (int i = 0; i < cExprs; ++i)
                     {
-                    aExprs[i] = LVals.get(i).getLValueExpression();
+                    listExprs.add(LVals.get(i).getLValueExpression());
                     }
-                this.exprs = aExprs;
+                this.exprs = listExprs;
                 }
-            return aExprs;
+            return listExprs;
             }
 
         /**
@@ -560,11 +561,10 @@ public class MultipleLValueStatement
             {
             assert expr != null;
 
-            Expression[] aExprs = ensureExpressions();
-            int          cExprs = aExprs.length;
-            for (int i = 0; i < cExprs; ++i)
+            List<Expression> listExprs = ensureExpressions();
+            for (int i = 0, c = listExprs.size(); i < c; ++i)
                 {
-                if (expr == aExprs[i])
+                if (expr == listExprs.get(i))
                     {
                     return i;
                     }
@@ -578,7 +578,7 @@ public class MultipleLValueStatement
             return getParent().toString();
             }
 
-        protected Expression[] exprs;
+        protected List<Expression> exprs;
         }
 
 
