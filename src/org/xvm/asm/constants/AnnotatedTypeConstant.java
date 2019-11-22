@@ -184,9 +184,9 @@ public class AnnotatedTypeConstant
     /**
      * @return the class of the annotation
      */
-    public Constant getAnnotationClass()
+    public IdentityConstant getAnnotationClass()
         {
-        return m_annotation.getAnnotationClass();
+        return (IdentityConstant) m_annotation.getAnnotationClass();
         }
 
     /**

@@ -200,8 +200,7 @@ public abstract class ClassTemplate
             }
 
         // replace the TerminalType of the typeActual with the inception type
-        Function<TypeConstant, TypeConstant> transformer =
-                new Function<TypeConstant, TypeConstant>()
+        Function<TypeConstant, TypeConstant> transformer = new Function<>()
             {
             public TypeConstant apply(TypeConstant type)
                 {
@@ -726,7 +725,7 @@ public abstract class ClassTemplate
                     switch (invokeNative1(frame, method, hTarget, ahArg[0], Op.A_STACK))
                         {
                         case Op.R_NEXT:
-                            return frame.assignTuple(iReturn, new ObjectHandle[]{frame.popStack()});
+                            return frame.assignTuple(iReturn, frame.popStack());
 
                         case Op.R_EXCEPTION:
                             return Op.R_EXCEPTION;
@@ -762,7 +761,7 @@ public abstract class ClassTemplate
                     switch (invokeNativeN(frame, method, hTarget, ahArg, Op.A_STACK))
                         {
                         case Op.R_NEXT:
-                            return frame.assignTuple(iReturn, new ObjectHandle[]{frame.popStack()});
+                            return frame.assignTuple(iReturn, frame.popStack());
 
                         case Op.R_EXCEPTION:
                             return Op.R_EXCEPTION;

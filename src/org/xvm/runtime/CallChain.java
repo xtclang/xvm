@@ -144,8 +144,10 @@ public class CallChain
         {
         if (isNative())
             {
-            return hTarget.getTemplate().
-                invokeNativeN(frame, getTop(), hTarget, ahArg, iReturn);
+            ClassTemplate template = hTarget.getTemplate();
+            return ahArg.length == 1
+                    ? template.invokeNative1(frame, getTop(), hTarget, ahArg[0], iReturn)
+                    : template.invokeNativeN(frame, getTop(), hTarget, ahArg, iReturn);
             }
 
         ObjectHandle[] ahVar = Utils.ensureSize(ahArg, getTop().getMaxVars());
