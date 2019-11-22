@@ -153,4 +153,10 @@ package reflect
                 }
             }
         }
+
+    /**
+     * SourceCodeInfo provides information about the name of the file that contains source code,
+     * and the 0-based line number within that file that the relevant source code begins.
+     */
+    const SourceCodeInfo(String sourceFile, Int lineNumber);
     }

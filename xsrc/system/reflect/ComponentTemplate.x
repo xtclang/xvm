@@ -1,19 +1,19 @@
 /**
- * A Template is a representation of the compiled form of an Ecstasy `module`, `package`, `class`,
+ * A ComponentTemplate is a representation of the compiled form of an Ecstasy `module`, `package`, `class`,
  * `const`, `enum`, `service`, `mixin`, or `interface`, or the constructs recursively contained
  * therein.
  *
  * Runtime objects, such as classes and functions, may be able to provide a template, but the
  * opposite is never true; any such relationship is unidirectional.
  */
-interface Template
+interface ComponentTemplate
     {
     /**
-     * The Template Format enumerates the various forms of
+     * The ComponentTemplate Format enumerates the various forms of
      *
      * Those beginning with "Reserved_" are reserved, and must not be used.
      */
-    enum Format<TemplateType extends Template>(Boolean implicitlyStatic, Boolean autoNarrowingAllowed)
+    enum Format<TemplateType extends ComponentTemplate>(Boolean implicitlyStatic, Boolean autoNarrowingAllowed)
         {
         Interface  <ClassTemplate      >(False, True ),
         Class      <ClassTemplate      >(False, True ),
@@ -27,8 +27,8 @@ interface Template
         TypeDef    <TypedefTemplate    >(False, False),
         Property   <PropertyTemplate   >(False, False),
         Method     <MethodTemplate     >(False, False),
-        Reserved_C <Template           >(False, False),
-        Reserved_D <Template           >(False, False),
+        Reserved_C <ComponentTemplate  >(False, False),
+        Reserved_D <ComponentTemplate  >(False, False),
         MultiMethod<MultiMethodTemplate>(False, False),
         File       <FileTemplate       >(False, False)
         }
@@ -42,14 +42,14 @@ interface Template
      * The template within which this template exists. For runtime templates, only the file template
      * will have no parent.
      */
-    @RO Template!? parent;
+    @RO ComponentTemplate!? parent;
 
     /**
      * The first ClassTemplate encountered while walking up the parentage chain of this template.
      */
     @RO ClassTemplate? containingClass.get()
         {
-        Template!? parent = this.parent;
+        ComponentTemplate!? parent = this.parent;
         while (parent != Null)
             {
             if (parent.is(ClassTemplate))
@@ -97,5 +97,5 @@ interface Template
     /**
      * Iterate over the child templates of this template.
      */
-    Iterator<Template!> children();
+    Iterator<ComponentTemplate!> children();
     }

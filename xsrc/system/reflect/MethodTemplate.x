@@ -2,7 +2,7 @@
  * Represents the compiled information for a method.
  */
 interface MethodTemplate
-        extends Template
+        extends ComponentTemplate
     {
     @Override
     @RO MultiMethodTemplate!? parent;

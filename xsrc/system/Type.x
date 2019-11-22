@@ -10,6 +10,7 @@ import reflect.Method;
 import reflect.MultiMethod;
 import reflect.Parameter;
 import reflect.Property;
+import reflect.TypeTemplate;
 
 /**
  * The Type interface represents an Ecstasy data type. There is nothing more central to a language
@@ -208,103 +209,6 @@ interface Type<DataType, OuterType>
      */
     @RO Map<String, Type!<>> childTypes;
 
-//    /**
-//     * A class contains a variety of items, each identified by a unique name:
-//     *
-//     * * Classes (including packages)
-//     * * Properties
-//     * * Methods (grouped together by name as a {@link MultiMethod}
-//     * * Functions (grouped together by name as a {@link MultiFunction}
-//     */
-//    @Lazy Map<String, NamedChild> childrenByName.calc()
-//        {
-//        ListMap<String, NamedChild> map = new ListMap();
-//        map.putAll(classesByName);
-//        map.putAll(propertiesByName);
-//        map.putAll(methodsByName);
-//        map.putAll(functionsByName);
-//
-//        assert map.size == classesByName.size
-//                         + propertiesByName.size
-//                         + methodsByName.size
-//                         + functionsByName.size;
-//
-//        return map.ensureImmutable();
-//        }
-//
-//    /**
-//     * The child classes, by name. This is a sub-set of the contents of {@link childrenByName}.
-//     */
-//    @Lazy Map<String, Class!<>> classesByName.calc()
-//        {
-//        ListMap<String, Class<>> map = new ListMap();
-//        for (Class<> class_ : classes)
-//            {
-//            assert !map.contains(class_.name);
-//            map.put(class_.name, class_);
-//            }
-//
-//        return map.ensureImmutable();
-//        }
-//
-//    /**
-//     * The class properties, by name. This is a sub-set of the contents of {@link childrenByName}.
-//     */
-//    @Lazy Map<String, Property> propertiesByName.calc()
-//        {
-//        ListMap<String, Property> map = new ListMap();
-//        for (Property property : properties)
-//            {
-//            assert !map.contains(property.name);
-//            map.put(property.name, property);
-//            }
-//
-//        return map.ensureImmutable();
-//        }
-//
-//    /**
-//     * The class methods, by name. This is a sub-set of the contents of {@link childrenByName}.
-//     */
-//    @Lazy Map<String, MultiMethod> methodsByName.calc()
-//        {
-//        ListMap<String, MultiMethod> map = new ListMap();
-//        for (Method method : methods)
-//            {
-//            if (MultiMethod multi := map.get(method.name))
-//                {
-//                map.put(method.name, multi.add(method));
-//                }
-//            else
-//                {
-//                map.put(method.name, new MultiMethod([method]));
-//                }
-//            }
-//
-//        return map.ensureImmutable();
-//        }
-//
-//    /**
-//     * The child function literals, by name. This is a sub-set of the contents of {@link
-//     * childrenByName}.
-//     */
-//    @Lazy Map<String, MultiFunction> functionsByName.calc()
-//        {
-//        ListMap<String, MultiFunction> map = new ListMap();
-//        for (Function function_ : functions)
-//            {
-//            if (MultiFunction multi := map.get(function_.name))
-//                {
-//                map.put(function_.name, multi.add(function_));
-//                }
-//            else
-//                {
-//                map.put(function_.name, new MultiFunction([function_]));
-//                }
-//            }
-//
-//        return map.ensureImmutable();
-//        }
-
     /**
      * Determine if the type non-ambiguously represents a class, and if so, obtain the class. The
      * class can be ambiguous, for example, if the type is a intersection type and the two
@@ -430,6 +334,11 @@ interface Type<DataType, OuterType>
      * Obtain the `Pure` form of this type.
      */
     Type!<> purify();
+
+    /**
+     * TODO
+     */
+    @RO TypeTemplate typeConstant;
 
 
     // ----- type operations -----------------------------------------------------------------------

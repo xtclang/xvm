@@ -27,10 +27,10 @@ import reflect.ClassTemplate.Composition;
  * A Class is intricately defined by a [Composition]. A Composition includes the discrete steps
  * of how the Class definition was formed; each step is like a step in a recipe, providing an
  * ingredient and the manner in which that ingredient is contributed to the resulting whole. The
- * base ingredient form is the [Template], which typically represents a binary structure that
- * corresponds to (i.e. "is the compiled form of") a class, or a member of a class. For  convenience
- * purposes, some of the information from the composition or the underlying templates is also made
- * available as part of the Class interface.
+ * base ingredient form is the [ComponentTemplate], which typically represents a binary structure
+ * that corresponds to (i.e. "is the compiled form of") a class, or a member of a class. For
+ * convenience purposes, some of the information from the composition or the underlying templates
+ * is also made available as part of the Class interface.
  *
  * A Class always provides four types:
  *
@@ -79,19 +79,27 @@ const Class<PublicType, ProtectedType extends PublicType,
                         StructType    extends Struct>
         incorporates conditional Enumeration<PublicType extends Enum>
     {
-    construct(Composition       composition,
-              Map<String, Type> formalTypes,
-              PublicType?       singleton    = Null,
-              Exception?        exception    = Null)
+    // ----- constructors --------------------------------------------------------------------------
+
+    /**
+     * Construct a `Class` based on a [Composition], the formal types of the class (if any), and
+     * (for singletons) a function that provides the singleton value.
+     *
+     * @param composition
+     * @param formalTypes
+     * @param obtainSingleton
+     */
+    construct(Composition            composition,
+              Map<String, Type>      formalTypes,
+              function PublicType()? obtainSingleton = Null)
         {
-        this.formalTypes  = formalTypes;
-        this.composition  = composition;
-        this.singleton    = singleton;
-        this.exception    = exception;
+        this.formalTypes     = formalTypes;
+        this.composition     = composition;
+        this.obtainSingleton = obtainSingleton;
         }
 
 
-    // ----- primary state -------------------------------------------------------------------------
+    // ----- attributes ----------------------------------------------------------------------------
 
     /**
      * The values for each of the formal types required by the class. The order of the entries in
@@ -105,25 +113,19 @@ const Class<PublicType, ProtectedType extends PublicType,
     Composition composition;
 
     /**
+     * The provider of the singleton instance. The singleton itself cannot be held in a property of
+     * the class, because Class is a `const`, and the singleton may be a `service` (which cannot be
+     * immutable, and thus a reference to a `service` cannot be held by a `const`).
+     */
+    private function PublicType()? obtainSingleton;
+
+    /**
      * Determine if the class is an virtual child class, which must be instantiated virtually.
      */
     Boolean virtualChild.get()
         {
         return composition.template.virtualChild;
         }
-
-    /**
-     * The singleton instance.
-     */
-    private PublicType? singleton;
-
-    /**
-     * The exception that occurred instantiating the singleton instance.
-     */
-    private Exception? exception;
-
-
-    // ----- helpers -------------------------------------------------------------------------------
 
     /**
      * Determine if the class defines a singleton, and if so, obtain that singleton. If a class is
@@ -137,174 +139,87 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     conditional PublicType isSingleton()
         {
-        throw exception?;
-        return True, singleton?;
-        return False;
+        function PublicType()? obtain = obtainSingleton;
+        return obtain == Null
+                ? False
+                : (True, obtain());
         }
 
-// TODO
-//    /**
-//     * Determine if the class of the referent implements the specified interface.
-//     *
-//     * Note: unlike the {@link instanceOf}, this method doesn't simply check if the referent's class
-//     * has all methods that the specified interface has. Instead, it returns true iff any of the
-//     * following conditions holds true:
-//     *  - the referent's class explicitly declares that it implements the specified interface, or
-//     *  - the referent's super class implements the specified interface (recursively), or
-//     *  - any of the interfaces that the referent's class declares to implement extends the
-//     *    specified interface (recursively)
-//     */
-//    Boolean implements_(Class interface_);
-//
-//    /**
-//     * Determine if the class of the referent extends (or is) the specified class.
-//     */
-//    Boolean extends_(Class class_);
-//
-//    /**
-//     * Determine if the class of the referent incorporates the specified mixin.
-//     */
-//    Boolean incorporates_(Class mixin_);
-//    // ----- calculated properties -----------------------------------------------------------------
-//
-//    /**
-//     * The type parameters for the class.
-//     */
-//    @Lazy Map<String, TypeParameter> typeParamsByName.calc()
-//        {
-//        ListMap<String, TypeParameter> map = new ListMap();
-//        for (TypeParameter param : typeParams)
-//            {
-//            assert !map.contains(param.name);
-//            map.put(param.name, param);
-//            }
-//
-//        return map.ensureImmutable();
-//        }
-//
-//    /**
-//     * Determine the super-class of this class, if any.
-//     *
-//     * * Other than the Class for `Object`, a Class whose category is Class will **always** have
-//     *   a super-class.
-//     * * A Class whose category is Module, Package, Const, Enum, or Service will **always** have a
-//     *   super-class.
-//     * * A Mixin _may_ have a super-class, which must be a `mixin`.
-//     * * An Interface will *never* have a super-class.
-//     */
-//    @Lazy Class!<>? superClass.calc()
-//        {
-//        if (category == INTERFACE)
-//            {
-//            return null;
-//            }
-//
-//        for (Composition step : composition)
-//            {
-//            if (step.action == Extends)
-//                {
-//                return step.ingredient;
-//                }
-//            }
-//
-//        return null;
-//        }
-//
-//    /**
-//     * Determine if this class "derives from" another class. A class derives from another class if
-//     * it (or something it derives from) extends the specified class, incorporates the specified
-//     * mixin, or implements the specified interface.
-//     */
-//    Boolean derivesFrom(Class!<> that)
-//        {
-//        if (&this == &that)
-//            {
-//            return true;
-//            }
-//
-//        for (Composition step : composition)
-//            {
-//            if (step.ingredient == that || step.ingredient.derivesFrom(that))
-//                {
-//                return true;
-//                }
-//            }
-//
-//        return false;
-//        }
-//
-//    /**
-//     * Determine if the class extends (or is) the specified class.
-//     */
-//    Boolean extends_(Class!<> that)
-//        {
-//        assert that.category != INTERFACE;
-//
-//        if (&this == &that)
-//            {
-//            return true;
-//            }
-//
-//        for (Composition step : composition)
-//            {
-//            if ((step.action == Extends && step.ingredient == that) ||
-//                (step.action != Implements && step.ingredient.extends_(that)))
-//                {
-//                return true;
-//                }
-//            }
-//
-//        return false;
-//        }
-//
-//    /**
-//     * Determine if the class implements the specified interface.
-//     */
-//    Boolean implements_(Class!<> that)
-//        {
-//        assert that.category == INTERFACE;
-//
-//        if (&this == &that)
-//            {
-//            return true;
-//            }
-//
-//        for (Composition step : composition)
-//            {
-//            if ((step.action == Implements && step.ingredient == that)
-//                    || step.ingredient.implements_(that))
-//                {
-//                return true;
-//                }
-//            }
-//
-//        return false;
-//        }
-//
-//    /**
-//     * Determine if the class incorporates the specified mixin.
-//     */
-//    Boolean incorporates_(Class!<> that)
-//        {
-//        assert that.category == MIXIN;
-//
-//        if (&this == &that)
-//            {
-//            return true;
-//            }
-//
-//        for (Composition step : composition)
-//            {
-//            if ((step.action == Incorporates && step.ingredient == that) ||
-//                (step.action != Implements && step.ingredient.incorporates_(that)))
-//                {
-//                return true;
-//                }
-//            }
-//
-//        return false;
-//        }
-//
+    /**
+     * Determine if the class of the referent extends (or is) the specified class.
+     *
+     * @param clz  the class to test if this class extends
+     *
+     * @return True iff this class extends the specified class
+     */
+    Boolean extends(Class!<> clz)
+        {
+        // one can only "incorporate" a mixin
+        if (clz.composition.template.format == Interface)
+            {
+            return False;
+            }
+
+        return this.PublicType.isA(clz.PublicType) && this.composition.extends(clz.composition);
+        }
+
+    /**
+     * Determine if the class of the referent incorporates the specified mixin.
+     *
+     * @param clz  the class to test if this class incorporates
+     *
+     * @return True iff this class incorporates the specified class
+     */
+    Boolean incorporates(Class!<> clz)
+        {
+        // one can only "incorporate" a mixin
+        if (clz.composition.template.format != Mixin)
+            {
+            return False;
+            }
+
+        return this.PublicType.isA(clz.PublicType) && this.composition.incorporates(clz.composition);
+        }
+
+    /**
+     * Determine if the class of the referent implements the specified interface.
+     *
+     * Note: Unlike [Type.isA], this method doesn't simply check if the referent's class
+     * has all methods that the specified interface has. Instead, it returns true iff any of the
+     * following conditions holds true:
+     *  - the referent's class explicitly declares that it implements the specified interface, or
+     *  - the referent's super class implements the specified interface (recursively), or
+     *  - any of the interfaces that the referent's class declares to implement extends the
+     *    specified interface (recursively)
+     *
+     * @param clz  the class to test if this class implements
+     *
+     * @return True iff this class implements the specified class (representing an interface)
+     */
+    Boolean implements(Class!<> clz)
+        {
+        // one can only "implement" an interface
+        if (clz.composition.template.format != Interface)
+            {
+            return False;
+            }
+
+        return this.PublicType.isA(clz.PublicType) && this.composition.implements(clz.composition);
+        }
+
+    /**
+     * Determine if this class "derives from" another class.
+     *
+     * @return True iff this (or something that this derives from) extends the specified class,
+     *         incorporates the specified mixin, or implements the specified interface
+     */
+    Boolean derivesFrom(Class!<> clz)
+        {
+        return &this == &clz
+                || this.extends(clz)
+                || this.incorporates(clz)
+                || this.implements(clz);
+        }
 
 
     // ----- conversions ---------------------------------------------------------------------------

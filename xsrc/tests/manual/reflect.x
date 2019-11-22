@@ -13,6 +13,7 @@ module TestReflection.xqiz.it
         testFuncs();
         testFuncs2();
         testChildTypes();
+        // TODO testEnum();
         }
 
     Function<<Int, String>, <Int>> foo()
@@ -307,6 +308,16 @@ module TestReflection.xqiz.it
             }
         }
 
+    void testEnum()
+        {
+        console.println("\n** testEnum");
+
+        console.println($"Boolean.count={Boolean.count}");
+        console.println($"Boolean.name={Boolean.name}");
+        console.println($"Boolean.values={Boolean.values}");
+        console.println($"Boolean.names={Boolean.names}");
+        }
+
     String formatType(Type type)
         {
         Type.Form form = type.form;
@@ -317,6 +328,7 @@ module TestReflection.xqiz.it
 
             case Class:
 // TODO CP assert Class clz := type.fromClass();
+
 //                Class.Composition cmp = clz.composition;
 //                while ((Annotation annotation, cmp) := cmp.deannotate())
 //                    {

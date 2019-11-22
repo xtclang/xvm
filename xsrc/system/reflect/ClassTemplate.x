@@ -3,13 +3,20 @@
  * `class`, `const`, `enum`, `service`, `mixin`, or `interface`.
  */
 interface ClassTemplate
-        extends Template
+        extends ComponentTemplate
         extends Composition
     {
     // ----- local types ---------------------------------------------------------------------------
 
     /**
-     * TODO
+     * A Composition represents the manner in which a Class is formed out of ClassTemplate objects.
+     * The purpose of separating the Class from the Composition reflects the complexities introduced
+     * by generic types, because the formation of the Class is dependent on its formal types --
+     * particularly with respect to _conditional incorporation_, but also with respect to the manner
+     * in which method call chains are formed out of methods whose parameter(s) or return type(s)
+     * are based on those formal types. As a result, the Composition is a necessary interposition
+     * that acts as a factory for Class instances, based on the values of the formal type parameters
+     * for the Class.
      */
     static interface Composition
         {
@@ -17,6 +24,299 @@ interface ClassTemplate
          * The underlying ClassTemplate representing the basis of the class composition.
          */
         @RO ClassTemplate template;
+
+        @RO TypeTemplate type;
+
+        /**
+         * An `Action` describes the manner in which one step of the class composition was achieved.
+         */
+        enum Action
+            {
+            /**
+             * AnnotatedBy - The specified `mixin` is applied "around" a class (preceding the
+             * members defined on the underlying `ClassTemplate` for this composition) in order to
+             * form a new class.
+             */
+            AnnotatedBy,
+            /**
+             * Extends - The underlying `ClassTemplate` for this composition `extends` (inherits
+             * from) another class. (This action does not apply to interfaces, despite the use of
+             * the `extends` keyword for defining interface inheritance; interface inheritance is
+             * represented by the `Implements` action in the compiled form of the code.)
+             */
+            Extends,
+            /**
+             * Implements - This represents interface inheritance. The `ingredient` must be an
+             * _interface_ type (i.e. not _class_ or _mixin_type).
+             */
+            Implements,
+            /**
+             * Delegates - This represents interface inheritance, and additionally, it represents
+             * the _delegation_ of all of the properties and methods _of_ the specified interface,
+             * to a reference of a compatible type (something that "is a" of that interface), which
+             * reference is obtained from a specified property of this composition.
+             */
+            Delegates,
+            /**
+             * MixesInto - The `ingredient` represents the constraint type for a `mixin`; it is the
+             * type that the mixin can be applied to as an annotation, or can be incorporated into.
+             */
+            MixesInto,
+            /**
+             * Incorporates - The `ingredient` specifies a `mixin` type that is incorporated into
+             * the resulting mixin or class.
+             */
+            Incorporates
+            }
+
+        /**
+         * A `Contribution` represents a single step in a compositional recipe. A class is composed
+         * as a series of composition steps.
+         */
+        static const Contribution(Action                     action,
+                                  Composition                ingredient,
+                                  PropertyTemplate?          delegatee = Null,
+                                  Map<String, TypeTemplate>? constraints = Null);
+
+        /**
+         * A composition is represented by a sequence of contributions.
+         * REVIEW can we use Contribution... instead?
+         */
+        @RO Contribution[] contribs;
+
+        /**
+         * Determine if this composition extends (or is) the specified class.
+         *
+         * @param composition  the composition representing the super class
+         *
+         * @return True iff this Composition extends the specified class
+         */
+        Boolean extends(Composition! composition)
+            {
+            // interfaces do not extend and cannot be extended
+            if (this.template.format == Interface || composition.template.format == Interface)
+                {
+                return false;
+                }
+
+            if (&this == &composition)
+                {
+                return True;
+                }
+
+            // unwrap any annotations from the composition that we are testing extension of
+            while ((Annotation annotation, composition) := composition.deannotate())
+                {
+                if (!this.incorporates(annotation.template))
+                    {
+                    return False;
+                    }
+
+                if (&this == &composition)
+                    {
+                    return True;
+                    }
+                }
+
+            // one can only "extend" a class
+            if (!composition.is(ClassTemplate))
+                {
+                return False;
+                }
+
+            // test whether it is possible for this to extend whatever the class template represents
+            switch (this.template.format, composition.format)
+                {
+                // any class can extend a class
+                case (Class    , Class):
+                case (Const    , Class):
+                case (Enum     , Class):
+                case (EnumValue, Class):
+                case (Service  , Class):
+                case (Package  , Class):
+                case (Module   , Class):
+
+                // a const (including Enum, EnumValue, Package, Module) can extend a const
+                case (Const    , Const):
+                case (Enum     , Const):
+                case (EnumValue, Const):
+                case (Package  , Const):
+                case (Module   , Const):
+
+                // only an EnumValue can extend an enum
+                case (EnumValue, Enum):
+
+                // only a mixin can extend a mixin
+                case (Mixin, Mixin):
+
+                // only a service can extend a service
+                case (Service, Service):
+                    break;
+
+                default:
+                    return False;
+                }
+
+            // search through the composition of this class to find the specified super class
+            for (val contrib : this.template.contribs)
+                {
+                if (contrib.ingredient.extends(composition))
+                    {
+                    return True;
+                    }
+                }
+
+            return False;
+            }
+
+        /**
+         * Determine if this composition incorporates (or is) the specified mixin.
+         *
+         * @param composition  the composition representing the mixin
+         *
+         * @return True iff this Composition incorporates the specified mixin
+         * @return (conditional) True iff the incorporation is conditional
+         */
+        conditional Boolean incorporates(Composition! composition)
+            {
+            Boolean fConditional = False;
+
+            // interfaces do not incorporate and cannot be incorporated; only a mixin can be
+            // incorporated
+            if (this.template.format == Interface || composition.template.format != Mixin)
+                {
+                return false;
+                }
+
+            if (&this == &composition)
+                {
+                return True, False;
+                }
+
+            // unwrap any annotations from the composition that we are testing extension of
+            while ((Annotation annotation, composition) := composition.deannotate())
+                {
+                if (Boolean fCond := this.incorporates(annotation.template))
+                    {
+                    fConditional |= fCond;
+                    }
+                else
+                    {
+                    return False;
+                    }
+
+                if (&this == &composition)
+                    {
+                    return True, fConditional;
+                    }
+                }
+
+            if (!composition.is(ClassTemplate))
+                {
+                return False;
+                }
+
+            // search through the composition of this class to find the specified mixin
+            for (val contrib : this.template.contribs)
+                {
+                if (Boolean fCond := contrib.ingredient.incorporates(composition))
+                    {
+                    fConditional |= fCond |
+                            (contrib.action == Incorporates && contrib.constraints != Null);
+                    return True, fConditional;
+                    }
+                }
+
+            return False;
+            }
+
+        /**
+         * Determine if this composition implements (or is) the specified interface.
+         *
+         * Note: Unlike [Type.isA], this method doesn't simply check if the referent's class
+         * has all methods that the specified interface has. Instead, it returns true iff any of the
+         * following conditions holds true:
+         *  - the referent's class explicitly declares that it implements the specified interface, or
+         *  - the referent's super class implements the specified interface (recursively), or
+         *  - any of the interfaces that the referent's class declares to implement extends the
+         *    specified interface (recursively)
+         *
+         * @param composition  the composition representing the interface
+         *
+         * @return True iff this Composition implements the specified interface
+         */
+        Boolean implements(Composition! composition)
+            {
+            if (&this == &composition)
+                {
+                return True;
+                }
+
+            // one can only "implement" an interface
+            // REVIEW implication of the possibility of an @Annotated interface
+            if (!(composition.is(ClassTemplate) && composition.format == Interface))
+                {
+                return False;
+                }
+
+            // search through the composition of this class to find the specified interface
+            for (val contrib : contribs)
+                {
+                if (contrib.ingredient.implements(composition))
+                    {
+                    return True;
+                    }
+                }
+
+            return False;
+            }
+
+        /**
+         * Determine if this composition "derives from" (or is) the specified composition.
+         *
+         * @param composition  a composition representing an class, mixin, or interface
+         *
+         * @return True iff this (or something that this derives from) extends the specified class,
+         *         incorporates the specified mixin, or implements the specified interface
+         */
+        Boolean derivesFrom(Composition! composition)
+            {
+            return &this == &composition
+                    || this.extends(composition)
+                    || this.incorporates(composition)
+                    || this.implements(composition);
+            }
+
+        /**
+         * Determine if this composition has a super-class.
+         *
+         * * Other than the Class for `Object`, a Class whose category is Class will **always** have
+         *   a super-class.
+         * * A Class whose category is Module, Package, Const, Enum, or Service will **always** have a
+         *   super-class.
+         * * A Mixin _may_ have a super-class, which must be a `mixin`.
+         * * An Interface will *never* have a super-class.
+         *
+         * @return True iff this Composition has a super class
+         * @return (conditional) the ClassTemplate of the super class
+         */
+        conditional ClassTemplate hasSuper()
+            {
+            if (template.format == Interface)
+                {
+                return False;
+                }
+
+            for (Contribution contrib : contribs)
+                {
+                if (contrib.action == Extends)
+                    {
+                    return True, contrib.ingredient.as(ClassTemplate);
+                    }
+                }
+
+            return False;
+            }
 
         /**
          * Produce a new composition that represents an annotation of an existing composition.
@@ -79,10 +379,33 @@ interface ClassTemplate
         }
 
 
-    // ----- stuff ----------------------------------------------------------------------------
+    // ----- attributes ----------------------------------------------------------------------------
 
     /**
-     * TODO
+     * Determine if the class is an inner class, which must be instantiated virtually.
+     *
+     * Consider the following example:
+     *
+     *     class BaseParent
+     *         {
+     *         class Child {}
+     *         }
+     *
+     *     class DerivedParent
+     *             extends BaseParent
+     *         {
+     *         @Override
+     *         class Child {}
+     *         }
+     *
+     *     BaseParent       parent1 = new BaseParent();
+     *     BaseParent.Child child1  = new parent1.Child();       // creates a BaseParent.Child
+     *
+     *     BaseParent       parent2 = new DerivedParent();
+     *     BaseParent.Child child2  = new parent2.Child();       // creates a DerivedParent.Child
+     *
+     * In the example, even though the reference was held in a variable of type BaseParent, the
+     * virtual type was used when instantiating the child.
      */
     @RO Boolean virtualChild;
 
@@ -90,62 +413,20 @@ interface ClassTemplate
      * TODO
      */
     @RO Boolean singleton;
-    }
 
-
-//    @RO Boolean virtualChild;
-//
-//    // THIS IS JUST FOR DISCUSSION - not an actual plan
-//    Template[] templates;
-//
-////    // ----- data types ----------------------------------------------------------------------------
-////
 ////    /**
 ////     * A class exists within a namespace. The namespace can be one of several Ecstasy language
 ////     * structures.
 ////     */
 ////    typedef Module | Package | Class<> | Property | Method | Function Namespace;
 //
-//    /**
-//     * A class is of a given category of Ecstasy language structures. These categories are not
-//     * entirely discrete; an Enum, for example, is a Const.
-//     */
-//    enum Category {MODULE, PACKAGE, CLASS, CONST, ENUM, SERVICE, MIXIN, INTERFACE}
-//
 ////    /**
 ////     * A class contains other named child structures.
 ////     */
 ////    typedef Class<> | MultiMethod | Property | MultiFunction NamedChild;
 ////
-//    /**
-//     * An action describes the manner in which one step of the class composition was achieved:
-//     * * AnnotatedBy - TODO
-//     * * Extends - a class _extends_ (inherits from) another class.
-//     * * Implements - a class _implements_ an interface; this verb is also used when one interface
-//     *   "extends" another interface.
-//     * * Incorporates - a class _incorporates_ a mixin.
-//     */
-//    enum Action {AnnotatedBy, Extends, Implements, Incorporates}
-//
-//    /**
-//     * A Composition represents a single step in a compositional recipe. A class is composed as a
-//     * series of composition steps.
-//     */
-//    static const Contribution(Action action, Type ingredient);
 //
 ////
-////    /**
-////     * SourceCodeInfo provides information about the name of the file that contains source code,
-////     * and the 0-based line number within that file that the relevant source code begins.
-////     */
-////    static const SourceCodeInfo(String sourceFile, Int lineNumber);
-////
-////    // ----- primary state -------------------------------------------------------------------------
-////
-////    /**
-////     * The category of the class.
-////     */
-////    Category category;
 ////
 ////    /**
 ////     * Every class is contained within a module, and the module is organized as a hierarchy of
@@ -153,11 +434,6 @@ interface ClassTemplate
 ////     * classes, properties, methods, and functions.
 ////     */
 ////    Namespace? parent;
-//
-//    /**
-//     * The simple (unqualified) name of the class.
-//     */
-//    String name;
 //
 //    /**
 //     * The type parameters for the class.
@@ -195,54 +471,7 @@ interface ClassTemplate
 ////    Function[] functions;
 ////
 ////    /**
-////     * Determine if the class is abstract (meaning that it is not instantiable).
-////     */
-////    Boolean isAbstract;
-////
-////    /**
-////     * Determine if the class defines a singleton (meaning that only one can be instantiated, and is
-////     * assumed to be instantiated by the first time that it is requested).
-////     */
-////    Boolean isSingleton;
-////
-////    /**
-////     * Obtain the singleton instance (throws an exception if _isSingleton_ is false).
-////     */
-////    PublicType singleton;
-////
-////    /**
-////     * Determine if the class is an inner class, which must be instantiated virtually.
-////     *
-////     * Consider the following example:
-////     *
-////     *   class BaseParent
-////     *       {
-////     *       class Child {}                                     // inner class
-////     *
-////     *       static class Orphan {}                             // inner class
-////     *       }
-////     *
-////     *   class DerivedParent
-////     *      extends BaseParent
-////     *     {
-////     *     @Override
-////     *     class Child {}                                       // inner class
-////     *
-////     *     @Override
-////     *     static class Orphan {}                               // inner class
-////     *     }
-////     *
-////     *   BaseParent parent1 = new BaseParent();
-////     *   BaseParent.Child  child1  = new parent1.Child();       // creates a BaseParent.Child
-////     *   BaseParent.Orphan orphan1 = new parent1.Orphan();      // creates a BaseParent.Orphan
-////     *
-////     *   BaseParent parent2 = new DerivedParent();
-////     *   BaseParent.Child  child2  = new parent2.Child();       // creates a DerivedParent.Child
-////     *   BaseParent.Orphan orphan2 = new parent2.Orphan();      // creates a DerivedParent.Orphan
-////     */
-////    Boolean isInnerClass;
-////
-////    /**
 ////     * The information that identifies the location of the source code for this class.
 ////     */
 ////    SourceCodeInfo? sourceInfo;
+    }

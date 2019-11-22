@@ -2,7 +2,7 @@
  * Represents the compiled information for a property.
  */
 interface PropertyTemplate
-        extends Template
+        extends ComponentTemplate
     {
     // TODO
     }

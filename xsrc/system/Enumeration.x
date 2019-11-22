@@ -117,21 +117,23 @@ mixin Enumeration<EnumType extends Enum>
         // the Enumeration class contains singleton Enum class/values; collect those values into a
         // Map keyed by name
         ListMap<String, EnumType> map = new ListMap();
-// TODO
-//        for (Class<> clz : classesByName.values)
-//            {
-//            if (clz.extends_(this) && clz.category == CONST && clz.is(Class<EnumType>))
-//                {
-//                assert clz.isSingleton;
-//
-//                EnumType instance = clz.singleton;
-//
-//                assert instance.ordinal == map.size;
-//                assert !map.contains(clz.name);
-//                map.put(clz.name, instance);
-//                }
-//            }
 
+// TODO for ((String name, Type type) : PublicType.childTypes)
+        for (val entry : PublicType.childTypes.entries)
+            {
+            String name = entry.key;
+            Type   type = entry.value;
+// TODO end
+
+            if (type.is(PublicType))
+                {
+                assert Class<> clz := type.fromClass();
+                assert EnumType instance := clz.as(Class<EnumType>).isSingleton();
+                assert instance.ordinal == map.size;
+                assert !map.contains(name);
+                map.put(name, instance);
+                }
+            }
         return map.ensureImmutable();
         }
     }
