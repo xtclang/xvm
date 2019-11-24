@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.function.ToIntFunction;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component.Contribution;
-import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -16,7 +14,6 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
@@ -30,8 +27,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
-
-import org.xvm.runtime.template.reflect.xClass.ClassHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
@@ -54,7 +49,7 @@ public class xRef
             {
             INSTANCE = this;
             INCEPTION_CLASS = new NativeRebaseConstant(
-                (ClassConstant) structure.getIdentityConstant());
+                    (ClassConstant) structure.getIdentityConstant());
             }
         }
 
@@ -89,20 +84,6 @@ public class xRef
             case "assigned":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned()));
 
-            case "refName":
-                {
-                String sName = hRef.getName();
-                return frame.assignValue(iReturn, sName == null ?
-                    xNullable.NULL : xString.makeHandle(sName));
-                }
-
-            case "byteLength":
-                // TODO: deferred
-                return frame.assignValue(iReturn, xInt64.makeHandle(0));
-
-            case "selfContained":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isSelfContained()));
-
             case "isService":
                 return actOnReferent(frame, hRef,
                     h -> frame.assignValue(iReturn,
@@ -117,6 +98,19 @@ public class xRef
                 return actOnReferent(frame, hRef,
                     h -> frame.assignValue(iReturn,
                         xBoolean.makeHandle(!h.isMutable())));
+
+            case "refName":
+                {
+                String sName = hRef.getName();
+                return frame.assignValue(iReturn, sName == null ? xNullable.NULL
+                                                                : xString.makeHandle(sName));
+                }
+
+            case "byteLength":
+                return frame.assignValue(iReturn, xInt64.makeHandle(8)); // TODO
+
+            case "selfContained":
+                return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isSelfContained()));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -130,21 +124,6 @@ public class xRef
 
         switch (method.getName())
             {
-            case "extends_":
-                return actOnReferent(frame, hRef,
-                    h -> frame.assignValue(iReturn,
-                        xBoolean.makeHandle(extends_(h, (ClassHandle) hArg))));
-
-            case "implements_":
-                return actOnReferent(frame, hRef,
-                    h -> frame.assignValue(iReturn,
-                        xBoolean.makeHandle(implements_(h, (ClassHandle) hArg))));
-
-            case "incorporates_":
-                return actOnReferent(frame, hRef,
-                    h -> frame.assignValue(iReturn,
-                        xBoolean.makeHandle(incorporates_(h, (ClassHandle) hArg))));
-
             case "instanceOf":
                 return actOnReferent(frame, hRef,
                     h -> frame.assignValue(iReturn,
@@ -489,52 +468,6 @@ public class xRef
             {
             return frame.raiseException(xException.unsupportedOperation(frame, "revealAs"));
             }
-        }
-
-    /**
-     * @return true iff the specified target implements the specified class
-     */
-    protected boolean implements_(ObjectHandle hTarget, ClassHandle hClass)
-        {
-        return hTarget.getType().isA(hClass.getPublicType());
-        }
-
-    /**
-     * @return true iff the specified target extends the specified class
-     */
-    protected boolean extends_(ObjectHandle hTarget, ClassHandle hClass)
-        {
-        TypeConstant typeTarget  = hTarget.getType();
-        TypeConstant typeExtends = hClass.getPublicType();
-
-        if (typeTarget .isExplicitClassIdentity(true) && typeTarget .isSingleUnderlyingClass(false) &&
-            typeExtends.isExplicitClassIdentity(true) && typeExtends.isSingleUnderlyingClass(false))
-            {
-            ClassStructure clzTarget = (ClassStructure)
-                    typeTarget.getSingleUnderlyingClass(false).getComponent();
-            return clzTarget.extendsClass(typeExtends.getSingleUnderlyingClass(false));
-            }
-        return false;
-        }
-
-    /**
-     * @return true iff the specified target is of the specified class
-     */
-    protected boolean incorporates_(ObjectHandle hTarget, ClassHandle hClass)
-        {
-        TypeConstant typeTarget  = hTarget.getType();
-        TypeConstant typeExtends = hClass.getPublicType();
-
-        if (typeTarget .isExplicitClassIdentity(true) && typeTarget .isSingleUnderlyingClass(false) &&
-            typeExtends.isExplicitClassIdentity(true) && typeExtends.isSingleUnderlyingClass(false))
-            {
-            ClassStructure clzTarget = (ClassStructure)
-                    typeTarget.getSingleUnderlyingClass(false).getComponent();
-            Contribution contrib = clzTarget.findContribution(
-                    typeExtends.getSingleUnderlyingClass(false));
-            return contrib != null && contrib.getComposition() == Composition.Incorporates;
-            }
-        return false;
         }
 
     /**

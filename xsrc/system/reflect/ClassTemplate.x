@@ -410,68 +410,37 @@ interface ClassTemplate
     @RO Boolean virtualChild;
 
     /**
-     * TODO
+     * True iff this class is the class of a singleton.
      */
     @RO Boolean singleton;
 
-////    /**
-////     * A class exists within a namespace. The namespace can be one of several Ecstasy language
-////     * structures.
-////     */
-////    typedef Module | Package | Class<> | Property | Method | Function Namespace;
-//
-////    /**
-////     * A class contains other named child structures.
-////     */
-////    typedef Class<> | MultiMethod | Property | MultiFunction NamedChild;
-////
-//
-////
-////
-////    /**
-////     * Every class is contained within a module, and the module is organized as a hierarchy of
-////     * named structures, starting with the module itself, which contains a tree of packages,
-////     * classes, properties, methods, and functions.
-////     */
-////    Namespace? parent;
-//
-//    /**
-//     * The type parameters for the class.
-//     */
-//    TypeParameter[] typeParams;
-//
-////    /**
-////     * If the class is a mixin, this is the class to which it can be applied.
-////     */
-////    Class!<>? appliesTo;
-////
-////    /**
-////     * The ordered steps of composition of this class.
-////     */
-////    Composition[] composition;
-////
-////    /**
-////     * The child classes of this class.
-////     */
-////    Class!<>[] classes;
-////
-////    /**
-////     * The child properties of this class.
-////     */
-////    Property[] properties;
-////
-////    /**
-////     * The child methods of this class.
-////     */
-////    Method[] methods;
-////
-////    /**
-////     * The child function literals of this class.
-////     */
-////    Function[] functions;
-////
-////    /**
-////     * The information that identifies the location of the source code for this class.
-////     */
-////    SourceCodeInfo? sourceInfo;
+    /**
+     * The type parameters for the class.
+     */
+    @RO TypeParameter[] typeParams;
+
+    /**
+     * If the class is a mixin, this is the class to which it can be applied.
+     */
+    @RO ClassTemplate! mixesInto;
+
+    /**
+     * The classes contained within this class.
+     */
+    @RO ClassTemplate![] classes;
+
+    /**
+     * The properties of this class.
+     */
+    @RO PropertyTemplate[] properties;
+
+    /**
+     * The multi-methods of this class.
+     */
+    @RO MultiMethodTemplate[] multimethods;
+
+    /**
+     * The information that identifies the location of the source code for this class.
+     */
+    @RO SourceCodeInfo? sourceInfo;
     }
