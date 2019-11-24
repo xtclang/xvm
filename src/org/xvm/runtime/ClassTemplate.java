@@ -374,9 +374,7 @@ public abstract class ClassTemplate
                 f_struct.getFormat() == Format.CONST ||
                 f_struct.getFormat() == Format.ENUMVALUE);
 
-        clazz = clazz.ensureAccess(Access.STRUCT);
-
-        return new GenericHandle(clazz);
+        return new GenericHandle(clazz.ensureAccess(Access.STRUCT));
         }
 
     /**
@@ -395,57 +393,8 @@ public abstract class ClassTemplate
         //
         // -> indicates a call via continuation
         // => indicates a call via Construct op-code
-        //
-        // we need to create the call chain in the revers order;
-        // the very last frame should also assign the resulting new object
 
-        Frame frameCD = frame.createFrame1(constructor, hStruct, ahVar, Op.A_IGNORE);
-
-        // we need a non-null anchor (see Frame#chainFinalizer)
-        FullyBoundHandle hFD = frameCD.m_hfnFinally = Utils.makeFinalizer(constructor, ahVar);
-
-        frameCD.addContinuation(frameCaller ->
-            {
-            List<String> listUnassigned;
-            if ((listUnassigned = hStruct.validateFields()) != null)
-                {
-                return frameCaller.raiseException(
-                    xException.unassignedFields(frameCaller, listUnassigned));
-                }
-
-            switch (postValidate(frameCaller, hStruct))
-                {
-                case Op.R_NEXT:
-                    break;
-
-                case Op.R_CALL:
-                    frameCaller.m_frameNext.addContinuation(frame0 ->
-                        {
-                        ObjectHandle hPublic = hStruct.ensureAccess(Access.PUBLIC);
-
-                        return hFD.callChain(frameCaller, hPublic, frame1 ->
-                            frame1.assignValue(iReturn, hPublic));
-
-                        });
-                    return Op.R_CALL;
-                }
-
-            ObjectHandle hPublic = hStruct.ensureAccess(Access.PUBLIC);
-
-            return hFD.callChain(frameCaller, hPublic, frame0 ->
-                frame0.assignValue(iReturn, hPublic));
-            });
-
-        if (methodAI == null)
-            {
-            return frame.callInitialized(frameCD);
-            }
-
-        Frame frameInit = frame.createFrame1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
-
-        frameInit.addContinuation(frameCaller -> frameCaller.callInitialized(frameCD));
-
-        return frame.callInitialized(frameInit);
+        return new Construct(constructor, methodAI, hStruct, ahVar, iReturn).doNext(frame);
         }
 
     /**
@@ -1855,6 +1804,127 @@ public abstract class ClassTemplate
             if (methSetter != null)
                 {
                 methSetter.markNative();
+                }
+            }
+        }
+
+    /**
+     * Helper class for construction actions.
+     */
+    protected class Construct
+            implements Frame.Continuation
+        {
+        // passed in arguments
+        private final MethodStructure  constructor;
+        private final MethodStructure  methodAI;
+        private final ObjectHandle     hStruct;
+        private final ObjectHandle[]   ahVar;
+        private final int              iReturn;
+
+        // internal fields
+        private FullyBoundHandle hfnFinally;
+        private int              ixStep;
+
+        public Construct(MethodStructure  constructor,
+                         MethodStructure  methodAI,
+                         ObjectHandle     hStruct,
+                         ObjectHandle[]   ahVar,
+                         int              iReturn)
+            {
+            this.constructor = constructor;
+            this.methodAI    = methodAI;
+            this.hStruct     = hStruct;
+            this.ahVar       = ahVar;
+            this.iReturn     = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            return doNext(frameCaller);
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (true)
+                {
+                int iResult;
+                switch (ixStep++)
+                    {
+                    case 0: // call auto-generated initializer
+                        if (methodAI != null)
+                            {
+                            iResult = frameCaller.call1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
+                            break;
+                            }
+                        ixStep++;
+                        // fall through
+
+                    case 1: // call the constructor
+                        {
+                        Frame frameCD = frameCaller.createFrame1(
+                                constructor, hStruct, ahVar, Op.A_IGNORE);
+
+                        FullyBoundHandle hfn = Utils.makeFinalizer(constructor, ahVar);
+                        if (hfn == null)
+                            {
+                            // in case super constructors have their own finalizers
+                            // we need a non-null anchor
+                            frameCD.m_hfnFinally = FullyBoundHandle.NO_OP;
+                            }
+                        else
+                            {
+                            hfnFinally = frameCD.m_hfnFinally = hfn;
+                            }
+
+                        iResult = frameCaller.callInitialized(frameCD);
+                        break;
+                        }
+
+                    case 2: // check unassigned
+                        {
+                        List<String> listUnassigned;
+                        if ((listUnassigned = hStruct.validateFields()) != null)
+                            {
+                            return frameCaller.raiseException(
+                                xException.unassignedFields(frameCaller, listUnassigned));
+                            }
+                        ixStep++;
+                        // fall through
+                        }
+
+                    case 3: // post-construction validation
+                        iResult = postValidate(frameCaller, hStruct);
+                        break;
+
+                    case 4:
+                        {
+                        ObjectHandle hPublic = hStruct.ensureAccess(Access.PUBLIC);
+                        return hfnFinally == null
+                                ? frameCaller.assignValue(iReturn, hPublic)
+                                : hfnFinally.callChain(frameCaller, hPublic, frame_ ->
+                                        frame_.assignValue(iReturn, hPublic));
+                        }
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.addContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalArgumentException();
+                    }
                 }
             }
         }

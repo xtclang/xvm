@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
@@ -45,7 +46,14 @@ public class xOSFileStore
     @Override
     protected int postValidate(Frame frame, ObjectHandle hStruct)
         {
-        return makeImmutable(frame, hStruct);
+        // we need to make the OSFileStore handle immutable, so it can go across the service
+        // boundary, but it holds a reference to a OSStorage service handle, so a call to
+        //   makeImmutable(frame, hStruct);
+        // would result in a natural exception
+        // TODO: consider an option for ClassTemplate.makeImmutable() to exclude service handles
+
+        hStruct.makeImmutable();
+        return Op.R_NEXT;
         }
 
     @Override

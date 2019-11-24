@@ -105,14 +105,14 @@ public abstract class Utils
      * @param constructor  the constructor
      * @param ahArg        the arguments to bind
      *
-     * @return a FullyBoundHandle representing the finalizer
+     * @return a FullyBoundHandle representing the finalizer or null if there is no finalizer
      */
     public static FullyBoundHandle makeFinalizer(MethodStructure constructor, ObjectHandle[] ahArg)
         {
         MethodStructure methodFinally = constructor.getConstructFinally();
 
         return methodFinally == null
-            ? FullyBoundHandle.NO_OP
+            ? null
             : xRTFunction.makeHandle(methodFinally).bindArguments(ahArg);
         }
 
