@@ -21,6 +21,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
@@ -372,6 +373,7 @@ public abstract class ClassTemplate
         assert clazz.getTemplate() == this &&
                (f_struct.getFormat() == Format.CLASS ||
                 f_struct.getFormat() == Format.CONST ||
+                f_struct.getFormat() == Format.MIXIN ||
                 f_struct.getFormat() == Format.ENUMVALUE);
 
         return new GenericHandle(clazz.ensureAccess(Access.STRUCT));
@@ -1479,7 +1481,9 @@ public abstract class ClassTemplate
     @Override
     public ClassTemplate getTemplate(TypeConstant type)
         {
-        return this;
+        return type instanceof AnnotatedTypeConstant
+                ? f_templates.getTemplate(((AnnotatedTypeConstant) type).getAnnotationClass())
+                : this;
         }
 
     @Override

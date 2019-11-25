@@ -14,6 +14,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
@@ -67,6 +68,12 @@ public class xRef
     protected ClassConstant getInceptionClassConstant()
         {
         return this == INSTANCE ? INCEPTION_CLASS : getClassConstant();
+        }
+
+    @Override
+    public ClassTemplate getTemplate(TypeConstant type)
+        {
+        return this;
         }
 
     @Override

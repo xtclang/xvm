@@ -25,6 +25,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xMixin;
 import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
@@ -241,6 +242,9 @@ public class TemplateRegistry
                     break;
 
                 case MIXIN:
+                    template = new xMixin(this, structClass, false);
+                    break;
+
                 case CLASS:
                 case INTERFACE:
                     template = new xObject(this, structClass, false);
