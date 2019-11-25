@@ -523,7 +523,7 @@ interface Map<Key, Value>
             return False;
             }
 
-        for (CompileType.Key key1, CompileType.Value value1 : map1)
+        for ((CompileType.Key key1, CompileType.Value value1) : map1)
             {
             if (CompileType.Value value2 := map2.get(key1), value2 == value1)
                 {

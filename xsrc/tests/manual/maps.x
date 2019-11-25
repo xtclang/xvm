@@ -18,6 +18,8 @@ module TestMaps.xqiz.it
         profile(run, 10);
 
         testListMap();
+
+        testMapIteration();
         }
 
     void testBasic()
@@ -109,6 +111,33 @@ module TestMaps.xqiz.it
         loop4: for (Map<String, String>.Entry entry : new KeyEntries<String, String>(map))
             {
             console.println($"[{loop4.count}]:{entry}");
+            }
+        }
+
+    void testMapIteration()
+        {
+        console.println("\n** testListMap()");
+
+        Map<String, Int> map = new HashMap();
+        map.put("hello", 1);
+        map.put("goodbye", 2);
+
+        console.println("keys:");
+        for (String key : map)
+            {
+            console.println($"{key}");
+            }
+
+        console.println("keys and values:");
+        for ((String s, Int i) : map)
+            {
+            console.println($"{s} = {i}");
+            }
+
+        console.println("values:");
+        for ((_, Int i) : map)
+            {
+            console.println($"? = {i}");
             }
         }
     }

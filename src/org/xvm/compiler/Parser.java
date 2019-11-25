@@ -1538,12 +1538,10 @@ public class Parser
         List<AstNode> init = new ArrayList<>();
         if (peek().getId() != Id.SEMICOLON)
             {
-            boolean fFirst        = true;
-            boolean fMaybeCStyle  = true;
-            boolean fMaybeForEach = true;
+            boolean fFirst = true;
             do
                 {
-                AstNode LVal = fMaybeCStyle ? peekMultiVariableInitializer() : null;
+                AstNode LVal = peekMultiVariableInitializer();
                 if (LVal == null)
                     {
                     Token tokType = matchVarOrVal();
@@ -1579,35 +1577,17 @@ public class Parser
                             }
                         }
                     }
-                else
+
+                if (fFirst && peek().getId() == Id.COLON)
                     {
-                    // the parenthesized list of LValues cannot occur within the
-                    // OptionalDeclarationList construct used by the for-each statement
-                    fMaybeForEach = false;
+                    AssignmentStatement cond = new AssignmentStatement(
+                            LVal, expect(Id.COLON), parseExpression(), false);
+                    expect(Id.R_PAREN);
+                    return new ForEachStatement(keyword, cond, parseStatementBlock());
                     }
 
-                if (!fMaybeForEach || (fFirst && peek().getId() == Id.ASN))
-                    {
-                    fMaybeForEach = false;
-                    init.add(new AssignmentStatement(LVal, expect(Id.ASN), parseExpression(), false));
-                    }
-                else
-                    {
-                    fMaybeCStyle = false;
-                    init.add(LVal);
-                    if (peek().getId() != Id.COMMA)
-                        {
-                        if (init.size() > 1)
-                            {
-                            // the LValue for the condition is a list of multiple LValues
-                            LVal = new MultipleLValueStatement(init);
-                            }
-                        AssignmentStatement cond = new AssignmentStatement(
-                                LVal, expect(Id.COLON), parseExpression(), false);
-                        expect(Id.R_PAREN);
-                        return new ForEachStatement(keyword, cond, parseStatementBlock());
-                        }
-                    }
+                init.add(new AssignmentStatement(LVal, expect(Id.ASN), parseExpression(), false));
+                fFirst = false;
                 }
             while (match(Id.COMMA) != null);
             }

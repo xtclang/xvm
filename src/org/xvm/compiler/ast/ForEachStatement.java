@@ -834,15 +834,12 @@ public class ForEachStatement
         TypeConstant typeValue = getValueType();
         TypeConstant typeMap   = pool.ensureParameterizedTypeConstant(pool.typeMap(), typeKey, typeValue);
         TypeConstant typeEntry = pool.ensureVirtualChildTypeConstant(typeMap, "Entry");
-        TypeConstant typeAble  = pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeEntry);
-        TypeConstant typeIter  = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeEntry);
+        TypeInfo     infoMap   = typeMap.ensureTypeInfo(errs);
 
-        TypeInfo         infoMap   = typeMap.ensureTypeInfo(errs);
-        PropertyConstant idKeys    = infoMap.findProperty("keys").getIdentity();
-        PropertyConstant idEntries = infoMap.findProperty("entries").getIdentity();
-        TypeInfo         infoEntry = typeEntry.ensureTypeInfo(errs);
-        PropertyConstant idKey     = infoEntry.findProperty("key").getIdentity();
-        PropertyConstant idValue   = infoEntry.findProperty("value").getIdentity();
+        boolean      fKeysOnly = m_exprLValue.getValueCount() == 1 && m_regEntry == null;
+        TypeConstant typeEach  = fKeysOnly ? typeKey : typeEntry;
+        TypeConstant typeAble  = pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeEach);
+        TypeConstant typeIter  = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeEach);
 
         TypeInfo       infoAble   = typeAble.ensureTypeInfo(errs);
         MethodConstant idIterator = findWellKnownMethod(infoAble, "iterator", errs);
@@ -881,6 +878,11 @@ public class ForEachStatement
             // IP_INC count                     ; (optional) increment the L.count
             // JMP Repeat                       ; loop
             // Exit:
+
+            PropertyConstant idEntries = infoMap.findProperty("entries").getIdentity();
+            TypeInfo         infoEntry = typeEntry.ensureTypeInfo(errs);
+            PropertyConstant idKey     = infoEntry.findProperty("key").getIdentity();
+            PropertyConstant idValue   = infoEntry.findProperty("value").getIdentity();
 
             Register regSet = new Register(typeAble, Op.A_STACK);
             code.add(new P_Get(idEntries, argMap, regSet));
@@ -935,7 +937,7 @@ public class ForEachStatement
             }
         else
             {
-            // VAR     iter Iterator<Entry>     ; the entry Iterator
+            // VAR     iter Iterator<Key>       ; the key Iterator
             // P_GET   Map.keys, map -> set     ; get the "keys" property from the [RValue] map
             // NVOK_01 set iterator() -> iter   ; get the iterator
             //
@@ -951,8 +953,8 @@ public class ForEachStatement
             // IP_INC count                     ; (optional) increment the L.count
             // JMP Repeat                       ; loop
             // Exit:
-
-            Register regSet = new Register(typeAble, Op.A_STACK);
+            PropertyConstant idKeys = infoMap.findProperty("keys").getIdentity();
+            Register         regSet = new Register(typeAble, Op.A_STACK);
             code.add(new P_Get(idKeys, argMap, regSet));
             code.add(new Var(typeIter));
             Register regIter = code.lastRegister();
