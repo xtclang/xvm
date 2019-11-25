@@ -15,7 +15,6 @@ import java.util.Map;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 
-import org.xvm.compiler.Source;
 import org.xvm.util.Severity;
 
 
@@ -70,7 +69,8 @@ import org.xvm.util.Severity;
  * a two-phase process. In the first phase, the hierarchy is traversed, and every XVM Structure in
  * the hierarchy registers the constant values (if any) that it uses. After the first phase, the
  * constants in the constant pool that are unused can be discarded, and the pool can be ordered in a
- * way that places the most-used constants first. Once the constants and their order are finalized,
+ * way that places the most-used constants first (which reduces the sum-size of the variably-sized
+ * integers used to specify constant identities). Once the constants and their order are finalized,
  * then the XVM Structures recursively write their structures out to create the binary (the
  * serialized form).</li>
  *
