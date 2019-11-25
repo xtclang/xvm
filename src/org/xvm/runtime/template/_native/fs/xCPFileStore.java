@@ -61,11 +61,13 @@ public class xCPFileStore
         if (constant instanceof FileStoreConstant)
             {
             FileStoreConstant constStore = (FileStoreConstant) constant;
-            FSNodeConstant    constRoot  = constStore.getValue();
 
-            GenericHandle hStruct = new GenericHandle(s_clzStruct);
-            return callConstructor(frame, s_constructor, s_clz.ensureAutoInitializer(), hStruct,
-                    new ObjectHandle[] {xString.makeHandle(constStore.getPath()), new ConstantHandle(constRoot)}, Op.A_STACK);
+            GenericHandle  hStruct = new GenericHandle(s_clzStruct);
+            ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
+            ahVar[0] = xString.makeHandle(constStore.getPath());
+            ahVar[1] = new ConstantHandle(constStore.getValue());
+
+            return callConstructor(frame, s_constructor, hStruct, ahVar, Op.A_STACK);
             }
 
         return super.createConstHandle(frame, constant);

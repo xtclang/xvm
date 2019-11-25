@@ -108,12 +108,10 @@ public class xEnum
 
                 if (hValue.isStruct())
                     {
-                    MethodStructure constructor = f_struct.findConstructor(TypeConstant.NO_TYPES);
-                    MethodStructure methodInit  = getCanonicalClass().ensureAutoInitializer();
-                    int             cVars       = constructor.getMaxVars();
-                    ObjectHandle[]  ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE, cVars);
+                    MethodStructure ctor  = f_struct.findConstructor(TypeConstant.NO_TYPES);
+                    ObjectHandle[]  ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, ctor.getMaxVars());
 
-                    return callConstructor(frame, constructor, methodInit, hValue, ahVar, Op.A_STACK);
+                    return callConstructor(frame, ctor, hValue, ahVar, Op.A_STACK);
                     }
                 }
 
@@ -143,7 +141,8 @@ public class xEnum
         }
 
     @Override
-    public int callEquals(Frame frame, ClassComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+    public int callEquals(Frame frame, ClassComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         EnumHandle hEnum1 = (EnumHandle) hValue1;
         EnumHandle hEnum2 = (EnumHandle) hValue2;
@@ -151,7 +150,8 @@ public class xEnum
         }
 
     @Override
-    public int callCompare(Frame frame, ClassComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+    public int callCompare(Frame frame, ClassComposition clazz,
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         EnumHandle hEnum1 = (EnumHandle) hValue1;
         EnumHandle hEnum2 = (EnumHandle) hValue2;

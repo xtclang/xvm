@@ -156,10 +156,10 @@ public abstract class OSFileNode
         ClassComposition clzStruct   = fDir ? s_clzOSDirStruct : s_clzOSFileStruct;
         MethodStructure  constructor = fDir ? s_constructorDir : s_constructorFile;
 
-        NodeHandle hStruct = new NodeHandle(clzStruct, path.toAbsolutePath(), hOSStore);
+        NodeHandle     hStruct = new NodeHandle(clzStruct, path.toAbsolutePath(), hOSStore);
+        ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, constructor.getMaxVars());
 
-        return clzPublic.getTemplate().callConstructor(frame, constructor,
-            clzPublic.ensureAutoInitializer(), hStruct, Utils.OBJECTS_NONE, iReturn);
+        return clzPublic.getTemplate().callConstructor(frame, constructor, hStruct, ahVar, iReturn);
         }
 
 

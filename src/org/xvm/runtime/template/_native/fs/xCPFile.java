@@ -17,6 +17,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ConstantHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xConst;
 
@@ -49,9 +50,11 @@ public class xCPFile
             {
             FSNodeConstant constFile = (FSNodeConstant) constant;
 
-            GenericHandle hStruct = new GenericHandle(s_clzStruct);
-            return callConstructor(frame, s_constructor, s_clz.ensureAutoInitializer(), hStruct,
-                    new ObjectHandle[] {new ConstantHandle(constFile)}, Op.A_STACK);
+            GenericHandle  hStruct = new GenericHandle(s_clzStruct);
+            ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
+            ahVar[0] = new ConstantHandle(constFile);
+
+            return callConstructor(frame, s_constructor, hStruct, ahVar, Op.A_STACK);
             }
 
         return super.createConstHandle(frame, constant);

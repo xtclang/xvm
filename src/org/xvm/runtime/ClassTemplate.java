@@ -356,7 +356,7 @@ public abstract class ClassTemplate
             ((GenericHandle) hStruct).setField(GenericHandle.OUTER, hParent);
             }
 
-        return callConstructor(frame, constructor, clazz.ensureAutoInitializer(), hStruct, ahVar, iReturn);
+        return callConstructor(frame, constructor, hStruct, ahVar, iReturn);
         }
 
     /**
@@ -382,19 +382,10 @@ public abstract class ClassTemplate
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int callConstructor(Frame frame, MethodStructure constructor, MethodStructure methodAI,
+    public int callConstructor(Frame frame, MethodStructure constructor,
                                ObjectHandle hStruct, ObjectHandle[] ahVar, int iReturn)
         {
-        // assume that we have class D with an auto-generated initializer (AI), a constructor (CD),
-        // and a finalizer (FD) that extends B with a constructor (CB) and a finalizer (FB)
-        // the call sequence should be:
-        //
-        //  ("new" op-code) => AI -> CD => CB -> FB -> FD -> "assign" (continuation)
-        //
-        // -> indicates a call via continuation
-        // => indicates a call via Construct op-code
-
-        return new Construct(constructor, methodAI, hStruct, ahVar, iReturn).doNext(frame);
+        return new Construct(constructor, hStruct, ahVar, iReturn).proceed(frame);
         }
 
     /**
@@ -1815,24 +1806,21 @@ public abstract class ClassTemplate
             implements Frame.Continuation
         {
         // passed in arguments
-        private final MethodStructure  constructor;
-        private final MethodStructure  methodAI;
-        private final ObjectHandle     hStruct;
-        private final ObjectHandle[]   ahVar;
-        private final int              iReturn;
+        private final MethodStructure constructor;
+        private final ObjectHandle    hStruct;
+        private final ObjectHandle[]  ahVar;
+        private final int             iReturn;
 
         // internal fields
         private FullyBoundHandle hfnFinally;
         private int              ixStep;
 
-        public Construct(MethodStructure  constructor,
-                         MethodStructure  methodAI,
-                         ObjectHandle     hStruct,
-                         ObjectHandle[]   ahVar,
-                         int              iReturn)
+        public Construct(MethodStructure constructor,
+                         ObjectHandle    hStruct,
+                         ObjectHandle[]  ahVar,
+                         int             iReturn)
             {
             this.constructor = constructor;
-            this.methodAI    = methodAI;
             this.hStruct     = hStruct;
             this.ahVar       = ahVar;
             this.iReturn     = iReturn;
@@ -1841,17 +1829,23 @@ public abstract class ClassTemplate
         @Override
         public int proceed(Frame frameCaller)
             {
-            return doNext(frameCaller);
-            }
+            // assume that we have class D with an auto-generated initializer (AI), a constructor (CD),
+            // and a finalizer (FD) that extends B with a constructor (CB) and a finalizer (FB)
+            // the call sequence should be:
+            //
+            //  ("new" op-code) => AI -> CD => CB -> FB -> FD -> "assign" (continuation)
+            //
+            // -> indicates a call via continuation
+            // => indicates a call via Construct op-code
 
-        public int doNext(Frame frameCaller)
-            {
             while (true)
                 {
                 int iResult;
                 switch (ixStep++)
                     {
                     case 0: // call auto-generated initializer
+                        {
+                        MethodStructure methodAI = hStruct.getComposition().ensureAutoInitializer();
                         if (methodAI != null)
                             {
                             iResult = frameCaller.call1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
@@ -1859,6 +1853,7 @@ public abstract class ClassTemplate
                             }
                         ixStep++;
                         // fall through
+                        }
 
                     case 1: // call the constructor
                         {
