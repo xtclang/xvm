@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.Argument;
@@ -30,6 +31,7 @@ import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
@@ -58,6 +60,7 @@ public class NamedTypeExpression
         this.access     = access;
         this.nonnarrow  = nonnarrow;
         this.paramTypes = params;
+        this.lStartPos  = immutable == null ? names.get(0).getStartPosition() : immutable.getStartPosition();
         this.lEndPos    = lEndPos;
         }
 
@@ -73,7 +76,26 @@ public class NamedTypeExpression
         this.access     = null;
         this.nonnarrow  = null;
         this.paramTypes = params;
+        this.lStartPos  = names.get(0).getStartPosition();
         this.lEndPos    = lEndPos;
+        }
+
+    /**
+     * Construct a synthetic validated NamedTypeExpression.
+     */
+    public NamedTypeExpression(Expression exprSource, TypeConstant type)
+        {
+        this.left       = null;
+        this.immutable  = null;
+        this.access     = null;
+        this.nonnarrow  = null;
+        this.paramTypes = null;
+        this.lStartPos  = exprSource.getStartPosition();
+        this.lEndPos    = exprSource.getEndPosition();
+        this.names      = Collections.singletonList(new Token(lStartPos, lEndPos,
+                            Token.Id.IDENTIFIER, type.getValueString())); // used for "toString" only
+        setTypeConstant(type);
+        setStage(Stage.Validated);
         }
 
 
@@ -286,7 +308,7 @@ public class NamedTypeExpression
     @Override
     public long getStartPosition()
         {
-        return immutable == null ? names.get(0).getStartPosition() : immutable.getStartPosition();
+        return lStartPos;
         }
 
     @Override
@@ -525,8 +547,8 @@ public class NamedTypeExpression
                 }
 
             case ERROR:
-                if (left == null && access == null && immutable == null && paramTypes == null &&
-                        getCodeContainer() != null)
+                if (left == null && names.size() > 1 && access == null && immutable == null &&
+                        paramTypes == null && getCodeContainer() != null)
                     {
                     // assume that the type is "dynamic", for example: "that.Element"
                     return;
@@ -1005,6 +1027,7 @@ public class NamedTypeExpression
     protected Token                access;
     protected Token                nonnarrow;
     protected List<TypeExpression> paramTypes;
+    protected long                 lStartPos;
     protected long                 lEndPos;
 
     protected transient NameResolver   m_resolver;

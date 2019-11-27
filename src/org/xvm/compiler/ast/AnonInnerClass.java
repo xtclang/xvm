@@ -347,20 +347,6 @@ public class AnonInnerClass
         }
 
     /**
-     * Create a fake IDENTIFIER token.
-     *
-     * @param location  the location at which to create the token
-     * @param oVal      the value of the token
-     *
-     * @return the token
-     */
-    private Token genToken(AstNode location, Object oVal)
-        {
-        long lPos = location.getStartPosition();
-        return new Token(lPos, lPos, Id.IDENTIFIER, oVal);
-        }
-
-    /**
      * Store the super class designation in the list of contributions.
      *
      * @param exprType  the type expression of the super class
@@ -454,31 +440,27 @@ public class AnonInnerClass
             return exprThis;
             }
 
+        long                 ofStart    = exprThis.getStartPosition();
         long                 ofEnd      = exprThis.getEndPosition();
         List<Parameter>      listFormal = new ArrayList<>(cFormalTypes);
         List<TypeExpression> listImpl   = new ArrayList<>(cFormalTypes);
 
         for (Map.Entry<StringConstant, TypeConstant> entry : clzBase.getTypeParamsAsList())
             {
-            StringConstant constName      = entry.getKey();
-            TypeConstant   typeConstraint = exprThis.ensureTypeConstant().
-                                                resolveGenericType(constName.getValue());
+            String       sName          = entry.getKey().getValue();
+            TypeConstant typeConstraint = exprThis.ensureTypeConstant().resolveGenericType(sName);
+
             if (typeConstraint == null || !typeConstraint.containsFormalType(true))
                 {
                 continue;
                 }
 
-            Token          tok       = genToken(exprThis, constName.getValue());
+            Token          tok       = new Token(ofStart, ofStart, Id.IDENTIFIER, sName);
             TypeExpression exprParam = new NamedTypeExpression(null,
                     Collections.singletonList(tok), null, null, null, ofEnd);
-
             listImpl.add(exprParam);
 
-            Token          tokExtends  = genToken(exprThis, typeConstraint.getValueString());
-            TypeExpression exprExtends = new NamedTypeExpression(null,
-                Collections.singletonList(tokExtends), null, null, null, ofEnd);
-            exprExtends.setTypeConstant(typeConstraint);
-
+            TypeExpression exprExtends = new NamedTypeExpression(exprThis, typeConstraint);
             listFormal.add(new Parameter(exprExtends, tok));
             }
 
