@@ -54,8 +54,14 @@ public interface Argument
             {
             if (nArg <= Op.CONSTANT_OFFSET)
                 {
-                ConstantPool pool = ServiceContext.getCurrentContext().getCurrentFrame().poolCode();
-                return pool.getConstant(Op.CONSTANT_OFFSET - nArg).getValueString();
+                ServiceContext context = ServiceContext.getCurrentContext();
+                ConstantPool   pool    = context == null
+                        ? ConstantPool.getCurrentPool()
+                        : context.getCurrentFrame().poolCode();
+                if (pool != null)
+                    {
+                    return pool.getConstant(Op.CONSTANT_OFFSET - nArg).getValueString();
+                    }
                 }
             }
         catch (RuntimeException e) {}
