@@ -5,16 +5,16 @@
  * Usage example:
  *   @Watch(n -> console.print("new value=" + n)) Int n = 0;
  */
-mixin WatchVar<RefType>(function void (RefType) notify)
-        into Var<RefType>
+mixin WatchVar<Referent>(function void (Referent) notify)
+        into Var<Referent>
     {
     /**
      * The notification function.
      */
-    private function void (RefType) notify;
+    private function void (Referent) notify;
 
     @Override
-    void set(RefType value)
+    void set(Referent value)
         {
         super(value);
         notify(value);
