@@ -66,6 +66,12 @@ public class xTerminalConsole
             {
             case "print": // Object o
                 {
+                if (hArg == ObjectHandle.DEFAULT)
+                    {
+                    CONSOLE_OUT.flush();
+                    return Op.R_NEXT;
+                    }
+
                 int iResult = Utils.callToString(frame, hArg);
                 switch (iResult)
                     {
@@ -82,6 +88,12 @@ public class xTerminalConsole
 
             case "println": // Object o
                 {
+                if (hArg == ObjectHandle.DEFAULT)
+                    {
+                    CONSOLE_OUT.println();
+                    return Op.R_NEXT;
+                    }
+
                 int iResult = Utils.callToString(frame, hArg);
                 switch (iResult)
                     {
