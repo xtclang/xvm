@@ -831,6 +831,7 @@ public abstract class Constant
         MultiMethod,
         Method,
         Annotation,
+        Register,
 
         /*
          * Pseudo identifiers.

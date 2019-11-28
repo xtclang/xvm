@@ -2529,6 +2529,10 @@ public class ConstantPool
                     constant = new Annotation(this, in);
                     break;
 
+                case Register:
+                    constant = new RegisterConstant(this, in);
+                    break;
+
                 /*
                 * Pseudo identifiers.
                 */

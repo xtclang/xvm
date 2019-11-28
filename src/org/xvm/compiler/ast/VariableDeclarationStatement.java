@@ -5,14 +5,21 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Annotation;
+import org.xvm.asm.Argument;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ExpressionConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Move;
+import org.xvm.asm.op.Var;
 import org.xvm.asm.op.Var_DN;
 import org.xvm.asm.op.Var_N;
 
@@ -171,9 +178,9 @@ public class VariableDeclarationStatement
 
         if (typeNew instanceof AnnotatedTypeExpression)
             {
-            AnnotatedTypeExpression exprAnno = (AnnotatedTypeExpression) typeNew;
+            AnnotatedTypeExpression exprAnnoType = (AnnotatedTypeExpression) typeNew;
 
-            if (exprAnno.isInjected())
+            if (exprAnnoType.isInjected())
                 {
                 ctx.markVarWrite(name, errs);
                 m_reg.markEffectivelyFinal();
@@ -181,18 +188,23 @@ public class VariableDeclarationStatement
 
             // for DVAR registers, specify the DVAR "register type" (separate from the type of the value
             // that gets held in the register)
-            List<AnnotationExpression> listRefAnnotations = exprAnno.getRefAnnotations();
+            List<AnnotationExpression> listRefAnnotations = exprAnnoType.getRefAnnotations();
             if (listRefAnnotations != null)
                 {
-                boolean fVar = exprAnno.isVar();
+                boolean      fVar    = exprAnnoType.isVar();
+                boolean      fConst  = true;
                 TypeConstant typeReg = pool.ensureParameterizedTypeConstant(
                         fVar ? pool.typeVar() : pool.typeRef(), typeVar);
                 for (int i = listRefAnnotations.size() - 1; i >= 0; --i)
                     {
+                    AnnotationExpression exprAnno = listRefAnnotations.get(i);
+
                     typeReg = pool.ensureAnnotatedTypeConstant(
-                            typeReg, listRefAnnotations.get(i).ensureAnnotation(pool));
+                            typeReg, exprAnno.ensureAnnotation(pool));
+                    fConst &= exprAnno.isConstant();
                     }
                 m_reg.specifyRegType(typeReg);
+                m_fConstAnno = fConst;
                 }
             }
 
@@ -206,13 +218,59 @@ public class VariableDeclarationStatement
         StringConstant constName = pool.ensureStringConstant((String) name.getValue());
 
         // declare named var
-        if (m_reg.isDVar())
+        Register reg = m_reg;
+        if (reg.isDVar())
             {
-            code.add(new Var_DN(m_reg, constName));
+            if (!m_fConstAnno)
+                {
+                // replace the non-constant args with the corresponding registers
+                AnnotatedTypeExpression exprAnnoType = (AnnotatedTypeExpression) type;
+
+                TypeConstant typeReg = pool.ensureParameterizedTypeConstant(
+                        exprAnnoType.isVar() ? pool.typeVar() : pool.typeRef(), reg.getOriginalType());
+
+                List<AnnotationExpression> listRefAnnotations = exprAnnoType.getRefAnnotations();
+                for (int i = listRefAnnotations.size() - 1; i >= 0; --i)
+                    {
+                    AnnotationExpression exprAnno = listRefAnnotations.get(i);
+                    Annotation           anno     = exprAnno.ensureAnnotation(pool);
+                    if (!exprAnno.isConstant())
+                        {
+                        Constant[] aConst = anno.getParams();
+                        for (int j = 0, c = aConst.length; j < c; j++)
+                            {
+                            Constant constArg = aConst[j];
+                            if (constArg instanceof ExpressionConstant)
+                                {
+                                Expression exprArg = ((ExpressionConstant) constArg).getExpression();
+
+                                Argument argArg = exprArg.generateArgument(ctx, code, true, false, errs);
+                                Register regArg;
+                                if (argArg instanceof Register)
+                                    {
+                                    regArg = (Register) argArg;
+                                    }
+                                else
+                                    {
+                                    regArg = new Register(exprArg.getType());
+                                    code.add(new Var(regArg));
+                                    code.add(new Move(argArg, regArg));
+                                    }
+                                aConst[j] = new RegisterConstant(pool, regArg);
+                                }
+                            }
+                        anno = pool.ensureAnnotation(anno.getAnnotationClass(), aConst);
+                        }
+                    typeReg = pool.ensureAnnotatedTypeConstant(typeReg, anno);
+                    }
+
+                reg.specifyRegType(typeReg);
+                }
+            code.add(new Var_DN(reg, constName));
             }
         else
             {
-            code.add(new Var_N(m_reg, constName));
+            code.add(new Var_N(reg, constName));
             }
 
         return fReachable;
@@ -255,6 +313,7 @@ public class VariableDeclarationStatement
 
     private transient Register       m_reg;
     private transient NameExpression m_exprName;
+    private transient boolean        m_fConstAnno;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VariableDeclarationStatement.class, "type");
     }

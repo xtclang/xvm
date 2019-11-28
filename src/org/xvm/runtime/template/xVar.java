@@ -129,13 +129,13 @@ public class xVar
 
             case RefHandle.REF_REF:
                 {
-                RefHandle hDelegate = (RefHandle) hRef.getReferent();
+                RefHandle hDelegate = (RefHandle) hRef.getReferentHolder();
                 return hRef.getVarSupport().setReferent(frame, hDelegate, hValue);
                 }
 
             case RefHandle.REF_PROPERTY:
                 {
-                ObjectHandle hDelegate = hRef.getReferent();
+                ObjectHandle hDelegate = hRef.getReferentHolder();
                 return hDelegate.getTemplate().setPropertyValue(
                     frame, hDelegate, hRef.getPropertyId(), hRef);
                 }
@@ -143,8 +143,8 @@ public class xVar
             case RefHandle.REF_ARRAY:
                 {
                 IndexedRefHandle hIndexedRef = (IndexedRefHandle) hRef;
-                ObjectHandle hArray = hRef.getReferent();
-                IndexSupport template = (IndexSupport) hArray.getTemplate();
+                ObjectHandle     hArray      = hRef.getReferentHolder();
+                IndexSupport     template    = (IndexSupport) hArray.getTemplate();
 
                 return template.assignArrayValue(frame, hArray, hIndexedRef.f_lIndex, hValue);
                 }

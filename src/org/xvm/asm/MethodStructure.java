@@ -1471,7 +1471,7 @@ public class MethodStructure
             }
         else if (m_code != null)
             {
-            m_code.ensureConstantRegistry();
+            m_code.registerConstants();
             }
         }
 
@@ -2082,6 +2082,28 @@ public class MethodStructure
             }
 
         /**
+         * Address and simulate ops, eliminate dead code and after that register the ops with a
+         * method constant registry.
+         */
+        protected void registerConstants()
+            {
+            if (f_method.m_abOps == null)
+                {
+                // it is possible that the elimination of dead code makes it possible to find new
+                // redundant code, and vice versa
+                do
+                    {
+                    eliminateDeadCode();
+                    }
+                while (eliminateRedundantCode());
+                // note that the last call to eliminateRedundantCode() did not modify the code, so
+                // each op will already have been stamped with the correct address and scope depth
+
+                ensureConstantRegistry();
+                }
+            }
+
+        /**
          * Walk over all of the code, determining what ops are redundant (have no net effect), and
          * eliminate that redundant code.
          *
@@ -2183,16 +2205,6 @@ public class MethodStructure
             {
             if (f_method.m_abOps == null)
                 {
-                // it is possible that the elimination of dead code makes it possible to find new
-                // redundant code, and vice versa
-                do
-                    {
-                    eliminateDeadCode();
-                    }
-                while (eliminateRedundantCode());
-                // note that the last call to eliminateRedundantCode() did not modify the code, so
-                // each op will already have been stamped with the correct address and scope depth
-
                 // populate the local constant registry
                 ConstantRegistry registry = ensureConstantRegistry();
 

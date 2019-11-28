@@ -42,7 +42,9 @@ public class CallChain
 
     public MethodStructure getMethod(int nDepth)
         {
-        return f_aMethods[nDepth].getMethodStructure();
+        return nDepth < f_aMethods.length
+                ? f_aMethods[nDepth].getMethodStructure()
+                : null;
         }
 
     public MethodStructure getTop()

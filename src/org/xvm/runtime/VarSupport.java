@@ -15,17 +15,26 @@ public interface VarSupport
     // ----- construction --------------------------------------------------------------------------
 
     /**
-     * Create a Ref or a Var for the specified referent class.
-     *
-     * Most commonly, the returned handle is an uninitialized Var, but
-     * in the case of InjectedRef, it's an initialized [read-only] Ref.
+     * Create an uninitialized Ref or a Var for the specified referent class.
      *
      * @param clazz  the referent class
      * @param sName  an optional Ref/Var name
      *
-     * @return the corresponding {@link RefHandle}
+     * @return the uninitialized corresponding {@link RefHandle}
      */
     RefHandle createRefHandle(TypeComposition clazz, String sName);
+
+    /**
+     * Introduce a Ref or a Var for the specified referent class.
+     *
+     * @param frame    the current frame
+     * @param clazz    the referent class
+     * @param sName    an optional Ref/Var name
+     * @param iReturn  the register to place the handle to
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
+     */
+    int introduceRef(Frame frame, TypeComposition clazz, String sName, int iReturn);
 
 
     // ----- built-in unary operations -------------------------------------------------------------

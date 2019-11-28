@@ -15,14 +15,15 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.compiler.Compiler;
@@ -79,6 +80,12 @@ public class AnnotationExpression
     public List<Expression> getArguments()
         {
         return args;
+        }
+
+    @Override
+    public boolean isConstant()
+        {
+        return m_fConst;
         }
 
     @Override
@@ -140,19 +147,31 @@ public class AnnotationExpression
                     {
                     aconstArgs[iArg] = exprArg.isConstant()
                             ? exprArg.toConstant()
-                            : exprArg.getType(); // TODO REMOVE HACK
+                            : new ExpressionConstant(pool, exprArg);
                     }
-                else if (exprArg instanceof LiteralExpression
-                        && ((LiteralExpression) exprArg).getLiteral().getId() == Id.LIT_STRING)
+                else if (exprArg instanceof LiteralExpression)
                     {
-                    // only String literals have a predictable runtime type (no @Auto conversions)
-                    aconstArgs[iArg] = pool.ensureStringConstant(((LiteralExpression) exprArg)
-                            .getLiteral().getValue().toString());
+                    LiteralExpression exprLit = (LiteralExpression) exprArg;
+
+                    if (exprLit.getLiteral().getId() == Id.LIT_STRING)
+                        {
+                        // only String literals have a predictable runtime type (no @Auto conversions)
+                        aconstArgs[iArg] = pool.ensureStringConstant(((LiteralExpression) exprArg)
+                                .getLiteral().getValue().toString());
+                        }
+                    else
+                        {
+                        aconstArgs[iArg] = exprLit.getLiteralConstant();
+                        }
                     }
-                else
+                else if (exprArg instanceof NameExpression)
                     {
                     aconstArgs[iArg] = new UnresolvedNameConstant(pool,
                             ((NameExpression) exprArg).collectNames(1), false);
+                    }
+                else
+                    {
+                    aconstArgs[iArg] = new ExpressionConstant(pool, exprArg);
                     }
                 }
             }
@@ -178,7 +197,7 @@ public class AnnotationExpression
 
         boolean       fValid   = true;
         ClassConstant idAnno   = (ClassConstant) constAnno;
-        // TODO: this should "steal" any matching type parameters from the underlying type
+        // TODO ask Cam: this should "steal" any matching type parameters from the underlying type
         TypeInfo      infoAnno = idAnno.ensureTypeInfo(null, errs);
         if (infoAnno.getFormat() != Format.MIXIN)
             {
@@ -192,17 +211,40 @@ public class AnnotationExpression
             return;
             }
 
-        if (getCodeContainer() != null)
+        // check the named arguments
+        List<Expression>  args       = getArguments();
+        int               cArgs      = args == null ? 0 : args.size();
+        String[]          asArgNames = null;
+        boolean           fNameErr   = false;
+
+        for (int iArg = 0; iArg < cArgs; ++iArg)
+            {
+            Expression exprArg = args.get(iArg);
+            if (exprArg instanceof LabeledExpression)
+                {
+                if (asArgNames == null)
+                    {
+                    asArgNames = new String[cArgs];
+                    }
+                asArgNames[iArg] = ((LabeledExpression) exprArg).getName();
+                }
+            else if (asArgNames != null && !fNameErr)
+                {
+                // there was already at least one arg with a name, so all trailing args MUST
+                // have a name
+                exprArg.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, iArg);
+                fNameErr = true;
+                fValid   = false;
+                }
+            }
+
+        if (!fValid || getCodeContainer() != null)
             {
             return;
             }
 
         // find a matching constructor on the annotation class
         // before we let the children go, we need to fill in the annotation construction parameters
-        List<Expression>  args       = getArguments();
-        int               cArgs      = args == null ? 0 : args.size();
-        String[]          asArgNames = null;
-        boolean           fNameErr   = false;
         TypeConstant[]    atypeArgs  = TypeConstant.NO_TYPES;
         ValidatingContext ctx        = null;
         if (cArgs > 0)
@@ -214,129 +256,84 @@ public class AnnotationExpression
 
             for (int iArg = 0; iArg < cArgs; ++iArg)
                 {
-                Expression exprArg = args.get(iArg);
-                if (exprArg instanceof LabeledExpression)
-                    {
-                    if (asArgNames == null)
-                        {
-                        asArgNames = new String[cArgs];
-                        }
-                    asArgNames[iArg] = ((LabeledExpression) exprArg).getName();
-                    }
-                else if (asArgNames != null && !fNameErr)
-                    {
-                    // there was already at least one arg with a name, so all trailing args MUST
-                    // have a name
-                    exprArg.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, iArg);
-                    fNameErr = true;
-                    fValid   = false;
-                    }
-
-                atypeArgs[iArg] = exprArg.getImplicitType(ctx);
+                atypeArgs[iArg] = args.get(iArg).getImplicitType(ctx);
                 }
             }
 
-        if (fValid)
+        MethodConstant idConstruct = infoAnno.findConstructor(atypeArgs, asArgNames);
+        if (idConstruct == null)
             {
-            MethodConstant idConstruct = infoAnno.findConstructor(atypeArgs, asArgNames);
-            if (idConstruct == null)
-                {
-                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getName());
-                }
-            else if (cArgs > 0)
-                {
-                // validate the argument expressions and fix up all of the constants used as
-                // arguments to construct the annotation
-                Constant[] aconstArgs = anno.getParams();
-                assert cArgs == aconstArgs.length;
+            log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getName());
+            }
+        else if (cArgs > 0)
+            {
+            // validate the argument expressions and fix up all of the constants used as
+            // arguments to construct the annotation
+            Constant[] aconstArgs = anno.getParams();
+            assert cArgs == aconstArgs.length;
 
-                TypeConstant[] atypeParams = idConstruct.getRawParams();
-                for (int iArg = 0; iArg < cArgs; ++iArg)
+            TypeConstant[] atypeParams = idConstruct.getRawParams();
+            for (int iArg = 0; iArg < cArgs; ++iArg)
+                {
+                Expression exprOld = args.get(iArg);
+                Expression exprNew = exprOld.validate(ctx, atypeParams[iArg], errs);
+                if (exprNew != null && exprNew != exprOld)
                     {
-                    Expression exprOld = args.get(iArg);
-                    Expression exprNew = exprOld.validate(ctx, atypeParams[iArg], errs);
-                    if (exprNew != null && exprNew != exprOld)
-                        {
-                        args.set(iArg, exprNew);
-                        }
-
-                    if (exprNew == null || !exprNew.isRuntimeConstant())
-                        {
-                        exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
-                        }
-                    else
-                        {
-                        // update the Annotation directly
-                        // Note: this is quite unusual, in that normally things like an annotation are
-                        //       treated as a constant once instantiated, but in this case, it was
-                        //       impossible to validate the arguments of the annotation when it was
-                        //       constructed, because we were too early in the compile cycle to resolve
-                        //       any constant expressions that refer to anything _by name_
-                        aconstArgs[iArg] = exprNew.toConstant();
-                        }
+                    args.set(iArg, exprNew);
                     }
 
-                anno.resolveParams(aconstArgs);
+                if (exprNew == null || !exprNew.isRuntimeConstant())
+                    {
+                    exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                    }
+                else
+                    {
+                    // update the Annotation directly
+                    // Note: this is quite unusual, in that normally things like an annotation are
+                    //       treated as a constant once instantiated, but in this case, it was
+                    //       impossible to validate the arguments of the annotation when it was
+                    //       constructed, because we were too early in the compile cycle to resolve
+                    //       any constant expressions that refer to anything _by name_
+                    aconstArgs[iArg] = exprNew.toConstant();
+                    }
                 }
+
+            anno.resolveParams(aconstArgs);
             }
         }
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        List<Expression>  listArgs   = getArguments();
-        int               cArgs      = listArgs == null ? 0 : listArgs.size();
-        String[]          asArgNames = null;
-        boolean           fNameErr   = false;
-        TypeConstant[]    atypeArgs  = TypeConstant.NO_TYPES;
-        boolean           fValid     = true;
+        List<Expression> listArgs = getArguments();
+        int              cArgs    = listArgs == null ? 0 : listArgs.size();
+        boolean          fValid   = true;
+        boolean          fConst   = true;
 
-        if (cArgs > 0)
+        // validate the arguments
+        for (int iArg = 0; iArg < cArgs; ++iArg)
             {
-            // build a list of argument types and names (used later to try to find an appropriate
-            // annotation constructor)
-            atypeArgs = new TypeConstant[cArgs];
+            Expression exprArgOld = listArgs.get(iArg);
+            Expression exprArgNew = exprArgOld.validate(ctx, null, errs);
 
-            for (int iArg = 0; iArg < cArgs; ++iArg)
+            if (exprArgNew == null)
                 {
-                Expression exprArgOld = listArgs.get(iArg);
-                Expression exprArgNew = exprArgOld.validate(ctx, null, errs);
-
-                if (exprArgNew == null)
-                    {
-                    fValid = false;
-                    continue;
-                    }
-
-                if (exprArgNew != exprArgOld)
-                    {
-                    listArgs.set(iArg, exprArgNew);
-                    }
-
-                if (exprArgNew instanceof LabeledExpression)
-                    {
-                    if (asArgNames == null)
-                        {
-                        asArgNames = new String[cArgs];
-                        }
-                    asArgNames[iArg] = ((LabeledExpression) exprArgNew).getName();
-                    }
-                else if (asArgNames != null && !fNameErr)
-                    {
-                    // there was already at least one arg with a name, so all trailing args MUST
-                    // have a name
-                    exprArgNew.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, iArg);
-                    fNameErr = true;
-                    fValid   = false;
-                    }
-
-                atypeArgs[iArg] = exprArgNew.getType();
+                fValid = false;
+                continue;
                 }
+
+            if (exprArgNew != exprArgOld)
+                {
+                listArgs.set(iArg, exprArgNew);
+                }
+
+            fConst &= exprArgNew.isConstant();
             }
 
         if (fValid)
             {
-            m_anno = null;  // force a re-generation of the annotation
+            m_fConst = fConst;
+            m_anno   = null;  // force a re-generation of the annotation
 
             ConstantPool  pool         = pool();
             Annotation    anno         = ensureAnnotation(pool);
@@ -354,7 +351,7 @@ public class AnnotationExpression
             TypeInfo infoAnno = typeTarget.ensureTypeInfo(errs);
 
             MethodConstant idConstruct = findMethod(ctx, infoAnno, "construct", listArgs,
-                    TypeInfo.MethodKind.Constructor, true, false, null, errs);
+                    MethodKind.Constructor, true, false, null, errs);
             if (idConstruct != null)
                 {
                 typeTarget = pool.ensureAnnotatedTypeConstant(typeRequired, anno);
@@ -521,6 +518,7 @@ public class AnnotationExpression
     // necessary
     private transient AstNode    m_node;
     private transient Annotation m_anno;
+    private transient boolean    m_fConst;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AnnotationExpression.class, "type", "args");
     }

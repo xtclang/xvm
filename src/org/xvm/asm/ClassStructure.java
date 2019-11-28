@@ -2763,7 +2763,7 @@ public class ClassStructure
             {
             code.add(new Return_0());
 
-            code.ensureAssembled();
+            code.registerConstants();
             }
         else
             {
@@ -2883,7 +2883,7 @@ public class ClassStructure
                     }
                 }
 
-            code.ensureAssembled();
+            code.registerConstants();
             }
         return methodDelegate;
         }
@@ -2965,7 +2965,7 @@ public class ClassStructure
             if (cParams == 1)
                 {
                 aParam[1] = new Parameter(pool, new UnresolvedTypeConstant(pool,
-                        new UnresolvedNameConstant(pool, new String[]{"CompileType"}, false)),
+                        new UnresolvedNameConstant(pool, "CompileType")),
                         "value", null, false, 1, false);
                 }
             else
@@ -2973,7 +2973,7 @@ public class ClassStructure
                 for (int i = 1; i <= cParams; i++)
                     {
                     aParam[i] = new Parameter(pool, new UnresolvedTypeConstant(pool,
-                            new UnresolvedNameConstant(pool, new String[]{"CompileType"}, false)),
+                            new UnresolvedNameConstant(pool, "CompileType")),
                             "value" + i, null, false, i, false);
                     }
                 }
@@ -3050,7 +3050,7 @@ public class ClassStructure
 
                 if (fEnsureAssembled)
                     {
-                    code.ensureAssembled();
+                    code.registerConstants();
                     }
 
                 MethodStructure methEstimate = findMethod("estimateStringLength", 0);
@@ -3072,7 +3072,7 @@ public class ClassStructure
 
                     if (fEnsureAssembled)
                         {
-                        code.ensureAssembled();
+                        code.registerConstants();
                         }
                     }
                 }

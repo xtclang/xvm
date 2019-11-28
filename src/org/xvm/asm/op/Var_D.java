@@ -14,8 +14,6 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.VarSupport;
 
-import org.xvm.runtime.template.xRef.RefHandle;
-
 
 /**
  * VAR_D TYPE ; next register is an anonymous "dynamic reference" variable
@@ -66,10 +64,6 @@ public class Var_D
         {
         ClassComposition clz = frame.resolveClass(m_nType);
 
-        RefHandle hRef = ((VarSupport) clz.getSupport()).createRefHandle(clz, null);
-
-        frame.introduceResolvedVar(m_nVar, clz.getType(), null, Frame.VAR_DYNAMIC_REF, hRef);
-
-        return hRef.initializeCustomFields(frame);
+        return ((VarSupport) clz.getSupport()).introduceRef(frame, clz, null, m_nVar);
         }
     }

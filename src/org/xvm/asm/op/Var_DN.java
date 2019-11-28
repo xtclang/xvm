@@ -7,11 +7,11 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
@@ -31,23 +31,6 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Var_DN
         extends OpVar
     {
-    /**
-     * Construct a VAR_DN op for the specified type and name.
-     *
-     * @param constType  the variable type
-     * @param constName  the name constant
-     */
-    public Var_DN(TypeConstant constType, StringConstant constName)
-        {
-        super(constType);
-
-        if (constName == null)
-            {
-            throw new IllegalArgumentException("name required");
-            }
-        m_constName = constName;
-        }
-
     /**
      * Construct a VAR_DN op for the specified register and name.
      *
@@ -110,20 +93,19 @@ public class Var_DN
             {
             ClassComposition clz = frame.resolveClass(m_nType);
 
-            hRef = ((VarSupport) clz.getSupport()).createRefHandle(clz, sName);
+            iRet = ((VarSupport) clz.getSupport()).introduceRef(frame, clz, sName, m_nVar);
 
-            if (hRef instanceof InjectedHandle)
+            if (iRet == Op.R_NEXT && frame.f_ahVar[m_nVar] instanceof InjectedHandle)
                 {
-                // InjectedRef is exclusively native; no need for initialization
                 m_ref = hRef;
-                }
-            else
-                {
-                iRet = hRef.initializeCustomFields(frame);
+                iRet  = iPC + 1;
                 }
             }
+        else
+            {
+            frame.introduceResolvedVar(m_nVar, hRef.getType(), sName, Frame.VAR_DYNAMIC_REF, hRef);
+            }
 
-        frame.introduceResolvedVar(m_nVar, hRef.getType(), sName, Frame.VAR_DYNAMIC_REF, hRef);
         return iRet;
         }
 

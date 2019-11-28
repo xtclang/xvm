@@ -134,7 +134,8 @@ public class Register
         {
         ConstantPool pool = typeReg.getConstantPool();
 
-        assert m_typeReg == null;
+        // annotated types may re-resolve the annotation arguments
+        assert m_typeReg == null || typeReg.isAnnotated();
         assert typeReg.isA(pool.typeRef());
 
         this.m_typeReg = typeReg;

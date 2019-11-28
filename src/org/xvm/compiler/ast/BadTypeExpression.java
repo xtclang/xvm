@@ -7,6 +7,9 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.UnresolvedNameConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
+
 
 /**
  * A type expression that can't figure out how to be a type exception. It pretends to be a type,
@@ -28,7 +31,8 @@ public class BadTypeExpression
     @Override
     protected TypeConstant instantiateTypeConstant(Context ctx)
         {
-        throw new UnsupportedOperationException();
+        return new UnresolvedTypeConstant(pool(),
+            new UnresolvedNameConstant(pool(), nonType.toString()));
         }
 
 

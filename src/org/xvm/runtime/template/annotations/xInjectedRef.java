@@ -61,7 +61,16 @@ public class xInjectedRef
         }
 
     @Override
-    protected int invokeGetReferent(Frame frame, RefHandle hTarget, int iReturn)
+    public int introduceRef(Frame frame, TypeComposition clazz, String sName, int iReturn)
+        {
+        // InjectedHandle is exclusively native; no need for further initialization
+        frame.introduceResolvedVar(iReturn, clazz.getType(), sName,
+                Frame.VAR_DYNAMIC_REF, createRefHandle(clazz, sName));
+        return Op.R_NEXT;
+        }
+
+    @Override
+    public int getReferent(Frame frame, RefHandle hTarget, int iReturn)
         {
         InjectedHandle hInjected = (InjectedHandle) hTarget;
         ObjectHandle   hValue    = hInjected.getReferent();
@@ -109,6 +118,19 @@ public class xInjectedRef
         public String getResourceName()
             {
             return f_sResource;
+            }
+
+        @Override
+        public ObjectHandle getReferent()
+            {
+            return m_hReferent;
+            }
+
+        public void setReferent(ObjectHandle hReferent)
+            {
+            assert m_hReferent == null;
+
+            m_hReferent = hReferent;
             }
 
         // ----- fields ----------------------------------------------------------------------------

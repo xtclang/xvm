@@ -10,6 +10,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -195,6 +196,56 @@ public class xRef
         }
 
     @Override
+    public int introduceRef(Frame frame, TypeComposition clazz, String sName, int iReturn)
+        {
+        RefHandle hRef;
+        int       iResult;
+        boolean   fStack;
+
+        TypeConstant typeRef = clazz.getType();
+        if (typeRef instanceof AnnotatedTypeConstant)
+            {
+            AnnotatedTypeConstant typeAnno  = (AnnotatedTypeConstant) typeRef;
+            TypeConstant          typeMixin = typeAnno.getAnnotationType();
+            Mixin                 mixin     = (Mixin) f_templates.getTemplate(typeMixin);
+
+            hRef    = createRefHandle(clazz.ensureAccess(Access.STRUCT), sName);
+            iResult = mixin.callConstructor(frame, null, hRef, Utils.OBJECTS_NONE, Op.A_STACK);
+            fStack  = true;
+            }
+        else
+            {
+            hRef    = createRefHandle(clazz, sName);
+            iResult = hRef.initializeCustomFields(frame);
+            fStack  = false;
+            }
+
+        switch (iResult)
+            {
+            case Op.R_NEXT:
+                {
+                frame.introduceResolvedVar(iReturn, typeRef, sName, Frame.VAR_DYNAMIC_REF, hRef);
+                return Op.R_NEXT;
+                }
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                        {
+                        frameCaller.introduceResolvedVar(iReturn, typeRef, sName,
+                            Frame.VAR_DYNAMIC_REF, fStack ? frameCaller.popStack() : hRef);
+                        return Op.R_NEXT;
+                        });
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    @Override
     public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
@@ -240,13 +291,13 @@ public class xRef
 
             case RefHandle.REF_REF:
                 {
-                RefHandle hDelegate = (RefHandle) hRef.getReferent();
+                RefHandle hDelegate = (RefHandle) hRef.getReferentHolder();
                 return hDelegate.getVarSupport().getReferent(frame, hDelegate, iReturn);
                 }
 
             case RefHandle.REF_PROPERTY:
                 {
-                ObjectHandle hDelegate = hRef.getReferent();
+                ObjectHandle hDelegate = hRef.getReferentHolder();
                 return hDelegate.getTemplate().getPropertyValue(
                     frame, hDelegate, hRef.getPropertyId(), iReturn);
                 }
@@ -254,7 +305,7 @@ public class xRef
             case RefHandle.REF_ARRAY:
                 {
                 IndexedRefHandle hIndexedRef = (IndexedRefHandle) hRef;
-                ObjectHandle     hArray      = hRef.getReferent();
+                ObjectHandle     hArray      = hRef.getReferentHolder();
                 IndexSupport     template    = (IndexSupport) hArray.getTemplate();
 
                 return template.extractArrayValue(frame, hArray, hIndexedRef.f_lIndex, iReturn);
@@ -587,14 +638,22 @@ public class xRef
             return frame.callInitialized(frameID);
             }
 
+        public ObjectHandle getReferentHolder()
+            {
+            assert m_iVar != REF_REFERENT;
+            return m_hReferent;
+            }
+
         public ObjectHandle getReferent()
             {
-            return m_hReferent;
+            assert m_iVar == REF_REFERENT;
+            return getField(REFERENT);
             }
 
         public void setReferent(ObjectHandle hReferent)
             {
-            m_hReferent = hReferent;
+            assert m_iVar == REF_REFERENT;
+            setField(REFERENT, hReferent);
             }
 
         public String getName()
@@ -622,11 +681,14 @@ public class xRef
             switch (m_iVar)
                 {
                 case REF_REFERENT:
-                    return m_hReferent != null;
+                    return getReferent() != null;
+
+                case REF_REF:
+                    return ((RefHandle) getReferentHolder()).isAssigned();
 
                 case REF_PROPERTY:
                     {
-                    GenericHandle hTarget = (GenericHandle) m_hReferent;
+                    GenericHandle hTarget = (GenericHandle) getReferentHolder();
                     ObjectHandle  hValue  = hTarget.getField(m_idProp);
                     if (hValue == null)
                         {
@@ -638,8 +700,8 @@ public class xRef
                         }
                     return true;
                     }
-                case REF_REF:
-                    return ((RefHandle) m_hReferent).isAssigned();
+                case REF_ARRAY:
+                    return getReferentHolder() != null;
 
                 default: // assertion m_frame != null && m_iVar >= 0
                     return m_frame.f_ahVar[m_iVar] != null;
@@ -668,21 +730,37 @@ public class xRef
             switch (m_iVar)
                 {
                 case REF_REFERENT:
-                case REF_ARRAY:
-                    return m_hReferent == null ? s : s + m_hReferent;
+                    return isAssigned() ? s + getReferent() : s;
 
                 case REF_REF:
-                    return s + "--> " + m_hReferent;
+                    return s + "--> " + getReferentHolder();
 
                 case REF_PROPERTY:
-                    return s + "-> " + m_hReferent.getComposition() + "#" + m_sName;
+                    return s + "-> " + getReferentHolder().getComposition() + "#" + m_sName;
+
+                case REF_ARRAY:
+                    return getReferentHolder() + "[" + ((IndexedRefHandle) this).f_lIndex + "]";
 
                 default:
                     return s + "-> #" + m_iVar;
                 }
             }
 
-        protected ObjectHandle     m_hReferent; // can point to another Ref for the same referent
+        /**
+         * For a lack of a better name, this field holds either
+         * <ul>
+         *   <li>the referent itself (InjectRefHandle, m_iVar = REF_REFERENT),
+         *   <li>a delegation to another RefHandle (m_iVar = REF_REF),
+         *   <li>a property container (m_iVar = REF_PROPERTY),
+         *   <li>an array holding the referent (IndexRefHandle, m_iVar = REF_ARRAY),
+         *   <li>a delegation to a frame variable (m_frame != null, m_iVar >= 0), or
+         *   <li>null, for m_iVar = REF_REFERENT, in which case the field REFERENT holds the value
+         * </ul>
+         *
+         * What is quite important is that this field must not change while set - this will ensure
+         * the correct behavior of a {@link #cloneAs} operation.
+         */
+        protected ObjectHandle     m_hReferent;
         protected PropertyConstant m_idProp;
         protected String           m_sName;
         protected Frame            m_frame;
@@ -700,6 +778,11 @@ public class xRef
 
         // indicates that the m_hReferent field holds an array target
         protected static final int REF_ARRAY    = -4;
+
+        /**
+         * Synthetic property holding a referent.
+         */
+        protected final static String REFERENT = "$value";
         }
 
     /***
@@ -797,12 +880,12 @@ public class xRef
 
         private final RefHandle hRef1;
         private final RefHandle hRef2;
-        private final xRef template;
-        private final int iReturn;
+        private final xRef      template;
+        private final int       iReturn;
 
-        private ObjectHandle hReferent1;
-        private ObjectHandle hReferent2;
-        private int index = -1;
+        private ObjectHandle    hReferent1;
+        private ObjectHandle    hReferent2;
+        private int             index = -1;
         }
 
     // ----- constants -----------------------------------------------------------------------------

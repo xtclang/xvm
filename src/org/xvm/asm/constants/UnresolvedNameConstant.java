@@ -39,6 +39,14 @@ public class UnresolvedNameConstant
         m_fNoNarrow = fExplicitlyNonNarrowing;
         }
 
+    /**
+     * A trivial helper constructor.
+     */
+    public UnresolvedNameConstant(ConstantPool pool, String sName)
+        {
+        this(pool, new String[] {sName}, false);
+        }
+
 
     // ----- type-specific functionality -----------------------------------------------------------
 

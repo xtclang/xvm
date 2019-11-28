@@ -4,8 +4,6 @@ module TestProps.xqiz.it
 
     void run()
         {
-        console.println("hello world! (property tests)");
-
         testMethodProperty();
         testLazyProperty();
         testDelegation();
