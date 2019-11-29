@@ -186,18 +186,19 @@ public class VariableDeclarationStatement
                 m_reg.markEffectivelyFinal();
                 }
 
-            // for DVAR registers, specify the DVAR "register type" (separate from the type of the value
-            // that gets held in the register)
-            List<AnnotationExpression> listRefAnnotations = exprAnnoType.getRefAnnotations();
-            if (listRefAnnotations != null)
+            // for DVAR registers, specify the DVAR "register type"
+            // (separate from the type of the value that gets held in the register)
+            List<AnnotationExpression> listRefAnnos = exprAnnoType.getRefAnnotations();
+            int                        cRefAnnos    = listRefAnnos == null ? 0 : listRefAnnos.size();
+            if (cRefAnnos > 0)
                 {
                 boolean      fVar    = exprAnnoType.isVar();
                 boolean      fConst  = true;
                 TypeConstant typeReg = pool.ensureParameterizedTypeConstant(
                         fVar ? pool.typeVar() : pool.typeRef(), typeVar);
-                for (int i = listRefAnnotations.size() - 1; i >= 0; --i)
+                for (int i = cRefAnnos - 1; i >= 0; --i)
                     {
-                    AnnotationExpression exprAnno = listRefAnnotations.get(i);
+                    AnnotationExpression exprAnno = listRefAnnos.get(i);
 
                     typeReg = pool.ensureAnnotatedTypeConstant(
                             typeReg, exprAnno.ensureAnnotation(pool));
