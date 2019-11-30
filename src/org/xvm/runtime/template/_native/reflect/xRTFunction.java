@@ -18,9 +18,15 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ArrayHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.collections.xIntArray.IntArrayHandle;
+import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xInt64;
@@ -29,7 +35,6 @@ import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
-import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 
 /**
@@ -53,6 +58,8 @@ public class xRTFunction
     @Override
     public void initDeclared()
         {
+        TO_ARRAY = f_struct.findMethod("toArray", 1);
+
         markNativeMethod("bind", new String[] {"Type<Object>", "reflect.Parameter", "Object"}, null);
         markNativeMethod("bind", new String[] {"collections.Map<reflect.Parameter, Object>"}, null);
         markNativeMethod("invoke", null, null);
@@ -155,8 +162,43 @@ public class xRTFunction
      */
     public int invokeBind(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
         {
-        // TODO
-        throw new UnsupportedOperationException();
+        Frame.Continuation stepBind = frameCaller ->
+            {
+            try
+                {
+                ConstantPool   pool       = frameCaller.poolContext();
+                ArrayHandle    haValues   = (ArrayHandle) frameCaller.popStack();
+                IntArrayHandle haOrdinals = (IntArrayHandle) frameCaller.popStack();
+                FunctionHandle hFuncR     = hFunc;
+
+                int ixPrev = Integer.MAX_VALUE;
+                for (int i = 0, c = haOrdinals.m_cSize; i < c; i++)
+                    {
+                    int     ix      = (int) haOrdinals.m_alValue[i];
+                    boolean fAdjust = ix > ixPrev;
+
+                    ixPrev = ix;
+                    if (fAdjust)
+                        {
+                        ix--;
+                        }
+                    hFuncR = hFuncR.bind(pool, ix, haValues.getElement(i));
+                    }
+                return frameCaller.assignValue(iReturn, hFuncR);
+                }
+            catch (Exception e)
+                {
+                return frameCaller.raiseException(e.getMessage());
+                }
+            };
+
+        ObjectHandle[] ahArg = new ObjectHandle[TO_ARRAY.getMaxVars()];
+        ahArg[0] = hArg;
+
+        Frame frameNext = frame.createFrameN(TO_ARRAY, null, ahArg,
+            new int[] {Op.A_STACK, Op.A_STACK});
+        frameNext.addContinuation(stepBind);
+        return frame.callInitialized(frameNext);
         }
 
     /**
@@ -164,8 +206,15 @@ public class xRTFunction
      */
     public int invokeBind(Frame frame, FunctionHandle hFunc, ObjectHandle[] ahArg, int iReturn)
         {
-        // TODO
-        throw new UnsupportedOperationException();
+        // (TypeHandle) ahArg[0] -- unused
+        GenericHandle hParam = (GenericHandle) ahArg[1];
+        ObjectHandle  hValue = ahArg[2];
+
+        long nOrdinal = ((JavaLong) hParam.getField("ordinal")).getValue();
+
+        FunctionHandle hFuncR = hFunc.bind(frame.poolContext(),
+                                    (int) nOrdinal, hValue);
+        return frame.assignValue(iReturn, hFuncR);
         }
 
     /**
@@ -1087,4 +1136,12 @@ public class xRTFunction
         {
         return new FunctionHandle(function);
         }
+
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * static (Int[], Object[]) toArray(Map<Parameter, Object> params)
+     */
+    protected static MethodStructure TO_ARRAY;
     }

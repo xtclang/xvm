@@ -390,6 +390,12 @@ public abstract class BitBasedArray
             }
 
         @Override
+        public ObjectHandle getElement(int ix)
+            {
+            return ((BitBasedArray) getTemplate()).makeBitHandle(getBit(m_abValue, ix));
+            }
+
+        @Override
         public void makeImmutable()
             {
             if (isMutable())

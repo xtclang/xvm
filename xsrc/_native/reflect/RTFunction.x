@@ -14,4 +14,22 @@ const RTFunction<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple
     @Override Function!<> bind(Map<Parameter, Object> params)     { TODO("native"); }
     @Override @Op("()") ReturnTypes invoke(ParamTypes args)       { TODO("native"); }
     @Override FutureVar<ReturnTypes> invokeAsync(ParamTypes args) { TODO("native"); }
+
+    /**
+     * Helper function used by the native code.
+     */
+    static (Int[], Object[]) toArray(Map<Parameter, Object> params)
+        {
+        Int      size     = params.size;
+        Int[]    ordinals = new Array<Int>(size);
+        Object[] values   = new Array<Object>(size);
+
+        loop:
+        for ((Parameter param, Object value) : params)
+            {
+            ordinals[loop.count] = param.ordinal;
+            values  [loop.count] = value;
+            }
+        return (ordinals, values);
+        }
     }

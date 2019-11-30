@@ -315,6 +315,12 @@ public class xByteArray
             }
 
         @Override
+        public ObjectHandle getElement(int ix)
+            {
+            return xUInt8.makeHandle(m_abValue[ix]);
+            }
+
+        @Override
         public void makeImmutable()
             {
             if (isMutable())

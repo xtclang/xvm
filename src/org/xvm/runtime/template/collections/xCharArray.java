@@ -312,6 +312,12 @@ public class xCharArray
             }
 
         @Override
+        public ObjectHandle getElement(int ix)
+            {
+            return xChar.makeHandle(m_achValue[ix]);
+            }
+
+        @Override
         public void makeImmutable()
             {
             if (isMutable())

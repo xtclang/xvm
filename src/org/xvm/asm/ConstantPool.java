@@ -3372,7 +3372,19 @@ public class ConstantPool
             }
         if (cL != cMaxParams || cR != cMaxParams)
             {
-            // either cR == 0 or a compilation error; not our responsibility to report
+            // the only valid scenario is:
+            // Function<<>, <>> <-- Function<>
+            if (cL == cMaxParams && cR == cMinParams)
+                {
+                TypeConstant typeLP = typeLeft .getParamType(ixParams);
+                TypeConstant typeLR = typeLeft .getParamType(ixReturns);
+
+                assert typeLP.isTuple() && typeLR.isTuple();
+                if (typeLP.getParamsCount() == 0 && typeLR.getParamsCount() == 0)
+                    {
+                    return Relation.IS_A;
+                    }
+                }
             return Relation.INCOMPATIBLE;
             }
 

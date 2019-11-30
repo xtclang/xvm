@@ -294,6 +294,12 @@ public class xIntArray
             }
 
         @Override
+        public ObjectHandle getElement(int ix)
+            {
+            return xInt64.makeHandle(m_alValue[ix]);
+            }
+
+        @Override
         public boolean isNativeEqual()
             {
             return true;

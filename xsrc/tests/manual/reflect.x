@@ -12,6 +12,7 @@ module TestReflection.xqiz.it
         testProps();
         testFuncs();
         testFuncs2();
+        testBind();
         testChildTypes();
         // TODO testEnum();
         }
@@ -306,6 +307,32 @@ module TestReflection.xqiz.it
             {
             console.println($"{type} children: {type.childTypes}");
             }
+        }
+
+    void testBind()
+        {
+        import Ecstasy.collections.ListMap;
+        import Ecstasy.reflect.Parameter;
+
+        console.println("\n** testBind");
+
+        function void (Int, String) log =
+            (i, v) -> console.println($"[{i}] {v}");
+
+        Parameter<Int>    param0 = log.params[0].as(Parameter<Int>);
+        Parameter<String> param1 = log.params[1].as(Parameter<String>);
+
+        // single bind
+        function void (Int) hello = log.bind(param1, "hello").as(function void (Int));
+        hello(0);
+
+        // multi bind
+        Map<Parameter, Object> params = new ListMap();
+        params.put(param0, 1);
+        params.put(param1, "world");
+
+        function void () world = log.bind(params);
+        world();
         }
 
     void testEnum()

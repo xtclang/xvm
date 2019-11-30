@@ -999,6 +999,12 @@ public class xArray
             }
 
         @Override
+        public ObjectHandle getElement(int ix)
+            {
+            return m_ahValue[ix];
+            }
+
+        @Override
         public boolean isNativeEqual()
             {
             return false;
