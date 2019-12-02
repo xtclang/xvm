@@ -272,12 +272,13 @@ public abstract class IdentityConstant
         }
 
     /**
-     * TODO GG doc
+     * Obtain an object that identifies this constant relative to the class within which it nests,
+     * with generic types resolved resolved using the specified resolver.
      *
-     * @param pool
-     * @param resolver
+     * @param pool      the ConstantPool to use
+     * @param resolver  the {@link GenericTypeResolver} to resolve generic types
      *
-     * @return
+     * @return an identifying object or null if this constant refers to a class structure
      */
     public Object resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver)
         {
