@@ -17,6 +17,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -170,6 +171,10 @@ public class TemplateRegistry
         {
         // this call (class by name) can only come from the root module
         Component comp = f_moduleRoot.getChildByPath(sName);
+        while (comp instanceof TypedefStructure)
+            {
+            comp = ((TypedefStructure) comp).getType().getSingleUnderlyingClass(true).getComponent();
+            }
         if (comp instanceof ClassStructure)
             {
             return (ClassStructure) comp;
