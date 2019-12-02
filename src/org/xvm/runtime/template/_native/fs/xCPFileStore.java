@@ -104,13 +104,12 @@ public class xCPFileStore
                 {
                 ConstantHandle hNode     = (ConstantHandle) ahArg[0];
                 FSNodeConstant constNode = (FSNodeConstant) hNode.get();
-                ObjectHeap     heap      = frame.f_context.f_heapGlobal;
 
                 ObjectHandle[] ahValue = new ObjectHandle[5];
                 ahValue[0] = xBoolean.makeHandle(constNode.getFormat() == Format.FSDir);
                 ahValue[1] = xString.makeHandle(constNode.getName());
-                ahValue[2] = heap.ensureConstHandle(frame, constNode.getCreatedConstant());
-                ahValue[3] = heap.ensureConstHandle(frame, constNode.getModifiedConstant());
+                ahValue[2] = frame.getConstHandle(constNode.getCreatedConstant());
+                ahValue[3] = frame.getConstHandle(constNode.getModifiedConstant());
                 ahValue[4] = xInt64.makeHandle(calcSize(constNode));
                 return new Utils.AssignValues(aiReturn, ahValue).proceed(frame);
                 }

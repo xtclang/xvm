@@ -351,7 +351,7 @@ public class xRTType
                 poolDft.ensureParameterizedTypeConstant(poolDft.typeMap(),
                         poolDft.typeString(), poolDft.typeType()));
         MapConstant  constResult = poolDft.ensureMapConstant(typeResult, mapResult);
-        ObjectHandle hResult     = frame.f_context.f_heapGlobal.ensureConstHandle(frame, constResult);
+        ObjectHandle hResult     = frame.getConstHandle(constResult);
         return frame.assignValue(iReturn, hResult);
         }
 
