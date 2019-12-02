@@ -22,6 +22,8 @@ import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
+import org.xvm.runtime.template.collections.xTuple.TupleHandle;
+
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
@@ -463,7 +465,11 @@ public class ServiceContext
             });
         }
 
-    // send and asynchronous "invoke" message with zero or one return value
+    /**
+     * Send and asynchronous "invoke" message with zero or one return value.
+     *
+     * @param cReturns 1, 0 or -1  for one, zero or tuple return
+     */
     public CompletableFuture<ObjectHandle> sendInvoke1Request(Frame frameCaller,
                 FunctionHandle hFunction, ServiceHandle hService, ObjectHandle[] ahArg, int cReturns)
         {
@@ -577,7 +583,7 @@ public class ServiceContext
                         new Response(fiberCaller, xTuple.H_VOID, frame.m_hException, future));
                 break;
 
-            case 1:
+            case  1:
                 {
                 ObjectHandle    hReturn    = frame.f_ahVar[0];
                 ExceptionHandle hException = frame.m_hException;
@@ -594,6 +600,36 @@ public class ServiceContext
                 break;
                 }
 
+            case -1:
+                {
+                ObjectHandle[]  ahReturn   = frame.f_ahVar;
+                ExceptionHandle hException = frame.m_hException;
+                TupleHandle     hTuple     = null;
+                if (hException == null)
+                    {
+                    hTuple = (TupleHandle) ahReturn[0];
+
+                    ahReturn = hTuple.m_ahValue;
+                    for (int i = 0, c = ahReturn.length; i < c; i++)
+                        {
+                        ObjectHandle hReturn = ahReturn[i];
+                        if (hReturn.isMutable() && !hReturn.isService())
+                            {
+                            hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
+                            if (hReturn == null)
+                                {
+                                hException = xException.mutableObject(frame);
+                                hTuple     = null;
+                                break;
+                                }
+                            ahReturn[i] = hReturn;
+                            }
+                        }
+                    }
+                fiberCaller.f_context.respond(new Response(fiberCaller, hTuple, hException, future));
+                break;
+                }
+
             default:
                 {
                 assert cReturns > 1;
@@ -604,7 +640,7 @@ public class ServiceContext
                     for (int i = 0, c = ahReturn.length; i < c; i++)
                         {
                         ObjectHandle hReturn = ahReturn[i];
-                        if (hReturn.isMutable() && hReturn.isService())
+                        if (hReturn.isMutable() && !hReturn.isService())
                             {
                             hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
                             if (hReturn == null)
@@ -799,9 +835,22 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    return f_hFunction.call1(frame,
-                        f_hService == null ? context.getService() : f_hService,
-                        f_ahArg, f_cReturns == 1 ? 0 : A_IGNORE);
+                    ServiceHandle hService = f_hService == null ? context.getService() : f_hService;
+
+                    switch (f_cReturns)
+                        {
+                        case -1:
+                            return f_hFunction.callT(frame, hService, f_ahArg, 0);
+
+                        case 0:
+                            return f_hFunction.call1(frame, hService, f_ahArg, A_IGNORE);
+
+                        case 1:
+                            return f_hFunction.call1(frame, hService, f_ahArg, 0);
+
+                        default:
+                            throw new IllegalStateException();
+                        }
                     }
 
                 public String toString()
@@ -810,7 +859,7 @@ public class ServiceContext
                     }
                 };
 
-            Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
+            Frame frame0 = context.createServiceEntryFrame(this, Math.abs(f_cReturns),
                     new Op[] {opCall, Return_0.INSTANCE});
 
             frame0.addContinuation(_null ->

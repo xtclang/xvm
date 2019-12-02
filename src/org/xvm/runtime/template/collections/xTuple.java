@@ -263,6 +263,11 @@ public class xTuple
 
     // ----- ObjectHandle helpers -----
 
+    public static TupleHandle makeHandle(ObjectHandle... ahValue)
+        {
+        return new TupleHandle(INSTANCE.getCanonicalClass(), ahValue);
+        }
+
     public static TupleHandle makeHandle(TypeConstant typeTuple, ObjectHandle... ahValue)
         {
         return new TupleHandle(INSTANCE.ensureClass(typeTuple), ahValue);

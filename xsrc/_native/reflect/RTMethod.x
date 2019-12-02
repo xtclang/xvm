@@ -14,7 +14,6 @@ const RTMethod<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends
 
     @Override Function<ParamTypes, ReturnTypes> bindTarget(Target target)        { TODO("native"); }
     @Override ReturnTypes invoke(Target target, ParamTypes args)                 { TODO("native"); }
-    @Override FutureVar<ReturnTypes> invokeAsync(Target target, ParamTypes args) { TODO("native"); }
 
     // these methods are currently implemented as natural code:
     //   conditional Parameter findParam(String name)

@@ -63,7 +63,6 @@ public class xRTFunction
         markNativeMethod("bind", new String[] {"Type<Object>", "reflect.Parameter", "Object"}, null);
         markNativeMethod("bind", new String[] {"collections.Map<reflect.Parameter, Object>"}, null);
         markNativeMethod("invoke", null, null);
-        markNativeMethod("invokeAsync", null, null);
 
         super.initDeclared();
         }
@@ -123,9 +122,6 @@ public class xRTFunction
 
             case "invoke":
                 return invokeInvoke(frame, hFunc, hArg, iReturn);
-
-            case "invokeAsync":
-                return invokeInvokeAsync(frame, hFunc, hArg, iReturn);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -272,15 +268,6 @@ public class xRTFunction
             }
 
         return hFunc.callT(frame, null, ahVar, iReturn);
-        }
-
-    /**
-     * Method implementation: `FutureVar<ReturnTypes> invokeAsync(ParamTypes args)`
-     */
-    public int invokeInvokeAsync(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn)
-        {
-        // TODO GG
-        throw new UnsupportedOperationException();
         }
 
 
@@ -915,14 +902,8 @@ public class xRTFunction
                 return frame.raiseException(xException.mutableObject(frame));
                 }
 
-            if (true)
-                {
-                // TODO: add a "return a Tuple back" flag
-                throw new UnsupportedOperationException();
-                }
-
             CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
-                    frame, this, hService, ahVar, 1);
+                    frame, this, hService, ahVar, -1);
 
             return frame.assignFutureResult(iReturn, cfResult);
             }

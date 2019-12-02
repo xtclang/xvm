@@ -51,7 +51,6 @@ public class xRTMethod
         markNativeMethod("formalReturnNames", null, null);
         markNativeMethod("bindTarget"       , null, null);
         markNativeMethod("invoke"           , null, null);
-        markNativeMethod("invokeAsync"      , null, null);
 
         super.initDeclared();
         }
@@ -120,9 +119,6 @@ public class xRTMethod
             {
             case "invoke":
                 return invokeInvoke(frame, hMethod, ahArg, iReturn);
-
-            case "invokeAsync":
-                return invokeInvokeAsync(frame, hMethod, ahArg, iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -186,15 +182,6 @@ public class xRTMethod
         return chain.isNative()
                 ? hTarget.getTemplate().invokeNativeT(frame, chain.getTop(), hTarget, ahPass, iReturn)
                 : hTarget.getTemplate().invokeT(frame, chain, hTarget, ahPass, iReturn);
-        }
-
-    /**
-     * Implementation for: {@code FutureVar<ReturnTypes> invokeAsync(Target target, ParamTypes args)}.
-     */
-    public int invokeInvokeAsync(Frame frame, MethodHandle hMethod, ObjectHandle[] ahArg, int iReturn)
-        {
-        // TODO GG
-        throw new UnsupportedOperationException("TODO");
         }
 
     /**

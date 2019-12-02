@@ -799,11 +799,10 @@ public class Frame
                 return returnValue(f_aiReturn[0], hValue, fDynamic);
 
             case Op.A_TUPLE:
+                Frame framePrev = f_framePrev;
+                int   iReturn   = f_aiReturn[0];
                 if (fDynamic)
                     {
-                    Frame framePrev = f_framePrev;
-                    int   iReturn   = f_aiReturn[0];
-
                     if (framePrev.isDynamicVar(iReturn))
                         {
                         // TODO: dynamic -> dynamic Tuple, e.g. @Future Tuple<T> t = f();
@@ -824,9 +823,15 @@ public class Frame
                                 break;
 
                             case Op.R_CALL:
-                                m_frameNext.addContinuation(frameCaller ->
-                                    frameCaller.returnAsTuple(new ObjectHandle[] {popStack()}));
-                                return Op.R_CALL;
+                                framePrev.m_frameNext.addContinuation(frameCaller ->
+                                    frameCaller.assignValue(iReturn,
+                                        xTuple.makeHandle(frameCaller.popStack())));
+                                if (m_continuation != null)
+                                    {
+                                    // transfer the continuation
+                                    framePrev.m_frameNext.addContinuation(m_continuation);
+                                    }
+                                return Op.R_RETURN_CALL;
 
                             case Op.R_EXCEPTION:
                                 return Op.R_RETURN_EXCEPTION;
@@ -836,7 +841,7 @@ public class Frame
                             }
                         }
                     }
-                return returnAsTuple(new ObjectHandle[]{hValue});
+                return framePrev.returnValue(iReturn, xTuple.makeHandle(hValue), false);
 
             default:
                 return returnValue(f_iReturn, hValue, fDynamic);
@@ -903,18 +908,6 @@ public class Frame
             }
         }
 
-    // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
-    private int returnAsTuple(ObjectHandle[] ahValue)
-        {
-        assert f_iReturn == Op.A_TUPLE;
-
-        int iReturn = f_aiReturn[0];
-
-        ClassComposition clazz = ensureClass(f_framePrev.getVarInfo(iReturn).getType());
-        return returnValue(iReturn, xTuple.makeHandle(clazz, ahValue), false);
-        }
-
-
     /**
      * Assign the return registers on the caller's frame.
      *
@@ -935,12 +928,18 @@ public class Frame
                 return new Utils.ReturnValues(f_aiReturn, ahValue, afDynamic).proceed(this);
 
             case Op.A_TUPLE:
-                if (afDynamic != null)
+                if (afDynamic == null)
+                    {
+                    int              iReturn = f_aiReturn[0];
+                    ClassComposition clazz   = ensureClass(f_framePrev.getVarInfo(iReturn).getType());
+
+                    return returnValue(iReturn, xTuple.makeHandle(clazz, ahValue), false);
+                    }
+                else
                     {
                     // TODO: dynamic -> tuple
                     throw new UnsupportedOperationException();
                     }
-                return returnAsTuple(ahValue);
 
             default:
                 throw new IllegalArgumentException("iReturn=" + f_iReturn);

@@ -10,8 +10,9 @@ module TestReflection.xqiz.it
         testMaskReveal();
         testForm();
         testProps();
-        testFuncs();
-        testFuncs2();
+        testInvoke();
+        testInvoke2();
+        testInvokeAsync();
         testBind();
         testChildTypes();
         // TODO testEnum();
@@ -198,13 +199,13 @@ module TestReflection.xqiz.it
             }
         }
 
-    void testFuncs()
+    void testInvoke()
         {
-        console.println("\n** testFuncs");
+        console.println("\n** testInvoke");
 
-        val f = testFuncs;
-        console.println($"func name={f.name}");
-        console.println($"func type={&f.actualType}");
+        val fnSelf = testInvoke;
+        console.println($"func name={fnSelf.name}");
+        console.println($"func type={&fnSelf.actualType}");
 
         void foo(Int x, String s)
             {
@@ -225,9 +226,9 @@ module TestReflection.xqiz.it
         f4.invoke((42, "goodbye"));
         }
 
-    void testFuncs2()
+    void testInvoke2()
         {
-        console.println("\n** testFuncs2");
+        console.println("\n** testInvoke2");
 
         const Point<Num extends Number>(Num x, Num y)
             {
@@ -298,14 +299,37 @@ module TestReflection.xqiz.it
             }
         }
 
-    void testChildTypes()
+    void testInvokeAsync()
         {
-        console.println("\n** testChildTypes");
+        console.println("\n** testInvokeAsync");
 
-        Type[] types = [Nullable, Map, Ecstasy.collections.HashMap, Type, Class];
-        for (Type type : types)
+        DelayService svc = new DelayService();
+
+        function Int (Duration) calc = svc.calcSomethingBig;
+
+        console.println("calling sync");
+        Tuple resultS = calc.invoke(Tuple:(Duration.ofMillis(10)));
+        console.println(resultS[0]);
+
+        console.println("calling async");
+        @Future Tuple resultA = calc.invoke(Tuple:(Duration.ofMillis(20)));
+        &resultA.whenComplete((t, e) ->
             {
-            console.println($"{type} children: {type.childTypes}");
+            console.println($"complete {t?[0] : assert}");
+            });
+        console.println($"assigned={&resultA.assigned}, result={resultA[0]}, assigned={&resultA.assigned}");
+
+        service DelayService
+            {
+            Int calcSomethingBig(Duration delay)
+                {
+                @Inject Clock clock;
+                @Future Int   result;
+
+                console.println($"delay {delay}");
+                clock.schedule(delay, () -> {result=delay.milliseconds;});
+                return result;
+                }
             }
         }
 
@@ -333,6 +357,17 @@ module TestReflection.xqiz.it
 
         function void () world = log.bind(params);
         world();
+        }
+
+    void testChildTypes()
+        {
+        console.println("\n** testChildTypes");
+
+        Type[] types = [Nullable, Map, Ecstasy.collections.HashMap, Type, Class];
+        for (Type type : types)
+            {
+            console.println($"{type} children: {type.childTypes}");
+            }
         }
 
     void testEnum()

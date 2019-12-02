@@ -64,6 +64,9 @@ public class xFutureVar
 
         markNativeMethod("completeExceptionally", new String[] {"Exception"}, VOID);
 
+        markNativeProperty("assigned");
+        markNativeProperty("completion");
+
         getCanonicalType().invalidateTypeInfo();
         }
 
@@ -75,9 +78,6 @@ public class xFutureVar
 
         switch (sPropName)
             {
-            case "assignable":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(cf == null || !cf.isDone()));
-
             case "assigned":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(cf != null && cf.isDone()));
 

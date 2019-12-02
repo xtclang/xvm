@@ -41,6 +41,7 @@ module TestServices.xqiz.it
             console.println($"{tag()} 2. expected exception={e.text}");
             }
 
+        assert &n2.assigned;
         &n2.whenComplete((n, e) ->
             {
             assert e != null;

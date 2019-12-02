@@ -7,7 +7,7 @@
  *
  * To invoke a function, use [invoke], passing a compatible tuple of arguments. To invoke a
  * function that permits asynchronous execution (if the function represents something that executes
- * within the scope of another service), use [invokeAsync] instead.
+ * within the scope of another service), use [invoke] assigning the result into a [@Future Tuple].
  */
 interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>
         extends Signature<ParamTypes, ReturnTypes>
@@ -54,17 +54,4 @@ interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tup
      */
     @Op("()")
     ReturnTypes invoke(ParamTypes args);
-
-    /**
-     * Invoke the function with the specified arguments, obtaining a future result. It is possible
-     * that the function will be executed in a synchronous manner and that the future will have
-     * completed by the time that this method returns; this will occur, for example, if the function
-     * does not actually represent a service invocation, or if the runtime chooses to execute a
-     * service invocation synchronously.
-     *
-     * @param args  a tuple of the arguments to invoke the function
-     *
-     * @return a future tuple of the return values from the function
-     */
-    FutureVar<ReturnTypes> invokeAsync(ParamTypes args);
     }

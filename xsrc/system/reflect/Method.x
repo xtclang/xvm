@@ -36,21 +36,6 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
         return bindTarget(target).invoke(args);
         }
 
-    /**
-     * Given an object reference of a type that contains this method, invoke that method
-     * asynchronously (if possible) passing the specified arguments, and returning the results as
-     * a future result.
-     *
-     * @param target  the object reference to invoke this method on
-     * @param args    a tuple of the arguments to invoke the method
-     *
-     * @return a future tuple of the return values from the method
-     */
-    FutureVar<ReturnTypes> invokeAsync(Target target, ParamTypes args)
-        {
-        return bindTarget(target).invokeAsync(args);
-        }
-
 
     // ----- type comparison support ---------------------------------------------------------------
 
