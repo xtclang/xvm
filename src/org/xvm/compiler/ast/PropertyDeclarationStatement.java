@@ -242,6 +242,11 @@ public class PropertyDeclarationStatement
 
         String    sName     = name.getValueText();
         Component container = getParent().getComponent();
+        if (container == null)
+            {
+            // error should have already been reported
+            return;
+            }
         if (!container.isClassContainer())
             {
             log(errs, Severity.ERROR, Compiler.PROP_UNEXPECTED, sName, container);
