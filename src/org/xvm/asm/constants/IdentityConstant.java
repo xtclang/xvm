@@ -643,14 +643,16 @@ public abstract class IdentityConstant
         }
 
     /**
-     * Obtain the TypeConstant that represents the runtime type of a Ref/Var for this constant in
-     * the context of the specified target.
+     * If an identity constant can be embedded into assembly and referred to as a _value_ in that
+     * assembly code, then at runtime, the code execution is responsible for turning the identity
+     * constant into an object that corresponds to that identity; this method calculates the type
+     * of that runtime value.
      *
      * @param typeTarget  the target type (null if the identity is itself the target)
      *
      * @return a TypeConstant
      */
-    public TypeConstant getRefType(TypeConstant typeTarget)
+    public TypeConstant getValueType(TypeConstant typeTarget)
         {
         if (isClass())
             {

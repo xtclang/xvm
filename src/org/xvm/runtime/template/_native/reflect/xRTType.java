@@ -364,19 +364,15 @@ public class xRTType
         TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
         Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
         ArrayList<ObjectHandle>             listProps  = new ArrayList<>(mapProps.size());
-        ConstantPool                        pool       = frame.poolContext();
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
             {
-            PropertyInfo propinfo = entry.getValue();
-            if (!propinfo.isConstant())
+            PropertyInfo infoProp = entry.getValue();
+            if (!infoProp.isConstant())
                 {
                 continue;
                 }
 
-            TypeConstant typeReferent = propinfo.getType();
-            TypeConstant typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, entry.getKey());
-            TypeConstant typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
-                typeTarget, typeReferent, typeImpl);
+            TypeConstant typeProperty = entry.getKey().getValueType(typeTarget);
             ObjectHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
 
             listProps.add(hProperty);
@@ -687,13 +683,10 @@ public class xRTType
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
             {
             PropertyConstant idProp   = entry.getKey();
-            PropertyInfo     propinfo = entry.getValue();
-            if (!propinfo.isConstant() && idProp.getNestedDepth() == 1)
+            PropertyInfo     infoProp = entry.getValue();
+            if (!infoProp.isConstant() && idProp.getNestedDepth() == 1)
                 {
-                TypeConstant  typeReferent = propinfo.getType();
-                TypeConstant  typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, idProp);
-                TypeConstant  typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
-                                                typeTarget, typeReferent, typeImpl);
+                TypeConstant  typeProperty = entry.getKey().getValueType(typeTarget);
                 PropertyHandle hProperty   = xRTProperty.INSTANCE.makeHandle(typeProperty);
 
                 listProps.add(hProperty);
@@ -821,16 +814,8 @@ public class xRTType
             Constant constDef = type.getDefiningConstant();
             if (constDef instanceof PropertyConstant)
                 {
-                PropertyConstant idProp        = (PropertyConstant) constDef;
-                ConstantPool      pool         = idProp.getConstantPool();  // note: purposeful
-                TypeConstant      typeTarget   = idProp.getClassIdentity().getType();
-                TypeInfo          infoTarget   = typeTarget.ensureTypeInfo();
-                PropertyInfo      infoProp     = infoTarget.findProperty(idProp);
-                TypeConstant      typeReferent = infoProp.getType();
-                TypeConstant      typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, idProp);
-                TypeConstant      typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
-                                                    typeTarget, typeReferent, typeImpl);
-                PropertyHandle    hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
+                TypeConstant   typeProperty = ((PropertyConstant) constDef).getValueType(null);
+                PropertyHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
 
                 return frame.assignValues(aiReturn, xBoolean.TRUE, hProperty);
                 }

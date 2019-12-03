@@ -1930,8 +1930,8 @@ public class NameExpression
                     TypeConstant     typeClass = clazz.getFormalType();
 
                     return constant instanceof PseudoConstant
-                            ? ((PseudoConstant) constant).resolveClass(idClass).getRefType(typeClass)
-                            : ((IdentityConstant) constant).getRefType(typeClass);
+                            ? ((PseudoConstant) constant).resolveClass(idClass).getValueType(typeClass)
+                            : ((IdentityConstant) constant).getValueType(typeClass);
                     }
 
             case Property:
@@ -2066,7 +2066,7 @@ public class NameExpression
                         ? Plan.None
                         : Plan.BindTarget;
 
-                TypeConstant typeFn = idMethod.getRefType(null);
+                TypeConstant typeFn = idMethod.getType();
                 if (typeDesired != null)
                     {
                     MethodStructure method = (MethodStructure) idMethod.getComponent();

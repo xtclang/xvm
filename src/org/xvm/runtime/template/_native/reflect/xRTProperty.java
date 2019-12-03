@@ -73,22 +73,12 @@ public class xRTProperty
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        // TODO CP - identity mode for property name needs to emit a constant that provides enough
+        // TODO GG - identity mode for property name needs to emit a constant that provides enough
         //           info (e.g. a PropertyClassTypeConstant)
-
-        // @deprecated compiler should no longer emit PropertyConstant for identity mode TODO remove
         if (constant instanceof PropertyConstant)
             {
-            ConstantPool     pool         = constant.getConstantPool();  // note: purposeful
-            PropertyConstant idProp       = (PropertyConstant) constant;
-            TypeConstant     typeTarget   = idProp.getClassIdentity().getType();
-            TypeInfo         infoTarget   = typeTarget.ensureTypeInfo();
-            PropertyInfo     infoProp     = infoTarget.findProperty(idProp);
-            TypeConstant     typeReferent = infoProp.getType();
-            TypeConstant     typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, idProp);
-            TypeConstant     typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
-                                                typeTarget, typeReferent, typeImpl);
-            ObjectHandle     hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
+            TypeConstant typeProperty = ((PropertyConstant) constant).getValueType(null);
+            ObjectHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
 
             frame.pushStack(hProperty);
             return Op.R_NEXT;

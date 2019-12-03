@@ -416,25 +416,22 @@ public class MethodConstant
         return getSignature().isAutoNarrowing();
         }
 
-
-    // ----- Constant methods ----------------------------------------------------------------------
-
     @Override
-    public Format getFormat()
+    public TypeConstant getValueType(TypeConstant typeTarget)
         {
-        return Format.Method;
-        }
+        SignatureConstant sig       = getSignature();
+        boolean           fFunction = isFunction() || isConstructor();
 
-    @Override
-    public TypeConstant getRefType(TypeConstant typeTarget)
-        {
-        SignatureConstant sig = getSignature();
-        if (isFunction() || isConstructor())
+        if (fFunction)
             {
             assert typeTarget == null;
             }
         else
             {
+            if (typeTarget == null)
+                {
+                typeTarget = getClassIdentity().getType();
+                }
             sig = sig.resolveAutoNarrowing(getConstantPool(), typeTarget);
             }
 
@@ -447,7 +444,18 @@ public class MethodConstant
                 sig = sig.truncateParams(cTypeParams, sig.getParamCount() - cTypeParams);
                 }
             }
-        return sig.asFunctionType();
+        return fFunction
+                ? sig.asFunctionType()
+                : sig.asMethodType(getConstantPool(), typeTarget);
+        }
+
+
+    // ----- Constant methods ----------------------------------------------------------------------
+
+    @Override
+    public Format getFormat()
+        {
+        return Format.Method;
         }
 
     @Override

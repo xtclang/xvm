@@ -187,22 +187,15 @@ public class PropertyConstant
         return isFormalType() && getConstraintType() instanceof TypeSequenceTypeConstant;
         }
 
-
-    // ----- Constant methods ----------------------------------------------------------------------
-
-    @Override
-    public Format getFormat()
-        {
-        return Format.Property;
-        }
-
-    @Override
-    public boolean isProperty()
-        {
-        return true;
-        }
-
-    @Override
+    /**
+     * Obtain the TypeConstant that represents the runtime type of a Ref/Var for this property in
+     * the context of the specified target.
+     *
+     * @param typeTarget  the target type (null if the property's {@link #getClassIdentity()
+     *                    class identity} is the target)
+     *
+     * @return a TypeConstant
+     */
     public TypeConstant getRefType(TypeConstant typeTarget)
         {
         if (typeTarget == null)
@@ -217,6 +210,42 @@ public class PropertyConstant
         return infoThis.isCustomLogic()
                 ? getConstantPool().ensurePropertyClassTypeConstant(typeTarget, this)
                 : infoThis.getBaseRefType();
+        }
+
+
+    // ----- IdentityConstant methods --------------------------------------------------------------
+
+    @Override
+    public TypeConstant getValueType(TypeConstant typeTarget)
+        {
+        if (typeTarget == null)
+            {
+            typeTarget = getClassIdentity().getType();
+            }
+
+        ConstantPool pool         = getConstantPool();
+        TypeInfo     infoTarget   = typeTarget.ensureTypeInfo();
+        PropertyInfo infoProp     = infoTarget.findProperty(this);
+        TypeConstant typeReferent = infoProp.getType();
+        TypeConstant typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, this);
+
+        return pool.ensureParameterizedTypeConstant(pool.typeProperty(),
+                typeTarget, typeReferent, typeImpl);
+        }
+
+
+    // ----- Constant methods ----------------------------------------------------------------------
+
+    @Override
+    public Format getFormat()
+        {
+        return Format.Property;
+        }
+
+    @Override
+    public boolean isProperty()
+        {
+        return true;
         }
 
     @Override

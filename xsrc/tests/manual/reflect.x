@@ -85,7 +85,7 @@ module TestReflection.xqiz.it
         // but they must not be able to use that fact when in a different container;
         // since the tests for now run "in-container", the revealAs() would work
 
-        console.println($"tmpDir=" + tmpDir.toString());
+        console.println("tmpDir=" + tmpDir.toString());
 
         assert !tmpDir.is(Stringable);
         assert !&tmpDir.instanceOf(Stringable);

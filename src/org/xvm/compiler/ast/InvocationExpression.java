@@ -430,8 +430,8 @@ public class InvocationExpression
                     }
 
                 TypeConstant typeFn = m_fBindTarget
-                    ? idMethod.getType()
-                    : idMethod.getRefType(typeLeft);
+                        ? idMethod.getType()
+                        : idMethod.getValueType(typeLeft);
 
                 if (resolver != null)
                     {
@@ -858,8 +858,8 @@ public class InvocationExpression
                             }
 
                         TypeConstant typeFn = m_fBindTarget
-                            ? idMethod.getType()
-                            : idMethod.getRefType(typeLeft);
+                                ? idMethod.getType()
+                                : idMethod.getValueType(typeLeft);
 
                         if (!mapTypeParams.isEmpty())
                             {
