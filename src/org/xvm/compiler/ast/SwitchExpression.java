@@ -100,7 +100,7 @@ public class SwitchExpression
             {
             if (node instanceof Expression)
                 {
-                fit.combineWith(((Expression) node).testFitMulti(ctx, atypeRequired, errs));
+                fit = fit.combineWith(((Expression) node).testFitMulti(ctx, atypeRequired, errs));
                 if (!fit.isFit())
                     {
                     return fit;
