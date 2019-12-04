@@ -17,8 +17,8 @@ module TestReflection.xqiz.it
         testInvokeAsync();
         testBind();
         testChildTypes();
-        // testTypeTemplate();
-        // testEnum();
+        testTypeTemplate();
+        testEnum();
         }
 
     Function<<Int, String>, <Int>> foo()

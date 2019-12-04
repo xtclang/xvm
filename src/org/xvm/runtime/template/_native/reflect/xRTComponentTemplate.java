@@ -67,32 +67,32 @@ public class xRTComponentTemplate
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        ComponentTemplateHandle hStruct = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
         switch (sPropName)
             {
             case "access":
-                return getPropertyAccess(frame, hStruct, iReturn);
+                return getPropertyAccess(frame, hComponent, iReturn);
 
             case "doc":
-                return getPropertyDoc(frame, hStruct, iReturn);
+                return getPropertyDoc(frame, hComponent, iReturn);
 
             case "format":
-                return getPropertyFormat(frame, hStruct, iReturn);
+                return getPropertyFormat(frame, hComponent, iReturn);
 
             case "isAbstract":
-                return getPropertyIsAbstract(frame, hStruct, iReturn);
+                return getPropertyIsAbstract(frame, hComponent, iReturn);
 
             case "isStatic":
-                return getPropertyIsStatic(frame, hStruct, iReturn);
+                return getPropertyIsStatic(frame, hComponent, iReturn);
 
             case "name":
-                return getPropertyName(frame, hStruct, iReturn);
+                return getPropertyName(frame, hComponent, iReturn);
 
             case "parent":
-                return getPropertyParent(frame, hStruct, iReturn);
+                return getPropertyParent(frame, hComponent, iReturn);
 
             case "synthetic":
-                return getPropertySynthetic(frame, hStruct, iReturn);
+                return getPropertySynthetic(frame, hComponent, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -102,14 +102,14 @@ public class xRTComponentTemplate
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
         {
-        ComponentTemplateHandle hStruct = (ComponentTemplateHandle) hTarget;
+        ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
         switch (method.getName())
             {
             case "children":
-                return invokeIsA(frame, hStruct, iReturn);
+                return invokeIsA(frame, hComponent, iReturn);
 
             case "toString":
-                return invokeToString(frame, hStruct, iReturn);
+                return invokeToString(frame, hComponent, iReturn);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -129,6 +129,7 @@ public class xRTComponentTemplate
         {
         ClassComposition clz = INSTANCE.ensureClass(INSTANCE.getCanonicalType(),
                 INSTANCE.pool().ensureEcstasyTypeConstant("reflect.TypeTemplate"));
+        // note: no need to initialize the struct because there are no natural fields
         return new ComponentTemplateHandle(clz, component);
         }
 
@@ -158,9 +159,9 @@ public class xRTComponentTemplate
     /**
      * Implements property: access.get()
      */
-    public int getPropertyAccess(Frame frame, ComponentTemplateHandle hStruct, int iReturn)
+    public int getPropertyAccess(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component component = hStruct.getComponent();
+        Component component = hComponent.getComponent();
         Access    access    = component.getAccess();
         ObjectHandle hEnum = Utils.ensureInitializedEnum(frame,
                 makeAccessHandle(frame, access));
@@ -180,9 +181,9 @@ public class xRTComponentTemplate
     /**
      * Implements property: doc.get()
      */
-    public int getPropertyDoc(Frame frame, ComponentTemplateHandle hStruct, int iReturn)
+    public int getPropertyDoc(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component component = hStruct.getComponent();
+        Component component = hComponent.getComponent();
         String    sDoc      = component.getDocumentation();
         return frame.assignValue(iReturn, sDoc == null
                 ? xNullable.NULL
@@ -192,9 +193,9 @@ public class xRTComponentTemplate
     /**
      * Implements property: format.get()
      */
-    public int getPropertyFormat(Frame frame, ComponentTemplateHandle hStruct, int iReturn)
+    public int getPropertyFormat(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component  component = hStruct.getComponent();
+        Component  component = hComponent.getComponent();
         EnumHandle hFormat   = null; // TODO
         return Utils.assignInitializedEnum(frame, hFormat, iReturn);
         }
@@ -202,9 +203,9 @@ public class xRTComponentTemplate
     /**
      * Implements property: isAbstract.get()
      */
-    public int getPropertyIsAbstract(Frame frame, ComponentTemplateHandle hStruct, int iReturn)
+    public int getPropertyIsAbstract(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component component = hStruct.getComponent();
+        Component component = hComponent.getComponent();
         boolean   fAbstract = component.isAbstract();
         return frame.assignValue(iReturn, xBoolean.makeHandle(fAbstract));
         }
@@ -212,9 +213,9 @@ public class xRTComponentTemplate
     /**
      * Implements property: isStatic.get()
      */
-    public int getPropertyIsStatic(Frame frame, ComponentTemplateHandle hStruct, int iReturn)
+    public int getPropertyIsStatic(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component component = hStruct.getComponent();
+        Component component = hComponent.getComponent();
         boolean   fStatic   = component.isStatic();
         return frame.assignValue(iReturn, xBoolean.makeHandle(fStatic));
         }
@@ -222,9 +223,9 @@ public class xRTComponentTemplate
     /**
      * Implements property: name.get()
      */
-    public int getPropertyName(Frame frame, ComponentTemplateHandle hStruct, int iReturn)
+    public int getPropertyName(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component component = hStruct.getComponent();
+        Component component = hComponent.getComponent();
         String    sName     = component.getName();
         return frame.assignValue(iReturn, xString.makeHandle(sName));
         }
@@ -232,9 +233,9 @@ public class xRTComponentTemplate
     /**
      * Implements property: parent.get()
      */
-    public int getPropertyParent(Frame frame, ComponentTemplateHandle hStruct, int iReturn)
+    public int getPropertyParent(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component     component = hStruct.getComponent();
+        Component     component = hComponent.getComponent();
         GenericHandle hParent   = null; // TODO
         return frame.assignValue(iReturn, hParent);
         }
@@ -242,9 +243,9 @@ public class xRTComponentTemplate
     /**
      * Implements property: synthetic.get()
      */
-    public int getPropertySynthetic(Frame frame, ComponentTemplateHandle hStruct, int iReturn)
+    public int getPropertySynthetic(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component component  = hStruct.getComponent();
+        Component component  = hComponent.getComponent();
         boolean   fSynthetic = component.isSynthetic();
         return frame.assignValue(iReturn, xBoolean.makeHandle(fSynthetic));
         }
@@ -255,9 +256,9 @@ public class xRTComponentTemplate
     /**
      * Implementation for: {@code Iterator<ComponentTemplate> children()}.
      */
-    public int invokeIsA(Frame frame, ComponentTemplateHandle hStruct, int iReturn)
+    public int invokeIsA(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component component  = hStruct.getComponent();
+        Component component  = hComponent.getComponent();
         // TODO CP
         throw new UnsupportedOperationException();
         }
@@ -265,9 +266,9 @@ public class xRTComponentTemplate
     /**
      * Implementation for: {@code String toString()}.
      */
-    public int invokeToString(Frame frame, ComponentTemplateHandle hStruct, int iReturn)
+    public int invokeToString(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component component  = hStruct.getComponent();
+        Component component  = hComponent.getComponent();
         String    sResult    = component.toString();
         return frame.assignValue(iReturn, xString.makeHandle(sResult));
         }

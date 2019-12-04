@@ -117,9 +117,6 @@ public class xRTTypeTemplate
 
             case "purify":
                 return invokePurify(frame, hType, iReturn);
-
-            case "toString":
-                return invokeToString(frame, hType, iReturn);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -348,7 +345,7 @@ public class xRTTypeTemplate
         }
 
     /**
-     * Implementation for: {@code conditional Class fromClass()}.
+     * Implementation for: {@code conditional Composition fromClass()}.
      */
     public int invokeFromClass(Frame frame, TypeTemplateHandle hType, int[] aiReturn)
         {
@@ -358,13 +355,16 @@ public class xRTTypeTemplate
             return frame.assignValues(aiReturn, xBoolean.FALSE, null);
             }
 
-        IdentityConstant idClz = type.getSingleUnderlyingClass(true);
-        GenericHandle hClass = null; // TODO GG
+        IdentityConstant idClz  = type.getSingleUnderlyingClass(true);
+        ClassStructure   clz    = (ClassStructure) idClz.getComponent();
+        GenericHandle    hClass = xRTClassTemplate.makeHandle(clz);
+        // TODO (temporarily defer) - type could be explicitly annotated (recursively) so we would
+        //      have to wrap the handle that many times in an AnnotatingComposition
         return frame.assignValues(aiReturn, xBoolean.TRUE, hClass);
         }
 
     /**
-     * Implementation for: {@code conditional Property fromProperty()}.
+     * Implementation for: {@code conditional PropertyTemplate fromProperty()}.
      */
     public int invokeFromProperty(Frame frame, TypeTemplateHandle hType, int[] aiReturn)
         {
@@ -383,7 +383,7 @@ public class xRTTypeTemplate
                 TypeConstant      typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, idProp);
                 TypeConstant      typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
                                                     typeTarget, typeReferent, typeImpl);
-                PropertyHandle    hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
+                GenericHandle     hProperty    = null; // TODO PropertyTemplate from typeProperty
 
                 return frame.assignValues(aiReturn, xBoolean.TRUE, hProperty);
                 }
@@ -393,7 +393,7 @@ public class xRTTypeTemplate
         }
 
     /**
-     * Implementation for: {@code Boolean isA()}.
+     * Implementation for: {@code Boolean isA(TypeTemplate that)}.
      */
     public int invokeIsA(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
@@ -408,7 +408,7 @@ public class xRTTypeTemplate
         {
         TypeConstant type  = hType.getDataType();
         return type.isModifyingType()
-                ? frame.assignValues(aiReturn, xBoolean.TRUE, type.getUnderlyingType().getTypeHandle())
+                ? frame.assignValues(aiReturn, xBoolean.TRUE, makeHandle(type.getUnderlyingType()))
                 : frame.assignValues(aiReturn, xBoolean.FALSE, null);
         }
 
@@ -451,18 +451,9 @@ public class xRTTypeTemplate
         TypeConstant type = hType.getDataType();
         return type.isRelationalType()
                 ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                        type.getUnderlyingType().getTypeHandle(),
-                        type.getUnderlyingType2().getTypeHandle())
+                        makeHandle(type.getUnderlyingType()),
+                        makeHandle(type.getUnderlyingType2()))
                 : frame.assignValues(aiReturn, xBoolean.FALSE, null, null);
-        }
-
-    /**
-     * Implementation for: {@code String toString()}.
-     */
-    public int invokeToString(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        // TODO CP
-        throw new UnsupportedOperationException();
         }
 
 

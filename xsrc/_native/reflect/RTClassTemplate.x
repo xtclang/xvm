@@ -28,14 +28,14 @@ class RTClassTemplate
     @Override @RO TypeParameter[]       typeParams;
     @Override @RO Boolean               virtualChild;
 
-    @Override conditional (Annotation, Composition!) deannotate();
-    @Override Class!<> ensureClass(Type... actualTypes);
+    @Override conditional (Annotation, Composition) deannotate();
+    @Override Class<> ensureClass(Type... actualTypes);
 
     // natural code (these *could* be optimized if they were made native)
-    //   Boolean extends(Composition! composition)
-    //   conditional Boolean incorporates(Composition! composition)
-    //   Boolean implements(Composition! composition)
-    //   Boolean derivesFrom(Composition! composition)
+    //   Boolean extends(Composition composition)
+    //   conditional Boolean incorporates(Composition composition)
+    //   Boolean implements(Composition composition)
+    //   Boolean derivesFrom(Composition composition)
     //   conditional ClassTemplate hasSuper()
     //   Composition! annotate(Annotation annotation)
     }
