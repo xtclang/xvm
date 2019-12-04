@@ -1,5 +1,7 @@
 module TestReflection.xqiz.it
     {
+    import Ecstasy.reflect.TypeTemplate;
+
     @Inject Ecstasy.io.Console console;
 
     void run()
@@ -15,7 +17,8 @@ module TestReflection.xqiz.it
         testInvokeAsync();
         testBind();
         testChildTypes();
-        // TODO testEnum();
+        testTypeTemplate();
+        testEnum();
         }
 
     Function<<Int, String>, <Int>> foo()
@@ -370,6 +373,15 @@ module TestReflection.xqiz.it
             }
         }
 
+    void testTypeTemplate()
+        {
+        console.println("\n** testTypeTemplate");
+
+        Type t = String;
+        TypeTemplate tt = t.template;
+        console.println($"type={t}; template={tt}");
+        }
+
     void testEnum()
         {
         console.println("\n** testEnum");
@@ -379,6 +391,9 @@ module TestReflection.xqiz.it
         console.println($"Boolean.values={Boolean.values}");
         console.println($"Boolean.names={Boolean.names}");
         }
+
+
+    // ---------------------------------------------------------------------------------------------
 
     String formatType(Type type)
         {

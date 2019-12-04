@@ -5,5 +5,5 @@ interface MethodTemplate
         extends ComponentTemplate
     {
     @Override
-    @RO MultiMethodTemplate!? parent;
+    @RO MultiMethodTemplate parent;
     }

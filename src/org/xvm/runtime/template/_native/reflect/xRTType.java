@@ -79,6 +79,7 @@ public class xRTType
         markNativeProperty("methods");
         markNativeProperty("properties");
         markNativeProperty("recursive");
+        markNativeProperty("template");
         markNativeProperty("underlyingTypes");
 
         markNativeMethod("accessSpecified", null, null);
@@ -167,6 +168,9 @@ public class xRTType
 
             case "recursive":
                 return getPropertyRecursive(frame, hType, iReturn);
+
+            case "template":
+                return getPropertyTemplate(frame, hType, iReturn);
 
             case "underlyingTypes":
                 return getPropertyUnderlyingTypes(frame, hType, iReturn);
@@ -703,6 +707,14 @@ public class xRTType
     public int getPropertyRecursive(Frame frame, TypeHandle hType, int iReturn)
         {
         return frame.assignValue(iReturn, xBoolean.makeHandle(hType.getDataType().containsRecursiveType()));
+        }
+
+    /**
+     * Implements property: template.get()
+     */
+    public int getPropertyTemplate(Frame frame, TypeHandle hType, int iReturn)
+        {
+        return frame.assignValue(iReturn, xRTTypeTemplate.makeHandle(hType.getDataType()));
         }
 
     /**

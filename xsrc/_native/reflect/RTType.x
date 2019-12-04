@@ -1,6 +1,7 @@
 import Ecstasy.reflect.Access;
 import Ecstasy.reflect.Annotation;
 import Ecstasy.reflect.MultiMethod;
+import Ecstasy.reflect.TypeTemplate;
 
 /**
  * The native Type implementation.
@@ -8,16 +9,17 @@ import Ecstasy.reflect.MultiMethod;
 const RTType<DataType, OuterType>
         implements Type<DataType, OuterType>
     {
-    @Override @RO Form form                                       .get() { TODO("native"); }
-    @Override @RO Type[] underlyingTypes                          .get() { TODO("native"); }
-    @Override @RO Property<DataType>[] properties                 .get() { TODO("native"); }
-    @Override @RO Property[] constants                            .get() { TODO("native"); }
-    @Override @RO Method<DataType>[] methods                      .get() { TODO("native"); }
-    @Override @RO Function[] functions                            .get() { TODO("native"); }
-    @Override @RO Constructor[] constructors                      .get() { TODO("native"); }
     @Override @RO Map<String, Type!<>> childTypes                 .get() { TODO("native"); }
-    @Override @RO Boolean recursive                               .get() { TODO("native"); }
-    @Override @RO Boolean explicitlyImmutable                     .get() { TODO("native"); }
+    @Override @RO Property[]           constants                  .get() { TODO("native"); }
+    @Override @RO Constructor[]        constructors               .get() { TODO("native"); }
+    @Override @RO Boolean              explicitlyImmutable        .get() { TODO("native"); }
+    @Override @RO Form                 form                       .get() { TODO("native"); }
+    @Override @RO Function[]           functions                  .get() { TODO("native"); }
+    @Override @RO Method<DataType>[]   methods                    .get() { TODO("native"); }
+    @Override @RO Property<DataType>[] properties                 .get() { TODO("native"); }
+    @Override @RO Boolean              recursive                  .get() { TODO("native"); }
+    @Override @RO TypeTemplate         template                   .get() { TODO("native"); }
+    @Override @RO Type[]               underlyingTypes            .get() { TODO("native"); }
 
     @Override conditional Class fromClass()                              { TODO("native"); }
     @Override conditional Property fromProperty()                        { TODO("native"); }

@@ -36,7 +36,7 @@ interface TypeTemplate // TODO move
          */
         Pure,
         /**
-         * A type that is drawn from (represents the implementation of) a class.
+         * A type that is drawn from (represents the implementation of) a class composition.
          */
         Class,
         /**
@@ -105,6 +105,24 @@ interface TypeTemplate // TODO move
     // ----- state representation ------------------------------------------------------------------
 
     /**
+     * The name of the type, if it has one.
+     *
+     * Typedefs, child classes, properties, and formal types always have a name. Other types _may_
+     * provide a name.
+     */
+    @RO String? name;
+
+    /**
+     * A brief descriptive string for the type, intended to provide clarity for a developer.
+     */
+    @RO String desc.get()
+        {
+        // this default implementation should be overridden by any type template that can provide
+        // a more detailed and/or succinct description in a form well-known to a developer
+        return name ?: this.TypeTemplate.toString();
+        }
+
+    /**
      * The form of the type.
      */
     @RO Form form;
@@ -117,16 +135,16 @@ interface TypeTemplate // TODO move
     @RO TypeTemplate[] underlyingTypes;
 
     /**
-     * Determine if the type non-ambiguously represents a class, and if so, obtain the class. The
-     * class can be ambiguous, for example, if the type is a intersection type and the two
-     * intersected types do not each represent the same class.
+     * Determine if the type non-ambiguously represents a Class [Composition], and if so, obtain the
+     * composition. The composition can be ambiguous, for example, if the type is an intersection
+     * type and the two intersected types do not each represent the same class.
      *
-     * A type of form `Class` always represents a class.
+     * A type of form `Class` always represents a class composition.
      *
-     * @return True iff this type represents a class
-     * @return (conditional) the class
+     * @return True iff this type represents a class composition
+     * @return (conditional) the class composition
      */
-    conditional Composition fromClass(); // REVIEW fromComposition() ???
+    conditional Composition fromClass();
 
     /**
      * Determine if the type non-ambiguously represents a property. The property can be ambiguous,
@@ -150,7 +168,7 @@ interface TypeTemplate // TODO move
      * @return True iff this type delegates in some manner to an underlying type
      * @return (conditional) the underlying type
      */
-    conditional TypeTemplate!<> modifying();
+    conditional TypeTemplate! modifying();
 
     /**
      * Determine if this type is a relational type, and if it is, obtain the two types that it is
@@ -162,18 +180,7 @@ interface TypeTemplate // TODO move
      * @return (conditional) the first of the two types of the relation
      * @return (conditional) the second of the two types of the relation
      */
-    conditional (TypeTemplate!<>, TypeTemplate!<>) relational();
-
-    /**
-     * Determine if the type has a name, and if so, obtain that name.
-     *
-     * Typedefs, child classes, properties, and formal types always have a name. Other types _may_
-     * provide a name.
-     *
-     * @return True iff the type has a name
-     * @return (conditional) the name of the type
-     */
-    conditional String named();
+    conditional (TypeTemplate!, TypeTemplate!) relational();
 
     /**
      * Determine if the type is contextually contained within another type, from which it may draw
@@ -184,7 +191,7 @@ interface TypeTemplate // TODO move
      * @return True iff this type is contextually contained within another type
      * @return (conditional) the parent that contains this type
      */
-    conditional TypeTemplate!<> contained();
+    conditional TypeTemplate! contained();
 
     /**
      * Determine if the type has a non-conflicting specified access control, and if so, obtain the
@@ -221,13 +228,13 @@ interface TypeTemplate // TODO move
      * @return True iff the type is parameterized
      * @return (conditional) an array of the type parameters
      */
-    conditional TypeTemplate!<>[] parameterized();
+    conditional TypeTemplate![] parameterized();
 
     /**
      * Determine if the type is recursive. Certain types may recursively refer to themselves, either
      * directly or indirectly; consider the example:
      *
-     *     typedef (Nullable | Boolean | Number | String | JsonDoc[] | Map<String, JsonDoc>) JsonDoc
+     *     typedef (Nullable | Boolean | Number | String | JsonVal[] | Map<String, JsonVal>) JsonVal
      */
     @RO Boolean recursive;
 
@@ -240,7 +247,7 @@ interface TypeTemplate // TODO move
     /**
      * Obtain the `Pure` form of this type.
      */
-    TypeTemplate!<> purify();
+    TypeTemplate! purify();
 
 
     // ----- type operations -----------------------------------------------------------------------
@@ -249,11 +256,108 @@ interface TypeTemplate // TODO move
      * Test whether this type is type-compatible with the specified second type, such that any
      * object of `this` type would also be an object of `that` type.
      *
-     * @param that  a second type
+     * It is possible for the two type templates to be incompatible for comparison, if their origins
+     * differ, because they may not share a common type system understanding. For example, a type
+     * template can originate from a runtime type, and a type template can be manually constructed
+     * for compile-time use. In any such case, this method must return `False`.
+     *
+     * @param that  a second type template
      *
      * @return True iff all objects of `this` type are also objects of `that` type
      */
-    Boolean isA(TypeTemplate!<> that);
+    Boolean isA(TypeTemplate! that);
+
+
+    // ----- Stringable ----------------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return 0;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        switch (form)
+            {
+            case Pure:
+                TODO
+
+            case Class:
+                assert Composition cmp := fromClass();
+                while ((Annotation annotation, cmp) := cmp.deannotate())
+                    {
+                    appender.add('@')
+                            .add(annotation.template.name)
+                            .add(' ');
+                    }
+                appender.add(cmp.template.name);
+                break;
+
+            case Property:
+            case Child:
+            case FormalProperty:
+            case FormalParameter:
+            case FormalChild:
+                TODO
+
+            case Intersection:
+            case Union:
+            case Difference:
+                assert (TypeTemplate t1, TypeTemplate t2) := relational();
+                t1.appendTo(appender);
+                appender.add(switch (form)
+                        {
+                        case Intersection: " | ";
+                        case Union:        " + ";
+                        case Difference:   " - ";
+                        default: assert;
+                        });
+                t2.appendTo(appender);
+                break;
+
+            case Immutable:
+                assert TypeTemplate t1 := modifying();
+                appender.add("immutable ");
+                t1.appendTo(appender);
+                break;
+
+            case Access:
+                assert val access := accessSpecified();
+                assert TypeTemplate t1 := modifying();
+                t1.appendTo(appender);
+                appender.add(':')
+                        .add(access.keyword);
+                break;
+
+            case Annotated:
+                TODO
+
+            case Parameterized:
+                assert TypeTemplate[] params := parameterized();
+                assert TypeTemplate   t1     := modifying();
+                t1.appendTo(appender);
+                appender.add('<');
+                EachParam: for (TypeTemplate param : params)
+                    {
+                    if (!EachParam.first)
+                        {
+                        appender.add(", ");
+                        }
+                    param.appendTo(appender);
+                    }
+                appender.add('>');
+                break;
+
+            case Typedef:
+            case Sequence:
+                TODO
+
+            default:
+                assert;
+            }
+        }
 
 
     // ----- Comparable, Hashable, and Orderable ---------------------------------------------------

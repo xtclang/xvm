@@ -199,7 +199,7 @@ public class PropertyInfo
             if (!typeAdd.equals(typeResult))
                 {
                 // the property type can be narrowed by a class implementation
-                if (exAdd != Existence.Implied && exAdd.compareTo(exResult) >= 0 && typeAdd.isA(typeResult))
+                if (exAdd != Existence.Implied && /* TODO GG+CP exAdd.compareTo(exResult) >= 0 && */ typeAdd.isA(typeResult))
                     {
                     // type has been narrowed
                     typeResult = typeAdd;

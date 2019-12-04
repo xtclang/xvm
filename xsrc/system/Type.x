@@ -26,6 +26,19 @@ import reflect.TypeTemplate;
  * can be performed?" The identity answers the question of: "To what thing are those questions being
  * directed?"
  *
+ * (To explain these two terms in a manner that a C++ programmer can understand, an Ecstasy
+ * reference is _conceptually_ composed of (i) a v-table pointer **and** (ii) a `struct` pointer. An
+ * Ecstasy type is therefore analogous to a v-table, but one that is fully self-describing as if it
+ * included its own RTTI. Furthermore, because the v-table pointer is part of the reference, and not
+ * part of the struct as it is in C++, it means that a single struct can expose different types at
+ * runtime, such as separate `public`, `protected`, and `private` types, as well as any number of
+ * pure virtual class or other super-types. Since the object is represented by the reference, and
+ * not directly by the `struct`, it is even possible that a single `struct` can be used to represent
+ * more than one object; for example, the same structure -- the same location in memory -- that
+ * represents an "Int" value could potentially be used with the type "public Int", the type "Int[]",
+ * and the type "Tuple<Int>", such that the same structural value can represent itself, an array of
+ * itself, and a tuple of itself.)
+ *
  * An Ecstasy type thus exposes the following information:
  *
  * * A set of _properties_ that expose object state and generic type information;
@@ -54,81 +67,7 @@ interface Type<DataType, OuterType>
 
     typedef Function<<>, <DataType>> Constructor;
 
-    /**
-     * There are a number of different forms that a type can take. Each form has a different
-     * meaning, and exposes type information that is specific to that form.
-     */
-    enum Form(Boolean modifying = False, Boolean relational = False)
-        {
-        /**
-         * A pure interface type that only contains methods, properties, and abstract functions.
-         */
-        Pure,
-        /**
-         * A type that is drawn from (represents the implementation of) a class.
-         */
-        Class,
-        /**
-         * A type that is drawn from (represents the implementation of) a property.
-         */
-        Property,
-        /**
-         * A type that represents a class that is a virtual child of another class.
-         */
-        Child,
-        /**
-         * A formal type used to define a generic type, such as `Array.Element`.
-         */
-        FormalProperty,
-        /**
-         * A format type used as a type parameter to a method or function.
-         */
-        FormalParameter,
-        /**
-         * A child type of a formal type, such as `Element.Key` if the formal `Element` type is
-         * constrained by the `Map` type.
-         */
-        FormalChild,
-        /**
-         * An intersection of two types, such as `(Int | String)`, or `String?`.
-         */
-        Intersection (relational = True),
-        /**
-         * A union of two types, such as `(Hashable + Orderable)`.
-         */
-        Union        (relational = True),
-        /**
-         * The _relative complement_ of two types, such as `(DataInput - BinaryInput)`
-         */
-        Difference   (relational = True),
-        /**
-         * A type that adds immutability _to another type_
-         */
-        Immutable    (modifying = True),
-        /**
-         * A type that adds an access modifier _to another type_.
-         */
-        Access       (modifying = True),
-        /**
-         * A type that adds an annotation _to another type_.
-         */
-        Annotated    (modifying = True),
-        /**
-         * A type that specifies the formal types _of another type_.
-         */
-        Parameterized(modifying = True),
-        /**
-         * A type that acts as a name _of another type_.
-         */
-        Typedef      (modifying = True),
-        /**
-         * A type that acts as a sequence _of other types_. It is primarily used by the [Tuple] and
-         * [Function] interfaces.
-         *
-         * Note that this term "Sequence" is **not** related to the Ecstasy [Sequence] interface.
-         */
-        Sequence
-        }
+    typedef TypeTemplate.Form Form;
 
 
     // ----- state representation ------------------------------------------------------------------
@@ -336,7 +275,7 @@ interface Type<DataType, OuterType>
     Type!<> purify();
 
     /**
-     * TODO
+     * Obtain a TypeTemplate that represents this type.
      */
     @RO TypeTemplate template;
 
