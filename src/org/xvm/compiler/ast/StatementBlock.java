@@ -905,7 +905,7 @@ public class StatementBlock
                             {
                             if (info.containsMultiMethod(sName))
                                 {
-                                idResult = new MultiMethodConstant(pool, id, sName);
+                                idResult = pool.ensureMultiMethodConstant(id, sName);
                                 }
                             }
                         else

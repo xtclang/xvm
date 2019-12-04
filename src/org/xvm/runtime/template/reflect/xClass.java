@@ -3,10 +3,7 @@ package org.xvm.runtime.template.reflect;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -53,24 +50,18 @@ public class xClass
         {
         if (constant instanceof ClassConstant)
             {
-            ConstantPool  pool    = frame.poolContext();
-            ClassConstant idClz   = (ClassConstant) constant;
-            TypeConstant  typeClz = idClz.getType();
-            ClassComposition clz = ensureParameterizedClass(pool,
-                    pool.ensureAccessTypeConstant(typeClz, Access.PROTECTED),
-                    pool.ensureAccessTypeConstant(typeClz, Access.PROTECTED),
-                    pool.ensureAccessTypeConstant(typeClz, Access.PRIVATE),
-                    pool.ensureAccessTypeConstant(typeClz, Access.STRUCT));
+            ClassConstant    idClz   = (ClassConstant) constant;
+            TypeConstant     typeClz = idClz.getValueType(null);
+            ClassComposition clz     = ensureClass(typeClz);
 
-            MethodStructure constructor = ((MultiMethodStructure) f_struct.getChild("construct"))
-                    .methods().iterator().next();
-            ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
+            MethodStructure constructor = f_struct.findMethod("construct", 3);
+            ObjectHandle[]  ahVar       = new ObjectHandle[constructor.getMaxVars()];
             // constructor parameters:
             //   required: Composition
             //   required: Map<String, Type>
             //   optional: function PublicType()?
             // TODO
-            return construct(frame, constructor, clz, null, ahVar, Op.A_STACK);
+            return clz.getTemplate().construct(frame, constructor, clz, null, ahVar, Op.A_STACK);
             }
 
         return super.createConstHandle(frame, constant);

@@ -7,12 +7,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Component.ResolutionResult;
-import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -43,7 +40,6 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
@@ -697,7 +693,7 @@ public class NameExpression
                                         : pool.ensureSingletonConstConstant(id);
                                 }
                             }
-                        else if (m_plan == Plan.None)
+                        else if (m_plan == Plan.None && !m_fClassAttribute)
                             {
                             constVal = id;
                             }
@@ -756,7 +752,7 @@ public class NameExpression
                 }
             }
 
-        return finishValidation(typeRequired, type, fit, constVal, errs);
+         return finishValidation(typeRequired, type, fit, constVal, errs);
         }
 
     @Override
@@ -1547,33 +1543,40 @@ public class NameExpression
                     && ((NameExpression) left).isIdentityMode(ctx, true);
             if (fIdMode)
                 {
-                // it must be a child of the component
-                NameExpression   exprLeft  = (NameExpression) left;
-                IdentityConstant idLeft    = exprLeft.getIdentity(ctx);
-                SimpleCollector  collector = new SimpleCollector();
-                // TODO this seems all wrong - why are we using the "id" instead of the TypeConstant.ensureTypeInfo() ???
-                if (idLeft.getComponent().resolveName(sName, Access.PUBLIC, collector) == ResolutionResult.RESOLVED)
+                NameExpression   exprLeft = (NameExpression) left;
+                IdentityConstant idLeft   = exprLeft.getIdentity(ctx);
+                TypeInfo         info     = idLeft.ensureTypeInfo(Access.PUBLIC, errs);
+
+                IdentityConstant idChild = info.findName(pool, sName);
+
+                if (idChild == null)
                     {
-                    Constant constant = collector.getResolvedConstant();
-                    switch (constant.getFormat())
-                        {
-                        case Package:
-                        case Class:
-                        case Property:
-                        case Typedef:
-                            m_arg = constant;
-                            break;
+                    // no child of that name on "Left"; try "Class<Left>"
+                    info    = idLeft.getValueType(null).ensureTypeInfo(errs);
+                    idChild = info.findName(pool, sName);
 
-                        case MultiMethod:
-                            log(errs, Severity.ERROR, Compiler.UNEXPECTED_METHOD_NAME, sName);
-                            fValid = false;
-                            break;
+                    m_fClassAttribute = idChild != null;
+                    }
 
-                        case Module:        // why an error? because it can't be nested
-                        default:
-                            throw new IllegalStateException("format=" + constant.getFormat()
-                                    + ", constant=" + constant);
-                        }
+                switch (idChild.getFormat())
+                    {
+                    case Package:
+                    case Class:
+                    case Property:
+                    case Method:
+                    case Typedef:
+                        m_arg = idChild;
+                        break;
+
+                    case MultiMethod:
+                        log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, sName);
+                        fValid = false;
+                        break;
+
+                    case Module: // a module can't be nested
+                    default:
+                        throw new IllegalStateException("format=" + idChild.getFormat()
+                                + ", constant=" + idChild);
                     }
                 }
 
@@ -1619,14 +1622,10 @@ public class NameExpression
                             // formal child constant
 
                             TypeConstant typeFormal = ((Register) argLeft).getOriginalType().getParamType(0);
-                            if (typeFormal.isSingleDefiningConstant())
+                            if (typeFormal.isFormalType())
                                 {
-                                argLeft = typeFormal.getDefiningConstant();
-                                if (argLeft instanceof FormalConstant)
-                                    {
-                                    constFormal = (FormalConstant) argLeft;
-                                    typeLeft    = typeLeft.getParamType(0);
-                                    }
+                                constFormal = (FormalConstant) typeFormal.getDefiningConstant();
+                                typeLeft    = typeLeft.getParamType(0);
                                 }
                             break;
                             }
@@ -1692,65 +1691,72 @@ public class NameExpression
                         }
                     }
 
-                TypeInfo     infoType = typeLeft.ensureTypeInfo(errs);
-                PropertyInfo infoProp = infoType.findProperty(sName);
-                if (infoProp == null)
+                TypeInfo         infoLeft = typeLeft.ensureTypeInfo(errs);
+                IdentityConstant idChild  = infoLeft.findName(pool, sName);
+                if (idChild == null)
                     {
-                    Set<MethodConstant> setMethods = infoType.findMethods(sName, -1, MethodKind.Any);
-                    switch (setMethods.size())
+                    // process the "this.OuterName" construct
+                    if (!fIdMode)
                         {
-                        case 0:
-                            // TODO check if the name refers to a typedef
-
-                            // process the "this.OuterName" construct
-                            if (!fIdMode)
+                        Constant constTarget = new NameResolver(this, sName)
+                                .forceResolve(ErrorListener.BLACKHOLE);
+                        if (constTarget instanceof IdentityConstant && constTarget.isClass())
+                            {
+                            // if the left is a class, then the result is a sequence of at
+                            // least one (recursive) ParentClassConstant around a
+                            // ThisClassConstant; from this (context) point, walk up looking
+                            // for the specified class, counting the number of "parent
+                            // class" steps to get there
+                            PseudoConstant idRelative = getRelativeIdentity(typeLeft, (IdentityConstant) constTarget);
+                            if (idRelative != null)
                                 {
-                                Constant constTarget = new NameResolver(this, sName)
-                                        .forceResolve(ErrorListener.BLACKHOLE);
-                                if (constTarget instanceof IdentityConstant && constTarget.isClass())
-                                    {
-                                    // if the left is a class, then the result is a sequence of at
-                                    // least one (recursive) ParentClassConstant around a
-                                    // ThisClassConstant; from this (context) point, walk up looking
-                                    // for the specified class, counting the number of "parent
-                                    // class" steps to get there
-                                    PseudoConstant idRelative = getRelativeIdentity(typeLeft, (IdentityConstant) constTarget);
-                                    if (idRelative != null)
-                                        {
-                                        m_arg = idRelative;
-                                        return idRelative;
-                                        }
-                                    }
+                                return m_arg = idRelative;
                                 }
-
-                            name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING,
-                                sName, typeLeft.getValueString());
-                            break;
-
-                        case 1:
-                            // there's just a single method by that name
-                            m_arg = setMethods.iterator().next();
-                            break;
-
-                        default:
-                            // there are more then one method by that name;
-                            // return the MultiMethod; let the caller decide
-                            m_arg = setMethods.iterator().next().getParentConstant();
-                            break;
+                            }
                         }
+                    log(errs, Severity.ERROR, Compiler.NAME_MISSING, sName);
+                    return null;
                     }
-                else
+
+                switch (idChild.getFormat())
                     {
-                    if (constFormal == null)
-                        {
-                        m_arg         = infoProp.getIdentity();
-                        m_fAssignable = infoProp.isVar();
-                        }
-                    else
-                        {
-                        m_arg         = pool.ensureFormalTypeChildConstant(constFormal, sName);
-                        m_fAssignable = false;
-                        }
+                    case Package:
+                        log(errs, Severity.ERROR, Compiler.PACKAGE_UNEXPECTED, sName);
+                        break;
+
+                    case Class:
+                        log(errs, Severity.ERROR, Compiler.CLASS_UNEXPECTED, sName);
+                        break;
+
+                    case Typedef:
+                        log(errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED, sName);
+                        break;
+
+                    case Property:
+                        if (constFormal == null)
+                            {
+                            m_arg         = idChild;
+                            m_fAssignable = infoLeft.findProperty((PropertyConstant) idChild).isVar();
+                            }
+                        else
+                            {
+                            m_arg         = pool.ensureFormalTypeChildConstant(constFormal, sName);
+                            m_fAssignable = false;
+                            }
+                        break;
+
+                    case Method:
+                        // fall through
+                    case MultiMethod:
+                        // there are more then one method by that name;
+                        // return the MultiMethod; let the caller decide
+                        m_arg = idChild;
+                        break;
+
+                    case Module: // a module can't be nested
+                    default:
+                        throw new IllegalStateException("format=" + idChild.getFormat()
+                                + ", constant=" + idChild);
                     }
                 }
             }
@@ -1941,23 +1947,15 @@ public class NameExpression
                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                     }
 
-                // TODO: this scenario will go away (p.this for property p on Map will become this.Map.&p)
-                if (name.getValueText().equals("this"))
-                    {
-                    assert left instanceof NameExpression;
-                    m_plan = Plan.OuterThis;
-                    return ((PropertyConstant) constant).getRefType(left.getType());
-                    }
+                PropertyConstant  idProp = (PropertyConstant) argRaw;
+                PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+                TypeConstant      type   = prop.getType();
 
-                PropertyConstant  id   = (PropertyConstant) argRaw;
-                PropertyStructure prop = (PropertyStructure) id.getComponent();
-                TypeConstant      type = prop.getType();
-
-                if (id.isTypeSequenceTypeParameter())
+                if (idProp.isTypeSequenceTypeParameter())
                     {
                     assert !m_fAssignable;
                     m_plan = Plan.PropertyDeref;
-                    return id.getConstraintType();
+                    return idProp.getConstraintType();
                     }
 
                 if (prop.isConstant())
@@ -1981,7 +1979,7 @@ public class NameExpression
                             // the property may originate in a contribution
                             // (e.g. Interval.x refers to Range.upperBound)
                             PropertyInfo infoProp = clz.getFormalType().
-                                    ensureTypeInfo(errs).findProperty(id);
+                                    ensureTypeInfo(errs).findProperty(idProp);
                             if (infoProp != null)
                                 {
                                 type = infoProp.getType();
@@ -1991,7 +1989,7 @@ public class NameExpression
                     else
                         {
                         typeLeft = m_targetInfo.getTargetType();
-                        type     = typeLeft.ensureTypeInfo(errs).findProperty(id).getType();
+                        type     = typeLeft.ensureTypeInfo(errs).findProperty(idProp).getType();
                         }
 
                     // check for a narrowed property type
@@ -2012,24 +2010,29 @@ public class NameExpression
                         {
                         typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
                         }
-                    PropertyInfo infoProp = typeLeft.ensureTypeInfo(errs).findProperty(id);
+                    PropertyInfo infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
                     if (infoProp != null)
                         {
                         type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft);
                         }
                     }
 
+                if (m_fClassAttribute)
+                    {
+                    m_plan = isSuppressDeref() ? Plan.PropertyRef : Plan.PropertyDeref;
+                    return type;
+                    }
+
                 if (isIdentityMode(ctx, false))
                     {
                     m_plan = Plan.None;
-                    // TODO parameterized type of Property<Target, Referent, Implementation>
-                    return pool.typeProperty();
+                    return idProp.getValueType(typeLeft);
                     }
 
                 if (isSuppressDeref())
                     {
                     m_plan = Plan.PropertyRef;
-                    return id.getRefType(typeLeft);
+                    return idProp.getRefType(typeLeft);
                     }
                 else
                     {
@@ -2244,24 +2247,18 @@ public class NameExpression
                 //   1) there is no left and the context is static; or
                 //   2) there is a left, and it is in identity mode;
                 //
-                // Name        method             specifies            "static"            specifies
-                // refers to   context            no-de-ref            context             no-de-ref
-                // ---------   -----------------  -------------------  ------------------  -------------------
-                // Property    T                  <- Ref/Var           Error               PropertyConstant*
-                // type param  T                  <- Ref               T                   <- Ref
-                // Constant    T                  <- Ref               T                   <- Ref
-
+                // Name         method  specifies  "static" context /   specifies
+                // refers to    context no-de-ref  identity mode        no-de-ref
+                // ------------ ------- ---------- ------------------   -------------------
+                // Property     T       <- Ref/Var PropertyConstant*[1] PropertyConstant*
+                // - type param T       <- Ref     PropertyConstant*[1] PropertyConstant*
+                // Constant     T       <- Ref     T                    <- Ref
+                //
+                // *[1] must have a left hand side in identity mode; otherwise it is an Error
                 PropertyStructure prop = (PropertyStructure) getIdentity(ctx).getComponent();
 
-                if (name.getValueText().equals("this"))
-                    {
-                    // "propname.this" is legal, as long as we're on code somewhere nested inside of
-                    // "propname", and we can get a "this" for the class that contains it
-                    return left instanceof NameExpression && ((NameExpression) left).left == null;   // TODO grab checks from below?
-                    }
-
-                return isSuppressDeref() && !prop.isConstant() && !prop.isGenericTypeParameter()
-                    && left != null && ((NameExpression) left).isIdentityMode(ctx, true);
+                return !prop.isConstant() && left != null
+                        && ((NameExpression) left).isIdentityMode(ctx, true);
                 }
             }
 
@@ -2580,6 +2577,12 @@ public class NameExpression
      * The chosen property access plan.
      */
     private PropertyAccess m_propAccessPlan;
+
+    /**
+     * If true, indicates that the argument refers to a property or method for a class specified by
+     * the "left" expression.
+     */
+    private transient boolean m_fClassAttribute;
 
     /**
      * Cached validation info: Can the name be used as an "L value"?

@@ -144,13 +144,16 @@ public class TemplateExpression
         Constant constVal = null;
         if (fValid && fConst)
             {
-            StringBuilder sb = new StringBuilder();
+            ConstantPool  pool = pool();
+            StringBuilder sb   = new StringBuilder();
             for (Expression expr : exprs)
                 {
                 TypeConstant[] atype = expr.getTypes();
                 if (atype.length > 0)
                     {
-                    Constant constExpr = expr.toConstant().convertTo(T_STRING);
+                    Constant constExpr = atype[0].getDefiningConstant().equals(pool.clzProperty())
+                        ? null // identity mode property constant
+                        : expr.toConstant().convertTo(T_STRING);
                     if (constExpr == null)
                         {
                         fConst = false;
@@ -159,7 +162,7 @@ public class TemplateExpression
                     sb.append(((StringConstant) constExpr).getValue());
                     }
                 }
-            constVal = fConst ? pool().ensureStringConstant(sb.toString()) : null;
+            constVal = fConst ? pool.ensureStringConstant(sb.toString()) : null;
             }
 
         ctx = ctx.exit();

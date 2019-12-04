@@ -1056,6 +1056,58 @@ public class TypeInfo
         return map;
         }
 
+
+    /**
+     * Look up any of the following (in that order):
+     * <ol>
+     *   <li>a property;</li>
+     *   <li>a method;</li>
+     *   <li>a child class;</li>
+     * </ol>
+     * Note: if more than one method with the specified name exists, a MultiMethodConstant is
+     *       returned.
+     *
+     * @param pool   the ConstantPool to use
+     * @param sName  the name to look for
+     *
+     * @return an IdentityConstant representing a component of that name or null if none found
+     */
+    public IdentityConstant findName(ConstantPool pool, String sName)
+        {
+        PropertyInfo prop = findProperty(sName);
+        if (prop != null)
+            {
+            return prop.getIdentity();
+            }
+
+        // not a property; try a method
+        Set<MethodConstant> setMethod = findMethods(sName, -1, MethodKind.Any);
+        switch (setMethod.size())
+            {
+            case 0:
+                break;
+
+            case 1:
+                return setMethod.iterator().next();
+
+            default:
+                return setMethod.iterator().next().getParentConstant();
+            }
+
+        // not a method; try a child class
+        TypeConstant typeChild = calculateChildType(pool, sName);
+        return typeChild != null && typeChild.isSingleDefiningConstant()
+                ? typeChild.getSingleUnderlyingClass(true)
+                : null;
+        }
+
+    /**
+     * Look up the property by its name.
+     *
+     * @param sName  the property name
+     *
+     * @return the PropertyInfo for the specified constant, or null
+     */
     public PropertyInfo findProperty(String sName)
         {
         return ensurePropertiesByName().get(sName);
