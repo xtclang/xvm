@@ -6,17 +6,17 @@ module TestReflection.xqiz.it
 
     void run()
         {
-        testFuncType();
-        testTypeStrings();
-        testInstanceOf();
-        testMaskReveal();
-        testForm();
-        testProps();
-        testInvoke();
-        testInvoke2();
-        testInvokeAsync();
-        testBind();
-        testChildTypes();
+//        testFuncType();
+//        testTypeStrings();
+//        testInstanceOf();
+//        testMaskReveal();
+//        testForm();
+//        testProps();
+//        testInvoke();
+//        testInvoke2();
+//        testInvokeAsync();
+//        testBind();
+//        testChildTypes();
         testTypeTemplate();
         testEnum();
         }

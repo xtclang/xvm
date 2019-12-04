@@ -2,10 +2,12 @@ package org.xvm.runtime.template._native.reflect;
 
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -47,7 +49,8 @@ public class xRTClassTemplate
         markNativeProperty("typeParams");
         markNativeProperty("virtualChild");
 
-        markNativeMethod("", null, null);
+        markNativeMethod("deannotate", null, null);
+        markNativeMethod("ensureClass", null, null);
 
         super.initDeclared();
         }
@@ -121,6 +124,24 @@ public class xRTClassTemplate
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+        }
+
+
+    // ----- ComponentTemplateHandle support -------------------------------------------------------
+
+    /**
+     * Obtain a {@link ComponentTemplateHandle} for the specified component.
+     *
+     * @param component  the {@link Component} to obtain a {@link ComponentTemplateHandle} for
+     *
+     * @return the resulting {@link ComponentTemplateHandle}
+     */
+    public static ComponentTemplateHandle makeHandle(ClassStructure component)
+        {
+        ClassComposition clz = INSTANCE.ensureClass(INSTANCE.getCanonicalType(),
+                INSTANCE.pool().ensureEcstasyTypeConstant("reflect.ClassTemplate"));
+        // note: no need to initialize the struct because there are no natural fields
+        return new ComponentTemplateHandle(clz, component);
         }
 
 

@@ -119,21 +119,6 @@ public class xRTComponentTemplate
     // ----- ComponentTemplateHandle support -------------------------------------------------------
 
     /**
-     * Obtain a {@link ComponentTemplateHandle} for the specified component.
-     *
-     * @param component  the {@link Component} to obtain a {@link ComponentTemplateHandle} for
-     *
-     * @return the resulting {@link ComponentTemplateHandle}
-     */
-    public static ComponentTemplateHandle makeHandle(Component component)
-        {
-        ClassComposition clz = INSTANCE.ensureClass(INSTANCE.getCanonicalType(),
-                INSTANCE.pool().ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
-        // note: no need to initialize the struct because there are no natural fields
-        return new ComponentTemplateHandle(clz, component);
-        }
-
-    /**
      * Inner class: ComponentTemplateHandle. This is a handle to a native Component.
      */
     public static class ComponentTemplateHandle
