@@ -15,6 +15,7 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -342,19 +343,18 @@ public class xRTType
         TypeConstant                      typeTarget  = hType.getDataType();
         TypeInfo                          infoTarget  = typeTarget.ensureTypeInfo();
         boolean                           fDeepParams = typeTarget.isParameterizedDeep();
-        ConstantPool                      poolDft     = pool();
         ConstantPool                      poolCtx     = frame.poolContext();
         Map<String, ChildInfo>            mapInfos    = infoTarget.getChildInfosByName();
         Map<StringConstant, TypeConstant> mapResult   = new ListMap<>();
         for (String sName : mapInfos.keySet())
             {
             TypeConstant typeChild = infoTarget.calculateChildType(poolCtx, sName);
-            mapResult.put(poolDft.ensureStringConstant(sName), typeChild.getType());
+            mapResult.put(poolCtx.ensureStringConstant(sName), typeChild.getType());
             }
-        TypeConstant typeResult  = poolDft.ensureImmutableTypeConstant(
-                poolDft.ensureParameterizedTypeConstant(poolDft.typeMap(),
-                        poolDft.typeString(), poolDft.typeType()));
-        MapConstant  constResult = poolDft.ensureMapConstant(typeResult, mapResult);
+        TypeConstant typeResult  = poolCtx.ensureImmutableTypeConstant(
+                poolCtx.ensureParameterizedTypeConstant(poolCtx.typeMap(),
+                        poolCtx.typeString(), poolCtx.typeType()));
+        MapConstant  constResult = poolCtx.ensureMapConstant(typeResult, mapResult);
         ObjectHandle hResult     = frame.getConstHandle(constResult);
         return frame.assignValue(iReturn, hResult);
         }
@@ -809,10 +809,24 @@ public class xRTType
      */
     public int invokeFromClass(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        ObjectHandle hClass = null; // TODO
-        return hClass == null
-            ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
-            : frame.assignValues(aiReturn, xBoolean.TRUE, hClass);
+        TypeConstant typeTarget = hType.getDataType();
+        if (typeTarget.isSingleUnderlyingClass(true))
+            {
+            IdentityConstant idClz  = typeTarget.getSingleUnderlyingClass(true);
+            ObjectHandle     hClass = frame.getConstHandle(idClz);
+
+            if (Op.isDeferred(hClass))
+                {
+                ObjectHandle[] ahValue = new ObjectHandle[] {hClass};
+                Frame.Continuation stepNext = frameCaller ->
+                    frame.assignValues(aiReturn, xBoolean.TRUE, ahValue[0]);
+
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                }
+
+            return frame.assignValues(aiReturn, xBoolean.TRUE, hClass);
+            }
+        return frame.assignValues(aiReturn, xBoolean.FALSE, null);
         }
 
     /**
