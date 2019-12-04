@@ -128,7 +128,7 @@ public class xRTComponentTemplate
     public static ComponentTemplateHandle makeHandle(Component component)
         {
         ClassComposition clz = INSTANCE.ensureClass(INSTANCE.getCanonicalType(),
-                INSTANCE.pool().ensureEcstasyTypeConstant("reflect.TypeTemplate"));
+                INSTANCE.pool().ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
         // note: no need to initialize the struct because there are no natural fields
         return new ComponentTemplateHandle(clz, component);
         }

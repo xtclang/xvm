@@ -30,8 +30,6 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xString;
 
-import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
-
 import org.xvm.runtime.template.collections.xArray;
 
 
@@ -178,7 +176,7 @@ public class xRTTypeTemplate
      * Inner class: TypeTemplateHandle. This is a handle to a native TypeConstant.
      */
     public static class TypeTemplateHandle
-        extends GenericHandle
+            extends GenericHandle
         {
         protected TypeTemplateHandle(ClassComposition clz, TypeConstant type)
             {
