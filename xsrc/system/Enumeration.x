@@ -125,11 +125,11 @@ mixin Enumeration<EnumType extends Enum>
             Type   type = entry.value;
 // TODO end
 
-            if (type.is(PublicType))
+            if (type.is(Type<PublicType>))
                 {
                 assert Class<> clz := type.fromClass();
                 assert EnumType instance := clz.as(Class<EnumType>).isSingleton();
-                assert instance.ordinal == map.size;
+                // assert instance.ordinal == map.size;
                 assert !map.contains(name);
                 map.put(name, instance);
                 }
