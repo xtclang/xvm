@@ -20,7 +20,7 @@ import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnumeration;
 import org.xvm.runtime.template.xNullable;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 
 /**
@@ -77,13 +77,17 @@ public class xClass
                 ConstantPool pool          = frame.poolContext();
                 Constant     constInstance = pool.ensureSingletonConstConstant(idClz);
                 ObjectHandle hInstance     = frame.getConstHandle(constInstance);
+                TypeConstant typePublic    = idClz.getType();
+                TypeConstant typeFn        = pool.ensureImmutableTypeConstant(
+                        pool.buildFunctionType(TypeConstant.NO_TYPES, typePublic));
 
-//                TypeConstant typePublic = idClz.getType();
-//                TypeConstant typeFn     = frame.poolContext().
-//                    buildFunctionType(TypeConstant.NO_TYPES, typePublic);
-
-                xRTFunction.FunctionHandle hFn = new xRTFunction.NativeFunctionHandle(
-                    (frameCaller, ahArg, iReturn) -> frameCaller.assignValue(iReturn, hInstance));
+                FunctionHandle hFn = new FunctionHandle(typeFn, null)
+                    {
+                    public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+                        {
+                        return frame.assignValue(iReturn, hInstance);
+                        }
+                    };
                 ahVar[2] = hFn;
                 }
             else
