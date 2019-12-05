@@ -213,7 +213,7 @@ public class DifferenceTypeConstant
                             mergeMethods(info1, info2, errs),
                             Collections.EMPTY_MAP,  // mapVirtProps
                             Collections.EMPTY_MAP,  // mapVirtMethods
-                            Collections.EMPTY_MAP,  // mapChildren
+                            ListMap.EMPTY,          // mapChildren
                             info1.getProgress().worstOf(info2.getProgress())
                             );
         }

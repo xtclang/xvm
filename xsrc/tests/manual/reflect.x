@@ -6,18 +6,18 @@ module TestReflection.xqiz.it
 
     void run()
         {
-//        testFuncType();
-//        testTypeStrings();
-//        testInstanceOf();
-//        testMaskReveal();
-//        testForm();
-//        testProps();
-//        testInvoke();
-//        testInvoke2();
-//        testInvokeAsync();
-//        testBind();
-//        testChildTypes();
-        testTypeTemplate();
+        testFuncType();
+        testTypeStrings();
+        testInstanceOf();
+        testMaskReveal();
+        testForm();
+        testProps();
+        testInvoke();
+        testInvoke2();
+        testInvokeAsync();
+        testBind();
+        testChildTypes();
+        // testTypeTemplate();
         testEnum();
         }
 
@@ -387,7 +387,6 @@ module TestReflection.xqiz.it
         console.println("\n** testEnum");
 
         console.println($"Boolean.count={Boolean.count}");
-        console.println($"Boolean.name={Boolean.name}");
         console.println($"Boolean.values={Boolean.values}");
         console.println($"Boolean.names={Boolean.names}");
         }

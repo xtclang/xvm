@@ -58,10 +58,11 @@ mixin Enumeration<EnumType extends Enum>
      * * "Boolean" for {@link Boolean}
      * * "Ordered" for {@link Ordered}
      */
-    String name.get()
+    @Override
+    @RO String name.get()
         {
         // the name of the class is same as the name of the Enumeration
-        TODO return super();
+        return super();
         }
 
     /**
@@ -129,7 +130,7 @@ mixin Enumeration<EnumType extends Enum>
                 {
                 assert Class<> clz := type.fromClass();
                 assert EnumType instance := clz.as(Class<EnumType>).isSingleton();
-                // assert instance.ordinal == map.size;
+                assert instance.ordinal == map.size;
                 assert !map.contains(name);
                 map.put(name, instance);
                 }

@@ -8,6 +8,8 @@ import org.xvm.runtime.template.reflect.xClass;
 
 /**
  * Native Enumeration implementation.
+ *
+ * TODO GG: remove if no native support is needed
  */
 public class xEnumeration
         extends xClass
@@ -27,13 +29,5 @@ public class xEnumeration
     @Override
     public void initDeclared()
         {
-        if (this == INSTANCE)
-            {
-            // REVIEW even though the super is native, the PropertyInfo requires a field unless
-            //        we mark this property as native too
-            markNativeProperty("name");
-
-            getCanonicalType().invalidateTypeInfo();
-            }
         }
     }

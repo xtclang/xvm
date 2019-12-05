@@ -38,6 +38,16 @@ public class ListMap<K,V>
             : Collections.EMPTY_LIST;
         }
 
+    /**
+     * Construct a new ListMap of the same content as the specified ListMap.
+     *
+     * @param map  the map to clone
+     */
+    public ListMap(ListMap map)
+        {
+        m_list = new ArrayList<>(map.m_list);
+        }
+
     @Override
     public V put(K key, V value)
         {

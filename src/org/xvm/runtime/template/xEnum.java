@@ -84,7 +84,7 @@ public class xEnum
                         }
                     }
                 }
-            m_listNames = listNames;
+            m_listNames   = listNames;
             m_listHandles = listHandles;
             }
         }

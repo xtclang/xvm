@@ -2231,7 +2231,7 @@ public class ConstantPool
                 Collections.EMPTY_LIST, new ListMap<>(), new ListMap<>(),
                 Collections.EMPTY_MAP, Collections.EMPTY_MAP,
                 Collections.EMPTY_MAP, Collections.EMPTY_MAP,
-                Collections.EMPTY_MAP, Progress.Building)
+                ListMap.EMPTY, Progress.Building)
                     {
                     public String toString()
                         {

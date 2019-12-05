@@ -101,6 +101,14 @@ const Class<PublicType, ProtectedType extends PublicType,
     // ----- attributes ----------------------------------------------------------------------------
 
     /**
+     * The name of the Class.
+     */
+    @RO String name.get()
+        {
+        return composition?.template.name : "?";
+        }
+
+    /**
      * The values for each of the formal types required by the class. The order of the entries in
      * the map is significant.
      */

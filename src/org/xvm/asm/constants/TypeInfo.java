@@ -78,7 +78,7 @@ public class TypeInfo
             Map<MethodConstant, MethodInfo>     mapMethods,
             Map<Object, PropertyInfo>           mapVirtProps,
             Map<Object, MethodInfo>             mapVirtMethods,
-            Map<String, ChildInfo>              mapChildren,
+            ListMap<String, ChildInfo>          mapChildren,
             Progress                            progress)
         {
         assert type                 != null;
@@ -246,7 +246,7 @@ public class TypeInfo
                 }
             }
 
-        Map<String, ChildInfo> mapChildren = new HashMap<>();
+        ListMap<String, ChildInfo> mapChildren = new ListMap<>(f_mapChildren.size());
         for (Entry<String, ChildInfo> entry : f_mapChildren.entrySet())
             {
             String    sName = entry.getKey();
@@ -2003,7 +2003,7 @@ public class TypeInfo
     /**
      * @return a map of information about child types of this type, keyed by name
      */
-    public Map<String, ChildInfo> getChildInfosByName()
+    public ListMap<String, ChildInfo> getChildInfosByName()
         {
         return f_mapChildren;
         }
@@ -2426,7 +2426,7 @@ public class TypeInfo
      * The information about child types of this type, keyed by name. In the case of types nested
      * under properties, the name will be dot-delimited, such as "prop.name".
      */
-    private final Map<String, ChildInfo> f_mapChildren;
+    private final ListMap<String, ChildInfo> f_mapChildren;
 
     /**
      * The methods of the type, indexed by signature. This will not include nested methods, such

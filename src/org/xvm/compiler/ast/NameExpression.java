@@ -1537,52 +1537,57 @@ public class NameExpression
                 }
 
             // attempt to use identity mode (e.g. "packageName.ClassName.PropName")
-            boolean fValid  = true;
             boolean fIdMode = left instanceof NameExpression
                     && ((NameExpression) left).resolveRawArgument(ctx, false, errs) != null
                     && ((NameExpression) left).isIdentityMode(ctx, true);
             if (fIdMode)
                 {
-                NameExpression   exprLeft = (NameExpression) left;
-                IdentityConstant idLeft   = exprLeft.getIdentity(ctx);
-                TypeInfo         info     = idLeft.ensureTypeInfo(Access.PUBLIC, errs);
-
-                IdentityConstant idChild = info.findName(pool, sName);
+                NameExpression   exprLeft   = (NameExpression) left;
+                IdentityConstant idLeft     = exprLeft.getIdentity(ctx);
+                TypeInfo         info       = idLeft.ensureTypeInfo(Access.PUBLIC, errs);
+                IdentityConstant idChild    = info.findName(pool, sName);
+                TypeInfo         infoClz    = idLeft.getValueType(null).ensureTypeInfo(errs);
+                IdentityConstant idClzChild = infoClz.findName(pool, sName);
 
                 if (idChild == null)
                     {
                     // no child of that name on "Left"; try "Class<Left>"
-                    info    = idLeft.getValueType(null).ensureTypeInfo(errs);
-                    idChild = info.findName(pool, sName);
-
+                    idChild           = idClzChild;
                     m_fClassAttribute = idChild != null;
                     }
-
-                switch (idChild.getFormat())
+                else if (idClzChild != null)
                     {
-                    case Package:
-                    case Class:
-                    case Property:
-                    case Method:
-                    case Typedef:
-                        m_arg = idChild;
-                        break;
+                    log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, sName);
+                    return null;
+                    }
 
-                    case MultiMethod:
-                        log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, sName);
-                        fValid = false;
-                        break;
+                if (idChild != null)
+                    {
+                    switch (idChild.getFormat())
+                        {
+                        case Package:
+                        case Class:
+                        case Property:
+                        case Method:
+                        case Typedef:
+                            m_arg = idChild;
+                            break;
 
-                    case Module: // a module can't be nested
-                    default:
-                        throw new IllegalStateException("format=" + idChild.getFormat()
-                                + ", constant=" + idChild);
+                        case MultiMethod:
+                            log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, sName);
+                            return null;
+
+                        case Module: // a module can't be nested
+                        default:
+                            throw new IllegalStateException("format=" + idChild.getFormat()
+                                    + ", constant=" + idChild);
+                        }
                     }
                 }
 
             // if identity mode didn't answer the question, then use the TypeInfo to find the name
             // (e.g. "foo().x.y"
-            if (fValid && m_arg == null)
+            if (m_arg == null)
                 {
                 // the name can refer to either a property or a typedef
                 TypeConstant typeLeft = left.getImplicitType(ctx);
@@ -1720,10 +1725,6 @@ public class NameExpression
 
                 switch (idChild.getFormat())
                     {
-                    case Package:
-                        log(errs, Severity.ERROR, Compiler.PACKAGE_UNEXPECTED, sName);
-                        break;
-
                     case Class:
                         log(errs, Severity.ERROR, Compiler.CLASS_UNEXPECTED, sName);
                         break;

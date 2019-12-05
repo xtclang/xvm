@@ -1491,7 +1491,7 @@ public abstract class TypeConstant
         Map<MethodConstant   , MethodInfo  > mapMethods     = new HashMap<>();
         Map<Object           , PropertyInfo> mapVirtProps   = new HashMap<>(); // keyed by nested id
         Map<Object           , MethodInfo  > mapVirtMethods = new HashMap<>(); // keyed by nested id
-        Map<String           , ChildInfo   > mapChildren    = new HashMap<>(); // keyed by name
+        ListMap<String       , ChildInfo   > mapChildren    = new ListMap<>(); // keyed by name
         // note that the mapChildren keys may be '.' delim'd in the case of a "prop.class"
 
         fComplete &= collectMemberInfo(constId, struct, mapTypeParams,
@@ -1637,7 +1637,7 @@ public abstract class TypeConstant
                 false, infoPri.getTypeParams(), infoPri.getClassAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
-                mapProps, mapMethods, mapVirtProps, Collections.EMPTY_MAP, Collections.EMPTY_MAP,   // TODO mapChildren
+                mapProps, mapMethods, mapVirtProps, Collections.EMPTY_MAP, ListMap.EMPTY,   // TODO mapChildren
                 fIncomplete ? Progress.Incomplete : Progress.Complete);
         }
 
@@ -2455,7 +2455,7 @@ public abstract class TypeConstant
 
             Map<PropertyConstant, PropertyInfo> mapContribProps;
             Map<MethodConstant  , MethodInfo  > mapContribMethods;
-            Map<String          , ChildInfo   > mapContribChildren;
+            ListMap<String      , ChildInfo   > mapContribChildren;
 
             TypeConstant     typeContrib = contrib.getTypeConstant();
             Composition      composition = contrib.getComposition();
@@ -2466,7 +2466,7 @@ public abstract class TypeConstant
                 {
                 mapContribProps    = new HashMap<>();
                 mapContribMethods  = new HashMap<>();
-                mapContribChildren = new HashMap<>();
+                mapContribChildren = new ListMap<>();
 
                 int nBaseRank = mapProps.size();
 
@@ -3488,7 +3488,7 @@ public abstract class TypeConstant
             Map<Object          , ParamInfo>    mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant  , MethodInfo>   mapMethods,
-            Map<String, ChildInfo>              mapChildren,
+            ListMap<String, ChildInfo>          mapChildren,
             List<PropertyConstant>              listExplode,
             int                                 nBaseRank,
             ErrorListener                       errs)
@@ -4173,7 +4173,7 @@ public abstract class TypeConstant
         Map<MethodConstant  , MethodInfo  > mapMethods     = new HashMap<>(infoSource.getMethods());
         Map<Object          , PropertyInfo> mapVirtProps   = new HashMap<>(infoSource.getVirtProperties());
         Map<Object          , MethodInfo  > mapVirtMethods = new HashMap<>(infoSource.getVirtMethods());
-        Map<String          , ChildInfo   > mapChildren    = new HashMap<>(infoSource.getChildInfosByName());
+        ListMap<String      , ChildInfo   > mapChildren    = new ListMap<>(infoSource.getChildInfosByName());
 
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapMixinProps.entrySet())
             {
