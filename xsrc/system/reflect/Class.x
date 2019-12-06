@@ -88,8 +88,8 @@ const Class<PublicType, ProtectedType extends PublicType,
      * @param formalTypes
      * @param obtainSingleton
      */
-    construct(Composition            composition,
-              Map<String, Type>      formalTypes,
+    construct(Composition?           composition     = Null,
+              Map<String, Type>?     formalTypes     = Null,
               function PublicType()? obtainSingleton = Null)
         {
         this.formalTypes     = formalTypes;
@@ -112,12 +112,12 @@ const Class<PublicType, ProtectedType extends PublicType,
      * The values for each of the formal types required by the class. The order of the entries in
      * the map is significant.
      */
-    Map<String, Type> formalTypes;
+    Map<String, Type>? formalTypes;
 
     /**
      * The composition of the class.
      */
-    Composition composition;
+    Composition? composition;
 
     /**
      * The provider of the singleton instance. The singleton itself cannot be held in a property of
@@ -131,7 +131,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     Boolean virtualChild.get()
         {
-        return composition.template.virtualChild;
+        return composition?.template.virtualChild : False;
         }
 
     /**
@@ -162,12 +162,12 @@ const Class<PublicType, ProtectedType extends PublicType,
     Boolean extends(Class!<> clz)
         {
         // one can only "incorporate" a mixin
-        if (clz.composition.template.format == Interface)
+        if (clz.composition?.template.format == Interface)
             {
             return False;
             }
 
-        return this.PublicType.isA(clz.PublicType) && this.composition.extends(clz.composition);
+        return this.PublicType.isA(clz.PublicType) && this.composition?.extends(clz.composition?) : False;
         }
 
     /**
@@ -180,12 +180,12 @@ const Class<PublicType, ProtectedType extends PublicType,
     Boolean incorporates(Class!<> clz)
         {
         // one can only "incorporate" a mixin
-        if (clz.composition.template.format != Mixin)
+        if (clz.composition?.template.format != Mixin)
             {
             return False;
             }
 
-        return this.PublicType.isA(clz.PublicType) && this.composition.incorporates(clz.composition);
+        return this.PublicType.isA(clz.PublicType) && this.composition?.incorporates(clz.composition?) : False;
         }
 
     /**
@@ -206,12 +206,12 @@ const Class<PublicType, ProtectedType extends PublicType,
     Boolean implements(Class!<> clz)
         {
         // one can only "implement" an interface
-        if (clz.composition.template.format != Interface)
+        if (clz.composition?.template.format != Interface)
             {
             return False;
             }
 
-        return this.PublicType.isA(clz.PublicType) && this.composition.implements(clz.composition);
+        return this.PublicType.isA(clz.PublicType) && this.composition?.implements(clz.composition?) : False;
         }
 
     /**
