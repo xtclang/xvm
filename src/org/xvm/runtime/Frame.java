@@ -703,7 +703,17 @@ public class Frame
             switch (c - i)
                 {
                 default:
-                    switch (assignValue(anVar[i], ahValue[i]))
+                    {
+                    ObjectHandle hVal = ahValue[i];
+                    if (hVal == null)
+                        {
+                        // a "null" value can only occur in a conditional assignment; we need to
+                        // avoid the scenario in which some values are assigned and others are not
+                        assert i == 1 && ahValue[0] == xBoolean.FALSE;
+                        return Op.R_NEXT;
+                        }
+
+                    switch (assignValue(anVar[i], hVal))
                         {
                         case Op.R_NEXT:
                             ++i;
@@ -721,10 +731,20 @@ public class Frame
                         default:
                             throw new IllegalStateException();
                         }
+
                     break;
+                    }
 
                 case 1:
-                    return assignValue(anVar[i], ahValue[i]);
+                    {
+                    ObjectHandle hVal = ahValue[i];
+                    if (hVal == null)
+                        {
+                        assert i == 1 && ahValue[0] == xBoolean.FALSE;
+                        return Op.R_NEXT;
+                        }
+                    return assignValue(anVar[i], hVal);
+                    }
 
                 case 0:
                     return Op.R_NEXT;

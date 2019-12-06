@@ -17,7 +17,7 @@ module TestReflection.xqiz.it
         testInvokeAsync();
         testBind();
         testChildTypes();
-        // testTypeTemplate();
+        testTypeTemplate();
         testEnum();
         }
 

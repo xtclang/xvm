@@ -199,13 +199,13 @@ public class xString
 
                         char chValue = (char) ((JavaLong) hValue).getValue();
                         int  ofStart = hStart == ObjectHandle.DEFAULT
-                            ? 0
-                            : (int) ((JavaLong) hStart).getValue();
+                                ? 0
+                                : (int) ((JavaLong) hStart).getValue();
 
                         int  ofResult = indexOf(hThis.m_achValue, chValue, ofStart);
                         return ofResult < 0
-                            ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
-                            : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofResult));
+                                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+                                : frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(ofResult));
                         }
                     }
                 break;

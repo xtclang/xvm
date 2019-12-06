@@ -309,7 +309,7 @@ public class xRTTypeTemplate
 
             return frame.assignValues(aiReturn, xBoolean.TRUE, hEnum);
             }
-        return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
     /**
@@ -319,7 +319,7 @@ public class xRTTypeTemplate
         {
         ObjectHandle hAnnotation = null; // TODO
         return hAnnotation == null
-                ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
+                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
                 : frame.assignValues(aiReturn, xBoolean.TRUE, hAnnotation);
         }
 
@@ -338,7 +338,7 @@ public class xRTTypeTemplate
             }
         else
             {
-            return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
         }
 
@@ -350,7 +350,7 @@ public class xRTTypeTemplate
         TypeConstant type = hType.getDataType();
         if (!type.isSingleUnderlyingClass(true))
             {
-            return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
         IdentityConstant idClz  = type.getSingleUnderlyingClass(true);
@@ -387,7 +387,7 @@ public class xRTTypeTemplate
                 }
             }
 
-        return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
     /**
@@ -407,7 +407,7 @@ public class xRTTypeTemplate
         TypeConstant type  = hType.getDataType();
         return type.isModifyingType()
                 ? frame.assignValues(aiReturn, xBoolean.TRUE, makeHandle(type.getUnderlyingType()))
-                : frame.assignValues(aiReturn, xBoolean.FALSE, null);
+                : frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
     /**
@@ -418,7 +418,7 @@ public class xRTTypeTemplate
         TypeConstant type = hType.getDataType();
         if (!type.isParamsSpecified())
             {
-            return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
         TypeConstant[] atypes  = type.getParamTypesArray();
@@ -451,7 +451,7 @@ public class xRTTypeTemplate
                 ? frame.assignValues(aiReturn, xBoolean.TRUE,
                         makeHandle(type.getUnderlyingType()),
                         makeHandle(type.getUnderlyingType2()))
-                : frame.assignValues(aiReturn, xBoolean.FALSE, null, null);
+                : frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
 

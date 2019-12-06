@@ -52,6 +52,8 @@ public class xRTClassTemplate
         markNativeMethod("deannotate", null, null);
         markNativeMethod("ensureClass", null, null);
 
+        // this native implementation explicitly incorporates the native implementation of
+        // RTComponentTemplate
         super.initDeclared();
         }
 
@@ -276,6 +278,6 @@ public class xRTClassTemplate
     public int invokeDeannotate(Frame frame, ComponentTemplateHandle hComponent, int[] aiReturn)
         {
         // a Composition that is a ClassTemplate is not annotated
-        return frame.assignValues(aiReturn, xBoolean.FALSE, null, null);
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
     }

@@ -772,7 +772,7 @@ public class xRTType
 
             return frame.assignValues(aiReturn, xBoolean.TRUE, hEnum);
             }
-        return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
     /**
@@ -782,7 +782,7 @@ public class xRTType
         {
         ObjectHandle hAnnotation = null; // TODO
         return hAnnotation == null
-                ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
+                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
                 : frame.assignValues(aiReturn, xBoolean.TRUE, hAnnotation);
         }
 
@@ -800,7 +800,7 @@ public class xRTType
             }
         else
             {
-            return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
         }
 
@@ -826,7 +826,7 @@ public class xRTType
 
             return frame.assignValues(aiReturn, xBoolean.TRUE, hClass);
             }
-        return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
     /**
@@ -847,7 +847,7 @@ public class xRTType
                 }
             }
 
-        return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
     /**
@@ -858,7 +858,7 @@ public class xRTType
         TypeConstant type  = hType.getDataType();
         return type.isModifyingType()
                 ? frame.assignValues(aiReturn, xBoolean.TRUE, type.getUnderlyingType().getTypeHandle())
-                : frame.assignValues(aiReturn, xBoolean.FALSE, null);
+                : frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
     /**
@@ -878,7 +878,7 @@ public class xRTType
             }
 
         return sName == null
-            ? frame.assignValues(aiReturn, xBoolean.FALSE, null)
+            ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
             : frame.assignValues(aiReturn, xBoolean.TRUE, xString.makeHandle(sName));
         }
 
@@ -890,7 +890,7 @@ public class xRTType
         TypeConstant type = hType.getDataType();
         if (!type.isParamsSpecified())
             {
-            return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
         TypeConstant[] atypes  = type.getParamTypesArray();
@@ -923,7 +923,7 @@ public class xRTType
                 ? frame.assignValues(aiReturn, xBoolean.TRUE,
                         type.getUnderlyingType().getTypeHandle(),
                         type.getUnderlyingType2().getTypeHandle())
-                : frame.assignValues(aiReturn, xBoolean.FALSE, null, null);
+                : frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
 

@@ -312,7 +312,7 @@ public class xRTProperty
         PropertyInfo info = hProp.getPropertyInfo();
         if (!info.isConstant())
             {
-            return frame.assignValues(aiReturn, xBoolean.FALSE, null);
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
         PropertyConstant  idProp      = hProp.getPropertyConstant();
