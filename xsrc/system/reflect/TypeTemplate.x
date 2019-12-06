@@ -351,6 +351,9 @@ interface TypeTemplate // TODO move
                 break;
 
             case Typedef:
+                (name?.as(Stringable) : underlyingTypes[0]).appendTo(appender);
+                break;
+
             case Sequence:
                 TODO
 

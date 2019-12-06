@@ -4,7 +4,6 @@ package org.xvm.runtime.template._native.reflect;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -26,7 +25,6 @@ import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.collections.xArray;
-
 
 /**
  * Native ComponentTemplate (abstract base class) implementation.
@@ -106,7 +104,7 @@ public class xRTComponentTemplate
         switch (method.getName())
             {
             case "children":
-                return invokeIsA(frame, hComponent, iReturn);
+                return invokeChildren(frame, hComponent, iReturn);
 
             case "toString":
                 return invokeToString(frame, hComponent, iReturn);
@@ -146,10 +144,10 @@ public class xRTComponentTemplate
      */
     public int getPropertyAccess(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component component = hComponent.getComponent();
-        Access    access    = component.getAccess();
-        ObjectHandle hEnum = Utils.ensureInitializedEnum(frame,
-                makeAccessHandle(frame, access));
+        Component    component = hComponent.getComponent();
+        Access       access    = component.getAccess();
+        ObjectHandle hEnum     = Utils.ensureInitializedEnum(frame,
+                xRTType.makeAccessHandle(frame, access));
 
         if (Op.isDeferred(hEnum))
             {
@@ -181,7 +179,7 @@ public class xRTComponentTemplate
     public int getPropertyFormat(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         Component  component = hComponent.getComponent();
-        EnumHandle hFormat   = null; // TODO
+        EnumHandle hFormat   = makeFormatHandle(frame, component.getFormat());
         return Utils.assignInitializedEnum(frame, hFormat, iReturn);
         }
 
@@ -241,10 +239,25 @@ public class xRTComponentTemplate
     /**
      * Implementation for: {@code Iterator<ComponentTemplate> children()}.
      */
-    public int invokeIsA(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+    public int invokeChildren(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component component  = hComponent.getComponent();
-        // TODO CP
+        Component      component  = hComponent.getComponent();
+        int            cChildren  = component.getChildrenCount();
+        ObjectHandle[] ahChildren = new ObjectHandle[cChildren];
+
+        int i = 0;
+        for (Component child : component.children())
+            {
+            ahChildren[i++] = null; // TODO CP
+            }
+        assert i == cChildren;
+
+        // turn the Java array into an Ecstasy array
+        ObjectHandle.ArrayHandle hArray = ensureComponentArrayTemplate().createArrayHandle(
+                ensureComponentArrayType(), ahChildren);
+
+        // create and return an iterator of the Ecstasy array
+        // TODO GG return frame.assignValue(iReturn, hIter);
         throw new UnsupportedOperationException();
         }
 
@@ -253,192 +266,101 @@ public class xRTComponentTemplate
      */
     public int invokeToString(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component component  = hComponent.getComponent();
-        String    sResult    = component.toString();
+        Component component = hComponent.getComponent();
+        String    sResult   = component.toString();
         return frame.assignValue(iReturn, xString.makeHandle(sResult));
         }
 
 
-    // ----- Template caching -----------------------------------------------------------------------
+    // ----- Type and Template caching -------------------------------------------------------------
+
+    private static xArray           COMPONENT_ARRAY_TEMPLATE;
+    private static ClassComposition COMPONENT_ARRAY_TYPE;
 
     /**
-     * @return the ClassTemplate for an Array of TypeTemplate
+     * @return the ClassTemplate for an Array of ComponentTemplate
      */
-    public xArray ensureTypeTemplateArrayTemplate()
+    public xArray ensureComponentArrayTemplate()
         {
-        xArray template = TYPETEMPLATE_ARRAY_TEMPLATE;
+        xArray template = COMPONENT_ARRAY_TEMPLATE;
         if (template == null)
             {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeTemplateArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType()); // TODO
-            TYPETEMPLATE_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeTypeTemplateArray));
+            TypeConstant typeTypeArray = ensureComponentArrayType().getType();
+            COMPONENT_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeTypeArray));
             assert template != null;
             }
         return template;
         }
 
-    private static xArray TYPETEMPLATE_ARRAY_TEMPLATE;
-
-
-    // ----- ClassComposition caching and helpers --------------------------------------------------
-
     /**
-     * @return the ClassComposition for an Array of TypeTemplate
+     * @return the ClassComposition for an Array of ComponentTemplate
      */
-    public ClassComposition ensureClassComposition()
+    public ClassComposition ensureComponentArrayType()
         {
-        ClassComposition clz = TYPETEMPLATE;
+        ClassComposition clz = COMPONENT_ARRAY_TYPE;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant type = pool.ensureEcstasyTypeConstant("reflect.TypeTemplate");
-            TYPETEMPLATE = clz = f_templates.resolveClass(type);
+            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                    pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
+            COMPONENT_ARRAY_TYPE = clz = f_templates.resolveClass(typeTypeArray);
             assert clz != null;
             }
         return clz;
         }
-
-    /**
-     * @return the ClassComposition for an Array of TypeTemplate
-     */
-    public ClassComposition ensureArrayClassComposition()
-        {
-        ClassComposition clz = TYPETEMPLATE_ARRAY;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                    pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
-            TYPETEMPLATE_ARRAY = clz = f_templates.resolveClass(type);
-            assert clz != null;
-            }
-        return clz;
-        }
-
-    private static ClassComposition TYPETEMPLATE;
-    private static ClassComposition TYPETEMPLATE_ARRAY;
 
 
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Given an Access value, determine the corresponding Ecstasy "Access" value.
+     * Given a "Component.Format", obtain an Ecstasy "ComponentTemplate.Format" handle.
      *
      * @param frame   the current frame
-     * @param access  an Access value
+     * @param format  a Component Format
      *
-     * @return the handle to the appropriate Ecstasy {@code Access} enum value
+     * @return the handle to the appropriate Ecstasy {@code ComponentTemplate.Format} enum value
      */
-    public EnumHandle makeAccessHandle(Frame frame, Constants.Access access)
+    protected static EnumHandle makeFormatHandle(Frame frame, Component.Format format)
         {
-        xEnum enumAccess = (xEnum) f_templates.getTemplate("reflect.Access");
-        switch (access)
+        xEnum enumForm = (xEnum) INSTANCE.f_templates.getTemplate("reflect.ComponentTemplate.Format");
+
+        switch (format)
             {
-            case PUBLIC:
-                return enumAccess.getEnumByName("Public");
-
-            case PROTECTED:
-                return enumAccess.getEnumByName("Protected");
-
-            case PRIVATE:
-                return enumAccess.getEnumByName("Private");
-
-            case STRUCT:
-                return enumAccess.getEnumByName("Struct");
-
-            default:
-                throw new IllegalStateException("unknown access value: " + access);
-            }
-        }
-
-    /**
-     * Given a TypeConstant, determine the Ecstasy "Form" value for the type.
-     *
-     * @param frame  the current frame
-     * @param type   a TypeConstant used at runtime
-     *
-     * @return the handle to the appropriate Ecstasy {@code TypeTemplate.Form} enum value
-     */
-    protected EnumHandle makeFormHandle(Frame frame, TypeConstant type)
-        {
-        xEnum enumForm = (xEnum) f_templates.getTemplate("reflect.TypeTemplate.Form");
-
-        switch (type.getFormat())
-            {
-            case TerminalType:
-                if (type.isSingleDefiningConstant())
-                    {
-                    switch (type.getDefiningConstant().getFormat())
-                        {
-                        case NativeClass:
-                            return enumForm.getEnumByName("Pure");
-
-                        case Module:
-                        case Package:
-                        case Class:
-                        case ThisClass:
-                        case ParentClass:
-                        case ChildClass:
-                            return enumForm.getEnumByName("Class");
-
-                        case Property:
-                            return enumForm.getEnumByName("FormalProperty");
-
-                        case TypeParameter:
-                            return enumForm.getEnumByName("FormalParameter");
-
-                        case FormalTypeChild:
-                            return enumForm.getEnumByName("FormalChild");
-
-                        default:
-                            throw new IllegalStateException("unsupported format: " +
-                                    type.getDefiningConstant().getFormat());
-                        }
-                    }
-                else
-                    {
-                    return enumForm.getEnumByName("Typedef");
-                    }
-
-            case ImmutableType:
-                return enumForm.getEnumByName("Immutable");
-
-            case AccessType:
-                return enumForm.getEnumByName("Access");
-
-            case AnnotatedType:
-                return enumForm.getEnumByName("Annotated");
-
-            case ParameterizedType:
-                return enumForm.getEnumByName("Parameterized");
-
-            case TurtleType:
-                return enumForm.getEnumByName("Sequence");
-
-            case VirtualChildType:
-                return enumForm.getEnumByName("Child");
-
-            case AnonymousClassType:
+            case INTERFACE:
+                return enumForm.getEnumByName("Interface");
+            case CLASS:
                 return enumForm.getEnumByName("Class");
-
-            case PropertyClassType:
+            case CONST:
+                return enumForm.getEnumByName("Const");
+            case ENUM:
+                return enumForm.getEnumByName("Enum");
+            case ENUMVALUE:
+                return enumForm.getEnumByName("EnumValue");
+            case MIXIN:
+                return enumForm.getEnumByName("Mixin");
+            case SERVICE:
+                return enumForm.getEnumByName("Service");
+            case PACKAGE:
+                return enumForm.getEnumByName("Package");
+            case MODULE:
+                return enumForm.getEnumByName("Module");
+            case TYPEDEF:
+                return enumForm.getEnumByName("TypeDef");
+            case PROPERTY:
                 return enumForm.getEnumByName("Property");
+            case METHOD:
+                return enumForm.getEnumByName("Method");
+            case RSVD_C:
+                return enumForm.getEnumByName("Reserved_C");
+            case RSVD_D:
+                return enumForm.getEnumByName("Reserved_D");
+            case MULTIMETHOD:
+                return enumForm.getEnumByName("MultiMethod");
+            case FILE:
+                return enumForm.getEnumByName("File");
 
-            case UnionType:
-                return enumForm.getEnumByName("Union");
-
-            case IntersectionType:
-                return enumForm.getEnumByName("Intersection");
-
-            case DifferenceType:
-                return enumForm.getEnumByName("Difference");
-
-            case RecursiveType:
-                return enumForm.getEnumByName("Typedef");
-
-            case UnresolvedType:
             default:
-                throw new IllegalStateException("unsupported type: " + type);
+                throw new IllegalStateException("unsupported format: " + format);
             }
         }
     }

@@ -1116,9 +1116,9 @@ public class xRTType
      *
      * @return the handle to the appropriate Ecstasy {@code Type.Access} enum value
      */
-    public EnumHandle makeAccessHandle(Frame frame, Constants.Access access)
+    public static EnumHandle makeAccessHandle(Frame frame, Constants.Access access)
         {
-        xEnum enumAccess = (xEnum) f_templates.getTemplate("Type.Access");
+        xEnum enumAccess = (xEnum) INSTANCE.f_templates.getTemplate("Type.Access");
         switch (access)
             {
             case PUBLIC:
@@ -1146,9 +1146,9 @@ public class xRTType
      *
      * @return the handle to the appropriate Ecstasy {@code Type.Form} enum value
      */
-    protected EnumHandle makeFormHandle(Frame frame, TypeConstant type)
+    protected static EnumHandle makeFormHandle(Frame frame, TypeConstant type)
         {
-        xEnum enumForm = (xEnum) f_templates.getTemplate("Type.Form");
+        xEnum enumForm = (xEnum) INSTANCE.f_templates.getTemplate("Type.Form");
 
         switch (type.getFormat())
             {
