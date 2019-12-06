@@ -693,9 +693,17 @@ public class NameExpression
                                         : pool.ensureSingletonConstConstant(id);
                                 }
                             }
-                        else if (m_plan == Plan.None && !m_fClassAttribute)
+                        if (m_plan == Plan.None)
                             {
-                            constVal = id;
+                            assert type.isA(pool.typeProperty());
+                            assert left == null || left.getType().isA(pool.typeClass());
+
+                            TypeConstant typeParent = left == null
+                                    ? ctx.getThisType()
+                                    : m_fClassAttribute
+                                            ? left.getType()
+                                            : left.getType().getParamType(0);
+                            constVal = pool.ensurePropertyClassTypeConstant(typeParent, id);
                             }
                         break;
                     }
@@ -1432,6 +1440,12 @@ public class NameExpression
                     case Package:
                     case Class:
                     case Typedef:
+                        if (isSuppressDeref())
+                            {
+                            log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
+                            return null;
+                            }
+                        // fall through
                     case Property:
                         m_arg = arg;
                         break;
@@ -1555,7 +1569,7 @@ public class NameExpression
                     idChild           = idClzChild;
                     m_fClassAttribute = idChild != null;
                     }
-                else if (idClzChild != null)
+                else if (idClzChild != null && !idClzChild.equals(idChild))
                     {
                     log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, sName);
                     return null;
@@ -1712,14 +1726,15 @@ public class NameExpression
                             // ThisClassConstant; from this (context) point, walk up looking
                             // for the specified class, counting the number of "parent
                             // class" steps to get there
-                            PseudoConstant idRelative = getRelativeIdentity(typeLeft, (IdentityConstant) constTarget);
+                            PseudoConstant idRelative =
+                                    getRelativeIdentity(typeLeft, (IdentityConstant) constTarget);
                             if (idRelative != null)
                                 {
                                 return m_arg = idRelative;
                                 }
                             }
                         }
-                    log(errs, Severity.ERROR, Compiler.NAME_MISSING, sName);
+                    log(errs, Severity.ERROR, Compiler.NAME_MISSING, sName, typeLeft.getValueString());
                     return null;
                     }
 
@@ -2018,16 +2033,29 @@ public class NameExpression
                         }
                     }
 
-                if (m_fClassAttribute)
-                    {
-                    m_plan = isSuppressDeref() ? Plan.PropertyRef : Plan.PropertyDeref;
-                    return type;
-                    }
+                // Consider the following statements:
+                //     val c = Boolean.count;
+                //     val r = Boolean.&count
+                // It's quite clear that "c" is an Int and "r" is a Ref<Int>;
+                // however it leaves no [syntax] room to specify a property "count" on Boolean class.
+                // For that case we will need the l-value to direct us:
+                //     Property p = Boolean.count;
+                // using the same syntax as in a case of a non-singleton class:
+                //     val p = Person.name;
 
-                if (isIdentityMode(ctx, false))
+                boolean fClass = m_fClassAttribute; // the class of Class?
+                if (fClass && typeDesired != null && typeDesired.isA(pool.typeProperty())
+                        || !fClass && isIdentityMode(ctx, false))
                     {
+                    if (isSuppressDeref())
+                        {
+                        log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
+                        return null;
+                        }
+                    assert typeLeft.isA(pool.typeClass());
+
                     m_plan = Plan.None;
-                    return idProp.getValueType(typeLeft);
+                    return idProp.getValueType(fClass ? typeLeft : typeLeft.getParamType(0));
                     }
 
                 if (isSuppressDeref())
@@ -2580,8 +2608,8 @@ public class NameExpression
     private PropertyAccess m_propAccessPlan;
 
     /**
-     * If true, indicates that the argument refers to a property or method for a class specified by
-     * the "left" expression.
+     * If true, indicates that the argument refers to a property or method for a class of Class
+     * specified by the "left" expression.
      */
     private transient boolean m_fClassAttribute;
 

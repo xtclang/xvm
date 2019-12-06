@@ -73,12 +73,12 @@ public class xRTProperty
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        // TODO GG - identity mode for property name needs to emit a constant that provides enough
-        //           info (e.g. a PropertyClassTypeConstant)
-        if (constant instanceof PropertyConstant)
+        if (constant instanceof PropertyClassTypeConstant)
             {
-            TypeConstant typeProperty = ((PropertyConstant) constant).getValueType(null);
-            ObjectHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
+            TypeConstant     typeParent   = ((PropertyClassTypeConstant) constant).getParentType();
+            PropertyConstant idProperty   = ((PropertyClassTypeConstant) constant).getProperty();
+            TypeConstant     typeProperty = idProperty.getValueType(typeParent);
+            ObjectHandle     hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
 
             frame.pushStack(hProperty);
             return Op.R_NEXT;

@@ -1194,6 +1194,10 @@ public class Compiler
      */
     public static final String TYPE_PARAMS_UNRESOLVABLE            = "COMPILER-145";
     /**
+     * Property reference ('&') is invalid.
+     */
+    public static final String INVALID_PROPERTY_REF                = "COMPILER-146";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

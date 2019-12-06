@@ -193,8 +193,7 @@ public class ObjectHeap
             case Class:
                 return f_poolRoot.typeClass();
 
-            case Property:
-                // TODO GG this is currently unreachable
+            case PropertyClassType:
                 return f_poolRoot.ensureEcstasyTypeConstant("_native.reflect.RTProperty");
 
             case Method:
