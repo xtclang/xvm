@@ -331,15 +331,6 @@ public class xFutureVar
         }
 
     @Override
-    public int introduceRef(Frame frame, TypeComposition clazz, String sName, int iReturn)
-        {
-        // FutureHandle is exclusively native; no need for further initialization
-        frame.introduceResolvedVar(iReturn, clazz.getType(), sName,
-                Frame.VAR_DYNAMIC_REF, createRefHandle(clazz, sName));
-        return Op.R_NEXT;
-        }
-
-    @Override
     protected int invokeGetReferent(Frame frame, RefHandle hTarget, int iReturn)
         {
         FutureHandle hFuture = (FutureHandle) hTarget;

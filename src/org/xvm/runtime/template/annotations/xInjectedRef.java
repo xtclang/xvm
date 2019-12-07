@@ -61,15 +61,6 @@ public class xInjectedRef
         }
 
     @Override
-    public int introduceRef(Frame frame, TypeComposition clazz, String sName, int iReturn)
-        {
-        // InjectedHandle is exclusively native; no need for further initialization
-        frame.introduceResolvedVar(iReturn, clazz.getType(), sName,
-                Frame.VAR_DYNAMIC_REF, createRefHandle(clazz, sName));
-        return Op.R_NEXT;
-        }
-
-    @Override
     public int getReferent(Frame frame, RefHandle hTarget, int iReturn)
         {
         InjectedHandle hInjected = (InjectedHandle) hTarget;

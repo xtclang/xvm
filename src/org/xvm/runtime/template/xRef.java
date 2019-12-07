@@ -198,6 +198,14 @@ public class xRef
     @Override
     public int introduceRef(Frame frame, TypeComposition clazz, String sName, int iReturn)
         {
+        if (this != INSTANCE && this != xVar.INSTANCE)
+            {
+            // native Ref/Var no need for further initialization
+            frame.introduceResolvedVar(iReturn, clazz.getType(), sName,
+                    Frame.VAR_DYNAMIC_REF, createRefHandle(clazz, sName));
+            return Op.R_NEXT;
+            }
+
         RefHandle hRef;
         int       iResult;
         boolean   fStack;
