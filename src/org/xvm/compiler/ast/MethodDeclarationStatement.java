@@ -520,7 +520,12 @@ public class MethodDeclarationStatement
         MethodStructure method = (MethodStructure) getComponent();
         if (method != null)
             {
-            if (method.isFunction())
+            // sort out which annotations go on the method, and which belong to the return type
+            if (!method.resolveAnnotations() || !method.resolveTypedefs())
+                {
+                mgr.requestRevisit();
+                }
+            else if (method.isFunction())
                 {
                 // make sure functions don't using any generic types
                 for (TypeConstant type : method.getIdentityConstant().getRawParams())
@@ -539,12 +544,6 @@ public class MethodDeclarationStatement
                                 method.getName(), type.getValueString());
                         }
                     }
-                }
-
-            // sort out which annotations go on the method, and which belong to the return type
-            if (!method.resolveAnnotations() || !method.resolveTypedefs())
-                {
-                mgr.requestRevisit();
                 }
             }
         }
