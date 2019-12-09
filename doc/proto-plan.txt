@@ -9,15 +9,11 @@
 
 - createConst() processing for Set, Map etc.
 
-- a new VAR_D like op-code to provide additional parameters (e.g. injection name)
-
 - Move op-code: "safe wrapper" logic
 
 - ServiceContext - the "register..." APIs are "fiber local" -- unless called from the outside
 
 - TypeInfo.findCallable() - use the same approach as Expression.findMethod()
-
-- ast.Annotation - use the InvocationExpression's approach for argument validation
 
 - native optimization Stringable methods on xInt*, xUInt*, etc.
 
@@ -30,8 +26,6 @@
      (and use Expression.packedExpression and unpackedExpressions for code gen?)
 
 - finish nesting call chain support
-
-- heap.getType() vs. Constant.getType()
 
 - Lazy property on an immutable object must not produce a mutable value
 
@@ -69,6 +63,8 @@
         return new Array<type.DataType>();
         }
 
+- run-time to validate that immutable objects passing through the "membrane" belongs to the
+  recipient's type system
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
