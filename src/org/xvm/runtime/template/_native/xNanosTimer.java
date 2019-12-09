@@ -53,9 +53,9 @@ public class xNanosTimer
 
         markNativeProperty("elapsed");
 
-        markNativeMethod("start"   , new String[0], null);
-        markNativeMethod("stop"    , new String[0], null);
-        markNativeMethod("reset"   , new String[0], null);
+        markNativeMethod("start"   , VOID, null);
+        markNativeMethod("stop"    , VOID, null);
+        markNativeMethod("reset"   , VOID, null);
         markNativeMethod("schedule", new String[]{"Duration", "Timer.Alarm"}, null);
 
         getCanonicalType().invalidateTypeInfo();

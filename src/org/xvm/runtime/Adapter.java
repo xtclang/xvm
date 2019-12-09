@@ -1,17 +1,9 @@
 package org.xvm.runtime;
 
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
-import org.xvm.asm.MultiMethodStructure;
-import org.xvm.asm.Op;
-import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
@@ -31,52 +23,11 @@ public class Adapter
     protected final TemplateRegistry f_templates;
     protected final ModuleStructure f_moduleRoot;
 
-    // the template composition: name -> the corresponding ClassConstant id
-    private Map<String, Integer> m_mapClasses = new HashMap<>();
-
     public Adapter(TemplateRegistry registry, ModuleStructure moduleRoot)
         {
         f_templates = registry;
         f_moduleRoot = moduleRoot;
         f_pool = moduleRoot.getConstantPool();
-        }
-
-    // get a "relative" type id for the specified name in the context of the
-    // specified template
-    // if sName is a semicolon delimited array of names, the resulting type
-    // is a tuple
-    public int getClassTypeConstId(String sName)
-        {
-        if (m_mapClasses.containsKey(sName))
-            {
-            return m_mapClasses.get(sName);
-            }
-
-        TypeConstant constType;
-
-        if (sName.indexOf(';') < 0)
-            {
-            constType = getClassType(sName, null);
-            }
-        else
-            {
-            String[] asName = Handy.parseDelimitedString(sName, ';');
-            int cNames = asName.length;
-
-            TypeConstant[] aconstTypes = new TypeConstant[cNames];
-            for (int i = 0; i < cNames; ++i)
-                {
-                aconstTypes[i] = getClassType(asName[i], null);
-                }
-
-            ConstantPool pool = f_pool;
-            constType = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aconstTypes);
-            }
-
-        int nTypeId = Op.CONSTANT_OFFSET - constType.getPosition();
-        m_mapClasses.put(sName, nTypeId);
-
-        return nTypeId;
         }
 
     // get a class type for the specified name in the context of the
@@ -183,29 +134,5 @@ public class Adapter
             aType[i] = getClassType(asType[i].trim(), template);
             }
         return aType;
-        }
-
-    private Parameter[] getTypeParameters(String[] asType, boolean fReturn)
-        {
-        ConstantPool pool = f_pool;
-        int cTypes = asType.length;
-        Parameter[] aType = new Parameter[cTypes];
-        for (int i = 0; i < cTypes; i++)
-            {
-            String sType = asType[i].trim();
-            aType[i] = new Parameter(pool, (TypeConstant) pool.getConstant(
-                Op.CONSTANT_OFFSET - getClassTypeConstId(sType)),
-                    (fReturn ?"r":"p")+i, null, fReturn, i, false);
-            }
-        return aType;
-        }
-
-    public MethodStructure addMethod(Component structure, String sName,
-                                            String[] asArgType, String[] asRetType)
-        {
-        MultiMethodStructure mms = structure.ensureMultiMethodStructure(sName);
-        return mms.createMethod(false, Constants.Access.PUBLIC,
-                null, getTypeParameters(asRetType, true), getTypeParameters(asArgType, false),
-                true, true);
         }
     }

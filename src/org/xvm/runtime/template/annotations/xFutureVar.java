@@ -53,7 +53,7 @@ public class xFutureVar
     @Override
     public void initDeclared()
         {
-        COMPLETION = (xEnum) getChildTemplate("Completion");
+        COMPLETION = (xEnum) f_templates.getTemplate("annotations.FutureVar.Completion");
 
         markNativeMethod("whenComplete", new String[] {"reflect.Function"}, new String[] {"annotations.FutureVar!<Referent>"});
         markNativeMethod("thenDo", new String[] {"reflect.Function"}, new String[] {"annotations.FutureVar!<Referent>"});

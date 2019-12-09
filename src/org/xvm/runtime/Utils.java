@@ -118,34 +118,6 @@ public abstract class Utils
 
 
     /**
-     * Helper method for a "get property" invocation that pushes the result onto the frame's stack.
-     *
-     * @param frame   the current frame
-     * @param hValue  the value to get a property for
-     * @param idProp  the property id
-     *
-     * @return one of R_EXCEPTION, R_NEXT or R_CALL values
-     */
-    public static int callGetProperty(Frame frame, ObjectHandle hValue, PropertyConstant idProp)
-        {
-        TypeComposition clzValue = hValue.getComposition();
-        CallChain       chain    = clzValue.getPropertyGetterChain(idProp);
-
-        if (chain == null)
-            {
-            return frame.raiseException("Unknown property: " + idProp.getValueString());
-            }
-
-        if (chain.isNative())
-            {
-            return clzValue.getTemplate().invokeNativeGet(frame, idProp.getName(), hValue, Op.A_STACK);
-            }
-
-        ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-        return clzValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Op.A_STACK);
-        }
-
-    /**
      * Helper method for a method invocation that pushes the result onto the frame's stack.
      *
      * @param frame   the current frame
@@ -1241,9 +1213,6 @@ public abstract class Utils
 
         UnaryAction DEC = (frameCaller, hValue) ->
             hValue.getOpSupport().invokePrev(frameCaller, hValue, Op.A_STACK);
-
-        UnaryAction NEG = (frameCaller, hValue) ->
-            hValue.getOpSupport().invokeNeg(frameCaller, hValue, Op.A_STACK);
         }
 
     // the lambda for binary actions

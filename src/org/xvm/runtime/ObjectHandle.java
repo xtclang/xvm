@@ -454,7 +454,7 @@ public abstract class ObjectHandle
             if (fInitialize)
                 {
                 m_exception = eCause == null ?
-                        new WrapperException() : new WrapperException(eCause);;
+                        new WrapperException() : new WrapperException(eCause);
                 }
             }
 

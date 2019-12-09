@@ -243,11 +243,6 @@ public abstract class ClassTemplate
         return typeMask.equals(typeInception) ? clz : clz.maskAs(typeMask);
         }
 
-    protected ClassTemplate getChildTemplate(String sName)
-        {
-        return f_templates.getTemplate(f_sName + '.' + sName);
-        }
-
     /**
      * Find the specified property in this template or direct inheritance chain.
      *
