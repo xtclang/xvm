@@ -12,9 +12,9 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xRef;
 
@@ -75,18 +75,20 @@ public class xInjectedRef
                 return frame.raiseException("Unknown injectable property " + hInjected.getResourceName());
                 }
 
-            if (hValue instanceof DeferredCallHandle)
+            if (Op.isDeferred(hValue))
                 {
-                ((DeferredCallHandle) hValue).addContinuation(frameCaller ->
+                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
+                Frame.Continuation stepNext = frameCaller ->
                     {
-                    hInjected.setReferent(frameCaller.peekStack());
-                    return Op.R_NEXT;
-                    });
+                    ObjectHandle hVal = ahValue[0];
+                    hInjected.setReferent(hVal);
+                    return frameCaller.assignValue(iReturn, hVal);
+                    };
+
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
-            else
-                {
-                hInjected.setReferent(hValue);
-                }
+
+            hInjected.setReferent(hValue);
             }
 
         return frame.assignValue(iReturn, hValue);

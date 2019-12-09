@@ -63,7 +63,6 @@ public class xByteArray
             UInt8ArrayConstant constBytes = (UInt8ArrayConstant) constant;
 
             frame.pushStack(makeHandle(constBytes.getValue(), Mutability.Constant));
-
             return Op.R_NEXT;
             }
 

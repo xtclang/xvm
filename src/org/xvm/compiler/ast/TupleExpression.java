@@ -465,11 +465,11 @@ public class TupleExpression
         }
 
     @Override
-    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         if (isConstant())
             {
-            return toConstant();
+            return toConstants();
             }
 
         int        cExprs = exprs.size();
@@ -481,7 +481,7 @@ public class TupleExpression
 
         // generate the tuple itself, and return it as an argument
         code.add(new Var_T(getType(), aArgs));
-        return code.lastRegister();
+        return new Argument[] {code.lastRegister()};
         }
 
 

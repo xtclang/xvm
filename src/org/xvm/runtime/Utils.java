@@ -9,12 +9,12 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
-
 import org.xvm.asm.PropertyStructure;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -705,8 +705,8 @@ public abstract class Utils
 
                     ClassTemplate template = heap.f_templates.getTemplate(idClz);
 
-                    Component.Format format = template.f_struct.getFormat();
-                    if (format == Component.Format.ENUMVALUE)
+                    Format format = template.f_struct.getFormat();
+                    if (format == Format.ENUMVALUE)
                         {
                         // this can happen if the constant's handle was not initialized or
                         // assigned on a different constant pool

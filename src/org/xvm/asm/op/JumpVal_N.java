@@ -164,7 +164,7 @@ public class JumpVal_N
                     }
 
                 ObjectHandle hCase = ahCases[iC] = frame.getConstHandle(constCase);
-                if (hCase instanceof DeferredCallHandle)
+                if (isDeferred(hCase))
                     {
                     fDeferred = true;
                     }

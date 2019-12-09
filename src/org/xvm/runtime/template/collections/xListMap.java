@@ -18,7 +18,6 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.TemplateRegistry;
 
 
@@ -46,7 +45,6 @@ public class xListMap
         CONSTRUCTOR = f_struct.findMethod("construct", 2);
         }
 
-
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
@@ -66,8 +64,8 @@ public class xListMap
                 ObjectHandle hKey = frame.getConstHandle(entry.getKey());
                 ObjectHandle hVal = frame.getConstHandle(entry.getValue());
 
-                fDeferredKey |= hKey instanceof DeferredCallHandle;
-                fDeferredVal |= hVal instanceof DeferredCallHandle;
+                fDeferredKey |= Op.isDeferred(hKey);
+                fDeferredVal |= Op.isDeferred(hVal);
 
                 ahKey[ix] = hKey;
                 ahVal[ix] = hVal;

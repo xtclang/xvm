@@ -18,7 +18,6 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
@@ -49,7 +48,7 @@ public class xTuple
             INSTANCE = this;
             INCEPTION_CLASS = new NativeRebaseConstant(
                 (ClassConstant) structure.getIdentityConstant());
-            H_VOID = makeHandle(getCanonicalClass(), Utils.OBJECTS_NONE);
+            H_VOID = makeImmutableHandle(getCanonicalType(), Utils.OBJECTS_NONE);
             }
         }
 
@@ -89,21 +88,31 @@ public class xTuple
         TypeConstant typeTuple = constTuple.getType().resolveGenerics(
             frame.poolContext(), frame.getGenericsResolver());
 
-        ObjectHandle[] ahValue = new ObjectHandle[c];
+        ObjectHandle[] ahValue   = new ObjectHandle[c];
+        boolean        fDeferred = false;
         for (int i = 0; i < c; i++)
             {
-            ahValue[i] = frame.getConstHandle(aconst[i]);
+            ObjectHandle hValue = frame.getConstHandle(aconst[i]);
 
-            if (ahValue[i] instanceof DeferredCallHandle)
+            if (Op.isDeferred(hValue))
                 {
-                throw new UnsupportedOperationException("not implemented"); // TODO
+                fDeferred = true;
                 }
+            ahValue[i] = hValue;
             }
 
-        TupleHandle hTuple = makeHandle(typeTuple, ahValue);
-        hTuple.makeImmutable();
+        if (fDeferred)
+            {
+            Frame.Continuation stepNext = frameCaller ->
+                {
+                frameCaller.pushStack(makeImmutableHandle(typeTuple, ahValue));
+                return Op.R_NEXT;
+                };
 
-        frame.pushStack(hTuple);
+            return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+            }
+
+        frame.pushStack(makeImmutableHandle(typeTuple, ahValue));
         return Op.R_NEXT;
         }
 
@@ -257,16 +266,41 @@ public class xTuple
 
     // ----- ObjectHandle helpers -----
 
+    /**
+     * Make a mutable canonical Tuple handle.
+     *
+     * @param ahValue  the values
+     *
+     * @return the handle
+     */
     public static TupleHandle makeHandle(ObjectHandle... ahValue)
         {
         return new TupleHandle(INSTANCE.getCanonicalClass(), ahValue);
         }
 
-    public static TupleHandle makeHandle(TypeConstant typeTuple, ObjectHandle... ahValue)
+    /**
+     * Make an immutable Tuple handle.
+     *
+     * @param typeTuple  the tuple type
+     * @param ahValue    the values
+     *
+     * @return the handle
+     */
+    public static TupleHandle makeImmutableHandle(TypeConstant typeTuple, ObjectHandle... ahValue)
         {
-        return new TupleHandle(INSTANCE.ensureClass(typeTuple), ahValue);
+        TupleHandle hTuple = new TupleHandle(INSTANCE.ensureClass(typeTuple), ahValue);
+        hTuple.makeImmutable();
+        return hTuple;
         }
 
+    /**
+     * Make a mutable Tuple handle.
+     *
+     * @param clazz    the tuple class composition
+     * @param ahValue  the values
+     *
+     * @return the handle
+     */
     public static TupleHandle makeHandle(TypeComposition clazz, ObjectHandle... ahValue)
         {
         return new TupleHandle(clazz, ahValue);

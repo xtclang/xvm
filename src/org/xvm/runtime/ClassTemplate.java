@@ -34,7 +34,6 @@ import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.Utils.BinaryAction;
 import org.xvm.runtime.Utils.InPlacePropertyBinary;
@@ -307,6 +306,8 @@ public abstract class ClassTemplate
 
     /**
      * Create an object handle for the specified constant and push it on the frame's local stack.
+     * <p/>
+     * Note: the overriding method *should never* push DeferredCallHandles on the stack.
      *
      * @param frame     the current frame
      * @param constant  the constant
@@ -815,18 +816,20 @@ public abstract class ClassTemplate
                         frame, prop.getInjectedResourceName(), prop.getType());
                 if (hValue != null)
                     {
-                    if (hValue instanceof DeferredCallHandle)
+                    if (Op.isDeferred(hValue))
                         {
-                        ((DeferredCallHandle) hValue).addContinuation(frameCaller ->
+                        ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
+                        Frame.Continuation stepNext = frameCaller ->
                             {
-                            hThis.setField(idProp, frameCaller.peekStack());
-                            return Op.R_NEXT;
-                            });
+                            ObjectHandle hVal = ahValue[0];
+                            hThis.setField(idProp, hVal);
+                            return frameCaller.assignValue(iReturn, hVal);
+                            };
+
+                        return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                         }
-                    else
-                        {
-                        hThis.setField(idProp, hValue);
-                        }
+
+                    hThis.setField(idProp, hValue);
                     return frame.assignValue(iReturn, hValue);
                     }
                 sErr = "Unknown injectable property ";

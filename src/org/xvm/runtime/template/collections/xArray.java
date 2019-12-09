@@ -190,7 +190,7 @@ public class xArray
 
         TypeConstant typeArray = constArray.getType();
         Constant[]   aconst    = constArray.getValue();
-        int cSize = aconst.length;
+        int          cSize     = aconst.length;
 
         ObjectHandle[] ahValue   = new ObjectHandle[cSize];
         boolean        fDeferred = false;
@@ -198,7 +198,7 @@ public class xArray
             {
             ObjectHandle hValue = frame.getConstHandle(aconst[i]);
 
-            if (hValue instanceof DeferredCallHandle)
+            if (Op.isDeferred(hValue))
                 {
                 fDeferred = true;
                 }
@@ -206,11 +206,19 @@ public class xArray
             }
 
         ClassComposition clzArray = f_templates.resolveClass(typeArray);
-        ObjectHandle     hResult  = fDeferred
-            ? new DeferredArrayHandle(clzArray, ahValue)
-            : ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue);
+        if (fDeferred)
+            {
+            Frame.Continuation stepNext = frameCaller ->
+                {
+                frameCaller.pushStack(
+                    ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
+                return Op.R_NEXT;
+                };
 
-        frame.pushStack(hResult);
+            return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+            }
+
+        frame.pushStack(((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
         return Op.R_NEXT;
         }
 
