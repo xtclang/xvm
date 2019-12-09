@@ -15,6 +15,8 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.template.numbers.xUInt32;
+
 
 /**
  * Native Char implementation.

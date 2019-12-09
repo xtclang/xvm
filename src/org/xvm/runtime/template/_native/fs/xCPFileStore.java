@@ -16,18 +16,19 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ConstantHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xString;
+import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
-import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xConst;
-import org.xvm.runtime.template.xInt64;
-import org.xvm.runtime.template.xString;
-import org.xvm.runtime.template.xString.StringHandle;
+
+import org.xvm.runtime.template.numbers.xInt64;
 
 
 /**

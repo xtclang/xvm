@@ -171,7 +171,7 @@ module TestArray.xqiz.it
 
     void testNibble()
         {
-        import Ecstasy.Nibble;
+        import Ecstasy.numbers.Nibble;
 
         console.println("\n** testNibble()");
 
@@ -184,6 +184,8 @@ module TestArray.xqiz.it
 
     void testBits()
         {
+        import Ecstasy.numbers.Bit;
+
         console.println("\n** testBits()");
 
         Int n = 17;
@@ -199,6 +201,7 @@ module TestArray.xqiz.it
         {
         import Ecstasy.collections.Hasher;
         import Ecstasy.collections.NaturalHasher;
+        import Ecstasy.numbers.Bit;
 
         console.println("\n** testComparable()");
 

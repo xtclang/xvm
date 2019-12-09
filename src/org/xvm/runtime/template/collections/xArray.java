@@ -34,10 +34,11 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+
+import org.xvm.runtime.template.numbers.xInt64;
 
 
 /**
@@ -78,7 +79,7 @@ public class xArray
         mapTemplates.put(pool.typeByte(), xByteArray.INSTANCE);
         mapTemplates.put(pool.typeChar(), xCharArray.INSTANCE);
         mapTemplates.put(pool.typeBoolean(), xBooleanArray.INSTANCE);
-        mapTemplates.put(pool.ensureEcstasyTypeConstant("Bit"), xBitArray.INSTANCE);
+        mapTemplates.put(pool.ensureEcstasyTypeConstant("numbers.Bit"), xBitArray.INSTANCE);
 
         ARRAY_TEMPLATES = mapTemplates;
 
@@ -133,11 +134,11 @@ public class xArray
         markNativeProperty("size");
 
         markNativeMethod("getElement", INT, ELEMENT_TYPE);
-        markNativeMethod("setElement", new String[] {"Int64", "Element"}, VOID);
+        markNativeMethod("setElement", new String[] {"numbers.Int64", "Element"}, VOID);
         markNativeMethod("elementAt", INT, new String[] {"Var<Element>"});
         markNativeMethod("add", ELEMENT_TYPE, ARRAY);
         markNativeMethod("addAll", new String[] {"Iterable<Element>"}, ARRAY);
-        markNativeMethod("slice", new String[] {"Interval<Int64>"}, ARRAY);
+        markNativeMethod("slice", new String[] {"Interval<numbers.Int64>"}, ARRAY);
         markNativeMethod("ensureImmutable", BOOLEAN, null);
         markNativeMethod("ensurePersistent", BOOLEAN, null);
 

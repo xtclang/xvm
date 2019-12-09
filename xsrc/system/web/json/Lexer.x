@@ -3,6 +3,9 @@ import io.IOException;
 import io.Reader;
 import io.Reader.Position;
 
+import numbers.Nibble;
+import numbers.UInt32;
+
 /**
  * A lexer for a JSON document.
  *

@@ -1,5 +1,7 @@
 import io.IllegalUTF;
 
+import numbers.UInt32;
+
 /**
  * The LegacyDataInput mixin uses the same wire formats as defined by the Java `DataInputStream` for
  * bytes, characters, strings, and for the subset of the number types supported by that language.

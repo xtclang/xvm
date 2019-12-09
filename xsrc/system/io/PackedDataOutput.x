@@ -1,3 +1,12 @@
+import numbers.Int16;
+import numbers.Int32;
+import numbers.Int128;
+import numbers.UInt16;
+import numbers.UInt32;
+import numbers.UInt128;
+import numbers.VarInt;
+import numbers.VarUInt;
+
 /**
  * The DataOutput interface represents a output stream of values of various fundamental Ecstasy
  * types. It provides default implementations for some methods, but does not prescribe an underlying

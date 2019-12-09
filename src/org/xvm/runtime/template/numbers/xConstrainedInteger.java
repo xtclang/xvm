@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.numbers;
 
 
 import org.xvm.asm.ClassStructure;
@@ -17,6 +17,13 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xChar;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xOrdered;
+import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.collections.BitBasedArray;
 import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
@@ -64,24 +71,24 @@ public abstract class xConstrainedInteger
 
         markNativeMethod("toUnchecked", VOID, null);
 
-        markNativeMethod("toInt8"  , VOID, sName.equals("Int8")   ? THIS : new String[]{"Int8"});
-        markNativeMethod("toInt16" , VOID, sName.equals("Int16")  ? THIS : new String[]{"Int16"});
-        markNativeMethod("toInt32" , VOID, sName.equals("Int32")  ? THIS : new String[]{"Int32"});
-        markNativeMethod("toInt"   , VOID, sName.equals("Int64")  ? THIS : new String[]{"Int64"});
-        markNativeMethod("toByte"  , VOID, sName.equals("UInt8")  ? THIS : new String[]{"UInt8"});
-        markNativeMethod("toUInt16", VOID, sName.equals("UInt16") ? THIS : new String[]{"UInt16"});
-        markNativeMethod("toUInt32", VOID, sName.equals("UInt32") ? THIS : new String[]{"UInt32"});
-        markNativeMethod("toUInt"  , VOID, sName.equals("UInt64") ? THIS : new String[]{"UInt64"});
+        markNativeMethod("toInt8"  , VOID, sName.equals("numbers.Int8")   ? THIS : new String[]{"numbers.Int8"});
+        markNativeMethod("toInt16" , VOID, sName.equals("numbers.Int16")  ? THIS : new String[]{"numbers.Int16"});
+        markNativeMethod("toInt32" , VOID, sName.equals("numbers.Int32")  ? THIS : new String[]{"numbers.Int32"});
+        markNativeMethod("toInt"   , VOID, sName.equals("numbers.Int64")  ? THIS : new String[]{"numbers.Int64"});
+        markNativeMethod("toByte"  , VOID, sName.equals("numbers.UInt8")  ? THIS : new String[]{"numbers.UInt8"});
+        markNativeMethod("toUInt16", VOID, sName.equals("numbers.UInt16") ? THIS : new String[]{"numbers.UInt16"});
+        markNativeMethod("toUInt32", VOID, sName.equals("numbers.UInt32") ? THIS : new String[]{"numbers.UInt32"});
+        markNativeMethod("toUInt"  , VOID, sName.equals("numbers.UInt64") ? THIS : new String[]{"numbers.UInt64"});
 
-        markNativeMethod("toInt128"      , VOID, new String[]{"Int128"});
-        markNativeMethod("toUInt128"     , VOID, new String[]{"UInt128"});
-        markNativeMethod("toVarInt"      , VOID, new String[]{"VarInt"});
-        markNativeMethod("toVarUInt"     , VOID, new String[]{"VarUInt"});
-        markNativeMethod("toVarFloat"    , VOID, new String[]{"VarFloat"});
-        markNativeMethod("toVarDec"      , VOID, new String[]{"VarDec"});
+        markNativeMethod("toInt128"      , VOID, new String[]{"numbers.Int128"});
+        markNativeMethod("toUInt128"     , VOID, new String[]{"numbers.UInt128"});
+        markNativeMethod("toVarInt"      , VOID, new String[]{"numbers.VarInt"});
+        markNativeMethod("toVarUInt"     , VOID, new String[]{"numbers.VarUInt"});
+        markNativeMethod("toVarFloat"    , VOID, new String[]{"numbers.VarFloat"});
+        markNativeMethod("toVarDec"      , VOID, new String[]{"numbers.VarDec"});
         markNativeMethod("toChar"        , VOID, new String[]{"Char"});
         markNativeMethod("toBooleanArray", VOID, new String[]{"collections.Array<Boolean>"});
-        markNativeMethod("toBitArray"    , VOID, new String[]{"collections.Array<Bit>"});
+        markNativeMethod("toBitArray"    , VOID, new String[]{"collections.Array<numbers.Bit>"});
 
         markNativeMethod("rotateLeft"   , INT , THIS);
         markNativeMethod("rotateRight"  , INT , THIS);

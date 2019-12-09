@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.numbers;
 
 
 import org.xvm.asm.ClassStructure;
@@ -9,14 +9,14 @@ import org.xvm.runtime.TemplateRegistry;
 /**
  * Native unchecked Int8 support.
  */
-public class xUncheckedInt8
+public class xUncheckedUInt8
         extends xUncheckedConstrainedInt
     {
-    public static xUncheckedInt8 INSTANCE;
+    public static xUncheckedUInt8 INSTANCE;
 
-    public xUncheckedInt8(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xUncheckedUInt8(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, Byte.MIN_VALUE, Byte.MAX_VALUE, 8, false);
+        super(templates, structure, 0L, 0xFFL, 8, true);
 
         if (fInstance)
             {
@@ -27,6 +27,6 @@ public class xUncheckedInt8
     @Override
     protected xConstrainedInteger getComplimentaryTemplate()
         {
-        return xUncheckedUInt8.INSTANCE;
+        return xUncheckedInt8.INSTANCE;
         }
     }

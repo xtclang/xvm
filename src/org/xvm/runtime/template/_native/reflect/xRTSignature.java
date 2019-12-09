@@ -15,15 +15,16 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
-
 import org.xvm.runtime.TypeComposition;
+
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
-import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.collections.xArray;
+
+import org.xvm.runtime.template.numbers.xInt64;
 
 
 /**

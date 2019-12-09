@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.numbers;
 
 
 import org.xvm.asm.ClassStructure;
@@ -15,6 +15,12 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
+
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xOrdered;
+import org.xvm.runtime.template.xString;
 
 import org.xvm.util.PackedInteger;
 
@@ -42,16 +48,16 @@ public abstract class xBaseInt128
 
         markNativeMethod("toUnchecked", VOID, null);
 
-        markNativeMethod("toInt128" , VOID, sName.equals("Int128") ? THIS : new String[]{"Int128"});
-        markNativeMethod("toInt"    , VOID, new String[]{"Int64"});
-        markNativeMethod("toInt32"  , VOID, new String[]{"Int32"});
-        markNativeMethod("toInt16"  , VOID, new String[]{"Int16"});
-        markNativeMethod("toInt8"   , VOID, new String[]{"Int8"});
-        markNativeMethod("toUInt128", VOID, sName.equals("UInt128") ? THIS : new String[]{"UInt128"});
-        markNativeMethod("toUInt"   , VOID, new String[]{"UInt64"});
-        markNativeMethod("toUInt32" , VOID, new String[]{"UInt32"});
-        markNativeMethod("toUInt16" , VOID, new String[]{"UInt16"});
-        markNativeMethod("toByte"   , VOID, new String[]{"UInt8"});
+        markNativeMethod("toInt128" , VOID, sName.equals("numbers.Int128") ? THIS : new String[]{"numbers.Int128"});
+        markNativeMethod("toInt"    , VOID, new String[]{"numbers.Int64"});
+        markNativeMethod("toInt32"  , VOID, new String[]{"numbers.Int32"});
+        markNativeMethod("toInt16"  , VOID, new String[]{"numbers.Int16"});
+        markNativeMethod("toInt8"   , VOID, new String[]{"numbers.Int8"});
+        markNativeMethod("toUInt128", VOID, sName.equals("numbers.UInt128") ? THIS : new String[]{"numbers.UInt128"});
+        markNativeMethod("toUInt"   , VOID, new String[]{"numbers.UInt64"});
+        markNativeMethod("toUInt32" , VOID, new String[]{"numbers.UInt32"});
+        markNativeMethod("toUInt16" , VOID, new String[]{"numbers.UInt16"});
+        markNativeMethod("toByte"   , VOID, new String[]{"numbers.UInt8"});
 
         // @Op methods
         markNativeMethod("abs", VOID, THIS);

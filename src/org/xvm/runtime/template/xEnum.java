@@ -26,6 +26,8 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.numbers.xInt64;
+
 
 /**
  * A template for the base of all Enum classes

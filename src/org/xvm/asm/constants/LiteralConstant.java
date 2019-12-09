@@ -1367,7 +1367,14 @@ public class LiteralConstant
     @Override
     public Constant convertTo(TypeConstant typeOut)
         {
-        switch (this.getFormat().name() + "->" + typeOut.getEcstasyClassName())
+        String sSimpleName = typeOut.getEcstasyClassName();
+        int    ofDot       = sSimpleName.lastIndexOf('.');
+        if (ofDot > 0)
+            {
+            sSimpleName = sSimpleName.substring(ofDot + 1);
+            }
+
+        switch (this.getFormat().name() + "->" + sSimpleName)
             {
             case "IntLiteral->Bit":
                 return toBitConstant();
@@ -1391,7 +1398,7 @@ public class LiteralConstant
             case "IntLiteral->UInt64":
             case "IntLiteral->UInt128":
             case "IntLiteral->VarUInt":
-                return toIntConstant(Format.valueOf(typeOut.getEcstasyClassName()));
+                return toIntConstant(Format.valueOf(sSimpleName));
 
             case "IntLiteral->FPLiteral":
                 return getConstantPool().ensureLiteralConstant(Format.FPLiteral, getValue());
@@ -1426,7 +1433,7 @@ public class LiteralConstant
             case "FPLiteral->Dec32":
             case "FPLiteral->Dec64":
             case "FPLiteral->Dec128":
-                return toDecimalConstant(Format.valueOf(typeOut.getEcstasyClassName()));
+                return toDecimalConstant(Format.valueOf(sSimpleName));
 
             case "IntLiteral->VarDec":
             case "FPLiteral->VarDec":
@@ -1452,7 +1459,8 @@ public class LiteralConstant
                     for (Format format = Format.Bit;
                             format.ordinal() <= Format.VarDec.ordinal(); format = format.next())
                         {
-                        TypeConstant typeSupported = pool.ensureEcstasyTypeConstant(format.name());
+                        TypeConstant typeSupported = pool.ensureEcstasyTypeConstant(
+                                format.getEcstasyName());
                         if (typeSupported.isA(typeOut))
                             {
                             return convertTo(typeSupported);
@@ -1466,7 +1474,8 @@ public class LiteralConstant
                 for (Format format = Format.Float16;
                         format.ordinal() <= Format.VarDec.ordinal(); format = format.next())
                     {
-                    TypeConstant typeSupported = pool.ensureEcstasyTypeConstant(format.name());
+                    TypeConstant typeSupported = pool.ensureEcstasyTypeConstant(
+                            format.getEcstasyName());
                     if (typeSupported.isA(typeOut))
                         {
                         return convertTo(typeSupported);

@@ -214,56 +214,56 @@ public abstract class Constant
             case "String":
                 return pool.ensureStringConstant("");
 
-            case "IntLiteral":
+            case "numbers.IntLiteral":
                 return pool.ensureLiteralConstant(Format.IntLiteral, "0");
 
-            case "FPLiteral":
+            case "numbers.FPLiteral":
                 return pool.ensureLiteralConstant(Format.FPLiteral, "0.0");
 
-            case "Bit":
+            case "numbers.Bit":
                 return pool.ensureBitConstant(0);
 
-            case "Nibble":
+            case "numbers.Nibble":
                 return pool.ensureNibbleConstant(0);
 
-            case "Int8":
+            case "numbers.Int8":
                 return pool.ensureInt8Constant(0);
 
-            case "UInt8":
+            case "numbers.UInt8":
                 return pool.ensureUInt8Constant(0);
 
-            case "Int16":
-            case "Int32":
-            case "Int64":
-            case "Int128":
-            case "VarInt":
-            case "UInt16":
-            case "UInt32":
-            case "UInt64":
-            case "UInt128":
-            case "VarUInt":
+            case "numbers.Int16":
+            case "numbers.Int32":
+            case "numbers.Int64":
+            case "numbers.Int128":
+            case "numbers.VarInt":
+            case "numbers.UInt16":
+            case "numbers.UInt32":
+            case "numbers.UInt64":
+            case "numbers.UInt128":
+            case "numbers.VarUInt":
                 return pool.ensureIntConstant(PackedInteger.ZERO, Format.valueOf(type.getEcstasyClassName()));
 
-            case "Dec32":
+            case "numbers.Dec32":
                 return pool.ensureDecimalConstant(Decimal32.POS_ZERO);
-            case "Dec64":
+            case "numbers.Dec64":
                 return pool.ensureDecimalConstant(Decimal64.POS_ZERO);
-            case "Dec128":
+            case "numbers.Dec128":
                 return pool.ensureDecimalConstant(Decimal128.POS_ZERO);
-            case "VarDec":
+            case "numbers.VarDec":
                 throw new UnsupportedOperationException();
 
-            case "BFloat16":
+            case "numbers.BFloat16":
                 return pool.ensureBFloat16Constant(0.0f);
-            case "Float16":
+            case "numbers.Float16":
                 return pool.ensureFloat16Constant(0.0f);
-            case "Float32":
+            case "numbers.Float32":
                 return pool.ensureFloat32Constant(0.0f);
-            case "Float64":
+            case "numbers.Float64":
                 return pool.ensureFloat64Constant(0.0);
-            case "Float128":
+            case "numbers.Float128":
                 return pool.ensureFloat128Constant(new byte[16]);
-            case "VarFloat":
+            case "numbers.VarFloat":
                 throw new UnsupportedOperationException();
 
             // TODO arrays and lists and maps and tuples and so on
@@ -770,32 +770,32 @@ public abstract class Constant
         /*
          * Values.
          */
-        IntLiteral,
-        Bit,
-        Nibble,
-        Int8,
-        Int16,
-        Int32,
-        Int64,
-        Int128,
-        VarInt,
-        UInt8,
-        UInt16,
-        UInt32,
-        UInt64,
-        UInt128,
-        VarUInt,
-        FPLiteral,
-        BFloat16,
-        Float16,
-        Float32,
-        Float64,
-        Float128,
-        VarFloat,
-        Dec32,
-        Dec64,
-        Dec128,
-        VarDec,
+        IntLiteral("numbers"),
+        Bit       ("numbers"),
+        Nibble    ("numbers"),
+        Int8      ("numbers"),
+        Int16     ("numbers"),
+        Int32     ("numbers"),
+        Int64     ("numbers"),
+        Int128    ("numbers"),
+        VarInt    ("numbers"),
+        UInt8     ("numbers"),
+        UInt16    ("numbers"),
+        UInt32    ("numbers"),
+        UInt64    ("numbers"),
+        UInt128   ("numbers"),
+        VarUInt   ("numbers"),
+        FPLiteral ("numbers"),
+        BFloat16  ("numbers"),
+        Float16   ("numbers"),
+        Float32   ("numbers"),
+        Float64   ("numbers"),
+        Float128  ("numbers"),
+        VarFloat  ("numbers"),
+        Dec32     ("numbers"),
+        Dec64     ("numbers"),
+        Dec128    ("numbers"),
+        VarDec    ("numbers"),
         Char,
         String,
         Date,               // ISO8601 YYYY-MM-DD date format
@@ -876,6 +876,16 @@ public abstract class Constant
 
         // -------------------------------------------------------------------------------------
 
+        Format()
+            {
+            f_sPackage = null;
+            }
+
+        Format(String sPackage)
+            {
+            f_sPackage = sPackage;
+            }
+
         public Format next()
             {
             return Format.valueOf(this.ordinal() + 1);
@@ -908,6 +918,16 @@ public abstract class Constant
             }
 
         /**
+         * @return fully qualified Ecstasy class name corresponding to this enum value
+         */
+        public String getEcstasyName()
+            {
+            return f_sPackage == null
+                ? name()
+                : f_sPackage + '.' + name();
+            }
+
+        /**
          * Look up a Format enum by its ordinal.
          *
          * @param i  the ordinal
@@ -923,6 +943,11 @@ public abstract class Constant
          * All of the Format enums.
          */
         private static final Format[] FORMATS = Format.values();
+
+        /**
+         * The package name.
+         */
+        private final String f_sPackage;
         }
 
 

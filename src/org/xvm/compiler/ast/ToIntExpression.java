@@ -80,23 +80,23 @@ public class ToIntExpression
         {
         switch (expr.getType().getEcstasyClassName())
             {
-            case "Int8":
-            case "Int16":
-            case "Int32":
-            case "Int64":
-            case "Int128":
-            case "VarInt":
-            case "UInt8":
-            case "UInt16":
-            case "UInt32":
-            case "UInt64":
-            case "UInt128":
-            case "VarUInt":
+            case "numbers.Int8":
+            case "numbers.Int16":
+            case "numbers.Int32":
+            case "numbers.Int64":
+            case "numbers.Int128":
+            case "numbers.VarInt":
+            case "numbers.UInt8":
+            case "numbers.UInt16":
+            case "numbers.UInt32":
+            case "numbers.UInt64":
+            case "numbers.UInt128":
+            case "numbers.VarUInt":
                 // already an IntNumber
                 return null;
 
-            case "Bit":
-            case "Nibble":
+            case "numbers.Bit":
+            case "numbers.Nibble":
             case "Char":
                 {
                 // at least one of these does NOT have an @Auto method that converts to<Int>()
@@ -139,27 +139,27 @@ public class ToIntExpression
         String       sFormat = expr.getType().getEcstasyClassName();
         switch (sFormat)
             {
-            case "Int8":
+            case "numbers.Int8":
                 return pool.ensureInt8Constant(pint.getInt());
 
-            case "UInt8":
+            case "numbers.UInt8":
                 return pool.ensureUInt8Constant(pint.getInt());
 
-            case "Int16":
-            case "Int32":
-            case "Int128":
-            case "VarInt":
-            case "UInt16":
-            case "UInt32":
-            case "UInt64":
-            case "UInt128":
-            case "VarUInt":
+            case "numbers.Int16":
+            case "numbers.Int32":
+            case "numbers.Int128":
+            case "numbers.VarInt":
+            case "numbers.UInt16":
+            case "numbers.UInt32":
+            case "numbers.UInt64":
+            case "numbers.UInt128":
+            case "numbers.VarUInt":
                 return pool.ensureIntConstant(pint, Format.valueOf(sFormat));
 
-            case "Bit":     // converted by extract
-            case "Nibble":  // converted by extract
-            case "Char":    // converted by extract
-            case "Int64":
+            case "numbers.Bit":     // converted by extract
+            case "numbers.Nibble":  // converted by extract
+            case "Char":            // converted by extract
+            case "numbers.Int64":
             default:
                 return pool.ensureIntConstant(pint);
             }
@@ -172,17 +172,17 @@ public class ToIntExpression
         {
         switch (expr.getType().getEcstasyClassName())
             {
-            case "Int8":
-            case "Int16":
-            case "Int32":
-            case "Int128":
-            case "VarInt":
-            case "UInt8":
-            case "UInt16":
-            case "UInt32":
-            case "UInt64":
-            case "UInt128":
-            case "VarUInt":
+            case "numbers.Int8":
+            case "numbers.Int16":
+            case "numbers.Int32":
+            case "numbers.Int128":
+            case "numbers.VarInt":
+            case "numbers.UInt8":
+            case "numbers.UInt16":
+            case "numbers.UInt32":
+            case "numbers.UInt64":
+            case "numbers.UInt128":
+            case "numbers.VarUInt":
                 // most of these do NOT have an @Auto method that converts to<Int>()
                 MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
                         "toInt", true, false, getTypes(), TypeConstant.NO_TYPES, null);
@@ -190,10 +190,10 @@ public class ToIntExpression
                 return id;
 
 
-            case "Bit":     // converted by extract
-            case "Nibble":  // converted by extract
-            case "Char":    // converted by extract
-            case "Int64":   // already the right type
+            case "numbers.Bit":     // converted by extract
+            case "numbers.Nibble":  // converted by extract
+            case "Char":            // converted by extract
+            case "numbers.Int64":   // already the right type
             default:
                 return null;
             }

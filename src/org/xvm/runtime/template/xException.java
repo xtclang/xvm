@@ -44,7 +44,7 @@ public class xException
         s_clzTimedOut             = f_templates.getTemplate("TimedOut").getCanonicalClass();
         s_clzTypeMismatch         = f_templates.getTemplate("TypeMismatch").getCanonicalClass();
         s_clzUnsupportedOperation = f_templates.getTemplate("UnsupportedOperation").getCanonicalClass();
-        s_clzDivisionByZero       = f_templates.getTemplate("Number.DivisionByZero").getCanonicalClass();
+        s_clzDivisionByZero       = f_templates.getTemplate("numbers.Number.DivisionByZero").getCanonicalClass();
         s_clzPathException        = f_templates.getTemplate("fs.PathException").getCanonicalClass();
 
         METHOD_FORMAT_EXCEPTION = f_struct.findMethod("formatExceptionString", 2);

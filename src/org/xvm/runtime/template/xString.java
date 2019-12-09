@@ -23,6 +23,9 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xCharArray;
 import org.xvm.runtime.template.collections.xCharArray.CharArrayHandle;
 
+import org.xvm.runtime.template.numbers.xInt64;
+
+
 /**
  * Native String implementation.
  */
@@ -53,7 +56,8 @@ public class xString
         markNativeProperty("chars");
 
         markNativeMethod("construct", new String[]{"collections.Array<Char>"}, VOID);
-        markNativeMethod("indexOf", new String[]{"Char", "Int64"}, new String[]{"Boolean", "Int64"});
+        markNativeMethod("indexOf", new String[]{"Char", "numbers.Int64"},
+                                    new String[]{"Boolean", "numbers.Int64"});
         markNativeMethod("substring", INT, STRING);
 
         getCanonicalType().invalidateTypeInfo();

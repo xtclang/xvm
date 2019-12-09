@@ -28,13 +28,15 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.xEnum.EnumHandle;
+import org.xvm.runtime.template.xString.StringHandle;
+
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xBitArray;
 
-import org.xvm.runtime.template.xEnum.EnumHandle;
-import org.xvm.runtime.template.xString.StringHandle;
+import org.xvm.runtime.template.numbers.xInt64;
 
 
 /**
@@ -81,8 +83,8 @@ public class xConst
 
             // Nibble support
             TypeConstant typeBitArray = pool.ensureParameterizedTypeConstant(
-                pool.typeArray(), pool.ensureEcstasyTypeConstant("Bit"));
-            NIBBLE_CONSTRUCT = f_templates.getClassStructure("Nibble").
+                pool.typeArray(), pool.ensureEcstasyTypeConstant("numbers.Bit"));
+            NIBBLE_CONSTRUCT = f_templates.getClassStructure("numbers.Nibble").
                 findMethod("construct", 1, typeBitArray);
 
             // DateTime support

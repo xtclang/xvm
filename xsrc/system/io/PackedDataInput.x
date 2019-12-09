@@ -1,3 +1,12 @@
+import numbers.Int16;
+import numbers.Int32;
+import numbers.Int128;
+import numbers.UInt16;
+import numbers.UInt32;
+import numbers.UInt128;
+import numbers.VarInt;
+import numbers.VarUInt;
+
 /**
  * The PackedDataInput mixin uses the packed integer format for integers and the UTF-8 encoding for
  * characters.

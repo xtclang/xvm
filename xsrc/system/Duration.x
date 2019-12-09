@@ -1,3 +1,5 @@
+import numbers.UInt128;
+
 /**
  * A Duration represents a magnitude of time, with picosecond resolution.
  */

@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.numbers;
 
 
 import java.math.BigInteger;
@@ -11,6 +11,9 @@ import org.xvm.asm.constants.IntConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.runtime.template.xString;
+
 import org.xvm.util.PackedInteger;
 
 

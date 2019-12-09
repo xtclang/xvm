@@ -19,7 +19,8 @@ import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xInt64;
+
+import org.xvm.runtime.template.numbers.xInt64;
 
 
 /**

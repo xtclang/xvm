@@ -1,4 +1,5 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.numbers;
+
 
 import org.xvm.asm.ClassStructure;
 
@@ -7,6 +8,8 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.runtime.template.xOrdered;
 
 
 /**

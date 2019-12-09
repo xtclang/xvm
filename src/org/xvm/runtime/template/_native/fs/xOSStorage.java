@@ -30,7 +30,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
@@ -38,6 +37,9 @@ import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+
+import org.xvm.runtime.template.numbers.xInt64;
+
 
 /**
  * Native OSStorage implementation.

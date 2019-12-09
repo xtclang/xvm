@@ -1,8 +1,10 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.numbers;
+
 
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.runtime.TemplateRegistry;
+
 
 /**
  * Native VarInt support.

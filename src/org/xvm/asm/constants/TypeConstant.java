@@ -5266,21 +5266,21 @@ public abstract class TypeConstant
 
         switch (getEcstasyClassName())
             {
-            case "Bit":
-            case "Nibble":
-            case "Int8":
-            case "Int16":
-            case "Int32":
-            case "Int64":
-            case "Int128":
-            case "VarInt":
-            case "UInt8":
-            case "UInt16":
-            case "UInt32":
-            case "UInt64":
-            case "UInt128":
-            case "VarUInt":
-            case "Char":
+            case "numbers.Bit":
+            case "numbers.Nibble":
+            case "numbers.Char":
+            case "numbers.Int8":
+            case "numbers.Int16":
+            case "numbers.Int32":
+            case "numbers.Int64":
+            case "numbers.Int128":
+            case "numbers.VarInt":
+            case "numbers.UInt8":
+            case "numbers.UInt16":
+            case "numbers.UInt32":
+            case "numbers.UInt64":
+            case "numbers.UInt128":
+            case "numbers.VarUInt":
                 return true;
 
             default:
@@ -5298,32 +5298,32 @@ public abstract class TypeConstant
 
         switch (getEcstasyClassName())
             {
-            case "Bit":
+            case "numbers.Bit":
                 return 2;
 
-            case "Nibble":
+            case "numbers.Nibble":
                 return 0x10;
-
-            case "Int8":
-            case "UInt8":
-                return 0x100;
-
-            case "Int16":
-            case "UInt16":
-                return 0x10000;
 
             case "Char":
                 // unicode goes from 0 to 10FFFF
                 return 0x10FFFF + 1;
 
-            case "Int32":
-            case "UInt32":
-            case "Int64":
-            case "UInt64":
-            case "Int128":
-            case "UInt128":
-            case "VarInt":
-            case "VarUInt":
+            case "numbers.Int8":
+            case "numbers.UInt8":
+                return 0x100;
+
+            case "numbers.Int16":
+            case "numbers.UInt16":
+                return 0x10000;
+
+            case "numbers.Int32":
+            case "numbers.UInt32":
+            case "numbers.Int64":
+            case "numbers.UInt64":
+            case "numbers.Int128":
+            case "numbers.UInt128":
+            case "numbers.VarInt":
+            case "numbers.VarUInt":
                 return Integer.MAX_VALUE;
 
             default:

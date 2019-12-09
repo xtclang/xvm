@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.numbers;
 
 
 import java.math.BigInteger;
@@ -19,6 +19,9 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.util.PackedInteger;
@@ -49,22 +52,22 @@ public class xIntLiteral
 
         markNativeMethod("toString", VOID, STRING);
 
-        markNativeMethod("toInt8"    , VOID, new String[]{"Int8"});
-        markNativeMethod("toInt16"   , VOID, new String[]{"Int16"});
-        markNativeMethod("toInt32"   , VOID, new String[]{"Int32"});
-        markNativeMethod("toInt"     , VOID, new String[]{"Int64"});
-        markNativeMethod("toInt128"  , VOID, new String[]{"Int128"});
+        markNativeMethod("toInt8"    , VOID, new String[]{"numbers.Int8"});
+        markNativeMethod("toInt16"   , VOID, new String[]{"numbers.Int16"});
+        markNativeMethod("toInt32"   , VOID, new String[]{"numbers.Int32"});
+        markNativeMethod("toInt"     , VOID, new String[]{"numbers.Int64"});
+        markNativeMethod("toInt128"  , VOID, new String[]{"numbers.Int128"});
 
-        markNativeMethod("toByte"    , VOID, new String[]{"UInt8"});
-        markNativeMethod("toUInt16"  , VOID, new String[]{"UInt16"});
-        markNativeMethod("toUInt32"  , VOID, new String[]{"UInt32"});
-        markNativeMethod("toUInt"    , VOID, new String[]{"UInt64"});
-        markNativeMethod("toUInt128" , VOID, new String[]{"UInt128"});
+        markNativeMethod("toByte"    , VOID, new String[]{"numbers.UInt8"});
+        markNativeMethod("toUInt16"  , VOID, new String[]{"numbers.UInt16"});
+        markNativeMethod("toUInt32"  , VOID, new String[]{"numbers.UInt32"});
+        markNativeMethod("toUInt"    , VOID, new String[]{"numbers.UInt64"});
+        markNativeMethod("toUInt128" , VOID, new String[]{"numbers.UInt128"});
 
-        markNativeMethod("toVarInt"  , VOID, new String[]{"VarInt"});
-        markNativeMethod("toVarUInt" , VOID, new String[]{"VarUInt"});
-        markNativeMethod("toVarFloat", VOID, new String[]{"VarFloat"});
-        markNativeMethod("toVarDec"  , VOID, new String[]{"VarDec"});
+        markNativeMethod("toVarInt"  , VOID, new String[]{"numbers.VarInt"});
+        markNativeMethod("toVarUInt" , VOID, new String[]{"numbers.VarUInt"});
+        markNativeMethod("toVarFloat", VOID, new String[]{"numbers.VarFloat"});
+        markNativeMethod("toVarDec"  , VOID, new String[]{"numbers.VarDec"});
 
         getCanonicalType().invalidateTypeInfo();
         }

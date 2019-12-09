@@ -1081,7 +1081,6 @@ public class ConstantPool
 
             case "Appender":
             case "Assertion":
-            case "Bit":
             case "Boolean":
             case "Char":
             case "Clock":
@@ -1095,16 +1094,13 @@ public class ConstantPool
             case "Enum":
             case "Enumeration":
             case "Exception":
-            case "FPLiteral":
             case "IllegalArgument":
             case "IllegalState":
             case "Interval":
-            case "IntLiteral":
             case "Iterable":
             case "Iterator":
             case "Module":
             case "Nullable":
-            case "Number":
             case "Ordered":
             case "Object":
             case "Orderable":
@@ -1135,24 +1131,39 @@ public class ConstantPool
                 sSub = "Inner";
                 break;
 
+            case "Bit":
+            case "FPLiteral":
+            case "FPNumber":
+            case "IntLiteral":
+            case "IntNumber":
+            case "Number":
+                sPkg = "numbers";
+                sClz = sName;
+                break;
+
             case "Byte":
+                sPkg = "numbers";
                 sClz = "UInt8";
                 break;
 
             case "Signum":
+                sPkg = "numbers";
                 sClz = "Number";
                 sSub = "Signum";
                 break;
 
             case "Dec":
+                sPkg = "numbers";
                 sClz = "Dec64";
                 break;
 
             case "Int":
+                sPkg = "numbers";
                 sClz = "Int64";
                 break;
 
             case "UInt":
+                sPkg = "numbers";
                 sClz = "UInt64";
                 break;
 

@@ -1,3 +1,5 @@
+import numbers.Bit;
+
 enum Boolean
         default(False)
     {

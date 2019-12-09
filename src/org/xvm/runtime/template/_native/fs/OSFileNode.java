@@ -24,9 +24,10 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xString;
+
+import org.xvm.runtime.template.numbers.xInt64;
 
 
 /**

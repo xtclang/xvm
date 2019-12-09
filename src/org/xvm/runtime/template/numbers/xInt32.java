@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.numbers;
 
 
 import org.xvm.asm.ClassStructure;
@@ -7,35 +7,35 @@ import org.xvm.runtime.TemplateRegistry;
 
 
 /**
- * Native Int16 support.
+ * Native Int32 support.
  */
-public class xInt16
+public class xInt32
         extends xConstrainedInteger
     {
-    public static xInt16 INSTANCE;
+    public static xInt32 INSTANCE;
 
-    public xInt16(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xInt32(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, Short.MIN_VALUE, Short.MAX_VALUE, 16, false, true);
+        super(templates, structure, Integer.MIN_VALUE, Integer.MAX_VALUE, 32, false, true);
 
         if (fInstance)
             {
             INSTANCE = this;
 
             // create unchecked template
-            new xUncheckedInt16(templates, structure, true);
+            new xUncheckedInt32(templates, structure, true);
             }
         }
 
     @Override
     protected xConstrainedInteger getComplimentaryTemplate()
         {
-        return xUInt16.INSTANCE;
+        return xUInt32.INSTANCE;
         }
 
     @Override
     protected xUncheckedConstrainedInt getUncheckedTemplate()
         {
-        return xUncheckedInt16.INSTANCE;
+        return xUncheckedInt32.INSTANCE;
         }
     }

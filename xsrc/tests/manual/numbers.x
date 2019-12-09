@@ -1,8 +1,8 @@
 module TestNumbers.xqiz.it
     {
-    import X.Int8;
-    import X.Int128;
-    import X.UInt128;
+    import X.numbers.Int8;
+    import X.numbers.Int128;
+    import X.numbers.UInt128;
 
     @Inject X.io.Console console;
 

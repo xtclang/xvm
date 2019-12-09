@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.numbers;
 
 
 import org.xvm.asm.ClassStructure;
@@ -17,6 +17,11 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xOrdered;
+import org.xvm.runtime.template.xString;
 
 
 /**
@@ -37,9 +42,9 @@ public class xBit
         ONE  = new JavaLong(getCanonicalClass(), 1);
 
         markNativeMethod("toBoolean", VOID, new String[]{"Boolean"});
-        markNativeMethod("toByte"   , VOID, new String[]{"UInt8"}); // Byte
-        markNativeMethod("toInt"    , VOID, new String[]{"Int64"});
-        markNativeMethod("toUInt"   , VOID, new String[]{"UInt64"});
+        markNativeMethod("toByte"   , VOID, new String[]{"numbers.UInt8"}); // Byte
+        markNativeMethod("toInt"    , VOID, new String[]{"numbers.Int64"});
+        markNativeMethod("toUInt"   , VOID, new String[]{"numbers.UInt64"});
 
         markNativeMethod("and", THIS, THIS);
         markNativeMethod("or" , THIS, THIS);

@@ -1,5 +1,7 @@
 import io.IllegalUTF;
 
+import numbers.UInt32;
+
 const Char
         implements Sequential
         implements Stringable

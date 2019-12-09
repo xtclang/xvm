@@ -1,3 +1,5 @@
+import numbers.UInt128;
+
 /**
  * A Time represents information about "time-of-day". It is primarily intended to support human
  * interface concepts, such as scheduling, or to assist in displaying information.

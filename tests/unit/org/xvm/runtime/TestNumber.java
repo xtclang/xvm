@@ -3,7 +3,8 @@ package org.xvm.runtime;
 import org.junit.Assert;
 import org.junit.Test;
 
-import org.xvm.runtime.template.LongLong;
+import org.xvm.runtime.template.numbers.LongLong;
+
 
 /**
  * Unit tests for various native number implementations.

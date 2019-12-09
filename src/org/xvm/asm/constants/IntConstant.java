@@ -860,7 +860,7 @@ public class IntConstant
             case UInt64:
             case UInt128:
             case VarUInt:
-                return pool.ensureEcstasyTypeConstant(m_fmt.name());
+                return pool.ensureEcstasyTypeConstant(m_fmt.getEcstasyName());
 
             default:
                 throw new IllegalStateException();

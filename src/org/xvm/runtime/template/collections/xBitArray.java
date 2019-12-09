@@ -12,9 +12,10 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.template.xBit;
+import org.xvm.runtime.template.numbers.xBit;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xUInt8;
+
+import org.xvm.runtime.template.numbers.xUInt8;
 
 
 /**
@@ -47,7 +48,8 @@ public class xBitArray
     public TypeConstant getCanonicalType()
         {
         ConstantPool pool = pool();
-        return pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.ensureEcstasyTypeConstant("Bit"));
+        return pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                pool.ensureEcstasyTypeConstant("numbers.Bit"));
         }
 
     @Override

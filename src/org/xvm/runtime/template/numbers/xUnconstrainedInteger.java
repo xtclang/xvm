@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.numbers;
 
 
 import org.xvm.asm.ClassStructure;
@@ -9,7 +9,12 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.template.xIntLiteral.VarIntHandle;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xOrdered;
+import org.xvm.runtime.template.xString;
+
+import org.xvm.runtime.template.numbers.xIntLiteral.VarIntHandle;
 
 import org.xvm.util.PackedInteger;
 
