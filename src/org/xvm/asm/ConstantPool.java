@@ -1157,6 +1157,16 @@ public class ConstantPool
                 sClz = "Dec64";
                 break;
 
+            case "Float":
+                sPkg = "numbers";
+                sClz = "Float64";
+                break;
+
+            case "Double":
+                sPkg = "numbers";
+                sClz = "Float128";
+                break;
+
             case "Int":
                 sPkg = "numbers";
                 sClz = "Int64";

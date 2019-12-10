@@ -19,8 +19,6 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
-import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
@@ -421,7 +419,7 @@ public class xArray
         switch (sPropName)
             {
             case "mutability":
-                hArray.m_mutability = Mutability.values()[((EnumHandle) hValue).getValue()];
+                hArray.m_mutability = Mutability.values()[((EnumHandle) hValue).getOrdinal()];
                 return Op.R_NEXT;
             }
         return super.invokeNativeSet(frame, hTarget, sPropName, hValue);

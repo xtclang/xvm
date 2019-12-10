@@ -12,6 +12,7 @@ module TestNumbers.xqiz.it
         testByte();
         testInt128();
         testUInt128();
+        testFloat64();
         }
 
     void testUInt()
@@ -152,5 +153,43 @@ module TestNumbers.xqiz.it
         catch (Exception e)
             {
             }
+        }
+
+    void testFloat64()
+        {
+        console.println("\n** testFloat64()");
+
+        Float n1 = 4.2;
+        console.println("n1=" + n1);
+
+        Float n2 = n1 + 1;
+        console.println("-1=" + n2);
+        console.println("+1=" + (n2 - 1));
+
+        Float n3 = n1*10;
+        console.println("*10=" + n3);
+        console.println("/10=" + (n3 / 10));
+
+        console.println("PI=" + FPNumber.PI);
+        Float pi64 = FPNumber.PI;
+        console.println("pi64=" + pi64);
+
+        // see http://www.cplusplus.com/reference/cmath/round/
+        Float f1 = 2.3;
+        Float f2 = 3.8;
+        Float f3 = 5.5;
+        Float f4 = -f1;
+        Float f5 = -f2;
+        Float f6 = -f3;
+
+        console.println();
+        console.println("value\tround\tfloor\tceil\ttoZero");
+        console.println("-----\t-----\t-----\t----\t-----");
+        console.println($"{f1},\t{f1.round()},\t{f1.floor()},\t{f1.ceil()},\t{f1.round(TowardZero)}");
+        console.println($"{f2},\t{f2.round()},\t{f2.floor()},\t{f2.ceil()},\t{f2.round(TowardZero)}");
+        console.println($"{f3},\t{f3.round()},\t{f3.floor()},\t{f3.ceil()},\t{f3.round(TowardZero)}");
+        console.println($"{f4},\t{f4.round()},\t{f4.floor()},\t{f4.ceil()},\t{f4.round(TowardZero)}");
+        console.println($"{f5},\t{f5.round()},\t{f5.floor()},\t{f5.ceil()},\t{f5.round(TowardZero)}");
+        console.println($"{f6},\t{f6.round()},\t{f6.floor()},\t{f6.ceil()},\t{f6.round(TowardZero)}");
         }
     }

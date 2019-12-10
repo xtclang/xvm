@@ -28,7 +28,7 @@ import org.xvm.util.PackedInteger;
 
 
 /**
- * TODO:
+ * Native IntLiteral implementation.
  */
 public class xIntLiteral
         extends xConst
@@ -70,6 +70,12 @@ public class xIntLiteral
         markNativeMethod("toVarDec"  , VOID, new String[]{"numbers.VarDec"});
 
         getCanonicalType().invalidateTypeInfo();
+        }
+
+    @Override
+    public boolean isGenericHandle()
+        {
+        return false;
         }
 
     @Override

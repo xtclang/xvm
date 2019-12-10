@@ -133,10 +133,10 @@ public class xEnum
             {
             case "name":
                 return frame.assignValue(iReturn,
-                        xString.makeHandle(m_listNames.get(hEnum.getValue())));
+                        xString.makeHandle(m_listNames.get(hEnum.getOrdinal())));
 
             case "ordinal":
-                return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getValue()));
+                return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getOrdinal()));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -148,7 +148,7 @@ public class xEnum
         {
         EnumHandle hEnum1 = (EnumHandle) hValue1;
         EnumHandle hEnum2 = (EnumHandle) hValue2;
-        return frame.assignValue(iReturn, xBoolean.makeHandle(hEnum1.getValue() == hEnum2.getValue()));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(hEnum1.getOrdinal() == hEnum2.getOrdinal()));
         }
 
     @Override
@@ -157,13 +157,13 @@ public class xEnum
         {
         EnumHandle hEnum1 = (EnumHandle) hValue1;
         EnumHandle hEnum2 = (EnumHandle) hValue2;
-        return frame.assignValue(iReturn, xOrdered.makeHandle(hEnum1.getValue() - hEnum2.getValue()));
+        return frame.assignValue(iReturn, xOrdered.makeHandle(hEnum1.getOrdinal() - hEnum2.getOrdinal()));
         }
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        return ((EnumHandle) hValue1).getValue() == ((EnumHandle) hValue2).getValue();
+        return ((EnumHandle) hValue1).getOrdinal() == ((EnumHandle) hValue2).getOrdinal();
         }
 
     @Override
@@ -171,7 +171,7 @@ public class xEnum
         {
         EnumHandle hEnum = (EnumHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getValue()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getOrdinal()));
         }
 
     @Override
@@ -180,7 +180,7 @@ public class xEnum
         EnumHandle hEnum = (EnumHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                xString.makeHandle(m_listNames.get(hEnum.getValue())));
+                xString.makeHandle(m_listNames.get(hEnum.getOrdinal())));
         }
 
 
@@ -258,7 +258,7 @@ public class xEnum
             m_fMutable = false;
             }
 
-        public int getValue()
+        public int getOrdinal()
             {
             return m_index;
             }
@@ -272,7 +272,7 @@ public class xEnum
         @Override
         public int compareTo(ObjectHandle that)
             {
-            return getValue() - ((EnumHandle) that).getValue();
+            return getOrdinal() - ((EnumHandle) that).getOrdinal();
             }
 
         @Override

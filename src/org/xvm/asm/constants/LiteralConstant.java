@@ -333,13 +333,25 @@ public class LiteralConstant
             }
         else
             {
-            if (m_oVal instanceof PackedInteger)
+            if (m_oVal instanceof BigDecimal)
+                {
+                dec = (BigDecimal) m_oVal;
+                }
+            else if (m_oVal instanceof PackedInteger)
                 {
                 m_oVal = dec = new BigDecimal(((PackedInteger) m_oVal).getBigInteger());
                 }
+            else if (m_oVal instanceof Double)
+                {
+                m_oVal = dec = new BigDecimal((Double) m_oVal);
+                }
+            else if (m_oVal instanceof Float)
+                {
+                m_oVal = dec = new BigDecimal((Float) m_oVal);
+                }
             else
                 {
-                dec = (BigDecimal) m_oVal;
+                throw new IllegalStateException();
                 }
             }
         return dec;
