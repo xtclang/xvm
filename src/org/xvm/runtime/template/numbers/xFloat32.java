@@ -15,7 +15,7 @@ import org.xvm.runtime.TemplateRegistry;
  * Native Float32 support.
  */
 public class xFloat32
-        extends BaseFP
+        extends BaseBinaryFP
     {
     public static xFloat32 INSTANCE;
 

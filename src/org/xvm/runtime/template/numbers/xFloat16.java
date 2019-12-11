@@ -15,7 +15,7 @@ import org.xvm.runtime.TemplateRegistry;
  * Native Float16 support.
  */
 public class xFloat16
-        extends BaseFP
+        extends BaseBinaryFP
     {
     public static xFloat16 INSTANCE;
 

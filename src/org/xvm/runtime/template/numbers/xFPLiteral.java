@@ -154,7 +154,7 @@ public class xFPLiteral
             case "toFloat32":
             case "toFloat64":
                 TypeConstant typeRet  = method.getReturn(0).getType();
-                BaseFP       template = (BaseFP) f_templates.getTemplate(typeRet);
+                BaseBinaryFP template = (BaseBinaryFP) f_templates.getTemplate(typeRet);
                 return frame.assignValue(iReturn,
                         template.makeFloat(hLiteral.getValue().doubleValue()));
 

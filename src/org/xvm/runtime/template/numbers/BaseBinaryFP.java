@@ -33,12 +33,12 @@ import org.xvm.runtime.template.xString;
 
 
 /**
- * Base class for native Float* support.
+ * Base class for native BinaryFPNumber (Float*) support.
  */
-abstract public class BaseFP
+abstract public class BaseBinaryFP
         extends xConst
     {
-    public BaseFP(TemplateRegistry templates, ClassStructure structure, int cBits)
+    public BaseBinaryFP(TemplateRegistry templates, ClassStructure structure, int cBits)
         {
         super(templates, structure, false);
 

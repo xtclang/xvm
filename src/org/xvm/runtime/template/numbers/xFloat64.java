@@ -16,7 +16,7 @@ import org.xvm.runtime.TemplateRegistry;
  * Native Float64 support.
  */
 public class xFloat64
-        extends BaseFP
+        extends BaseBinaryFP
     {
     public static xFloat64 INSTANCE;
 
