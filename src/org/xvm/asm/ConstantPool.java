@@ -2079,7 +2079,6 @@ public class ConstantPool
     public ClassConstant     clzVar()           {ClassConstant     c = m_clzVar;          if (c == null) {m_clzVar          = c = (ClassConstant) getImplicitlyImportedIdentity("Var"        );} return c;}
     public ClassConstant     clzStruct()        {ClassConstant     c = m_clzStruct;       if (c == null) {m_clzStruct       = c = (ClassConstant) getImplicitlyImportedIdentity("Struct"     );} return c;}
     public ClassConstant     clzType()          {ClassConstant     c = m_clzType;         if (c == null) {m_clzType         = c = (ClassConstant) getImplicitlyImportedIdentity("Type"       );} return c;}
-    public ClassConstant     clzClass()         {ClassConstant     c = m_clzClass;        if (c == null) {m_clzClass        = c = (ClassConstant) getImplicitlyImportedIdentity("Class"      );} return c;}
     public ClassConstant     clzConst()         {ClassConstant     c = m_clzConst;        if (c == null) {m_clzConst        = c = (ClassConstant) getImplicitlyImportedIdentity("Const"      );} return c;}
     public ClassConstant     clzService()       {ClassConstant     c = m_clzService;      if (c == null) {m_clzService      = c = (ClassConstant) getImplicitlyImportedIdentity("Service"    );} return c;}
     public ClassConstant     clzModule()        {ClassConstant     c = m_clzModule;       if (c == null) {m_clzModule       = c = (ClassConstant) getImplicitlyImportedIdentity("Module"     );} return c;}
@@ -2091,51 +2090,13 @@ public class ConstantPool
     public ClassConstant     clzProperty()      {ClassConstant     c = m_clzProperty;     if (c == null) {m_clzProperty     = c = (ClassConstant) getImplicitlyImportedIdentity("Property"   );} return c;}
     public ClassConstant     clzMethod()        {ClassConstant     c = m_clzMethod;       if (c == null) {m_clzMethod       = c = (ClassConstant) getImplicitlyImportedIdentity("Method"     );} return c;}
     public ClassConstant     clzFunction()      {ClassConstant     c = m_clzFunction;     if (c == null) {m_clzFunction     = c = (ClassConstant) getImplicitlyImportedIdentity("Function"   );} return c;}
-    public ClassConstant     clzBoolean()       {ClassConstant     c = m_clzBoolean;      if (c == null) {m_clzBoolean      = c = (ClassConstant) getImplicitlyImportedIdentity("Boolean"    );} return c;}
-    public ClassConstant     clzFalse()         {ClassConstant     c = m_clzFalse;        if (c == null) {m_clzFalse        = c = (ClassConstant) getImplicitlyImportedIdentity("False"      );} return c;}
-    public ClassConstant     clzTrue()          {ClassConstant     c = m_clzTrue;         if (c == null) {m_clzTrue         = c = (ClassConstant) getImplicitlyImportedIdentity("True"       );} return c;}
-    public ClassConstant     clzOrdered()       {ClassConstant     c = m_clzOrdered;      if (c == null) {m_clzOrdered      = c = (ClassConstant) getImplicitlyImportedIdentity("Ordered"    );} return c;}
-    public ClassConstant     clzLesser()        {ClassConstant     c = m_clzLesser;       if (c == null) {m_clzLesser       = c = (ClassConstant) getImplicitlyImportedIdentity("Lesser"     );} return c;}
-    public ClassConstant     clzEqual()         {ClassConstant     c = m_clzEqual;        if (c == null) {m_clzEqual        = c = (ClassConstant) getImplicitlyImportedIdentity("Equal"      );} return c;}
-    public ClassConstant     clzGreater()       {ClassConstant     c = m_clzGreater;      if (c == null) {m_clzGreater      = c = (ClassConstant) getImplicitlyImportedIdentity("Greater"    );} return c;}
     public ClassConstant     clzNullable()      {ClassConstant     c = m_clzNullable;     if (c == null) {m_clzNullable     = c = (ClassConstant) getImplicitlyImportedIdentity("Nullable"   );} return c;}
-    public ClassConstant     clzNull()          {ClassConstant     c = m_clzNull;         if (c == null) {m_clzNull         = c = (ClassConstant) getImplicitlyImportedIdentity("Null"       );} return c;}
-    public ClassConstant     clzChar()          {ClassConstant     c = m_clzChar;         if (c == null) {m_clzChar         = c = (ClassConstant) getImplicitlyImportedIdentity("Char"       );} return c;}
-    public ClassConstant     clzIntLiteral()    {ClassConstant     c = m_clzIntLiteral;   if (c == null) {m_clzIntLiteral   = c = (ClassConstant) getImplicitlyImportedIdentity("IntLiteral" );} return c;}
-    public ClassConstant     clzFPLiteral()     {ClassConstant     c = m_clzFPLiteral;    if (c == null) {m_clzFPLiteral    = c = (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"  );} return c;}
-    public ClassConstant     clzString()        {ClassConstant     c = m_clzString;       if (c == null) {m_clzString       = c = (ClassConstant) getImplicitlyImportedIdentity("String"     );} return c;}
-    public ClassConstant     clzStringable()    {ClassConstant     c = m_clzStringable;   if (c == null) {m_clzStringable   = c = (ClassConstant) getImplicitlyImportedIdentity("Stringable" );} return c;}
-    public ClassConstant     clzStringBuffer()  {ClassConstant     c = m_clzStringBuffer; if (c == null) {m_clzStringBuffer = c = (ClassConstant) getImplicitlyImportedIdentity("StringBuffer");} return c;}
-    public ClassConstant     clzByte()          {ClassConstant     c = m_clzByte;         if (c == null) {m_clzByte         = c = (ClassConstant) getImplicitlyImportedIdentity("Byte"       );} return c;}
-    public ClassConstant     clzInt()           {ClassConstant     c = m_clzInt;          if (c == null) {m_clzInt          = c = (ClassConstant) getImplicitlyImportedIdentity("Int"        );} return c;}
-    public ClassConstant     clzIndexed()       {ClassConstant     c = m_clzIndexed;      if (c == null) {m_clzIndexed      = c = (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed");} return c;}
     public ClassConstant     clzArray()         {ClassConstant     c = m_clzArray;        if (c == null) {m_clzArray        = c = (ClassConstant) getImplicitlyImportedIdentity("Array"      );} return c;}
     public ClassConstant     clzMatrix()        {ClassConstant     c = m_clzMatrix;       if (c == null) {m_clzMatrix       = c = (ClassConstant) getImplicitlyImportedIdentity("Matrix"     );} return c;}
-    public ClassConstant     clzList()          {ClassConstant     c = m_clzList;         if (c == null) {m_clzList         = c = (ClassConstant) getImplicitlyImportedIdentity("List"       );} return c;}
     public ClassConstant     clzMap()           {ClassConstant     c = m_clzMap;          if (c == null) {m_clzMap          = c = (ClassConstant) getImplicitlyImportedIdentity("Map"        );} return c;}
-    public ClassConstant     clzEntry()         {ClassConstant     c = m_clzEntry;        if (c == null) {m_clzEntry        = c = (ClassConstant) getImplicitlyImportedIdentity("Entry"      );} return c;}
     public ClassConstant     clzSequence()      {ClassConstant     c = m_clzSequence;     if (c == null) {m_clzSequence     = c = (ClassConstant) getImplicitlyImportedIdentity("Sequence"   );} return c;}
     public ClassConstant     clzOrderable()     {ClassConstant     c = m_clzOrderable;    if (c == null) {m_clzOrderable    = c = (ClassConstant) getImplicitlyImportedIdentity("Orderable"  );} return c;}
-    public ClassConstant     clzSequential()    {ClassConstant     c = m_clzSequential;   if (c == null) {m_clzSequential   = c = (ClassConstant) getImplicitlyImportedIdentity("Sequential" );} return c;}
-    public ClassConstant     clzNumber()        {ClassConstant     c = m_clzNumber;       if (c == null) {m_clzNumber       = c = (ClassConstant) getImplicitlyImportedIdentity("Number"     );} return c;}
-    public ClassConstant     clzRange()         {ClassConstant     c = m_clzRange;        if (c == null) {m_clzRange        = c = (ClassConstant) getImplicitlyImportedIdentity("Range"      );} return c;}
-    public ClassConstant     clzInterval()      {ClassConstant     c = m_clzInterval;     if (c == null) {m_clzInterval     = c = (ClassConstant) getImplicitlyImportedIdentity("Interval"   );} return c;}
-    public ClassConstant     clzHashable()      {ClassConstant     c = m_clzHashable;     if (c == null) {m_clzHashable     = c = (ClassConstant) getImplicitlyImportedIdentity("Hashable"   );} return c;}
-    public ClassConstant     clzIterable()      {ClassConstant     c = m_clzIterable;     if (c == null) {m_clzIterable     = c = (ClassConstant) getImplicitlyImportedIdentity("Iterable"   );} return c;}
-    public ClassConstant     clzIterator()      {ClassConstant     c = m_clzIterator;     if (c == null) {m_clzIterator     = c = (ClassConstant) getImplicitlyImportedIdentity("Iterator"   );} return c;}
     public ClassConstant     clzTuple()         {ClassConstant     c = m_clzTuple;        if (c == null) {m_clzTuple        = c = (ClassConstant) getImplicitlyImportedIdentity("Tuple"      );} return c;}
-    public ClassConstant     clzDate()          {ClassConstant     c = m_clzDate;         if (c == null) {m_clzDate         = c = (ClassConstant) getImplicitlyImportedIdentity("Date"       );} return c;}
-    public ClassConstant     clzTime()          {ClassConstant     c = m_clzTime;         if (c == null) {m_clzTime         = c = (ClassConstant) getImplicitlyImportedIdentity("Time"       );} return c;}
-    public ClassConstant     clzDateTime()      {ClassConstant     c = m_clzDateTime;     if (c == null) {m_clzDateTime     = c = (ClassConstant) getImplicitlyImportedIdentity("DateTime"   );} return c;}
-    public ClassConstant     clzTimeZone()      {ClassConstant     c = m_clzTimeZone;     if (c == null) {m_clzTimeZone     = c = (ClassConstant) getImplicitlyImportedIdentity("TimeZone"   );} return c;}
-    public ClassConstant     clzDuration()      {ClassConstant     c = m_clzDuration;     if (c == null) {m_clzDuration     = c = (ClassConstant) getImplicitlyImportedIdentity("Duration"   );} return c;}
-    public ClassConstant     clzVersion()       {ClassConstant     c = m_clzVersion;      if (c == null) {m_clzVersion      = c = (ClassConstant) getImplicitlyImportedIdentity("Version"    );} return c;}
-    public ClassConstant     clzPath()          {ClassConstant     c = m_clzPath;         if (c == null) {m_clzPath         = c = (ClassConstant) getImplicitlyImportedIdentity("Path"       );} return c;}
-    public ClassConstant     clzFileStore()     {ClassConstant     c = m_clzFileStore;    if (c == null) {m_clzFileStore    = c = (ClassConstant) getImplicitlyImportedIdentity("FileStore"  );} return c;}
-    public ClassConstant     clzDirectory()     {ClassConstant     c = m_clzDirectory;    if (c == null) {m_clzDirectory    = c = (ClassConstant) getImplicitlyImportedIdentity("Directory"  );} return c;}
-    public ClassConstant     clzFile()          {ClassConstant     c = m_clzFile;         if (c == null) {m_clzFile         = c = (ClassConstant) getImplicitlyImportedIdentity("File"       );} return c;}
-    public ClassConstant     clzFileNode()      {ClassConstant     c = m_clzFileNode;     if (c == null) {m_clzFileNode     = c = (ClassConstant) ensureEcstasyClassConstant("fs.FileNode"   );} return c;}
-    public ClassConstant     clzFrame()         {ClassConstant     c = m_clzFrame;        if (c == null) {m_clzFrame        = c = (ClassConstant) getImplicitlyImportedIdentity("StackFrame" );} return c;}
     public ClassConstant     clzAuto()          {ClassConstant     c = m_clzAuto;         if (c == null) {m_clzAuto         = c = (ClassConstant) getImplicitlyImportedIdentity("Auto"       );} return c;}
     public ClassConstant     clzOp()            {ClassConstant     c = m_clzOp;           if (c == null) {m_clzOp           = c = (ClassConstant) getImplicitlyImportedIdentity("Op"         );} return c;}
     public ClassConstant     clzRO()            {ClassConstant     c = m_clzRO;           if (c == null) {m_clzRO           = c = (ClassConstant) getImplicitlyImportedIdentity("RO"         );} return c;}
@@ -2188,6 +2149,7 @@ public class ConstantPool
     public TypeConstant      typeString()       {TypeConstant      c = m_typeString;      if (c == null) {m_typeString      = c = ensureTerminalTypeConstant(clzString()                     );} return c;}
     public TypeConstant      typeStringable()   {TypeConstant      c = m_typeStringable;  if (c == null) {m_typeStringable  = c = ensureTerminalTypeConstant(clzStringable()                 );} return c;}
     public TypeConstant      typeStringBuffer() {TypeConstant      c = m_typeStringBuffer;if (c == null) {m_typeStringBuffer= c = ensureTerminalTypeConstant(clzStringBuffer()               );} return c;}
+    public TypeConstant      typeBit()          {TypeConstant      c = m_typeBit;         if (c == null) {m_typeBit         = c = ensureTerminalTypeConstant(clzBit()                        );} return c;}
     public TypeConstant      typeByte()         {TypeConstant      c = m_typeByte;        if (c == null) {m_typeByte        = c = ensureTerminalTypeConstant(clzByte()                       );} return c;}
     public TypeConstant      typeInt()          {TypeConstant      c = m_typeInt;         if (c == null) {m_typeInt         = c = ensureTerminalTypeConstant(clzInt()                        );} return c;}
     public TypeConstant      typeIndexed()      {TypeConstant      c = m_typeIndexed;     if (c == null) {m_typeIndexed     = c = ensureTerminalTypeConstant(clzIndexed()                    );} return c;}
@@ -2218,6 +2180,7 @@ public class ConstantPool
     public TypeConstant      typeFileNode()     {TypeConstant      c = m_typeFileNode;    if (c == null) {m_typeFileNode    = c = ensureTerminalTypeConstant(clzFileNode()                   );} return c;}
     public TypeConstant      typeFrame()        {TypeConstant      c = m_typeFrame;       if (c == null) {m_typeFrame       = c = ensureTerminalTypeConstant(clzFrame()                      );} return c;}
 
+    public TypeConstant      typeBitArray()     {TypeConstant      c = m_typeBitArray;    if (c == null) {m_typeBitArray    = c = ensureClassTypeConstant(clzArray(), null, typeBit()        );} return c;}
     public TypeConstant      typeByteArray()    {TypeConstant      c = m_typeByteArray;   if (c == null) {m_typeByteArray   = c = ensureClassTypeConstant(clzArray(), null, typeByte()       );} return c;}
     public TypeConstant      typeBinary()       {TypeConstant      c = m_typeBinary;      if (c == null) {m_typeBinary      = c = ensureImmutableTypeConstant(typeByteArray()                );} return c;}
 
@@ -2237,6 +2200,49 @@ public class ConstantPool
     public SignatureConstant sigConstruct()     {SignatureConstant c = m_sigConstruct;    if (c == null) {m_sigConstruct    = c = getSignature("Object",    "construct", 0)                   ;} return c;}
     public SignatureConstant sigEquals()        {SignatureConstant c = m_sigEquals;       if (c == null) {m_sigEquals       = c = getSignature("Object",    "equals",    3)                   ;} return c;}
     public SignatureConstant sigCompare()       {SignatureConstant c = m_sigCompare;      if (c == null) {m_sigCompare      = c = getSignature("Orderable", "compare",   3)                   ;} return c;}
+
+
+    // ---- internal class helpers -----------------------------------------------------------------
+
+    protected ClassConstant  clzClass()        {return (ClassConstant) getImplicitlyImportedIdentity("Class"         );}
+    protected ClassConstant  clzBoolean()      {return (ClassConstant) getImplicitlyImportedIdentity("Boolean"       );}
+    protected ClassConstant  clzFalse()        {return (ClassConstant) getImplicitlyImportedIdentity("False"         );}
+    protected ClassConstant  clzTrue()         {return (ClassConstant) getImplicitlyImportedIdentity("True"          );}
+    protected ClassConstant  clzOrdered()      {return (ClassConstant) getImplicitlyImportedIdentity("Ordered"       );}
+    protected ClassConstant  clzLesser()       {return (ClassConstant) getImplicitlyImportedIdentity("Lesser"        );}
+    protected ClassConstant  clzEqual()        {return (ClassConstant) getImplicitlyImportedIdentity("Equal"         );}
+    protected ClassConstant  clzGreater()      {return (ClassConstant) getImplicitlyImportedIdentity("Greater"       );}
+    protected ClassConstant  clzNull()         {return (ClassConstant) getImplicitlyImportedIdentity("Null"          );}
+    protected ClassConstant  clzChar()         {return (ClassConstant) getImplicitlyImportedIdentity("Char"          );}
+    protected ClassConstant  clzString()       {return (ClassConstant) getImplicitlyImportedIdentity("String"        );}
+    protected ClassConstant  clzStringable()   {return (ClassConstant) getImplicitlyImportedIdentity("Stringable"    );}
+    protected ClassConstant  clzStringBuffer() {return (ClassConstant) getImplicitlyImportedIdentity("StringBuffer"  );}
+    protected ClassConstant  clzIntLiteral()   {return (ClassConstant) getImplicitlyImportedIdentity("IntLiteral"    );}
+    protected ClassConstant  clzFPLiteral()    {return (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"     );}
+    protected ClassConstant  clzBit()          {return (ClassConstant) getImplicitlyImportedIdentity("Bit"           );}
+    protected ClassConstant  clzByte()         {return (ClassConstant) getImplicitlyImportedIdentity("Byte"          );}
+    protected ClassConstant  clzInt()          {return (ClassConstant) getImplicitlyImportedIdentity("Int"           );}
+    protected ClassConstant  clzIndexed()      {return (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed");}
+    protected ClassConstant  clzInterval()     {return (ClassConstant) getImplicitlyImportedIdentity("Interval"      );}
+    protected ClassConstant  clzIterable()     {return (ClassConstant) getImplicitlyImportedIdentity("Iterable"      );}
+    protected ClassConstant  clzIterator()     {return (ClassConstant) getImplicitlyImportedIdentity("Iterator"      );}
+    protected ClassConstant  clzList()         {return (ClassConstant) getImplicitlyImportedIdentity("List"          );}
+    protected ClassConstant  clzNumber()       {return (ClassConstant) getImplicitlyImportedIdentity("Number"        );}
+    protected ClassConstant  clzRange()        {return (ClassConstant) getImplicitlyImportedIdentity("Range"         );}
+    protected ClassConstant  clzSequential()   {return (ClassConstant) getImplicitlyImportedIdentity("Sequential"    );}
+    protected ClassConstant  clzHashable()     {return (ClassConstant) getImplicitlyImportedIdentity("Hashable"      );}
+    protected ClassConstant  clzDate()         {return (ClassConstant) getImplicitlyImportedIdentity("Date"          );}
+    protected ClassConstant  clzDateTime()     {return (ClassConstant) getImplicitlyImportedIdentity("DateTime"      );}
+    protected ClassConstant  clzDuration()     {return (ClassConstant) getImplicitlyImportedIdentity("Duration"      );}
+    protected ClassConstant  clzTime()         {return (ClassConstant) getImplicitlyImportedIdentity("Time"          );}
+    protected ClassConstant  clzTimeZone()     {return (ClassConstant) getImplicitlyImportedIdentity("TimeZone"      );}
+    protected ClassConstant  clzPath()         {return (ClassConstant) getImplicitlyImportedIdentity("Path"          );}
+    protected ClassConstant  clzVersion()      {return (ClassConstant) getImplicitlyImportedIdentity("Version"       );}
+    protected ClassConstant  clzDirectory()    {return (ClassConstant) getImplicitlyImportedIdentity("Directory"     );}
+    protected ClassConstant  clzFile()         {return (ClassConstant) getImplicitlyImportedIdentity("File"          );}
+    protected ClassConstant  clzFileNode()     {return                 ensureEcstasyClassConstant   ("fs.FileNode"   );}
+    protected ClassConstant  clzFileStore()    {return (ClassConstant) getImplicitlyImportedIdentity("FileStore"     );}
+    protected ClassConstant  clzFrame()        {return (ClassConstant) getImplicitlyImportedIdentity("Frame"         );}
 
     /**
      * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
@@ -2917,7 +2923,6 @@ public class ConstantPool
         m_clzVar          = null;
         m_clzStruct       = null;
         m_clzType         = null;
-        m_clzClass        = null;
         m_clzCloseable    = null;
         m_clzConst        = null;
         m_clzService      = null;
@@ -2929,51 +2934,13 @@ public class ConstantPool
         m_clzProperty     = null;
         m_clzMethod       = null;
         m_clzFunction     = null;
-        m_clzBoolean      = null;
-        m_clzFalse        = null;
-        m_clzTrue         = null;
-        m_clzOrdered      = null;
-        m_clzLesser       = null;
-        m_clzEqual        = null;
-        m_clzGreater      = null;
         m_clzNullable     = null;
-        m_clzNull         = null;
-        m_clzChar         = null;
-        m_clzIntLiteral   = null;
-        m_clzFPLiteral    = null;
-        m_clzString       = null;
-        m_clzStringable   = null;
-        m_clzStringBuffer = null;
-        m_clzByte         = null;
-        m_clzInt          = null;
-        m_clzIndexed      = null;
         m_clzArray        = null;
         m_clzMatrix       = null;
-        m_clzList         = null;
         m_clzMap          = null;
-        m_clzEntry        = null;
         m_clzSequence     = null;
         m_clzOrderable    = null;
-        m_clzSequential   = null;
-        m_clzNumber       = null;
-        m_clzHashable     = null;
-        m_clzRange        = null;
-        m_clzInterval     = null;
-        m_clzIterable     = null;
-        m_clzIterator     = null;
         m_clzTuple        = null;
-        m_clzDate         = null;
-        m_clzTime         = null;
-        m_clzDateTime     = null;
-        m_clzTimeZone     = null;
-        m_clzDuration     = null;
-        m_clzVersion      = null;
-        m_clzPath         = null;
-        m_clzFileStore    = null;
-        m_clzDirectory    = null;
-        m_clzFile         = null;
-        m_clzFileNode     = null;
-        m_clzFrame        = null;
         m_clzAuto         = null;
         m_clzOp           = null;
         m_clzRO           = null;
@@ -3027,7 +2994,9 @@ public class ConstantPool
         m_typeStringable  = null;
         m_typeStringBuffer= null;
         m_typeString१     = null;
+        m_typeBit         = null;
         m_typeByte        = null;
+        m_typeBitArray    = null;
         m_typeByteArray   = null;
         m_typeBinary      = null;
         m_typeInt         = null;
@@ -3627,7 +3596,6 @@ public class ConstantPool
     private transient ClassConstant     m_clzVar;
     private transient ClassConstant     m_clzType;
     private transient ClassConstant     m_clzStruct;
-    private transient ClassConstant     m_clzClass;
     private transient ClassConstant     m_clzConst;
     private transient ClassConstant     m_clzService;
     private transient ClassConstant     m_clzModule;
@@ -3639,51 +3607,13 @@ public class ConstantPool
     private transient ClassConstant     m_clzProperty;
     private transient ClassConstant     m_clzMethod;
     private transient ClassConstant     m_clzFunction;
-    private transient ClassConstant     m_clzBoolean;
-    private transient ClassConstant     m_clzFalse;
-    private transient ClassConstant     m_clzTrue;
-    private transient ClassConstant     m_clzOrdered;
-    private transient ClassConstant     m_clzLesser;
-    private transient ClassConstant     m_clzEqual;
-    private transient ClassConstant     m_clzGreater;
     private transient ClassConstant     m_clzNullable;
-    private transient ClassConstant     m_clzNull;
-    private transient ClassConstant     m_clzChar;
-    private transient ClassConstant     m_clzIntLiteral;
-    private transient ClassConstant     m_clzFPLiteral;
-    private transient ClassConstant     m_clzString;
-    private transient ClassConstant     m_clzStringable;
-    private transient ClassConstant     m_clzStringBuffer;
-    private transient ClassConstant     m_clzByte;
-    private transient ClassConstant     m_clzInt;
-    private transient ClassConstant     m_clzIndexed;
     private transient ClassConstant     m_clzArray;
     private transient ClassConstant     m_clzMatrix;
-    private transient ClassConstant     m_clzList;
     private transient ClassConstant     m_clzMap;
-    private transient ClassConstant     m_clzEntry;
     private transient ClassConstant     m_clzSequence;
     private transient ClassConstant     m_clzOrderable;
-    private transient ClassConstant     m_clzSequential;
-    private transient ClassConstant     m_clzNumber;
-    private transient ClassConstant     m_clzHashable;
-    private transient ClassConstant     m_clzRange;
-    private transient ClassConstant     m_clzInterval;
-    private transient ClassConstant     m_clzIterable;
-    private transient ClassConstant     m_clzIterator;
     private transient ClassConstant     m_clzTuple;
-    private transient ClassConstant     m_clzDate;
-    private transient ClassConstant     m_clzTime;
-    private transient ClassConstant     m_clzDateTime;
-    private transient ClassConstant     m_clzTimeZone;
-    private transient ClassConstant     m_clzDuration;
-    private transient ClassConstant     m_clzVersion;
-    private transient ClassConstant     m_clzPath;
-    private transient ClassConstant     m_clzFileStore;
-    private transient ClassConstant     m_clzDirectory;
-    private transient ClassConstant     m_clzFile;
-    private transient ClassConstant     m_clzFileNode;
-    private transient ClassConstant     m_clzFrame;
     private transient ClassConstant     m_clzAuto;
     private transient ClassConstant     m_clzOp;
     private transient ClassConstant     m_clzRO;
@@ -3737,7 +3667,9 @@ public class ConstantPool
     private transient TypeConstant      m_typeStringable;
     private transient TypeConstant      m_typeStringBuffer;
     private transient TypeConstant      m_typeString१;
+    private transient TypeConstant      m_typeBit;
     private transient TypeConstant      m_typeByte;
+    private transient TypeConstant      m_typeBitArray;
     private transient TypeConstant      m_typeByteArray;
     private transient TypeConstant      m_typeBinary;
     private transient TypeConstant      m_typeInt;
