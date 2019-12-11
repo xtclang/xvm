@@ -2,27 +2,26 @@ package org.xvm.runtime.template.numbers;
 
 
 import org.xvm.asm.ClassStructure;
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.Float64Constant;
+import org.xvm.asm.constants.Float32Constant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TemplateRegistry;
 
 
 /**
- * Native Float64 support.
+ * Native Float32 support.
  */
-public class xFloat64
+public class xFloat32
         extends BaseFP
     {
-    public static xFloat64 INSTANCE;
+    public static xFloat32 INSTANCE;
 
-    public xFloat64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xFloat32(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 64);
+        super(templates, structure, 32);
 
         if (fInstance)
             {
@@ -33,9 +32,9 @@ public class xFloat64
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof Float64Constant)
+        if (constant instanceof Float32Constant)
             {
-            double dValue = ((Float64Constant) constant).getValue();
+            double dValue = ((Float32Constant) constant).getValue();
             frame.pushStack(makeFloat(dValue));
             return Op.R_NEXT;
             }
@@ -46,18 +45,19 @@ public class xFloat64
     @Override
     protected byte[] getBits(double d)
         {
-        return xConstrainedInteger.toByteArray(Double.doubleToRawLongBits(d), 8);
+        return xConstrainedInteger.toByteArray(
+            Float.floatToRawIntBits((float) d) & 0xFFFFFFFFL, 4);
         }
 
     @Override
     protected double fromLong(long l)
         {
-        return Double.longBitsToDouble(l);
+        return Float.intBitsToFloat((int) (l & 0xFFFFFFFFL));
         }
 
     @Override
     protected String toString(double d)
         {
-        return String.valueOf(d);
+        return String.valueOf((float) d);
         }
     }

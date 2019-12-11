@@ -28,7 +28,7 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 
 import org.xvm.runtime.template.numbers.LongLong;
-import org.xvm.runtime.template.numbers.xBaseInt128.LongLongHandle;
+import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xUInt128;
 

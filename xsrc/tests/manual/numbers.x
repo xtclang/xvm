@@ -1,10 +1,10 @@
 module TestNumbers.xqiz.it
     {
-    import X.numbers.Int8;
-    import X.numbers.Int128;
-    import X.numbers.UInt128;
+    import Ecstasy.numbers.Int8;
+    import Ecstasy.numbers.Int128;
+    import Ecstasy.numbers.UInt128;
 
-    @Inject X.io.Console console;
+    @Inject Ecstasy.io.Console console;
 
     void run()
         {
@@ -13,6 +13,8 @@ module TestNumbers.xqiz.it
         testInt128();
         testUInt128();
         testFloat64();
+        testFloat32();
+        testFloat16();
         }
 
     void testUInt()
@@ -21,6 +23,14 @@ module TestNumbers.xqiz.it
 
         UInt n1 = 42;
         console.println("n1=" + n1);
+
+        Bit[] bits = n1.toBitArray();
+        UInt  n11  = new UInt(bits);
+        assert n11 == n1;
+
+        Byte[] bytes = n1.toByteArray();
+        UInt   n12   = new UInt(bytes);
+        assert n12 == n1;
 
         UInt n2 = 0xFFFF_FFFF_FFFF_FFFF;
         console.println("n2=" + n2);
@@ -162,6 +172,14 @@ module TestNumbers.xqiz.it
         Float n1 = 4.2;
         console.println("n1=" + n1);
 
+        Byte[] bytes = n1.toByteArray();
+        Float  n11   = new Float(bytes);
+        assert n11 == n1;
+
+        Bit[]  bits = n1.toBitArray();
+        Float  n12  = new Float(bits);
+        assert n12 == n1;
+
         Float n2 = n1 + 1;
         console.println("-1=" + n2);
         console.println("+1=" + (n2 - 1));
@@ -175,21 +193,56 @@ module TestNumbers.xqiz.it
         console.println("pi64=" + pi64);
 
         // see http://www.cplusplus.com/reference/cmath/round/
-        Float f1 = 2.3;
-        Float f2 = 3.8;
-        Float f3 = 5.5;
-        Float f4 = -f1;
-        Float f5 = -f2;
-        Float f6 = -f3;
+        Float[] floats = [2.3, 3.8, 5.5, -2.3, -3.8, -5.5];
 
         console.println();
         console.println("value\tround\tfloor\tceil\ttoZero");
         console.println("-----\t-----\t-----\t----\t-----");
-        console.println($"{f1},\t{f1.round()},\t{f1.floor()},\t{f1.ceil()},\t{f1.round(TowardZero)}");
-        console.println($"{f2},\t{f2.round()},\t{f2.floor()},\t{f2.ceil()},\t{f2.round(TowardZero)}");
-        console.println($"{f3},\t{f3.round()},\t{f3.floor()},\t{f3.ceil()},\t{f3.round(TowardZero)}");
-        console.println($"{f4},\t{f4.round()},\t{f4.floor()},\t{f4.ceil()},\t{f4.round(TowardZero)}");
-        console.println($"{f5},\t{f5.round()},\t{f5.floor()},\t{f5.ceil()},\t{f5.round(TowardZero)}");
-        console.println($"{f6},\t{f6.round()},\t{f6.floor()},\t{f6.ceil()},\t{f6.round(TowardZero)}");
+        for (Float f : floats)
+            {
+            console.println($"{f},\t{f.round()},\t{f.floor()},\t{f.ceil()},\t{f.round(TowardZero)}");
+            }
+        }
+
+    void testFloat32()
+        {
+        import Ecstasy.numbers.Float32;
+
+        console.println("\n** testFloat32()");
+
+        Float32 n1 = 4.2;
+        console.println("n1=" + n1);
+
+        Byte[]  bytes = n1.toByteArray();
+        Float32 n11   = new Float32(bytes);
+        assert n11 == n1;
+
+        Bit[]   bits = n1.toBitArray();
+        Float32 n12  = new Float32(bits);
+        assert n12 == n1;
+
+        Float32 pi32 = FPNumber.PI;
+        console.println("pi32=" + pi32);
+        }
+
+    void testFloat16()
+        {
+        import Ecstasy.numbers.Float16;
+
+        console.println("\n** testFloat16()");
+
+        Float16 n1 = 4.2;
+        console.println("n1=" + n1);
+
+        Byte[]  bytes = n1.toByteArray();
+        Float16 n11   = new Float16(bytes);
+        assert n11 == n1;
+
+        Bit[]   bits = n1.toBitArray();
+        Float16 n12  = new Float16(bits);
+        assert n12 == n1;
+
+        Float16 pi16 = FPNumber.PI;
+        console.println("pi16=" + pi16);
         }
     }

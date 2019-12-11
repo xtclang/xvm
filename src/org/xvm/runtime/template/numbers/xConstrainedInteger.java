@@ -28,7 +28,6 @@ import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.collections.BitBasedArray;
 import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
-import org.xvm.runtime.template.collections.xByteArray;
 import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
 
 import org.xvm.util.PackedInteger;
@@ -87,8 +86,8 @@ public abstract class xConstrainedInteger
         markNativeMethod("toVarFloat"    , VOID, new String[]{"numbers.VarFloat"});
         markNativeMethod("toVarDec"      , VOID, new String[]{"numbers.VarDec"});
         markNativeMethod("toChar"        , VOID, new String[]{"Char"});
-        markNativeMethod("toBooleanArray", VOID, new String[]{"collections.Array<Boolean>"});
-        markNativeMethod("toBitArray"    , VOID, new String[]{"collections.Array<numbers.Bit>"});
+        markNativeMethod("toBooleanArray", VOID, null);
+        markNativeMethod("toBitArray"    , VOID, null);
 
         markNativeMethod("rotateLeft"   , INT , THIS);
         markNativeMethod("rotateRight"  , INT , THIS);
@@ -159,31 +158,36 @@ public abstract class xConstrainedInteger
     public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
-        // make sure this is a Binary-based constructor
         SignatureConstant sig = constructor.getIdentityConstant().getSignature();
-        if (sig.getParamCount() == 1 && sig.getRawParams()[0].equals(xByteArray.INSTANCE.getCanonicalType()))
+        if (sig.getParamCount() == 1)
             {
-            ByteArrayHandle hBytes = (ByteArrayHandle) ahVar[0];
-            byte[]          abVal  = hBytes.m_abValue;
-
-            int cBytes = abVal.length;
-            if (cBytes != f_cNumBits / 8)
+            if (sig.getRawParams()[0].getParamType(0).equals(pool().typeByte()))
                 {
-                return frame.raiseException(xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
+                // construct(Byte[] bytes)
+                ByteArrayHandle hBytes = (ByteArrayHandle) ahVar[0];
+                byte[]          abVal  = hBytes.m_abValue;
+
+                int cBytes = hBytes.m_cSize;
+                return cBytes == f_cNumBits / 8
+                    ? convertLong(frame, fromByteArray(abVal, cBytes), iReturn)
+                    : frame.raiseException(
+                        xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
                 }
 
-            long lResult = 0;
-            for (int i = 0; i < cBytes; i++)
+            if (sig.getRawParams()[0].getParamType(0).equals(pool().typeBit()))
                 {
-                lResult = lResult << 8 | abVal[i];
-                }
+                // construct(Bit[] bits)
+                BitArrayHandle hBits = (BitArrayHandle) ahVar[0];
+                byte[]         abVal = hBits.m_abValue;
 
-            return convertLong(frame, lResult, iReturn);
+                int cBits = hBits.m_cSize;
+                return cBits == f_cNumBits
+                    ? convertLong(frame, fromByteArray(abVal, cBits >>> 3), iReturn)
+                    : frame.raiseException(
+                        xException.illegalArgument(frame, "Invalid bit count: " + cBits));
+                }
             }
-        else
-            {
-            return frame.raiseException(xException.unsupportedOperation(frame));
-            }
+        return frame.raiseException(xException.unsupportedOperation(frame));
         }
 
     @Override
@@ -369,9 +373,9 @@ public abstract class xConstrainedInteger
                     return templateTo.convertLong(frame, lValue, iReturn);
                     }
 
-                if (template instanceof xBaseInt128)
+                if (template instanceof BaseInt128)
                     {
-                    xBaseInt128 templateTo = (xBaseInt128) template;
+                    BaseInt128 templateTo = (BaseInt128) template;
                     long        lValue     = ((JavaLong) hTarget).getValue();
 
                     if (f_fSigned && lValue < 0 && !templateTo.f_fSigned)
@@ -397,7 +401,7 @@ public abstract class xConstrainedInteger
                     {
                     long l = ((JavaLong) hTarget).getValue();
                     return frame.assignValue(iReturn, new BitArrayHandle(template.getCanonicalClass(),
-                        toByteArray(l), f_cNumBits, Mutability.Constant));
+                        toByteArray(l, f_cNumBits >>> 3), f_cNumBits, Mutability.Constant));
                     }
 
                 break;
@@ -658,7 +662,7 @@ public abstract class xConstrainedInteger
         return frame.assignValue(iReturn, xInt64.makeHandle(l));
         }
 
-    // ----- comparison support -----
+    // ----- comparison support --------------------------------------------------------------------
 
     @Override
     public int callEquals(Frame frame, ClassComposition clazz,
@@ -701,7 +705,7 @@ public abstract class xConstrainedInteger
      */
     public int convertLong(Frame frame, long lValue, int iReturn)
         {
-        if (lValue < f_cMinValue || lValue > f_cMaxValue)
+        if (f_cNumBits != 64 && (lValue < f_cMinValue || lValue > f_cMaxValue))
             {
             return overflow(frame);
             }
@@ -740,40 +744,48 @@ public abstract class xConstrainedInteger
         }
 
 
-    // ----- helpers -----
+    // ----- helpers -------------------------------------------------------------------------------
 
-    protected byte[] toByteArray(long l)
+    /**
+     * Produce an array of bytes for the specified long value.
+     *
+     * @param l       the long value
+     * @param cBytes  the number of bytes to preserve
+     *
+     * @return the byte array
+     */
+    static public byte[] toByteArray(long l, int cBytes)
         {
-        switch (f_cNumBits)
+        switch (cBytes)
             {
-            case 64:
+            case 8:
                 return new byte[]
                     {
-                    (byte) l,
-                    (byte) (l >> 8),
-                    (byte) (l >> 16),
-                    (byte) (l >> 24),
-                    (byte) (l >> 32),
-                    (byte) (l >> 40),
+                    (byte) (l >> 56),
                     (byte) (l >> 48),
-                    (byte) (l >> 56)
-                    };
-
-            case 32:
-                return new byte[] {
-                    (byte) l,
-                    (byte) (l >> 8),
-                    (byte) (l >> 16),
+                    (byte) (l >> 40),
+                    (byte) (l >> 32),
                     (byte) (l >> 24),
-                    };
-
-            case 16:
-                return new byte[] {
+                    (byte) (l >> 16),
+                    (byte) (l >> 8 ),
                     (byte) l,
-                    (byte) (l >> 8),
                     };
 
-            case 8:
+            case 4:
+                return new byte[] {
+                    (byte) (l >> 24),
+                    (byte) (l >> 16),
+                    (byte) (l >> 8 ),
+                    (byte) l,
+                    };
+
+            case 2:
+                return new byte[] {
+                    (byte) (l >> 8),
+                    (byte) l,
+                };
+
+            case 1:
                 return new byte[] {
                     (byte) l,
                     };
@@ -783,7 +795,26 @@ public abstract class xConstrainedInteger
             }
         }
 
-    // ----- fields -----
+    /**
+     * Produce a long value from the specified byte array.
+     *
+     * @param aBytes  the byte array
+     * @param cBytes  the number of bytes to use
+     *
+     * @return the long value
+     */
+    static public long fromByteArray(byte[] aBytes, int cBytes)
+        {
+        long l = 0;
+        for (int i = 0; i < cBytes; i++)
+            {
+            l = l << 8 | (aBytes[i] & 0xFF);
+            }
+        return l;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
 
     protected final long f_cMinValue;
     protected final long f_cMaxValue;

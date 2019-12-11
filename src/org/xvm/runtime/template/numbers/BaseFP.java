@@ -10,6 +10,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -18,29 +19,30 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
+import org.xvm.runtime.template.collections.xArray.Mutability;
+import org.xvm.runtime.template.collections.xBitArray;
+import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
+
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xString;
 
 
 /**
  * Base class for native Float* support.
  */
-abstract public class FPBase
+abstract public class BaseFP
         extends xConst
     {
-    public static FPBase INSTANCE;
-
-    public FPBase(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public BaseFP(TemplateRegistry templates, ClassStructure structure, int cBits)
         {
         super(templates, structure, false);
 
-        if (fInstance)
-            {
-            INSTANCE = this;
-            }
+        f_cBits = cBits;
         }
 
     @Override
@@ -102,6 +104,7 @@ abstract public class FPBase
         markNativeMethod("nextDown"   , VOID, THIS);
 
         // conversions
+        markNativeMethod("toBitArray" , VOID, null);
         markNativeMethod("toFloat64"  , VOID, FLOAT64);
         markNativeMethod("toVarInt"   , VOID, VAR_INT);
         markNativeMethod("toVarUInt"  , VOID, VAR_UINT);
@@ -113,6 +116,44 @@ abstract public class FPBase
     public boolean isGenericHandle()
         {
         return false;
+        }
+
+    @Override
+    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
+        {
+        SignatureConstant sig = constructor.getIdentityConstant().getSignature();
+        if (sig.getParamCount() == 1)
+            {
+            if (sig.getRawParams()[0].getParamType(0).equals(pool().typeByte()))
+                {
+                // construct(Byte[] bytes)
+                ByteArrayHandle hBytes = (ByteArrayHandle) ahVar[0];
+                byte[]          abVal  = hBytes.m_abValue;
+
+                int    cBytes = hBytes.m_cSize;
+                return cBytes == f_cBits / 8
+                    ? frame.assignValue(iReturn,
+                        makeFloat(fromLong(xConstrainedInteger.fromByteArray(abVal, cBytes))))
+                    : frame.raiseException(
+                        xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
+                }
+
+            if (sig.getRawParams()[0].getParamType(0).equals(pool().typeBit()))
+                {
+                // construct(Bit[] bits)
+                BitArrayHandle hBits = (BitArrayHandle) ahVar[0];
+                byte[]         abVal = hBits.m_abValue;
+
+                int cBits = hBits.m_cSize;
+                return cBits == f_cBits
+                    ? frame.assignValue(iReturn,
+                        makeFloat(fromLong(xConstrainedInteger.fromByteArray(abVal, cBits >>> 3))))
+                    : frame.raiseException(
+                        xException.illegalArgument(frame, "Invalid bit count: " + cBits));
+                }
+            }
+        return frame.raiseException(xException.unsupportedOperation(frame));
         }
 
     @Override
@@ -208,6 +249,13 @@ abstract public class FPBase
             case "abs":
                 return frame.assignValue(iReturn, makeFloat(Math.abs(d)));
 
+            case "toBitArray":
+                {
+                byte[] abValue = getBits(d);
+                return frame.assignValue(iReturn,
+                    xBitArray.makeHandle(abValue, f_cBits, Mutability.Constant));
+                }
+
             case "toFloat64":
                 return frame.assignValue(iReturn, makeFloat(d));
 
@@ -234,7 +282,7 @@ abstract public class FPBase
                 return frame.assignValue(iReturn, makeFloat(Math.log(d)));
 
             case "log2":
-                return frame.assignValue(iReturn, makeFloat(Math.log10(d)/LOG10_2));
+                return frame.assignValue(iReturn, makeFloat(Math.log10(d)*LOG2_10));
 
             case "log10":
                 return frame.assignValue(iReturn, makeFloat(Math.log10(d)));
@@ -380,16 +428,50 @@ abstract public class FPBase
         }
 
 
-    // ----- FP operations -------------------------------------------------------------------------
+    // ----- comparison support --------------------------------------------------------------------
 
+    @Override
+    public int callEquals(Frame frame, ClassComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        FloatHandle h1 = (FloatHandle) hValue1;
+        FloatHandle h2 = (FloatHandle) hValue2;
+
+        return frame.assignValue(iReturn,
+            xBoolean.makeHandle(h1.getValue() == h2.getValue()));
+        }
+
+    @Override
+    public int callCompare(Frame frame, ClassComposition clazz,
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        FloatHandle h1 = (FloatHandle) hValue1;
+        FloatHandle h2 = (FloatHandle) hValue2;
+
+        return frame.assignValue(iReturn,
+            xOrdered.makeHandle(Double.compare(h1.getValue(), h2.getValue())));
+        }
 
 
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * @return precision (_p_) is defined by IEEE 754
+     * @return a bit array for the specified double value
      */
-    abstract protected int getPrecision();
+    abstract protected byte[] getBits(double d);
+
+    /**
+     * @return a double value for the specified long value
+     */
+    abstract protected double fromLong(long l);
+
+    /**
+     * Note: while we could simply say "Sting.valueOf(d)", it may produce a higher precision
+     * (and less human readable) value.
+     *
+     * @return a String value of the specified double
+     */
+    abstract protected String toString(double d);
 
     /**
      * Raise an overflow exception.
@@ -406,7 +488,7 @@ abstract public class FPBase
         {
         double d = ((FloatHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(String.valueOf(d).length()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(toString(d).length()));
         }
 
     @Override
@@ -417,7 +499,7 @@ abstract public class FPBase
         ObjectHandle[] ahArg = new ObjectHandle[METHOD_APPEND_TO.getMaxVars()];
         ahArg[0] = hAppender;
 
-        return frame.call1(METHOD_APPEND_TO, xString.makeHandle(String.valueOf(d)), ahArg, iReturn);
+        return frame.call1(METHOD_APPEND_TO, xString.makeHandle(toString(d)), ahArg, iReturn);
         }
 
     @Override
@@ -433,7 +515,7 @@ abstract public class FPBase
         {
         double d = ((FloatHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xString.makeHandle(String.valueOf(d)));
+        return frame.assignValue(iReturn, xString.makeHandle(toString(d)));
         }
 
 
@@ -505,8 +587,7 @@ abstract public class FPBase
     /**
      * The log10(2) value.
      */
-    public static final double LOG10_2    = Math.log10(2);
-
+    public static final double LOG2_10     = 1.0/Math.log10(2);
 
     public static String[] FLOAT64   = new String[]{"numbers.Float64"};
     public static String[] VAR_INT   = new String[]{"numbers.VarInt"};
@@ -515,4 +596,9 @@ abstract public class FPBase
     public static String[] VAR_DEC   = new String[]{"numbers.VarDec"};
 
     private static MethodStructure METHOD_APPEND_TO;
+
+    /**
+     * The number of bits for this Float type.
+     */
+    protected final int f_cBits;
     }

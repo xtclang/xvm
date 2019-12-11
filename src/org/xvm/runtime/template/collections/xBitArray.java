@@ -1,6 +1,8 @@
 package org.xvm.runtime.template.collections;
 
 
+import java.util.Arrays;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -42,6 +44,9 @@ public class xBitArray
         ClassStructure mixin = f_templates.getClassStructure("collections.Array.BitArray");
 
         mixin.findMethod("toByte", 0).markNative();
+        mixin.findMethod("toByteArray", 0).markNative();
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override
@@ -64,6 +69,29 @@ public class xBitArray
                 return hBits.m_cSize > 8
                     ? frame.raiseException(xException.outOfBounds(frame, "Array is too big: " + hBits.m_cSize))
                     : frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(hBits.m_abValue[0]));
+                }
+
+            case "toByteArray":
+                {
+                BitArrayHandle hBits = (BitArrayHandle) hTarget;
+                int cBits = hBits.m_cSize;
+                if (cBits % 8 != 0)
+                    {
+                    return frame.raiseException(
+                        xException.illegalArgument(frame, "Invalid array size: " + cBits));
+                    }
+
+                int    cBytes = cBits >>> 3;
+                byte[] aBytes = hBits.m_abValue;
+
+                // TODO: a) if the source is persistent the copy is unnecessary;
+                //       b) add a "partial size" constructor
+                if (aBytes.length > cBytes && hBits.m_mutability == Mutability.Constant)
+                    {
+                    aBytes = Arrays.copyOfRange(aBytes, 0, cBytes);
+                    }
+                return frame.assignValue(iReturn,
+                        xByteArray.makeHandle(aBytes, Mutability.Constant));
                 }
             }
 

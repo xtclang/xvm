@@ -27,12 +27,12 @@ import org.xvm.util.PackedInteger;
 /**
  * Abstract base for Int128 and UInt128.
  */
-public abstract class xBaseInt128
+public abstract class BaseInt128
         extends xConst
     {
     public final boolean f_fSigned;
 
-    public xBaseInt128(TemplateRegistry templates, ClassStructure structure, boolean fSigned)
+    public BaseInt128(TemplateRegistry templates, ClassStructure structure, boolean fSigned)
         {
         super(templates, structure, false);
 
@@ -179,9 +179,9 @@ public abstract class xBaseInt128
                     return convertToConstrainedType(frame, (xConstrainedInteger) template, hTarget, iReturn);
                     }
 
-                if (template instanceof xBaseInt128)
+                if (template instanceof BaseInt128)
                     {
-                    xBaseInt128 templateTo = (xBaseInt128) template;
+                    BaseInt128 templateTo = (BaseInt128) template;
                     LongLong    llValue    = ((LongLongHandle) hTarget).getValue();
 
                     if (f_fSigned && llValue.signum() < 0 && !templateTo.f_fSigned)

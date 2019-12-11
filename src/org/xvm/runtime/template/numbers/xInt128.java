@@ -8,7 +8,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 
 public class xInt128
-        extends xBaseInt128
+        extends BaseInt128
     {
     public static xInt128 INSTANCE;
 

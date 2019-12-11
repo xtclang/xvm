@@ -174,7 +174,7 @@ public class Float16Constant
         // --------------------------------------------   -----  -----
         // k, storage width in bits                         16     32
         // p, precision in bits                             11     24
-        // emax, maxiumum exponent e                        15    127
+        // emax, maximum exponent e                         15    127
         // bias, E-e                                        15    127
         // sign bit                                          1      1
         // w, exponent field width in bits                   5      8

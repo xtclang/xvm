@@ -214,9 +214,9 @@ public class xIntLiteral
                     return ((xConstrainedInteger) template).
                         convertLong(frame, piValue, iReturn);
                     }
-                if (template instanceof xBaseInt128)
+                if (template instanceof BaseInt128)
                     {
-                    xBaseInt128 template128 = (xBaseInt128) template;
+                    BaseInt128  template128 = (BaseInt128) template;
                     BigInteger  biValue     = piValue.getBigInteger();
                     LongLong    llValue     = LongLong.fromBigInteger(biValue);
 
