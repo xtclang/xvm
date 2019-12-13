@@ -221,6 +221,22 @@ const IntNumber
      */
     @Unchecked IntNumber toUnchecked();
 
+    /**
+     * @return the integer literal for this integer number
+     */
+    IntLiteral toIntLiteral()
+        {
+        return new IntLiteral(toString());
+        }
+
+    /**
+     * @return the floating point literal for this floating point number
+     */
+    FPLiteral toFPLiteral()
+        {
+        return new FPLiteral(toString());
+        }
+
 
     // ----- Stringable ----------------------------------------------------------------------------
 

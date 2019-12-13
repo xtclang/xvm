@@ -146,9 +146,10 @@ class UTF8Reader
         @Override
         Position get()
             {
-            return offset <= 0xFFFFF && lineNumber <= 0xFFFF && lineOffset <= 0xFFFF && rawOffset <= 0xFFF
-                        ? new TinyPos(offset, lineNumber, lineOffset, rawOffset)
-                        : new SimplePos(offset, lineNumber, lineOffset, rawOffset);
+            return offset <= 0xFFFFF && lineNumber <= 0xFFFF && lineOffset <= 0xFFFF
+                    && (rawOffset - offset) <= 0xFFF
+                            ? new TinyPos(offset, lineNumber, lineOffset, rawOffset)
+                            : new SimplePos(offset, lineNumber, lineOffset, rawOffset);
             }
 
         @Override

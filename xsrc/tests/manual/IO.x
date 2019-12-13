@@ -11,6 +11,7 @@ module TestIO
     import Ecstasy.web.json.Lexer;
     import Ecstasy.web.json.Lexer.Token;
     import Ecstasy.web.json.Parser;
+    import Ecstasy.web.json.Printer;
 
     @Inject Console console;
 
@@ -21,6 +22,7 @@ module TestIO
         testUTF8Reader();
         testJSONLex();
         testJSONParse();
+        testJSONPrint();
         }
 
     void testInputStream()
@@ -132,5 +134,19 @@ module TestIO
             {
             console.println($"doc={doc}");
             }
+        }
+
+    void testJSONPrint()
+        {
+        console.println("\n*** testJSONPrint()");
+
+        Reader reader = new CharArrayReader(ExampleJSON);
+        Parser parser = new Parser(reader, False);
+        console.println($"raw doc=\n{ExampleJSON}");
+        assert Doc doc := parser.next();
+        console.println($"doc as structures={doc}");
+        Printer printer = new Printer(doc);
+        console.println($"ugly doc={printer.toString(pretty=False)}");
+        console.println($"pretty doc=\n{printer.toString(pretty=True)}");
         }
     }

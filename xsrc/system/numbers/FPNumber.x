@@ -374,4 +374,15 @@ const FPNumber
      * @return the next representable floating point value that precedes this value, if there is one
      */
     FPNumber nextDown();
+
+
+    // ----- conversions ---------------------------------------------------------------------------
+
+    /**
+     * @return the floating point literal for this floating point number
+     */
+    FPLiteral toFPLiteral()
+        {
+        return new FPLiteral(toString());
+        }
     }
