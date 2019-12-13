@@ -15,7 +15,7 @@ module TestNumbers.xqiz.it
         testFloat64();
         testFloat32();
         testFloat16();
-        // testDec64(); // TODO GG
+        testDec64();
         }
 
     void testUInt()

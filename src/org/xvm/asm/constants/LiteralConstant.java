@@ -225,15 +225,15 @@ public class LiteralConstant
         }
 
      /**
-     * Obtain the radix of the integer literal.
+     * Obtain the radix of the numeric literal.
      * <p/>
-     * This must not be called if the constant is not an IntLiteral.
+     * This must not be called if the constant is not an IntLiteral or FPLiteral.
      *
      * @return the radix of an IntLiteral
      */
-    public int getIntRadix()
+    public int getRadix()
         {
-        assert getFormat() == Format.IntLiteral;
+        assert getFormat() == Format.IntLiteral || getFormat() == Format.FPLiteral;
 
         // if the first character is '0', it is potentially part of a prefix denoting a radix
         // (note that the literal may begin with a minus sign)
@@ -245,8 +245,10 @@ public class LiteralConstant
                 {
                 case 'B':
                 case 'b':
+                    assert getFormat() == Format.IntLiteral;
                     return 2;
                 case 'o':
+                    assert getFormat() == Format.IntLiteral;
                     return 8;
                 case 'X':
                 case 'x':
@@ -255,6 +257,14 @@ public class LiteralConstant
             }
 
         return 10;
+        }
+
+    private int pickFPRadixForNumericOperation(LiteralConstant const1, LiteralConstant const2)
+        {
+        assert const1.getFormat() == Format.FPLiteral || const2.getFormat() == Format.FPLiteral;
+        return const1.getRadix() == 16 && const2.getRadix() == 16
+                ? 16
+                : 10;
         }
 
     /**
@@ -272,7 +282,7 @@ public class LiteralConstant
         if (pint == null)
             {
             String s = getValue().replace("_", ""); // TODO all of the lexer logic has to show up here
-            int    r = getIntRadix();
+            int    r = getRadix();
             if (r == 10)
                 {
                 pint = s.length() < 20
@@ -295,26 +305,9 @@ public class LiteralConstant
         }
 
     /**
-     * Obtain the radix of the floating point literal.
-     * <p/>
-     * This must not be called if the constant is not an IntLiteral or an FPLiteral.
-     *
-     * @return 2 iff the floating point literal specifies a binary radix, otherwise 10
-     */
-    public int getFPRadix()
-        {
-        assert getFormat() == Format.IntLiteral || getFormat() == Format.FPLiteral;
-
-        // Ecstasy always uses decimal by default, unless forced to use base 2 floating point
-        return m_constStr.getValue().indexOf('E') >= 0 || m_constStr.getValue().indexOf('e') >= 0
-                ? 2
-                : 10;
-        }
-
-    /**
      * Obtain the BigDecimal value of the floating point literal.
      * <p/>
-     * This must not be called if the constant is not an IntLiteral or an FPLiteral of radix 10.
+     * This must not be called if the constant is not an IntLiteral or an FPLiteral.
      *
      * @return the BigDecimal value of the floating point literal
      */
@@ -322,38 +315,24 @@ public class LiteralConstant
         {
         assert getFormat() == Format.IntLiteral || getFormat() == Format.FPLiteral;
 
-        BigDecimal dec;
-
-        if (m_oVal == null)
+        BigDecimal dec = m_oVal instanceof BigDecimal ? (BigDecimal) m_oVal : null;
+        if (dec == null)
             {
-            // Java BigDecimal uses "E" to indicate a decimal exponent, while ISO uses "P"
-            m_oVal = dec = getFormat() == Format.IntLiteral
-                    ? new BigDecimal(getPackedInteger().getBigInteger())
-                    : new BigDecimal(m_constStr.getValue().replace('p', 'e').replace('P', 'E'));
-            }
-        else
-            {
-            if (m_oVal instanceof BigDecimal)
+            if (getFormat() == Format.IntLiteral)
                 {
-                dec = (BigDecimal) m_oVal;
-                }
-            else if (m_oVal instanceof PackedInteger)
-                {
-                m_oVal = dec = new BigDecimal(((PackedInteger) m_oVal).getBigInteger());
-                }
-            else if (m_oVal instanceof Double)
-                {
-                m_oVal = dec = new BigDecimal((Double) m_oVal);
-                }
-            else if (m_oVal instanceof Float)
-                {
-                m_oVal = dec = new BigDecimal((Float) m_oVal);
+                dec = new BigDecimal(getPackedInteger().getBigInteger());
                 }
             else
                 {
-                throw new IllegalStateException();
+                String sLit = m_constStr.getValue();
+                // note: BigDecimal does not support hexadecimal representation of FP numbers
+                dec = getRadix() == 16
+                        ? BigDecimal.valueOf(Double.valueOf(sLit))
+                        : new BigDecimal(sLit);
                 }
+            m_oVal = dec;
             }
+
         return dec;
         }
 
@@ -394,17 +373,9 @@ public class LiteralConstant
             return (Float) m_oVal;
             }
 
-        float fl;
-        if (getFormat() == Format.IntLiteral)
-            {
-            fl = getPackedInteger().getBigInteger().floatValue();
-            }
-        else
-            {
-            fl = getFPRadix() == 2
-                    ? Float.parseFloat(m_constStr.getValue())
-                    : getBigDecimal().floatValue();
-            }
+        float fl = getFormat() == Format.IntLiteral
+                ? getPackedInteger().getBigInteger().floatValue()
+                : Float.parseFloat(m_constStr.getValue());
 
         m_oVal = fl;
         return fl;
@@ -424,17 +395,9 @@ public class LiteralConstant
             return (Double) m_oVal;
             }
 
-        double dfl;
-        if (getFormat() == Format.IntLiteral)
-            {
-            dfl = getPackedInteger().getBigInteger().doubleValue();
-            }
-        else
-            {
-            dfl = getFPRadix() == 2
-                    ? Double.parseDouble(m_constStr.getValue())
-                    : getBigDecimal().doubleValue();
-            }
+        double dfl = getFormat() == Format.IntLiteral
+                ? getPackedInteger().getBigInteger().doubleValue()
+                : Double.parseDouble(m_constStr.getValue());
 
         m_oVal = dfl;
         return dfl;
@@ -810,7 +773,7 @@ public class LiteralConstant
                     default:
                         throw new IllegalStateException();
                     }
-                return pool.ensureLiteralConstant(Format.IntLiteral, piResult.toString(this.getIntRadix()));
+                return pool.ensureLiteralConstant(Format.IntLiteral, piResult.toString(this.getRadix()));
                 }
 
             case "IntLiteral==IntLiteral":
@@ -825,20 +788,13 @@ public class LiteralConstant
                 }
 
             case "FPLiteral+IntLiteral":
-            case "FPLiteral+FPLiteral":
             case "IntLiteral+FPLiteral":
+            case "FPLiteral+FPLiteral":
                 {
-                String sLit;
-                if (this.getFPRadix() == 2 || ((LiteralConstant) that).getFPRadix() == 2)
-                    {
-                    sLit = Double.toString(this.getDouble() + ((LiteralConstant) that).getDouble());
-                    }
-                else
-                    {
-                    BigDecimal decThis = this.getBigDecimal();
-                    BigDecimal decThat = ((LiteralConstant) that).getBigDecimal();
-                    sLit = decThis.add(decThat).toString().replace('E', 'P');
-                    }
+                LiteralConstant litThat = (LiteralConstant) that;
+                String sLit = pickFPRadixForNumericOperation(this, litThat) == 16
+                        ? Double.toHexString(this.getDouble() + litThat.getDouble())
+                        : this.getBigDecimal().add(litThat.getBigDecimal()).toString();
                 return pool.ensureLiteralConstant(Format.FPLiteral, sLit);
                 }
 
@@ -846,17 +802,10 @@ public class LiteralConstant
             case "FPLiteral-FPLiteral":
             case "IntLiteral-FPLiteral":
                 {
-                String sLit;
-                if (this.getFPRadix() == 2 || ((LiteralConstant) that).getFPRadix() == 2)
-                    {
-                    sLit = Double.toString(this.getDouble() - ((LiteralConstant) that).getDouble());
-                    }
-                else
-                    {
-                    BigDecimal decThis = this.getBigDecimal();
-                    BigDecimal decThat = ((LiteralConstant) that).getBigDecimal();
-                    sLit = decThis.subtract(decThat).toString().replace('E', 'P');
-                    }
+                LiteralConstant litThat = (LiteralConstant) that;
+                String sLit = pickFPRadixForNumericOperation(this, litThat) == 16
+                        ? Double.toHexString(this.getDouble() - litThat.getDouble())
+                        : this.getBigDecimal().subtract(litThat.getBigDecimal()).toString();
                 return pool.ensureLiteralConstant(Format.FPLiteral, sLit);
                 }
 
@@ -864,17 +813,10 @@ public class LiteralConstant
             case "FPLiteral*FPLiteral":
             case "IntLiteral*FPLiteral":
                 {
-                String sLit;
-                if (this.getFPRadix() == 2 || ((LiteralConstant) that).getFPRadix() == 2)
-                    {
-                    sLit = Double.toString(this.getDouble() * ((LiteralConstant) that).getDouble());
-                    }
-                else
-                    {
-                    BigDecimal decThis = this.getBigDecimal();
-                    BigDecimal decThat = ((LiteralConstant) that).getBigDecimal();
-                    sLit = decThis.multiply(decThat).toString().replace('E', 'P');
-                    }
+                LiteralConstant litThat = (LiteralConstant) that;
+                String sLit = pickFPRadixForNumericOperation(this, litThat) == 16
+                        ? Double.toHexString(this.getDouble() * litThat.getDouble())
+                        : this.getBigDecimal().multiply(litThat.getBigDecimal()).toString();
                 return pool.ensureLiteralConstant(Format.FPLiteral, sLit);
                 }
 
@@ -882,17 +824,10 @@ public class LiteralConstant
             case "FPLiteral/FPLiteral":
             case "IntLiteral/FPLiteral":
                 {
-                String sLit;
-                if (this.getFPRadix() == 2 || ((LiteralConstant) that).getFPRadix() == 2)
-                    {
-                    sLit = Double.toString(this.getDouble() / ((LiteralConstant) that).getDouble());
-                    }
-                else
-                    {
-                    BigDecimal decThis = this.getBigDecimal();
-                    BigDecimal decThat = ((LiteralConstant) that).getBigDecimal();
-                    sLit = decThis.divide(decThat).toString().replace('E', 'P');
-                    }
+                LiteralConstant litThat = (LiteralConstant) that;
+                String sLit = pickFPRadixForNumericOperation(this, litThat) == 16
+                        ? Double.toHexString(this.getDouble() / litThat.getDouble())
+                        : this.getBigDecimal().divide(litThat.getBigDecimal()).toString();
                 return pool.ensureLiteralConstant(Format.FPLiteral, sLit);
                 }
 
@@ -904,11 +839,12 @@ public class LiteralConstant
             case "FPLiteral>=FPLiteral":
             case "FPLiteral<=>FPLiteral":
                 {
+                LiteralConstant litThat = (LiteralConstant) that;
                 int nOrd;
-                if (this.getFPRadix() == 2 || ((LiteralConstant) that).getFPRadix() == 2)
+                if (pickFPRadixForNumericOperation(this, litThat) == 16)
                     {
                     double dflThis = this.getDouble();
-                    double dflThat = ((LiteralConstant) that).getDouble();
+                    double dflThat = litThat.getDouble();
                     // NaN has to be ordered somewhere (since we use a 3-state ordering and IEEE-754
                     // uses a 4-state ordering), so put it at "the beginning"
                     if (Double.isNaN(dflThis))
@@ -926,9 +862,7 @@ public class LiteralConstant
                     }
                 else
                     {
-                    BigDecimal decThis = this.getBigDecimal();
-                    BigDecimal decThat = ((LiteralConstant) that).getBigDecimal();
-                    nOrd = decThis.compareTo(decThat);
+                    nOrd = this.getBigDecimal().compareTo(litThat.getBigDecimal());
                     }
                 return translateOrder(nOrd, op);
                 }
