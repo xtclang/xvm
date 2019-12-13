@@ -229,6 +229,26 @@ const Class<PublicType, ProtectedType extends PublicType,
         }
 
 
+    // ----- construction --------------------------------------------------------------------------
+
+    /**
+     * Allocate an empty structure for this class.
+     */
+    conditional StructType allocate();
+
+    /**
+     * - if a corresponding constructor exists, it will be called before the automatic structure
+     *   validation
+     *
+     * @throws IllegalState if the structure is illegal in any way
+     */
+    PublicType instantiate(StructType structure)
+        {
+        assert function PublicType (StructType) constructor := PublicType.structConstructor();
+        return constructor(structure);
+        }
+
+
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
