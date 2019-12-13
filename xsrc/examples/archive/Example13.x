@@ -391,10 +391,124 @@ mixin M1b
     mixin M2        // implicit or explicit (@Override required)
         {
         }
-         
+
     class C3
         {
         }
     }
 
 // also note that typedef names will be in this same namespace
+
+
+// ----- JSON DOMish parsing
+
+p = new Point(doc.find("x").expect<Int>(0), doc.find("y").expect<Int>(0));
+
+p = new Point(doc.require<Int>("x"), doc.require<Int>("y"));
+
+p = new Point(doc.require<Int>("x"), doc.require<Int>("y"));
+
+p = new Person(doc.require<String?>("name"), doc.require<Int?>("age"));
+
+// sub-record read
+p = new Person(doc.require<String?>("name"), doc.require<Int?>("age"), doc.require<Dog?>("dog"));
+p = new Person(doc.require<String?>("name"), doc.require<Int?>("age"), doc.require<Dog[]>("dogs"));
+
+
+out.write(person);
+// ...
+PersonMapping.write(out, Person p)
+    {
+    out.writeString("name", p.name);
+    out.writeInt("age", p.age);
+    out.writeObject("dog", p.dog);
+    out.writeArray("dogs", p.dogs);
+    }
+// ...
+DogMapping.write(out, Dog d)
+    {
+    // ...
+    }
+
+
+Person p = in.read<Person>();
+// ...
+PersonMapping.read<Person>(in)
+    {
+    var p = Person.allocate();
+    p.name = in.readString("name");
+    p.age  = in.readInt("age");
+    p.dog  = in.readObject<Dog>("dog");
+    p.dogs = in.readArray<Dog>("dogs");   // or readIterator() to get an iterator instead
+
+    // by default, any version information is passed down from the outermost document
+    if (in.version == ...)
+        {
+        ...
+        }
+
+    if (in.next() == "cat")
+        {
+        ...
+        }
+
+    if (in.contains("mouse"))
+        {
+        ...
+        }
+
+    if (in.hasRemainder())
+        {
+        p.stash = in.readRemainder();
+        }
+
+    return Person.instantiate(p);
+    }
+// ...
+DogMapping.read<Dog>(in)
+    {
+    // ...
+    }
+
+
+//
+// {
+//   "$schema": "http://json-schema.org/schema#",
+//   "title": "Product",
+//   "type": "object",
+//   "required": ["id", "name", "price"],
+//   "numbers": [1,2,3],
+//   "properties": {
+//     "id": {
+//       "type": "number",
+//       "description": "Product identifier"
+//     },
+//     "name": {
+//       "type": "string",
+//       "description": "Name of the product"
+//     }
+//   }
+// }
+String s =new Printer()
+    .add("$schema", "http://json-schema.org/schema#")
+    .add("title", "Product")
+    .add("type", "object")
+    .addArray("required", ["id", "name", "price"])
+    .addArray("numbers", [1,2,3])
+    .enter("properties")
+        .enter("id")
+            .add("type", "number")
+            .add("description", "Proudct identifier")
+            .addArray("tokens", list.size, (i, p) ->
+                {
+                p.add("index", i)
+                 .add("type", list[i].type)
+                 .add("description", list[i].desc);
+                }
+        .exit()
+        .enter("name")
+            .add("type", "string")
+            .add("description", "Name of the product")
+        .exit()
+    .exit()
+    .toString();
