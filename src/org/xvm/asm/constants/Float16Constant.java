@@ -43,11 +43,14 @@ public class Float16Constant
     public Float16Constant(ConstantPool pool, float flVal)
         {
         super(pool);
-        if (Float.isFinite(flVal) && !Float.isFinite(toFloat(toHalf(flVal))))
+
+        float flVal16 = toFloat(toHalf(flVal));
+
+        if (Float.isFinite(flVal) && !Float.isFinite(flVal16))
             {
             throw new IllegalArgumentException("value out of range: " + flVal);
             }
-        m_flVal = flVal;
+        m_flVal = flVal16;
         }
 
 

@@ -5,6 +5,7 @@ import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -52,6 +53,13 @@ public class xString
     @Override
     public void initDeclared()
         {
+        ConstantPool   pool      = pool();
+        TypeConstant   typeArg   = pool.ensureClassTypeConstant(
+                pool.ensureEcstasyClassConstant("Appender"), null,
+                pool.typeChar());
+
+        METHOD_APPEND_TO = f_struct.findMethod("appendTo", 1, typeArg);
+
         markNativeProperty("size");
         markNativeProperty("chars");
 
@@ -100,11 +108,11 @@ public class xString
         switch (Utils.callToString(frame, hArg))
             {
             case Op.R_NEXT:
-                return frame.assignValue(iReturn, add(hThis, (StringHandle) frame.popStack()));
+                return frame.assignValue(iReturn, concat(hThis, (StringHandle) frame.popStack()));
 
             case Op.R_CALL:
                 frame.m_frameNext.addContinuation(frameCaller ->
-                    frameCaller.assignValue(iReturn, add(hThis, (StringHandle) frame.popStack())));
+                    frameCaller.assignValue(iReturn, concat(hThis, (StringHandle) frame.popStack())));
                 return Op.R_CALL;
 
             case Op.R_EXCEPTION:
@@ -253,7 +261,7 @@ public class xString
         }
 
 
-    // ----- comparison support -----
+    // ----- comparison support --------------------------------------------------------------------
 
     @Override
     public int callEquals(Frame frame, ClassComposition clazz,
@@ -282,9 +290,9 @@ public class xString
         }
 
 
-    // ----- helpers -----
+    // ----- helpers -------------------------------------------------------------------------------
 
-    protected StringHandle add(StringHandle h1, StringHandle h2)
+    protected StringHandle concat(StringHandle h1, StringHandle h2)
         {
         char[] ach1 = h1.m_achValue;
         char[] ach2 = h2.m_achValue;
@@ -416,7 +424,27 @@ public class xString
         return c1 - c2;
         }
 
-    // --=-- handle -----
+    /**
+     * Call String.appendTo(Appender<Char> appender)
+     *
+     * @param frame      the current frame
+     * @param hString    the string to append
+     * @param hAppender  the appender handle
+     * @param iReturn    the register to place the result into
+     *
+     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION} values
+     */
+    public static int callAppendTo(Frame frame, StringHandle hString,
+                                   ObjectHandle hAppender, int iReturn)
+        {
+        ObjectHandle[] ahArg = new ObjectHandle[METHOD_APPEND_TO.getMaxVars()];
+        ahArg[0] = hAppender;
+
+        return frame.call1(METHOD_APPEND_TO, hString, ahArg, iReturn);
+        }
+
+
+    // --=-- handle --------------------------------------------------------------------------------
 
     public static class StringHandle
             extends ObjectHandle
@@ -488,8 +516,13 @@ public class xString
             : new StringHandle(INSTANCE.getCanonicalClass(), achValue);
         }
 
+
+    // ----- constants -----------------------------------------------------------------------------
+
     public static StringHandle EMPTY_STRING;
     public static StringHandle EMPTY_ARRAY;
     public static StringHandle ZERO;
     public static StringHandle ONE;
+
+    protected static MethodStructure METHOD_APPEND_TO;
     }

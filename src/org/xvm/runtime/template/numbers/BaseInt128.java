@@ -476,13 +476,6 @@ public abstract class BaseInt128
                 : h1.getValue().compareUnsigned(h2.getValue())));
         }
 
-    // ----- Object methods -----
-
-    protected int overflow(Frame frame)
-        {
-        return frame.raiseException(xException.outOfBounds(frame, "Int128 overflow"));
-        }
-
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
@@ -494,12 +487,15 @@ public abstract class BaseInt128
                 : ll.toUnsignedBigInteger().toString()));
         }
 
+
+    // ----- helpers -------------------------------------------------------------------------------
+
     /**
      * Convert a long value into a handle for the type represented by this template.
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    public int convertLong(Frame frame, long lValue, int iReturn)
+    protected int convertLong(Frame frame, long lValue, int iReturn)
         {
         return frame.assignValue(iReturn, makeLongLong(
             f_fSigned

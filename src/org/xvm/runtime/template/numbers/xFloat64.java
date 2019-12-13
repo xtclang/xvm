@@ -2,7 +2,6 @@ package org.xvm.runtime.template.numbers;
 
 
 import org.xvm.asm.ClassStructure;
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
@@ -36,7 +35,7 @@ public class xFloat64
         if (constant instanceof Float64Constant)
             {
             double dValue = ((Float64Constant) constant).getValue();
-            frame.pushStack(makeFloat(dValue));
+            frame.pushStack(makeHandle(dValue));
             return Op.R_NEXT;
             }
 

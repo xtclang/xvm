@@ -15,6 +15,7 @@ module TestNumbers.xqiz.it
         testFloat64();
         testFloat32();
         testFloat16();
+        // testDec64(); // TODO GG
         }
 
     void testUInt()
@@ -244,5 +245,44 @@ module TestNumbers.xqiz.it
 
         Float16 pi16 = FPNumber.PI;
         console.println("pi16=" + pi16);
+        }
+
+    void testDec64()
+        {
+        console.println("\n** testDec64()");
+
+        Dec n1 = 4.2;
+        console.println("n1=" + n1);
+
+        Byte[] bytes = n1.toByteArray();
+        Dec  n11   = new Dec(bytes);
+        assert n11 == n1;
+
+        Bit[]  bits = n1.toBitArray();
+        Dec  n12  = new Dec(bits);
+        assert n12 == n1;
+
+        Dec n2 = n1 + 1;
+        console.println("-1=" + n2);
+        console.println("+1=" + (n2 - 1));
+
+        Dec n3 = n1*10;
+        console.println("*10=" + n3);
+        console.println("/10=" + (n3 / 10));
+
+        console.println("PI=" + FPNumber.PI);
+        Dec pi64 = FPNumber.PI;
+        console.println("pi64=" + pi64);
+
+        // see http://www.cplusplus.com/reference/cmath/round/
+        Dec[] numbers = [2.3, 3.8, 5.5, -2.3, -3.8, -5.5];
+
+        console.println();
+        console.println("value\tround\tfloor\tceil\ttoZero");
+        console.println("-----\t-----\t-----\t----\t-----");
+        for (Dec d : numbers)
+            {
+            console.println($"{d},\t{d.round()},\t{d.floor()},\t{d.ceil()},\t{d.round(TowardZero)}");
+            }
         }
     }

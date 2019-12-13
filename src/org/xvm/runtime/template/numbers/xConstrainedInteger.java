@@ -722,16 +722,6 @@ public abstract class xConstrainedInteger
         }
 
     /**
-     * Raise an overflow exception.
-     *
-     * @return {@link Op#R_EXCEPTION}
-     */
-    protected int overflow(Frame frame)
-        {
-        return frame.raiseException(xException.outOfBounds(frame, f_struct.getName() + " overflow"));
-        }
-
-    /**
      * Create a JavaLong handle for the type represented by this template.
      *
      * @param lValue  the underlying long value

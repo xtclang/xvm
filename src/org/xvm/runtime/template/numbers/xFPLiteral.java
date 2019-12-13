@@ -153,16 +153,24 @@ public class xFPLiteral
             case "toFloat16":
             case "toFloat32":
             case "toFloat64":
+                {
                 TypeConstant typeRet  = method.getReturn(0).getType();
                 BaseBinaryFP template = (BaseBinaryFP) f_templates.getTemplate(typeRet);
                 return frame.assignValue(iReturn,
-                        template.makeFloat(hLiteral.getValue().doubleValue()));
+                        template.makeHandle(hLiteral.getValue().doubleValue()));
+                }
+
+            case "toDec32":
+                return frame.assignValue(iReturn,
+                        xDec32.INSTANCE.makeHandle(hLiteral.getValue().doubleValue()));
+
+            case "toDec64":
+                return frame.assignValue(iReturn,
+                        xDec64.INSTANCE.makeHandle(hLiteral.getValue().doubleValue()));
 
             case "toFloat128":
             case "toVarFloat":
             case "toVarDec":
-            case "toDec32":
-            case "toDec64":
             case "toDec128":
                 throw new UnsupportedOperationException(); // TODO
             }

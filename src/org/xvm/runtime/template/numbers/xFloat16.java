@@ -35,7 +35,7 @@ public class xFloat16
         if (constant instanceof Float16Constant)
             {
             double dValue = ((Float16Constant) constant).getValue();
-            frame.pushStack(makeFloat(dValue));
+            frame.pushStack(makeHandle(dValue));
             return Op.R_NEXT;
             }
 

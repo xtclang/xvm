@@ -1,0 +1,53 @@
+package org.xvm.runtime.template.numbers;
+
+
+import java.math.BigDecimal;
+
+import java.util.Arrays;
+
+import org.xvm.asm.ClassStructure;
+
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.type.Decimal;
+import org.xvm.type.Decimal64;
+
+
+/**
+ * Native Dec64 support.
+ */
+public class xDec64
+        extends BaseDecFP
+    {
+    public static xDec64 INSTANCE;
+
+    public xDec64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+        {
+        super(templates, structure, 64);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
+        }
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    @Override
+    protected Decimal fromBigDecimal(BigDecimal big)
+        {
+        return new Decimal64(big);
+        }
+
+    @Override
+    protected ObjectHandle makeHandle(byte[] abValue, int cBytes)
+        {
+        assert cBytes >= 8;
+        if (cBytes > 8)
+            {
+            abValue = Arrays.copyOfRange(abValue, 0, 8);
+            }
+        return makeHandle(new Decimal64(abValue));
+        }
+    }

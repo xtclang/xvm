@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
 
 
 /**
@@ -77,7 +78,7 @@ public class Decimal32
             }
 
         m_nBits = toIntBits(dec);
-        m_dec   = dec;                  // this isn't perfect, but we'll trust the cached value
+        m_dec   = toBigDecimal(m_nBits);
         }
 
 
@@ -237,6 +238,8 @@ public class Decimal32
      */
     public static int toIntBits(BigDecimal dec)
         {
+        dec = dec.round(MathContext.DECIMAL32);
+
         // obtain the significand
         int nSig = dec.unscaledValue().intValueExact();
         if (nSig < -9999999 || nSig > 9999999)
@@ -259,7 +262,7 @@ public class Decimal32
             }
 
         // store the least significant 6 bits of the exponent into the combo field starting at G5
-        // store the least signficant 6 decimal digits of the significand in two 10-bit declets in T
+        // store the least significant 6 decimal digits of the significand in two 10-bit declets in T
         nBits |=  ((nExp & 0b111111              ) << 20)
                 | (intToDeclet(nSig / 1000 % 1000) << 10)
                 | (intToDeclet(nSig        % 1000)      );

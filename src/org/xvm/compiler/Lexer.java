@@ -1320,19 +1320,19 @@ public class Lexer
             {
             // convert to IEEE-754 decimal floating point format
             // note: for now it is simply stored in the literal token as a BigDecimal
+            BigInteger biWhole = piWhole.getBigInteger();
             BigDecimal dec;
             if (piFraction == null)
                 {
-                dec = new BigDecimal(piWhole.getBigInteger());
+                dec = new BigDecimal(biWhole);
                 }
             else
                 {
-                BigInteger biWhole = piWhole.getBigInteger();
                 if (biWhole.signum() < 0)
                     {
                     biWhole = biWhole.negate();
                     }
-                dec = new BigDecimal(biWhole.multiply(BigInteger.valueOf(10 * fractionalDigits))
+                dec = new BigDecimal(biWhole.multiply(BigInteger.TEN.pow(fractionalDigits))
                         .add(piFraction.getBigInteger()), fractionalDigits);
                 if (signScalar < 0)
                     {

@@ -320,7 +320,7 @@ public class LiteralConstant
      */
     public BigDecimal getBigDecimal()
         {
-        assert getFormat() == Format.IntLiteral || getFormat() == Format.FPLiteral && getFPRadix() == 10;
+        assert getFormat() == Format.IntLiteral || getFormat() == Format.FPLiteral;
 
         BigDecimal dec;
 

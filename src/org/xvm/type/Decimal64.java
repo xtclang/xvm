@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
 
 
 /**
@@ -83,7 +84,7 @@ public class Decimal64
             }
 
         m_nBits = toLongBits(dec);
-        m_dec   = dec;                  // this isn't perfect, but we'll trust the cached value
+        m_dec   = toBigDecimal(m_nBits);
         }
 
 
@@ -252,6 +253,8 @@ public class Decimal64
      */
     public static long toLongBits(BigDecimal dec)
         {
+        dec = dec.round(MathContext.DECIMAL64);
+
         // obtain the significand
         long nSig = dec.unscaledValue().longValueExact();
         if (nSig < -9999999999999999L || nSig > 9999999999999999L)
@@ -274,19 +277,21 @@ public class Decimal64
             }
 
         // store the least significant 8 bits of the exponent into the combo field starting at G5
-        // store the least signficant 15 decimal digits of the significand in 5 10-bit declets in T
-        nBits |=  (((long) (nExp & 0xFF                                          )) << 50)
-                | (((long) (intToDeclet((int) (nSig / 1_000_000_000_000L) % 1000))) << 40)
-                | (((long) (intToDeclet((int) (nSig / 1_000_000_000L    ) % 1000))) << 30)
-                | (((long) (intToDeclet((int) (nSig / 1_000_000L        ) % 1000))) << 20)
-                | (((long) (intToDeclet((int) (nSig / 1_000L            ) % 1000))) << 10)
-                | (((long) (intToDeclet((int) (nSig                     ) % 1000)))      );
+        // store the least significant 15 decimal digits of the significand in 5 10-bit declets in T
+        int nLeft  = (int) (nSig / 1_000_000_000L);
+        int nRight = (int) (nSig % 1_000_000_000L);
+        nBits |=   (((long) (nExp & 0xFF)                         ) << 50)
+                 | (((long) intToDeclet(nLeft  /     1_000 % 1000)) << 40)
+                 | (((long) intToDeclet(nLeft              % 1000)) << 30)
+                 | (((long) intToDeclet(nRight / 1_000_000 % 1000)) << 20)
+                 | (((long) intToDeclet(nRight /     1_000 % 1000)) << 10)
+                 | (((long) intToDeclet(nRight             % 1000))      );
 
         // remaining significand of 8 or 9 is stored in G4 as 0 or 1, with remaining exponent stored
         // in G2-G3, and G0-G1 both set to 1; otherwise, remaining significand (3 bits) is stored in
         // G2-G4 with remaining exponent stored in G0-G1
-        int nSigRem = (int) (nSig / 1_000_000_000_000_000L);
-        int nGBits = nSigRem >= 8                               // G01234
+        int nSigRem = nLeft / 1_000_000;
+        int nGBits  = nSigRem >= 8                              // G01234
                 ? (0b11000 | (nSigRem & 0b00001) | ((nExp & 0b11000_00000) >>> 7))
                 : (          (nSigRem & 0b00111) | ((nExp & 0b11000_00000) >>> 5));
 

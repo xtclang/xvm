@@ -158,11 +158,6 @@ public class xChar
 
     // ----- helpers -----
 
-    protected int overflow(Frame frame)
-        {
-        return frame.raiseException(xException.outOfBounds(frame, "Char overflow"));
-        }
-
     public static JavaLong makeHandle(long chValue)
         {
         assert chValue >= 0 & chValue <= 0x10FFFF;

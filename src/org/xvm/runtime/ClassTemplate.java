@@ -1722,6 +1722,19 @@ public abstract class ClassTemplate
         }
 
 
+    // ----- numeric support -----------------------------------------------------------------------
+
+    /**
+     * Raise an overflow exception.
+     *
+     * @return {@link Op#R_EXCEPTION}
+     */
+    public int overflow(Frame frame)
+        {
+        return frame.raiseException(xException.outOfBounds(frame, f_struct.getName() + " overflow"));
+        }
+
+
     // ----- toString() support --------------------------------------------------------------------
 
     /**

@@ -2,16 +2,9 @@ package org.xvm.runtime.template.numbers;
 
 
 import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
-
-import org.xvm.asm.constants.SignatureConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
@@ -19,141 +12,36 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xBitArray;
-import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum.EnumHandle;
-import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xString;
 
 
 /**
- * Base class for native BinaryFPNumber (Float*) support.
+ * Base class for native BinaryFPNumber (Float16, 32, 64) support.
  */
 abstract public class BaseBinaryFP
-        extends xConst
+        extends BaseFP
     {
     public BaseBinaryFP(TemplateRegistry templates, ClassStructure structure, int cBits)
         {
-        super(templates, structure, false);
-
-        f_cBits = cBits;
+        super(templates, structure, cBits);
         }
 
     @Override
     public void initDeclared()
         {
-        if (METHOD_APPEND_TO == null)
-            {
-            ConstantPool   pool      = pool();
-            ClassStructure clzString = xString.INSTANCE.f_struct;
-            TypeConstant   typeArg   = pool.ensureClassTypeConstant(
-                    pool.ensureEcstasyClassConstant("Appender"), null,
-                    pool.typeChar());
-
-            METHOD_APPEND_TO = clzString.findMethod("appendTo", 1, typeArg);
-            }
-
-        // @Op methods
-        markNativeMethod("abs"        , VOID, THIS);
-        markNativeMethod("add"        , THIS, THIS);
-        markNativeMethod("sub"        , THIS, THIS);
-        markNativeMethod("mul"        , THIS, THIS);
-        markNativeMethod("div"        , THIS, THIS);
-        markNativeMethod("mod"        , THIS, THIS);
-        markNativeMethod("neg"        , VOID, THIS);
+        super.initDeclared();
 
         // properties
         markNativeProperty("infinity");
         markNativeProperty("NaN");
 
-        // operations
-        markNativeMethod("pow"        , THIS, THIS);
-        markNativeMethod("split"      , VOID, null);
-        markNativeMethod("round"      , null, THIS);
-        markNativeMethod("floor"      , VOID, THIS);
-        markNativeMethod("ceil"       , VOID, THIS);
-        markNativeMethod("exp"        , VOID, THIS);
-        markNativeMethod("scaleByPow" , INT,  THIS);
-        markNativeMethod("log"        , VOID, THIS);
-        markNativeMethod("log2"       , VOID, THIS);
-        markNativeMethod("log10"      , VOID, THIS);
-        markNativeMethod("sqrt"       , VOID, THIS);
-        markNativeMethod("cbrt"       , VOID, THIS);
-        markNativeMethod("sin"        , VOID, THIS);
-        markNativeMethod("tan"        , VOID, THIS);
-        markNativeMethod("asin"       , VOID, THIS);
-        markNativeMethod("acos"       , VOID, THIS);
-        markNativeMethod("atan"       , VOID, THIS);
-        markNativeMethod("atan2"      , THIS, THIS);
-        markNativeMethod("asinh"      , VOID, THIS);
-        markNativeMethod("sinh"       , VOID, THIS);
-        markNativeMethod("cosh"       , VOID, THIS);
-        markNativeMethod("tanh"       , VOID, THIS);
-        markNativeMethod("asinh"      , VOID, THIS);
-        markNativeMethod("acosh"      , VOID, THIS);
-        markNativeMethod("atanh"      , VOID, THIS);
-        markNativeMethod("deg2rad"    , VOID, THIS);
-        markNativeMethod("rad2deg"    , VOID, THIS);
-        markNativeMethod("nextUp"     , VOID, THIS);
-        markNativeMethod("nextDown"   , VOID, THIS);
-
-        // conversions
-        markNativeMethod("toBitArray" , VOID, null);
-        markNativeMethod("toFloat64"  , VOID, FLOAT64);
-        markNativeMethod("toVarInt"   , VOID, VAR_INT);
-        markNativeMethod("toVarUInt"  , VOID, VAR_UINT);
-        markNativeMethod("toVarFloat" , VOID, VAR_FLOAT);
-        markNativeMethod("toVarDec"   , VOID, VAR_DEC);
-        }
-
-    @Override
-    public boolean isGenericHandle()
-        {
-        return false;
-        }
-
-    @Override
-    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
-                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
-        {
-        SignatureConstant sig = constructor.getIdentityConstant().getSignature();
-        if (sig.getParamCount() == 1)
-            {
-            if (sig.getRawParams()[0].getParamType(0).equals(pool().typeByte()))
-                {
-                // construct(Byte[] bytes)
-                ByteArrayHandle hBytes = (ByteArrayHandle) ahVar[0];
-                byte[]          abVal  = hBytes.m_abValue;
-
-                int    cBytes = hBytes.m_cSize;
-                return cBytes == f_cBits / 8
-                    ? frame.assignValue(iReturn,
-                        makeFloat(fromLong(xConstrainedInteger.fromByteArray(abVal, cBytes))))
-                    : frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
-                }
-
-            if (sig.getRawParams()[0].getParamType(0).equals(pool().typeBit()))
-                {
-                // construct(Bit[] bits)
-                BitArrayHandle hBits = (BitArrayHandle) ahVar[0];
-                byte[]         abVal = hBits.m_abValue;
-
-                int cBits = hBits.m_cSize;
-                return cBits == f_cBits
-                    ? frame.assignValue(iReturn,
-                        makeFloat(fromLong(xConstrainedInteger.fromByteArray(abVal, cBits >>> 3))))
-                    : frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid bit count: " + cBits));
-                }
-            }
-        return frame.raiseException(xException.unsupportedOperation(frame));
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override
@@ -205,7 +93,7 @@ abstract public class BaseBinaryFP
                 double d1 = ((FloatHandle) hTarget).getValue();
                 double d2 = ((FloatHandle) hArg).getValue();
 
-                return frame.assignValue(iReturn, makeFloat(Math.pow(d1, d2)));
+                return frame.assignValue(iReturn, makeHandle(Math.pow(d1, d2)));
                 }
 
             case "round":
@@ -214,9 +102,9 @@ abstract public class BaseBinaryFP
                 int    i = hArg == ObjectHandle.DEFAULT
                             ? 0
                             : ((EnumHandle) hArg).getOrdinal();
-                double r = new BigDecimal(d).plus(Rounding.values()[i].getContext()).doubleValue();
+                double r = new BigDecimal(d).setScale(0, Rounding.values()[i].getMode()).doubleValue();
 
-                return frame.assignValue(iReturn, makeFloat(r));
+                return frame.assignValue(iReturn, makeHandle(r));
                 }
 
             case "scaleByPow":
@@ -224,7 +112,7 @@ abstract public class BaseBinaryFP
                 double d = ((FloatHandle) hTarget).getValue();
                 long   l = ((JavaLong) hArg).getValue();
 
-                return frame.assignValue(iReturn, makeFloat(Math.pow(d, l)));
+                return frame.assignValue(iReturn, makeHandle(Math.pow(d, l)));
                 }
 
             case "atan2":
@@ -232,7 +120,7 @@ abstract public class BaseBinaryFP
                 double d1 = ((FloatHandle) hTarget).getValue();
                 double d2 = ((FloatHandle) hArg).getValue();
 
-                return frame.assignValue(iReturn, makeFloat(Math.atan2(d1, d2)));
+                return frame.assignValue(iReturn, makeHandle(Math.atan2(d1, d2)));
                 }
             }
 
@@ -247,7 +135,7 @@ abstract public class BaseBinaryFP
         switch (method.getName())
             {
             case "abs":
-                return frame.assignValue(iReturn, makeFloat(Math.abs(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.abs(d)));
 
             case "toBitArray":
                 {
@@ -257,7 +145,7 @@ abstract public class BaseBinaryFP
                 }
 
             case "toFloat64":
-                return frame.assignValue(iReturn, makeFloat(d));
+                return frame.assignValue(iReturn, makeHandle(d));
 
             case "toVarInt":
             case "toVarUInt":
@@ -267,76 +155,76 @@ abstract public class BaseBinaryFP
 
             case "neg":
                 // same as invokeNeg()
-                return frame.assignValue(iReturn, makeFloat(-d));
+                return frame.assignValue(iReturn, makeHandle(-d));
 
             case "floor":
-                return frame.assignValue(iReturn, makeFloat(Math.floor(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.floor(d)));
 
             case "ceil":
-                return frame.assignValue(iReturn, makeFloat(Math.ceil(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.ceil(d)));
 
             case "exp":
-                return frame.assignValue(iReturn, makeFloat(Math.exp(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.exp(d)));
 
             case "log":
-                return frame.assignValue(iReturn, makeFloat(Math.log(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.log(d)));
 
             case "log2":
-                return frame.assignValue(iReturn, makeFloat(Math.log10(d)*LOG2_10));
+                return frame.assignValue(iReturn, makeHandle(Math.log10(d)*LOG2_10));
 
             case "log10":
-                return frame.assignValue(iReturn, makeFloat(Math.log10(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.log10(d)));
 
             case "sqrt":
-                return frame.assignValue(iReturn, makeFloat(Math.sqrt(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.sqrt(d)));
 
             case "cbrt":
-                return frame.assignValue(iReturn, makeFloat(Math.cbrt(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.cbrt(d)));
 
             case "sin":
-                return frame.assignValue(iReturn, makeFloat(Math.sin(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.sin(d)));
 
             case "tan":
-                return frame.assignValue(iReturn, makeFloat(Math.tan(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.tan(d)));
 
             case "asin":
-                return frame.assignValue(iReturn, makeFloat(Math.asin(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.asin(d)));
 
             case "acos":
-                return frame.assignValue(iReturn, makeFloat(Math.acos(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.acos(d)));
 
             case "atan":
-                return frame.assignValue(iReturn, makeFloat(Math.atan(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.atan(d)));
 
             case "sinh":
-                return frame.assignValue(iReturn, makeFloat(Math.sinh(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.sinh(d)));
 
             case "cosh":
-                return frame.assignValue(iReturn, makeFloat(Math.cosh(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.cosh(d)));
 
             case "tanh":
-                return frame.assignValue(iReturn, makeFloat(Math.tanh(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.tanh(d)));
 
             case "asinh":
-                return frame.assignValue(iReturn, makeFloat(Math.log(d+Math.sqrt(d*d+1.0))));
+                return frame.assignValue(iReturn, makeHandle(Math.log(d+Math.sqrt(d*d+1.0))));
 
             case "acosh":
-                return frame.assignValue(iReturn, makeFloat( Math.log(d+Math.sqrt(d*d-1.0))));
+                return frame.assignValue(iReturn, makeHandle( Math.log(d+Math.sqrt(d*d-1.0))));
 
             case "atanh":
-                return frame.assignValue(iReturn, makeFloat(0.5*Math.log((d+1.0)/(d-1.0))));
+                return frame.assignValue(iReturn, makeHandle(0.5*Math.log((d+1.0)/(d-1.0))));
 
             case "deg2rad":
-                return frame.assignValue(iReturn, makeFloat(Math.toRadians(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.toRadians(d)));
 
             case "rad2deg":
-                return frame.assignValue(iReturn, makeFloat(Math.toDegrees(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.toDegrees(d)));
 
             case "nextUp":
-                return frame.assignValue(iReturn, makeFloat(Math.nextUp(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.nextUp(d)));
 
             case "nextDown":
-                return frame.assignValue(iReturn, makeFloat(Math.nextDown(d)));
+                return frame.assignValue(iReturn, makeHandle(Math.nextDown(d)));
 
             }
 
@@ -370,7 +258,7 @@ abstract public class BaseBinaryFP
         double d1 = ((FloatHandle) hTarget).getValue();
         double d2 = ((FloatHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeFloat(d1+d2));
+        return frame.assignValue(iReturn, makeHandle(d1+d2));
         }
 
     @Override
@@ -379,7 +267,7 @@ abstract public class BaseBinaryFP
         double d1 = ((FloatHandle) hTarget).getValue();
         double d2 = ((FloatHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeFloat(d1-d2));
+        return frame.assignValue(iReturn, makeHandle(d1-d2));
         }
 
     @Override
@@ -388,7 +276,7 @@ abstract public class BaseBinaryFP
         double d1 = ((FloatHandle) hTarget).getValue();
         double d2 = ((FloatHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeFloat(d1*d2));
+        return frame.assignValue(iReturn, makeHandle(d1*d2));
         }
 
     @Override
@@ -402,7 +290,7 @@ abstract public class BaseBinaryFP
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeFloat(d1/d2));
+        return frame.assignValue(iReturn, makeHandle(d1/d2));
         }
 
     @Override
@@ -416,7 +304,7 @@ abstract public class BaseBinaryFP
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeFloat(d1%d2));
+        return frame.assignValue(iReturn, makeHandle(d1%d2));
         }
 
     @Override
@@ -424,7 +312,7 @@ abstract public class BaseBinaryFP
         {
         double d = ((FloatHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, makeFloat(-d));
+        return frame.assignValue(iReturn, makeHandle(-d));
         }
 
 
@@ -473,16 +361,6 @@ abstract public class BaseBinaryFP
      */
     abstract protected String toString(double d);
 
-    /**
-     * Raise an overflow exception.
-     *
-     * @return {@link Op#R_EXCEPTION}
-     */
-    protected int overflow(Frame frame)
-        {
-        return frame.raiseException(xException.outOfBounds(frame, f_struct.getName() + " overflow"));
-        }
-
     @Override
     protected int callEstimateLength(Frame frame, ObjectHandle hTarget, int iReturn)
         {
@@ -496,10 +374,7 @@ abstract public class BaseBinaryFP
         {
         double d = ((FloatHandle) hTarget).getValue();
 
-        ObjectHandle[] ahArg = new ObjectHandle[METHOD_APPEND_TO.getMaxVars()];
-        ahArg[0] = hAppender;
-
-        return frame.call1(METHOD_APPEND_TO, xString.makeHandle(toString(d)), ahArg, iReturn);
+        return xString.callAppendTo(frame, xString.makeHandle(toString(d)), hAppender, iReturn);
         }
 
     @Override
@@ -521,7 +396,13 @@ abstract public class BaseBinaryFP
 
     // ----- handle --------------------------------------------------------------------------------
 
-    public FloatHandle makeFloat(double dValue)
+    @Override
+    protected ObjectHandle makeHandle(byte[] aBytes, int cBytes)
+        {
+        return makeHandle(fromLong(xConstrainedInteger.fromByteArray(aBytes, cBytes)));
+        }
+
+    protected FloatHandle makeHandle(double dValue)
         {
         return new FloatHandle(getCanonicalClass(), dValue);
         }
@@ -545,29 +426,7 @@ abstract public class BaseBinaryFP
         }
 
 
-    // ----- constants and fields ------------------------------------------------------------------
-
-    /**
-     * A copy of the enum in FPNumber.x
-     */
-    enum Rounding
-        {
-        TiesToEven    (RoundingMode.HALF_EVEN),
-        TiesToAway    (RoundingMode.UP       ),
-        TowardPositive(RoundingMode.CEILING  ),
-        TowardZero    (RoundingMode.DOWN     ),
-        TowardNegative(RoundingMode.FLOOR    );
-
-        Rounding(RoundingMode mode)
-            {
-            m_ctx = new MathContext(1, mode);
-            }
-        public MathContext getContext()
-            {
-            return m_ctx;
-            }
-        private MathContext m_ctx;
-        }
+    // ----- constants -----------------------------------------------------------------------------
 
     /**
      * Bit mask for the sign bit of a double value.
@@ -583,22 +442,4 @@ abstract public class BaseBinaryFP
      * Bit mask for the mantissa of a double value.
      */
     public static final long MANTISSA_MASK = 0x000FFFFFFFFFFFFFL;
-
-    /**
-     * The log10(2) value.
-     */
-    public static final double LOG2_10     = 1.0/Math.log10(2);
-
-    public static String[] FLOAT64   = new String[]{"numbers.Float64"};
-    public static String[] VAR_INT   = new String[]{"numbers.VarInt"};
-    public static String[] VAR_UINT  = new String[]{"numbers.VarUInt"};
-    public static String[] VAR_FLOAT = new String[]{"numbers.VarFloat"};
-    public static String[] VAR_DEC   = new String[]{"numbers.VarDec"};
-
-    private static MethodStructure METHOD_APPEND_TO;
-
-    /**
-     * The number of bits for this Float type.
-     */
-    protected final int f_cBits;
     }
