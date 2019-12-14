@@ -321,6 +321,16 @@ public class xByteArray
             }
 
         @Override
+        public void deleteElement(int ix)
+            {
+            if (ix < m_cSize - 1)
+                {
+                System.arraycopy(m_abValue, ix+1, m_abValue, ix, m_cSize-ix-1);
+                }
+            m_abValue[--m_cSize] = 0;
+            }
+
+        @Override
         public void makeImmutable()
             {
             if (isMutable())

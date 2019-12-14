@@ -301,6 +301,16 @@ public class xIntArray
             }
 
         @Override
+        public void deleteElement(int ix)
+            {
+            if (ix < m_cSize - 1)
+                {
+                System.arraycopy(m_alValue, ix+1, m_alValue, ix, m_cSize-ix-1);
+                }
+            m_alValue[--m_cSize] = 0;
+            }
+
+        @Override
         public boolean isNativeEqual()
             {
             return true;

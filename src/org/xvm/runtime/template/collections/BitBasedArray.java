@@ -396,6 +396,12 @@ public abstract class BitBasedArray
             }
 
         @Override
+        public void deleteElement(int ix)
+            {
+            throw new UnsupportedOperationException("TODO GG :)");
+            }
+
+        @Override
         public void makeImmutable()
             {
             if (isMutable())

@@ -555,6 +555,7 @@ public abstract class ObjectHandle
 
         abstract public int getCapacity();
         abstract public ObjectHandle getElement(int ix);
+        abstract public void deleteElement(int ix);
 
         @Override
         public void makeImmutable()

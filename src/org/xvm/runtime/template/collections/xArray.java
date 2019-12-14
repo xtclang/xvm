@@ -136,6 +136,7 @@ public class xArray
         markNativeMethod("elementAt", INT, new String[] {"Var<Element>"});
         markNativeMethod("add", ELEMENT_TYPE, ARRAY);
         markNativeMethod("addAll", new String[] {"Iterable<Element>"}, ARRAY);
+        markNativeMethod("delete", new String[] {"numbers.Int64"}, null);
         markNativeMethod("slice", new String[] {"Interval<numbers.Int64>"}, ARRAY);
         markNativeMethod("ensureImmutable", BOOLEAN, null);
         markNativeMethod("ensurePersistent", BOOLEAN, null);
@@ -437,6 +438,9 @@ public class xArray
             case "addAll":
                 return addElements(frame, hTarget, hArg, iReturn);
 
+            case "delete":
+                return deleteElement(frame, hTarget, hArg, iReturn);
+
             case "elementAt":
                 return makeRef(frame, hTarget, ((JavaLong) hArg).getValue(), false, iReturn);
 
@@ -668,6 +672,41 @@ public class xArray
             hArray.m_cSize += cThat;
             System.arraycopy(hArrayAdd.m_ahValue, 0, ahThis, cThis, cThat);
             }
+        }
+
+    /**
+     * delete(index) implementation
+     */
+    protected int deleteElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
+        {
+        ArrayHandle hArray = (ArrayHandle) hTarget;
+        long        lIndex = ((JavaLong) hValue).getValue();
+        if (lIndex < 0 || lIndex >= hArray.m_cSize)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, hArray.m_cSize));
+            }
+
+        Mutability  mutability = null;
+        switch (hArray.m_mutability)
+            {
+            case FixedSize:
+                return frame.raiseException(xException.readOnly(frame));
+
+            case Constant:
+            case Persistent:
+                mutability = hArray.m_mutability;
+                hArray     = createCopy(hArray, Mutability.Mutable);
+                break;
+            }
+
+        hArray.deleteElement((int) lIndex);
+
+        if (mutability != null)
+            {
+            hArray.m_mutability = mutability;
+            }
+
+        return frame.assignValue(iReturn, hArray);
         }
 
     /**
@@ -1009,6 +1048,16 @@ public class xArray
         public ObjectHandle getElement(int ix)
             {
             return m_ahValue[ix];
+            }
+
+        @Override
+        public void deleteElement(int ix)
+            {
+            if (ix < m_cSize - 1)
+                {
+                System.arraycopy(m_ahValue, ix+1, m_ahValue, ix, m_cSize-ix-1);
+                }
+            m_ahValue[--m_cSize] = null;
             }
 
         @Override

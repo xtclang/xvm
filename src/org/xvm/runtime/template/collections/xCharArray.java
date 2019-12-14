@@ -318,6 +318,16 @@ public class xCharArray
             }
 
         @Override
+        public void deleteElement(int ix)
+            {
+            if (ix < m_cSize - 1)
+                {
+                System.arraycopy(m_achValue, ix+1, m_achValue, ix, m_cSize-ix-1);
+                }
+            m_achValue[--m_cSize] = 0;
+            }
+
+        @Override
         public void makeImmutable()
             {
             if (isMutable())
