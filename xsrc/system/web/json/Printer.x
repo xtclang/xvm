@@ -296,8 +296,11 @@ class Printer
      *
      * @return an estimated number of characters necessary to hold the resulting rendered document
      */
-    Int estimateStringLength(Doc doc, Int indent = 0, Boolean alreadyIndented = False,
-                             Boolean showNulls = False, Boolean pretty = False)
+    Int estimateStringLength(Doc     doc,
+                             Int     indent          = 0,
+                             Boolean alreadyIndented = False,
+                             Boolean showNulls       = False,
+                             Boolean pretty          = False)
         {
         if (doc.is(Enum))
             {
@@ -404,11 +407,13 @@ class Printer
      * @param pretty           pass `True` to render the JSON document in a visually hierarchical
      *                         manner designed for human eyes, or `False` to suppress white-space
      *                         wherever possible (optional; defaults to False)
-     *
-     * @return an estimated number of characters necessary to hold the resulting rendered document
      */
-    void printDoc(Doc doc, Appender<Char> appender, Int indent = 0, Boolean alreadyIndented = False,
-                  Boolean showNulls = False, Boolean pretty = False)
+    void printDoc(Doc            doc,
+                  Appender<Char> appender,
+                  Int            indent          = 0,
+                  Boolean        alreadyIndented = False,
+                  Boolean        showNulls       = False,
+                  Boolean        pretty          = False)
         {
         if (doc.is(Enum))
             {
