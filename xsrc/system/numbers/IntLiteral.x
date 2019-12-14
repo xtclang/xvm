@@ -592,6 +592,6 @@ const IntLiteral(String text)
     @Override
     void appendTo(Appender<Char> appender)
         {
-        appender.add(text);
+        text.appendTo(appender);
         }
     }

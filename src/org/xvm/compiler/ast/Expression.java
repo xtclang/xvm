@@ -251,8 +251,6 @@ public abstract class Expression
             throw notImplemented();
             }
 
-        checkDepth();
-
         TypeConstant[] aTypes = getImplicitTypes(ctx);
         return aTypes.length == 0
                 ? null
@@ -275,8 +273,6 @@ public abstract class Expression
             throw notImplemented();
             }
 
-        checkDepth();
-
         TypeConstant type = getImplicitType(ctx);
         return type == null
                 ? TypeConstant.NO_TYPES
@@ -298,8 +294,6 @@ public abstract class Expression
      */
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        checkDepth();
-
         if (typeRequired == null)
             {
             // all expressions are required to be able to yield a void result
@@ -313,7 +307,6 @@ public abstract class Expression
 
         if (hasMultiValueImpl())
             {
-            checkDepth();
             return testFitMulti(ctx, typeRequired == null ? TypeConstant.NO_TYPES
                                                           : new TypeConstant[] {typeRequired}, errs);
             }
@@ -336,8 +329,6 @@ public abstract class Expression
      */
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
-        checkDepth();
-
         switch (atypeRequired.length)
             {
             case 0:
@@ -461,8 +452,6 @@ public abstract class Expression
             throw notImplemented();
             }
 
-        checkDepth();
-
         TypeConstant[] aTypes = typeRequired == null
                 ? TypeConstant.NO_TYPES
                 : new TypeConstant[] {typeRequired};
@@ -487,8 +476,6 @@ public abstract class Expression
      */
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
-        checkDepth();
-
         int cTypesRequired = atypeRequired == null ? 0 : atypeRequired.length;
         if (cTypesRequired > 1)
             {
@@ -1219,8 +1206,6 @@ public abstract class Expression
      */
     public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
-        checkDepth();
-
         // a lack of side effects means that the expression can be ignored altogether
         if (hasSideEffects())
             {
@@ -1255,7 +1240,6 @@ public abstract class Expression
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        checkDepth();
         assert !isVoid();
 
         if (isConstant())
@@ -1298,8 +1282,6 @@ public abstract class Expression
     public Argument[] generateArguments(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        checkDepth();
-
         if (isConstant())
             {
             return toConstants();
@@ -1352,8 +1334,6 @@ public abstract class Expression
      */
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        checkDepth();
-
         if (hasSingleValueImpl())
             {
             // this will be overridden by classes that can push down the work
@@ -1385,8 +1365,6 @@ public abstract class Expression
      */
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
-        checkDepth();
-
         int     cLVals = aLVal.length;
         int     cRVals = getValueCount();
         boolean fCond  = getCodeContainer().isReturnConditional();
@@ -1463,8 +1441,6 @@ public abstract class Expression
     public void generateConditionalJump(
             Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
-        checkDepth();
-
         assert !isVoid() && getType().isA(pool().typeBoolean());
 
         if (isConstant())
@@ -1541,8 +1517,6 @@ public abstract class Expression
      */
     public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs)
         {
-        checkDepth();
-
         if (!isAssignable(ctx) || isVoid())
             {
             throw new IllegalStateException();
@@ -1571,8 +1545,6 @@ public abstract class Expression
      */
     public Assignable[] generateAssignables(Context ctx, Code code, ErrorListener errs)
         {
-        checkDepth();
-
         if (isVoid())
             {
             generateVoid(ctx, code, errs);
@@ -1831,21 +1803,6 @@ public abstract class Expression
     protected Constant generateFakeConstant(TypeConstant type)
         {
         return Constant.defaultValue(type);
-        }
-
-    /**
-     * Temporary to prevent stack overflow from methods that haven't yet been overridden.
-     *
-     * @throws UnsupportedOperationException if it appears that there is an infinite loop
-     */
-    protected void checkDepth()
-        {
-        int cDepth = m_nFlags & DEPTH_MASK;
-        if (cDepth > 40)
-            {
-            throw notImplemented();
-            }
-        m_nFlags = ((cDepth + 1) & DEPTH_MASK) | (m_nFlags & ~DEPTH_MASK);
         }
 
     /**
@@ -3153,7 +3110,6 @@ public abstract class Expression
 
     private static final int IN_ASSIGNMENT = 1 << 30;
     private static final int ILLEGAL_SHORT = 1 << 29;
-    private static final int DEPTH_MASK    = 0xFF;
 
     /**
      * After validation, contains the TypeFit determined during the validation.

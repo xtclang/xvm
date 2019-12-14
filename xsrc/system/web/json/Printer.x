@@ -113,12 +113,23 @@ class Printer
         }
 
     /**
-     * Add the name/value pair to the current JSON object. A JSON Printer represents any number of
-     * nested JSON objects; the current JSON object is the last one to have been "entered" but not
-     * "exited".
+     * Add a name/value pair to the current JSON object, with the value being an array of values.
      *
-     * @param name   the name for the JSON property
-     * @param value  the array of integer values for the JSON property
+     * @param name    the name for the JSON property
+     * @param values  the sequence of JSON values for the JSON property
+     *
+     * @return this Printer
+     */
+    Printer addArray(String name, Doc... values)
+        {
+        return add(name, values.toArray());
+        }
+
+    /**
+     * Add a name/value pair to the current JSON object, with the value being an array of values.
+     *
+     * @param name    the name for the JSON property
+     * @param values  the sequence of integer values for the JSON property
      *
      * @return this Printer
      */
@@ -128,12 +139,10 @@ class Printer
         }
 
     /**
-     * Add the name/value pair to the current JSON object. A JSON Printer represents any number of
-     * nested JSON objects; the current JSON object is the last one to have been "entered" but not
-     * "exited".
+     * Add a name/value pair to the current JSON object, with the value being an array of values.
      *
-     * @param name   the name for the JSON property
-     * @param value  the array of floating-point number values for the JSON property
+     * @param name    the name for the JSON property
+     * @param values  the sequence of floating-point number values for the JSON property
      *
      * @return this Printer
      */
@@ -143,8 +152,7 @@ class Printer
         }
 
     /**
-     * Add a name/value pair to the current JSON object, with the value being an array composed of
-     * values provided by the specified supplier function.
+     * Add a name/value pair to the current JSON object, with the value being an array of values.
      *
      * @param name    the name for the JSON property
      * @param size    the number of values to place in the array
@@ -244,6 +252,13 @@ class Printer
 
     // ----- rendering -----------------------------------------------------------------------------
 
+    /**
+     * @param showNulls  pass `True` to always show null JSON values as "null", or `False` to omit
+     *                   them when possible (optional; defaults to False)
+     * @param pretty     pass `True` to render the JSON document in a visually hierarchical manner
+     *                   designed for human eyes, or `False` to suppress white-space wherever
+     *                   possible (optional; defaults to False)
+     */
     @Override
     String toString(Boolean showNulls = False, Boolean pretty = False)
         {
@@ -252,12 +267,35 @@ class Printer
         return buf.toString();
         }
 
+    /**
+     * @param showNulls  pass `True` to always show null JSON values as "null", or `False` to omit
+     *                   them when possible (optional; defaults to False)
+     * @param pretty     pass `True` to render the JSON document in a visually hierarchical manner
+     *                   designed for human eyes, or `False` to suppress white-space wherever
+     *                   possible (optional; defaults to False)
+     */
     @Override
     Int estimateStringLength(Boolean showNulls = False, Boolean pretty = False)
         {
         return estimateStringLength(doc, showNulls=showNulls, pretty=pretty);
         }
 
+    /**
+     * Calculate the String length of the specified JSON document.
+     *
+     * @param doc              the document to render
+     * @param indent           a level of indent, expressed in a number of spaces
+     * @param alreadyIndented  `True` indicates that a value that requires a new line and
+     *                         indentation does not have to add the new line and indentation for the
+     *                         first line of its output
+     * @param showNulls        pass `True` to always show null JSON values as "null", or `False` to
+     *                         omit them when possible (optional; defaults to False)
+     * @param pretty           pass `True` to render the JSON document in a visually hierarchical
+     *                         manner designed for human eyes, or `False` to suppress white-space
+     *                         wherever possible (optional; defaults to False)
+     *
+     * @return an estimated number of characters necessary to hold the resulting rendered document
+     */
     Int estimateStringLength(Doc doc, Int indent = 0, Boolean alreadyIndented = False,
                              Boolean showNulls = False, Boolean pretty = False)
         {
@@ -287,15 +325,24 @@ class Printer
             Doc[] array = doc.as(Doc[]);
             if (pretty && containsObject(array))
                 {
-                // TODO
+                Int count = array.size;
+                Int total = (count + (alreadyIndented ? 1 : 2)) * (1 + indent)  // newlines+indents
+                            + count + 1;                                        // commas+brackets
+                for (Doc value : array)
+                    {
+                    total += estimateStringLength(value, indent=indent, alreadyIndented=True,
+                                                  pretty=True, showNulls=showNulls);
+                    }
+                return total;
                 }
 
             // "[" + value + "," + value + "," ... + "]"
-            Int total = array.size + 1 * (pretty ? 2 : 1);
+            // (pretty uses ", " instead of ",")
+            Int total = (array.size - 1) * (pretty ? 2 : 1) + 2;
             for (Doc value : array)
                 {
                 // nulls must be shown in the array, because the array structure is not sparse
-                total += estimateStringLength(value, pretty=pretty);
+                total += estimateStringLength(value, indent=indent, pretty=pretty);
                 }
             return total;
             }
@@ -304,14 +351,14 @@ class Printer
             Map<String, Doc> map = doc.as(Map<String, Doc>);
             if (map.empty || !showNulls && containsOnlyNulls(map))
                 {
-                return 2;
+                return 2; // "{}"
                 }
 
             Int count  = map.size;
-            Int margin = pretty ? indent * 2 + 1 : 0;   // newline + indent
-            Int seps   = pretty ? 3 : 2;                // every entry has ':' and ',' (or '}')
-            Int total  = 1 + count * (margin + seps)    // '{' + entries
-                       + 2 * margin;                    // newline and indent for curlies
+            Int margin = pretty ? 1 + indent : 0;               // newline + indent
+            Int seps   = pretty ? 3 : 2;                        // every entry has ':' and ',' / '}'
+            Int total  = 1 + count * (margin + seps)            // '{' + entries
+                       + (alreadyIndented ? 1 : 2) * margin;    // newline and indent for curlies
             Int deeper = indent + 2;
             for ((String name, Doc value) : map)
                 {
@@ -322,20 +369,44 @@ class Printer
                     }
                 else
                     {
-                    total += estimateStringLength(name , deeper, showNulls, pretty)
-                           + estimateStringLength(value, deeper, showNulls, pretty);
+                    total += estimateStringLength(name , indent=deeper, showNulls=showNulls, pretty=pretty)
+                           + estimateStringLength(value, indent=deeper, showNulls=showNulls, pretty=pretty);
                     }
                 }
             return total;
             }
         }
 
+    /**
+     * @param showNulls  pass `True` to always show null JSON values as "null", or `False` to omit
+     *                   them when possible (optional; defaults to False)
+     * @param pretty     pass `True` to render the JSON document in a visually hierarchical manner
+     *                   designed for human eyes, or `False` to suppress white-space wherever
+     *                   possible (optional; defaults to False)
+     */
     @Override
     void appendTo(Appender<Char> appender, Boolean showNulls = False, Boolean pretty = False)
         {
         printDoc(doc, appender, alreadyIndented=True, showNulls=showNulls, pretty=pretty);
         }
 
+    /**
+     * Render the specified JSON document into an `Appender`.
+     *
+     * @param doc              the document to render
+     * @param appender         the appender to render the character data into
+     * @param indent           a level of indent, expressed in a number of spaces
+     * @param alreadyIndented  `True` indicates that a value that requires a new line and
+     *                         indentation does not have to add the new line and indentation for the
+     *                         first line of its output
+     * @param showNulls        pass `True` to always show null JSON values as "null", or `False` to
+     *                         omit them when possible (optional; defaults to False)
+     * @param pretty           pass `True` to render the JSON document in a visually hierarchical
+     *                         manner designed for human eyes, or `False` to suppress white-space
+     *                         wherever possible (optional; defaults to False)
+     *
+     * @return an estimated number of characters necessary to hold the resulting rendered document
+     */
     void printDoc(Doc doc, Appender<Char> appender, Int indent = 0, Boolean alreadyIndented = False,
                   Boolean showNulls = False, Boolean pretty = False)
         {
@@ -436,7 +507,7 @@ class Printer
             {
             if (!Loop.first)
                 {
-                ", ".appendTo(appender);
+                appender.add(',');
                 }
 
             indentLine(appender, indent);
@@ -516,7 +587,12 @@ class Printer
         }
 
     /**
-     * TODO
+     * Determine if the JSON array contains any non-empty JSON objects.
+     *
+     * @param docs  a JSON array
+     *
+     * @return True iff there is any non-empty JSON object contained (at any nested depth) with the
+     *         JSON array
      */
     static Boolean containsObject(Doc[] docs)
         {
@@ -537,7 +613,12 @@ class Printer
         }
 
     /**
-     * TODO
+     * Determine if the specified JSON object contains only null values.
+     *
+     * @param map  a JSON object (name/value pairs)
+     *
+     * @return True iff the JSON object has no name/value pairs, or if all of the names are
+     *         associated with null values
      */
     static Boolean containsOnlyNulls(Map<String, Doc> map)
         {
@@ -552,13 +633,18 @@ class Printer
         }
 
     /**
-     * TODO
+     * Determine if the specified character should be escaped, and if so, escape it.
+     *
+     * @param ch  the character
+     *
+     * @return True iff the character needs to be escaped in a JSON string
+     * @return (conditional) the String representing the escaped character
      */
     static conditional String escaped(Char ch)
         {
-        if (ch <= '\\')             // 0x5C=92='\'
+        if (ch <= '\\')                             // '\'=92=0x5C
             {
-            if (ch <= '\"')         // 0x22=34='"'
+            if (ch < ' ' || ch == '"')              // ' '=32=0x20, '"'=34=0x22
                 {
                 return True, ESCAPES[ch.toInt()];
                 }
@@ -570,6 +656,10 @@ class Printer
         return False;
         }
 
+    /**
+     * The pre-computed JSON escape sequences for the first 34 Unicode code-points. (Note that
+     * codepoint 33 is not escaped.)
+     */
     static String[] ESCAPES =
         [               // hex dec
         "\\" + "u0000", //  00   0
@@ -604,7 +694,7 @@ class Printer
         "\\" + "u001D", //  1D  29
         "\\" + "u001E", //  1E  30
         "\\" + "u001F", //  1F  31
-        "\\" + "u0020", //  20  32
+        " ",            //  20  32
         "!",            //  21  33
         "\\\""          //  22  34
         ];

@@ -555,8 +555,6 @@ public class NameExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        checkDepth();
-
         if (typeRequired == null)
             {
             return TypeFit.Fit;

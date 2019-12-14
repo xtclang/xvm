@@ -23,6 +23,7 @@ module TestIO
         testJSONLex();
         testJSONParse();
         testJSONPrint();
+        testJSONBuild();
         }
 
     void testInputStream()
@@ -148,5 +149,29 @@ module TestIO
         Printer printer = new Printer(doc);
         console.println($"ugly doc={printer.toString(pretty=False)}");
         console.println($"pretty doc=\n{printer.toString(pretty=True)}");
+        }
+
+    void testJSONBuild()
+        {
+        console.println("\n*** testJSONBuild()");
+
+        Printer p = new Printer()
+            .add("$schema", "http://json-schema.org/schema#")
+            .add("title", "Product")
+            .add("type", "object")
+            .addArray("required", ["id", "name", "price"])
+            .addArray("numbers", [1,2,3])
+            .enter("properties")
+                .enter("id")
+                    .add("type", "number")
+                    .add("description", "Product identifier")
+                .exit()
+                .enter("name")
+                    .add("type", "string")
+                    .add("description", "Name of the product")
+                .exit()
+            .exit();
+
+        console.println($"result={p.toString()}\npretty:\n{p.toString(pretty=True)}");
         }
     }

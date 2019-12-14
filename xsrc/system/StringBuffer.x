@@ -92,6 +92,21 @@ class StringBuffer
         return chars.size;
         }
 
+    Int capacity
+        {
+        @Override
+        Int get()
+            {
+            return chars.capacity;
+            }
+
+        @Override
+        void set(Int n)
+            {
+            chars.capacity = Int.maxOf(n, chars.size);
+            }
+        }
+
     @Override
     @Op("[]")
     @Op Char getElement(Int index)

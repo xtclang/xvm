@@ -87,4 +87,19 @@ const FPLiteral(String text)
         {
         return text;
         }
+
+
+    // ----- Stringable implementation -------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return text.size;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        text.appendTo(appender);
+        }
     }
