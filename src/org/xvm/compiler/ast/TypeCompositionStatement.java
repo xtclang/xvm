@@ -1876,7 +1876,7 @@ public class TypeCompositionStatement
                     continue;
                     }
 
-                if (!infoProp.isVar())
+                if (!infoProp.isVar() && !infoProp.isAbstract())
                     {
                     // the setter for the super's property is not reachable, mark the synthetic one
                     // as "@Override @RO"
@@ -2133,7 +2133,10 @@ public class TypeCompositionStatement
                 org.xvm.asm.Parameter param  = params.get(i);
                 String                sParam = param.getName();
 
-                if (infoSuper == null || infoSuper.findProperty(sParam) == null)
+                PropertyInfo propSuper = infoSuper == null
+                        ? null
+                        : infoSuper.findProperty(sParam);
+                if (propSuper == null || propSuper.isAbstract())
                     {
                     // there must be a property by the same name
                     Component child = component.getChild(sParam);
