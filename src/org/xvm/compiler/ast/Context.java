@@ -379,11 +379,11 @@ public class Context
                     }
                 }
             else
-                // TODO if fCompletes || this is lambda???
-                // REVIEW CP this prevents "return" statement in lambda to promote the assignments
-                // if (fCompleting)
                 {
-                Assignment asnOuter = promote(sName, asnInner, ctxOuter.getVarAssignment(sName));
+                Assignment asnOuter = ctxOuter.getVarAssignment(sName);
+                asnOuter = fCompletes
+                        ? promote(sName, asnInner, asnOuter)
+                        : asnInner.promoteFromNonCompleting(asnOuter);
                 if (fDemuxing)
                     {
                     asnOuter = asnOuter.demux();
@@ -1785,8 +1785,34 @@ public class Context
                 {
                 ensureGenericTypeMap(Branch.of(fWhenTrue)).putAll(mapBranch);
                 }
-            }
 
+            // promote the other branch's assignments
+            Map<String, Assignment> mapPromote = fWhenTrue
+                    ? m_ctxWhenFalse == null
+                        ? Collections.EMPTY_MAP
+                        : m_ctxWhenFalse.getDefiniteAssignments()
+                    : m_ctxWhenTrue == null
+                        ? Collections.EMPTY_MAP
+                        : m_ctxWhenTrue .getDefiniteAssignments();
+            if (!mapPromote.isEmpty())
+                {
+                Map<String, Assignment> mapAssign = ensureDefiniteAssignments();
+                for (Map.Entry<String, Assignment> entry : mapPromote.entrySet())
+                    {
+                    Assignment assignment = mapAssign.get(entry.getKey());
+                    if (assignment == null)
+                        {
+                        assignment = entry.getValue();
+                        }
+                    else
+                        {
+                        assignment = fWhenTrue ? assignment.whenFalse() : assignment.whenTrue();
+                        assignment = assignment.join(entry.getValue());
+                        }
+                    mapAssign.put(entry.getKey(), assignment);
+                    }
+                }
+            }
 
         private Context m_ctxWhenTrue;
         private Context m_ctxWhenFalse;

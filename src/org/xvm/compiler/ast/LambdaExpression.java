@@ -1228,6 +1228,12 @@ public class LambdaExpression
             }
 
         @Override
+        protected void promoteNonCompleting(Context ctxInner)
+            {
+            // Lambda's non-completion has no effect on the parent's context
+            }
+
+        @Override
         public void requireThis(long lPos, ErrorListener errs)
             {
             if (getOuterContext().isFunction())
