@@ -14,8 +14,6 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.op.Label;
 
-import org.xvm.compiler.Compiler.Stage;
-
 
 /**
  * Base class for all Ecstasy statements.
@@ -164,7 +162,7 @@ public abstract class Statement
      * @return the Context being used for validation of this statement, if this statement is
      *         currently being validated
      *
-     * @throws IllegalStateException  if thist statement is not currently being validated
+     * @throws IllegalStateException  if this statement is not currently being validated
      */
     protected Context ensureValidationContext()
         {
