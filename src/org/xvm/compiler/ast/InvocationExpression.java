@@ -1653,6 +1653,34 @@ public class InvocationExpression
 
             if (arg instanceof Register)
                 {
+                Register reg = (Register) arg;
+                if (reg.isPredefined())
+                    {
+                    // report specific error messages for incorrect "this" or "super" use
+                    switch (reg.getIndex())
+                        {
+                        case Op.A_TARGET:
+                        case Op.A_PUBLIC:
+                        case Op.A_PROTECTED:
+                        case Op.A_PRIVATE:
+                        case Op.A_STRUCT:
+                            if (ctx.isFunction())
+                                {
+                                exprName.log(errs, Severity.ERROR, Compiler.NO_THIS);
+                                return null;
+                                }
+                            break;
+
+                        case Op.A_SUPER:
+                            if (!ctx.isMethod())
+                                {
+                                exprName.log(errs, Severity.ERROR, Compiler.NO_SUPER);
+                                return null;
+                                }
+                            break;
+                        }
+                    }
+
                 if (testFunction(ctx, arg.getType(), atypeReturn, errs) == null)
                     {
                     return null;
