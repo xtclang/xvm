@@ -380,18 +380,26 @@ public class SignatureConstant
 
         // Note, that rule 1.2.2 does not apply in our case (duck typing)
 
-        // number of parameters and return values must match
-        // REVIEW consider relaxing this later, i.e. allow sub-classes to add return values
-        if (!this.getName().equals(that.getName())
-                || this.getParamCount()  != that.getParamCount()
-                || this.getReturnCount() != that.getReturnCount())
+        if (!this.getName().equals(that.getName()))
+            {
+            return false;
+            }
+
+        int cR1 = that.getReturnCount();
+        int cR2 = this.getReturnCount();
+        int cP1 = that.getParamCount();
+        int cP2 = this.getParamCount();
+
+        // the "sub" method can add return values, but never reduce them; additional parameters
+        // should be handled by the caller (see TypeConstant.collectPotentialSuperMethods)
+        if (cP2 != cP1 || cR2 < cR1)
             {
             return false;
             }
 
         TypeConstant[] aR1 = that.getRawReturns();
         TypeConstant[] aR2 = this.getRawReturns();
-        for (int i = 0, c = aR1.length; i < c; i++)
+        for (int i = 0, c = Math.min(cR1, cR2); i < c; i++)
             {
             if (!aR2[i].isCovariantReturn(aR1[i], typeCtx))
                 {
@@ -401,7 +409,7 @@ public class SignatureConstant
 
         TypeConstant[] aP1 = that.getRawParams();
         TypeConstant[] aP2 = this.getRawParams();
-        for (int i = 0, c = aP1.length; i < c; i++)
+        for (int i = 0; i < cP1; i++)
             {
             if (!aP2[i].isContravariantParameter(aP1[i], typeCtx))
                 {

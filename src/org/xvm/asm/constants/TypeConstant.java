@@ -3322,6 +3322,7 @@ public abstract class TypeConstant
 
         {
         List<Object> listMatch = new ArrayList<>();
+        boolean      fExact    = true;
         for (Entry<Object, MethodInfo> entry : mapSupers.entrySet())
             {
             Object nidCandidate = entry.getKey();
@@ -3332,11 +3333,16 @@ public abstract class TypeConstant
                     {
                     if (sigSub.isSubstitutableFor(sigCandidate, this))
                         {
+                        if (!fExact)
+                            {
+                            // we found an exact match; get rid of non-exact ones
+                            listMatch.clear();
+                            }
                         listMatch.add(nidCandidate);
                         }
-                    else
+                    else if (listMatch.isEmpty())
                         {
-                        // allow default parameters
+                        // allow default parameters (if there is no "exact" match
                         int cDefault = method.getDefaultParamCount();
                         if (cDefault > 0)
                             {
@@ -3348,6 +3354,7 @@ public abstract class TypeConstant
                                 if (sigSubReq.isSubstitutableFor(sigCandidate, this))
                                     {
                                     listMatch.add(nidCandidate);
+                                    fExact = false;
                                     }
                                 }
                             }
