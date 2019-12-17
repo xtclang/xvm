@@ -1,21 +1,26 @@
 import collections.ListMap;
 
 /**
- * A "printer" for a JSON object. This implementation supports the transformation of Ecstasy data
- * structures into JSON objects, and then into character strings that can be used to transmit,
- * store, or view ("pretty print") the JSON-formatted data.
+ * A "printer" for a JSON object.
+ *
+ * The base `Printer` implementation supports construction from a JSON `Doc`, which can then be
+ * converted into character strings that can be used to transmit, store, or view ("pretty print")
+ * the JSON-formatted data. The Printer API methods, such as [Printer add(String name, Doc value)],
+ * are not operational
+ *
+ * The [BufferedPrinter] implementation allows a JSON `Doc` to be built using the Printer API
+ * methods, such as [Printer add(String name, Doc value)]. The resulting JSON `Doc` can be obtained
+ * from the `BufferedPrinter`, and rendered via the [toString()] method or the [Stringable]
+ * interface.
+ *
+ * The [DirectPrinter] implementation uses the Printer API to emit JSON directly to an
+ * `Appender<Char>`. Unlike the other `Printer` implementations, the `DirectPrinter` neither begins
+ * with, nor results in a JSON `Doc`.
  */
 class Printer
         implements Stringable
     {
     // ----- constructors --------------------------------------------------------------------------
-
-    /**
-     * Construct an empty JSON printer.
-     */
-    construct()
-        {
-        }
 
     /**
      * Construct a JSON printer around a JSON document object.
@@ -25,7 +30,6 @@ class Printer
     construct(Doc doc)
         {
         this.doc = doc;
-        stack.add(doc);
         }
 
 
@@ -34,219 +38,7 @@ class Printer
     /**
      * The JSON document, in its current form.
      */
-    public/protected Doc doc = Null;
-
-    /**
-     * The "path" from the outermost JSON doc "down to" the JSON doc that is currently being added
-     * to.
-     */
-    private Doc[] stack = new Doc[];
-
-
-    // ----- builder -------------------------------------------------------------------------------
-
-    /**
-     * Add the name/value pair to the current JSON object. A JSON Printer represents any number of
-     * nested JSON objects; the current JSON object is the last one to have been "entered" but not
-     * "exited".
-     *
-     * @param name   the name for the JSON property
-     * @param value  the JSON Doc value for the JSON property
-     *
-     * @return this Printer
-     */
-    Printer add(String name, Doc value)
-        {
-        Map<String, Doc> cur;
-        if (doc == Null)
-            {
-            cur = new ListMap();
-            doc = cur;
-            stack.add(doc);
-            }
-        else
-            {
-            val top = stack[stack.size-1];
-            if (top.is(Map<String, Doc>))
-                {
-                cur = top;
-                }
-            else
-                {
-                throw new IllegalState("invalid context from which to add");
-                }
-            }
-
-        cur.put(name, value);
-        return this;
-        }
-
-    /**
-     * Add the name/value pair to the current JSON object. A JSON Printer represents any number of
-     * nested JSON objects; the current JSON object is the last one to have been "entered" but not
-     * "exited".
-     *
-     * @param name   the name for the JSON property
-     * @param value  the integer value for the JSON property
-     *
-     * @return this Printer
-     */
-    Printer add(String name, IntNumber value)
-        {
-        return add(name, value.toIntLiteral());
-        }
-
-    /**
-     * Add the name/value pair to the current JSON object. A JSON Printer represents any number of
-     * nested JSON objects; the current JSON object is the last one to have been "entered" but not
-     * "exited".
-     *
-     * @param name   the name for the JSON property
-     * @param value  the floating-point number value for the JSON property
-     *
-     * @return this Printer
-     */
-    Printer add(String name, FPNumber value)
-        {
-        return add(name, value.toFPLiteral());
-        }
-
-    /**
-     * Add a name/value pair to the current JSON object, with the value being an array of values.
-     *
-     * @param name    the name for the JSON property
-     * @param values  the sequence of JSON values for the JSON property
-     *
-     * @return this Printer
-     */
-    Printer addArray(String name, Doc... values)
-        {
-        return add(name, values.toArray());
-        }
-
-    /**
-     * Add a name/value pair to the current JSON object, with the value being an array of values.
-     *
-     * @param name    the name for the JSON property
-     * @param values  the sequence of integer values for the JSON property
-     *
-     * @return this Printer
-     */
-    Printer addArray(String name, IntNumber... values)
-        {
-        return add(name, new Array<IntLiteral>(values.size, (i) -> values[i].toIntLiteral()));
-        }
-
-    /**
-     * Add a name/value pair to the current JSON object, with the value being an array of values.
-     *
-     * @param name    the name for the JSON property
-     * @param values  the sequence of floating-point number values for the JSON property
-     *
-     * @return this Printer
-     */
-    Printer addArray(String name, FPNumber... values)
-        {
-        return add(name, new Array<FPLiteral>(values.size, (i) -> values[i].toFPLiteral()));
-        }
-
-    /**
-     * Add a name/value pair to the current JSON object, with the value being an array of values.
-     *
-     * @param name    the name for the JSON property
-     * @param size    the number of values to place in the array
-     * @param supply  the function that will provide the value for each element of the array
-     *
-     * @return this Printer
-     */
-    Printer addArray(String name, Int size, function Doc|IntNumber|FPNumber (Int) supply)
-        {
-        function Doc (Int) transform = supply.is(function Doc (Int))
-                ? supply
-                : (i) ->
-                        {
-                        val v = supply(i);
-                        return switch()
-                            {
-                            case v.is(IntNumber): v.as(IntNumber).toIntLiteral();     // TODO GG as() redundant?
-                            case v.is(FPNumber) : v.as(FPNumber) .toFPLiteral();
-                            default             : v.as(Doc);
-                            };
-                        };
-
-        return add(name, new Array<Doc>(size, transform));
-        }
-
-    /**
-     * Add a name/value pair to the current JSON object, with the value being an array composed of
-     * JSON objects printed into this Printer via the specified function.
-     *
-     * @param name   the name for the JSON property
-     * @param size   the number of values to place in the array
-     * @param print  the function that will print JSON objects into each element of the array
-     *
-     * @return this Printer
-     */
-    Printer addArray(String name, Int size, function void (Int, Printer) print)
-        {
-        Doc[] array = new Array<Doc>(size);
-        add(name, array);
-
-        // use the array as a temporary "floor" in the stack to disable unbalanced calls to exit()
-        // from within the lambda
-        stack.add(array);
-        Int popTo = stack.size;
-
-        for (Int i = 0; i < size; ++i)
-            {
-            ListMap<String, Doc> value = new ListMap();
-            array.add(value);
-            if (stack.size > popTo)
-                {
-                stack.delete(stack.size-1 .. popTo);
-                }
-            stack.add(value);
-            print(i, this);
-            }
-
-        if (stack.size >= popTo)
-            {
-            stack.delete(stack.size-1 .. popTo-1);
-            }
-
-        return this;
-        }
-
-    /**
-     * Create a JSON object under the current document, and then "enter" that document so that it
-     * becomes the new current document.
-     *
-     * @param name  the name for the JSON property that will contain the new JSON object
-     *
-     * @return this Printer
-     */
-    Printer enter(String name)
-        {
-        ListMap<String, Doc> value = new ListMap();
-        add(name, value);
-        stack.add(value);
-        return this;
-        }
-
-    /**
-     * Undo a corresponding previous call to [enter()].
-     *
-     * @return this Printer
-     */
-    Printer exit()
-        {
-        Int index = stack.size-1;
-        if (index > 0 && !stack[index].is(Array))
-            {
-            stack.delete(index);
-            }
-        return this;
-        }
+    public/protected Doc doc;
 
 
     // ----- rendering -----------------------------------------------------------------------------
@@ -276,7 +68,7 @@ class Printer
     @Override
     Int estimateStringLength(Boolean showNulls = False, Boolean pretty = False)
         {
-        return estimateStringLength(doc, showNulls=showNulls, pretty=pretty);
+        return estimateDocPrintLength(doc, showNulls=showNulls, pretty=pretty);
         }
 
     /**
@@ -295,7 +87,7 @@ class Printer
      *
      * @return an estimated number of characters necessary to hold the resulting rendered document
      */
-    Int estimateStringLength(Doc     doc,
+    Int estimateDocPrintLength(Doc     doc,
                              Int     indent          = 0,
                              Boolean alreadyIndented = False,
                              Boolean showNulls       = False,
@@ -308,7 +100,7 @@ class Printer
             }
         else if (doc.is(String))
             {
-            Int total = 2 + doc.estimateStringLength();
+            Int total = 2 + doc.size;
             for (Char ch : doc)
                 {
                 if (String s := escaped(ch))
@@ -332,7 +124,7 @@ class Printer
                             + count + 1;                                        // commas+brackets
                 for (Doc value : array)
                     {
-                    total += estimateStringLength(value, indent=indent, alreadyIndented=True,
+                    total += estimateDocPrintLength(value, indent=indent, alreadyIndented=True,
                                                   pretty=True, showNulls=showNulls);
                     }
                 return total;
@@ -344,7 +136,7 @@ class Printer
             for (Doc value : array)
                 {
                 // nulls must be shown in the array, because the array structure is not sparse
-                total += estimateStringLength(value, indent=indent, pretty=pretty);
+                total += estimateDocPrintLength(value, indent=indent, pretty=pretty);
                 }
             return total;
             }
@@ -371,8 +163,8 @@ class Printer
                     }
                 else
                     {
-                    total += estimateStringLength(name , indent=deeper, showNulls=showNulls, pretty=pretty)
-                           + estimateStringLength(value, indent=deeper, showNulls=showNulls, pretty=pretty);
+                    total += estimateDocPrintLength(name , indent=deeper, showNulls=showNulls, pretty=pretty)
+                           + estimateDocPrintLength(value, indent=deeper, showNulls=showNulls, pretty=pretty);
                     }
                 }
             return total;

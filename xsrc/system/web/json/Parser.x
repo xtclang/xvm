@@ -33,7 +33,7 @@ class Parser
      * @param lexer        a JSON Lexer
      * @param collateDups  pass True to allow duplicate names in JSON objects
      */
-    construct(Lexer lexer, Boolean collateDups = False)
+    construct(Iterator<Token> lexer, Boolean collateDups = False)
         {
         this.lexer       = lexer;
         this.token      := lexer.next();
@@ -46,7 +46,7 @@ class Parser
     /**
      * The underlying [Lexer].
      */
-    protected/private Lexer lexer;
+    protected/private Iterator<Token> lexer;
 
     /**
      * The next [Token] to process.

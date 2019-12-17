@@ -7,11 +7,14 @@ module TestIO
     import Ecstasy.io.JavaDataInput;
     import Ecstasy.io.Reader;
     import Ecstasy.io.UTF8Reader;
+    import Ecstasy.web.json.Builder;
     import Ecstasy.web.json.Doc;
     import Ecstasy.web.json.Lexer;
     import Ecstasy.web.json.Lexer.Token;
     import Ecstasy.web.json.Parser;
     import Ecstasy.web.json.Printer;
+    import Ecstasy.web.json.BufferedPrinter;
+    import Ecstasy.web.json.DirectPrinter;
 
     @Inject Console console;
 
@@ -155,23 +158,45 @@ module TestIO
         {
         console.println("\n*** testJSONBuild()");
 
-        Printer p = new Printer()
-            .add("$schema", "http://json-schema.org/schema#")
-            .add("title", "Product")
-            .add("type", "object")
-            .addArray("required", ["id", "name", "price"])
-            .addArray("numbers", [1,2,3])
-            .enter("properties")
-                .enter("id")
-                    .add("type", "number")
-                    .add("description", "Product identifier")
-                .exit()
-                .enter("name")
-                    .add("type", "string")
-                    .add("description", "Name of the product")
-                .exit()
-            .exit();
+        console.println("BufferedPrinter:");
+        BufferedPrinter p = new BufferedPrinter();
+        build(p);
+        console.println($"doc={p.doc}");
+        console.println($"print ugly={p.toString()}");
+        console.println($"print pretty=\n{p.toString(pretty=True)}");
 
-        console.println($"result={p.toString()}\npretty:\n{p.toString(pretty=True)}");
+        console.println("DirectPrinter:");
+        Appender<Char> toConsole = new Appender<Char>()
+            {
+            @Override // TODO GG if this @Override is missing, the error message sucks
+            Appender<Char> add(Char ch)
+                {
+                console.print(ch);
+                return this;
+                }
+            };
+        DirectPrinter p2 = new DirectPrinter(toConsole);
+        build(p2);
+        console.println("\n(done)");
+        }
+
+    private void build(Builder builder)
+        {
+        builder.add("$schema", "http://json-schema.org/schema#")
+                .add("title", "Product")
+                .add("type", "object")
+                .addArray("required", ["id", "name", "price"])
+                .addArray("numbers", [1,2,3])
+                .enter("properties")
+                    .enter("id")
+                        .add("type", "number")
+                        .add("description", "Product identifier")
+                    .exit()
+                    .enter("name")
+                        .add("type", "string")
+                        .add("description", "Name of the product")
+                    .exit()
+                .exit()
+                .close();
         }
     }
