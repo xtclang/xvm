@@ -319,6 +319,7 @@ public class ForStatement
         // expression evaluates to "false"
         ctx = ctx.enterIf();
 
+        boolean fAlwaysTrue = true;
         for (int i = 0, c = getConditionCount(); i < c; ++i)
             {
             AstNode cond = getCondition(i);
@@ -347,16 +348,34 @@ public class ForStatement
                     {
                     fValid = false;
                     }
-                else  if (exprNew != exprOld)
+                else if (exprNew != exprOld)
                     {
                     cond = exprNew;
                     conds.set(i, cond);
                     }
                 }
+
+            if (cond instanceof Expression && ((Expression) cond).isConstant())
+                {
+                if (((Expression) cond).isConstantFalse())
+                    {
+                    fAlwaysTrue = false;
+                    }
+                else
+                    {
+                    assert ((Expression) cond).isConstantTrue();
+                    }
+                }
+            else
+                {
+                fAlwaysTrue  = false;
+                }
             }
 
         // the statement block is equivalent to "if ... then"
-        ctx = ctx.enterFork(true);
+        ctx = fAlwaysTrue
+                ? ctx.enterInfiniteLoop()
+                : ctx.enterFork(true);
 
         StatementBlock blockOld = block;
         StatementBlock blockNew = (StatementBlock) blockOld.validate(ctx, errs);
@@ -472,7 +491,7 @@ public class ForStatement
         // any condition of false results in false (as long as all conditions up to that point are
         // constant); all condition of true results in true (as long as all conditions are constant)
         boolean fAlwaysTrue  = true;
-        boolean fAlwaysFalse = true;
+        boolean fAlwaysFalse = !conds.isEmpty(); // no conditions means "true"
         for (AstNode cond : conds)
             {
             if (cond instanceof Expression && ((Expression) cond).isConstant())

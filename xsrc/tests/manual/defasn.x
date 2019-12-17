@@ -7,6 +7,8 @@ module TestDefAsn.xqiz.it
         testDefAssignment();
         testShort();
         testNameHiding();
+        testWhileLoop(0);
+        testForLoop(0);
         }
 
     Boolean gimmeTrue()
@@ -75,5 +77,43 @@ module TestDefAsn.xqiz.it
             {
             assert name.size == count;
             }
+        }
+
+    void testWhileLoop(Int? in)
+        {
+        Int i;
+        while (true)
+            {
+            if (in.is(Int))
+                {
+                i = in;
+                break;
+                }
+            else
+                {
+                throw new IllegalState();
+                }
+            }
+
+        assert i.is(Int);
+        }
+
+    void testForLoop(Int? in)
+        {
+        Int i;
+        for (;;)
+            {
+            if (in.is(Int))
+                {
+                i = in;
+                break;
+                }
+            else
+                {
+                return;
+                }
+            }
+
+        assert i.is(Int);
         }
     }

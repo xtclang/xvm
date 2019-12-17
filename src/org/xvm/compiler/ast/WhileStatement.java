@@ -239,7 +239,7 @@ public class WhileStatement
         // assume that the while or do..while statement actually loops (we may find out otherwise)
         boolean fLoops = true;
 
-        // don't let this repeat ad nauseum
+        // don't let this repeat ad nauseam
         int cTries = 0;
 
         while (true)
@@ -277,9 +277,17 @@ public class WhileStatement
                 ++cExits;
                 }
 
+            if (!fDoWhile)
+                {
+                // the test expression plays a role of an "if", since the block cannot be entered
+                // if this expression evaluates to "false"
+                ctx = ctx.enterIf();
+                }
+
             // we have two parts to validate, the conditions and the block. unfortunately, these
             // come in two different orders, either the conditions first (for a while loop) followed
             // by the block, or the block first (for a do..while) followed by the conditions.
+            boolean fAlwaysTrue = true;
             for (int iPart = 1; iPart <= 2; ++iPart)
                 {
                 if ((iPart == 2) == fDoWhile)
@@ -300,31 +308,47 @@ public class WhileStatement
 
                         if (condNew == null)
                             {
-                            fValid    = false;
+                            fValid = false;
                             }
                         else
                             {
-                            conds.set(i, condNew);
-
-                            if (condNew instanceof Expression && ((Expression) condNew).isConstantFalse())
+                            if (condNew != condOld)
                                 {
-                                if (fDoWhile)
+                                conds.set(i, condNew);
+                                }
+
+                            if (condNew instanceof Expression && ((Expression) condNew).isConstant())
+                                {
+                                if (((Expression) condNew).isConstantFalse())
                                     {
-                                    // do..while(False) does not loop
-                                    if (fLoops)
+                                    fAlwaysTrue = false;
+
+                                    if (fDoWhile)
                                         {
-                                        // need to repeat the entire validation, now that we
-                                        // know that the loop doesn't loop
-                                        fLoops  = false;
-                                        fRepeat = true;
+                                        // do..while(False) does not loop
+                                        if (fLoops)
+                                            {
+                                            // need to repeat the entire validation, now that we
+                                            // know that the loop doesn't loop
+                                            fLoops  = false;
+                                            fRepeat = true;
+                                            }
+                                        }
+                                    else
+                                        {
+                                        // while(False) is illegal because it cannot ever execute
+                                        condNew.log(errs, Severity.ERROR, Compiler.ILLEGAL_WHILE_CONDITION);
+                                        fValid = false;
                                         }
                                     }
                                 else
                                     {
-                                    // while(False) is illegal because it cannot ever execute
-                                    condNew.log(errs, Severity.ERROR, Compiler.ILLEGAL_WHILE_CONDITION);
-                                    fValid = false;
+                                    assert ((Expression) condNew).isConstantTrue();
                                     }
+                                }
+                            else
+                                {
+                                fAlwaysTrue = false;
                                 }
                             }
                         }
@@ -338,7 +362,9 @@ public class WhileStatement
                     // assignment from the condition to the body of the loop
                     if (!fDoWhile)
                         {
-                        ctx = ctx.enterFork(true);
+                        ctx = fAlwaysTrue
+                                ? ctx.enterInfiniteLoop()
+                                : ctx.enterFork(true);
                         }
 
                     // validate the block
@@ -354,7 +380,7 @@ public class WhileStatement
 
                     if (!fDoWhile)
                         {
-                        ctx = ctx.exit();
+                        ctx = ctx.exit();  // "enterFork()"
                         }
 
                     // apply the assignment contributions from the various continue statements, if any
@@ -387,6 +413,11 @@ public class WhileStatement
                         fRepeat = true;
                         }
                     }
+                }
+
+            if (!fDoWhile)
+                {
+                ctx = ctx.exit(); // "enterIf()"
                 }
 
             // see if there are any assignments that would change our starting assumptions
@@ -433,7 +464,7 @@ public class WhileStatement
                     ctx = ctx.exit();
                     }
 
-                errs = errs.merge();
+                errs.merge();
                 return fValid ? this : null;
                 }
             }

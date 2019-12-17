@@ -233,6 +233,21 @@ public class Context
         }
 
     /**
+     * Create a nested context that behaves as a "true" branch of an IfContext and automatically
+     * marks the corresponding "false" branch as unreachable.
+     * <p/>
+     * Note: This can only be used during the validate() stage.
+     *
+     * @return the new (forked) context
+     */
+    public Context enterInfiniteLoop()
+        {
+        ForkedContext ctxFork = (ForkedContext) enterFork(true);
+        ctxFork.markExclusive();
+        return ctxFork;
+        }
+
+    /**
      * Create a short-circuiting "and" context.
      * <p/>
      * Note: This can only be used during the validate() stage.
@@ -1787,29 +1802,28 @@ public class Context
                 }
 
             // promote the other branch's assignments
-            Map<String, Assignment> mapPromote = fWhenTrue
-                    ? m_ctxWhenFalse == null
-                        ? Collections.EMPTY_MAP
-                        : m_ctxWhenFalse.getDefiniteAssignments()
-                    : m_ctxWhenTrue == null
-                        ? Collections.EMPTY_MAP
-                        : m_ctxWhenTrue .getDefiniteAssignments();
-            if (!mapPromote.isEmpty())
+            Context ctxPromote = fWhenTrue ? m_ctxWhenFalse : m_ctxWhenTrue;
+            if (ctxPromote != null)
                 {
-                Map<String, Assignment> mapAssign = ensureDefiniteAssignments();
+                Map<String, Assignment> mapPromote = ctxPromote.getDefiniteAssignments();
+                Map<String, Assignment> mapAssign  = ensureDefiniteAssignments();
                 for (Map.Entry<String, Assignment> entry : mapPromote.entrySet())
                     {
-                    Assignment assignment = mapAssign.get(entry.getKey());
-                    if (assignment == null)
+                    String sName = entry.getKey();
+                    if (!ctxPromote.isVarDeclaredInThisScope(sName))
                         {
-                        assignment = entry.getValue();
+                        Assignment assignment = mapAssign.get(sName);
+                        if (assignment == null)
+                            {
+                            assignment = entry.getValue();
+                            }
+                        else
+                            {
+                            assignment = fWhenTrue ? assignment.whenFalse() : assignment.whenTrue();
+                            assignment = assignment.join(entry.getValue());
+                            }
+                        mapAssign.put(entry.getKey(), assignment);
                         }
-                    else
-                        {
-                        assignment = fWhenTrue ? assignment.whenFalse() : assignment.whenTrue();
-                        assignment = assignment.join(entry.getValue());
-                        }
-                    mapAssign.put(entry.getKey(), assignment);
                     }
                 }
             }
@@ -1835,6 +1849,27 @@ public class Context
         public boolean isWhenTrue()
             {
             return m_fWhenTrue;
+            }
+
+        void markExclusive()
+            {
+            assert m_fWhenTrue; // exclusive is only allowed on a "true" branch
+            m_fExclusive = true;
+            }
+
+        @Override
+        public Context exit()
+            {
+            Context ctxOuter = super.exit();
+
+            if (m_fExclusive)
+                {
+                // simulate an unreachable "false" branch
+                Context ctxFalse = ctxOuter.enterFork(false);
+                ctxFalse.setReachable(false);
+                ctxFalse.exit();
+                }
+            return ctxOuter;
             }
 
         @Override
@@ -1893,6 +1928,7 @@ public class Context
             }
 
         private boolean m_fWhenTrue;
+        private boolean m_fExclusive;
         }
 
 
