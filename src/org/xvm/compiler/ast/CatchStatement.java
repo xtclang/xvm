@@ -144,7 +144,7 @@ public class CatchStatement
         code.add(ensureCatchStart());
         block.suppressScope();
         boolean fCompletes = block.completes(ctx, fReachable, code, errs);
-        code.add(new CatchEnd(getEndLabel()));
+        code.add(new CatchEnd(((TryStatement) getParent()).getEndLabel()));
         return fCompletes;
         }
 
