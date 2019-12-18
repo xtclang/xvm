@@ -13,8 +13,8 @@ import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ErrorListener;
-
 import org.xvm.asm.Version;
+
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.PackedInteger;
@@ -1229,7 +1229,7 @@ public class Lexer
     protected Token eatNumericLiteral()
         {
         final Source source    = m_source;
-        final long   lPosStart = source.getPosition();
+        final long   lStartPos = source.getPosition();
 
         // eat the first part of the number (or the entire number, if it is an integer literal)
         int[] results = new int[2];
@@ -1262,7 +1262,7 @@ public class Lexer
                         // spit back out the first dot
                         source.rewind();
 
-                        return new Token(lPosStart, source.getPosition(), Id.LIT_INT, piWhole);
+                        return new Token(lStartPos, source.getPosition(), Id.LIT_INT, piWhole);
                         }
                     }
 
@@ -1271,8 +1271,8 @@ public class Lexer
 
                 if (fractionalDigits == 0)
                     {
-                    log(Severity.ERROR, ILLEGAL_NUMBER, null,
-                            lPosStart, source.getPosition());
+                    log(Severity.ERROR, ILLEGAL_NUMBER, lStartPos,
+                            lStartPos, source.getPosition());
                     }
                 }
             else
@@ -1304,7 +1304,7 @@ public class Lexer
                     source.rewind();
                     if (isIdentifierPart(ch))
                         {
-                        log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                        log(Severity.ERROR, ILLEGAL_NUMBER, lStartPos,
                                 source.getPosition(), lEndPos);
                         }
                     break;
@@ -1314,7 +1314,7 @@ public class Lexer
         final long lPosEnd = source.getPosition();
         if (piFraction == null && piExp == null)
             {
-            return new Token(lPosStart, lPosEnd, Id.LIT_INT, piWhole);
+            return new Token(lStartPos, lPosEnd, Id.LIT_INT, piWhole);
             }
         else if (!mustBeBinary && mantissaRadix == 10)
             {
@@ -1345,21 +1345,21 @@ public class Lexer
                 long lExp = piExp.getLong();
                 if (lExp > 6144 || lExp < (1-6144))
                     {
-                    log(Severity.ERROR, ILLEGAL_NUMBER, null,
-                            lPosStart, lPosEnd);
+                    log(Severity.ERROR, ILLEGAL_NUMBER, lStartPos,
+                        lStartPos, lPosEnd);
                     }
                 else
                     {
                     dec = dec.scaleByPowerOfTen((int) lExp);
                     }
                 }
-            return new Token(lPosStart, lPosEnd, Id.LIT_DEC, dec);
+            return new Token(lStartPos, lPosEnd, Id.LIT_DEC, dec);
             }
         else
             {
             // convert to IEEE-754 binary floating point format
             // note: for now it is simply stored in the literal token as a String
-            return new Token(lPosStart, lPosEnd, Id.LIT_BIN, source.toString(lPosStart, lPosEnd));
+            return new Token(lStartPos, lPosEnd, Id.LIT_BIN, source.toString(lStartPos, lPosEnd));
             }
         }
 
@@ -1475,8 +1475,8 @@ public class Lexer
         boolean    fError  = false;
         int        cDigits = 0;
 
-        final Source source = m_source;
-        final long lPosStart = source.getPosition();
+        final Source source    = m_source;
+        final long   lStartPos = source.getPosition();
         Parsing: while (source.hasNext())
             {
             final long lPos = source.getPosition();
@@ -1492,7 +1492,7 @@ public class Lexer
                             {
                             if (!fError)
                                 {
-                                log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                                log(Severity.ERROR, ILLEGAL_NUMBER, lStartPos,
                                         lPos, source.getPosition());
                                 fError = true;
                                 }
@@ -1507,7 +1507,7 @@ public class Lexer
                         {
                         if (!fError)
                             {
-                            log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                            log(Severity.ERROR, ILLEGAL_NUMBER, lStartPos,
                                     lPos, source.getPosition());
                             fError = true;
                             }
@@ -1522,7 +1522,7 @@ public class Lexer
                         {
                         if (!fError)
                             {
-                            log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                            log(Severity.ERROR, ILLEGAL_NUMBER, lStartPos,
                                     lPos, source.getPosition());
                             fError = true;
                             }
@@ -1539,7 +1539,7 @@ public class Lexer
                     if (cDigits == 0 && !fError)
                         {
                         // it's an error to start the sequence of digits with an underscore
-                        log(Severity.ERROR, ILLEGAL_NUMBER, null,
+                        log(Severity.ERROR, ILLEGAL_NUMBER, lStartPos,
                                 lPos, source.getPosition());
                         fError = true;
                         }
@@ -1568,8 +1568,7 @@ public class Lexer
 
         if (!fError && cDigits == 0)
             {
-            log(Severity.ERROR, ILLEGAL_NUMBER, null,
-                    lPosStart, source.getPosition());
+            log(Severity.ERROR, ILLEGAL_NUMBER, lStartPos, lStartPos, source.getPosition());
             }
 
         if (digitCount != null && digitCount.length > 0)
@@ -2336,7 +2335,7 @@ public class Lexer
             }
         catch (NoSuchElementException e)
             {
-            log(Severity.ERROR, sError, null,
+            log(Severity.ERROR, sError, m_source.getPosition(),
                     m_source.getPosition(), m_source.getPosition());
             }
 
@@ -2450,12 +2449,20 @@ public class Lexer
 
     /**
      * Log an error.
-     *
-     * @param severity
-     * @param sCode
-     * @param aoParam
-     * @param lPosStart
-     * @param lPosEnd
+     */
+    protected void log(Severity severity, String sCode, long lPosPrev, long lPosStart, long lPosEnd)
+        {
+        if (lPosPrev == lPosStart)
+            {
+            m_source.rewind();
+            lPosPrev = m_source.getPosition();
+            m_source.next();
+            }
+        log(severity, sCode, new Object[]{m_source.toString(lPosPrev, lPosEnd)}, lPosStart, lPosEnd);
+        }
+
+    /**
+     * Log an error.
      */
     protected void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd)
         {
