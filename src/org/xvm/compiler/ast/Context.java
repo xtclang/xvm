@@ -1770,6 +1770,12 @@ public class Context
         protected void promoteNonCompleting(Context ctxInner)
             {
             discardBranch(ctxInner == m_ctxWhenTrue);
+
+            if (m_ctxWhenTrue  != null && !m_ctxWhenTrue .isReachable() &&
+                m_ctxWhenFalse != null && !m_ctxWhenFalse.isReachable())
+                {
+                setReachable(false);
+                }
             }
 
         private void discardBranch(boolean fWhenTrue)
