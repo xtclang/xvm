@@ -71,7 +71,7 @@ public class Jump
             m_ixAllGuard   = opFinally.getGuardDepth() + nGuardAllDepth - 1;
             m_ixBaseGuard  = opJumpTo.getGuardAllDepth() - 1;
             m_nJumpToScope = opJumpTo.getDepth() - 1;
-            m_fCallFinally = true;
+            m_fCallFinally = opJumpTo.getGuardAllDepth() < nGuardAllDepth;
             }
         }
 

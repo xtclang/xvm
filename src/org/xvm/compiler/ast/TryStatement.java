@@ -284,12 +284,14 @@ public class TryStatement
 
         // try..finally
         FinallyStart opFinallyBlock = null;
+        Label        labelCatchEnd  = getEndLabel();
         if (catchall != null)
             {
             Register regFinallyException = m_regFinallyException == null
                     ? new Register(pool.typeException१())
                     : m_regFinallyException;
             opFinallyBlock = new FinallyStart(regFinallyException);
+            labelCatchEnd  = new Label();
             code.add(new GuardAll(opFinallyBlock));
             }
 
@@ -316,12 +318,14 @@ public class TryStatement
         boolean fAnyCatchCompletes = false;
         if (catches != null)
             {
-            code.add(new GuardEnd(getEndLabel()));
+            code.add(new GuardEnd(labelCatchEnd));
 
             int c = catches.size();
             for (int i = 0; i < c; ++i)
                 {
-                fAnyCatchCompletes |= catches.get(i).completes(ctx, fCompletes, code, errs);
+                CatchStatement stmtCatch = catches.get(i);
+                stmtCatch.setCatchLabel(labelCatchEnd);
+                fAnyCatchCompletes |= stmtCatch.completes(ctx, fCompletes, code, errs);
                 }
             }
 
@@ -332,6 +336,7 @@ public class TryStatement
             // the finally clause gets wrapped in FINALLY / FINALLY_E ops, which imply an enter/exit
             catchall.suppressScope();
 
+            code.add(labelCatchEnd); // the normal flow is to jump to the "FinallyStart" op
             code.add(opFinallyBlock);
             boolean fFinallyCompletes = catchall.completes(ctx, fCompletes, code, errs);
 

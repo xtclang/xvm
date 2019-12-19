@@ -12,6 +12,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.CatchEnd;
 import org.xvm.asm.op.CatchStart;
+import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
 
@@ -71,6 +72,11 @@ public class CatchStatement
                     pool().ensureStringConstant(getCatchVariableName()));
             }
         return op;
+        }
+
+    public void setCatchLabel(Label label)
+        {
+        m_labelEndCatch = label;
         }
 
     @Override
@@ -140,11 +146,12 @@ public class CatchStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        assert m_opCatch != null;
-        code.add(ensureCatchStart());
+        assert m_opCatch != null && m_labelEndCatch != null;
+
+        code.add(m_opCatch);
         block.suppressScope();
         boolean fCompletes = block.completes(ctx, fReachable, code, errs);
-        code.add(new CatchEnd(((TryStatement) getParent()).getEndLabel()));
+        code.add(new CatchEnd(m_labelEndCatch));
         return fCompletes;
         }
 
@@ -165,6 +172,7 @@ public class CatchStatement
     protected long                         lStartPos;
 
     private transient CatchStart m_opCatch;
+    private transient Label      m_labelEndCatch;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CatchStatement.class, "target", "block");
     }

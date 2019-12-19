@@ -244,11 +244,18 @@ module TestTry.xqiz.it
                 assert:rnd(100) x < size();
                 ++ok;
                 }
+            catch (OutOfBounds e)
+                {
+                assert;
+                }
             catch (Exception e)
                 {
                 ++err;
                 }
-            ++x;
+            finally
+                {
+                ++x;
+                }
             }
 
         console.println($"results: ok={ok}, errs={err} (should be ~10)");
