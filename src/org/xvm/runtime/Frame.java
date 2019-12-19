@@ -501,6 +501,7 @@ public class Frame
      */
     public void pushStack(ObjectHandle hValue)
         {
+        assert hValue != null;
         if (m_hStackTop != null)
             {
             Deque<ObjectHandle> stack = m_stack;
@@ -1220,7 +1221,10 @@ public class Frame
                     }
                 else
                     {
-                    throw xException.illegalState(this, "Unassigned value").getException();
+                    VarInfo info  = f_aInfo[iArg];
+                    String  sName = info == null ? "" : info.getName();
+                    throw xException.illegalState(this,
+                        "Unassigned value: \"" + sName + '"').getException();
                     }
                 }
 
