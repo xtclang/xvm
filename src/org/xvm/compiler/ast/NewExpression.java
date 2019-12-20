@@ -607,7 +607,7 @@ public class NewExpression
                         else
                             {
                             args = listArgs =
-                                    rearrangeNamedArgs(m_constructor, listArgs, mapNamedExpr);
+                                    rearrangeNamedArgs(constructor, listArgs, mapNamedExpr);
                             }
                         }
 
