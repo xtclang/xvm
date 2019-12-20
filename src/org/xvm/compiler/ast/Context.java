@@ -2039,7 +2039,6 @@ public class Context
             switch (branch)
                 {
                 case WhenTrue:
-                case Always:
                     getOuterContext().replaceGenericType(sName, branch, typeNarrowed);
                     break;
 
@@ -2129,7 +2128,6 @@ public class Context
             switch (branch)
                 {
                 case WhenFalse:
-                case Always:
                     getOuterContext().replaceGenericType(sName, branch, typeNarrowed);
                     break;
 
@@ -2314,6 +2312,31 @@ public class Context
         public void registerVar(Token tokName, Register reg, ErrorListener errs)
             {
             getOuterContext().registerVar(tokName, reg, errs);
+            }
+
+        @Override
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
+            {
+            switch (branch)
+                {
+                case Always:
+                    super.promoteNarrowedType(sName, arg, branch);
+                    break;
+
+                case WhenTrue:
+                case WhenFalse:
+                    // promote our "true" into the parent's "true" branch and
+                    // our "false" int the parent's "false"
+                    getOuterContext().replaceArgument(sName, branch, arg);
+                    break;
+                }
+            }
+
+        @Override
+        protected void promoteNarrowedGenericType(String sName, TypeConstant typeNarrowed, Branch branch)
+            {
+            // promote all
+            getOuterContext().replaceGenericType(sName, branch, typeNarrowed);
             }
 
         TypeConstant m_typeLeft;
