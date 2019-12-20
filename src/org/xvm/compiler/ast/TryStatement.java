@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -139,12 +138,9 @@ public class TryStatement
                     {
                     fValid = false;
                     }
-                else
+                else if (useNew != useOld)
                     {
-                    if (useNew != useOld)
-                        {
-                        resources.set(i, useNew);
-                        }
+                    resources.set(i, useNew);
                     }
 
                 // each using/try-with-resources is a nested try-finally
@@ -152,29 +148,57 @@ public class TryStatement
                 }
             }
 
-        Context ctxOrig  = ctx;
-        int     cCatches = catches == null ? 0 : catches.size();
+        Context ctxOrig     = ctx;
+        Context ctxCatchAll = null;
+        int     cCatches    = catches == null ? 0 : catches.size();
 
         // validate the "try" block
-        ctx = ctxOrig.enter();
-        block.validate(ctx, errs);
+        Context ctxTryBlock = ctxOrig.enter();
+        block.validate(ctxTryBlock, errs);
+
+        Map<String, Assignment> mapTryAsn = ctxTryBlock.prepareJump(ctxOrig);
+        if (catchall != null)
+            {
+            ctxCatchAll = ctxOrig.enter();
+            ctxCatchAll.merge(mapTryAsn);
+            }
 
         if (cCatches > 0)
             {
-            // instead of exiting the context, we simply collect all of the impact from the end of the
-            // "try" block, together with all of the impact from the end of each "catch" block
-            List<Map<String, Assignment>> listAsn    = new ArrayList<>(1 + cCatches);
-            boolean                       fReachable = ctx.isReachable();
+            Context ctxNext = ctxOrig.enterIf();
 
-            listAsn.add(ctx.prepareJump(ctxOrig));
-            ctx.discard();
+            // now we collect all of the impact from the end of the "try" block, together with all
+            // of the impact from the end of each "catch" block, which is semantically the same
+            // as the following "if" ladder:
+            //
+            //    catch (e1)          if (e1())
+            //        {                   {
+            //        ...                 ...
+            //        }                   }
+            //    catch (e2)          else if (e2())
+            //        {                   {
+            //        ...                 ...
+            //        }                   }
+            //                        else
+            //                            {
+            //                            // unreachable else clause
+            //                            throw ...
+            //                            }
+
+            if (ctxTryBlock.isReachable())
+                {
+                ctxNext.merge(mapTryAsn);
+                }
 
             for (int i = 0; i < cCatches; ++i)
                 {
-                ctx = ctxOrig.enter();
+                Context ctxCatch = ctxNext.enterFork(true);
 
                 CatchStatement catchOld = catches.get(i);
-                CatchStatement catchNew = (CatchStatement) catchOld.validate(ctx, errs);
+                CatchStatement catchNew = (CatchStatement) catchOld.validate(ctxCatch, errs);
+
+                ctxNext = ctxCatch.exit();
+
                 if (catchNew == null)
                     {
                     fValid = false;
@@ -203,32 +227,50 @@ public class TryStatement
                         }
                     }
 
-                fReachable |= ctx.isReachable();
-                listAsn.add(ctx.prepareJump(ctxOrig));
-                ctx.discard();
-                }
-
-            // collect the assignment impacts from the end of the "try" block and from the end of each
-            // "catch" block
-            ctx = ctxOrig;
-            if (fReachable)
-                {
-                for (Map<String, Assignment> mapAsn : listAsn)
+                ctxNext = ctxNext.enterFork(false);
+                if (i == cCatches - 1)
                     {
-                    ctx.merge(mapAsn);
+                    // the last one - mark unreachable and exit all the way up
+                    ctxNext.setReachable(false);
+                    while (i-- >= 0)
+                        {
+                        // exit ForkContext(false); exit IfContext()
+                        ctxNext = ctxNext.exit().exit();
+                        }
+                    break;
+                    }
+                else
+                    {
+                    ctxNext = ctxNext.enterIf();
                     }
                 }
-            ctx.setReachable(fReachable);
+
+            assert ctxNext == ctxOrig;
+            if (ctxTryBlock.isReachable())
+                {
+                ctxOrig.merge(ctxTryBlock.getDefiniteAssignments());
+                }
+            }
+        else
+            {
+            ctx = ctxTryBlock.exit();
+            assert ctx == ctxOrig;
             }
 
         if (catchall != null)
             {
             // the context for finally clause is a continuation of the context prior to "try"
-            m_ctxValidatingFinally  = ctxOrig; // TODO CP defNasn
+            // plus the "worst case scenario" of the try-catch block, but we only need to
+            // promote the information gathered by the finally block
+            Context ctxFinally = ctxCatchAll.enter();
+
+            m_ctxValidatingFinally  = ctxFinally;
             m_errsValidatingFinally = errs;
-            StatementBlock catchallNew = (StatementBlock) catchall.validate(ctxOrig, errs);
+            StatementBlock catchallNew = (StatementBlock) catchall.validate(ctxFinally, errs);
             m_ctxValidatingFinally  = null;
             m_errsValidatingFinally = null;
+
+            ctxFinally.promoteAssignments(ctxOrig);
 
             if (catchallNew == null)
                 {
@@ -238,11 +280,6 @@ public class TryStatement
                 {
                 catchall = catchallNew;
                 }
-            }
-
-        if (cCatches == 0)
-            {
-            ctx = ctx.exit();
             }
 
         if (resources != null)
@@ -296,7 +333,7 @@ public class TryStatement
             }
 
         // try..catch
-        CatchStart[] aCatchStart = null;
+        CatchStart[] aCatchStart;
         if (catches != null)
             {
             int c = catches.size();

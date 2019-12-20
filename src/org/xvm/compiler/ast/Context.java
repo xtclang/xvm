@@ -373,41 +373,11 @@ public class Context
      */
     public Context exit()
         {
-        Context ctxOuter   = getOuterContext();
-        boolean fCompletes = isReachable();
-        boolean fDemuxing  = isDemuxing();
+        Context ctxOuter = getOuterContext();
 
-        // copy variable assignment information from this scope to outer scope
-        for (Entry<String, Assignment> entry : getDefiniteAssignments().entrySet())
-            {
-            String     sName    = entry.getKey();
-            Assignment asnInner = entry.getValue();
-            if (isVarDeclaredInThisScope(sName))
-                {
-                // we have unwound all the way back to the declaration context for the
-                // variable at this point, so if it is proven to be effectively final, that
-                // information is stored off, for example so that captures can make use of
-                // that knowledge (i.e. capturing a value of type T, instead of a Ref<T>)
-                if (asnInner.isEffectivelyFinal())
-                    {
-                    ((Register) getVar(sName)).markEffectivelyFinal();
-                    }
-                }
-            else
-                {
-                Assignment asnOuter = ctxOuter.getVarAssignment(sName);
-                asnOuter = fCompletes
-                        ? promote(sName, asnInner, asnOuter)
-                        : asnInner.promoteFromNonCompleting(asnOuter);
-                if (fDemuxing)
-                    {
-                    asnOuter = asnOuter.demux();
-                    }
-                ctxOuter.setVarAssignment(sName, asnOuter);
-                }
-            }
+        promoteAssignments(ctxOuter);
 
-        if (fCompletes)
+        if (isReachable())
             {
             for (Entry<String, Argument> entry : getNameMap().entrySet())
                 {
@@ -535,6 +505,46 @@ public class Context
             {
             mapAsn.putAll(mapAdd);
             setReachable(true);
+            }
+        }
+
+    /**
+     * Copy variable assignment information from this scope to the specified outer scope.
+     *
+     * @param ctxOuter  the context to copy the assignment information into
+     */
+    public void promoteAssignments(Context ctxOuter)
+        {
+        boolean fCompletes = isReachable();
+        boolean fDemuxing  = isDemuxing();
+
+        for (Entry<String, Assignment> entry : getDefiniteAssignments().entrySet())
+            {
+            String     sName    = entry.getKey();
+            Assignment asnInner = entry.getValue();
+            if (isVarDeclaredInThisScope(sName))
+                {
+                // we have unwound all the way back to the declaration context for the
+                // variable at this point, so if it is proven to be effectively final, that
+                // information is stored off, for example so that captures can make use of
+                // that knowledge (i.e. capturing a value of type T, instead of a Ref<T>)
+                if (asnInner.isEffectivelyFinal())
+                    {
+                    ((Register) getVar(sName)).markEffectivelyFinal();
+                    }
+                }
+            else
+                {
+                Assignment asnOuter = ctxOuter.getVarAssignment(sName);
+                asnOuter = fCompletes
+                    ? promote(sName, asnInner, asnOuter)
+                    : asnInner.promoteFromNonCompleting(asnOuter);
+                if (fDemuxing)
+                    {
+                    asnOuter = asnOuter.demux();
+                    }
+                ctxOuter.setVarAssignment(sName, asnOuter);
+                }
             }
         }
 
@@ -1678,9 +1688,10 @@ public class Context
         @Override
         public boolean isReachable()
             {
-            return m_ctxWhenTrue  != null && m_ctxWhenTrue .m_fReachable
-                || m_ctxWhenFalse != null && m_ctxWhenFalse.m_fReachable
-                || super.isReachable();
+            // IfContext is unreachable if both branches exist and not reachable
+            return m_fReachable &&
+                    (m_ctxWhenTrue  == null || m_ctxWhenTrue .isReachable() ||
+                     m_ctxWhenFalse == null || m_ctxWhenFalse.isReachable());
             }
 
         @Override
@@ -1769,13 +1780,25 @@ public class Context
         @Override
         protected void promoteNonCompleting(Context ctxInner)
             {
-            discardBranch(ctxInner == m_ctxWhenTrue);
+            // defer the reachability decision until the exit()
+            }
 
-            if (m_ctxWhenTrue  != null && !m_ctxWhenTrue .isReachable() &&
-                m_ctxWhenFalse != null && !m_ctxWhenFalse.isReachable())
+        @Override
+        public Context exit()
+            {
+            if (isReachable())
                 {
-                setReachable(false);
+                if (m_ctxWhenTrue != null && !m_ctxWhenTrue.isReachable())
+                    {
+                    discardBranch(true);
+                    }
+                else if (m_ctxWhenFalse != null && !m_ctxWhenFalse.isReachable())
+                    {
+                    discardBranch(false);
+                    }
                 }
+
+            return super.exit();
             }
 
         private void discardBranch(boolean fWhenTrue)
