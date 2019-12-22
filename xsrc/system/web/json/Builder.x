@@ -105,9 +105,9 @@ interface Builder
                         val v = supply(i);
                         return switch()
                             {
-                            case v.is(IntNumber): v.as(IntNumber).toIntLiteral();     // TODO GG as() redundant?
-                            case v.is(FPNumber) : v.as(FPNumber) .toFPLiteral();
-                            default             : v.as(Doc);
+                            case v.is(IntNumber): v.toIntLiteral();
+                            case v.is(FPNumber) : v.toFPLiteral();
+                            default             : v;
                             };
                         };
 

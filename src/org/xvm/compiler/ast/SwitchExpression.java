@@ -134,32 +134,57 @@ public class SwitchExpression
             ctxCase = ctx;
             }
 
+        ctxCase = ctxCase.enterIf();
+
         ConstantPool   pool      = pool();
         TypeCollector  collector = new TypeCollector(pool);
         List<AstNode>  listNodes = contents;
         boolean        fInCase   = false;
+        int            cExprs    = 0;
         for (int iNode = 0, cNodes = listNodes.size(); iNode < cNodes; ++iNode)
             {
             AstNode node = listNodes.get(iNode);
             if (node instanceof CaseStatement)
                 {
-                fInCase = true;
+                if (fInCase)
+                    {
+                    ctxCase = ctxCase.enterOr();
+                    }
+
                 fValid &= mgr.validateCase(ctxCase, (CaseStatement) node, errs);
-                }
-            else // it's an expression value
-                {
-                Expression exprOld = (Expression) node;
-                Expression exprNew = exprOld.validateMulti(ctxCase, atypeRequest, errs);
 
                 if (fInCase)
                     {
-                    mgr.endCaseGroup(exprNew == null ? exprOld : exprNew);
-                    fInCase = false;
+                    ctxCase = ctxCase.exit();
                     }
                 else
                     {
+                    fInCase = true;
+                    }
+                }
+            else // it's an expression value
+                {
+                if (!fInCase)
+                    {
                     node.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_EXPECTED);
                     fValid = false;
+                    break;
+                    }
+                fInCase = false;
+                cExprs++;
+
+                ctxCase = ctxCase.enterFork(true);
+
+                Expression exprOld = (Expression) node;
+                Expression exprNew = exprOld.validateMulti(ctxCase, atypeRequest, errs);
+
+                ctxCase = ctxCase.exit();
+
+                mgr.endCaseGroup(exprNew == null ? exprOld : exprNew);
+
+                if (iNode < cNodes - 1)
+                    {
+                    ctxCase = ctxCase.enterFork(false).enterIf();
                     }
 
                 if (exprNew == null)
@@ -179,6 +204,11 @@ public class SwitchExpression
                         }
                     }
                 }
+            }
+
+        for (int i = 0; i < 2*cExprs - 1; ++i)
+            {
+            ctxCase = ctxCase.exit();
             }
 
         // notify the case manager that we're finished collecting everything
