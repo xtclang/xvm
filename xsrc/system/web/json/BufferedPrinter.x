@@ -50,7 +50,6 @@ class BufferedPrinter
                 }
             else
                 {
-                cur = new ListMap(); // TODO GG remove
                 throw new IllegalState("invalid context from which to add");
                 }
             }
