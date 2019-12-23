@@ -197,7 +197,13 @@ public class PrefixExpression
         {
         StringBuilder sb = new StringBuilder();
 
-        sb.append(operator.getId().TEXT);
+        boolean fPre = !(this instanceof SequentialAssignExpression) ||
+                        ((SequentialAssignExpression) this).isPre();
+        if (fPre)
+            {
+            sb.append(operator.getId().TEXT);
+            }
+
         if (expr instanceof NameExpression)
             {
             sb.append(expr);
@@ -205,6 +211,11 @@ public class PrefixExpression
         else
             {
             sb.append('(').append(expr).append(')');
+            }
+
+        if (!fPre)
+            {
+            sb.append(operator.getId().TEXT);
             }
 
         return sb.toString();
