@@ -75,6 +75,8 @@ public class Decimal64
      * Construct a 64-bit IEEE-754-2008 decimal value from a BigDecimal.
      *
      * @param dec  a BigDecimal value
+     *
+     * @throws RangeException if the BigDecimal is out of range
      */
     public Decimal64(BigDecimal dec)
         {
@@ -121,7 +123,8 @@ public class Decimal64
         }
 
     @Override
-    public void writeBytes(DataOutput out) throws IOException
+    public void writeBytes(DataOutput out)
+            throws IOException
         {
         out.writeLong(m_nBits);
         }
@@ -187,6 +190,37 @@ public class Decimal64
         }
 
     @Override
+    public Decimal fromBigDecimal(BigDecimal big)
+        {
+        try
+            {
+            return new Decimal64(big);
+            }
+        catch (RangeException e)
+            {
+            return e.getDecimal();
+            }
+        }
+
+    @Override
+    public Decimal infinity(boolean fSigned)
+        {
+        return fSigned ? NEG_INFINITY : POS_INFINITY;
+        }
+
+    @Override
+    public Decimal zero(boolean fSigned)
+        {
+        return fSigned ? NEG_ZERO : POS_ZERO;
+        }
+
+    @Override
+    public Decimal nan()
+        {
+        return NaN;
+        }
+
+    @Override
     public byte[] toByteArray()
         {
         long   nBits = m_nBits;
@@ -249,7 +283,7 @@ public class Decimal64
      *
      * @return a Java <tt>long</tt> that contains a 64-bit IEEE 754 decimal value
      *
-     * @throws ArithmeticException if the value is out of range
+     * @throws RangeException if the value is out of range
      */
     public static long toLongBits(BigDecimal dec)
         {
@@ -259,7 +293,22 @@ public class Decimal64
         long nSig = dec.unscaledValue().longValueExact();
         if (nSig < -9999999999999999L || nSig > 9999999999999999L)
             {
-            throw new ArithmeticException("significand is >16 digits: " + nSig);
+            throw new RangeException("significand is >16 digits: " + nSig,
+                    nSig > 0 ? POS_INFINITY : NEG_INFINITY);
+            }
+
+        // bias the exponent (the scale is basically a negative exponent)
+        int nExp = 398 - dec.scale();
+        if (nExp < 0 || nExp >= 768)
+            {
+            throw new RangeException("biased exponent is out of range [0,768): " + nExp,
+                    nSig > 0
+                        ? nExp > 0
+                            ? POS_INFINITY
+                            : POS_ZERO
+                        : nExp > 0
+                            ? NEG_INFINITY
+                            : NEG_ZERO);
             }
 
         long nBits = 0;
@@ -267,13 +316,6 @@ public class Decimal64
             {
             nBits = SIGN_BIT;
             nSig  = -nSig;
-            }
-
-        // bias the exponent (the scale is basically a negative exponent)
-        int nExp = 398 - dec.scale();
-        if (nExp < 0 || nExp >= 768)
-            {
-            throw new ArithmeticException("biased exponent is out of range [0,768): " + nExp);
             }
 
         // store the least significant 8 bits of the exponent into the combo field starting at G5

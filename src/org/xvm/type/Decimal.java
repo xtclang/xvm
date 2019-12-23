@@ -3,7 +3,9 @@ package org.xvm.type;
 
 import java.io.DataOutput;
 import java.io.IOException;
+
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 
 /**
@@ -234,6 +236,377 @@ public abstract class Decimal
         }
 
 
+    // ----- operations ----------------------------------------------------------------------------
+
+    public Decimal abs()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(big.abs());
+            }
+        return isSigned() ? infinity(false) : this;
+        }
+
+    public Decimal neg()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(big.negate());
+            }
+        return infinity(!isSigned());
+        }
+
+    public Decimal floor()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(big.setScale(0, RoundingMode.FLOOR));
+            }
+        return this;
+        }
+
+    public Decimal ceil()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(big.setScale(0, RoundingMode.CEILING));
+            }
+        return this;
+        }
+
+    public Decimal exp()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.exp(big.doubleValue())));
+            }
+        return isSigned() ? zero(false) : this;
+        }
+
+    public Decimal log()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.log(big.doubleValue())));
+            }
+        return isSigned() ? nan() : this;
+        }
+
+    public Decimal log2()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.log10(big.doubleValue())*LOG2_10));
+            }
+        return isSigned() ? nan() : this;
+        }
+
+    public Decimal log10()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.log10(big.doubleValue())));
+            }
+        return isSigned() ? nan() : this;
+        }
+
+    public Decimal sqrt()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.sqrt(big.doubleValue())));
+            }
+        return isSigned() ? nan() : this;
+        }
+
+    public Decimal cbrt()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.cbrt(big.doubleValue())));
+            }
+        return this;
+        }
+
+    public Decimal sin()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.sin(big.doubleValue())));
+            }
+        return nan();
+        }
+
+    public Decimal tan()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.tan(big.doubleValue())));
+            }
+        return nan();
+        }
+
+    public Decimal asin()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.asin(big.doubleValue())));
+            }
+        return nan();
+        }
+
+    public Decimal acos()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.acos(big.doubleValue())));
+            }
+        return nan();
+        }
+
+    public Decimal atan()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.atan(big.doubleValue())));
+            }
+        return nan();
+        }
+
+    public Decimal sinh()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.sinh(big.doubleValue())));
+            }
+        return nan();
+        }
+
+    public Decimal cosh()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.cosh(big.doubleValue())));
+            }
+        return nan();
+        }
+
+    public Decimal tanh()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.tanh(big.doubleValue())));
+            }
+        return nan();
+        }
+
+    public Decimal asinh()
+        {
+        if (isFinite())
+            {
+            double d = toBigDecimal().doubleValue();
+            return fromBigDecimal(new BigDecimal(Math.log(d+Math.sqrt(d*d+1.0))));
+            }
+        return nan();
+        }
+
+    public Decimal acosh()
+        {
+        if (isFinite())
+            {
+            double d = toBigDecimal().doubleValue();
+            return fromBigDecimal(new BigDecimal(Math.log(d+Math.sqrt(d*d-1.0))));
+            }
+        return nan();
+        }
+
+    public Decimal atanh()
+        {
+        if (isFinite())
+            {
+            double d = toBigDecimal().doubleValue();
+            return fromBigDecimal(new BigDecimal(0.5*Math.log((d+1.0)/(d-1.0))));
+            }
+        return nan();
+        }
+
+    public Decimal deg2rad()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.toRadians(big.doubleValue())));
+            }
+        return this;
+        }
+
+    public Decimal rad2deg()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.toDegrees(big.doubleValue())));
+            }
+        return this;
+        }
+
+    public Decimal nextUp()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.nextUp(big.doubleValue())));
+            }
+        return this;
+        }
+
+    public Decimal nextDown()
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(new BigDecimal(Math.nextDown(big.doubleValue())));
+            }
+        return this;
+        }
+
+    public Decimal round(RoundingMode mode)
+        {
+        if (isFinite())
+            {
+            BigDecimal big = toBigDecimal();
+            return fromBigDecimal(big.setScale(0, mode));
+            }
+        return this;
+        }
+
+    public Decimal add(Decimal that)
+        {
+        if (this.isFinite() && that.isFinite())
+            {
+            BigDecimal big1 = this.toBigDecimal();
+            BigDecimal big2 = that.toBigDecimal();
+            return fromBigDecimal(big1.add(big2));
+            }
+        return isFinite()
+            ? that
+            : that.isFinite()
+                ? this
+                : this.isSigned() == that.isSigned()
+                    ? this
+                    : nan();
+        }
+
+    public Decimal subtract(Decimal that)
+        {
+        if (this.isFinite() && that.isFinite())
+            {
+            BigDecimal big1 = this.toBigDecimal();
+            BigDecimal big2 = that.toBigDecimal();
+            return fromBigDecimal(big1.subtract(big2));
+            }
+        return isFinite()
+            ? infinity(!that.isSigned())
+            : that.isFinite()
+                ? this
+                : this.isSigned() == that.isSigned()
+                    ? nan()
+                    : this;
+        }
+
+    public Decimal multiply(Decimal that)
+        {
+        if (this.isFinite() && that.isFinite())
+            {
+            BigDecimal big1 = this.toBigDecimal();
+            BigDecimal big2 = that.toBigDecimal();
+            return fromBigDecimal(big1.multiply(big2));
+            }
+        return infinity(that.isSigned() != this.isSigned());
+        }
+
+    public Decimal divide(Decimal that)
+        {
+        if (this.isFinite() && that.isFinite())
+            {
+            BigDecimal big1 = this.toBigDecimal();
+            BigDecimal big2 = that.toBigDecimal();
+            return fromBigDecimal(big1.divide(big2));
+            }
+        return isFinite() ? zero(this.isSigned() != that.isSigned()) : nan();
+        }
+
+    public Decimal mod(Decimal that)
+        {
+        if (this.isFinite() && that.isFinite())
+            {
+            BigDecimal big1 = this.toBigDecimal();
+            BigDecimal big2 = that.toBigDecimal();
+            BigDecimal bigR = big1.remainder(big2);
+            return fromBigDecimal(bigR.signum() >= 0 ? bigR : bigR.add(big2));
+            }
+        return nan();
+        }
+
+    public Decimal pow(Decimal that)
+        {
+        if (isFinite())
+            {
+            if (that.isFinite())
+                {
+                BigDecimal big1 = this.toBigDecimal();
+                BigDecimal big2 = that.toBigDecimal();
+                return fromBigDecimal(big1.pow(big2.intValue()));
+                }
+            return nan();
+            }
+        return this;
+        }
+
+    public Decimal pow(int nPow)
+        {
+        if (isFinite())
+            {
+            BigDecimal big1 = toBigDecimal();
+            return fromBigDecimal(big1.pow(nPow));
+            }
+        return this;
+        }
+
+    public Decimal atan2(Decimal that)
+        {
+        if (isFinite())
+            {
+            if (that.isFinite())
+                {
+                BigDecimal big1 = this.toBigDecimal();
+                BigDecimal big2 = that.toBigDecimal();
+                return fromBigDecimal(
+                    new BigDecimal(Math.atan2(big1.doubleValue(), big2.doubleValue())));
+                }
+            return that;
+            }
+        return this;
+        }
+
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
@@ -242,6 +615,34 @@ public abstract class Decimal
      * @return a BigDecimal, or null if the decimal is not finite
      */
     public abstract BigDecimal toBigDecimal();
+
+    /**
+     * Obtain the decimal value for the specified Java BigDecimal.
+     *
+     * @return a decimal
+     */
+    public abstract Decimal fromBigDecimal(BigDecimal big);
+
+    /**
+     * Obtain the decimal value for an infinity.
+     *
+     * @return a decimal representing the corresponding infinity value
+     */
+    public abstract Decimal infinity(boolean fSigned);
+
+    /**
+     * Obtain the decimal value for a zero.
+     *
+     * @return a decimal representing the corresponding zero value
+     */
+    public abstract Decimal zero(boolean fSigned);
+
+    /**
+     * Obtain the decimal value for a not-a-number
+     *
+     * @return a decimal representing NaN
+     */
+    public abstract Decimal nan();
 
     /**
      * Obtain the decimal value as a byte array.
@@ -264,12 +665,12 @@ public abstract class Decimal
         {
         if (isFinite())
             {
-            return isZero() && isSigned() ? "-0" : toBigDecimal().toString();
+            return isZero() && isSigned() ? "-0" : toBigDecimal().stripTrailingZeros().toString();
             }
 
         if (isInfinite())
             {
-            return (isSigned() ? '-' : '+') + "Infinity";
+            return (isSigned() ? '-' : "") + "Infinity";
             }
 
         return isSignalingNaN() ? "sNaN" : "NaN";
@@ -466,6 +867,32 @@ public abstract class Decimal
                              (8 + ((nBits & 0b0000000001)      ));    // d3 = 8 + b9
             }
         }
+
+    /**
+     * An extension of the ArithmeticException that carries a suggested infinite or NaN Decimal.
+     */
+    public static class RangeException
+            extends ArithmeticException
+        {
+        public RangeException(String s, Decimal decNaN)
+            {
+            super(s);
+
+            f_decNaN = decNaN;
+            }
+
+        public Decimal getDecimal()
+            {
+            return f_decNaN;
+            }
+
+        private final Decimal f_decNaN;
+        }
+
+    /**
+     * The log2(10) value.
+     */
+    public static final double LOG2_10 = 1.0/Math.log10(2);
     }
 
 

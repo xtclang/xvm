@@ -16,6 +16,7 @@ module TestNumbers.xqiz.it
         testFloat32();
         testFloat16();
         testDec64();
+        testInfinity();
         }
 
     void testUInt()
@@ -285,4 +286,34 @@ module TestNumbers.xqiz.it
             console.println($"{d},\t{d.round()},\t{d.floor()},\t{d.ceil()},\t{d.round(TowardZero)}");
             }
         }
+
+    void testInfinity()
+        {
+        console.println("\n** testInfinity()");
+
+        Float f = -123456789.987654321;
+        Dec   d = f.toDec64();
+        while (true)
+            {
+            console.println($"f={f} d={d}");
+            if (f.infinity)
+                {
+                console.println($"++: {f + f)}\t{d + d}");
+                console.println($"--: {f - f)}\t{d - d}");
+                console.println($"**: {f * f)}\t{d * d}");
+                console.println($"//: {f / f)}\t{d / d}");
+                console.println($"+1: {f + 1)}\t{d + 1}");
+                console.println($"-1: {f - 1)}\t{d - 1}");
+                console.println($"1/: {1 / f)}\t{1 / d}");
+
+                console.println($"ln: {f.log()}\t{d.log()}");
+                break;
+                }
+
+            d = f.toDec64();
+            f = -f*f;
+            d = -d*d;
+            }
+        }
+
     }

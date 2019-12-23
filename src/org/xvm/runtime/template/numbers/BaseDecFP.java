@@ -1,8 +1,6 @@
 package org.xvm.runtime.template.numbers;
 
 
-import java.math.BigDecimal;
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -39,14 +37,6 @@ abstract public class BaseDecFP
         }
 
     @Override
-    public void initDeclared()
-        {
-        super.initDeclared();
-
-        getCanonicalType().invalidateTypeInfo();
-        }
-
-    @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof DecimalConstant)
@@ -57,6 +47,29 @@ abstract public class BaseDecFP
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        switch (sPropName)
+            {
+            case "infinity":
+                {
+                Decimal dec = ((DecimalHandle) hTarget).getValue();
+
+                return frame.assignValue(iReturn, xBoolean.makeHandle(!dec.isFinite()));
+                }
+
+            case "NaN":
+                {
+                Decimal dec = ((DecimalHandle) hTarget).getValue();
+
+                return frame.assignValue(iReturn, xBoolean.makeHandle(dec.isNaN()));
+                }
+            }
+
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override
@@ -82,38 +95,37 @@ abstract public class BaseDecFP
 
             case "pow":
                 {
-                BigDecimal big1 = ((DecimalHandle) hTarget).getValue().toBigDecimal();
-                BigDecimal big2 = ((DecimalHandle) hArg).getValue().toBigDecimal();
+                Decimal dec1 = ((DecimalHandle) hTarget).getValue();
+                Decimal dec2 = ((DecimalHandle) hArg).getValue();
 
-                return frame.assignValue(iReturn, makeHandle(big1.pow(big2.intValue())));
+                return frame.assignValue(iReturn, makeHandle(dec1.pow(dec2)));
                 }
 
             case "round":
                 {
-                BigDecimal big = ((DecimalHandle) hTarget).getValue().toBigDecimal();
-                int        i = hArg == ObjectHandle.DEFAULT
+                Decimal dec   = ((DecimalHandle) hTarget).getValue();
+                int     iMode = hArg == ObjectHandle.DEFAULT
                             ? 0
                             : ((EnumHandle) hArg).getOrdinal();
 
                 return frame.assignValue(iReturn,
-                    makeHandle(big.setScale(0, Rounding.values()[i].getMode())));
+                    makeHandle(dec.round(Rounding.values()[iMode].getMode())));
                 }
 
             case "scaleByPow":
                 {
-                BigDecimal big = ((DecimalHandle) hTarget).getValue().toBigDecimal();
-                long       l   = ((JavaLong) hArg).getValue();
+                Decimal dec  = ((DecimalHandle) hTarget).getValue();
+                long    lPow = ((JavaLong) hArg).getValue();
 
-                return frame.assignValue(iReturn, makeHandle(big.pow((int) l)));
+                return frame.assignValue(iReturn, makeHandle(dec.pow((int) lPow)));
                 }
 
             case "atan2":
                 {
-                BigDecimal big1 = ((DecimalHandle) hTarget).getValue().toBigDecimal();
-                BigDecimal big2 = ((DecimalHandle) hArg).getValue().toBigDecimal();
+                Decimal dec1 = ((DecimalHandle) hTarget).getValue();
+                Decimal dec2 = ((DecimalHandle) hArg).getValue();
 
-                return frame.assignValue(iReturn,
-                    makeHandle(Math.atan2(big1.doubleValue(), big2.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec1.atan2(dec2)));
                 }
             }
 
@@ -124,12 +136,11 @@ abstract public class BaseDecFP
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        Decimal    dec = ((DecimalHandle) hTarget).getValue();
-        BigDecimal big = dec.toBigDecimal();
+        Decimal dec = ((DecimalHandle) hTarget).getValue();
         switch (method.getName())
             {
             case "abs":
-                return frame.assignValue(iReturn, makeHandle(big.abs()));
+                return frame.assignValue(iReturn, makeHandle(dec.abs()));
 
             case "toBitArray":
                 {
@@ -139,8 +150,9 @@ abstract public class BaseDecFP
                 }
 
             case "toFloat64":
-                // TODO: overflow check
-                return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(big.doubleValue()));
+                return dec.isFinite()
+                    ? frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(dec.toBigDecimal().doubleValue()))
+                    : overflow(frame);
 
             case "toVarInt":
             case "toVarUInt":
@@ -150,87 +162,76 @@ abstract public class BaseDecFP
 
             case "neg":
                 // same as invokeNeg()
-                return frame.assignValue(iReturn, makeHandle(big.negate()));
+                return frame.assignValue(iReturn, makeHandle(dec.neg()));
 
             case "floor":
-                return frame.assignValue(iReturn,
-                    makeHandle(big.setScale(0, Rounding.TowardNegative.getMode())));
+                return frame.assignValue(iReturn, makeHandle(dec.floor()));
 
             case "ceil":
-                return frame.assignValue(iReturn,
-                    makeHandle(big.setScale(0, Rounding.TowardPositive.getMode())));
+                return frame.assignValue(iReturn, makeHandle(dec.ceil()));
 
             case "exp":
-                return frame.assignValue(iReturn, makeHandle(Math.exp(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.exp()));
 
             case "log":
-                return frame.assignValue(iReturn, makeHandle(Math.log(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.log()));
 
             case "log2":
-                return frame.assignValue(iReturn, makeHandle(Math.log10(big.doubleValue())*LOG2_10));
+                return frame.assignValue(iReturn, makeHandle(dec.log2()));
 
             case "log10":
-                return frame.assignValue(iReturn, makeHandle(Math.log10(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.log10()));
 
             case "sqrt":
-                return frame.assignValue(iReturn, makeHandle(Math.sqrt(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.sqrt()));
 
             case "cbrt":
-                return frame.assignValue(iReturn, makeHandle(Math.cbrt(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.cbrt()));
 
             case "sin":
-                return frame.assignValue(iReturn, makeHandle(Math.sin(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.sin()));
 
             case "tan":
-                return frame.assignValue(iReturn, makeHandle(Math.tan(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.tan()));
 
             case "asin":
-                return frame.assignValue(iReturn, makeHandle(Math.asin(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.asin()));
 
             case "acos":
-                return frame.assignValue(iReturn, makeHandle(Math.acos(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.acos()));
 
             case "atan":
-                return frame.assignValue(iReturn, makeHandle(Math.atan(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.atan()));
 
             case "sinh":
-                return frame.assignValue(iReturn, makeHandle(Math.sinh(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.sinh()));
 
             case "cosh":
-                return frame.assignValue(iReturn, makeHandle(Math.cosh(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.cosh()));
 
             case "tanh":
-                return frame.assignValue(iReturn, makeHandle(Math.tanh(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.tanh()));
 
             case "asinh":
-                {
-                double d = big.doubleValue();
-                return frame.assignValue(iReturn, makeHandle(Math.log(d+Math.sqrt(d*d+1.0))));
-                }
+                return frame.assignValue(iReturn, makeHandle(dec.asinh()));
 
             case "acosh":
-                {
-                double d = big.doubleValue();
-                return frame.assignValue(iReturn, makeHandle( Math.log(d+Math.sqrt(d*d-1.0))));
-                }
+                return frame.assignValue(iReturn, makeHandle(dec.acosh()));
 
             case "atanh":
-                {
-                double d = big.doubleValue();
-                return frame.assignValue(iReturn, makeHandle(0.5*Math.log((d+1.0)/(d-1.0))));
-                }
+                return frame.assignValue(iReturn, makeHandle(dec.atanh()));
 
             case "deg2rad":
-                return frame.assignValue(iReturn, makeHandle(Math.toRadians(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.deg2rad()));
 
             case "rad2deg":
-                return frame.assignValue(iReturn, makeHandle(Math.toDegrees(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.rad2deg()));
 
             case "nextUp":
-                return frame.assignValue(iReturn, makeHandle(Math.nextUp(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.nextUp()));
 
             case "nextDown":
-                return frame.assignValue(iReturn, makeHandle(Math.nextDown(big.doubleValue())));
+                return frame.assignValue(iReturn, makeHandle(dec.nextDown()));
 
             }
 
@@ -246,7 +247,7 @@ abstract public class BaseDecFP
                 {
                 Decimal dec = ((DecimalHandle) hTarget).getValue();
 
-                // TODO:
+                // TODO CP
                 boolean fSign     = dec.isSigned();
                 int     iExp      = 0;
                 long    lMantissa = 0;
@@ -261,66 +262,66 @@ abstract public class BaseDecFP
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        BigDecimal big1 = ((DecimalHandle) hTarget).getValue().toBigDecimal();
-        BigDecimal big2 = ((DecimalHandle) hArg).getValue().toBigDecimal();
+        Decimal dec1 = ((DecimalHandle) hTarget).getValue();
+        Decimal dec2 = ((DecimalHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(big1.add(big2)));
+        return frame.assignValue(iReturn, makeHandle(dec1.add(dec2)));
         }
 
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        BigDecimal big1 = ((DecimalHandle) hTarget).getValue().toBigDecimal();
-        BigDecimal big2 = ((DecimalHandle) hArg).getValue().toBigDecimal();
+        Decimal dec1 = ((DecimalHandle) hTarget).getValue();
+        Decimal dec2 = ((DecimalHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(big1.subtract(big2)));
+        return frame.assignValue(iReturn, makeHandle(dec1.subtract(dec2)));
         }
 
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        BigDecimal big1 = ((DecimalHandle) hTarget).getValue().toBigDecimal();
-        BigDecimal big2 = ((DecimalHandle) hArg).getValue().toBigDecimal();
+        Decimal dec1 = ((DecimalHandle) hTarget).getValue();
+        Decimal dec2 = ((DecimalHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(big1.multiply(big2)));
+        return frame.assignValue(iReturn, makeHandle(dec1.multiply(dec2)));
         }
 
     @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        BigDecimal big1 = ((DecimalHandle) hTarget).getValue().toBigDecimal();
-        BigDecimal big2 = ((DecimalHandle) hArg).getValue().toBigDecimal();
+        Decimal dec1 = ((DecimalHandle) hTarget).getValue();
+        Decimal dec2 = ((DecimalHandle) hArg).getValue();
 
-        if (big2.signum() == 0)
+        if (dec1.getSignum() == 0)
             {
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeHandle(big1.divide(big2)));
+        return frame.assignValue(iReturn, makeHandle(dec1.divide(dec2)));
         }
 
     @Override
     public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        BigDecimal big1 = ((DecimalHandle) hTarget).getValue().toBigDecimal();
-        BigDecimal big2 = ((DecimalHandle) hArg).getValue().toBigDecimal();
+        Decimal dec1 = ((DecimalHandle) hTarget).getValue();
+        Decimal dec2 = ((DecimalHandle) hArg).getValue();
 
-        if (big2.signum() <= 0)
+        if (dec2.getSignum() <= 0)
             {
-            // TODO:  if (< 0) "modulus not positive"
-            return overflow(frame);
+            return dec2.getSignum() == 0
+                ? overflow(frame)
+                : frame.raiseException("Modulus is negative: " + dec2.toString());
             }
 
-        BigDecimal bigR = big1.remainder(big2);
-        return frame.assignValue(iReturn, makeHandle(bigR.signum() >= 0 ? bigR : bigR.add(big2)));
+        return frame.assignValue(iReturn, makeHandle(dec1.mod(dec2)));
         }
 
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        BigDecimal big = ((DecimalHandle) hTarget).getValue().toBigDecimal();
+        Decimal dec = ((DecimalHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(big.negate()));
+        return frame.assignValue(iReturn, makeHandle(dec.neg()));
         }
 
 
@@ -352,32 +353,24 @@ abstract public class BaseDecFP
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * @return a decimal value for the specified BigDecimal
+     * @return a decimal value for the specified double
      */
-    abstract protected Decimal fromBigDecimal(BigDecimal big);
-
-    /**
-     * @return TODO
-     */
-    protected String toString(BigDecimal big)
-        {
-        return big.stripTrailingZeros().toString();
-        }
+    abstract protected Decimal fromDouble(double d);
 
     @Override
     protected int callEstimateLength(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        BigDecimal big = ((DecimalHandle) hTarget).getValue().toBigDecimal();
+        Decimal dec = ((DecimalHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(toString(big).length()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(dec.toString().length()));
         }
 
     @Override
     protected int callAppendTo(Frame frame, ObjectHandle hTarget, ObjectHandle hAppender, int iReturn)
         {
-        BigDecimal big = ((DecimalHandle) hTarget).getValue().toBigDecimal();
+        Decimal dec = ((DecimalHandle) hTarget).getValue();
 
-        return xString.callAppendTo(frame, xString.makeHandle(toString(big)), hAppender, iReturn);
+        return xString.callAppendTo(frame, xString.makeHandle(dec.toString()), hAppender, iReturn);
         }
 
     @Override
@@ -391,9 +384,9 @@ abstract public class BaseDecFP
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        BigDecimal big = ((DecimalHandle) hTarget).getValue().toBigDecimal();
+        Decimal dec = ((DecimalHandle) hTarget).getValue();
 
-        return frame.assignValue(iReturn, xString.makeHandle(toString(big)));
+        return frame.assignValue(iReturn, xString.makeHandle(dec.toString()));
         }
 
 
@@ -401,12 +394,7 @@ abstract public class BaseDecFP
 
     protected DecimalHandle makeHandle(double d)
         {
-        return makeHandle(new BigDecimal(d));
-        }
-
-    public DecimalHandle makeHandle(BigDecimal bigValue)
-        {
-        return makeHandle(fromBigDecimal(bigValue));
+        return makeHandle(fromDouble(d));
         }
 
     public DecimalHandle makeHandle(Decimal decValue)

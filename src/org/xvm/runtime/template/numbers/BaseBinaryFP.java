@@ -33,18 +33,6 @@ abstract public class BaseBinaryFP
         }
 
     @Override
-    public void initDeclared()
-        {
-        super.initDeclared();
-
-        // properties
-        markNativeProperty("infinity");
-        markNativeProperty("NaN");
-
-        getCanonicalType().invalidateTypeInfo();
-        }
-
-    @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         switch (sPropName)
@@ -144,8 +132,15 @@ abstract public class BaseBinaryFP
                     xBitArray.makeHandle(abValue, f_cBits, Mutability.Constant));
                 }
 
+            case "toDec64":
+                return Double.isInfinite(d)
+                    ? overflow(frame)
+                    : frame.assignValue(iReturn, xDec64.INSTANCE.makeHandle(d));
+
             case "toFloat64":
-                return frame.assignValue(iReturn, makeHandle(d));
+                return Double.isInfinite(d)
+                    ? overflow(frame)
+                    : frame.assignValue(iReturn, makeHandle(d));
 
             case "toVarInt":
             case "toVarUInt":

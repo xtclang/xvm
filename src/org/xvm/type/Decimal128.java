@@ -168,7 +168,7 @@ public class Decimal128
                 nHSig = nHSig * 1000 + decletToInt((int) (nHBits >>> of));
                 }
             }
-        
+
         // process the T portion in the low bits (including the 6 LSBs of the high bits)
         long nLSig = 0;
         if (nHSig != 0 || nLBits != 0)
@@ -182,7 +182,7 @@ public class Decimal128
                 nLSig = nLSig * 1000 + decletToInt((int) (nLBits >>> of));
                 }
             }
-        
+
         // put the digits from the low and high bits together to form the full significand
         BigInteger bintL = nLSig == 0 ? BIGINT_ZERO : BigInteger.valueOf(nLSig);
         return nHSig == 0 ? bintL : BigInteger.valueOf(nHSig).multiply(BIGINT_10_TO_18TH).add(bintL);
@@ -237,6 +237,37 @@ public class Decimal128
             m_dec = dec = isSigned() ? dec.negate() : dec;
             }
         return dec;
+        }
+
+    @Override
+    public Decimal fromBigDecimal(BigDecimal big)
+        {
+        try
+            {
+            return new Decimal128(big);
+            }
+        catch (RangeException e)
+            {
+            return e.getDecimal();
+            }
+        }
+
+    @Override
+    public Decimal infinity(boolean fSigned)
+        {
+        return fSigned ? NEG_INFINITY : POS_INFINITY;
+        }
+
+    @Override
+    public Decimal zero(boolean fSigned)
+        {
+        return fSigned ? NEG_ZERO : POS_ZERO;
+        }
+
+    @Override
+    public Decimal nan()
+        {
+        return NaN;
         }
 
     @Override

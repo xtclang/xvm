@@ -36,6 +36,10 @@ abstract public class BaseFP
     @Override
     public void initDeclared()
         {
+        // properties
+        markNativeProperty("infinity");
+        markNativeProperty("NaN");
+
         // @Op methods
         markNativeMethod("abs"        , VOID, THIS);
         markNativeMethod("add"        , THIS, THIS);

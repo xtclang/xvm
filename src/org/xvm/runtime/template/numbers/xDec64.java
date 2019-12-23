@@ -2,7 +2,6 @@ package org.xvm.runtime.template.numbers;
 
 
 import java.math.BigDecimal;
-
 import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
@@ -35,9 +34,16 @@ public class xDec64
     // ----- helpers -------------------------------------------------------------------------------
 
     @Override
-    protected Decimal fromBigDecimal(BigDecimal big)
+    protected Decimal fromDouble(double d)
         {
-        return new Decimal64(big);
+        try
+            {
+            return new Decimal64(new BigDecimal(d));
+            }
+        catch (Decimal.RangeException e)
+            {
+            return e.getDecimal();
+            }
         }
 
     @Override

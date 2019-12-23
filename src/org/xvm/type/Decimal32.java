@@ -178,6 +178,37 @@ public class Decimal32
         }
 
     @Override
+    public Decimal fromBigDecimal(BigDecimal big)
+        {
+        try
+            {
+            return new Decimal32(big);
+            }
+        catch (RangeException e)
+            {
+            return e.getDecimal();
+            }
+        }
+
+    @Override
+    public Decimal infinity(boolean fSigned)
+        {
+        return fSigned ? NEG_INFINITY : POS_INFINITY;
+        }
+
+    @Override
+    public Decimal zero(boolean fSigned)
+        {
+        return fSigned ? NEG_ZERO : POS_ZERO;
+        }
+
+    @Override
+    public Decimal nan()
+        {
+        return NaN;
+        }
+
+    @Override
     public byte[] toByteArray()
         {
         int    n  = m_nBits;
