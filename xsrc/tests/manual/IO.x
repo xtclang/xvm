@@ -168,7 +168,7 @@ module TestIO
         console.println("DirectPrinter:");
         Appender<Char> toConsole = new Appender<Char>()
             {
-            @Override // TODO GG if this @Override is missing, the error message sucks
+            @Override
             Appender<Char> add(Char ch)
                 {
                 console.print(ch);

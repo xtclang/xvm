@@ -3075,16 +3075,15 @@ public abstract class TypeConstant
             Object      nidContrib   = idContrib.resolveNestedIdentity(pool, this);
             MethodInfo  methodResult = methodContrib;
 
+            List<Object> listMatches = collectPotentialSuperMethods(
+                    methodContrib.getHead().getMethodStructure(),
+                    nidContrib, sigContrib, mapVirtMethods);
+
             if (methodContrib.getTail().isOverride())
                 {
                 // the @Override tag gives us permission to look for a method with a
                 // different signature that can be narrowed to the signature of the
                 // contribution (because @Override means there MUST be a super method)
-
-                List<Object> listMatches = collectPotentialSuperMethods(
-                        methodContrib.getHead().getMethodStructure(),
-                        nidContrib, sigContrib, mapVirtMethods);
-
                 if (listMatches.isEmpty())
                     {
                     if (methodContrib.getTail().isNative())
@@ -3194,19 +3193,25 @@ public abstract class TypeConstant
                 }
             else
                 {
-                // override is not specified
-                MethodInfo methodBase = mapVirtMethods.get(nidContrib);
-                if (methodBase != null)
+                // override is not specified;
+                // if nidContrib directly points to a "super" method, it must be in the list
+                assert !mapVirtMethods.containsKey(nidContrib) || listMatches.contains(nidContrib);
+
+                for (Object nid : listMatches)
                     {
-                    if (fSelf && !methodBase.getIdentity().equals(methodContrib.getIdentity()))
+                    MethodInfo methodBase = mapVirtMethods.get(nid);
+                    if (methodBase != null)
                         {
-                        log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
-                            getValueString(),
-                            methodBase.getIdentity(),
-                            methodContrib.getIdentity().getPathString()
-                            );
+                        if (fSelf && !methodBase.getIdentity().equals(methodContrib.getIdentity()))
+                            {
+                            log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
+                                getValueString(),
+                                methodBase.getIdentity(),
+                                methodContrib.getIdentity().getPathString()
+                                );
+                            }
+                        methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
                         }
-                    methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
                     }
 
                 if (idDelegate != null)
@@ -3307,7 +3312,7 @@ public abstract class TypeConstant
     /**
      * Collect all methods that could be the "super" of the specified method signature.
      *
-     * @param method     the method structure for the method that is searching for a super
+     * @param method     the method structure for the method that is searching for a super (optional)
      * @param nidSub     the nested identity of the method
      * @param sigSub     the signature of the method that is searching for a super
      * @param mapSupers  map of super methods to select from
@@ -3321,28 +3326,32 @@ public abstract class TypeConstant
             Map<Object, MethodInfo> mapSupers)
 
         {
-        List<Object> listMatch = new ArrayList<>();
+        List<Object> listMatch = null;
         boolean      fExact    = true;
         for (Entry<Object, MethodInfo> entry : mapSupers.entrySet())
             {
             Object nidCandidate = entry.getKey();
             if (IdentityConstant.isNestedSibling(nidSub, nidCandidate))
                 {
-                SignatureConstant sigCandidate  = entry.getValue().getSignature(); // resolved
+                SignatureConstant sigCandidate = entry.getValue().getSignature(); // resolved
                 if (sigCandidate.getName().equals(sigSub.getName()))
                     {
                     if (sigSub.isSubstitutableFor(sigCandidate, this))
                         {
-                        if (!fExact)
+                        if (!fExact && listMatch != null)
                             {
                             // we found an exact match; get rid of non-exact ones
                             listMatch.clear();
                             }
+                        if (listMatch == null)
+                            {
+                            listMatch = new ArrayList<>();
+                            }
                         listMatch.add(nidCandidate);
                         }
-                    else if (listMatch.isEmpty())
+                    else if (method != null && (listMatch == null || !fExact))
                         {
-                        // allow default parameters (if there is no "exact" match
+                        // allow default parameters (but only if there is no "exact" match)
                         int cDefault = method.getDefaultParamCount();
                         if (cDefault > 0)
                             {
@@ -3353,6 +3362,10 @@ public abstract class TypeConstant
                                 SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
                                 if (sigSubReq.isSubstitutableFor(sigCandidate, this))
                                     {
+                                    if (listMatch == null)
+                                        {
+                                        listMatch = new ArrayList<>();
+                                        }
                                     listMatch.add(nidCandidate);
                                     fExact = false;
                                     }
@@ -3362,7 +3375,7 @@ public abstract class TypeConstant
                     }
                 }
             }
-        return listMatch;
+        return listMatch == null ? Collections.EMPTY_LIST : listMatch;
         }
 
     /**
