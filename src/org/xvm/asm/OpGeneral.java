@@ -210,10 +210,14 @@ public abstract class OpGeneral
         StringBuilder sb = new StringBuilder();
         sb.append(toName(getOpCode()))
           .append(' ')
-          .append(Argument.toIdString(m_argTarget, m_nTarget))
-          .append(", ")
-          .append(Argument.toIdString(m_argValue, m_nArgValue))
-          .append(", ")
+          .append(Argument.toIdString(m_argTarget, m_nTarget));
+
+        if (isBinaryOp())
+            {
+            sb.append(", ")
+              .append(Argument.toIdString(m_argValue, m_nArgValue));
+            }
+        sb.append(", ")
           .append(Argument.toIdString(m_argReturn, m_nRetValue));
         return sb.toString();
         }
