@@ -2902,7 +2902,7 @@ public class ClassStructure
      * All the methods that are created artificially will be marked as "transient" and should not be
      * persisted during the serialization phase.
      *
-     * Note: we should not call "ensureAssembled" for generated code when called during the
+     * Note: we should not call "registerConstants()" for generated code when called during the
      *       compilation phase; it will be done by the compiler.
      *
      * @param fDisassemble  if true, indicates that this method is called during the "disassemble"
@@ -3009,7 +3009,7 @@ public class ClassStructure
      * If explicit "toString()" exists and "appendTo()" does not, generate "appendTo()" to route to
      * "toString" and a trivial "estimateStringLength".
      */
-    private void synthesizeAppendTo(boolean fEnsureAssembled)
+    private void synthesizeAppendTo(boolean fRegisterConstants)
         {
         MethodStructure methToString = findMethod("toString", 0);
         if (methToString != null)
@@ -3048,7 +3048,7 @@ public class ClassStructure
                 code.add(new Invoke_10(regStack, methAppendTo.getIdentityConstant(), regAppender));
                 code.add(new Return_0());
 
-                if (fEnsureAssembled)
+                if (fRegisterConstants)
                     {
                     code.registerConstants();
                     }
@@ -3070,7 +3070,7 @@ public class ClassStructure
                     // return 0;
                     code.add(new Return_1(pool.val0()));
 
-                    if (fEnsureAssembled)
+                    if (fRegisterConstants)
                         {
                         code.registerConstants();
                         }
