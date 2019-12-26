@@ -99,6 +99,20 @@ interface Ref<Referent>
     @RO Type actualType;
 
     /**
+     * Obtain an opaque object that represents the identity of the reference held by this Ref. The
+     * identity can be used for comparison with other identities to determine whether two identities
+     * originate from the same object.
+     *
+     * As long as the reference to the `Identity` is held, any subsequent requests for an identity
+     * from the same underlying object will provide an `Identity` that yields the same result from
+     * the `hashCode()` function. If the Identity is permitted to be garbage-collected, subsequent
+     * requests for an identity from the same underlying object _may_ provide an `Identity` that
+     * yields a different result from the `hashCode()` function; in other words, the hash code is
+     * treated as ephemeral data.
+     */
+    @RO immutable Hashable identity;
+
+    /**
      * Obtain a new reference to the referent such that the reference contains only the methods and
      * properties in the specified {@link Type}. The members of the requested type must be satisfied
      * by the members defined by the object's class. The requested type must be a subset of the
@@ -187,5 +201,8 @@ interface Ref<Referent>
      * _identity_. Specifically, two references are equal iff they reference the same runtime
      * object, or the two objects that they reference are both immutable and structurally identical.
      */
-    static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2);
+    static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2)
+        {
+        return value1.identity == value2.identity;
+        }
     }
