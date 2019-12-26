@@ -2,7 +2,6 @@ package org.xvm.runtime.template;
 
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 import org.xvm.asm.Annotation;

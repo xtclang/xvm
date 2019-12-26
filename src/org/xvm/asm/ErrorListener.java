@@ -2,7 +2,9 @@ package org.xvm.asm;
 
 
 import java.text.MessageFormat;
+
 import java.util.ResourceBundle;
+
 import org.xvm.compiler.Source;
 
 import org.xvm.util.Severity;
