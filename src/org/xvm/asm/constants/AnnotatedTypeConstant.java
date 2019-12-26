@@ -197,6 +197,28 @@ public class AnnotatedTypeConstant
         return m_annotation.getParams();
         }
 
+    /**
+     * @return a topologically equivalent AnnotatedTypeConstant that doesn't contain any annotation
+     *         parameters
+     */
+    public AnnotatedTypeConstant stripParameters()
+        {
+        TypeConstant typeUnderlying = getUnderlyingType();
+        boolean      fDiff          = false;
+
+        if (typeUnderlying instanceof AnnotatedTypeConstant)
+            {
+            TypeConstant typeU = ((AnnotatedTypeConstant) typeUnderlying).stripParameters();
+
+            fDiff          = typeU != typeUnderlying;
+            typeUnderlying = typeU;
+            }
+        return fDiff || getAnnotationParams().length > 0
+                ? getConstantPool().ensureAnnotatedTypeConstant(getAnnotationClass(),
+                        Constant.NO_CONSTS, typeUnderlying)
+                : this;
+        }
+
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 

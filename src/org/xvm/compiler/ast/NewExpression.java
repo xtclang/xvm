@@ -11,6 +11,7 @@ import java.util.Map.Entry;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -21,9 +22,12 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
@@ -285,13 +289,19 @@ public class NewExpression
 
         if (left == null)
             {
-            // infer type information from the required type; that information needs to be used to
-            // inform the validation of the type that we are "new-ing"
             typeTarget = type.ensureTypeConstant(ctx);
             if (typeTarget.containsUnresolved())
                 {
-                type.log(errs, Severity.FATAL, Compiler.NAME_UNRESOLVABLE, type.toString());
-                return null;
+                if (typeTarget instanceof AnnotatedTypeConstant)
+                    {
+                    typeTarget     = ((AnnotatedTypeConstant) typeTarget).stripParameters();
+                    m_fDynamicAnno = true;
+                    }
+                else
+                    {
+                    type.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, type.toString());
+                    return null;
+                    }
                 }
             typeTarget = typeTarget.resolveAutoNarrowingBase(pool);
             }
@@ -336,6 +346,8 @@ public class NewExpression
 
         if (fValid && typeRequired != null)
             {
+            // infer type information from the required type; that information needs to be used to
+            // inform the validation of the type that we are "new-ing"
             TypeConstant typeInferred = inferTypeFromRequired(typeTarget, typeRequired);
             if (typeInferred != null)
                 {
@@ -357,6 +369,11 @@ public class NewExpression
             {
             this.type  = exprTypeNew;
             typeTarget = exprTypeNew.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
+
+            if (m_fDynamicAnno)
+                {
+                typeTarget = ((AnnotatedTypeConstant) typeTarget).stripParameters();
+                }
             typeResult = typeTarget;
 
             if (left == null)
@@ -738,8 +755,21 @@ public class NewExpression
         {
         assert m_constructor.getTypeParamCount() == 0;
 
+        TypeConstant typeTarget;
+        if (m_fDynamicAnno)
+            {
+            // the annotated type cannot have any ref annotations, but can have multiple type
+            // annotations (e.g. @A1(arg1) @A2(arg2) C(arg)
+            AnnotatedTypeConstant typeAnno = (AnnotatedTypeConstant) type.ensureTypeConstant(ctx);
+
+            typeTarget = generateDynamicParameters(ctx, code, typeAnno, errs);
+            }
+        else
+            {
+            typeTarget = getType();
+            }
+
         MethodConstant idConstruct = m_constructor.getIdentityConstant();
-        TypeConstant   typeTarget  = getType();
         int            cParams     = m_constructor.getParamCount();
         int            cArgs       = aArgs.length;
         int            cDefaults   = cParams - cArgs;
@@ -869,6 +899,51 @@ public class NewExpression
                     }
                 }
             }
+        }
+
+    /**
+     * Generate registers for any dynamic (non-constant) parameter of the underlying annotated type
+     * and produce the resolved type constant to be used by the NEW_ op.
+     */
+    private TypeConstant generateDynamicParameters(Context ctx, Code code,
+                                                   AnnotatedTypeConstant typeAnno, ErrorListener errs)
+        {
+        ConstantPool pool = pool();
+
+        TypeConstant typeUnderlying = typeAnno.getUnderlyingType();
+        if (typeUnderlying instanceof AnnotatedTypeConstant)
+            {
+            typeUnderlying = generateDynamicParameters(ctx, code, (AnnotatedTypeConstant) typeUnderlying, errs);
+            }
+
+        Constant[] aConst = typeAnno.getAnnotationParams();
+        boolean    fDiff  = false;
+        for (int j = 0, c = aConst.length; j < c; j++)
+            {
+            Constant constArg = aConst[j];
+            if (constArg instanceof ExpressionConstant)
+                {
+                Expression exprArg = ((ExpressionConstant) constArg).getExpression();
+
+                Argument argArg = exprArg.generateArgument(ctx, code, true, false, errs);
+                Register regArg;
+                if (argArg instanceof Register)
+                    {
+                    regArg = (Register) argArg;
+                    }
+                else
+                    {
+                    regArg = new Register(exprArg.getType());
+                    code.add(new Var(regArg));
+                    code.add(new Move(argArg, regArg));
+                    }
+                aConst[j] = new RegisterConstant(pool, regArg);
+                fDiff     = true;
+                }
+            }
+        return fDiff
+                ? pool.ensureAnnotatedTypeConstant(typeAnno.getAnnotationClass(), aConst, typeUnderlying)
+                : typeAnno;
         }
 
     /**
@@ -1442,6 +1517,10 @@ public class NewExpression
      * True if the inner class captures "this" (i.e. not static).
      */
     private transient boolean               m_fInstanceChild;
+    /**
+     * True if the newable type has non-constant annotation parameters.
+     */
+    private transient boolean               m_fDynamicAnno;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "anon");
     }

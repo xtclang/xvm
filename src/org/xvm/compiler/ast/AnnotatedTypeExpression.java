@@ -47,7 +47,7 @@ public class AnnotatedTypeExpression
     /**
      * @return true iff this AnnotatedTypeExpression has been instructed to disassociate its
      *         annotation from the underlying type, which will occur if the annotation needs to be
-     *         associated with property, method, or variable, for example
+     *         associated with property or variable, for example
      */
     public boolean isDisassociated()
         {
@@ -55,7 +55,8 @@ public class AnnotatedTypeExpression
         }
 
     /**
-     * TODO
+     * @return true iff this AnnotatedTypeExpression is itself disassociated or contains any
+     *         disassociated AnnotatedTypeExpression type
      */
     public boolean isIntoRef()
         {
@@ -65,7 +66,8 @@ public class AnnotatedTypeExpression
         }
 
     /**
-     * TODO
+     * @return true iff this AnnotatedTypeExpression is itself refers to a Var (read/write) or
+     *         contains any disassociated AnnotatedTypeExpression type that refers to a Var
      */
     public boolean isVar()
         {
@@ -75,7 +77,7 @@ public class AnnotatedTypeExpression
         }
 
     /**
-     * TODO
+     * @return true if this type expression represents an injected type
      */
     public boolean isInjected()
         {
@@ -85,7 +87,7 @@ public class AnnotatedTypeExpression
         }
 
     /**
-     * TODO
+     * @return true if this type expression represents a "final" type (@Injected or @Final)
      */
     public boolean isFinal()
         {
@@ -95,7 +97,7 @@ public class AnnotatedTypeExpression
         }
 
     /**
-     * TODO
+     * @return a list of ref annotations (disassociated)
      */
     public List<AnnotationExpression> getRefAnnotations()
         {
@@ -211,11 +213,9 @@ public class AnnotatedTypeExpression
 
         type = typeNew;
 
-        TypeConstant typeReferent  = ensureTypeConstant(ctx);
-        TypeConstant typeReference = typeReferent.getType();
-
-        Annotation   anno     = annotation.ensureAnnotation(pool);
-        TypeConstant typeAnno = anno.getAnnotationType();
+        TypeConstant typeReferent = ensureTypeConstant(ctx);
+        Annotation   anno         = annotation.ensureAnnotation(pool);
+        TypeConstant typeAnno     = anno.getAnnotationType();
         TypeConstant typeReq;
 
         // the annotation must mix in to the Var (if it's disassociated), or into the underlying
@@ -269,7 +269,10 @@ public class AnnotatedTypeExpression
 
         annotation = exprNew;
 
-        return finishValidation(typeRequired, typeReference, TypeFit.Fit, typeReferent, errs);
+        resetTypeConstant();
+        typeReferent = ensureTypeConstant(ctx);
+
+        return finishValidation(typeRequired, typeReferent.getType(), TypeFit.Fit, typeReferent, errs);
         }
 
 

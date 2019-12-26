@@ -44,8 +44,9 @@ module TestAnnotations.xqiz.it
 
     void testMixin()
         {
+        Int age  = 26;
         val jane = new Named("Jane");
-        val joe  = new @Aged(27) Named("Joe");
+        val joe  = new @Aged(age + 1) Named("Joe");
 
         console.println(jane);
         console.println(joe);
