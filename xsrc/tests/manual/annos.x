@@ -44,12 +44,11 @@ module TestAnnotations.xqiz.it
 
     void testMixin()
         {
-        Int age  = 26;
-        val jane = new Named("Jane");
-        val joe  = new @Aged(age + 1) Named("Joe");
-
-        console.println(jane);
-        console.println(joe);
+        Int age = 26;
+        val p1  = new Named("Jane");
+        val p2  = new @Aged(age + 1) Named("Joe");
+        val p3  = new @Aged(age) @Skilled("Java") Named("Jon");
+        val p4  = new @Skilled("Ecstasy") @Aged(21) Named("Joanne");
         }
 
     const Named
@@ -76,6 +75,19 @@ module TestAnnotations.xqiz.it
             console.println($"finally (aged) {this}");
             }
         Int age;
+        }
+
+    mixin Skilled into Named
+        {
+        construct(String skill)
+            {
+            this.skill = skill;
+            }
+        finally
+            {
+            console.println($"finally (skill) {this}");
+            }
+        String skill;
         }
     }
 

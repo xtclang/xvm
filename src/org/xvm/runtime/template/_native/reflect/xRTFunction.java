@@ -772,6 +772,7 @@ public class xRTFunction
             {
             if (handle != NO_OP)
                 {
+                assert m_next == null;
                 m_next = handle;
                 }
             return this;

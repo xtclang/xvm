@@ -1,6 +1,7 @@
 package org.xvm.runtime.template;
 
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -172,24 +173,19 @@ public class Mixin
 
                     case 5:
                         {
-                        ObjectHandle hPublic = hStruct.ensureAccess(Access.PUBLIC);
-                        if (listFinalizers == null)
+                        ObjectHandle           hPublic = hStruct.ensureAccess(Access.PUBLIC);
+                        List<FullyBoundHandle> listFn  = listFinalizers;
+                        if (listFn == null)
                             {
                             return frameCaller.assignValue(iReturn, hPublic);
                             }
 
-                        int              ix         = 0;
-                        FullyBoundHandle hfnFinally = null;
-                        for (FullyBoundHandle hfn : listFinalizers)
+                        // create a chain (stack) of finalizers
+                        int              cFn        = listFn.size();
+                        FullyBoundHandle hfnFinally = listFn.get(cFn - 1);
+                        for (int i = cFn - 2; i >= 0; i--)
                             {
-                            if (ix++ == 0)
-                                {
-                                hfnFinally = hfn;
-                                }
-                            else
-                                {
-                                hfnFinally = hfnFinally.chain(hfn);
-                                }
+                            hfnFinally = listFn.get(i).chain(hfnFinally);
                             }
 
                         return hfnFinally.callChain(frameCaller, hPublic, frame_ ->
@@ -231,7 +227,7 @@ public class Mixin
                 {
                 if (listFinalizers == null)
                     {
-                    listFinalizers = new LinkedList<>();
+                    listFinalizers = new ArrayList<>();
                     }
                 listFinalizers.add(frame.m_hfnFinally = hfn);
                 }
