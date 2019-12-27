@@ -49,6 +49,24 @@ module TestAnnotations.xqiz.it
         val p2  = new @Aged(age + 1) Named("Joe");
         val p3  = new @Aged(age) @Skilled("Java") Named("Jon");
         val p4  = new @Skilled("Ecstasy") @Aged(21) Named("Joanne");
+        try
+            {
+            new @Aged(-1) Named("Joe");
+            throw new Exception();
+            }
+        catch (IllegalState e)
+            {
+            console.println($"expected assert: {e.text}");
+            }
+        try
+            {
+            new @Skilled("Ecstasy") @Aged(21) Named("");
+            throw new Exception();
+            }
+        catch (IllegalState e)
+            {
+            console.println($"expected assert: {e.text}");
+            }
         }
 
     const Named
@@ -61,6 +79,12 @@ module TestAnnotations.xqiz.it
             {
             console.println($"finally (name) {this}");
             }
+
+        assert()
+            {
+            assert name.size > 0;
+            console.println($"assert (name) {name}");
+            }
         String name;
         }
 
@@ -68,12 +92,17 @@ module TestAnnotations.xqiz.it
         {
         construct(Int age)
             {
-            assert age >= 0;
             this.age = age;
             }
         finally
             {
             console.println($"finally (aged) {this}");
+            }
+
+        assert()
+            {
+            assert age >= 0;
+            console.println($"assert (aged) {age}");
             }
         Int age;
         }
@@ -87,6 +116,12 @@ module TestAnnotations.xqiz.it
         finally
             {
             console.println($"finally (skill) {this}");
+            }
+
+        assert()
+            {
+            assert skill.size > 0;
+            console.println($"assert (skill) {skill}");
             }
         String skill;
         }

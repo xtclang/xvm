@@ -154,7 +154,11 @@ public class Mixin
                         // fall through
                         }
 
-                    case 3: // check unassigned
+                    case 3: // validation
+                        iResult = callValidator(frameCaller, hStruct);
+                        break;
+
+                    case 4: // check unassigned
                         {
                         List<String> listUnassigned;
                         if ((listUnassigned = hStruct.validateFields()) != null)
@@ -166,11 +170,11 @@ public class Mixin
                         // fall through
                         }
 
-                    case 4: // post-construction validation
+                    case 5: // native post-construction validation
                         iResult = postValidate(frameCaller, hStruct);
                         break;
 
-                    case 5:
+                    case 6:
                         {
                         ObjectHandle           hPublic = hStruct.ensureAccess(Access.PUBLIC);
                         List<FullyBoundHandle> listFn  = listFinalizers;

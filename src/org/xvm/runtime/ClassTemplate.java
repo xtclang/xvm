@@ -1721,6 +1721,48 @@ public abstract class ClassTemplate
             }
         }
 
+    /**
+     * Call the first (if any) validator for this class.
+     *
+     * @param frame    the current frame
+     * @param hStruct  the struct handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
+     */
+    protected int callValidator(Frame frame, ObjectHandle hStruct)
+        {
+        CallChain chain = hStruct.getComposition().getMethodCallChain(pool().sigValidator());
+        if (chain.isNative())
+            {
+            return Op.R_NEXT;
+            }
+
+        MethodStructure method   = chain.getTop();
+        Frame           frameTop = frame.createFrame1(method, hStruct,
+                                        new ObjectHandle[method.getMaxVars()], Op.A_IGNORE);
+        if (chain.getDepth() > 1)
+            {
+            Frame.Continuation nextStep = new Frame.Continuation()
+                {
+                @Override
+                public int proceed(Frame frameCaller)
+                    {
+                    MethodStructure methodNext = chain.getMethod(index);
+                    Frame           frameNext  = frameCaller.createFrame1(methodNext, hStruct,
+                                new ObjectHandle[methodNext.getMaxVars()], Op.A_IGNORE);
+                    if (++index < chain.getDepth())
+                        {
+                        frameNext.addContinuation(this);
+                        }
+                    return frame.callInitialized(frameNext);
+                    }
+                private int index = 1;
+                };
+            frameTop.addContinuation(nextStep);
+            }
+        return frame.callInitialized(frameTop);
+        }
+
 
     // ----- numeric support -----------------------------------------------------------------------
 
@@ -1891,7 +1933,11 @@ public abstract class ClassTemplate
                         break;
                         }
 
-                    case 2: // check unassigned
+                    case 2: // validation
+                        iResult = callValidator(frameCaller, hStruct);
+                        break;
+
+                    case 3: // check unassigned
                         {
                         List<String> listUnassigned;
                         if ((listUnassigned = hStruct.validateFields()) != null)
@@ -1903,11 +1949,11 @@ public abstract class ClassTemplate
                         // fall through
                         }
 
-                    case 3: // post-construction validation
+                    case 4: // native post-construction validation
                         iResult = postValidate(frameCaller, hStruct);
                         break;
 
-                    case 4:
+                    case 5:
                         {
                         ObjectHandle hPublic = hStruct.ensureAccess(Access.PUBLIC);
                         return hfnFinally == null

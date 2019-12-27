@@ -1284,7 +1284,7 @@ public class StatementBlock
         @Override
         public boolean isConstructor()
             {
-            return m_method.isConstructor();
+            return m_method.isConstructor() || m_method.isValidator();
             }
 
         ModuleStructure getModule()

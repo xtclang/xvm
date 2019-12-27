@@ -2208,28 +2208,7 @@ public class TypeCompositionStatement
         // type parameters are not permitted
         if (typeParams != null && !typeParams.isEmpty())
             {
-            // note: currently no way to determine the location of the parameters
-            // Parameter paramFirst = typeParams.get(0);
-            // Parameter paramLast  = typeParams.get(typeParams.size() - 1);
-
-            Token tokFirst = category == null ? name : category;
-            Token tokLast = name == null ? category : name;
-            log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
-            }
-        }
-
-    private void disallowConstructorParams(ErrorListener errs)
-        {
-        // constructor parameters are not permitted
-        if (constructorParams != null && !constructorParams.isEmpty())
-            {
-            // note: currently no way to determine the location of the parameters
-            // Parameter paramFirst = constructorParams.get(0);
-            // Parameter paramLast  = constructorParams.get(constructorParams.size() - 1);
-
-            Token tokFirst = category == null ? name : category;
-            Token tokLast = name == null ? category : name;
-            log(errs, Severity.ERROR, Compiler.CONSTRUCTOR_PARAMS_UNEXPECTED);
+            typeParams.get(0).log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
             }
         }
 
@@ -2242,10 +2221,7 @@ public class TypeCompositionStatement
                 {
                 if (param.value == null)
                     {
-                    // note: currently no way to determine the location of the parameter
-                    Token tokFirst = category == null ? name : category;
-                    Token tokLast = name == null ? category : name;
-                    log(errs, Severity.ERROR, Compiler.CONSTRUCTOR_PARAM_DEFAULT_REQUIRED);
+                    param.log(errs, Severity.ERROR, Compiler.CONSTRUCTOR_PARAM_DEFAULT_REQUIRED);
                     }
                 }
             }

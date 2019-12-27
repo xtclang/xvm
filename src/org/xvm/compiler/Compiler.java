@@ -652,11 +652,11 @@ public class Compiler
      */
     public static final String TYPE_PARAMS_UNEXPECTED             = "COMPILER-12";
     /**
-     * Illegal / unexpected constructor parameters.
+     * Validator parameters are not allowed.
      */
-    public static final String CONSTRUCTOR_PARAMS_UNEXPECTED      = "COMPILER-13";
+    public static final String VALIDATOR_PARAMS_UNEXPECTED        = "COMPILER-13";
     /**
-     * Illegal / unexpected constructor parameters.
+     * Constructor parameters must have default values.
      */
     public static final String CONSTRUCTOR_PARAM_DEFAULT_REQUIRED = "COMPILER-14";
     /**
@@ -1197,6 +1197,10 @@ public class Compiler
      * Property reference ('&') is invalid.
      */
     public static final String INVALID_PROPERTY_REF                = "COMPILER-146";
+    /**
+     * Validator cannot be abstract.
+     */
+    public static final String VALIDATOR_BODY_MISSING              = "COMPILER-147";
     /**
      * {0} is not yet implemented.
      */

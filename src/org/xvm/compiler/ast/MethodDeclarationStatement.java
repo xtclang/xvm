@@ -131,6 +131,14 @@ public class MethodDeclarationStatement
         }
 
     /**
+     * @return true iff this statement represents a validator
+     */
+    public boolean isValidator()
+        {
+        return name != null && name.getId() == Id.ASSERT;
+        }
+
+    /**
      * If this statement represents a constructor, return a complementary statement
      * representing the "finally" block if one exists.
      *
@@ -302,6 +310,7 @@ public class MethodDeclarationStatement
                 {
                 boolean      fConstructor = isConstructor();
                 boolean      fFinally     = isConstructorFinally();
+                boolean      fValidator   = isValidator();
                 boolean      fFunction    = isStatic(modifiers) || fConstructor;
                 ConstantPool pool         = container.getConstantPool();
 
@@ -324,7 +333,7 @@ public class MethodDeclarationStatement
                         break CreateStructure;
                         }
 
-                    if (fConstructor || fFinally)
+                    if (fConstructor || fFinally || fValidator)
                         {
                         aReturns = org.xvm.asm.Parameter.NO_PARAMS;
                         }
@@ -356,12 +365,35 @@ public class MethodDeclarationStatement
                         }
                     }
 
+                if (fValidator)
+                    {
+                    if (modifiers != null && modifiers.size() > 0)
+                        {
+                        Token tok = modifiers.get(0);
+                        errs.log(Severity.ERROR, Compiler.ILLEGAL_MODIFIER, null,
+                            getSource(), tok.getStartPosition(), tok.getEndPosition());
+                        return;
+                        }
+                    if (params != null && params.size() > 0)
+                        {
+                        params.get(0).log(errs, Severity.ERROR, Compiler.VALIDATOR_PARAMS_UNEXPECTED);
+                        return;
+                        }
+
+                    if (body == null)
+                        {
+                        log(errs, Severity.ERROR, Compiler.VALIDATOR_BODY_MISSING);
+                        return;
+                        }
+                    }
+
                 org.xvm.asm.Parameter[] aParams = buildParameters(pool);
                 Access                  access  = container instanceof MethodStructure
                                                     ? Access.PRIVATE
                                                     : getDefaultAccess();
 
-                boolean fUsesSuper = !fFunction && !fFinally && access != Access.PRIVATE && usesSuper();
+                boolean fUsesSuper = !fFunction && !fFinally && !fValidator
+                                        && access != Access.PRIVATE && usesSuper();
                 MethodStructure method;
                 if (fFinally)
                     {

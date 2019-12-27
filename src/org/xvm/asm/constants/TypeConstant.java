@@ -3042,8 +3042,23 @@ public abstract class TypeConstant
                 boolean fKeep = true;
                 if (methodContrib.isConstructor())
                     {
-                    // keep constructors only for ourselves and not "super" contributions
-                    fKeep = fSelf;
+                    // for all other purposes validators are treated as constructors, except we need
+                    // to chain them (based on the same resolved id)
+                    if (methodContrib.isValidator())
+                        {
+                        idContrib = (MethodConstant) constId.appendNestedIdentity(
+                                                        pool, idContrib.getSignature());
+                        MethodInfo methodBase = mapMethods.get(idContrib);
+                        if (methodBase != null)
+                            {
+                            methodContrib = methodBase.layerOnValidator(methodContrib);
+                            }
+                        }
+                    else
+                        {
+                        // keep constructors only for ourselves and not "super" contributions
+                        fKeep = fSelf;
+                        }
                     }
                 else if (idContrib.getNestedDepth() == 2)
                     {
@@ -4303,6 +4318,18 @@ public abstract class TypeConstant
                     }
 
                 mapMethods.put(idMixinMethod, methodMixin);
+                }
+
+            if (methodMixin.isValidator())
+                {
+                MethodConstant idValidator = (MethodConstant)
+                    idBaseClass.appendNestedIdentity(pool, idMixinMethod.getSignature());
+
+                MethodInfo methodBase   = infoBase.getMethodById(idValidator);
+                MethodInfo methodResult = methodBase == null
+                        ? methodMixin
+                        : methodBase.layerOnValidator(methodMixin);
+                mapMethods.put(idValidator, methodResult);
                 }
             return;
             }

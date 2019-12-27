@@ -2200,6 +2200,7 @@ public class ConstantPool
     public SignatureConstant sigConstruct()     {SignatureConstant c = m_sigConstruct;    if (c == null) {m_sigConstruct    = c = getSignature("Object",    "construct", 0)                   ;} return c;}
     public SignatureConstant sigEquals()        {SignatureConstant c = m_sigEquals;       if (c == null) {m_sigEquals       = c = getSignature("Object",    "equals",    3)                   ;} return c;}
     public SignatureConstant sigCompare()       {SignatureConstant c = m_sigCompare;      if (c == null) {m_sigCompare      = c = getSignature("Orderable", "compare",   3)                   ;} return c;}
+    public SignatureConstant sigValidator()     {SignatureConstant c = m_sigValidator;    if (c == null) {m_sigValidator    = c = ensureSignatureConstant("assert", NO_TYPES, NO_TYPES)       ;} return c;}
 
 
     // ---- internal class helpers -----------------------------------------------------------------
@@ -3039,6 +3040,7 @@ public class ConstantPool
         m_sigConstruct    = null;
         m_sigEquals       = null;
         m_sigCompare      = null;
+        m_sigValidator    = null;
         m_infoPlaceholder = null;
 
         // sort the Constants by how often they are referred to within the FileStructure, with the
@@ -3712,6 +3714,7 @@ public class ConstantPool
     private transient SignatureConstant m_sigConstruct;
     private transient SignatureConstant m_sigEquals;
     private transient SignatureConstant m_sigCompare;
+    private transient SignatureConstant m_sigValidator;
     private transient TypeInfo          m_infoPlaceholder;
 
     /**

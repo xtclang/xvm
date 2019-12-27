@@ -150,6 +150,14 @@ public class MethodStructure
         }
 
     /**
+     * @return true iff this is a validator
+     */
+    public boolean isValidator()
+        {
+        return getName().equals("assert");
+        }
+
+    /**
      * @return the number of annotations
      */
     public int getAnnotationCount()

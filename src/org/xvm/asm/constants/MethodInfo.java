@@ -187,6 +187,54 @@ public class MethodInfo
         }
 
     /**
+     * Layer the MethodInfo for the validator.
+     * <p/>
+     * This method is different from the "layerOn" method above since the validator is quite special:
+     * it is not virtual (not callable directly), but the runtime needs to have the full list
+     * of the validators to perform the post-construction validation.
+     *
+     * @param that  the "contribution" MethodInfo to layer onto this MethodInfo
+     *
+     * @return the resulting MethodInfo
+     */
+    public MethodInfo layerOnValidator(MethodInfo that)
+        {
+        assert this.isValidator() && that.isValidator();
+
+        MethodBody[] aBase = this.m_aBody;
+        MethodBody[] aAdd  = that.m_aBody;
+        int          cBase = aBase.length;
+        int          cAdd  = aAdd.length;
+
+        ArrayList<MethodBody> listMerge = null;
+        NextLayer: for (int iThat = 0; iThat < cAdd; ++iThat)
+            {
+            MethodBody bodyThat = aAdd[iThat];
+            for (int iThis = 0; iThis < cBase; ++iThis)
+                {
+                if (bodyThat.equals(aBase[iThis]))
+                    {
+                    // ignore a duplicate
+                    continue NextLayer;
+                    }
+                }
+            if (listMerge == null)
+                {
+                listMerge = new ArrayList<>();
+                }
+            listMerge.add(bodyThat);
+            }
+
+        if (listMerge == null)
+            {
+            return this;
+            }
+
+        Collections.addAll(listMerge, aBase);
+        return new MethodInfo(listMerge.toArray(MethodBody.NO_BODIES));
+        }
+
+    /**
      * In terms of the "glass planes" metaphor, the glass plane from "this" (contribution) is to
      * replace the glass plane of "that" (base), with the resulting combination of glass planes
      * returned as a MethodInfo.
@@ -524,6 +572,14 @@ public class MethodInfo
     public boolean isConstructor()
         {
         return getHead().isConstructor();
+        }
+
+    /**
+     * @return true iff this is a validator
+     */
+    public boolean isValidator()
+        {
+        return getHead().isValidator();
         }
 
     /**

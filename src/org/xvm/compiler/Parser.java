@@ -838,6 +838,15 @@ public class Parser
                         modifiers, annotations, null, null, null, keyword);
                 }
 
+            case ASSERT:
+                {
+                assert !fInMethod;
+
+                Token keyword = expect(Id.ASSERT);
+                return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
+                        modifiers, annotations, null, null, null, keyword);
+                }
+
             case L_PAREN:
                 {
                 // it's a property or a method, but the property type is parenthesized (odd!) or

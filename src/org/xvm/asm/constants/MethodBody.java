@@ -209,12 +209,22 @@ public class MethodBody
         }
 
     /**
-     * @return true iff this is a constructor, not a method or function
+     * @return true iff this is a constructor or validator, and not a method or function
      */
     public boolean isConstructor()
         {
         MethodStructure structMethod = getMethodStructure();
-        return structMethod != null && structMethod.isConstructor();
+        return structMethod != null &&
+            (structMethod.isConstructor() || structMethod.isValidator());
+        }
+
+    /**
+     * @return true iff this is a validator
+     */
+    public boolean isValidator()
+        {
+        MethodStructure structMethod = getMethodStructure();
+        return structMethod != null && structMethod.isValidator();
         }
 
     /**
