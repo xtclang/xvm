@@ -68,6 +68,7 @@ module TestAnnotations.xqiz.it
         {
         construct(Int age)
             {
+            assert age >= 0;
             this.age = age;
             }
         finally

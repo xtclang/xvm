@@ -305,16 +305,64 @@ public class AnnotationExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        ConstantPool     pool     = pool();
         List<Expression> listArgs = getArguments();
         int              cArgs    = listArgs == null ? 0 : listArgs.size();
-        boolean          fValid   = true;
-        boolean          fConst   = true;
+
+        NamedTypeExpression exprTypeOld = toTypeExpression();
+        NamedTypeExpression exprTypeNew = (NamedTypeExpression) exprTypeOld.validate(ctx, null, errs);
+
+        if (exprTypeNew == null)
+            {
+            return null;
+            }
+        type = exprTypeNew;
+
+        TypeConstant  typeAnno = exprTypeNew.ensureTypeConstant(ctx);
+        ClassConstant idAnno   = (ClassConstant) typeAnno.getDefiningConstant();
+
+        if (typeRequired != null)
+            {
+            TypeConstant typeInferred = inferTypeFromRequired(typeAnno, typeRequired);
+            if (typeInferred != null)
+                {
+                typeAnno = typeInferred;
+                }
+            }
+
+        if (idAnno.equals(pool.clzInject()) && cArgs == 0)
+            {
+            // the "resourceName" will come from the variable/property name
+            return finishValidation(typeRequired, typeAnno, TypeFit.Fit, null, errs);
+            }
+
+        if (!typeAnno.isA(typeRequired))
+            {
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                    typeRequired.getValueString(), typeAnno.getValueString());
+            return null;
+            }
+
+        TypeInfo       infoAnno    = typeAnno.ensureTypeInfo(errs);
+        MethodConstant idConstruct = findMethod(ctx, infoAnno, "construct", listArgs,
+                MethodKind.Constructor, true, false, null, errs);
+        if (idConstruct == null)
+            {
+            log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getName());
+            return null;
+            }
 
         // validate the arguments
+        TypeConstant[] atypeParam = idConstruct.getRawParams();
+        boolean        fValid     = true;
+        boolean        fConst     = true;
+
+        assert atypeParam.length >= cArgs;
+
         for (int iArg = 0; iArg < cArgs; ++iArg)
             {
             Expression exprArgOld = listArgs.get(iArg);
-            Expression exprArgNew = exprArgOld.validate(ctx, null, errs);
+            Expression exprArgNew = exprArgOld.validate(ctx, atypeParam[iArg], errs);
 
             if (exprArgNew == null)
                 {
@@ -333,32 +381,11 @@ public class AnnotationExpression
         if (fValid)
             {
             m_fConst = fConst;
-            m_anno   = null;  // force a re-generation of the annotation
+            m_anno   = null; // force a re-generation of the annotation
 
-            ConstantPool  pool         = pool();
-            Annotation    anno         = ensureAnnotation(pool);
-            ClassConstant idAnno       = (ClassConstant) anno.getAnnotationClass();
-            TypeConstant  typeAnno     = idAnno.getType(); // TerminalType
-            TypeConstant  typeInferred = inferTypeFromRequired(typeAnno, typeRequired);
-            TypeConstant  typeTarget   = typeInferred == null ? typeAnno : typeInferred;
+            typeAnno = pool.ensureAnnotatedTypeConstant(typeRequired, ensureAnnotation(pool));
 
-            if (idAnno.equals(pool.clzInject()) && cArgs == 0)
-                {
-                // the "resourceName" will come from the variable/property name
-                return finishValidation(typeRequired, typeTarget, TypeFit.Fit, null, errs);
-                }
-
-            TypeInfo infoAnno = typeTarget.ensureTypeInfo(errs);
-
-            MethodConstant idConstruct = findMethod(ctx, infoAnno, "construct", listArgs,
-                    MethodKind.Constructor, true, false, null, errs);
-            if (idConstruct != null)
-                {
-                typeTarget = pool.ensureAnnotatedTypeConstant(typeRequired, anno);
-                return finishValidation(typeRequired, typeTarget, TypeFit.Fit, null, errs);
-                }
-
-            log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getName());
+            return finishValidation(typeRequired, typeAnno, TypeFit.Fit, null, errs);
             }
 
         return null;
