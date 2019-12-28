@@ -398,7 +398,19 @@ public abstract class BitBasedArray
         @Override
         public void deleteElement(int ix)
             {
-            throw new UnsupportedOperationException("TODO GG :)");
+            byte[] ab    = m_abValue;
+            int    cSize = m_cSize;
+
+            if (ix < cSize - 1)
+                {
+                // TODO: improve naive implementation below by changing a byte at the time
+                for (int i = ix + 1; i < cSize; i++)
+                    {
+                    setBit(ab, i - 1, getBit(ab, i));
+                    }
+                }
+
+            setBit(ab, --m_cSize, false);
             }
 
         @Override

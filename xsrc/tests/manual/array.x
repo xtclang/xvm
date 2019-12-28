@@ -194,7 +194,16 @@ module TestArray.xqiz.it
             {
             console.print(bit);
             }
-        console.println("");
+        console.println();
+
+        bits = bits.delete(0);
+        bits = bits.delete(bits.size - 1);
+
+        for (Bit bit : bits)
+            {
+            console.print(bit);
+            }
+        console.println();
         }
 
     void testComparable()
@@ -271,11 +280,7 @@ module TestArray.xqiz.it
 
                 case 9:
                     console.println("\n   --> flatmap test");
-                    // REVIEW CP: can this really compile?
-                    // iter = iter.flatMap(s -> s.iterator()).map(ch -> ch.toString());
-
-                    Iterator<Char> iterCh = iter.flatMap(s -> s.iterator());
-                    iter = iterCh.map(ch -> ch.toString());
+                    iter = iter.flatMap(s -> s.iterator()).map(ch -> ch.toString());
                     break;
 
                 case 10:

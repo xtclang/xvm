@@ -269,9 +269,9 @@ public class xRTTypeTemplate
             {
             aUnderlying = new TypeConstant[] {typeTarget.getUnderlyingType(), typeTarget.getUnderlyingType2()};
             }
-        else if (typeTarget.getFormat() == Constant.Format.TurtleType)
+        else if (typeTarget.isFormalTypeSequence())
             {
-            throw new UnsupportedOperationException("TODO GG"); // TODO GG (TypeSequenceTypeConstant) typeTarget
+            aUnderlying = new TypeConstant[] {typeTarget}; // turtle type
             }
 
         TypeTemplateHandle[] ahTypes = new TypeTemplateHandle[aUnderlying.length];
