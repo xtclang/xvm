@@ -282,10 +282,40 @@ public class TerminalTypeConstant
             return constId.getReferredToType().containsGenericParam(sName);
             }
 
+        Constant         constant = getDefiningConstant();
+        IdentityConstant idClz;
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+                return false;
+
+            case Property:
+            case TypeParameter:
+            case FormalTypeChild:
+                return ((FormalConstant) constant).getConstraintType().containsGenericParam(sName);
+
+            case NativeClass:
+                idClz = ((NativeRebaseConstant) constant).getClassConstant();
+                break;
+
+            case Class:
+                idClz = (ClassConstant) constant;
+                break;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                idClz = ((PseudoConstant) constant).getDeclarationLevelClass();
+                break;
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+
         // because isA() uses this method, there is a chicken-and-egg problem, so instead of
         // materializing the TypeInfo at this point, just answer the question without it
-        ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
-
+        ClassStructure clz = (ClassStructure) idClz.getComponent();
         return clz.containsGenericParamType(sName);
         }
 
@@ -299,9 +329,41 @@ public class TerminalTypeConstant
             return constId.getReferredToType().getGenericParamType(sName, listParams);
             }
 
+        Constant         constant = getDefiningConstant();
+        IdentityConstant idClz;
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+                return null;
+
+            case Property:
+            case TypeParameter:
+            case FormalTypeChild:
+                return ((FormalConstant) constant).getConstraintType().
+                    getGenericParamType(sName, listParams);
+
+            case NativeClass:
+                idClz = ((NativeRebaseConstant) constant).getClassConstant();
+                break;
+
+            case Class:
+                idClz = (ClassConstant) constant;
+                break;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                idClz = ((PseudoConstant) constant).getDeclarationLevelClass();
+                break;
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+
         // because isA() uses this method, there is a chicken-and-egg problem, so instead of
         // materializing the TypeInfo at this point, just answer the question without it
-        ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
+        ClassStructure clz = (ClassStructure) idClz.getComponent();
         if (isFormalType())
             {
             assert listParams.isEmpty();
