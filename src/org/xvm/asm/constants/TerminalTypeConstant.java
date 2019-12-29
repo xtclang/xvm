@@ -820,6 +820,18 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean isNullable()
+        {
+        if (!isSingleDefiningConstant())
+            {
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return constId.getReferredToType().isNullable();
+            }
+
+        return false;
+        }
+
+    @Override
     public boolean isOnlyNullable()
         {
         TypeConstant typeResolved = resolveTypedefs();
@@ -1262,6 +1274,28 @@ public class TerminalTypeConstant
 
 
     // ----- type comparison support ---------------------------------------------------------------
+
+    @Override
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
+        {
+        if (isFormalType())
+            {
+            if (!isSingleDefiningConstant())
+                {
+                // a typedef for a formal type
+                TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+                return constId.getReferredToType().calculateRelationToLeft(typeLeft);
+                }
+
+            TypeConstant typeConstraint = ((FormalConstant) getDefiningConstant()).getConstraintType();
+            Relation     relation       = typeConstraint.calculateRelation(typeLeft);
+            if (relation != Relation.INCOMPATIBLE)
+                {
+                return relation;
+                }
+            }
+        return super.calculateRelationToLeft(typeLeft);
+        }
 
     @Override
     public boolean isCovariantReturn(TypeConstant typeBase, TypeConstant typeCtx)
