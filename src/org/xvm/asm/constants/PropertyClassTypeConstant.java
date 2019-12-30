@@ -246,6 +246,18 @@ public class PropertyClassTypeConstant
         return getRefType().containsSubstitutableMethod(signature, access, fFunction, listParams);
         }
 
+    @Override
+    protected Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
+        {
+        return Usage.NO;
+        }
+
+    @Override
+    protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
+        {
+        return Usage.NO;
+        }
+
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 

@@ -2306,8 +2306,8 @@ public class ClassStructure
                 // TODO: add @RO support
 
                 MethodStructure methodGet = property.getGetter();
-                if ((methodGet == null || methodGet.isAccessible(access)
-                        && constType.producesFormalType(sName, Access.PUBLIC)))
+                if ((methodGet == null || methodGet.isAccessible(access))
+                        && constType.producesFormalType(sName, Access.PUBLIC))
                     {
                     return true;
                     }

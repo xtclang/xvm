@@ -4765,7 +4765,10 @@ public abstract class TypeConstant
 
             TypeConstant typeThisR = this    .resolveAutoNarrowing(pool, false, typeCtx);
             TypeConstant typeBaseR = typeBase.resolveAutoNarrowing(pool, false, typeCtx);
-            return typeBaseR.equals(typeThisR);
+
+            // types may be equivalent, but not equal, for examples if some parameters are not
+            // specified: ("Array" and "Array<Object>")
+            return typeBaseR.isA(typeThisR) && typeThisR.isA(typeBaseR);
             }
         return false;
         }
