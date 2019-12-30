@@ -2132,6 +2132,7 @@ public class ClassStructure
         assert indexOfGenericParameter(sName) >= 0;
 
         ConstantPool pool = ConstantPool.getCurrentPool();
+        NextChild:
         for (Component child : children())
             {
             if (child instanceof MultiMethodStructure)
@@ -2161,18 +2162,26 @@ public class ClassStructure
                     constType = constType.resolveGenerics(pool, new SimpleTypeResolver(listActual));
                     }
 
-                // TODO: add correct access check when added to the structure
-                // TODO: add @RO support
-
-                MethodStructure methodGet = property.getGetter();
-                if ((methodGet == null || methodGet.isAccessible(access))
+                if (property.isRefAccessible(access)
                         && constType.consumesFormalType(sName, Access.PUBLIC))
                     {
                     return true;
                     }
 
-                MethodStructure methodSet = property.getSetter();
-                if ((methodSet == null || methodSet.isAccessible(access))
+                Annotation[] aAnno = property.getPropertyAnnotations();
+                if (aAnno.length > 0)
+                    {
+                    for (int i = 0, c = aAnno.length; i < c; i++)
+                        {
+                        if (aAnno[i].getAnnotationClass().equals(pool.clzRO()))
+                            {
+                            // read-only; skip the setter's check
+                            continue NextChild;
+                            }
+                        }
+                    }
+
+                if (property.isVarAccessible(access)
                         && constType.producesFormalType(sName, Access.PUBLIC))
                     {
                     return true;
@@ -2273,6 +2282,7 @@ public class ClassStructure
         assert indexOfGenericParameter(sName) >= 0;
 
         ConstantPool pool = ConstantPool.getCurrentPool();
+        NextChild:
         for (Component child : children())
             {
             if (child instanceof MultiMethodStructure)
@@ -2302,18 +2312,26 @@ public class ClassStructure
                     constType = constType.resolveGenerics(pool, new SimpleTypeResolver(listActual));
                     }
 
-                // TODO: add correct access check when added to the structure
-                // TODO: add @RO support
-
-                MethodStructure methodGet = property.getGetter();
-                if ((methodGet == null || methodGet.isAccessible(access))
+                if (property.isRefAccessible(access)
                         && constType.producesFormalType(sName, Access.PUBLIC))
                     {
                     return true;
                     }
 
-                MethodStructure methodSet = property.getSetter();
-                if ((methodSet == null || methodSet.isAccessible(access))
+                Annotation[] aAnno = property.getPropertyAnnotations();
+                if (aAnno.length > 0)
+                    {
+                    for (int i = 0, c = aAnno.length; i < c; i++)
+                        {
+                        if (aAnno[i].getAnnotationClass().equals(pool.clzRO()))
+                            {
+                            // read-only; skip the setter's check
+                            continue NextChild;
+                            }
+                        }
+                    }
+
+                if (property.isVarAccessible(access)
                         && constType.consumesFormalType(sName, Access.PUBLIC))
                     {
                     return true;
