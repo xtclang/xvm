@@ -16,6 +16,8 @@ module TestAnnotations.xqiz.it
 
     void testWatch()
         {
+        console.println("\n** testWatch");
+
         // property-based
         for (@Watch(logger) Int i = 3; i > 0; --i)
             {
@@ -44,6 +46,8 @@ module TestAnnotations.xqiz.it
 
     void testMixin()
         {
+        console.println("\n** testMixin");
+
         Int age = 26;
         val p1  = new Named("Jane");
         val p2  = new @Aged(age + 1) Named("Joe");
@@ -73,6 +77,7 @@ module TestAnnotations.xqiz.it
         {
         construct(String name)
             {
+            console.println($"construct (name) {this}");
             this.name = name;
             }
         finally
@@ -92,6 +97,7 @@ module TestAnnotations.xqiz.it
         {
         construct(Int age)
             {
+            console.println($"construct (aged) {this}");
             this.age = age;
             }
         finally
@@ -111,6 +117,7 @@ module TestAnnotations.xqiz.it
         {
         construct(String skill)
             {
+            console.println($"construct (skill) {this}");
             this.skill = skill;
             }
         finally

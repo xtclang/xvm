@@ -1624,7 +1624,8 @@ public abstract class TypeConstant
                         for (Map.Entry<MethodConstant, MethodInfo> entry : infoContrib.getMethods().entrySet())
                             {
                             MethodInfo method = entry.getValue();
-                            assert method.isFunction() || method.isConstructor();
+                            assert method.isFunction() || method.isConstructor() ||
+                                   method.getIdentity().getNamespace().equals(pool.clzObject());
                             mapMethods.putIfAbsent(entry.getKey(), method);
                             }
                         }
@@ -1632,6 +1633,11 @@ public abstract class TypeConstant
                     break;
                 }
             }
+
+        // add Object.toString() method
+        MethodInfo infoToString = pool.typeObject().ensureTypeInfo(errs).
+                getMethodBySignature(pool.sigToString());
+        mapMethods.putIfAbsent(infoToString.getIdentity(), infoToString);
 
         return new TypeInfo(this, cInvals, infoPri.getClassStructure(), 0,
                 false, infoPri.getTypeParams(), infoPri.getClassAnnotations(),

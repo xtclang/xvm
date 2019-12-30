@@ -276,6 +276,12 @@ public class Mixin
 
     private ClassTemplate getBaseTemplate(TypeConstant type)
         {
+        // first, unwrap access and immutability
+        while (!(type instanceof AnnotatedTypeConstant))
+            {
+            type = type.getUnderlyingType();
+            }
+
         AnnotatedTypeConstant typeAnno = (AnnotatedTypeConstant) type;
         TypeConstant          typeBase;
         while (true)
