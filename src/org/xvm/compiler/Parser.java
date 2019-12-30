@@ -1003,8 +1003,7 @@ public class Parser
                 if (fInMethod && modifiers == null && annotations == null)
                     {
                     Expression expr = parseExpression();
-
-                    Statement stmt = parsePossibleExpressionOrAssignmentStatement(expr);
+                    Statement  stmt = parsePossibleExpressionOrAssignmentStatement(expr);
                     if (stmt != null)
                         {
                         return stmt;
@@ -1410,9 +1409,11 @@ public class Parser
             case IDENTIFIER:
                 {
                 // check if it is a LabeledStatement
-                Token name = expect(Id.IDENTIFIER);
-                if (match(Id.COLON) != null)
+                Token name  = expect(Id.IDENTIFIER);
+                if (peek().getId() == Id.COLON
+                        && (peek().hasLeadingWhitespace() || peek().hasTrailingWhitespace()))
                     {
+                    expect(Id.COLON);
                     return new LabeledStatement(name, parseStatement());
                     }
                 else
@@ -5251,6 +5252,7 @@ public class Parser
         long    pos;
         Token   token;
         Token   putBack;
+        Token   lastMatch;
         Token   doc;
         boolean noRec;
         }
@@ -5258,11 +5260,12 @@ public class Parser
     protected Mark mark()
         {
         Mark mark = new Mark();
-        mark.pos     = m_lexer.getPosition();
-        mark.token   = m_token        == null ? null : m_token       .clone();
-        mark.putBack = m_tokenPutBack == null ? null : m_tokenPutBack.clone();;
-        mark.doc     = m_doc;
-        mark.noRec   = m_fAvoidRecovery;
+        mark.pos       = m_lexer.getPosition();
+        mark.token     = m_token          == null ? null : m_token         .clone();
+        mark.putBack   = m_tokenPutBack   == null ? null : m_tokenPutBack  .clone();
+        mark.lastMatch = m_tokenLastMatch == null ? null : m_tokenLastMatch.clone();
+        mark.doc       = m_doc;
+        mark.noRec     = m_fAvoidRecovery;
         return mark;
         }
 
@@ -5271,6 +5274,7 @@ public class Parser
         m_lexer.setPosition(mark.pos);
         m_token          = mark.token;
         m_tokenPutBack   = mark.putBack;
+        m_tokenLastMatch = mark.lastMatch;
         m_doc            = mark.doc;
         m_fAvoidRecovery = mark.noRec;
         }
