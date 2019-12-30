@@ -22,7 +22,10 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
-import org.xvm.util.Handy;
+import org.xvm.runtime.template.numbers.xInt64;
+
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xOrdered;
 
 /**
  * Native Method implementation.
@@ -141,6 +144,36 @@ public class xRTMethod
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
+    @Override
+    protected int callEqualsImpl(Frame frame,  ClassComposition clazz,
+                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        MethodHandle hMethod1 = (MethodHandle) hValue1;
+        MethodHandle hMethod2 = (MethodHandle) hValue2;
+
+        return frame.assignValue(iReturn,
+            xBoolean.makeHandle(hMethod1.getMethodId().equals(hMethod2.getMethodId())));
+        }
+
+    @Override
+    protected int callCompareImpl(Frame frame, ClassComposition clazz,
+                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        MethodHandle hMethod1 = (MethodHandle) hValue1;
+        MethodHandle hMethod2 = (MethodHandle) hValue2;
+
+        return frame.assignValue(iReturn,
+            xOrdered.makeHandle(hMethod1.getMethodId().compareTo(hMethod2.getMethodId())));
+        }
+
+    @Override
+    protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+        {
+        MethodHandle hMethod = (MethodHandle) hTarget;
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(hMethod.hashCode()));
+        }
+
 
     // ----- property implementations --------------------------------------------------------------
 
@@ -150,7 +183,7 @@ public class xRTMethod
     public int getPropertyAccess(Frame frame, MethodHandle hMethod, int iReturn)
         {
         Constants.Access access  = hMethod.getMethodInfo().getAccess();
-        ObjectHandle     hAccess = xRTType.INSTANCE.makeAccessHandle(frame, access);
+        ObjectHandle     hAccess = xRTType.makeAccessHandle(frame, access);
         return frame.assignValue(iReturn, hAccess);
         }
 
