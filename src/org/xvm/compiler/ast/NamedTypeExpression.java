@@ -583,7 +583,7 @@ public class NamedTypeExpression
                 }
 
             NameExpression exprNew = m_exprDynamic =
-                (NameExpression) exprOld.validate(ctx, pool().typeType(), errs);
+                    (NameExpression) exprOld.validate(ctx, pool().typeType(), errs);
 
             return exprNew == null
                     ? null
@@ -963,9 +963,9 @@ public class NamedTypeExpression
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        assert isDynamic();
-
-        return m_exprDynamic.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+        return isDynamic()
+                ? m_exprDynamic.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs)
+                : getType();
         }
 
 

@@ -1118,7 +1118,7 @@ public class xRTType
      */
     public static EnumHandle makeAccessHandle(Frame frame, Constants.Access access)
         {
-        xEnum enumAccess = (xEnum) INSTANCE.f_templates.getTemplate("Type.Access");
+        xEnum enumAccess = (xEnum) INSTANCE.f_templates.getTemplate("reflect.Access");
         switch (access)
             {
             case PUBLIC:

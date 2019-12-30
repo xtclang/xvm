@@ -90,6 +90,11 @@ const RTType<DataType, OuterType>
         {
         if (String name := named())
             {
+            if (Access access := accessSpecified())
+                {
+                return name.size + 1 + access.keyword.size;
+                }
+
             return name.size;
             }
 
@@ -105,6 +110,10 @@ const RTType<DataType, OuterType>
         if (String name := named())
             {
             appender.add(name);
+            if (Access access := accessSpecified())
+                {
+                appender.add(':').add(access.keyword);
+                }
             }
         else
             {
