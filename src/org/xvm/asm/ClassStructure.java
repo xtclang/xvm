@@ -2980,7 +2980,7 @@ public class ClassStructure
 
             Parameter[] aReturn = new Parameter[]
                 {
-                new Parameter(pool, typeReturn, "", null, true, 0, false)
+                new Parameter(pool, typeReturn, null, null, true, 0, false)
                 };
 
             // 2) create the method structure and [yet unresolved] identity
@@ -3058,7 +3058,7 @@ public class ClassStructure
                     {
                     Parameter[] aReturn = new Parameter[]
                         {
-                        new Parameter(pool, pool.typeInt(), "", null, true, 0, false)
+                        new Parameter(pool, pool.typeInt(), null, null, true, 0, false)
                         };
                     methEstimate = createMethod(/*function*/ false, Constants.Access.PUBLIC, aAnno,
                             aReturn, "estimateStringLength", Parameter.NO_PARAMS,
