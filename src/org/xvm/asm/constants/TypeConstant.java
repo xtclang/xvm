@@ -3868,7 +3868,7 @@ public abstract class TypeConstant
             log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_STRUCT,
                     getValueString(), sName);
             }
-        else  if (accessVar != null && accessRef.compareTo(accessVar) > 0)
+        else  if (accessVar != null && accessRef.isLessAccessibleThan(accessVar))
             {
             log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_ILLEGAL,
                     getValueString(), sName);
@@ -4571,7 +4571,8 @@ public abstract class TypeConstant
             case PUBLIC:
             case PROTECTED:
             case PRIVATE:
-                if (accessLeft.compareTo(accessRight) > 0)
+                if (accessLeft == Access.STRUCT ||
+                        accessLeft.isLessAccessibleThan(accessRight))
                     {
                     // for now, disallow any access widening
                     return Relation.INCOMPATIBLE;

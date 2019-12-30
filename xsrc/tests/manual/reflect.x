@@ -289,10 +289,11 @@ module TestReflection.xqiz.it
             {
             switch (constructor.params.size)
                 {
-                case 2:
-                    Tuple<Point<Int>> p2 = constructor.invoke((1.toInt(), 2.toInt()));
-                    console.println($"construct(1,2)={p2[0]}");
-                    break;
+//                case 1:
+//                    Struct structure =
+//                    Tuple<Point<Int>> p2 = constructor.invoke(t.fromClass().allocate);
+//                    console.println($"construct(1,2)={p2[0]}");
+//                    break;
 
                 case 3:
                     Tuple<Point<Int>> p3 = constructor.invoke((1.toInt(), 2.toInt(), "there"));

@@ -666,6 +666,16 @@ public class NamedTypeExpression
                 type = pool.ensureParameterizedTypeConstant(type, atypeParams);
                 }
             }
+        Access access = getExplicitAccess();
+        if (access != null && access != Access.PUBLIC)
+            {
+            type = pool.ensureAccessTypeConstant(type, access);
+            }
+
+        if (immutable != null)
+            {
+            type = pool.ensureImmutableTypeConstant(type);
+            }
 
         return fValid
                 ? finishValidation(typeRequired, type.getType(), TypeFit.Fit, null, errs)

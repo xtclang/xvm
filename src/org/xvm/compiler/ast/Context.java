@@ -956,8 +956,13 @@ public class Context
      */
     protected void markVarWrite(String sName, Token tokName, ErrorListener errs)
         {
-        // this method isn't supposed to be called for variable names that don't exist
-        assert getVar(sName) != null;
+        if (getVar(sName) == null)
+            {
+            // this method can be called for variable names that don't exist only if there are
+            // already compilation errors
+            assert errs.hasSeriousErrors();
+            return;
+            }
 
         if (isVarWritable(sName))
             {

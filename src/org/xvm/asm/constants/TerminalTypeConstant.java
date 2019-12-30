@@ -1430,6 +1430,9 @@ public class TerminalTypeConstant
         Constant constIdThis = getDefiningConstant();
         switch (constIdThis.getFormat())
             {
+            case NativeClass:
+                constIdThis = ((NativeRebaseConstant) constIdThis).getClassConstant();
+                // fall through
             case Module:
             case Package:
             case Class:
@@ -1472,11 +1475,14 @@ public class TerminalTypeConstant
             {
             case Module:
             case Package:
-            case Property: // formal types do not consume
             case TypeParameter:
             case FormalTypeChild:
+            case Property: // formal types do not consume
                 return Usage.NO;
 
+            case NativeClass:
+                constId = ((NativeRebaseConstant) constId).getClassConstant();
+                // fall through
             case Class:
                 if (isTuple())
                     {
@@ -1552,6 +1558,9 @@ public class TerminalTypeConstant
             case Property:
                 return Usage.valueOf(((PropertyConstant) constId).getName().equals(sTypeName));
 
+            case NativeClass:
+                constId = ((NativeRebaseConstant) constId).getClassConstant();
+                // fall through
             case Class:
                 if (isTuple())
                     {
