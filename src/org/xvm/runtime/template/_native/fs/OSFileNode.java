@@ -160,7 +160,7 @@ public abstract class OSFileNode
         NodeHandle     hStruct = new NodeHandle(clzStruct, path.toAbsolutePath(), hOSStore);
         ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, constructor.getMaxVars());
 
-        return clzPublic.getTemplate().callConstructor(frame, constructor, hStruct, ahVar, iReturn);
+        return clzPublic.getTemplate().proceedConstruction(frame, constructor, true, hStruct, ahVar, iReturn);
         }
 
 

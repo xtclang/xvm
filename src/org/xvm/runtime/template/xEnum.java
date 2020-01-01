@@ -113,7 +113,7 @@ public class xEnum
                     MethodStructure ctor  = f_struct.findConstructor(TypeConstant.NO_TYPES);
                     ObjectHandle[]  ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, ctor.getMaxVars());
 
-                    return callConstructor(frame, ctor, hValue, ahVar, Op.A_STACK);
+                    return proceedConstruction(frame, ctor, true, hValue, ahVar, Op.A_STACK);
                     }
                 }
 

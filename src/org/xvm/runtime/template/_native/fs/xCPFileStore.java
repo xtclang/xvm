@@ -68,7 +68,7 @@ public class xCPFileStore
             ahVar[0] = xString.makeHandle(constStore.getPath());
             ahVar[1] = new ConstantHandle(constStore.getValue());
 
-            return callConstructor(frame, s_constructor, hStruct, ahVar, Op.A_STACK);
+            return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, Op.A_STACK);
             }
 
         return super.createConstHandle(frame, constant);

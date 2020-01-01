@@ -353,7 +353,7 @@ public abstract class ClassTemplate
             ((GenericHandle) hStruct).setField(GenericHandle.OUTER, hParent);
             }
 
-        return callConstructor(frame, constructor, hStruct, ahVar, iReturn);
+        return proceedConstruction(frame, constructor, true, hStruct, ahVar, iReturn);
         }
 
     /**
@@ -364,7 +364,7 @@ public abstract class ClassTemplate
      *
      * @return the newly allocated handle
      */
-    protected ObjectHandle createStruct(Frame frame, ClassComposition clazz)
+    public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
         {
         assert clazz.getTemplate() == this &&
                (f_struct.getFormat() == Format.CLASS ||
@@ -376,13 +376,24 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Continuation of the {@link #construct} sequence.
+     * Continuation of the {@link #construct} sequence after the struct has been created.
+     *
+     * @param frame        the current frame
+     * @param constructor  (optional) the constructor to call; must be null the struct
+     *                     has already been initialized (fInitStruct == false)
+     * @param fInitStruct  if true, the struct needs to be initialized; otherwise it already
+     *                     has been and "constructor" must be null
+     * @param hStruct      the struct handle
+     * @param ahVar        the invocation parameters
+     * @param iReturn      the register id to place the result of invocation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int callConstructor(Frame frame, MethodStructure constructor,
-                               ObjectHandle hStruct, ObjectHandle[] ahVar, int iReturn)
+    public int proceedConstruction(Frame frame, MethodStructure constructor, boolean fInitStruct,
+                                   ObjectHandle hStruct, ObjectHandle[] ahVar, int iReturn)
         {
+        assert fInitStruct == (constructor != null);
+
         return new Construct(constructor, hStruct, ahVar, iReturn).proceed(frame);
         }
 
@@ -1881,6 +1892,9 @@ public abstract class ClassTemplate
             this.hStruct     = hStruct;
             this.ahVar       = ahVar;
             this.iReturn     = iReturn;
+
+            // no constructor means that the struct has already been initialized
+            ixStep = constructor == null ? 2 : 0;
             }
 
         @Override

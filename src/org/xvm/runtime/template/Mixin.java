@@ -50,10 +50,10 @@ public class Mixin
         }
 
     @Override
-    public int callConstructor(Frame frame, MethodStructure constructor,
-                               ObjectHandle hStruct, ObjectHandle[] ahVar, int iReturn)
+    public int proceedConstruction(Frame frame, MethodStructure constructor, boolean fInitStruct,
+                                   ObjectHandle hStruct, ObjectHandle[] ahVar, int iReturn)
         {
-        return new Construct(constructor, hStruct, ahVar, iReturn).proceed(frame);
+        return new Construct(constructor, fInitStruct, hStruct, ahVar, iReturn).proceed(frame);
         }
 
     /**
@@ -74,6 +74,7 @@ public class Mixin
         private List<FullyBoundHandle> listFinalizers;
 
         public Construct(MethodStructure constructor,
+                         boolean         fInitStruct,
                          ObjectHandle    hStruct,
                          ObjectHandle[]  ahVar,
                          int             iReturn)
@@ -88,6 +89,9 @@ public class Mixin
 
             typeNext = clz.getType().getUnderlyingType();
             assert typeNext.isAnnotated();
+
+            assert fInitStruct || constructor == null;
+            ixStep = fInitStruct ? 0 : 3;
             }
 
         @Override
@@ -103,7 +107,7 @@ public class Mixin
                         MethodStructure methodAI = hStruct.getComposition().ensureAutoInitializer();
                         if (methodAI != null)
                             {
-                            iResult  = frameCaller.call1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
+                            iResult = frameCaller.call1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
                             break;
                             }
                         ixStep++;
@@ -140,7 +144,6 @@ public class Mixin
                         }
 
                     case 2: // call the base constructor
-                        {
                         if (constructor != null)
                             {
                             Frame frameCtor = frameCaller.createFrame1(constructor, hStruct, ahVar, Op.A_IGNORE);
@@ -152,7 +155,6 @@ public class Mixin
                             }
                         ixStep++;
                         // fall through
-                        }
 
                     case 3: // validation
                         iResult = callValidator(frameCaller, hStruct);

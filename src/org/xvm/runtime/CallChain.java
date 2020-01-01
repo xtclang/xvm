@@ -367,6 +367,30 @@ public class CallChain
             }
 
         @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+            {
+            return throwException(frame);
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
+            {
+            return throwException(frame);
+            }
+
+        @Override
+        public int invokeT(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+            {
+            return throwException(frame);
+            }
+
+        @Override
+        public int invokeT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+            {
+            return throwException(frame);
+            }
+
+        @Override
         public int bindTarget(Frame frame, ObjectHandle hTarget, int iReturn)
             {
             return throwException(frame);

@@ -220,7 +220,7 @@ public class xRef
             Mixin                 mixin     = (Mixin) f_templates.getTemplate(typeMixin);
 
             hRef    = createRefHandle(clazz.ensureAccess(Access.STRUCT), sName);
-            iResult = mixin.callConstructor(frame, null, hRef, Utils.OBJECTS_NONE, Op.A_STACK);
+            iResult = mixin.proceedConstruction(frame, null, true, hRef, Utils.OBJECTS_NONE, Op.A_STACK);
             fStack  = true;
             }
         else

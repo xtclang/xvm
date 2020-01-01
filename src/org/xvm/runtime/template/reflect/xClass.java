@@ -15,7 +15,9 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnumeration;
 import org.xvm.runtime.template.xNullable;
@@ -39,6 +41,14 @@ public class xClass
             {
             INSTANCE = this;
             }
+        }
+
+    @Override
+    public void initDeclared()
+        {
+        markNativeMethod("allocate", VOID, null);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override
@@ -99,5 +109,69 @@ public class xClass
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method,
+                              ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        switch (method.getName())
+            {
+            case "allocate":
+                {
+                TypeConstant typeClz    = hTarget.getType();
+                TypeConstant typePublic = typeClz.getParamType(0);
+
+                if (typePublic.isImmutabilitySpecified())
+                    {
+                    typePublic = typePublic.getUnderlyingType();
+                    }
+                if (typePublic.isAccessSpecified())
+                    {
+                    typePublic = typePublic.getUnderlyingType();
+                    }
+
+                ClassTemplate template = f_templates.getTemplate(typePublic);
+
+                switch (template.f_struct.getFormat())
+                    {
+                    case CLASS:
+                    case CONST:
+                    case MIXIN:
+                    case ENUMVALUE:
+                        break;
+
+                    default:
+                        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                    }
+
+                ClassComposition clz      = f_templates.resolveClass(typePublic);
+                ObjectHandle     hStruct  = template.createStruct(frame, clz);
+                MethodStructure  methodAI = clz.ensureAutoInitializer();
+                if (methodAI != null)
+                    {
+                    switch (frame.call1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE))
+                        {
+                        case Op.R_NEXT:
+                            break;
+
+                        case Op.R_CALL:
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                frameCaller.assignValues(aiReturn, xBoolean.TRUE, hStruct));
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    break;
+                    }
+                return frame.assignValues(aiReturn, xBoolean.TRUE, hStruct);
+                }
+            }
+
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
     }

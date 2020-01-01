@@ -55,7 +55,7 @@ public class InterfaceProxy
         }
 
     @Override
-    protected ObjectHandle createStruct(Frame frame, ClassComposition clazz)
+    public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
         {
         throw new IllegalStateException();
         }

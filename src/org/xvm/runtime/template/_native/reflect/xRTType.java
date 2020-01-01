@@ -26,6 +26,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -543,8 +544,13 @@ public class xRTType
                 System.arraycopy(ahArg, 1, ahArg, 0, ahArg.length-1);
                 }
 
-            int iResult = f_clzTarget.getTemplate().construct(
-                    frame, f_constructor, f_clzTarget, hParent, ahArg, Op.A_STACK);
+            ClassComposition clz         = f_clzTarget;
+            ClassTemplate    template    = clz.getTemplate();
+            MethodStructure  constructor = f_constructor;
+
+            int iResult = constructor == null
+                ? template.proceedConstruction(frame, null, false, ahArg[0], ahArg, Op.A_STACK)
+                : template.construct(frame, constructor, clz, hParent, ahArg, Op.A_STACK);
             switch (iResult)
                 {
                 case Op.R_NEXT:
@@ -602,6 +608,13 @@ public class xRTType
             {
             assert iArg == 0;
             return f_clzTarget.getType();
+            }
+
+        @Override
+        public int getVarCount()
+            {
+            int cVars = super.getVarCount();
+            return Math.max(cVars, f_aParams.length);
             }
 
         final private ClassComposition f_clzTarget;

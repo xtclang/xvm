@@ -109,7 +109,7 @@ public class xService
         }
 
     @Override
-    protected ObjectHandle createStruct(Frame frame, ClassComposition clazz)
+    public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
         {
         // called via constructSync()
         return new ServiceHandle(clazz.ensureAccess(Access.STRUCT), frame.f_context);
