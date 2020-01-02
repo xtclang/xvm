@@ -862,7 +862,7 @@ public class Frame
                             }
                         }
                     }
-                return framePrev.returnValue(iReturn, xTuple.makeHandle(hValue), false);
+                return returnValue(iReturn, xTuple.makeHandle(hValue), false);
 
             default:
                 return returnValue(f_iReturn, hValue, fDynamic);
