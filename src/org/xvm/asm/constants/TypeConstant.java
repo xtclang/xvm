@@ -3127,7 +3127,21 @@ public abstract class TypeConstant
                         {
                         nidBase      = listMatches.get(0);
                         methodBase   = mapVirtMethods.get(nidBase);
-                        methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+                        if (methodBase.isCapped())
+                            {
+                            // the "super" method we found is capped, but the cap itself apparently
+                            // didn't match; this means that the attempted override is illegal
+                            MethodConstant id = methodBase.getIdentity();
+                            id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
+                                    idContrib.getNamespace().getValueString(),
+                                    id.getSignature().getValueString(),
+                                    id.getNamespace().getValueString());
+                            nidBase = null;
+                            }
+                        else
+                            {
+                            methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+                            }
                         }
                     else
                         {
