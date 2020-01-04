@@ -3284,7 +3284,7 @@ public abstract class TypeConstant
                     Object     nidNarrowing  = setNarrowing.iterator().next();
                     MethodInfo infoNarrowing = mapVirtMods.get(nidNarrowing);
                     MethodInfo infoNarrowed  = mapVirtMethods.get(nidNarrowed);
-                    mapVirtMods.put(nidNarrowed, infoNarrowed.capWith(infoNarrowing));
+                    mapVirtMods.put(nidNarrowed, infoNarrowed.capWith(this, infoNarrowing));
                     }
                 else
                     {

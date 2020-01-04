@@ -55,11 +55,12 @@ public class MethodInfo
      * Cap this method chain with a redirection to a narrowed method chain. Error checking is the
      * responsibility of the caller.
      *
-     * @param that  the method chain to redirect to, which is the narrowed form of this MethodInfo
+     * @param typeCtx  the type, for which the MethodInfo is built
+     * @param that     the method chain to redirect to, which is the narrowed form of this MethodInfo
      *
      * @return a capped version of this method chain
      */
-    MethodInfo capWith(MethodInfo that)
+    MethodInfo capWith(TypeConstant typeCtx, MethodInfo that)
         {
         // both method chains must be virtual, and neither can already be capped
         assert this.isOverridable();
@@ -83,13 +84,15 @@ public class MethodInfo
                 }
             }
 
-        MethodConstant idCap = pool().ensureMethodConstant(idThat.getParentConstant(), sigThis);
+        ConstantPool   pool  = pool();
+        MethodConstant idCap = pool.ensureMethodConstant(idThat.getParentConstant(), sigThis);
 
         MethodBody[] aOld = m_aBody;
         int          cOld = aOld.length;
         MethodBody[] aNew = new MethodBody[cOld+1];
 
-        aNew[0] = new MethodBody(idCap, sigThis, Implementation.Capped, idThat.getNestedIdentity());
+        aNew[0] = new MethodBody(idCap, sigThis, Implementation.Capped,
+                                    idThat.resolveNestedIdentity(pool, typeCtx));
         System.arraycopy(aOld, 0, aNew, 1, cOld);
 
         return new MethodInfo(aNew);
