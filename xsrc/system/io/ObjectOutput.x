@@ -8,5 +8,5 @@ interface ObjectOutput
     /**
      * @param value  the object to write to the stream
      */
-    <ObjectType> void write<ObjectType>(ObjectType value);
+    <ObjectType> void write(ObjectType value);
     }

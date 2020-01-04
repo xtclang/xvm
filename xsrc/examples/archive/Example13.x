@@ -441,6 +441,10 @@ PersonMapping.read<Person>(in)
     p.dog  = in.readObject<Dog>("dog");
     p.dogs = in.readArray<Dog>("dogs");   // or readIterator() to get an iterator instead
 
+
+    Map<String, Doc>? remainder = Null;
+    in.anyExtraShitGoesHere((name, value) -> {if remainder == null remainder = new Map(); remainder.put(name, value);})
+
     // by default, any version information is passed down from the outermost document
     if (in.version == ...)
         {
@@ -452,15 +456,13 @@ PersonMapping.read<Person>(in)
         ...
         }
 
-    if (in.contains("mouse"))
+    if (FieldInput mouseReader := in.enterObject("mouse"))
         {
         ...
         }
 
-    if (in.hasRemainder())
-        {
-        p.stash = in.readRemainder();
-        }
+    in.ImAllDone();
+    p.remainder = remainder;
 
     return Person.instantiate(p);
     }
@@ -470,6 +472,13 @@ DogMapping.read<Dog>(in)
     // ...
     }
 
+    skipping(name, Reader)
+    remains()
+
+    Boolean collectRemainder;
+
+    conditional String nextName();
+    conditional Map<String, Doc> remainder();
 
 //
 // {
@@ -490,6 +499,7 @@ DogMapping.read<Dog>(in)
 //   }
 // }
 String s =new Printer()
+    .enterObject()
     .add("$schema", "http://json-schema.org/schema#")
     .add("title", "Product")
     .add("type", "object")
@@ -512,3 +522,8 @@ String s =new Printer()
         .exit()
     .exit()
     .toString();
+
+in.readPointer(pointer)
+in.fromPointer(pointer)
+in.dereference(pointer)     // ok
+in.follow(pointer)

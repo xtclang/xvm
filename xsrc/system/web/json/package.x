@@ -29,7 +29,7 @@ package json
     @Override
     @RO String name.get()
         {
-        return "JSON";
+        return Schema.DEFAULT.name;
         }
 
     @Override

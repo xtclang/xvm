@@ -7,7 +7,7 @@ module TestIO
     import Ecstasy.io.JavaDataInput;
     import Ecstasy.io.Reader;
     import Ecstasy.io.UTF8Reader;
-    import Ecstasy.web.json.Builder;
+    import Ecstasy.web.json.FieldOutput;
     import Ecstasy.web.json.Doc;
     import Ecstasy.web.json.Lexer;
     import Ecstasy.web.json.Lexer.Token;
@@ -149,9 +149,9 @@ module TestIO
         console.println($"raw doc=\n{ExampleJSON}");
         assert Doc doc := parser.next();
         console.println($"doc as structures={doc}");
-        Printer printer = new Printer(doc);
-        console.println($"ugly doc={printer.toString(pretty=False)}");
-        console.println($"pretty doc=\n{printer.toString(pretty=True)}");
+//        Printer printer = new Printer(doc);
+//        console.println($"ugly doc={printer.toString(pretty=False)}");
+//        console.println($"pretty doc=\n{printer.toString(pretty=True)}");
         }
 
     void testJSONBuild()
@@ -160,43 +160,43 @@ module TestIO
 
         console.println("BufferedPrinter:");
         BufferedPrinter p = new BufferedPrinter();
-        build(p);
-        console.println($"doc={p.doc}");
-        console.println($"print ugly={p.toString()}");
-        console.println($"print pretty=\n{p.toString(pretty=True)}");
-
-        console.println("DirectPrinter:");
-        Appender<Char> toConsole = new Appender<Char>()
-            {
-            @Override
-            Appender<Char> add(Char ch)
-                {
-                console.print(ch);
-                return this;
-                }
-            };
-        DirectPrinter p2 = new DirectPrinter(toConsole);
-        build(p2);
-        console.println("\n(done)");
+//        build(p);
+//        console.println($"doc={p.doc}");
+//        console.println($"print ugly={p.toString()}");
+//        console.println($"print pretty=\n{p.toString(pretty=True)}");
+//
+//        console.println("DirectPrinter:");
+//        Appender<Char> toConsole = new Appender<Char>()
+//            {
+//            @Override
+//            Appender<Char> add(Char ch)
+//                {
+//                console.print(ch);
+//                return this;
+//                }
+//            };
+//        DirectPrinter p2 = new DirectPrinter(toConsole);
+//        build(p2);
+//        console.println("\n(done)");
         }
 
-    private void build(Builder builder)
-        {
-        builder.add("$schema", "http://json-schema.org/schema#")
-                .add("title", "Product")
-                .add("type", "object")
-                .addArray("required", ["id", "name", "price"])
-                .addArray("numbers", [1,2,3])
-                .enter("properties")
-                    .enter("id")
-                        .add("type", "number")
-                        .add("description", "Product identifier")
-                    .exit()
-                    .enter("name")
-                        .add("type", "string")
-                        .add("description", "Name of the product")
-                    .exit()
-                .exit()
-                .close();
-        }
+//    private void build(FieldOutput builder)
+//        {
+//        builder.add("$schema", "http://json-schema.org/schema#")
+//                .add("title", "Product")
+//                .add("type", "object")
+//                .addArray("required", ["id", "name", "price"])
+//                .addArray("numbers", [1,2,3])
+//                .openObject("properties")
+//                    .openObject("id")
+//                        .add("type", "number")
+//                        .add("description", "Product identifier")
+//                    .close()
+//                    .openObject("name")
+//                        .add("type", "string")
+//                        .add("description", "Name of the product")
+//                    .close()
+//                .close()
+//                .close();
+//        }
     }
