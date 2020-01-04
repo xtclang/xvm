@@ -541,6 +541,16 @@ const Number
         return toVarDec().toDec128();
         }
 
+    /**
+     * @return the integer literal for this number
+     */
+    IntLiteral toIntLiteral();
+
+    /**
+     * @return the floating point literal for this number
+     */
+    FPLiteral toFPLiteral();
+
 
     // ----- Stringable support --------------------------------------------------------------------
 

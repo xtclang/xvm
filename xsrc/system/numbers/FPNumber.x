@@ -378,9 +378,13 @@ const FPNumber
 
     // ----- conversions ---------------------------------------------------------------------------
 
-    /**
-     * @return the floating point literal for this floating point number
-     */
+    @Override
+    IntLiteral toIntLiteral()
+        {
+        return round(TowardZero).toVarInt().toIntLiteral();
+        }
+
+    @Override
     FPLiteral toFPLiteral()
         {
         return new FPLiteral(toString());

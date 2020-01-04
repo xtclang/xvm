@@ -221,17 +221,13 @@ const IntNumber
      */
     @Unchecked IntNumber toUnchecked();
 
-    /**
-     * @return the integer literal for this integer number
-     */
+    @Override
     IntLiteral toIntLiteral()
         {
         return new IntLiteral(toString());
         }
 
-    /**
-     * @return the floating point literal for this floating point number
-     */
+    @Override
     FPLiteral toFPLiteral()
         {
         return new FPLiteral(toString());
