@@ -499,9 +499,27 @@ public class ParameterizedTypeConstant
                     {
                     IdentityConstant idClz = constResolved.getSingleUnderlyingClass(true);
                     ClassStructure   clz   = (ClassStructure) idClz.getComponent();
-                    return clz.isParameterized()
-                            ? pool.ensureParameterizedTypeConstant(constResolved, m_atypeParams)
-                            : constResolved;
+
+                    if (clz.isParameterized())
+                        {
+                        TypeConstant[] aconstOriginal = m_atypeParams;
+                        TypeConstant[] aconstResolved = aconstOriginal;
+                        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+                            {
+                            TypeConstant constParamOriginal = aconstOriginal[i];
+                            TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing(pool, false, typeTarget);
+                            if (constParamOriginal != constParamResolved)
+                                {
+                                if (aconstResolved == aconstOriginal)
+                                    {
+                                    aconstResolved = aconstOriginal.clone();
+                                    }
+                                aconstResolved[i] = constParamResolved;
+                                }
+                            }
+                        return pool.ensureParameterizedTypeConstant(constResolved, aconstResolved);
+                        }
+                    return constResolved;
                     }
 
                 // TODO: how to figure out a case of the resolved type not being congruent

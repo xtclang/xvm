@@ -169,13 +169,13 @@ public class ConstantPool
         if (fRegisterRecursively)
             {
             constant.registerConstants(this);
-            }
 
-        // once all of the modules are linked together, we know all of the valid upstream
-        // constant pools that we are allowed to refer to from this constant pool, so this
-        // is an assertion to make sure that we don't accidentally refer to a constant pool
-        // that isn't in that set of valid pools
-        constant.checkValidPools(m_setValidPools, new int[] {0});
+            // once all of the modules are linked together, we know all of the valid upstream
+            // constant pools that we are allowed to refer to from this constant pool, so this
+            // is an assertion to make sure that we don't accidentally refer to a constant pool
+            // that isn't in that set of valid pools
+            constant.checkValidPools(m_setValidPools, new int[] {0});
+            }
 
         return constant;
         }

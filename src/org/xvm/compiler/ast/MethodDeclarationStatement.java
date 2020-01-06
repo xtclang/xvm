@@ -641,7 +641,7 @@ public class MethodDeclarationStatement
             return;
             }
 
-        if (!errs.isSilent())
+        if (!errs.isSilent() && !method.isConstructor())
             {
             ClassStructure clz  = method.getContainingClass();
             TypeConstant   type = pool().ensureAccessTypeConstant(clz.getCanonicalType(), Access.PRIVATE);

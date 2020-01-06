@@ -1391,8 +1391,8 @@ public class TerminalTypeConstant
                 // fall through
             case Class:
                 {
-                IdentityConstant idLeft = (IdentityConstant) constIdLeft;
-                ClassStructure clzLeft = (ClassStructure) idLeft.getComponent();
+                IdentityConstant idLeft  = (IdentityConstant) constIdLeft;
+                ClassStructure   clzLeft = (ClassStructure) idLeft.getComponent();
 
                 assert clzLeft.getFormat() == Component.Format.INTERFACE;
 
