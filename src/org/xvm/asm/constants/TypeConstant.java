@@ -293,6 +293,19 @@ public abstract class TypeConstant
         }
 
     /**
+     * The {@link ParameterizedTypeConstant} is the only TypeConstant that allows a recursion,
+     * e.g. {@code Array<Doc | Array<Doc>>}. This method measures the depth of the recursion.
+     *
+     * @return the depth of the {@link ParameterizedTypeConstant} recursion
+     */
+    protected int getParameterDepth()
+        {
+        return isModifyingType()
+                ? getUnderlyingType().getParameterDepth()
+                : 0;
+        }
+
+    /**
      * @return the type parameters, iff the type has parameters specified
      *
      * @throws UnsupportedOperationException if there are no type parameters specified, or if the
@@ -4475,6 +4488,7 @@ public abstract class TypeConstant
                 {
                 relation = typeRight.calculateRelationToLeft(typeLeft);
 
+                testDuckTyping:
                 if (relation == Relation.INCOMPATIBLE && typeLeft.isDuckTypeAble())
                     {
                     // left is an interface; check the duck-typing
@@ -4484,16 +4498,56 @@ public abstract class TypeConstant
                         // let's disallow it to be assigned to anything for now
                         // TODO: allow an "empty" interface to be duck-typed to Object
                         // the "turtle" type also is not duck-typeable to anything
-                        relation = Relation.INCOMPATIBLE;
+                        break testDuckTyping;
                         }
-                    else
+
+                    if (typeLeft.isSingleDefiningConstant())
                         {
-                        TypeConstant typeLeftN  = typeLeft.normalizeParameters(pool);
-                        TypeConstant typeRightN = typeRight.normalizeParameters(pool);
-                        relation = typeLeftN.isInterfaceAssignableFrom(
-                                typeRightN, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty()
-                            ? Relation.IS_A : Relation.INCOMPATIBLE;
+                        Constant constIdLeft = typeLeft.getDefiningConstant();
+                        if (typeRight.isSingleDefiningConstant() &&
+                                typeRight.getDefiningConstant().equals(constIdLeft))
+                            {
+                            // we have just tested the relationship between C<T1> and C<T2> and got
+                            // a negative answer; there is no logical way for the duck-typing to
+                            // produce a different result
+                            break testDuckTyping;
+                            }
+
+                        int nDepthLeft = typeLeft.getParameterDepth();
+                        for (Map.Entry<TypeConstant, Relation> entry : mapRelations.entrySet())
+                            {
+                            TypeConstant typeL = entry.getKey();
+                            if (typeL.equals(typeLeft))
+                                {
+                                // this is the current "left"
+                                continue;
+                                }
+
+                            if (entry.getValue() == Relation.IN_PROGRESS)
+                                {
+                                int nDepth = typeL.getParameterDepth();
+
+                                if (typeL.isSingleDefiningConstant() &&
+                                    typeL.getDefiningConstant().equals(constIdLeft) &&
+                                    nDepth > 0 && nDepth < nDepthLeft)
+                                    {
+                                    // we are testing the relationship to L<T1>, but there is already
+                                    // (in-progress) test for our relationship with L<T2> of lower
+                                    // depth, strongly indicating an infinite recursion
+                                    System.err.println("rejecting isA() due to a suspected recursion:" +
+                                        " left=" + typeLeft.getValueString() +
+                                        "; right=" + typeRight.getValueString());
+                                    break testDuckTyping;
+                                    }
+                                }
+                            }
                         }
+
+                    TypeConstant typeLeftN  = typeLeft.normalizeParameters(pool);
+                    TypeConstant typeRightN = typeRight.normalizeParameters(pool);
+                    relation = typeLeftN.isInterfaceAssignableFrom(
+                                    typeRightN, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty()
+                            ? Relation.IS_A : Relation.INCOMPATIBLE;
                     }
 
                 mapRelations.put(typeLeft, relation);

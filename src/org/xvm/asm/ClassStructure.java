@@ -551,7 +551,7 @@ public class ClassStructure
         map.put(pool.ensureStringConstant(sName), typeConstraint);
 
         // each type parameter also has a synthetic property of the same name,
-        // whose type is of type"Type<constraint-type>"
+        // whose type is of type "Type<constraint-type>"
         TypeConstant typeConstraintType = pool.ensureClassTypeConstant(
             pool.clzType(), null, typeConstraint);
 
@@ -1676,13 +1676,21 @@ public class ClassStructure
                 }
             else
                 {
-                // REVIEW: shouldn't we simply ALWAYS disallow C<L1, L2> = C<R1>?
-                // assignment  C<L1, L2> = C<R1> is not the same as
+                // Assignment  C<L1, L2> = C<R1> is not the same as
                 //             C<L1, L2> = C<R1, [canonical type for R2]>;
                 // the former is only allowed if class C produces L2
-                // and then all L2 consuming methods (if any) must be "wrapped"
+                // and then all L2 consuming methods (if any) must be "wrapped".
+                //
+                // For example, this assignment should be "weakly" allowed
+                //    List<Object> <-- List
+                // However, the following is not allowed:
+                //    Logger<Object> <-- Logger
+                // The only exception from that rule is Type, so the following is allowed:
+                //    Type<Exception, Object> <-- Type<Exception>
+                //    Type<Object> <-- Type
                 typeRight    = typeCanonical;
-                fProduces    = fTuple || producesFormalType(sName, accessLeft, listLeft);
+                fProduces    = fTuple || getIdentityConstant().equals(pool.clzType()) ||
+                               producesFormalType(sName, accessLeft, listLeft);
                 fLeftIsRight = false;
                 }
 

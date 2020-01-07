@@ -165,6 +165,17 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    protected int getParameterDepth()
+        {
+        int nDepth = 0;
+        for (TypeConstant typeParam : m_atypeParams)
+            {
+            nDepth = Math.max(nDepth, typeParam.getParameterDepth() + 1);
+            }
+        return nDepth;
+        }
+
+    @Override
     protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
         assert listParams.isEmpty();
