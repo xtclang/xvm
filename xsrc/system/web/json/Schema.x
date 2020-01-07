@@ -272,7 +272,7 @@ const Schema
         TODO
         }
 
-    conditional Mapping getMapping(Type type)
+    <ObjectType> conditional Mapping<ObjectType> getMapping(Type<ObjectType> type)
         {
         TODO
         }
