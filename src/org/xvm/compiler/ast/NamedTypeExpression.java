@@ -736,6 +736,8 @@ public class NamedTypeExpression
      * Considering the containing class, calculate a type for the specified target constant in the
      * absence of explicitly provided type parameters.
      *
+     * Note, the returned type should not be parameterized; it will be done later by the caller.
+     *
      * @return a resulting type
      */
     protected TypeConstant calculateDefaultType(Context ctx, Constant constTarget)
@@ -858,7 +860,7 @@ public class NamedTypeExpression
                         boolean        fFormal = !(component instanceof MethodStructure &&
                                                     ((MethodStructure) component).isFunction());
 
-                        typeTarget = createVirtualTypeConstant(clzBase, clzTarget, fFormal);
+                        typeTarget = createVirtualTypeConstant(clzBase, clzTarget, fFormal, false);
                         assert typeTarget != null;
                         }
                     else
@@ -884,7 +886,7 @@ public class NamedTypeExpression
                     ClassConstant  idBase  = idTarget.getAutoNarrowingBase();
                     ClassStructure clzBase = (ClassStructure) idBase.getComponent();
 
-                    typeTarget = createVirtualTypeConstant(clzBase, clzTarget, false);
+                    typeTarget = createVirtualTypeConstant(clzBase, clzTarget, false, false);
                     }
                 }
 
@@ -924,7 +926,8 @@ public class NamedTypeExpression
             }
         }
 
-    private TypeConstant createVirtualTypeConstant(ClassStructure clzBase, ClassStructure clzTarget, boolean fFormal)
+    private TypeConstant createVirtualTypeConstant(ClassStructure clzBase, ClassStructure clzTarget,
+                                                   boolean fFormal, boolean fParameterize)
         {
         assert clzTarget.isVirtualChild();
 
@@ -945,10 +948,10 @@ public class NamedTypeExpression
             return null;
             }
 
-        TypeConstant typeParent = createVirtualTypeConstant(clzBase, clzParent, fFormal);
+        TypeConstant typeParent = createVirtualTypeConstant(clzBase, clzParent, fFormal, true);
         TypeConstant typeTarget = pool().ensureVirtualChildTypeConstant(typeParent, sName);
 
-        if (clzTarget.getTypeParamCount() > 0)
+        if (fParameterize && clzTarget.getTypeParamCount() > 0)
             {
             TypeConstant[] atypeParams = fFormal
                     ? clzTarget.getFormalType().getParamTypesArray()
