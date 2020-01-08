@@ -102,6 +102,12 @@ public class TypeParameterConstant
     @Override
     public TypeConstant getConstraintType()
         {
+        TypeConstant typeConstraint = m_typeConstraint;
+        if (typeConstraint != null)
+            {
+            return typeConstraint;
+            }
+
         // the type points to a register, which means that the type is a parameterized type;
         // the type of the register will be "Type<X>" or a formal type
         MethodConstant constMethod = getMethod();
@@ -110,10 +116,10 @@ public class TypeParameterConstant
 
         assert atypeParams.length > nReg;
 
-        TypeConstant typeConstraint = atypeParams[nReg];
+        typeConstraint = atypeParams[nReg];
         if (typeConstraint.isGenericType())
             {
-            return typeConstraint;
+            return m_typeConstraint = typeConstraint;
             }
 
         assert typeConstraint.isTypeOfType() && typeConstraint.isParamsSpecified();
@@ -143,7 +149,7 @@ public class TypeParameterConstant
                 typeConstraint = pool.ensureParameterizedTypeConstant(typeConstraint, atypeFormal);
                 }
             }
-        return typeConstraint;
+        return m_typeConstraint = typeConstraint;
         }
 
     @Override
@@ -309,6 +315,11 @@ public class TypeParameterConstant
      * The register index.
      */
     private int m_iReg;
+
+    /**
+     * Cached constraint type.
+     */
+    private transient TypeConstant m_typeConstraint;
 
     private transient boolean fReEntry;
     private transient boolean fResolved;

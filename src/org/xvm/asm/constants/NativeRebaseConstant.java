@@ -82,7 +82,6 @@ public class NativeRebaseConstant
         throw new IllegalStateException();
         }
 
-
     @Override
     public int hashCode()
         {

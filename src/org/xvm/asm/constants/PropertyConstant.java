@@ -86,10 +86,16 @@ public class PropertyConstant
     @Override
     public TypeConstant getConstraintType()
         {
+        TypeConstant typeConstraint = m_typeConstraint;
+        if (typeConstraint != null)
+            {
+            return typeConstraint;
+            }
+
         assert isFormalType();
 
         // the type of the property must be "Type<X>", so return X
-        TypeConstant typeConstraint = getType();
+        typeConstraint = getType();
 
         assert typeConstraint.isTypeOfType() && typeConstraint.isParamsSpecified();
 
@@ -113,7 +119,7 @@ public class PropertyConstant
                 typeConstraint = pool.ensureParameterizedTypeConstant(typeConstraint, atypeFormal);
                 }
             }
-        return typeConstraint;
+        return m_typeConstraint = typeConstraint;
         }
 
     @Override
@@ -362,4 +368,9 @@ public class PropertyConstant
      * Cached constant that represents the signature of this property.
      */
     private transient SignatureConstant m_constSig;
+
+    /**
+     * Cached constraint type.
+     */
+    protected transient TypeConstant m_typeConstraint;
     }

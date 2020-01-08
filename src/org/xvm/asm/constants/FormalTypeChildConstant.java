@@ -87,8 +87,15 @@ public class FormalTypeChildConstant
     @Override
     public TypeConstant getConstraintType()
         {
-        FormalConstant idParent       = (FormalConstant) getParentConstant();
-        TypeConstant   typeConstraint = idParent.getConstraintType();
+        TypeConstant typeConstraint = m_typeConstraint;
+        if (typeConstraint != null)
+            {
+            return typeConstraint;
+            }
+
+        FormalConstant idParent = (FormalConstant) getParentConstant();
+
+        typeConstraint = idParent.getConstraintType();
 
         // there is a possibility that this constant was constructed with some extra assumptions
         // during the compile time that are not "encoded" into the constant itself;
@@ -102,9 +109,9 @@ public class FormalTypeChildConstant
             assert type.isGenericType();
 
             PropertyConstant idProp = (PropertyConstant) type.getDefiningConstant();
-            return idProp.getConstraintType();
+            return m_typeConstraint = idProp.getConstraintType();
             }
-        return getConstantPool().typeObject();
+        return m_typeConstraint = getConstantPool().typeObject();
         }
 
     @Override
