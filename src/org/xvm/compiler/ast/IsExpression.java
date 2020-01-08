@@ -105,7 +105,7 @@ public class IsExpression
                 NameExpression exprName = (NameExpression) exprTarget;
 
                 exprName.narrowType(ctx, Branch.WhenTrue,  typeTarget.combine(pool, typeTest));
-                exprName.narrowType(ctx, Branch.WhenFalse, typeTarget.subtract(pool, typeTest));
+                exprName.narrowType(ctx, Branch.WhenFalse, typeTarget.andNot(pool, typeTest));
                 }
             }
 

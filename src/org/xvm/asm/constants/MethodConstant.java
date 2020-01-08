@@ -247,30 +247,6 @@ public class MethodConstant
         return method != null && method.isConstructor();
         }
 
-    /**
-     * If any of this method's signature components are auto-narrowing (or have any references to
-     * auto-narrowing types), replace any auto-narrowing portion with an explicit class identity in
-     * the context of the specified target.
-     *
-     * Note 1: this functionality is not applicable to functions.
-     * Note 2: the target type must be "isA" of this method's containing class
-     *
-     * @param pool        the ConstantPool to place a potentially created new constant into
-     * @param typeTarget  the type of a method's target (null if the target is the containing class)
-     *
-     * @return the SignatureConstant with explicit identities swapped in for any auto-narrowing
-     *         identities
-     */
-    public SignatureConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
-        {
-        assert !isFunction() && !isConstructor();
-        assert typeTarget == null ||
-               typeTarget.isA(getClassIdentity().getType()) ||
-               typeTarget.isFormalTypeSequence();
-
-        return getSignature().resolveAutoNarrowing(pool, typeTarget);
-        }
-
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 

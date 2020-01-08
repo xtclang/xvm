@@ -572,7 +572,8 @@ public abstract class TypeConstant
 
     /**
      * Produce a minimal representation of a type that is known to be assignable to both this
-     * and the specified type.
+     * and the specified type. The resulting type is guaranteed to be the same or narrower than
+     * this type.
      *
      * @return a reduction for the union of two types
      */
@@ -593,6 +594,19 @@ public abstract class TypeConstant
             {
             return that;
             }
+
+        // since Enum values cannot be extended, an Enum value type cannot be combined with any
+        // other type; this obviously applies to Nullable
+        if (this.isExplicitClassIdentity(false) &&
+            this.getExplicitClassFormat() == Component.Format.ENUMVALUE
+            || this.isOnlyNullable())
+            {
+            return this;
+            }
+
+        // theoretically speaking, we could have done the same Enum value check for "that" type
+        // as above; the problem is, however, that this method is expected to return a type that is
+        // equal to or narrower than "this" and returning "that" might may break that expectation
 
         // type Type is known to have a distributive property:
         // Type<X> + Type<Y> == Type<X + Y>
@@ -636,24 +650,28 @@ public abstract class TypeConstant
 
     /**
      * Produce a minimal representation the type that is known to be assignable to this type but
-     * is also known not to be assignable to the specified type.
+     * is also known not to be assignable to the specified type. The resulting type is guaranteed
+     * to be the same or narrower than this type.
+     * <p/>
+     * Unless this type is relational, the "not assignable to the specified type" part of the
+     * contract may not be achievable.
      *
-     * @return a reduction for the difference between two types
+     * @return a type that is equal or narrower than this type
      */
-    public TypeConstant subtract(ConstantPool pool, TypeConstant that)
+    public TypeConstant andNot(ConstantPool pool, TypeConstant that)
         {
         TypeConstant thisResolved = this.resolveTypedefs();
         TypeConstant thatResolved = that.resolveTypedefs();
         if (thisResolved != this || thatResolved != that)
             {
-            return thisResolved.subtract(pool, thatResolved);
+            return thisResolved.andNot(pool, thatResolved);
             }
 
         // type Type is known to have a distributive property:
         // Type<X> - Type<Y> == Type<X - Y>
         return this.isTypeOfType() && this.getParamsCount() > 0 &&
                that.isTypeOfType() && that.getParamsCount() > 0
-                ? this.getParamType(0).subtract(pool, that.getParamType(0)).getType()
+                ? this.getParamType(0).andNot(pool, that.getParamType(0)).getType()
                 : this;
         }
 

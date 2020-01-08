@@ -425,8 +425,9 @@ public class InvocationExpression
                                 ? ctx.getVar("this").getType() // "this" could be narrowed
                                 : m_targetinfo.getTargetType();
                         }
+                    SignatureConstant sigMethod = idMethod.getSignature();
                     return resolveTypes(resolver,
-                            idMethod.resolveAutoNarrowing(pool, typeLeft).getRawReturns());
+                            sigMethod.resolveAutoNarrowing(pool, typeLeft).getRawReturns());
                     }
 
                 TypeConstant typeFn = m_fBindTarget
@@ -825,14 +826,16 @@ public class InvocationExpression
                     TypeConstant[] atypeResult;
                     if (m_fCall)
                         {
-                        SignatureConstant sigRet = method.isFunction() || method.isConstructor()
-                                ? idMethod.getSignature()
-                                : idMethod.resolveAutoNarrowing(pool, typeLeft);
+                        SignatureConstant sigMethod = idMethod.getSignature();
+                        if (!method.isFunction() && !method.isConstructor())
+                            {
+                            sigMethod = sigMethod.resolveAutoNarrowing(pool, typeLeft);
+                            }
                         if (!mapTypeParams.isEmpty())
                             {
-                            sigRet = sigRet.resolveGenericTypes(pool, mapTypeParams::get);
+                            sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
                             }
-                        atypeResult = sigRet.getRawReturns();
+                        atypeResult = sigMethod.getRawReturns();
 
                         if (fCondReturn)
                             {

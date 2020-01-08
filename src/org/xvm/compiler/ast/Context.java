@@ -1242,7 +1242,9 @@ public class Context
     protected void narrowLocalRegister(String sName, Register reg,
                                        Branch branch, TypeConstant typeNarrow)
         {
-        assert typeNarrow.isA(reg.getType()) || typeNarrow.isA(reg.getOriginalType());
+        // a formal type could be narrowed to its constraint, but is not assignable from it
+        assert typeNarrow.isA(reg.getType()) || typeNarrow.isA(reg.getOriginalType()) ||
+               reg.getOriginalType().isFormalType();
 
         replaceArgument(sName, branch, reg.narrowType(typeNarrow));
         }

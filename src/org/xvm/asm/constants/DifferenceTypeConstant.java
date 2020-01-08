@@ -190,11 +190,21 @@ public class DifferenceTypeConstant
         {
         // we've been asked to resolve some type defined as "T1 - T2", which means that we need to
         // first resolve T1 and T2, and then collect all the information from T1 that is not in T2
-        TypeConstant type1   = m_constType1;
-        TypeConstant type2   = m_constType2;
-        int          cInvals = getConstantPool().getInvalidationCount();
-        TypeInfo     info1   = type1.ensureTypeInfo(errs);
-        TypeInfo     info2   = type2.ensureTypeInfo(errs);
+        ConstantPool pool  = getConstantPool();
+        TypeConstant type1 = m_constType1;
+        TypeConstant type2 = m_constType2;
+
+        if (type1.isFormalType())
+            {
+            // we know that a TypeInfo for a formal type is the same as a TypeInfo for its constraint;
+            // therefore we can simply apply the difference to the constraint
+            TypeConstant typeC1 = ((FormalConstant) type1.getDefiningConstant()).getConstraintType();
+            return typeC1.andNot(pool, type2).ensureTypeInfo(errs);
+            }
+
+        int      cInvals = pool.getInvalidationCount();
+        TypeInfo info1   = type1.ensureTypeInfo(errs);
+        TypeInfo info2   = type2.ensureTypeInfo(errs);
 
         return new TypeInfo(this,
                             cInvals,
@@ -300,6 +310,22 @@ public class DifferenceTypeConstant
     @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
+        if (m_constType1.isFormalType() && typeLeft.isFormalType())
+            {
+            // this (right) type is DR = (FR - X), where FR is a formal type with a constraint of CR;
+            // typeLeft is a formal type FL with a constraint of CL;
+            // the logic below implies that if (CR - X) is assignable to CL then
+            // (FR - X) is assignable to FL
+            //
+            // Note: we are treating this DifferenceType as a *formal type that is not constType2*
+            //       (see the comment at TerminalTypeConstant.removeNullable)
+            TypeConstant typeCR = ((FormalConstant) m_constType1.getDefiningConstant()).getConstraintType();
+            TypeConstant typeCL = ((FormalConstant) typeLeft.getDefiningConstant()).getConstraintType();
+
+            TypeConstant typeSubR = typeCR.andNot(ConstantPool.getCurrentPool(), m_constType2);
+            return typeSubR.calculateRelation(typeCL);
+            }
+
         // this will be answered via duck-type check
         return Relation.INCOMPATIBLE;
         }
@@ -323,7 +349,7 @@ public class DifferenceTypeConstant
                                                boolean fFunction, List<TypeConstant> listParams)
         {
         return m_constType1.containsSubstitutableMethod(signature, access, fFunction, listParams)
-            && m_constType2.containsSubstitutableMethod(signature, access, fFunction, listParams);
+            && !m_constType2.containsSubstitutableMethod(signature, access, fFunction, listParams);
         }
 
 

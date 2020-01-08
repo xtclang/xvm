@@ -828,6 +828,15 @@ public class TerminalTypeConstant
             return constId.getReferredToType().isNullable();
             }
 
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Property:
+            case TypeParameter:
+            case FormalTypeChild:
+                return ((FormalConstant) constant).getConstraintType().isNullable();
+            }
+
         return false;
         }
 
@@ -838,6 +847,63 @@ public class TerminalTypeConstant
         return this == typeResolved
                 ? ensureResolvedConstant().equals(getConstantPool().clzNullable())
                 : typeResolved.isOnlyNullable();
+        }
+
+    @Override
+    public TypeConstant removeNullable(ConstantPool pool)
+        {
+        if (!isSingleDefiningConstant())
+            {
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return constId.getReferredToType().removeNullable(pool);
+            }
+
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Property:
+            case TypeParameter:
+            case FormalTypeChild:
+                if (((FormalConstant) constant).getConstraintType().isNullable())
+                    {
+                    // Note: we use the DifferenceType here to say that "this" formal type
+                    //       *is not* Nullable, which is not quite the same as other usages
+                    //       of DifferenceType; consider adding a new TypeConstant for that case,
+                    //       for example "FormalDifference"...
+                    return pool.ensureDifferenceTypeConstant(this, pool.typeNullable());
+                    }
+                break;
+            }
+
+        return super.removeNullable(pool);
+        }
+
+    @Override
+    public TypeConstant andNot(ConstantPool pool, TypeConstant that)
+        {
+        if (!isSingleDefiningConstant())
+            {
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return constId.getReferredToType().andNot(pool, that);
+            }
+
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Property:
+            case TypeParameter:
+            case FormalTypeChild:
+                {
+                FormalConstant constFormal    = (FormalConstant) constant;
+                TypeConstant   typeConstraint = constFormal.getConstraintType();
+                TypeConstant   typeAndNot     = typeConstraint.andNot(pool, that);
+                return typeAndNot.equals(typeConstraint)
+                        ? this
+                        : this.combine(pool, typeAndNot);
+                }
+            }
+
+        return super.andNot(pool, that);
         }
 
     @Override

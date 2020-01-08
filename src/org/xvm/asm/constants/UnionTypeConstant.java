@@ -111,7 +111,7 @@ public class UnionTypeConstant
         }
 
     @Override
-    public TypeConstant subtract(ConstantPool pool, TypeConstant that)
+    public TypeConstant andNot(ConstantPool pool, TypeConstant that)
         {
         TypeConstant type1 = getUnderlyingType().resolveTypedefs();
         TypeConstant type2 = getUnderlyingType2().resolveTypedefs();
@@ -132,15 +132,15 @@ public class UnionTypeConstant
         // ((A + B) + C) - B => A + C
         if (type1.isRelationalType() || type2.isRelationalType())
             {
-            TypeConstant type1R = type1.subtract(pool, that);
-            TypeConstant type2R = type2.subtract(pool, that);
+            TypeConstant type1R = type1.andNot(pool, that);
+            TypeConstant type2R = type2.andNot(pool, that);
             if (type1R != type1 || type2R != type2)
                 {
                 return type1R.combine(pool, type2R);
                 }
             }
 
-        return super.subtract(pool, that);
+        return super.andNot(pool, that);
         }
 
     @Override
