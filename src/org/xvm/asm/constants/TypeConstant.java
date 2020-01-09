@@ -4506,66 +4506,17 @@ public abstract class TypeConstant
                 {
                 relation = typeRight.calculateRelationToLeft(typeLeft);
 
-                testDuckTyping:
-                if (relation == Relation.INCOMPATIBLE && typeLeft.isDuckTypeAble())
+                if (relation == Relation.INCOMPATIBLE)
                     {
-                    // left is an interface; check the duck-typing
-                    if (typeRight.equals(pool.typeObject()) || typeRight.isFormalTypeSequence())
-                        {
-                        // Object requires special treatment here for a number of reasons;
-                        // let's disallow it to be assigned to anything for now
-                        // TODO: allow an "empty" interface to be duck-typed to Object
-                        // the "turtle" type also is not duck-typeable to anything
-                        break testDuckTyping;
-                        }
-
-                    if (typeLeft.isSingleDefiningConstant())
-                        {
-                        Constant constIdLeft = typeLeft.getDefiningConstant();
-                        if (typeRight.isSingleDefiningConstant() &&
-                                typeRight.getDefiningConstant().equals(constIdLeft))
-                            {
-                            // we have just tested the relationship between C<T1> and C<T2> and got
-                            // a negative answer; there is no logical way for the duck-typing to
-                            // produce a different result
-                            break testDuckTyping;
-                            }
-
-                        int nDepthLeft = typeLeft.getParameterDepth();
-                        for (Map.Entry<TypeConstant, Relation> entry : mapRelations.entrySet())
-                            {
-                            TypeConstant typeL = entry.getKey();
-                            if (typeL.equals(typeLeft))
-                                {
-                                // this is the current "left"
-                                continue;
-                                }
-
-                            if (entry.getValue() == Relation.IN_PROGRESS)
-                                {
-                                int nDepth = typeL.getParameterDepth();
-
-                                if (typeL.isSingleDefiningConstant() &&
-                                    typeL.getDefiningConstant().equals(constIdLeft) &&
-                                    nDepth > 0 && nDepth < nDepthLeft)
-                                    {
-                                    // we are testing the relationship to L<T1>, but there is already
-                                    // (in-progress) test for our relationship with L<T2> of lower
-                                    // depth, strongly indicating an infinite recursion
-                                    System.err.println("rejecting isA() due to a suspected recursion:" +
-                                        " left=" + typeLeft.getValueString() +
-                                        "; right=" + typeRight.getValueString());
-                                    break testDuckTyping;
-                                    }
-                                }
-                            }
-                        }
-
                     TypeConstant typeLeftN  = typeLeft.normalizeParameters(pool);
                     TypeConstant typeRightN = typeRight.normalizeParameters(pool);
-                    relation = typeLeftN.isInterfaceAssignableFrom(
-                                    typeRightN, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty()
-                            ? Relation.IS_A : Relation.INCOMPATIBLE;
+                    if (typeLeftN.isDuckTypeAbleFrom(typeRightN))
+                        {
+                        // left is an interface; check the duck-typing
+                        relation = typeLeftN.isInterfaceAssignableFrom(
+                                        typeRightN, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty()
+                                ? Relation.IS_A : Relation.INCOMPATIBLE;
+                        }
                     }
 
                 mapRelations.put(typeLeft, relation);
@@ -5751,27 +5702,97 @@ public abstract class TypeConstant
         return mapProduces;
         }
 
-    private boolean isDuckTypeAble()
+    /**
+     * Note: both this type and the typeRight are already normalized.
+     *
+     * @return false iff the duck-typing is known to be impossible
+     */
+    private boolean isDuckTypeAbleFrom(TypeConstant typeRight)
         {
         // interfaces are duck-type able except Tuple, Function and Orderable
         // (the later due to the fact that it's has no abstract methods and
         //  is well-known by the runtime only by its "compare" function)
-        if (isInterfaceType() && !isVirtualChild())
+        if (!isInterfaceType() || isVirtualChild() || isTuple())
             {
-            if (isTuple())
+            return false;
+            }
+
+        TypeConstant typeLeft = this;
+        if (typeLeft.isSingleDefiningConstant() && typeRight.isSingleDefiningConstant()
+            && typeRight.getDefiningConstant().equals(typeLeft.getDefiningConstant()))
+            {
+            // we have just tested the relationship between C<T1> and C<T2> and got
+            // a negative answer; there is no logical way for the duck-typing to
+            // produce a different result
+            return false;
+            }
+
+        ConstantPool pool = getConstantPool();
+
+        if (typeRight.equals(pool.typeObject()) || typeRight.isFormalTypeSequence())
+            {
+            // Object requires special treatment here for a number of reasons;
+            // let's disallow it to be assigned to anything for now
+            // TODO: allow an "empty" interface to be duck-typed to Object
+            // the "turtle" type also is not duck-typeable to anything
+            return false;
+            }
+
+        if (typeLeft.isSingleUnderlyingClass(true))
+            {
+            IdentityConstant idLeft = typeLeft.getSingleUnderlyingClass(true);
+            if (idLeft.equals(pool.clzFunction()) ||
+                idLeft.equals(pool.clzOrderable()))
                 {
                 return false;
                 }
-            if (isSingleUnderlyingClass(true))
+
+            ClassStructure clzLeft     = (ClassStructure) idLeft.getComponent();
+            int            cParamsLeft = clzLeft.getTypeParamCount();
+
+            if (typeRight.isSingleUnderlyingClass(true))
                 {
-                ConstantPool pool = getConstantPool();
-                IdentityConstant id = getSingleUnderlyingClass(true);
-                return !id.equals(pool.clzFunction()) &&
-                       !id.equals(pool.clzOrderable());
+                IdentityConstant idRight  = typeRight.getSingleUnderlyingClass(true);
+                ClassStructure   clzRight = (ClassStructure) idRight.getComponent();
+
+                if (cParamsLeft > clzRight.getTypeParamCount())
+                    {
+                    return false;
+                    }
+
+                if (cParamsLeft > 0)
+                    {
+                    ListMap<StringConstant, TypeConstant> mapParamsLeft  = clzLeft.getTypeParams();
+                    ListMap<StringConstant, TypeConstant> mapParamsRight = clzRight.getTypeParams();
+
+                    for (StringConstant constName : mapParamsLeft.keySet())
+                        {
+                        if (!mapParamsRight.containsKey(constName))
+                            {
+                            return false;
+                            }
+
+                        String       sName      = constName.getValue();
+                        TypeConstant typePLeft  = typeLeft.getGenericParamType(sName, Collections.EMPTY_LIST);
+                        TypeConstant typePRight = typeRight.getGenericParamType(sName, Collections.EMPTY_LIST);
+
+                        if (!typePRight.isA(typePLeft))
+                            {
+                            return false;
+                            }
+                        }
+                    }
                 }
-            return true;
+            else
+                {
+                // the right type is relational; no duck typing for parameterized left
+                if (cParamsLeft > 0)
+                    {
+                    return false;
+                    }
+                }
             }
-        return false;
+        return true;
         }
 
     // ----- inner class: Origin -------------------------------------------------------------------

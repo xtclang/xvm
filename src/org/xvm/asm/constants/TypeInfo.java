@@ -1784,43 +1784,53 @@ public class TypeInfo
                 // any number of parameters goes
                 cParams = Integer.MAX_VALUE;
                 }
+
+            // the call to info.getTopmostMethodStructure(this) may change the content of
+            // mapBySignature, so collect all the matching names first
+            Map<SignatureConstant, MethodInfo> mapCandidates = new HashMap<>();
+
             for (Map.Entry<SignatureConstant, MethodInfo> entry : ensureMethodsBySignature().entrySet())
                 {
                 SignatureConstant sig = entry.getKey();
-
                 if (sig.getName().equals(sName))
                     {
-                    MethodInfo      info   = entry.getValue();
-                    MethodStructure method = info.getTopmostMethodStructure(this);
+                    mapCandidates.put(sig, entry.getValue());
+                    }
+                }
 
-                    if (!kind.matches(method))
+            for (Map.Entry<SignatureConstant, MethodInfo> entry : mapCandidates.entrySet())
+                {
+                SignatureConstant sig  = entry.getKey();
+                MethodInfo      info   = entry.getValue();
+                MethodStructure method = info.getTopmostMethodStructure(this);
+
+                if (!kind.matches(method))
+                    {
+                    continue;
+                    }
+
+                if (info.isCapped())
+                    {
+                    // ignore "capped" methods
+                    continue;
+                    }
+
+                int cAllParams  = sig.getParamCount();
+                int cTypeParams = method.getTypeParamCount();
+                int cDefaults   = method.getDefaultParamCount();
+                int cRequired   = cAllParams - cTypeParams - cDefaults;
+
+                if (cParams >= cRequired)
+                    {
+                    if (setMethods == null)
                         {
-                        continue;
+                        setMethods = new HashSet<>(1);
                         }
 
-                    if (info.isCapped())
-                        {
-                        // ignore "capped" methods
-                        continue;
-                        }
-
-                    int cAllParams  = sig.getParamCount();
-                    int cTypeParams = method.getTypeParamCount();
-                    int cDefaults   = method.getDefaultParamCount();
-                    int cRequired   = cAllParams - cTypeParams - cDefaults;
-
-                    if (cParams >= cRequired)
-                        {
-                        if (setMethods == null)
-                            {
-                            setMethods = new HashSet<>(1);
-                            }
-
-                        MethodConstant idMethod = method.isFunction()
-                                ? method.getIdentityConstant()
-                                : resolveMethodConstant(info);
-                        setMethods.add(idMethod);
-                        }
+                    MethodConstant idMethod = method.isFunction()
+                            ? method.getIdentityConstant()
+                            : resolveMethodConstant(info);
+                    setMethods.add(idMethod);
                     }
                 }
 
