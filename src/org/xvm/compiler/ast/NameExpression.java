@@ -1919,18 +1919,40 @@ public class NameExpression
                 // determine the type of the class
                 if (aTypeParams != null || (typeDesired != null && typeDesired.isA(pool.typeType())))
                     {
-                    TypeConstant type;
+                    TypeConstant type = null;
                     if (aTypeParams == null)
                         {
-                        ClassConstant  idClass = (ClassConstant) constant;
-                        ClassStructure clzThis = getComponent().getContainingClass();
-                        if (clzThis != null && clzThis.getIdentityConstant().equals(idClass))
+                        ClassConstant  idTarget  = (ClassConstant) constant;
+                        Component      component = getComponent();
+                        ClassStructure clzThis   = component.getContainingClass();
+
+                        if (clzThis != null)
                             {
-                            type = clzThis.getFormalType();
+                            IdentityConstant idThis = clzThis.getIdentityConstant();
+                            if (idThis.equals(idTarget))
+                                {
+                                type = clzThis.getFormalType();
+                                }
+                            else
+                                {
+                                if (idTarget.isNestMateOf(idThis))
+                                    {
+                                    ClassStructure clzTarget = (ClassStructure) idTarget.getComponent();
+                                    if (clzTarget.isVirtualChild())
+                                        {
+                                        ClassConstant  idBase  = idTarget.getOutermost();
+                                        ClassStructure clzBase = (ClassStructure) idBase.getComponent();
+                                        boolean        fFormal = !(component instanceof MethodStructure &&
+                                                                        ((MethodStructure) component).isFunction());
+                                        type = pool.ensureVirtualTypeConstant(clzBase, clzTarget, fFormal, false);
+                                        }
+                                    }
+                                }
                             }
-                        else
+
+                        if (type == null)
                             {
-                            type = pool.ensureTerminalTypeConstant(constant);
+                            type = pool.ensureTerminalTypeConstant(idTarget);
                             }
                         }
                     else

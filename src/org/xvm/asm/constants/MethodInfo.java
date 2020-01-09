@@ -488,7 +488,9 @@ public class MethodInfo
             if (body.getImplementation() == Implementation.Capped)
                 {
                 Object nid = body.getNarrowingNestedIdentity();
-                return infoType.getMethodByNestedId(nid).getTopmostMethodStructure(infoType);
+                MethodInfo methodNarrowing = infoType.getMethodByNestedId(nid);
+                assert methodNarrowing != this;
+                return methodNarrowing.getTopmostMethodStructure(infoType);
                 }
 
             MethodStructure method = body.getMethodStructure();

@@ -1670,11 +1670,58 @@ public class ConstantPool
      * @param constParent  the parent's TypeConstant (can be parameterized)
      * @param sName        the child name
      *
-     * @return the TypeConstant of the instance child type
+     * @return the TypeConstant of the virtual child type
      */
     public TypeConstant ensureVirtualChildTypeConstant(TypeConstant constParent, String sName)
         {
         return (TypeConstant) register(new VirtualChildTypeConstant(this, constParent, sName));
+        }
+
+    /**
+     * Give the specified base and child classes, a TypeConstant representing a virtual child.
+     *
+     * @param clzBase        the base class
+     * @param clzChild       the child class
+     * @param fFormal        if true, create formal types for the parent type constants,
+     *                       otherwise canonical
+     * @param fParameterize  if true, parameterize the newly created child
+     *
+     * @return the TypeConstant of the virtual child type
+     */
+    public TypeConstant ensureVirtualTypeConstant(ClassStructure clzBase, ClassStructure clzChild,
+                                                  boolean fFormal, boolean fParameterize)
+        {
+        assert clzChild.isVirtualChild();
+
+        String           sName     = clzChild.getName();
+        ClassStructure   clzParent = (ClassStructure) clzChild.getParent();
+        IdentityConstant idParent  = clzParent.getIdentityConstant();
+
+        if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent, false))
+            {
+            // we've reached the "top"
+            TypeConstant typeParent = fFormal ? clzBase.getFormalType() : clzBase.getCanonicalType();
+            return ensureVirtualChildTypeConstant(typeParent, sName);
+            }
+
+        if (!clzParent.isVirtualChild())
+            {
+            // somehow the classes didn't coalesce
+            return null;
+            }
+
+        TypeConstant typeParent = ensureVirtualTypeConstant(clzBase, clzParent, fFormal, true);
+        TypeConstant typeTarget = ensureVirtualChildTypeConstant(typeParent, sName);
+
+        if (fParameterize && clzChild.getTypeParamCount() > 0)
+            {
+            TypeConstant[] atypeParams = fFormal
+                    ? clzChild.getFormalType().getParamTypesArray()
+                    : clzChild.getCanonicalType().getParamTypesArray();
+
+            typeTarget = ensureParameterizedTypeConstant(typeTarget, atypeParams);
+            }
+        return typeTarget;
         }
 
     /**

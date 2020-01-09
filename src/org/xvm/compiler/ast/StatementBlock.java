@@ -1055,7 +1055,11 @@ public class StatementBlock
                     if (stmtImport != null)
                         {
                         NameResolver resolver = stmtImport.getNameResolver();
-                        assert resolver.getResult() == Result.RESOLVED;
+                        if (resolver.getResult() != Result.RESOLVED)
+                            {
+                            // report an unresolvable import name below
+                            break;
+                            }
                         return resolver.getConstant();
                         }
 

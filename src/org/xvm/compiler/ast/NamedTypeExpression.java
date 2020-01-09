@@ -859,8 +859,8 @@ public class NamedTypeExpression
                         ClassStructure clzBase = (ClassStructure) idBase.getComponent();
                         boolean        fFormal = !(component instanceof MethodStructure &&
                                                     ((MethodStructure) component).isFunction());
-
-                        typeTarget = createVirtualTypeConstant(clzBase, clzTarget, fFormal, false);
+                        // Note: keep the formal types when in a constructor
+                        typeTarget = pool.ensureVirtualTypeConstant(clzBase, clzTarget, fFormal, false);
                         assert typeTarget != null;
                         }
                     else
@@ -886,7 +886,7 @@ public class NamedTypeExpression
                     ClassConstant  idBase  = idTarget.getAutoNarrowingBase();
                     ClassStructure clzBase = (ClassStructure) idBase.getComponent();
 
-                    typeTarget = createVirtualTypeConstant(clzBase, clzTarget, false, false);
+                    typeTarget = pool.ensureVirtualTypeConstant(clzBase, clzTarget, false, false);
                     }
                 }
 
@@ -924,42 +924,6 @@ public class NamedTypeExpression
                             new UnresolvedNameConstant(pool, getNames(), false));
                 }
             }
-        }
-
-    private TypeConstant createVirtualTypeConstant(ClassStructure clzBase, ClassStructure clzTarget,
-                                                   boolean fFormal, boolean fParameterize)
-        {
-        assert clzTarget.isVirtualChild();
-
-        String           sName     = clzTarget.getName();
-        ClassStructure   clzParent = (ClassStructure) clzTarget.getParent();
-        IdentityConstant idParent  = clzParent.getIdentityConstant();
-
-        if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent, false))
-            {
-            // we've reached the "top"
-            TypeConstant typeParent = fFormal ? clzBase.getFormalType() : clzBase.getCanonicalType();
-            return pool().ensureVirtualChildTypeConstant(typeParent, sName);
-            }
-
-        if (!clzParent.isVirtualChild())
-            {
-            // somehow the classes didn't coalesce
-            return null;
-            }
-
-        TypeConstant typeParent = createVirtualTypeConstant(clzBase, clzParent, fFormal, true);
-        TypeConstant typeTarget = pool().ensureVirtualChildTypeConstant(typeParent, sName);
-
-        if (fParameterize && clzTarget.getTypeParamCount() > 0)
-            {
-            TypeConstant[] atypeParams = fFormal
-                    ? clzTarget.getFormalType().getParamTypesArray()
-                    : clzTarget.getCanonicalType().getParamTypesArray();
-
-            typeTarget = pool().ensureParameterizedTypeConstant(typeTarget, atypeParams);
-            }
-        return typeTarget;
         }
 
     @Override

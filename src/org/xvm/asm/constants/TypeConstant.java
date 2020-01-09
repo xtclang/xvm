@@ -3276,7 +3276,11 @@ public abstract class TypeConstant
                                 methodContrib.getIdentity().getPathString()
                                 );
                             }
-                        methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+
+                        if (!methodBase.isCapped())
+                            {
+                            methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+                            }
                         }
                     }
 
@@ -3341,7 +3345,37 @@ public abstract class TypeConstant
 
             mapMethods.put(id, info);
             mapVirtMethods.put(nid, info);
+
+            // assert !info.isCapped() || verifyCap(info, mapVirtMods, mapVirtMethods);
             }
+        }
+
+    /**
+     * Assertion helper: verify that the capped info refers to a non-capped one.
+     */
+    private boolean verifyCap(MethodInfo info,
+                              Map<Object, MethodInfo> mapVirtMods,
+                              Map<Object, MethodInfo> mapVirtMethods)
+        {
+        for (int i = 0; i < 100; i++)
+            {
+            Object nidN = info.getHead().getNarrowingNestedIdentity();
+
+            info = mapVirtMethods.get(nidN);
+            if (info == null)
+                {
+                info = mapVirtMods.get(nidN);
+                }
+            if (info == null)
+                {
+                throw new AssertionError();
+                }
+            if (!info.isCapped())
+                {
+                return true;
+                }
+            }
+        return false;
         }
 
     /**
