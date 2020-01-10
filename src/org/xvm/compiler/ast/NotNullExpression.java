@@ -101,7 +101,10 @@ public class NotNullExpression
             {
             expr = exprNew;
             type = exprNew.getType();
-            if (!pool.typeNull().isA(type))  // Nullable or Object or ...
+
+            // the second check is for not-nullable type that is still allowed to be assigned from null
+            // (e.g. Object or Const)
+            if (!type.isNullable() && !pool.typeNull().isA(type))
                 {
                 exprNew.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
                 return replaceThisWith(exprNew);
