@@ -3910,11 +3910,12 @@ public class Parser
                 List<Expression> exprs = new ArrayList<>();
                 while (match(Id.R_SQUARE) == null)
                     {
-                    if (!exprs.isEmpty())
-                        {
-                        expect(Id.COMMA);
-                        }
                     exprs.add(parseExpression());
+                    if (match(Id.COMMA) == null)
+                        {
+                        expect(Id.R_SQUARE);
+                        break;
+                        }
                     }
                 return new ListExpression(type, exprs, lStartPos, getLastMatch().getEndPosition());
                 }
@@ -3922,22 +3923,18 @@ public class Parser
             case "Map":
                 {
                 expect(Id.L_SQUARE);
-                List<Expression> keys   = null;
-                List<Expression> values = null;
+                List<Expression> keys   = new ArrayList<>();
+                List<Expression> values = new ArrayList<>();
                 while (match(Id.R_SQUARE) == null)
                     {
-                    if (keys == null)
-                        {
-                        keys   = new ArrayList<>();
-                        values = new ArrayList<>();
-                        }
-                    else
-                        {
-                        expect(Id.COMMA);
-                        }
                     keys.add(parseExpression());
                     expect(Id.ASN);
                     values.add(parseExpression());
+                    if (match(Id.COMMA) == null)
+                        {
+                        expect(Id.R_SQUARE);
+                        break;
+                        }
                     }
                 return new MapExpression(type, keys, values, getLastMatch().getEndPosition());
                 }
