@@ -182,8 +182,9 @@ public class AnnotatedTypeExpression
         TypeConstant typeAnno = anno.getAnnotationType();
 
         // until it's resolved let's assume it's disassociated
-        m_fDisassociate = typeAnno.containsUnresolved() ||
-                typeAnno.getExplicitClassInto().isIntoVariableType();
+        m_fDisassociate = typeAnno.containsUnresolved()
+                || typeAnno.getExplicitClassInto().containsUnresolved() // TODO GG - comment this line out and it blows
+                || typeAnno.getExplicitClassInto().isIntoVariableType();
 
         return isDisassociated()
                 ? typeUnderlying    // our annotation is not added to the underlying type constant
