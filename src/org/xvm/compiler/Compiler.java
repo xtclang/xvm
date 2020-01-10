@@ -1202,6 +1202,10 @@ public class Compiler
      */
     public static final String VALIDATOR_BODY_MISSING              = "COMPILER-147";
     /**
+     * A duplicate name is used for a class or package: {0}
+     */
+    public static final String DUPLICATE_NAME                      = "COMPILER-148";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

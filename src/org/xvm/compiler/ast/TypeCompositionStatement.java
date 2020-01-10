@@ -506,7 +506,8 @@ public class TypeCompositionStatement
         setComponent(component);
         if (component == null)
             {
-            // must have been an error
+            // the only reason for "container.createX()" to fail is a duplicate name
+            log(errs, Severity.ERROR, Compiler.DUPLICATE_NAME, sName);
             return;
             }
 
