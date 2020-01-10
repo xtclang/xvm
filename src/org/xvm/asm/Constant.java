@@ -242,7 +242,8 @@ public abstract class Constant
             case "numbers.UInt64":
             case "numbers.UInt128":
             case "numbers.VarUInt":
-                return pool.ensureIntConstant(PackedInteger.ZERO, Format.valueOf(type.getEcstasyClassName()));
+                return pool.ensureIntConstant(PackedInteger.ZERO, Format.valueOf(
+                        type.getEcstasyClassName().substring(8))); // omit "numbers."
 
             case "numbers.Dec32":
                 return pool.ensureDecimalConstant(Decimal32.POS_ZERO);
