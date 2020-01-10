@@ -383,7 +383,13 @@ public class AnnotationExpression
             m_fConst = fConst;
             m_anno   = null; // force a re-generation of the annotation
 
-            typeAnno = pool.ensureAnnotatedTypeConstant(typeRequired, ensureAnnotation(pool));
+            Annotation   anno     = ensureAnnotation(pool);
+            TypeConstant typeInto = anno.getAnnotationType().getExplicitClassInto();
+            if (typeRequired != null)
+                {
+                typeInto = typeInto.resolveGenerics(pool, typeRequired);
+                }
+            typeAnno = pool.ensureAnnotatedTypeConstant(typeInto, anno);
 
             return finishValidation(typeRequired, typeAnno, TypeFit.Fit, null, errs);
             }

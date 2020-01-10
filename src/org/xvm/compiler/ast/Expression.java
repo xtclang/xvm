@@ -615,7 +615,7 @@ public abstract class Expression
     protected TypeConstant inferTypeFromRequired(TypeConstant typeActual, TypeConstant typeRequired)
         {
         if (typeRequired.isParameterizedDeep() && !typeActual.isParamsSpecified()
-                && !typeActual.isA(typeRequired))
+                && !typeActual.equals(typeRequired))
             {
             TypeConstant typeInferred = typeActual.adoptParameters(pool(), typeRequired);
             if (typeInferred.isA(typeRequired))

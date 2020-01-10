@@ -3277,7 +3277,7 @@ public abstract class TypeConstant
                                 );
                             }
 
-                        if (!methodBase.isCapped())
+                        if (nid.equals(nidContrib))
                             {
                             methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
                             }
