@@ -32,6 +32,6 @@ public class Runtime
     public boolean isIdle()
         {
         // TODO: very naive; replace
-        return f_daemons == null || f_daemons.m_fWaiting;
+        return f_daemons == null || f_daemons.isIdle();
         }
     }

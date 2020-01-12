@@ -1,16 +1,13 @@
 package org.xvm.runtime;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
-import java.util.List;
-
-import java.util.concurrent.CopyOnWriteArrayList;
-
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
-
-import org.xvm.util.Notifier;
-import org.xvm.util.SimpleNotifier;
-
 
 /**
  * A simple daemon pool.
@@ -19,17 +16,16 @@ public class DaemonPool
         implements Runnable
     {
     protected String m_sName;
-    protected Thread m_thread;
-
-    protected final Notifier f_notifier = new SimpleNotifier();
 
     private volatile State m_state = State.Initial;
 
-    public volatile boolean m_fWaiting = true;
+    private final AtomicInteger f_cActive = new AtomicInteger();
 
     enum State {Initial, Starting, Running, Stopping, Stopped;};
 
-    private List<ServiceContext> f_listServices = new CopyOnWriteArrayList<>();
+    private Set<ServiceContext> f_listServices = ConcurrentHashMap.newKeySet();
+
+    private final ExecutorService f_executor;
 
     /**
     * Create a DaemonPool with the specified name.
@@ -37,6 +33,15 @@ public class DaemonPool
     public DaemonPool(String sName)
         {
         m_sName = sName;
+
+        ThreadGroup group = new ThreadGroup(m_sName);
+        f_executor = Executors.newCachedThreadPool(r ->
+            {
+            Thread thread = new Thread(group, r);
+            thread.setDaemon(true);
+            thread.setName(m_sName + "@" + thread.hashCode());
+            return thread;
+            });
         }
 
     /**
@@ -51,20 +56,17 @@ public class DaemonPool
 
         setState(State.Starting);
 
-        Thread thread = m_thread = new Thread(new ThreadGroup(m_sName), this);
-        thread.setDaemon(true);
-        thread.start();
+        int concurrency = Integer.parseInt(System.getProperty("xvm.parallelism", "0"));
+        if (concurrency <= 0) {
+            concurrency = java.lang.Runtime.getRuntime().availableProcessors();
+        }
 
-        while (!isStarted())
+        f_cActive.set(concurrency);
+        setState(State.Running);
+
+        for (int i = 0; i < concurrency; ++i)
             {
-            try
-                {
-                wait(1000);
-                }
-            catch (InterruptedException e)
-                {
-                throw new IllegalStateException("Failed to start");
-                }
+            f_executor.submit(this);
             }
         }
 
@@ -78,20 +80,16 @@ public class DaemonPool
         f_listServices.remove(context);
         }
 
+    public boolean isIdle()
+        {
+        return f_cActive.get() == 0;
+        }
+
     // ----- Runnable interface -----
 
     @Override
     public void run()
         {
-        setState(State.Running);
-
-        synchronized (this)
-            {
-            notify();
-            }
-
-        Notifier notifier = f_notifier;
-
         try
             {
             boolean fNothingToDo = false;
@@ -100,9 +98,12 @@ public class DaemonPool
                 {
                 if (fNothingToDo)
                     {
-                    m_fWaiting = true;
-                    notifier.await(10); // min of all registered timeouts
-                    m_fWaiting = false;
+                    f_cActive.decrementAndGet();
+                    synchronized (this)
+                        {
+                        wait(10); // min of all registered timeouts
+                        }
+                    f_cActive.incrementAndGet();
                     }
                 else
                     {
@@ -111,41 +112,51 @@ public class DaemonPool
 
                 for (ServiceContext context : f_listServices)
                     {
-                    Frame frame = context.nextFiber();
-
-                    if (frame != null)
+                    if (context.tryLock())
                         {
-                        fNothingToDo = false;
                         try
                             {
-                            ConstantPool.setCurrentPool(frame.poolContext());
+                            Frame frame = context.nextFiber();
 
-                            frame = context.execute(frame);
                             if (frame != null)
                                 {
-                                context.suspendFiber(frame);
-                                }
-
-                            ConstantPool.setCurrentPool(null);
-                            }
-                        catch (Throwable e)
-                            {
-                            // TODO: RTError
-                            frame = context.getCurrentFrame();
-                            if (frame != null)
-                                {
-                                MethodStructure function = frame.f_function;
-                                int nLine = 0;
-                                if (function != null)
+                                fNothingToDo = false;
+                                try
                                     {
-                                    nLine = function.calculateLineNumber(frame.m_iPC);
-                                    }
+                                    ConstantPool.setCurrentPool(frame.poolContext());
 
-                                Utils.log(frame, "\nUnhandled exception at " + frame
-                                    + (nLine > 0 ? "; line=" + nLine : "; iPC=" + frame.m_iPC));
+                                    frame = context.execute(frame);
+                                    if (frame != null)
+                                        {
+                                        context.suspendFiber(frame);
+                                        }
+
+                                    ConstantPool.setCurrentPool(null);
+                                    }
+                                catch (Throwable e)
+                                    {
+                                    // TODO: RTError
+                                    frame = context.getCurrentFrame();
+                                    if (frame != null)
+                                        {
+                                        MethodStructure function = frame.f_function;
+                                        int nLine = 0;
+                                        if (function != null)
+                                            {
+                                            nLine = function.calculateLineNumber(frame.m_iPC);
+                                            }
+
+                                        Utils.log(frame, "\nUnhandled exception at " + frame
+                                                + (nLine > 0 ? "; line=" + nLine : "; iPC=" + frame.m_iPC));
+                                        }
+                                    e.printStackTrace(System.out);
+                                    System.exit(-1);
+                                    }
                                 }
-                            e.printStackTrace(System.out);
-                            System.exit(-1);
+                            }
+                        finally
+                            {
+                            context.releaseLock();
                             }
                         }
                     }
@@ -160,17 +171,16 @@ public class DaemonPool
             e.printStackTrace();
             System.exit(1);
             }
-
-        m_thread = null;
-
-        setState(State.Stopped);
         }
 
     // ----- InterService Communications -----
 
     public void signal()
         {
-        f_notifier.signal();
+        synchronized (this)
+            {
+            notify();
+            }
         }
 
     // ----- Service interface -----
@@ -180,19 +190,13 @@ public class DaemonPool
         if (m_state == State.Running)
             {
             m_state = State.Stopping;
+            notifyAll();
+            f_executor.shutdown();
+            setState(State.Stopped);
             }
-        f_notifier.signal();
         }
 
     // ----- Helpers -----
-
-    /**
-    * @return the thread object or null if the daemon is not started
-    */
-    public Thread getThread()
-        {
-        return m_thread;
-        }
 
     public boolean isStarted()
         {
@@ -210,7 +214,6 @@ public class DaemonPool
     @Override
     public String toString()
         {
-        return "DaemonPool{Thread=\"" + getThread() + '\"'
-            + ", State=" + m_state.name() + '}';
+        return "DaemonPool{Executor='" + f_executor + "', State=" + m_state.name() + '}';
         }
     }
