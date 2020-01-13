@@ -252,7 +252,8 @@ public abstract class TypeExpression
     @Override
     protected TypeConstant inferTypeFromRequired(TypeConstant typeActual, TypeConstant typeRequired)
         {
-        if (typeActual.isTypeOfType() && typeRequired.isTypeOfType())
+        if (typeActual.isTypeOfType() &&
+                typeRequired.isTypeOfType() && typeRequired.isParamsSpecified())
             {
             TypeConstant typeInferredReferent = super.inferTypeFromRequired(
                 getSafeDataType(typeActual), getSafeDataType(typeRequired));
