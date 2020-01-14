@@ -101,7 +101,7 @@ public class PropertyConstant
 
         typeConstraint = typeConstraint.getParamType(0);
 
-        if (!typeConstraint.isParamsSpecified() && typeConstraint.isSingleUnderlyingClass(true))
+        if (!typeConstraint.isParamsSpecified() && typeConstraint.isExplicitClassIdentity(true))
             {
             // create a normalized formal type
             ConstantPool   pool = getConstantPool();

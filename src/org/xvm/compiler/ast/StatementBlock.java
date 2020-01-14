@@ -1550,7 +1550,7 @@ public class StatementBlock
                 TypeConstant  typeTarget,
                 int           stepsOut)
             {
-            assert typeTarget.isSingleUnderlyingClass(true);
+            assert typeTarget.isExplicitClassIdentity(true);
 
             this.name       = name;
             this.id         = typeTarget.getSingleUnderlyingClass(true);

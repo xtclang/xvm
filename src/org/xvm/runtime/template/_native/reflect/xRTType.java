@@ -823,7 +823,7 @@ public class xRTType
     public int invokeFromClass(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         TypeConstant typeTarget = hType.getDataType();
-        if (typeTarget.isSingleUnderlyingClass(true))
+        if (typeTarget.isExplicitClassIdentity(true))
             {
             IdentityConstant idClz  = typeTarget.getSingleUnderlyingClass(true);
             ObjectHandle     hClass = frame.getConstHandle(idClz);

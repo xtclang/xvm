@@ -348,7 +348,7 @@ public class xRTTypeTemplate
     public int invokeFromClass(Frame frame, TypeTemplateHandle hType, int[] aiReturn)
         {
         TypeConstant type = hType.getDataType();
-        if (!type.isSingleUnderlyingClass(true))
+        if (!type.isExplicitClassIdentity(true))
             {
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }

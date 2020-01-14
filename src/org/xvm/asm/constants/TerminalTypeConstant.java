@@ -642,7 +642,7 @@ public class TerminalTypeConstant
             case ChildClass:
                 {
                 IdentityConstant idClass = null;
-                if (typeTarget != null && typeTarget.isSingleUnderlyingClass(true))
+                if (typeTarget != null && typeTarget.isExplicitClassIdentity(true))
                     {
                     idClass = typeTarget.getSingleUnderlyingClass(true);
                     }

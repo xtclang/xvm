@@ -309,7 +309,7 @@ public class AnonInnerClass
         // handling for all interface types
         if (m_sName == null)
             {
-            m_sName = type.isSingleUnderlyingClass(true)
+            m_sName = type.isExplicitClassIdentity(true)
                     ? type.getSingleUnderlyingClass(true).getName()
                     : type.getValueString().replace(" ", "");
             }

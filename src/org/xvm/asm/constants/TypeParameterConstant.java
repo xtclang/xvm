@@ -132,7 +132,7 @@ public class TypeParameterConstant
             return typeConstraint.resolveConstraints(pool);
             }
 
-        if (!typeConstraint.isParamsSpecified() && typeConstraint.isSingleUnderlyingClass(true))
+        if (!typeConstraint.isParamsSpecified() && typeConstraint.isExplicitClassIdentity(true))
             {
             // create a normalized formal type
             ClassStructure clz = (ClassStructure) typeConstraint.getSingleUnderlyingClass(true).getComponent();

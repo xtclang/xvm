@@ -2345,7 +2345,7 @@ public class NameExpression
     protected PseudoConstant getRelativeIdentity(TypeConstant typeFrom, IdentityConstant idTarget)
         {
         // verify that we can "walk up the line" starting from the specified type
-        if (!typeFrom.isSingleUnderlyingClass(true))
+        if (!typeFrom.isExplicitClassIdentity(true))
             {
             return null;
             }

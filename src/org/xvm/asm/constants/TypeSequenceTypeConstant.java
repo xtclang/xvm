@@ -131,7 +131,7 @@ public class TypeSequenceTypeConstant
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
         // the formal type sequence is a Sequence of types
-        if (typeLeft.isSingleUnderlyingClass(true))
+        if (typeLeft.isExplicitClassIdentity(true))
             {
             ConstantPool     pool  = getConstantPool();
             IdentityConstant idClz = typeLeft.getSingleUnderlyingClass(true);

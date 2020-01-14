@@ -145,7 +145,7 @@ public class ClassStructure
                 {
                 TypeConstant type = contrib.getTypeConstant();
 
-                if (type.isSingleUnderlyingClass(false) &&
+                if (type.isExplicitClassIdentity(false) &&
                     type.getSingleUnderlyingClass(false).equals(getConstantPool().clzAbstract()))
                     {
                     return true;
@@ -168,7 +168,7 @@ public class ClassStructure
                 {
                 TypeConstant type = contrib.getTypeConstant();
 
-                if (type.isSingleUnderlyingClass(false) &&
+                if (type.isExplicitClassIdentity(false) &&
                     type.getSingleUnderlyingClass(false).equals(getConstantPool().clzOverride()))
                     {
                     return true;
@@ -451,7 +451,7 @@ public class ClassStructure
             TypeConstant typeContrib = contrib.getTypeConstant();
 
             if (   typeContrib.containsUnresolved()
-               || !typeContrib.isSingleUnderlyingClass(true)) // disregard relational type contributions
+               || !typeContrib.isExplicitClassIdentity(true)) // disregard relational type contributions
                 {
                 continue;
                 }
@@ -949,7 +949,7 @@ public class ClassStructure
                     }
                 }
 
-            if (typeContrib.isSingleUnderlyingClass(true))
+            if (typeContrib.isExplicitClassIdentity(true))
                 {
                 ClassStructure clzContrib =
                         (ClassStructure) typeContrib.getSingleUnderlyingClass(true).getComponent();
@@ -1110,7 +1110,7 @@ public class ClassStructure
             TypeConstant typeContrib = contrib.getTypeConstant();
 
             if (   typeContrib.containsUnresolved()           // this question cannot be answered yet
-               || !typeContrib.isSingleUnderlyingClass(true)) // disregard relational type contributions
+               || !typeContrib.isExplicitClassIdentity(true)) // disregard relational type contributions
                 {
                 continue;
                 }
@@ -1202,7 +1202,8 @@ public class ClassStructure
         if (contribExtends != null)
             {
             TypeConstant typeExtends = contribExtends.getTypeConstant();
-            if (typeExtends.isSingleUnderlyingClass(false))
+            if (typeExtends.isExplicitClassIdentity(true) &&
+                typeExtends.isSingleUnderlyingClass(false))
                 {
                 return (ClassStructure) typeExtends.getSingleUnderlyingClass(false).getComponent();
                 }
@@ -1347,7 +1348,7 @@ public class ClassStructure
                         {
                         return null;
                         }
-                    if (type.isSingleUnderlyingClass(true))
+                    if (type.isExplicitClassIdentity(true))
                         {
                         if (list == null)
                             {

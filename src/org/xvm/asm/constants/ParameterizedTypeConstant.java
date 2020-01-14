@@ -506,7 +506,7 @@ public class ParameterizedTypeConstant
             else
                 {
                 // scenario 3a
-                if (constResolved.isSingleUnderlyingClass(true))
+                if (constResolved.isExplicitClassIdentity(true))
                     {
                     IdentityConstant idClz = constResolved.getSingleUnderlyingClass(true);
                     ClassStructure   clz   = (ClassStructure) idClz.getComponent();

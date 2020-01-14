@@ -1070,7 +1070,7 @@ public abstract class TypeConstant
     public boolean isNestMateOf(IdentityConstant idClass)
         {
         return !isFormalType() &&
-                isSingleDefiningConstant() &&
+                isExplicitClassIdentity(true) &&
                 isSingleUnderlyingClass(false) &&
                 getSingleUnderlyingClass(false).isNestMateOf(idClass);
         }
@@ -4910,7 +4910,7 @@ public abstract class TypeConstant
     protected static Relation checkReservedCompatibility(TypeConstant typeLeft, TypeConstant typeRight)
         {
         if (!typeLeft.isSingleDefiningConstant()    || !typeRight.isSingleDefiningConstant() ||
-            !typeLeft.isSingleUnderlyingClass(true) || !typeRight.isSingleUnderlyingClass(true))
+            !typeLeft.isExplicitClassIdentity(true) || !typeRight.isExplicitClassIdentity(true))
             {
             return null;
             }
@@ -5479,7 +5479,7 @@ public abstract class TypeConstant
      */
     public Constant getDefaultValue()
         {
-        if (isSingleUnderlyingClass(false))
+        if (isExplicitClassIdentity(false) && isSingleUnderlyingClass(false))
             {
             IdentityConstant id   = getSingleUnderlyingClass(false);
             ClassStructure   clz  = (ClassStructure) id.getComponent();
@@ -5772,7 +5772,7 @@ public abstract class TypeConstant
             return false;
             }
 
-        if (typeLeft.isSingleUnderlyingClass(true))
+        if (typeLeft.isExplicitClassIdentity(true))
             {
             IdentityConstant idLeft = typeLeft.getSingleUnderlyingClass(true);
             if (idLeft.equals(pool.clzFunction()) ||
@@ -5784,7 +5784,7 @@ public abstract class TypeConstant
             ClassStructure clzLeft     = (ClassStructure) idLeft.getComponent();
             int            cParamsLeft = clzLeft.getTypeParamCount();
 
-            if (typeRight.isSingleUnderlyingClass(true))
+            if (typeRight.isExplicitClassIdentity(true))
                 {
                 IdentityConstant idRight  = typeRight.getSingleUnderlyingClass(true);
                 ClassStructure   clzRight = (ClassStructure) idRight.getComponent();
