@@ -671,8 +671,10 @@ public class NameExpression
 
                     case Type:
                         // the class could either be identified (in the raw) by an identity
-                        // constant, or a relative (pseudo) constant
-                        assert argRaw instanceof IdentityConstant || argRaw instanceof PseudoConstant;
+                        // constant a relative (pseudo) constant or a typedef
+                        assert argRaw instanceof IdentityConstant ||
+                               argRaw instanceof PseudoConstant   ||
+                               argRaw instanceof TypedefConstant  ;
                         constVal = type;
                         break;
 
@@ -793,7 +795,7 @@ public class NameExpression
             case Unknown:
             case Method:
             case Class:
-            case Typedef:
+            case Type:
             case Label:
                 return false;
             }
@@ -2230,7 +2232,7 @@ public class NameExpression
                     return Meaning.Method;
 
                 case Typedef:
-                    return Meaning.Typedef;
+                    return Meaning.Type;
                 }
             }
 
@@ -2575,7 +2577,7 @@ public class NameExpression
     /**
      * Represents the category of argument that the expression yields.
      */
-    enum Meaning {Unknown, Reserved, Variable, Property, FormalChildType, Method, Class, Type, Typedef, Label}
+    enum Meaning {Unknown, Reserved, Variable, Property, FormalChildType, Method, Class, Type, Label}
 
     /**
      * Represents the necessary argument/assignable transformation that the expression will have to
