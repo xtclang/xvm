@@ -3,6 +3,7 @@ package org.xvm.runtime;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+
 import java.util.List;
 import java.util.Queue;
 

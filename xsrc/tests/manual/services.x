@@ -66,7 +66,7 @@ module TestServices.xqiz.it
             return False;
             });
 
-        for (Int i : 0..svcs.size)
+        for (Int i : 0..svcs.size-1)
             {
             DateTime start = now();
             @Future Int spinResult = svcs[i].spin(10_000);
