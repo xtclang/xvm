@@ -1,6 +1,8 @@
 package org.xvm.runtime;
 
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.List;
 import java.util.Queue;
 
@@ -55,6 +57,24 @@ public class ServiceContext
         f_pool          = module.getConstantPool();
         f_queueMsg      = new ConcurrentLinkedQueue<>();
         f_queueResponse = new ConcurrentLinkedQueue<>();
+        }
+
+    /**
+     * Attempt to acquire the context lock.
+     *
+     * @return {@code true} iff acquired
+     */
+    public boolean tryLock()
+        {
+        return !m_fLock && LOCK_HANDLE.compareAndSet(this, false, true);
+        }
+
+    /**
+     * Release the context lock.
+     */
+    public void releaseLock()
+        {
+        m_fLock = false;
         }
 
     public Frame getCurrentFrame()
@@ -1105,6 +1125,13 @@ public class ServiceContext
     enum Reentrancy {Prioritized, Open, Exclusive, Forbidden}
     volatile Reentrancy m_reentrancy = Reentrancy.Prioritized;
 
+    /**
+     * The context "lock", atomic operations are performed via {@link #LOCK_HANDLE}.
+     * <p>
+     * This lock must be held while processing a context.
+     */
+    volatile boolean m_fLock;
+
     enum ServiceStatus
         {
         Idle,
@@ -1115,4 +1142,22 @@ public class ServiceContext
     private volatile ServiceStatus m_status = ServiceStatus.Idle;
 
     final static ThreadLocal<ServiceContext> s_tloContext = new ThreadLocal<>();
+
+    /**
+     * VarHandle for {@link #m_fLock}.
+     */
+    final static VarHandle LOCK_HANDLE;
+
+    static
+        {
+        try
+            {
+            LOCK_HANDLE = MethodHandles.lookup().findVarHandle(ServiceContext.class,
+                "m_fLock", boolean.class);
+            }
+        catch (IllegalAccessException | NoSuchFieldException e)
+            {
+            throw new IllegalStateException(e);
+            }
+        }
     }

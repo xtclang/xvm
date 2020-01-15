@@ -9,6 +9,8 @@ module TestServices.xqiz.it
         console.println($"{tag()} creating service");
         TestService svc = new TestService();
 
+        TestService[] svcs = new Array<TestService>(4, (x) -> new TestService());
+
         console.println($"{tag()} calling service async/wait-style: {svc}");
         Int n = svc.calcSomethingBig(new Duration(0));
         console.println($"{tag()} async/wait-style result={n}");
@@ -64,6 +66,16 @@ module TestServices.xqiz.it
             return False;
             });
 
+        for (Int i : 0..svcs.size)
+            {
+            DateTime start = now();
+            @Future Int spinResult = svcs[i].spin(10_000);
+            &spinResult.whenComplete((n, e) ->
+                {
+                console.println($"{tag()} spin {i} yielded {n}; took {now() - start}}");
+                });
+            }
+
         console.println($"{tag()} done {r}");
         }
 
@@ -86,6 +98,17 @@ module TestServices.xqiz.it
             return result;
             }
 
+        Int spin(Int iters)
+            {
+            Int sum = 0;
+            for (Int i : iters..1)
+                {
+                sum += i;
+                }
+
+            return sum;
+            }
+
         Int terminateExceptionally(String message)
             {
             throw new Exception(message);
@@ -98,8 +121,15 @@ module TestServices.xqiz.it
             }
         }
 
+    static DateTime now()
+        {
+        @Inject Clock clock;
+        return clock.now;
+        }
+
     static String tag()
         {
-        return this:service.serviceName == "TestService" ? "[svc ]" : "[main]";
+        static DateTime base = now();
+        return $"{now() - base}:\t" + (this:service.serviceName == "TestService" ? "[svc ]" : "[main]");
         }
     }
