@@ -8,10 +8,14 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpCondJump;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**
@@ -67,9 +71,29 @@ public class JumpNType
     @Override
     protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue)
         {
-        TypeConstant type     = hValue.getType();
-        TypeConstant typeTest = frame.resolveType(m_nArg2);
+        TypeConstant typeTest;
+        if (m_nArg2 < CONSTANT_OFFSET)
+            {
+            typeTest = frame.resolveType(m_nArg2);
+            }
+        else
+            {
+            try
+                {
+                TypeHandle hType = (TypeHandle) frame.getArgument(m_nArg2);
+                typeTest = hType.getDataType();
+                }
+            catch (ClassCastException e)
+                {
+                // should not happen; treat as "no match"
+                return jump(frame, iPC + m_ofJmp, m_cExits);
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return frame.raiseException(e);
+                }
+            }
 
-        return type.isA(typeTest) ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
+        return hValue.getType().isA(typeTest) ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
         }
     }

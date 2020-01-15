@@ -10,7 +10,10 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -86,9 +89,18 @@ public class FunctionTypeExpression
                 {
                 fValid = false;
                 }
-            else if (exprNew != exprOld)
+            else
                 {
-                listTypes.set(i, exprNew);
+                if (exprNew.isDynamic())
+                    {
+                    log(errs, Severity.ERROR, Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS);
+                    fValid = false;
+                    }
+
+                if (exprNew != exprOld)
+                    {
+                    listTypes.set(i, exprNew);
+                    }
                 }
             }
 

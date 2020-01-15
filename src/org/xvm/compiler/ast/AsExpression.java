@@ -12,7 +12,10 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.MoveCast;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -51,20 +54,28 @@ public class AsExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeFit fit = TypeFit.Fit;
-
         ConstantPool   pool        = pool();
         TypeExpression exprType    = (TypeExpression) expr2.validate(ctx, pool.typeType(), errs);
         TypeConstant   type        = null;
         TypeConstant   typeRequest = null;
+        boolean        fValid      = true;
+
         if (exprType == null)
             {
-            fit = TypeFit.NoFit;
+            fValid = false;
             }
         else
             {
             expr2 = exprType;
-            type  = exprType.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
+            if (exprType.isDynamic())
+                {
+                log(errs, Severity.ERROR, Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS);
+                fValid = false;
+                }
+            else
+                {
+                type = exprType.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
+                }
 
             if (expr1.testFit(ctx, type, null).isFit())
                 {
@@ -76,20 +87,24 @@ public class AsExpression
         Expression exprTarget = expr1.validate(ctx, typeRequest, errs);
         if (exprTarget == null)
             {
-            fit = TypeFit.NoFit;
+            fValid = false;
             }
         else
             {
             expr1 = exprTarget;
             }
 
-        Constant constVal = null;
-        if (expr1.isConstant())
+        if (fValid)
             {
-            constVal = expr1.toConstant();
-            }
+            Constant constVal = null;
+            if (expr1.isConstant())
+                {
+                constVal = expr1.toConstant();
+                }
 
-        return finishValidation(typeRequired, type, fit, constVal, errs);
+            return finishValidation(typeRequired, type, TypeFit.Fit, constVal, errs);
+            }
+        return null;
         }
 
     @Override

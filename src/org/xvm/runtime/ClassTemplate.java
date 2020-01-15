@@ -196,7 +196,10 @@ public abstract class ClassTemplate
 
         if (typeActual.getDefiningConstant().equals(constInception))
             {
-            return ensureClass(typeActual, typeActual);
+            TypeConstant typeInception = typeActual.isAccessSpecified()
+                    ? typeActual.getUnderlyingType()
+                    : typeActual;
+            return ensureClass(typeInception, typeActual);
             }
 
         // replace the TerminalType of the typeActual with the inception type
@@ -226,7 +229,6 @@ public abstract class ClassTemplate
         ConstantPool pool = typeInception.getConstantPool();
 
         assert !typeInception.isAccessSpecified();
-        assert !typeMask.isAccessSpecified();
         assert typeInception.normalizeParameters(pool).equals(typeInception);
         assert typeMask.normalizeParameters(pool).equals(typeMask);
 

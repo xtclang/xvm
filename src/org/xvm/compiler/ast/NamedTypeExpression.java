@@ -585,9 +585,13 @@ public class NamedTypeExpression
             NameExpression exprNew = m_exprDynamic =
                     (NameExpression) exprOld.validate(ctx, pool().typeType(), errs);
 
-            return exprNew == null
-                    ? null
-                    : finishValidation(typeRequired, exprNew.getType(), TypeFit.Fit, null, errs);
+            if (exprNew == null ||
+                finishValidation(typeRequired, exprNew.getType(), TypeFit.Fit, null, errs) == null)
+                {
+                return null;
+                }
+            m_constId = exprNew.getType();
+            return this;
             }
 
         if (left == null)
@@ -678,8 +682,8 @@ public class NamedTypeExpression
             }
 
         return fValid
-                ? finishValidation(typeRequired, type.getType(), TypeFit.Fit, null, errs)
-                : finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
+                ? finishValidation(typeRequired, type.getType(), TypeFit.Fit, type, errs)
+                : null;
         }
 
     /**
@@ -932,7 +936,7 @@ public class NamedTypeExpression
         {
         return isDynamic()
                 ? m_exprDynamic.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs)
-                : getType();
+                : getType().getParamType(0).resolveAutoNarrowingBase(pool());
         }
 
 

@@ -568,9 +568,9 @@ interface Type<DataType, OuterType>
             assert:arg outer != Null;
             for (val fn : constructors)
                 {
-                if (fn.ParamTypes.size == 2 && fn.ParamTypes[1].is(Type<Struct>))
+                if (fn.ParamTypes.size == 2 && fn.ParamTypes[1].is(Type!<Struct>))
                     {
-                    assert fn.ParamTypes[0].as(Type) == OuterType;
+                    assert fn.ParamTypes[0].as(Type!) == OuterType;
                     return True, fn.as(function DataType(OuterType, Struct)).
                         bind(fn.params[0].as(Parameter<OuterType>), outer)
                             .as(function DataType(Struct));
@@ -581,7 +581,7 @@ interface Type<DataType, OuterType>
             {
             for (val fn : constructors)
                 {
-                if (fn.ParamTypes.size == 1 && fn.ParamTypes[0].as(Type).is(Type<Struct>))
+                if (fn.ParamTypes.size == 1 && fn.ParamTypes[0].is(Type!<Struct>))
                     {
                     return True, fn.as(function DataType(Struct));
                     }

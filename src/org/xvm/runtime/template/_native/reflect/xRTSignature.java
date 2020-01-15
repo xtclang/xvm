@@ -18,6 +18,7 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xString;
@@ -86,6 +87,12 @@ public class xRTSignature
 
             case "futureResult":
                 return getPropertyFutureResult(frame, hFunc, iReturn);
+
+            case "ParamTypes":
+                return getPropertyParamTypes(frame, hFunc, iReturn);
+
+            case "ReturnTypes":
+                return getPropertyReturnTypes(frame, hFunc, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -111,7 +118,7 @@ public class xRTSignature
     /**
      * Implements property: name.get()
      */
-    public int getPropertyName(Frame frame, SignatureHandle hFunc, int iReturn)
+    protected int getPropertyName(Frame frame, SignatureHandle hFunc, int iReturn)
         {
         xString.StringHandle handle = xString.makeHandle(hFunc.getName());
         return frame.assignValue(iReturn, handle);
@@ -120,7 +127,7 @@ public class xRTSignature
     /**
      * Implements property: params.get()
      */
-    public int getPropertyParams(Frame frame, SignatureHandle hFunc, int iReturn)
+    protected int getPropertyParams(Frame frame, SignatureHandle hFunc, int iReturn)
         {
         return new RTArrayConstructor(hFunc, false, iReturn).doNext(frame);
         }
@@ -128,7 +135,7 @@ public class xRTSignature
     /**
      * Implements property: params.get()
      */
-    public int getPropertyReturns(Frame frame, SignatureHandle hFunc, int iReturn)
+    protected int getPropertyReturns(Frame frame, SignatureHandle hFunc, int iReturn)
         {
         return new RTArrayConstructor(hFunc, true, iReturn).doNext(frame);
         }
@@ -136,20 +143,54 @@ public class xRTSignature
     /**
      * Implements property: conditionalResult.get()
      */
-    public int getPropertyConditionalResult(Frame frame, SignatureHandle hFunc, int iReturn)
+    protected int getPropertyConditionalResult(Frame frame, SignatureHandle hFunc, int iReturn)
         {
-        MethodStructure        structFunc = hFunc.getMethod();
-        xBoolean.BooleanHandle handle     = xBoolean.makeHandle(structFunc.isConditionalReturn());
+        MethodStructure structFunc = hFunc.getMethod();
+        BooleanHandle   handle     = xBoolean.makeHandle(structFunc.isConditionalReturn());
         return frame.assignValue(iReturn, handle);
         }
 
     /**
      * Implements property: futureResult.get()
      */
-    public int getPropertyFutureResult(Frame frame, SignatureHandle hFunc, int iReturn)
+    protected int getPropertyFutureResult(Frame frame, SignatureHandle hFunc, int iReturn)
         {
-        xBoolean.BooleanHandle handle = xBoolean.makeHandle(hFunc.isAsync());
+        BooleanHandle handle = xBoolean.makeHandle(hFunc.isAsync());
         return frame.assignValue(iReturn, handle);
+        }
+
+    /**
+     * Implements formal property: ParamTypes
+     */
+    protected int getPropertyParamTypes(Frame frame, SignatureHandle hFunc, int iReturn)
+        {
+        int            cParams = hFunc.getParamCount();
+        ObjectHandle[] ahType  = new ObjectHandle[cParams];
+
+        ClassComposition clzArray = xRTType.INSTANCE.ensureTypeArray();
+
+        for (int i = 0; i < cParams; i++)
+            {
+            ahType[i] = hFunc.getParamType(i).getTypeHandle();
+            }
+        return frame.assignValue(iReturn, xArray.INSTANCE.createArrayHandle(clzArray, ahType));
+        }
+
+    /**
+     * Implements formal property: ReturnTypes
+     */
+    protected int getPropertyReturnTypes(Frame frame, SignatureHandle hFunc, int iReturn)
+        {
+        int            cReturns = hFunc.getReturnCount();
+        ObjectHandle[] ahType   = new ObjectHandle[cReturns];
+
+        ClassComposition clzArray = xRTType.INSTANCE.ensureTypeArray();
+
+        for (int i = 0; i < cReturns; i++)
+            {
+            ahType[i] = hFunc.getReturnType(i).getTypeHandle();
+            }
+        return frame.assignValue(iReturn, xArray.INSTANCE.createArrayHandle(clzArray, ahType));
         }
 
 

@@ -27,6 +27,7 @@ import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xString;
 
+import org.xvm.runtime.template.numbers.xInt64;
 
 /**
  * Native Tuple implementation.
@@ -55,6 +56,7 @@ public class xTuple
     @Override
     public void initDeclared()
         {
+        markNativeProperty("size");
         }
 
     @Override
@@ -137,6 +139,20 @@ public class xTuple
         TupleHandle hTuple = new TupleHandle(clazz, ahValue);
 
         return frame.assignValue(iReturn, hTuple);
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        TupleHandle hTuple = (TupleHandle) hTarget;
+
+        switch (sPropName)
+            {
+            case "size":
+                return frame.assignValue(iReturn, xInt64.makeHandle(hTuple.m_ahValue.length));
+            }
+
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override
