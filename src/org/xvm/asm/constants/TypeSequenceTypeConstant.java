@@ -121,7 +121,7 @@ public class TypeSequenceTypeConstant
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // for now, let's pretend it's an Array<Type>
-        ConstantPool pool = ConstantPool.getCurrentPool();
+        ConstantPool pool = getConstantPool();
 
         TypeConstant typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
         return typeArray.ensureTypeInfoInternal(errs);
