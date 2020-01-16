@@ -134,7 +134,7 @@ interface Ref<Referent>
      * a different module, this method cannot produce an original reference, and will result in the
      * conditional false.
      */
-    <Unmasked> conditional Unmasked revealAs<Unmasked>();
+    <Unmasked> conditional Unmasked revealAs(Type<Unmasked> revealType);
 
     /**
      * Determine if the referent is an instance of the specified type.

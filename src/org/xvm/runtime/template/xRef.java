@@ -185,7 +185,7 @@ public class xRef
 
             case "revealAs":
                 return actOnReferent(frame, hRef,
-                    h -> revealAs(frame, h, (TypeHandle) ahArg[0], aiReturn));
+                    h -> revealAs(frame, h, (TypeHandle) ahArg[1], aiReturn));
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);

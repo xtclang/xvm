@@ -681,8 +681,9 @@ public class NamedTypeExpression
             type = pool.ensureImmutableTypeConstant(type);
             }
 
+        TypeConstant typeType = type.getType();
         return fValid
-                ? finishValidation(typeRequired, type.getType(), TypeFit.Fit, type, errs)
+                ? finishValidation(typeRequired, typeType, TypeFit.Fit, typeType, errs)
                 : null;
         }
 

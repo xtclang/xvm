@@ -103,7 +103,7 @@ module TestReflection.xqiz.it
             console.println($"expected - {e.text}");
             }
 
-        assert Stringable str := &tmpDir.revealAs<Stringable>();
+        assert Stringable str := &tmpDir.revealAs(Stringable);
         console.println($"str.length={str.estimateStringLength()}");
 
         Point p = new Point(1, 1);
@@ -120,7 +120,7 @@ module TestReflection.xqiz.it
             console.println($"expected - {e.text}");
             }
 
-        assert p := &str.revealAs<Point>();
+        assert p := &str.revealAs(Point);
         console.println($"p={p}");
         }
 
