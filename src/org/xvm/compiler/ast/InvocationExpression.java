@@ -702,31 +702,10 @@ public class InvocationExpression
                 MethodConstant  idMethod    = (MethodConstant) argMethod;
                 MethodStructure method      = m_method;
                 boolean         fCondReturn = method.isConditionalReturn();
-
-                if (typeLeft != null && !typeLeft.isFormalType() && typeLeft.getParamsCount() == 0 &&
-                        !method.isFunction() && !method.isConstructor())
-                    {
-                    // prevent a naked type to be used for consuming methods
-                    ClassStructure clz = (ClassStructure) idMethod.getNamespace().getComponent();
-                    if (clz.getTypeParamCount() > 0)
-                        {
-                        for (StringConstant constName : clz.getTypeParams().keySet())
-                            {
-                            if (method.consumesFormalType(constName.getValue()))
-                                {
-                                log(errs, Severity.ERROR, Compiler.ILLEGAL_NAKED_TYPE_INVOCATION,
-                                    typeLeft.getValueString(),
-                                    method.getIdentityConstant().getValueString());
-                                break Validate;
-                                }
-                            }
-                        }
-                    }
-
-                TypeConstant[] atypeParams = idMethod.getRawParams();
-                int            cTypeParams = method.getTypeParamCount();
-                int            cParams     = method.getVisibleParamCount();
-                int            cArgs       = args.size();
+                TypeConstant[] atypeParams  = idMethod.getRawParams();
+                int            cTypeParams  = method.getTypeParamCount();
+                int            cParams      = method.getVisibleParamCount();
+                int            cArgs        = args.size();
 
                 if (cTypeParams > 0)
                     {
