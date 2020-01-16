@@ -679,13 +679,27 @@ public class MethodStructure
             TypeConstant typePrev = mapTypeParams.get(sFormalName);
             if (typePrev != null)
                 {
-                typeResult = Op.selectCommonType(typePrev, typeResult, ErrorListener.BLACKHOLE);
-                if (typeResult == null)
+                if (typePrev.isA(typeResult))
                     {
-                    // different arguments cause the formal type to resolve into
-                    // incompatible types
-                    mapTypeParams.remove(sFormalName);
-                    return true;
+                    // the old type is more precise; keep it
+                    return false;
+                    }
+
+                if (typeResult.isA(typePrev))
+                    {
+                    // the new type is more precise; use it instead
+                    }
+                else
+                    {
+                    // the type are not compatible; use the common type (TODO: consider intersection?)
+                    typeResult = Op.selectCommonType(typePrev, typeResult, ErrorListener.BLACKHOLE);
+                    if (typeResult == null)
+                        {
+                        // different arguments cause the formal type to resolve into
+                        // incompatible types
+                        mapTypeParams.remove(sFormalName);
+                        return true;
+                        }
                     }
                 }
             mapTypeParams.put(sFormalName, typeResult);
