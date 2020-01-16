@@ -6,19 +6,19 @@ module TestReflection.xqiz.it
 
     void run()
         {
-//        testFuncType();
-//        testTypeStrings();
-//        testInstanceOf();
-//        testMaskReveal();
-//        testForm();
-//        testProps();
-//        testInvoke();
-//        testInvoke2();
-//        testInvokeAsync();
-//        testBind();
-//        testChildTypes();
-//        testTypeTemplate();
-//        testEnum();
+        testFuncType();
+        testTypeStrings();
+        testInstanceOf();
+        testMaskReveal();
+        testForm();
+        testProps();
+        testInvoke();
+        testInvoke2();
+        testInvokeAsync();
+        testBind();
+        testChildTypes();
+        testTypeTemplate();
+        testEnum();
         testStruct();
         }
 
@@ -448,42 +448,13 @@ module TestReflection.xqiz.it
                                  |     isImmutable={ref.isImmutable}, refName={ref.refName}, var={ref.is(Var)}
                                );
 
-//                Class<Point:public, Point:protected, Point:private, Point:struct> c = Point;
-//                Point p2 = c.instantiate(s);
-//                if (Struct s := &o.revealAs(Object:struct))
-
-                // TODO GG if (val  s := &o.revealAs(Struct))
-                if (Struct s := &o.revealAs(Struct))
+                if (val s := &o.revealAs(Struct))
                     {
                     Object clone = c.instantiate(s);
                     console.println($"clone={clone}");
                     }
                 }
             }
-
-
-        // -------------------------------------------------------------------------------------
-        // TODO GG
-        //java.lang.IllegalStateException
-        //	at org.xvm.asm.constants.UnresolvedTypeConstant.isExplicitClassIdentity(UnresolvedTypeConstant.java:124)
-        //	at org.xvm.asm.constants.TypeConstant.checkReservedCompatibility(TypeConstant.java:4913)
-        //	at org.xvm.asm.constants.TypeConstant.calculateRelation(TypeConstant.java:4530)
-        //	at org.xvm.asm.constants.TypeConstant.calculateRelation(TypeConstant.java:4496)
-        //	at org.xvm.asm.constants.TypeConstant.isA(TypeConstant.java:4470)
-        //	at org.xvm.asm.constants.TypeConst=ant.isAssignableTo(TypeConstant.java:5108)
-        //	at org.xvm.compiler.ast.AstNode.collectMatchingMethods(AstNode.java:1387)
-        //	at org.xvm.compiler.ast.AstNode.findMethod(AstNode.java:1082)
-        //	at org.xvm.compiler.ast.InvocationExpression.findCallable(InvocationExpression.java:2096)
-        //	at org.xvm.compiler.ast.InvocationExpression.resolveName(InvocationExpression.java:1964)
-        //	at org.xvm.compiler.ast.InvocationExpression.resolveReturnTypes(InvocationExpression.java:373)
-        //	at org.xvm.compiler.ast.InvocationExpression.testFitMulti(InvocationExpression.java:298)
-        //	at org.xvm.compiler.ast.AssignmentStatement.validateImpl(AssignmentStatement.java:460)
-        //	at org.xvm.compiler.ast.Statement.validate(Statement.java:138)
-//        Point:struct s = &p.revealAs<Point:struct>();
-//        console.println($"s.x={s.x}, s.y={s.y}");
-//
-//        Point.StructType s2 = &p.revealAs<Point.StructType>();
-//        console.println($"s2.x={s2.x}, s.y={s2.y}");
 
         //java.lang.IllegalStateException
         //	at org.xvm.asm.constants.UnresolvedTypeConstant.resolveAutoNarrowing(UnresolvedTypeConstant.java:266)
