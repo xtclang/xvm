@@ -1024,7 +1024,7 @@ public abstract class AstNode
                     ? exprTuple.getType()
                     : exprTuple.getImplicitType(ctx);
 
-            if (typeTuple != null && typeTuple.isTuple())
+            if (typeTuple != null && typeTuple.isTuple() && !typeTuple.isFormalType())
                 {
                 typeTupleArg = typeTuple;
                 }

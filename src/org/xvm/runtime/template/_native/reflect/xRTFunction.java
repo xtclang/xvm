@@ -277,7 +277,7 @@ public class xRTFunction
             {
             TypeConstant typeParam = hFunc.getParamType(i);
             TypeConstant typeArg   = ahArg[i].getType();
-            if (!typeParam.isA(typeArg))
+            if (!typeArg.isA(typeParam))
                 {
                 return frame.raiseException(
                     xException.illegalCast(frame, typeArg.getValueString()));

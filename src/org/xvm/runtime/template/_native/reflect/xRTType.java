@@ -47,6 +47,7 @@ import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
 import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xTuple;
 
 import org.xvm.util.ListMap;
 
@@ -544,21 +545,26 @@ public class xRTType
                 System.arraycopy(ahArg, 1, ahArg, 0, ahArg.length-1);
                 }
 
-            ClassComposition clz         = f_clzTarget;
-            ClassTemplate    template    = clz.getTemplate();
+            ClassComposition clzTarget   = f_clzTarget;
+            ClassTemplate    template    = clzTarget.getTemplate();
             MethodStructure  constructor = f_constructor;
+            ConstantPool     pool        = frame.poolContext();
+            TypeConstant     typeTuple   = pool.ensureParameterizedTypeConstant(
+                                            pool.typeTuple(), clzTarget.getType());
+            ClassComposition clzTuple    = xTuple.INSTANCE.ensureClass(typeTuple);
 
             int iResult = constructor == null
                 ? template.proceedConstruction(frame, null, false, ahArg[0], ahArg, Op.A_STACK)
-                : template.construct(frame, constructor, clz, hParent, ahArg, Op.A_STACK);
+                : template.construct(frame, constructor, clzTarget, hParent, ahArg, Op.A_STACK);
             switch (iResult)
                 {
                 case Op.R_NEXT:
-                    return frame.assignTuple(iReturn, frame.popStack());
+                    return frame.assignValue(iReturn, xTuple.makeHandle(clzTuple, frame.popStack()));
 
                 case Op.R_CALL:
                     frame.m_frameNext.addContinuation(frameCaller ->
-                        frameCaller.assignTuple(iReturn, frame.popStack()));
+                        frameCaller.assignValue(iReturn,
+                            xTuple.makeHandle(clzTuple, frameCaller.popStack())));
                     // fall through
                 default:
                     return iResult;

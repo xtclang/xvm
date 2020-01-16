@@ -1317,6 +1317,19 @@ public class TypeInfo
                 }
             }
 
+        // check well-known native methods
+        if (getType().isA(pool().typeFunction()))
+            {
+            if (sig.getName().equals("invoke"))
+                {
+                Set<MethodConstant> set = findMethods("invoke", 1, MethodKind.Method);
+                assert set.size() == 1;
+                method = getMethodById(set.iterator().next());
+                mapBySig.putIfAbsent(sig, method);
+                return method;
+                }
+            }
+
         // TODO: cache the miss
         return null;
         }

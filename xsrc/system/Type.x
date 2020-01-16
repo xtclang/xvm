@@ -570,10 +570,8 @@ interface Type<DataType, OuterType>
                 {
                 if (fn.ParamTypes.size == 2 && fn.ParamTypes[1].is(Type!<Struct>))
                     {
-                    assert fn.ParamTypes[0].as(Type!) == OuterType;
-                    return True, fn.as(function DataType(OuterType, Struct)).
-                        bind(fn.params[0].as(Parameter<OuterType>), outer)
-                            .as(function DataType(Struct));
+                    // assert fn.ParamTypes[0] == OuterType; TODO GG
+                    return True, structure -> fn.invoke((outer, structure))[0];
                     }
                 }
             }
@@ -583,7 +581,7 @@ interface Type<DataType, OuterType>
                 {
                 if (fn.ParamTypes.size == 1 && fn.ParamTypes[0].is(Type!<Struct>))
                     {
-                    return True, fn.as(function DataType(Struct));
+                    return True, structure -> fn.invoke(Tuple:(structure))[0];
                     }
                 }
             }

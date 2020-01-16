@@ -130,7 +130,7 @@ public class TypeSequenceTypeConstant
     @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
-        // the formal type sequence is a Sequence of types
+        // the formal type sequence is a Sequence of types and a canonical Tuple
         if (typeLeft.isExplicitClassIdentity(true))
             {
             ConstantPool     pool  = getConstantPool();
@@ -151,6 +151,10 @@ public class TypeSequenceTypeConstant
                             }
                         break;
                     }
+                }
+            else if (idClz.equals(pool.clzTuple()) && typeLeft.getParamsCount() == 0)
+                {
+                return Relation.IS_A;
                 }
             }
         return Relation.INCOMPATIBLE;
