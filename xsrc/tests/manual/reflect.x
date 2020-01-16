@@ -6,19 +6,20 @@ module TestReflection.xqiz.it
 
     void run()
         {
-        testFuncType();
-        testTypeStrings();
-        testInstanceOf();
-        testMaskReveal();
-        testForm();
-        testProps();
-        testInvoke();
-        testInvoke2();
-        testInvokeAsync();
-        testBind();
-        testChildTypes();
-        testTypeTemplate();
-        testEnum();
+//        testFuncType();
+//        testTypeStrings();
+//        testInstanceOf();
+//        testMaskReveal();
+//        testForm();
+//        testProps();
+//        testInvoke();
+//        testInvoke2();
+//        testInvokeAsync();
+//        testBind();
+//        testChildTypes();
+//        testTypeTemplate();
+//        testEnum();
+        testStruct();
         }
 
     Function<<Int, String>, <Int>> foo()
@@ -401,6 +402,100 @@ module TestReflection.xqiz.it
         console.println($"Boolean.count={Boolean.count}");
         console.println($"Boolean.values={Boolean.values}");
         console.println($"Boolean.names={Boolean.names}");
+        }
+
+    void testStruct()
+        {
+        console.println("\n** testStruct");
+
+        Point p = new Point(3,4);
+        analyzeStructure(p);
+
+        const Point3D(Int x, Int y, Int z) extends Point(x, y);
+        Point3D p3d = new Point3D(5,6,7);
+        analyzeStructure(p3d);
+        }
+
+    void analyzeStructure(Object o)
+        {
+        console.println($"Analyzing: {o}");
+
+        Type t = &o.actualType;
+        console.println($"Type={t}");
+
+        if (Class c := t.fromClass())
+            {
+            console.println($"Class={c}");
+            console.println($"PublicType={c.PublicType}");
+            console.println($"StructType={c.StructType}");
+
+            Type ts = c.StructType;
+            for (val prop : ts.properties)
+                {
+                // property must have a field, must not be injected, not constant/formal
+                console.println($|prop={prop.name}, constant={prop.isConstant()}, readOnly={prop.readOnly}
+                                 |     hasUnreachableSetter={prop.hasUnreachableSetter}, formal={prop.formal}
+                                 |     hasField={prop.hasField}, injected={prop.injected}, lazy={prop.lazy}
+                                 |     atomic={prop.atomic}, abstract={prop.abstract}
+                               );
+
+                // need to get a Ref for the property:
+                // - must be assigned
+                // - actual type cannot be Service
+                val ref = prop.of(o);
+                console.println($|assigned={ref.assigned}, peek()={ref.peek()}, actualType={ref.actualType}
+                                 |     isService={ref.isService}, isConst={ref.isConst}
+                                 |     isImmutable={ref.isImmutable}, refName={ref.refName}, var={ref.is(Var)}
+                               );
+
+//                Class<Point:public, Point:protected, Point:private, Point:struct> c = Point;
+//                Point p2 = c.instantiate(s);
+//                if (Struct s := &o.revealAs(Object:struct))
+
+                // TODO GG if (val  s := &o.revealAs(Struct))
+                if (Struct s := &o.revealAs(Struct))
+                    {
+                    Object clone = c.instantiate(s);
+                    console.println($"clone={clone}");
+                    }
+                }
+            }
+
+
+        // -------------------------------------------------------------------------------------
+        // TODO GG
+        //java.lang.IllegalStateException
+        //	at org.xvm.asm.constants.UnresolvedTypeConstant.isExplicitClassIdentity(UnresolvedTypeConstant.java:124)
+        //	at org.xvm.asm.constants.TypeConstant.checkReservedCompatibility(TypeConstant.java:4913)
+        //	at org.xvm.asm.constants.TypeConstant.calculateRelation(TypeConstant.java:4530)
+        //	at org.xvm.asm.constants.TypeConstant.calculateRelation(TypeConstant.java:4496)
+        //	at org.xvm.asm.constants.TypeConstant.isA(TypeConstant.java:4470)
+        //	at org.xvm.asm.constants.TypeConst=ant.isAssignableTo(TypeConstant.java:5108)
+        //	at org.xvm.compiler.ast.AstNode.collectMatchingMethods(AstNode.java:1387)
+        //	at org.xvm.compiler.ast.AstNode.findMethod(AstNode.java:1082)
+        //	at org.xvm.compiler.ast.InvocationExpression.findCallable(InvocationExpression.java:2096)
+        //	at org.xvm.compiler.ast.InvocationExpression.resolveName(InvocationExpression.java:1964)
+        //	at org.xvm.compiler.ast.InvocationExpression.resolveReturnTypes(InvocationExpression.java:373)
+        //	at org.xvm.compiler.ast.InvocationExpression.testFitMulti(InvocationExpression.java:298)
+        //	at org.xvm.compiler.ast.AssignmentStatement.validateImpl(AssignmentStatement.java:460)
+        //	at org.xvm.compiler.ast.Statement.validate(Statement.java:138)
+//        Point:struct s = &p.revealAs<Point:struct>();
+//        console.println($"s.x={s.x}, s.y={s.y}");
+//
+//        Point.StructType s2 = &p.revealAs<Point.StructType>();
+//        console.println($"s2.x={s2.x}, s.y={s2.y}");
+
+        //java.lang.IllegalStateException
+        //	at org.xvm.asm.constants.UnresolvedTypeConstant.resolveAutoNarrowing(UnresolvedTypeConstant.java:266)
+        //	at org.xvm.compiler.ast.VariableDeclarationStatement.validateImpl(VariableDeclarationStatement.java:174)
+        //	at org.xvm.compiler.ast.Statement.validate(Statement.java:138)
+        //	at org.xvm.compiler.ast.AssignmentStatement.validateImpl(AssignmentStatement.java:404)
+        //	at org.xvm.compiler.ast.Statement.validate(Statement.java:138)
+        //	at org.xvm.compiler.ast.StatementBlock.validateImpl(StatementBlock.java:336)
+        //	at org.xvm.compiler.ast.Statement.validate(Statement.java:138)
+        //	at org.xvm.compiler.ast.StatementBlock.compileMethod(StatementBlock.java:267)
+        // TODO GG Point:PublicType p2 = Point.instantiate(s.as(Point.StructType));
+//        console.println($"p2={p2}");
         }
 
 
