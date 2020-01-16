@@ -118,6 +118,16 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
+        {
+        // since the formal type sequence is a Sequence of types (see above).
+        // we need to report the "Element" formal type
+        return sName.equals("Element")
+                ? getConstantPool().typeType()
+                : null;
+        }
+
+    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // for now, let's pretend it's an Array<Type>
@@ -130,7 +140,7 @@ public class TypeSequenceTypeConstant
     @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
-        // the formal type sequence is a Sequence of types and a canonical Tuple
+        // the formal type sequence is a Sequence of types, a Tuple of types
         if (typeLeft.isExplicitClassIdentity(true))
             {
             ConstantPool     pool  = getConstantPool();
@@ -152,8 +162,16 @@ public class TypeSequenceTypeConstant
                         break;
                     }
                 }
-            else if (idClz.equals(pool.clzTuple()) && typeLeft.getParamsCount() == 0)
+            else if (idClz.equals(pool.clzTuple()))
                 {
+                for (int i = 0, c = typeLeft.getParamsCount(); i < c; i++)
+                    {
+                    if (!typeLeft.getParamType(i).isA(pool.typeType()))
+                        {
+                        return Relation.INCOMPATIBLE;
+                        }
+                    }
+
                 return Relation.IS_A;
                 }
             }
@@ -161,20 +179,26 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
-    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
-        {
-        // since the formal type sequence is a Sequence of types (see above).
-        // we need to report the "Element" formal type
-        return sName.equals("Element")
-                ? getConstantPool().typeType()
-                : null;
-        }
-
-    @Override
     protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
-        // the formal type sequence is a tuple of types ...
-        return typeRight.isTuple() ? Relation.IS_A : Relation.INCOMPATIBLE;
+        // the formal type sequence is assignable from a tuple, a sequence or an array of types
+        ConstantPool pool = getConstantPool();
+        if (typeRight.isTuple())
+            {
+            return Relation.IS_A;
+            }
+
+        if (typeRight.isExplicitClassIdentity(true))
+            {
+            IdentityConstant idClz = typeRight.getSingleUnderlyingClass(true);
+            if ((idClz.equals(pool.clzArray()) || idClz.equals(pool.clzSequence())) &&
+                    typeRight.getParamType(0).equals(pool.typeType()))
+                {
+                return Relation.IS_A;
+                }
+            }
+
+        return Relation.INCOMPATIBLE;
         }
 
 

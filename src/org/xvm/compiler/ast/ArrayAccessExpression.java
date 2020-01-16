@@ -125,7 +125,7 @@ public class ArrayAccessExpression
         // the value of the index might not yet be determinable
         if (typeArray.isTuple())
             {
-            return typeArray.isParamsSpecified()
+            return typeArray.isParamsSpecified() || typeArray.isFormalTypeSequence()
                     ? determineTupleResultType(typeArray)
                     : null;
             }
@@ -898,28 +898,35 @@ public class ArrayAccessExpression
      */
     private TypeConstant determineTupleResultType(TypeConstant typeTuple)
         {
-        Constant index = extractArrayIndex(indexes.get(0));
-        if (typeTuple == null || index == null)
+        Constant constIndex = extractArrayIndex(indexes.get(0));
+        if (typeTuple == null || constIndex == null)
             {
             return null;
             }
 
         ConstantPool pool = pool();
+
         if (typeTuple.isFormalTypeSequence())
             {
             return pool.typeType();
             }
 
-        List<TypeConstant> listFields = typeTuple.getTupleParamTypes();
+        int nIndex;
         try
             {
-            int nIndex = index.convertTo(pool.typeInt()).getIntValue().getInt();
-
-            // type of "tup[n]" is a field type
-            return nIndex >= 0 ? listFields.get(nIndex) : null;
+            // TODO is not clean; replace with a format check
+            nIndex = constIndex.convertTo(pool.typeInt()).getIntValue().getInt();
             }
         catch (RuntimeException e)
             {
+            nIndex = -1;
+            }
+
+        List<TypeConstant> listFields = typeTuple.getTupleParamTypes();
+        if (nIndex >= 0)
+            {
+            // type of "tup[n]" is a field type
+            return nIndex >= 0 && nIndex < listFields.size() ? listFields.get(nIndex) : null;
             }
 
         // type of "tup[lo..hi]" is a tuple of field types
@@ -927,7 +934,7 @@ public class ArrayAccessExpression
         int nHi;
         try
             {
-            RangeConstant range = (RangeConstant) index.convertTo(pool.typeInterval());
+            RangeConstant range = (RangeConstant) constIndex.convertTo(pool.typeInterval());
             nLo = range.getFirst().convertTo(pool.typeInt()).getIntValue().getInt();
             nHi = range.getLast().convertTo(pool.typeInt()).getIntValue().getInt();
             }

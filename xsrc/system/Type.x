@@ -534,7 +534,7 @@ interface Type<DataType, OuterType>
                 {
                 if (fn.ParamTypes.size == 1)
                     {
-                    assert fn.ParamTypes[0].as(Type) == OuterType;
+                    assert fn.ParamTypes[0] == OuterType;
                     return True, fn.as(function DataType(OuterType)).
                         bind(fn.params[0].as(Parameter<OuterType>), outer)
                             .as(function DataType());
@@ -570,7 +570,7 @@ interface Type<DataType, OuterType>
                 {
                 if (fn.ParamTypes.size == 2 && fn.ParamTypes[1].is(Type!<Struct>))
                     {
-                    // assert fn.ParamTypes[0] == OuterType; TODO GG
+                    assert fn.ParamTypes[0] == OuterType;
                     return True, structure -> fn.invoke((outer, structure))[0];
                     }
                 }
