@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.function.ToIntFunction;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -525,8 +526,15 @@ public class xRef
         {
         if (hTarget instanceof GenericHandle)
             {
-            ObjectHandle hRevealed =
-                ((GenericHandle) hTarget).revealAs(frame, hType.getDataType());
+            ConstantPool pool       = frame.poolContext();
+            TypeConstant typeReveal = hType.getDataType();
+
+            if (typeReveal.equals(pool.typeStruct()))
+                {
+                typeReveal = pool.ensureAccessTypeConstant(hTarget.getType(), Access.STRUCT);
+                }
+
+            ObjectHandle hRevealed = ((GenericHandle) hTarget).revealAs(frame, typeReveal);
 
             return hRevealed == null
                 ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
