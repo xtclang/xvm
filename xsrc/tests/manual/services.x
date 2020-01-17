@@ -66,13 +66,14 @@ module TestServices.xqiz.it
             return False;
             });
 
+        @Inject Timer timer;
         for (Int i : 0..svcs.size-1)
             {
-            DateTime start = now();
+            timer.reset();
             @Future Int spinResult = svcs[i].spin(10_000);
             &spinResult.whenComplete((n, e) ->
                 {
-                console.println($"{tag()} spin {i} yielded {n}; took {now() - start}}");
+                console.println($"{tag()} spin {i} yielded {n}; took {timer.elapsed.seconds} sec");
                 });
             }
 
@@ -130,6 +131,6 @@ module TestServices.xqiz.it
     static String tag()
         {
         static DateTime base = now();
-        return $"{now() - base}:\t" + (this:service.serviceName == "TestService" ? "[svc ]" : "[main]");
+        return $"{(now() - base).seconds}:\t" + (this:service.serviceName == "TestService" ? "[svc ]" : "[main]");
         }
     }
