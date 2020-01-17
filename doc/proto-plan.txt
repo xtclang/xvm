@@ -66,6 +66,9 @@
 - run-time to validate that immutable objects passing through the "membrane" belongs to the
   recipient's type system
 
+- generic type resolution for a turtle type should be Tuple<Type<A>,Type<B>, ...> instead of Tuple<A, B, ...>
+
+
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
 - TemplateRegistry and TypeComposition could be mutated by different threads

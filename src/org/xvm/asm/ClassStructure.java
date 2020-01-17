@@ -1586,6 +1586,7 @@ public class ClassStructure
                 list.toArray(TypeConstant.NO_TYPES));
             }
 
+        // TODO GG: for a turtle type this should return a Tuple<Type, ...>
         return ix < list.size() ? list.get(ix) : null;
         }
 

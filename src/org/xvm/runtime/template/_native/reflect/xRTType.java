@@ -30,15 +30,18 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xString;
 
@@ -56,7 +59,8 @@ import org.xvm.util.ListMap;
  * Native Type implementation.
  */
 public class xRTType
-        extends xConst
+        extends    xConst
+        implements IndexSupport // for turtle types
     {
     public static xRTType INSTANCE;
 
@@ -272,6 +276,40 @@ public class xRTType
         {
         // TODO
         throw new UnsupportedOperationException();
+        }
+
+
+    // ----- IndexSupport (turtle types only) ------------------------------------------------------
+
+    @Override
+    public long size(ObjectHandle hTarget)
+        {
+        TypeConstant type = ((TypeHandle) hTarget).getDataType();
+        return type.getParamsCount();
+        }
+
+    @Override
+    public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        TypeConstant type   = ((TypeHandle) hTarget).getDataType();
+        int          nIndex = (int) lIndex;
+
+        return nIndex >= 0 && nIndex < type.getParamsCount()
+            ? frame.assignValue(iReturn, type.getParamType(nIndex).getTypeHandle())
+            : frame.raiseException(xException.outOfBounds(frame, lIndex, type.getParamsCount()));
+        }
+
+    @Override
+    public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
+        {
+        return frame.raiseException(xException.immutableObject(frame));
+        }
+
+    @Override
+    public TypeConstant getElementType(Frame frame, ObjectHandle hTarget, long lIndex)
+            throws ExceptionHandle.WrapperException
+        {
+        throw xException.unsupportedOperation(frame).getException();
         }
 
 
