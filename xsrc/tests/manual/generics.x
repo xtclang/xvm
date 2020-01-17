@@ -9,6 +9,7 @@ module TestGenerics.xqiz.it
         testArrayType();
         testVirtualChild();
         testTypeParams();
+        testTurtleType();
         }
 
     void testArrayType()
@@ -123,5 +124,21 @@ module TestGenerics.xqiz.it
             void foo(CompileType1 c1, CompileType2 c2, CompileType3 c3)
         {
         assert c2.as(CompileType1) != c1;
+        }
+
+    void testTurtleType()
+        {
+        TestTurtle<<Int, String>> turtle = new TestTurtle<<Int, String>>();
+        console.println($"turtle.getType(0)={turtle.getType(0)}");
+
+        class TestTurtle<TurtleTypes extends Tuple<TurtleTypes>>
+            {
+            Type getType(Int index)
+                {
+                // TODO GG: the following line generates "suspicious assignment"
+                // Sequence<Type> types = TurtleTypes;
+                return TurtleTypes[index];
+                }
+            }
         }
     }
