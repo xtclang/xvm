@@ -179,7 +179,6 @@ public class xRTFunction
             {
             try
                 {
-                ConstantPool   pool       = frameCaller.poolContext();
                 ArrayHandle    haValues   = (ArrayHandle) frameCaller.popStack();
                 IntArrayHandle haOrdinals = (IntArrayHandle) frameCaller.popStack();
                 FunctionHandle hFuncR     = hFunc;
@@ -195,7 +194,7 @@ public class xRTFunction
                         {
                         ix--;
                         }
-                    hFuncR = hFuncR.bind(pool, ix, haValues.getElement(i));
+                    hFuncR = hFuncR.bind(frameCaller, ix, haValues.getElement(i));
                     }
                 return frameCaller.assignValue(iReturn, hFuncR);
                 }
@@ -225,8 +224,7 @@ public class xRTFunction
 
         long nOrdinal = ((JavaLong) hParam.getField("ordinal")).getValue();
 
-        FunctionHandle hFuncR = hFunc.bind(frame.poolContext(),
-                                    (int) nOrdinal, hValue);
+        FunctionHandle hFuncR = hFunc.bind(frame, (int) nOrdinal, hValue);
         return frame.assignValue(iReturn, hFuncR);
         }
 
@@ -367,18 +365,18 @@ public class xRTFunction
         /**
          * Bind the specified argument.
          *
-         *
-         * @param pool  the constant pool to use for creation a new function type
-         * @param iArg  the argument's index
-         * @param hArg  the argument to bind the argument to
+         * @param frame  the current frame
+         * @param iArg   the argument's index
+         * @param hArg   the argument to bind the argument to
          *
          * @return a bound FunctionHandle
          */
-        public FunctionHandle bind(ConstantPool pool, int iArg, ObjectHandle hArg)
+        public FunctionHandle bind(Frame frame, int iArg, ObjectHandle hArg)
             {
             assert iArg >= 0;
 
-            GenericTypeResolver resolver = null;
+            ConstantPool        pool     = frame.poolContext();
+            GenericTypeResolver resolver = frame.getGenericsResolver();
             MethodStructure     method   = getMethod();
             if (method != null)
                 {
