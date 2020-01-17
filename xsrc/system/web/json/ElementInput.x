@@ -1,7 +1,3 @@
-import Schema.Mapping;
-import Schema.MissingMapping;
-
-
 /**
  * The interface for reading a single JSON value, or for reading JSON values from within an array of
  * values.
@@ -126,7 +122,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      */
     <Serializable> Serializable read<Serializable>(Serializable? defaultValue = Null)
         {
-        if (Mapping<Serializable> mapping := schema.mappingFor(Serializable))
+        if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
             TODO return read<Serializable>(mapping.read<Serializable>(_), defaultValue);
             }
@@ -224,7 +220,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      */
     <Serializable> Serializable[] readArray(Serializable[]? defaultValue = Null)
         {
-        if (Mapping<Serializable> mapping := schema.mappingFor(Serializable))
+        if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
             TODO return readArray(mapping.read<Serializable>(_), defaultValue);
             }

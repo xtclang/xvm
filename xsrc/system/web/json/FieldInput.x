@@ -1,7 +1,3 @@
-import Schema.Mapping;
-import Schema.MissingMapping;
-
-
 /**
  * The interface for reading a sequence of name/value pairs from a JSON object.
  */
@@ -179,7 +175,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
      */
     <Serializable> Serializable readObject(String name, Serializable? defaultValue = Null)
         {
-        if (Mapping<Serializable> mapping := schema.mappingFor(Serializable))
+        if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
             TODO return read<Serializable>(name, mapping.read<Serializable>(_), defaultValue);
             }
@@ -286,7 +282,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
      */
     <Serializable> Serializable[] readArray(String name, Serializable[]? defaultValue = Null)
         {
-        if (Mapping<Serializable> mapping := schema.mappingFor(Serializable))
+        if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
             TODO return readObjectArray(name, mapping.read(_), defaultValue);
             }

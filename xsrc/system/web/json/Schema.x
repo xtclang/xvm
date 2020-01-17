@@ -14,24 +14,31 @@ const Schema
     /**
      * Construct a schema for a specified set of Mappings.
      *
-     * @param mappings         pass a sequence of `Mapping` objects to use to read and write various
-     *                         Ecstasy types; order defines precedence of selection in cases of ties
-     * @param version          pass a `Version` to use for the schema, otherwise one is calculated
-     * @param randomAccess     pass `True` to enable random access of name/value pairs within JSON
-     *                         objects
-     * @param enableMetadata   pass `True` to enable metadata collection from the beginning of JSON
-     *                         objects when reading, and to emit metadata to the beginning of JSON
-     *                         objects when writing
-     * @param enablePointers   pass `True` to use JSON pointers to eliminate duplicate
-     *                         serialization of custom objects non-primitive JSON types
-     * @param storeRemainders  pass `True` to
+     * @param mappings          pass a sequence of `Mapping` objects to use to read and write
+     *                          various Ecstasy types; order defines precedence of selection in
+     *                          cases of ties
+     * @param version           pass a `Version` to use for the schema, otherwise one is calculated
+     * @param randomAccess      pass `True` to enable random access of name/value pairs within JSON
+     *                          objects
+     * @param enableMetadata    pass `True` to enable metadata collection from the beginning of JSON
+     *                          objects when reading, and to emit metadata to the beginning of JSON
+     *                          objects when writing
+     * @param enablePointers    pass `True` to use JSON pointers to eliminate duplicate
+     *                          serialization of custom objects non-primitive JSON types
+     * @param enableReflection  pass `True` to use reflection as the basis for serialization and
+     *                          deserialization of types for which the Mapping is missing
+     * @param retainNulls       pass `True` to treat JSON `null` values as significant
+     * @param storeRemainders   pass `True` to collect and store any metadata and unread properties
+     *                          together as a means of supporting forward version compatibility
      */
-    construct(Mapping[] mappings        = [],
-              Version?  version         = Null,
-              Boolean   randomAccess    = False,
-              Boolean   enableMetadata  = False,
-              Boolean   enablePointers  = False,
-              Boolean   storeRemainders = False)
+    construct(Mapping[] mappings         = [],
+              Version?  version          = Null,
+              Boolean   randomAccess     = False,
+              Boolean   enableMetadata   = False,
+              Boolean   enablePointers   = False,
+              Boolean   enableReflection = False,
+              Boolean   retainNulls      = False,
+              Boolean   storeRemainders  = False)
         {
         // use the module version if no version is specified
         if (version == Null)
@@ -39,11 +46,13 @@ const Schema
             TODO version = ...
             }
 
-        this.version         = version;
-        this.randomAccess    = randomAccess;
-        this.enableMetadata  = enableMetadata;
-        this.enablePointers  = enablePointers;
-        this.storeRemainders = storeRemainders;
+        this.version          = version;
+        this.randomAccess     = randomAccess;
+        this.enableMetadata   = enableMetadata;
+        this.enablePointers   = enablePointers;
+        this.enableReflection = enableReflection;
+        this.retainNulls      = retainNulls;
+        this.storeRemainders  = storeRemainders;
 
         // add specified mappings
         ListMap<Type, Mapping> mappingForType = new ListMap();
@@ -64,90 +73,7 @@ const Schema
      * The "default" Schema, which is not aware of any custom serialization or deserialization
      * mechanisms.
      */
-    static Schema DEFAULT = new Schema(enableMetadata = True, enablePointers = True);
-
-
-    // ----- nested types --------------------------------------------------------------------------
-
-    /**
-     * A IllegalJSON exception is raised when a JSON format error is detected.
-     */
-    const MissingMapping(String? text = null, Exception? cause = null, Type? type = null)
-            extends IllegalJSON(text, cause);
-
-    /**
-     * A mapping represents the ability to read and/or write objects of a certain serializable type
-     * from/to a JSON document format.
-     */
-    static interface Mapping<Serializable>
-        {
-        /**
-         * The name of the type for the mapping. This name helps to identify a Mapping from JSON
-         * metadata, or allows the Mapping to be identified in the metadata related to objects
-         * emitted by this Mapping.
-         */
-        @RO String? typeName;
-
-        /**
-         * Read a value of type `Serializable` from the provided `ElementInput`.
-         *
-         * @param ObjectType  the type to read, which may be more specific than the `Serializable`
-         *                    type
-         * @param in          the `ElementInput` to read from
-         *
-         * @return a `Serializable` object
-         */
-        <ObjectType extends Serializable> ObjectType read<ObjectType>(ElementInput in);
-
-        /**
-         * Write a value of type `Serializable` to the provided `ElementOutput`.
-         *
-         * @param ObjectType  the type to write, which may be more specific than the `Serializable`
-         *                    type
-         * @param out    the `ElementOutput` to write to
-         * @param value  the `ObjectType` value to write
-         */
-        <ObjectType extends Serializable> void write(ElementOutput out, ObjectType value);
-        }
-
-    /**
-     * A service that looks for `Mapping`-by-type when there is **NOT** a Mapping that specifies
-     * that exact type. For example, annotated types may be handled by the non-annotated forms, and
-     * subclass types may be handled by a superclass type's `Mapping`.
-     */
-    service TypeMapper
-        {
-        /**
-         * Given a `Type`, check if there is a compatible `Mapping`, such as one that handles a
-         * superclass of the specified `Type`.
-         *
-         * @param type  the `Type` to find a Mapping for
-         *
-         * @return the `Type` for which a compatible `Mapping` exists
-         *
-         * @throws UnsupportedOperation if no compatible Mapping can be found
-         */
-        Type selectType(Type type)
-            {
-            if (Type mappingType := cache.get(type))
-                {
-                return mappingType;
-                }
-
-            for (Type mappingType : mappings.keys)
-                {
-                if (type.isA(mappingType))
-                    {
-                    cache.put(type, mappingType);
-                    return mappingType;
-                    }
-                }
-
-            throw new UnsupportedOperation($"No JSON Schema Mapping found for Type={type}");
-            }
-
-        private Map<Type, Type> cache = new HashMap();
-        }
+    static Schema DEFAULT = new Schema(enableMetadata = True, enablePointers = True, enableReflection = True);
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -201,6 +127,19 @@ const Schema
     Boolean enablePointers;
 
     /**
+     * An option to handle any types and classes of objects that do not have a known mapping by
+     * using a "catch-all" mapping. The "catch-all" mapping uses reflection to serialize and
+     * deserialize objects without a custom [Mapping] implementation.
+     */
+    Boolean enableReflection;
+
+    /**
+     * An option to treat null values as significant. This is generally only useful for "pretty
+     * printing" and debugging.
+     */
+    Boolean retainNulls;
+
+    /**
      * An option to collect and store any metadata and unread properties together as a means of
      * supporting interop across loosely compatible systems, and to support forward version
      * compatibility.
@@ -231,11 +170,13 @@ const Schema
 
     /**
      * A lazily instantiated default Mapping that handles any object.
+     TODO CP need Mapping<T> not <Object> - needs to be a const, and cache the pre-calc'd reflection data inside
      */
     @Lazy
-    Mapping defaultMapping.calc()
+    Mapping<Object> defaultMapping.calc()
         {
-        TODO return new ObjectMapping();
+        assert enableReflection;
+        return new ReflectionMapping();
         }
 
 
@@ -250,21 +191,50 @@ const Schema
     @Override
     ObjectInput createObjectInput(Reader reader)
         {
-        return new ObjectInputStream(reader);
+        return new ObjectInputStream(this, reader);
         }
 
     @Override
     ObjectOutput createObjectOutput(Writer writer)
         {
-        return new ObjectOutputStream(writer);
+        return new ObjectOutputStream(this, writer);
         }
 
 
     // ----- helpers
 
-    <Serializable> conditional Mapping<Serializable> mappingFor(Type<Serializable> type)
+    /**
+     * Search for a mapping for the specified type.
+     *
+     * @param type  the type for which a Mapping is required
+     *
+     * @return True iff a Mapping was found
+     * @return (conditional) the selected Mapping
+     */
+    <ObjectType> conditional Mapping<ObjectType> getMapping(Type<ObjectType> type)
         {
-        TODO
+        if (Mapping mapping := mappings.get(type), mapping.Serializable.is(ObjectType))
+            {
+            return True, mapping.as(Mapping<ObjectType>);
+            }
+
+        // TODO if (Type typeAlt := typeMapper.<ObjectType> )
+        if (enableReflection)
+            {
+            return True, defaultMapping;
+            }
+
+        return False;
+        }
+
+    <ObjectType> Mapping<ObjectType> ensureMapping(Type<ObjectType> type)
+        {
+        if (Mapping<ObjectType> mapping := getMapping(type))
+            {
+            return mapping;
+            }
+
+        throw new UnsupportedOperation($"No JSON Schema Mapping found for Type={type}");
         }
 
     conditional Mapping getMapping(Doc doc)
@@ -272,219 +242,140 @@ const Schema
         TODO
         }
 
-    <ObjectType> conditional Mapping<ObjectType> getMapping(Type<ObjectType> type)
+    /**
+     * Convert a JSON pointer to a String that can be used as part of a URI fragment.
+     *
+     * @param a JSON pointer
+     *
+     * @return the corresponding ASCII string that can be used in the "fragment" portion of a URI
+     */
+    static String pointerToUri(String pointer)
         {
-        TODO
+        Int length = estimatePointerUriLength(pointer);
+        return length == pointer.size
+                ? pointer
+                : appendPointerUri(pointer, new StringBuffer(length)).toString();
         }
 
-
-    // ----- input/output stream implementations ---------------------------------------------------
+    /**
+     * For each ASCII code 0-127, this specifies if the ASCII code is permitted in the "fragment"
+     * portion of the URI without being escaped.
+     */
+    static Boolean[] FRAGMENT_ALLOW =
+    //    (control characters...............)  !  $ &' ()*+,-./ 01234567 89:; = ? @ABCDEFG HIJKLMNO PQRSTUVW XYZ    _  abcdefg hijklmno pqrstuvw xyz   ~
+        0b00000000_00000000_00000000_00000000_01001011_11111111_11111111_11110101_11111111_11111111_11111111_11100001_01111111_11111111_11111111_11100010
+        .toUInt128().toBooleanArray();
 
     /**
-     * The ObjectInput implementation for JSON deserialization.
+     * Estimate the number of ASCII characters necessary to encode a JSON pointer into the fragment
+     * portion of a URI.
+     *
+     * @param the JSON pointer
+     *
+     * @return the number of ASCII characters necessary to encode the JSON pointer into the fragment
+     *         portion of a URI
      */
-    class ObjectInputStream(Reader reader)
-            implements ObjectInput
+    static Int estimatePointerUriLength(String pointer)
         {
-        /**
-         * The underlying writer to read the JSON data from.
-         */
-        public/private Reader reader;
-
-        @Lazy
-        public/private Lexer lexer.calc()
+        Int length = pointer.size;
+        for (Char ch : pointer)
             {
-            return new Lexer(reader);
-            }
-
-        @Lazy
-        public/private Parser parser.calc()
-            {
-            return new Parser(lexer);
-            }
-
-        @RO ElementInput<Nullable> root.get()
-            {
-            TODO
-            }
-
-        @RO FieldInput<ElementInput<Nullable>> object.get()
-            {
-            TODO return elementInput.enterObject();
-            }
-
-        @Override
-        <ObjectType> ObjectType read<ObjectType>()
-            {
-            if (Mapping<ObjectType> mapping := this.Schema.getMapping(ObjectType))
+            Int n = ch.toInt();
+            if (n <= 0x7F)
                 {
-                TODO return mapping.read(this);
-                }
-
-            Doc doc = new Parser(reader).next();
-            if (doc.is(Primitive | Array<Primitive>))
-                {
-                if (ObjectType != Object)
+                if (!FRAGMENT_ALLOW[n])
                     {
-                    TODO add conversions, e.g. IntLiteral -> Int, FPLiteral -> Dec, etc.
+                    length += 2;
                     }
-
-                if (doc.is(ObjectType))
-                    {
-                    return doc;
-                    }
-
-                TODO how should this report errors?
-                }
-
-            if (Mapping mapping := this.Schema.getMapping(doc), mapping.Serializable.is(ObjectType))
-                {
-                TODO return mapping.read(this).as(ObjectType);
-                }
-
-            return doc.as(ObjectType); // or throw
-            }
-
-        @Override
-        void close()
-            {
-            }
-        }
-
-    /**
-     * The ObjectOutput implementation for JSON serialization.
-     */
-    class ObjectOutputStream(Writer writer)
-            implements ObjectOutput
-        {
-        /**
-         * The underlying writer to direct the JSON data to.
-         */
-        public/private Writer writer;
-
-        @Lazy
-        protected/private ElementOutput output.calc()
-            {
-            TODO
-            }
-
-        @Override
-        <ObjectType> void write(ObjectType value)
-            {
-            TODO
-            }
-
-        @Override
-        void close()
-            {
-            }
-        }
-
-    /**
-     * The ObjectInput implementation for JSON deserialization.
-     */
-    interface JsonWriter
-        {
-        <ObjectType> void writeArray<ObjectType>(Iterator<ObjectType> values);
-        JsonWriter nest(String name);
-        }
-
-
-    // ----- intrinsic mappings --------------------------------------------------------------------
-
-    /**
-     * A "catch-all" mapping that can _theoretically_ handle any object.
-     */
-    const ObjectMapping
-            implements Mapping<Object>
-        {
-        @Override
-        <ObjectType extends Serializable> ObjectType read<ObjectType>(ElementInput in)
-            {
-            if (enableMetadata)
-                {
-                // use metadata to determine what to read
-                TODO
-                }
-
-            if (ObjectType != Object)
-                {
-                // use ObjectType to determine what to read
-                TODO
-                }
-
-            throw new MissingMapping(type=ObjectType);
-            }
-
-        @Override
-        <ObjectType extends Serializable> void write(ElementOutput out, ObjectType value)
-            {
-            // if no type information is provided, then use the runtime type of the object itself as
-            // the source of reflection information for the contents of the JSON serialization
-            Type type = ObjectType == Object
-                    ? &value.actualType
-                    : ObjectType;
-
-            if (value.is(Nullable))
-                {
-                // out.
-                }
-
-            if (type.is(Type<Number>))
-                {
-                }
-            else if (type.is(Type<Boolean>))
-                {
                 }
             else
                 {
+                // first encode the character as UTF8, then convert each non-ASCII byte (i.e. all of
+                // them) to the %-encoded form
+                length += ch.calcUtf8Length() * 3;
                 }
-
-            TODO
             }
+        return length;
         }
 
-//        /**
-//         * The containing DomAware object.
-//         */
-//        public/private DomNode!? parent;
-//
-//        /**
-//         * The reference token for this node.
-//         *
-//         * @see [RFC 6901 §4](https://tools.ietf.org/html/rfc6901#section-4)
-//         */
-//        @RO String referenceToken;
-//
-//        /**
-//         * The JSON pointer that represents the entire path to this node from the root object.
-//         *
-//         * @see [RFC 6901 §5](https://tools.ietf.org/html/rfc6901#section-5)
-//         */
-//        String pointer.get()
-//            {
-//            return buildPointer(0).toString();
-//            }
-//
-//        protected StringBuffer buildPointer(Int length)
-//            {
-//            String token = referenceToken;
-//            length += 1 + token.size;
-//            StringBuffer buf = parent?.buildPointer(length) : new StringBuffer(length);
-//            buf.append('/')
-//               .append(token);
-//            return buf;
-//            }
-//
-//        /**
-//         * The URI fragment that represents the JSON pointer that represents the entire path to this
-//         * node from the root object.
-//         *
-//         * @see [RFC 6901 §6](https://tools.ietf.org/html/rfc6901#section-6)
-//         */
-//        String uriFragment.get()
-//            {
-//            TODO encode pointer value as per https://tools.ietf.org/html/rfc3986
-//            }
+    /**
+     * Encode a JSON pointer into a sequence of ASCII characters that can be used in the fragment
+     * portion of a URI.
+     *
+     * @param pointer  the JSON pointer
+     * @param buf      the Char Appender to encode the JSON pointer into
+     *
+     * @return the Char Appender
+     */
+    static <Buf extends Appender<Char>> Buf appendPointerUri(String pointer, Buf buf)
+        {
+        for (Char ch : pointer)
+            {
+            Int n = ch.toInt();
+            if (n <= 0x7F)
+                {
+                if (FRAGMENT_ALLOW[n])
+                    {
+                    buf.add(ch);
+                    }
+                else
+                    {
+                    buf.add('%').add((n >>> 4).toHexit()).add(n.toHexit());
+                    }
+                }
+            else
+                {
+                // first encode the character as UTF8, then convert each non-ASCII byte (i.e. all of
+                // them) to the %-encoded form
+                for (Byte b : ch.utf())
+                    {
+                    buf.add('%').add((b >>> 4).toHexit()).add(b.toHexit());
+                    }
+                }
+            }
+        return buf;
+        }
 
+
+    // ----- TypeMapper service --------------------------------------------------------------------
+
+    /**
+     * A service that looks for `Mapping`-by-type when there is **NOT** a Mapping that specifies
+     * that exact type. For example, annotated types may be handled by the non-annotated forms, and
+     * subclass types may be handled by a superclass type's `Mapping`.
+     */
+    service TypeMapper
+        {
+        /**
+         * Given a `Type`, check if there is a compatible `Mapping`, such as one that handles a
+         * superclass of the specified `Type`.
+         *
+         * @param type  the `Type` to find a Mapping for
+         *
+         * @return True iff a compatible Mapping type was found
+         * @return (conditional) the `Type` for which a compatible `Mapping` exists
+         *
+         * @throws UnsupportedOperation if no compatible Mapping can be found
+         */
+        <ObjectType> conditional Type<ObjectType> selectType(Type<ObjectType> type)
+            {
+            if (Type mappingType := cache.get(type))
+                {
+                return True, mappingType.as(Type<ObjectType>);
+                }
+
+            for (Type mappingType : mappings.keys)
+                {
+                if (type.isA(mappingType))
+                    {
+                    cache.put(type, mappingType);
+                    return True, mappingType.as(Type<ObjectType>);
+                    }
+                }
+
+            return False;
+            }
+
+        private Map<Type, Type> cache = new HashMap();
+        }
     }

@@ -144,8 +144,8 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
     static IntLiteral ensureIntLiteral(IntLiteral | Number value)
         {
         return value.is(IntLiteral)
-                ? value.as(IntLiteral)              // TODO GG "as" should not be necessary
-                : value.as(Number).toIntLiteral();  // TODO GG "as" should not be necessary
+                ? value
+                : value.toIntLiteral();
         }
 
     /**
@@ -159,11 +159,11 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
         {
         if (value.is(FPLiteral))
             {
-            return value.as(FPLiteral);             // TODO GG "as" should not be necessary
+            return value;
             }
 
         return value.is(Number)
-            ? value.as(Number).toFPLiteral()        // TODO GG "as" should not be necessary
-            : value.as(IntLiteral).toFPLiteral();   // TODO GG "as" should not be necessary
+            ? value.toFPLiteral()
+            : value.toFPLiteral();
         }
     }

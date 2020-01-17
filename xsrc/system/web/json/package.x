@@ -14,6 +14,12 @@ package json
             extends IOException(text, cause);
 
     /**
+     * A IllegalJSON exception is raised when a JSON format error is detected.
+     */
+    const MissingMapping(String? text = null, Exception? cause = null, Type? type = null)
+            extends IllegalJSON(text, cause);
+
+    /**
      * JSON primitive types are all JSON values except for arrays and objects.
      */
     typedef (Nullable | Boolean | IntLiteral | FPLiteral | String) Primitive;

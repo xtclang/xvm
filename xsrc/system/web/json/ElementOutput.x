@@ -7,17 +7,6 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
     // ----- nesting values ------------------------------------------------------------------------
 
     /**
-     * Create a JSON object under the current document, and then "enter" that object, so that it
-     * becomes the active node of the document being built.
-     *
-     * @return the FieldOutput for the new JSON object
-     *
-     * @throws IllegalJSON   if this element is not an array and already has a value
-     * @throws IllegalState  if this element has already been closed
-     */
-    FieldOutput<ElementOutput> openObject();
-
-    /**
      * Create a JSON object under the current document, and then "enter" that document so that it
      * becomes the new current document.
      *
@@ -27,6 +16,17 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      * @throws IllegalState  if this element has already been closed
      */
     ElementOutput!<ElementOutput> openArray();
+
+    /**
+     * Create a JSON object under the current document, and then "enter" that object, so that it
+     * becomes the active node of the document being built.
+     *
+     * @return the FieldOutput for the new JSON object
+     *
+     * @throws IllegalJSON   if this element is not an array and already has a value
+     * @throws IllegalState  if this element has already been closed
+     */
+    FieldOutput<ElementOutput> openObject();
 
 
     // ----- single values -------------------------------------------------------------------------
@@ -74,7 +74,11 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this ElementOutput
      */
-    <Serializable> ElementOutput addObject(Serializable value);
+    <Serializable> ElementOutput addObject(Serializable value)
+        {
+        // TODO GG schema.ensureMapping(Serializable).write(this, value);
+        return this;
+        }
 
 
     // ----- array values --------------------------------------------------------------------------
@@ -133,5 +137,14 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this ElementOutput
      */
-    <Serializable> ElementOutput addObjectArray(Iterable<Serializable> values);
+    <Serializable> ElementOutput addObjectArray(Iterable<Serializable> values)
+        {
+        val array = openArray();
+        for (Serializable value : values)
+            {
+            array.addObject(value);
+            }
+        array.close();
+        return this;
+        }
     }

@@ -99,6 +99,28 @@ interface Ref<Referent>
     @RO Type actualType;
 
     /**
+     * A reference identity is an object that performs three tasks:
+     *
+     * * It prevents the reference from being garbage collected;
+     * * It provides a hash code for the reference;
+     * * It provides comparison of any two references.
+     */
+    static const Identity(Ref ref, Int hash)
+        {
+        @Override
+        static <CompileType extends Identity> Int hashCode(CompileType value)
+            {
+            return value.hash;
+            }
+
+        @Override
+        static <CompileType extends Identity> Boolean equals(CompileType value1, CompileType value2)
+            {
+            return value1.hash == value2.hash && value1.ref == value2.ref;
+            }
+        }
+
+    /**
      * Obtain an opaque object that represents the identity of the reference held by this Ref. The
      * identity can be used for comparison with other identities to determine whether two identities
      * originate from the same object.
@@ -110,7 +132,7 @@ interface Ref<Referent>
      * yields a different result from the `hashCode()` function; in other words, the hash code is
      * treated as ephemeral data.
      */
-    @RO immutable Hashable identity;
+    @RO Identity identity;
 
     /**
      * Obtain a new reference to the referent such that the reference contains only the methods and

@@ -65,13 +65,14 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
     // ----- nesting values ------------------------------------------------------------------------
 
     /**
-     * Add a JSON object under the current document, and return a FieldOutput that will write to it.
+     * Add a JSON array under the current document, and return an ElementOutput that will write to
+     * it.
      *
-     * @param name  the name for the JSON property that will contain the new JSON object
+     * @param name  the name for the JSON property that will contain the new JSON array
      *
-     * @return a FieldOutput that will write to the nested JSON object
+     * @return a ElementOutput that will write to the nested JSON array
      */
-    FieldOutput!<FieldOutput> openObject(String name);
+    ElementOutput<FieldOutput> openField(String name);
 
     /**
      * Add a JSON array under the current document, and return an ElementOutput that will write to
@@ -81,7 +82,16 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return a ElementOutput that will write to the nested JSON array
      */
-    ElementOutput<FieldOutput> openField(String name);
+    ElementOutput<FieldOutput> openArray(String name);
+
+    /**
+     * Add a JSON object under the current document, and return a FieldOutput that will write to it.
+     *
+     * @param name  the name for the JSON property that will contain the new JSON object
+     *
+     * @return a FieldOutput that will write to the nested JSON object
+     */
+    FieldOutput!<FieldOutput> openObject(String name);
 
 
     // ----- single values -------------------------------------------------------------------------
@@ -94,7 +104,14 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this FieldOutput
      */
-    FieldOutput add(String name, Doc value);
+    FieldOutput add(String name, Doc value)
+        {
+        using (val field = openField("name"))
+            {
+            field.add(value);
+            }
+        return this;
+        }
 
     /**
      * Add the name/value pair to the current JSON object.
@@ -131,7 +148,14 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this FieldOutput
      */
-    <Serializable> FieldOutput addObject(String name, Serializable value);
+    <Serializable> FieldOutput addObject(String name, Serializable value)
+        {
+        using (val nested = openField(name))
+            {
+            nested.addObject(value);
+            }
+        return this;
+        }
 
 
     // ----- array values --------------------------------------------------------------------------
@@ -194,5 +218,15 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      *
      * @return this FieldOutput
      */
-    <Serializable> FieldOutput addObjectArray(String name, Iterable<Serializable> values);
+    <Serializable> FieldOutput addObjectArray(String name, Iterable<Serializable> values)
+        {
+        using (val array = openArray(name))
+            {
+            for (Serializable value : values)
+                {
+                array.addObject(value);
+                }
+            }
+        return this;
+        }
     }

@@ -7,14 +7,11 @@ module TestIO
     import Ecstasy.io.JavaDataInput;
     import Ecstasy.io.Reader;
     import Ecstasy.io.UTF8Reader;
-    import Ecstasy.web.json.FieldOutput;
     import Ecstasy.web.json.Doc;
     import Ecstasy.web.json.Lexer;
     import Ecstasy.web.json.Lexer.Token;
     import Ecstasy.web.json.Parser;
     import Ecstasy.web.json.Printer;
-    import Ecstasy.web.json.BufferedPrinter;
-    import Ecstasy.web.json.DirectPrinter;
 
     @Inject Console console;
 
@@ -149,17 +146,18 @@ module TestIO
         console.println($"raw doc=\n{ExampleJSON}");
         assert Doc doc := parser.next();
         console.println($"doc as structures={doc}");
-//        Printer printer = new Printer(doc);
-//        console.println($"ugly doc={printer.toString(pretty=False)}");
-//        console.println($"pretty doc=\n{printer.toString(pretty=True)}");
+
+        console.println($"printing compact={Printer.DEFAULT.render(doc)}");
+        console.println($"printing pretty={Printer.PRETTY.render(doc)}");
+        console.println($"printing debug={Printer.DEBUG.render(doc)}");
         }
 
     void testJSONBuild()
         {
         console.println("\n*** testJSONBuild()");
 
-        console.println("BufferedPrinter:");
-        BufferedPrinter p = new BufferedPrinter();
+//        console.println("BufferedPrinter:");
+//        BufferedPrinter p = new BufferedPrinter();
 //        build(p);
 //        console.println($"doc={p.doc}");
 //        console.println($"print ugly={p.toString()}");

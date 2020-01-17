@@ -1,75 +1,68 @@
 import collections.ListMap;
 
 /**
- * A "printer" for a JSON object.
- *
- * The base `Printer` implementation supports construction from a JSON `Doc`, which can then be
- * converted into character strings that can be used to transmit, store, or view ("pretty print")
- * the JSON-formatted data. The Printer API methods, such as [Printer add(String name, Doc value)],
- * are not operational
- *
- * The [BufferedPrinter] implementation allows a JSON `Doc` to be built using the Printer API
- * methods, such as [Printer add(String name, Doc value)]. The resulting JSON `Doc` can be obtained
- * from the `BufferedPrinter`, and rendered via the [toString()] method or the [Stringable]
- * interface.
- *
- * The [DirectPrinter] implementation uses the Printer API to emit JSON directly to an
- * `Appender<Char>`. Unlike the other `Printer` implementations, the `DirectPrinter` neither begins
- * with, nor results in a JSON `Doc`.
+ * A "printer" for JSON objects.
  */
-class Printer
-        implements Stringable
+const Printer(Boolean showNulls = False, Boolean pretty = False)
     {
-    // ----- constructors --------------------------------------------------------------------------
+    // ----- pre-configured instances --------------------------------------------------------------
 
     /**
-     * Construct a JSON printer around a JSON document object.
+     * The default renderer for JSON documents that prints a compact form.
+     */
+    static Printer DEFAULT = new Printer();
+
+    /**
+     * A renderer for JSON documents that prints a human-readable form.
+     */
+    static Printer PRETTY  = new Printer(pretty = True);
+
+    /**
+     * A renderer for JSON documents that prints a human-readable form useful for debugging.
+     */
+    static Printer DEBUG   = new Printer(showNulls = True, pretty = True);
+
+
+    // ----- printer API ---------------------------------------------------------------------------
+
+    /**
+     * Render a JSON document as a String as it would be printed by this `Printer`.
      *
-     * @param doc  a JSON object
+     * @param doc  the JSON document to render
+     *
+     * @return the document rendered as a `String`
      */
-    construct(Doc doc)
+    String render(Doc doc)
         {
-        this.doc = doc;
-        }
-
-
-    // ----- properties ----------------------------------------------------------------------------
-
-    /**
-     * The JSON document, in its current form.
-     */
-    public/protected Doc doc;
-
-
-    // ----- rendering -----------------------------------------------------------------------------
-
-    /**
-     * @param showNulls  pass `True` to always show null JSON values as "null", or `False` to omit
-     *                   them when possible (optional; defaults to False)
-     * @param pretty     pass `True` to render the JSON document in a visually hierarchical manner
-     *                   designed for human eyes, or `False` to suppress white-space wherever
-     *                   possible (optional; defaults to False)
-     */
-    @Override
-    String toString(Boolean showNulls = False, Boolean pretty = False)
-        {
-        StringBuffer buf = new StringBuffer(estimateStringLength(showNulls, pretty));
-        appendTo(buf, showNulls, pretty);
+        StringBuffer buf = new StringBuffer(estimatePrintLength(doc));
+        print(doc, buf);
         return buf.toString();
         }
 
     /**
-     * @param showNulls  pass `True` to always show null JSON values as "null", or `False` to omit
-     *                   them when possible (optional; defaults to False)
-     * @param pretty     pass `True` to render the JSON document in a visually hierarchical manner
-     *                   designed for human eyes, or `False` to suppress white-space wherever
-     *                   possible (optional; defaults to False)
+     * Calculate the String length of the specified JSON document as it would be printed by this
+     * `Printer`.
+     *
+     * @return an estimated number of characters necessary to hold the resulting rendered document
      */
-    @Override
-    Int estimateStringLength(Boolean showNulls = False, Boolean pretty = False)
+    Int estimatePrintLength(Doc doc)
         {
-        return estimateDocPrintLength(doc, showNulls=showNulls, pretty=pretty);
+        return estimateInternal(doc, showNulls=showNulls, pretty=pretty);
         }
+
+    /**
+     * Print the specified JSON document to the provided [Appender].
+     *
+     * @param doc       the JSON document to print
+     * @param appender  the [Appender] to render the character data into
+     */
+    void print(Doc doc, Appender<Char> appender)
+        {
+        printInternal(doc, appender, alreadyIndented=True, showNulls=showNulls, pretty=pretty);
+        }
+
+
+    // ----- rendering -----------------------------------------------------------------------------
 
     /**
      * Calculate the String length of the specified JSON document.
@@ -87,11 +80,11 @@ class Printer
      *
      * @return an estimated number of characters necessary to hold the resulting rendered document
      */
-    Int estimateDocPrintLength(Doc     doc,
-                             Int     indent          = 0,
-                             Boolean alreadyIndented = False,
-                             Boolean showNulls       = False,
-                             Boolean pretty          = False)
+    protected Int estimateInternal(Doc     doc,
+                                   Int     indent          = 0,
+                                   Boolean alreadyIndented = False,
+                                   Boolean showNulls       = False,
+                                   Boolean pretty          = False)
         {
         if (doc.is(Enum))
             {
@@ -124,8 +117,8 @@ class Printer
                             + count + 1;                                        // commas+brackets
                 for (Doc value : array)
                     {
-                    total += estimateDocPrintLength(value, indent=indent, alreadyIndented=True,
-                                                  pretty=True, showNulls=showNulls);
+                    total += estimateInternal(value, indent=indent, alreadyIndented=True,
+                                              pretty=True, showNulls=showNulls);
                     }
                 return total;
                 }
@@ -136,7 +129,7 @@ class Printer
             for (Doc value : array)
                 {
                 // nulls must be shown in the array, because the array structure is not sparse
-                total += estimateDocPrintLength(value, indent=indent, pretty=pretty);
+                total += estimateInternal(value, indent=indent, pretty=pretty);
                 }
             return total;
             }
@@ -163,25 +156,12 @@ class Printer
                     }
                 else
                     {
-                    total += estimateDocPrintLength(name , indent=deeper, showNulls=showNulls, pretty=pretty)
-                           + estimateDocPrintLength(value, indent=deeper, showNulls=showNulls, pretty=pretty);
+                    total += estimateInternal(name , indent=deeper, showNulls=showNulls, pretty=pretty)
+                           + estimateInternal(value, indent=deeper, showNulls=showNulls, pretty=pretty);
                     }
                 }
             return total;
             }
-        }
-
-    /**
-     * @param showNulls  pass `True` to always show null JSON values as "null", or `False` to omit
-     *                   them when possible (optional; defaults to False)
-     * @param pretty     pass `True` to render the JSON document in a visually hierarchical manner
-     *                   designed for human eyes, or `False` to suppress white-space wherever
-     *                   possible (optional; defaults to False)
-     */
-    @Override
-    void appendTo(Appender<Char> appender, Boolean showNulls = False, Boolean pretty = False)
-        {
-        printDoc(doc, appender, alreadyIndented=True, showNulls=showNulls, pretty=pretty);
         }
 
     /**
@@ -199,12 +179,12 @@ class Printer
      *                         manner designed for human eyes, or `False` to suppress white-space
      *                         wherever possible (optional; defaults to False)
      */
-    void printDoc(Doc            doc,
-                  Appender<Char> appender,
-                  Int            indent          = 0,
-                  Boolean        alreadyIndented = False,
-                  Boolean        showNulls       = False,
-                  Boolean        pretty          = False)
+    protected void printInternal(Doc            doc,
+                                 Appender<Char> appender,
+                                 Int            indent          = 0,
+                                 Boolean        alreadyIndented = False,
+                                 Boolean        showNulls       = False,
+                                 Boolean        pretty          = False)
         {
         if (doc.is(Enum))
             {
@@ -254,24 +234,6 @@ class Printer
             }
         }
 
-    protected void printString(String value, Appender<Char> appender)
-        {
-        appender.add('"');
-        for (Char ch : value)
-            {
-            if (String s := escaped(ch))
-                {
-                s.appendTo(appender);
-                }
-            else
-                {
-                appender.add(ch);
-                }
-            }
-        appender.add('"');
-
-        }
-
     protected void printSingleLineArray(Doc[] values, Appender<Char> appender, Boolean pretty)
         {
         appender.add('[');
@@ -285,13 +247,16 @@ class Printer
                     appender.add(' ');
                     }
                 }
-            printDoc(value, appender, pretty=pretty, showNulls=True);
+            printInternal(value, appender, pretty=pretty, showNulls=True);
             }
         appender.add(']');
         }
 
-    protected void printMultiLineArray(Doc[] values, Appender<Char> appender, Int indent,
-                             Boolean alreadyIndented, Boolean showNulls)
+    protected void printMultiLineArray(Doc[]          values,
+                                       Appender<Char> appender,
+                                       Int            indent,
+                                       Boolean        alreadyIndented,
+                                       Boolean        showNulls)
         {
         if (!alreadyIndented)
             {
@@ -307,7 +272,7 @@ class Printer
                 }
 
             indentLine(appender, indent);
-            printDoc(value, appender, indent=indent, alreadyIndented=True, pretty=True, showNulls=showNulls);
+            printInternal(value, appender, indent=indent, alreadyIndented=True, pretty=True, showNulls=showNulls);
             }
 
         indentLine(appender, indent);
@@ -333,14 +298,17 @@ class Printer
 
                 printString(name, appender);
                 appender.add(':');
-                printDoc(value, appender, showNulls=showNulls);
+                printInternal(value, appender, showNulls=showNulls);
                 }
             }
         appender.add('}');
         }
 
-    protected void printPrettyObject(Map<String, Doc> map, Appender<Char> appender, Int indent,
-                                     Boolean alreadyIndented, Boolean showNulls)
+    protected void printPrettyObject(Map<String, Doc> map,
+                                     Appender<Char>   appender,
+                                     Int              indent,
+                                     Boolean          alreadyIndented,
+                                     Boolean          showNulls)
         {
         if (!alreadyIndented)
             {
@@ -365,7 +333,7 @@ class Printer
                 indentLine(appender, indent);
                 printString(name, appender);
                 ": ".appendTo(appender);
-                printDoc(value, appender, indent=indent+2, pretty=True, showNulls=showNulls);
+                printInternal(value, appender, indent=indent+2, pretty=True, showNulls=showNulls);
                 }
             }
 
@@ -381,6 +349,9 @@ class Printer
             appender.add(' ');
             }
         }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
 
     /**
      * Determine if the JSON array contains any non-empty JSON objects.
@@ -426,6 +397,23 @@ class Printer
                 }
             }
         return True;
+        }
+
+    static void printString(String value, Appender<Char> appender)
+        {
+        appender.add('"');
+        for (Char ch : value)
+            {
+            if (String s := escaped(ch))
+                {
+                s.appendTo(appender);
+                }
+            else
+                {
+                appender.add(ch);
+                }
+            }
+        appender.add('"');
         }
 
     /**

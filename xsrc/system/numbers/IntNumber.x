@@ -204,6 +204,17 @@ const IntNumber
         }
 
     /**
+     * Convert the least significant 4 bits of the integer value to a hexadecimal digit (hexit).
+     *
+     * @return the hexit for the least significant 4 bits of the integer value
+     */
+    Char toHexit()
+        {
+        Int nibble = toUnchecked().toInt() & 0xF;
+        return nibble <= 9 ? '0' + nibble : 'A' + nibble - 10;
+        }
+
+    /**
      * Obtain the number as an array of boolean values, each corresponding to one bit.
      */
     immutable Boolean[] toBooleanArray()
