@@ -550,6 +550,13 @@ const Duration(UInt128 picoseconds)
         if (picos > 0)
             {
             appender.add('.');
+
+            Int length = picos.estimateStringLength();
+            Int fill   = 12 - length;
+            while (fill-- > 0)
+                {
+                appender.add('0');
+                }
             picosFractional(picos).appendTo(appender);
             }
         }
@@ -567,7 +574,7 @@ const Duration(UInt128 picoseconds)
             }
 
         // add a decimal point and the picoseconds, but drop any trailing zeros
-        Int length = 13;
+        Int length = picos.estimateStringLength();
         if (picos % 100_000_000 == 0)
             {
             picos  /= 100_000_000;

@@ -67,13 +67,13 @@ module TestServices.xqiz.it
             });
 
         @Inject Timer timer;
+        timer.start();
         for (Int i : 0..svcs.size-1)
             {
-            timer.reset();
             @Future Int spinResult = svcs[i].spin(10_000);
             &spinResult.whenComplete((n, e) ->
                 {
-                console.println($"{tag()} spin {i} yielded {n}; took {timer.elapsed.seconds} sec");
+                console.println($"{tag()} spin {i} yielded {n}; took {timer.elapsed.milliseconds} ms");
                 });
             }
 
