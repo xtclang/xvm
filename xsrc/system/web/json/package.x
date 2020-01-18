@@ -8,13 +8,14 @@ package json
         implements io.TextFormat
     {
     /**
-     * A IllegalJSON exception is raised when a JSON format error is detected.
+     * An IllegalJSON exception is raised when a JSON format error is detected.
      */
     const IllegalJSON(String? text = null, Exception? cause = null)
             extends IOException(text, cause);
 
     /**
-     * A IllegalJSON exception is raised when a JSON format error is detected.
+     * A MissingMapping exception is raised when a [Mapping] is required for a particule Ecstasy
+     * type or JSON document format, and no corresponding Mapping is available.
      */
     const MissingMapping(String? text = null, Exception? cause = null, Type? type = null)
             extends IllegalJSON(text, cause);
