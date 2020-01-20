@@ -882,16 +882,22 @@ public class StatementBlock
                                 isConstructor() ? Access.STRUCT : Access.PRIVATE);
                             }
 
-                        ErrorListener errsTemp = errs.branch();
+                        ErrorListener errsTemp = ErrorListener.BLACKHOLE.branch();
 
                         infoPrev = info = typeClz.ensureTypeInfo(errsTemp);
 
-                        errsTemp.merge();
                         if (errsTemp.hasSeriousErrors())
                             {
                             // the info could not be calculated correctly; using it may result
                             // in confusing error messages
-                            return null;
+                            if (id == idClz)
+                                {
+                                fHasThis &= !info.isStatic();
+                                typeThis  = null;
+                                ++cSteps;
+                                }
+                            node = node.getParent();
+                            continue WalkUpToTheRoot;
                             }
                         idPrev = idClz;
                         }
