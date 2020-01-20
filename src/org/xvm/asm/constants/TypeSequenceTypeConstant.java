@@ -118,6 +118,12 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public boolean containsGenericType(boolean fAllowParams)
+        {
+        return fAllowParams;
+        }
+
+    @Override
     protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
         // since the formal type sequence is a Sequence of types (see above).
