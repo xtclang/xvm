@@ -265,11 +265,6 @@ public class ParameterizedTypeConstant
     @Override
     public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
-        if (resolver.equals(m_resolver))
-            {
-            return this;
-            }
-
         TypeConstant constOriginal = m_constType;
         TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
         boolean      fDiff         = constOriginal != constResolved;
@@ -293,14 +288,9 @@ public class ParameterizedTypeConstant
                 }
             }
 
-        if (fDiff)
-            {
-            ParameterizedTypeConstant typeResolved = (ParameterizedTypeConstant)
-                pool.ensureParameterizedTypeConstant(constResolved, aconstResolved);
-            typeResolved.m_resolver = resolver;
-            return typeResolved;
-            }
-        return this;
+        return fDiff
+            ? pool.ensureParameterizedTypeConstant(constResolved, aconstResolved)
+            : this;
         }
 
     @Override
@@ -937,23 +927,4 @@ public class ParameterizedTypeConstant
      * The type parameters.
      */
     private TypeConstant[] m_atypeParams;
-
-    /**
-     * The last resolver that was used by the generic type resolution that produced this type.
-     * <p/>
-     * When we're building the TypeInfo for a given type, we repetitively resolve contributions'
-     * property types and method signatures against the type for witch the TypeInfo is built.
-     * In a number of cases it introduces a problem of "double-dipping" into the resolution logic,
-     * especially when compiler creates formal synthetic relational types due to type inference
-     * (context specific type narrowing).
-     * <p/>
-     * To avoid keeping track of such a double-resolution, it's desirable to make sure the generic
-     * type resolution is as idempotent as possible. However, We need to be aware that it's quite
-     * natural to have to resolve a given method signature a couple of times using different
-     * resolvers.
-     * <p/>
-     * An idempotency solution we utilize here is to keep track of the last resolver used to resolve
-     * a given formal type and use it to prevent double-dipping.
-     */
-    private transient GenericTypeResolver m_resolver;
     }

@@ -13,8 +13,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
-
 import org.xvm.asm.PropertyStructure;
+
 import org.xvm.asm.constants.MethodBody.Implementation;
 
 import org.xvm.util.Severity;
@@ -432,9 +432,11 @@ public class MethodInfo
      */
     public MethodInfo asInto()
         {
-        // basically, if the method is a function, it stays as-is; otherwise, it needs to be
-        // "flattened" into a single implicit entry with the right signature
-        return (isFunction() || isConstructor()) && !getIdentity().getNamespace().equals(pool().clzObject())
+        // basically, if the method is a function or a "cap", it stays as-is (unless its a function
+        // on the Object class); otherwise, it needs to be "flattened" into a single implicit entry
+        // with the right signature
+        return (isFunction() || isConstructor() || isCapped()) &&
+                    !getIdentity().getNamespace().equals(pool().clzObject())
                 ? this
                 : new MethodInfo(new MethodBody(getIdentity(), getSignature(), Implementation.Implicit));
         }

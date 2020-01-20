@@ -2157,8 +2157,7 @@ public abstract class TypeConstant
 
         for (int iContrib = 0; iContrib < cContribs; ++iContrib)
             {
-            aContribType[iContrib] = listContribs.get(iContrib).
-                resolveGenerics(pool, this);
+            aContribType[iContrib] = listContribs.get(iContrib).resolveGenerics(pool, this);
             }
         return aContribType;
         }
@@ -3124,8 +3123,11 @@ public abstract class TypeConstant
 
             // look for a method of the same signature (using its nested identity); only
             // virtual methods are registered using their nested identities
-            Object      nidContrib   = idContrib.resolveNestedIdentity(pool, this);
+            // TODO: explain why only "fSelf" idContrib should be resolved
             MethodInfo  methodResult = methodContrib;
+            Object      nidContrib   = fSelf
+                                        ? idContrib.resolveNestedIdentity(pool, this)
+                                        : idContrib.getNestedIdentity();
 
             List<Object> listMatches = collectPotentialSuperMethods(
                     methodContrib.getHead().getMethodStructure(),
@@ -3202,9 +3204,18 @@ public abstract class TypeConstant
                             methodBase = mapVirtMethods.get(nidBase);
                             if (methodBase.isCapped())
                                 {
-                                // replace the cap with the referent
-                                nidBase    = methodBase.getHead().getNarrowingNestedIdentity();
-                                methodBase = mapVirtMethods.get(nidBase);
+                                // replace the capped method with the narrowing (non-capped)
+                                nidBase = methodBase.getHead().getNarrowingNestedIdentity();
+                                while (true)
+                                    {
+                                    methodBase = mapVirtMethods.get(nidBase);
+                                    if (!methodBase.isCapped())
+                                        {
+                                        break;
+                                        }
+                                    nidBase = methodBase.getHead().getNarrowingNestedIdentity();
+                                    }
+
                                 listMatches.remove(sigBest);
                                 cMatches--;
                                 }
@@ -3259,27 +3270,35 @@ public abstract class TypeConstant
                 }
             else
                 {
-                // override is not specified;
-                // if nidContrib directly points to a "super" method, it must be in the list
-                assert !mapVirtMethods.containsKey(nidContrib) || listMatches.contains(nidContrib);
+                // override is not specified
+                MethodInfo methodBase = mapVirtMethods.get(nidContrib);
+                if (methodBase != null)
+                    {
+                    // nidContrib directly points to a "super" method, so it must be in the list
+                    assert listMatches.contains(nidContrib);
+
+                    methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+                    }
 
                 for (Object nid : listMatches)
                     {
-                    MethodInfo methodBase = mapVirtMethods.get(nid);
-                    if (methodBase != null)
+                    MethodInfo methodMatch = mapVirtMethods.get(nid);
+                    if (methodMatch != null)
                         {
-                        if (fSelf && !methodBase.getIdentity().equals(methodContrib.getIdentity()))
+                        if (fSelf && !methodMatch.getIdentity().equals(methodContrib.getIdentity()))
                             {
                             log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
                                 getValueString(),
-                                methodBase.getIdentity(),
+                                methodMatch.getIdentity(),
                                 methodContrib.getIdentity().getPathString()
                                 );
                             }
 
-                        if (nid.equals(nidContrib))
+                        if (methodBase == null && !nid.equals(nidContrib) && methodMatch.isCapped())
                             {
-                            methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+                            // we have a match, but there is no base; TODO: is this correct always?
+                            methodBase   = methodMatch;
+                            methodResult = methodMatch.layerOn(methodContrib, fSelf, errs);
                             }
                         }
                     }
@@ -3346,7 +3365,7 @@ public abstract class TypeConstant
             mapMethods.put(id, info);
             mapVirtMethods.put(nid, info);
 
-            // assert !info.isCapped() || verifyCap(info, mapVirtMods, mapVirtMethods);
+            assert !info.isCapped() || verifyCap(info, mapVirtMods, mapVirtMethods);
             }
         }
 
@@ -3366,10 +3385,12 @@ public abstract class TypeConstant
                 {
                 info = mapVirtMods.get(nidN);
                 }
+
             if (info == null)
                 {
-                throw new AssertionError();
+                break;
                 }
+
             if (!info.isCapped())
                 {
                 return true;
@@ -4345,7 +4366,7 @@ public abstract class TypeConstant
             return;
             }
 
-        Object           nidContrib = idMixinProp.resolveNestedIdentity(pool, this);
+        Object           nidContrib = idMixinProp.getNestedIdentity(); // resolved
         PropertyConstant idResult   = (PropertyConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
         PropertyInfo     propBase   = infoBase.findPropertyByNid(nidContrib);
         if (propBase != null && infoProp.getIdentity().equals(propBase.getIdentity()))
@@ -4419,7 +4440,7 @@ public abstract class TypeConstant
             return;
             }
 
-        Object     nidContrib = idMixinMethod.resolveNestedIdentity(pool, this);
+        Object     nidContrib = idMixinMethod.getNestedIdentity(); // resolved
         MethodInfo methodBase = infoBase.getMethodByNestedId(nidContrib);
         if (methodBase != null && methodBase.getIdentity().equals(methodMixin.getIdentity()))
             {
