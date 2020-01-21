@@ -229,7 +229,7 @@ public class NamedTypeExpression
                 return true;
                 }
 
-            if (parent instanceof TypeExpression)
+            if (parent instanceof AnnotatedTypeExpression)
                 {
                 type = (TypeExpression) parent;
                 }

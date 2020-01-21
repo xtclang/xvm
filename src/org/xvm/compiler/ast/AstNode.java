@@ -845,17 +845,17 @@ public abstract class AstNode
         TypeFit fit    = TypeFit.Fit;
         for (int i = 0, c = Math.min(listExpr.size(), cTypes); i < c ; ++i)
             {
-                TypeConstant typeTest = atypeTest[i];
-                if (typeTest != null)
-                    {
-                    ctx = ctx.enterInferring(typeTest);
-                    }
+            TypeConstant typeTest = atypeTest[i];
+            if (typeTest != null)
+                {
+                ctx = ctx.enterInferring(typeTest);
+                }
 
             fit = fit.combineWith(listExpr.get(i).testFit(ctx, typeTest, null));
 
-                if (typeTest != null)
-                    {
-                    ctx = ctx.exit();
+            if (typeTest != null)
+                {
+                ctx = ctx.exit();
                 }
             }
         return fit;

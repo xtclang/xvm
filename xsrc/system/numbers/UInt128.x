@@ -261,13 +261,13 @@ const UInt128
     @Override
     UInt128! toChecked()
         {
-        return this.is(Unchecked) ? new UInt128!(bits) : this;
+        return this.is(Unchecked) ? new UInt128(bits) : this;
         }
 
     @Override
     @Unchecked UInt128 toUnchecked()
         {
-        return this.is(Unchecked) ? this : new @Unchecked UInt128!(bits);
+        return this.is(Unchecked) ? this : new @Unchecked UInt128(bits);
         }
 
     @Override

@@ -245,13 +245,13 @@ const VarUInt
     @Override
     VarUInt! toChecked()
         {
-        return this.is(Unchecked) ? new VarUInt!(bits) : this;
+        return this.is(Unchecked) ? new VarUInt(bits) : this;
         }
 
     @Override
     @Unchecked VarUInt toUnchecked()
         {
-        return this.is(Unchecked) ? this : new @Unchecked VarUInt!(bits);
+        return this.is(Unchecked) ? this : new @Unchecked VarUInt(bits);
         }
 
     @Override

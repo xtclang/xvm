@@ -559,7 +559,7 @@ public class MethodDeclarationStatement
                 }
             else if (method.isFunction())
                 {
-                // make sure functions don't using any generic types
+                // make sure functions don't use any generic types
                 for (TypeConstant type : method.getIdentityConstant().getRawParams())
                     {
                     if (type.containsGenericType(true))

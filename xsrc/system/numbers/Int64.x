@@ -285,13 +285,13 @@ const Int64
     @Override
     Int64! toChecked()
         {
-        return this.is(Unchecked) ? new Int64!(bits) : this;
+        return this.is(Unchecked) ? new Int64(bits) : this;
         }
 
     @Override
     @Unchecked Int64 toUnchecked()
         {
-        return this.is(Unchecked) ? this : new @Unchecked Int64!(bits);
+        return this.is(Unchecked) ? this : new @Unchecked Int64(bits);
         }
 
     @Override

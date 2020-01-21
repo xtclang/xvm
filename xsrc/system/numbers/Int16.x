@@ -285,13 +285,13 @@ const Int16
     @Override
     Int16! toChecked()
         {
-        return this.is(Unchecked) ? new Int16!(bits) : this;
+        return this.is(Unchecked) ? new Int16(bits) : this;
         }
 
     @Override
     @Unchecked Int16 toUnchecked()
         {
-        return this.is(Unchecked) ? this : new @Unchecked Int16!(bits);
+        return this.is(Unchecked) ? this : new @Unchecked Int16(bits);
         }
 
     @Override

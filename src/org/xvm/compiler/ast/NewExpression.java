@@ -149,8 +149,8 @@ public class NewExpression
     @Override
     public boolean isAutoNarrowingAllowed(TypeExpression type)
         {
-        // anonymous inner class declaration cannot auto-narrow its contributions
-        return !isComponentNode();
+        // auto-narrowing is allowed for type parameters, but not the type itself
+        return type != this.type;
         }
 
     @Override
@@ -303,7 +303,6 @@ public class NewExpression
                     return null;
                     }
                 }
-            typeTarget = typeTarget.resolveAutoNarrowingBase(pool);
             }
         else
             {
@@ -368,7 +367,7 @@ public class NewExpression
         else
             {
             this.type  = exprTypeNew;
-            typeTarget = exprTypeNew.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
+            typeTarget = exprTypeNew.ensureTypeConstant(ctx);
 
             if (m_fDynamicAnno)
                 {

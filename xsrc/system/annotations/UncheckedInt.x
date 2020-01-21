@@ -12,7 +12,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super();
+            return super().toUnchecked();
             }
         catch (OutOfBounds e)
             {
@@ -25,7 +25,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super();
+            return super().toUnchecked();
             }
         catch (OutOfBounds e)
             {
@@ -38,7 +38,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super(n);
+            return super(n).toUnchecked();
             }
         catch (OutOfBounds e)
             {
@@ -51,7 +51,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super(n);
+            return super(n).toUnchecked();
             }
         catch (OutOfBounds e)
             {
@@ -64,7 +64,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super(n);
+            return super(n).toUnchecked();
             }
         catch (OutOfBounds e)
             {
@@ -77,7 +77,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super(n);
+            return super(n).toUnchecked();
             }
         catch (OutOfBounds e)
             {
@@ -90,7 +90,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super();
+            return super().toUnchecked();
             }
         catch (OutOfBounds e)
             {
@@ -103,7 +103,7 @@ mixin UncheckedInt
         {
         try
             {
-            return super();
+            return super().toUnchecked();
             }
         catch (OutOfBounds e)
             {
