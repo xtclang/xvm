@@ -413,20 +413,20 @@ public class TryStatement
                 CatchStart     opCatch   = new CatchStart(regCatch, constName);
                 code.add(new GuardStart(new CatchStart[] {opCatch}));
 
-                Argument argResource    = resources.get(i).getLValueExpression()
+                Argument argResource      = resources.get(i).getLValueExpression()
                                           .generateArgument(ctx, code, false, false, errs);
-                Label    labelSkipClose = new Label("skip_close");
+                Label    labelSkipClose   = new Label("skip_close");
+                Label    labelFallThrough = new Label();
                 if (!argResource.getType().isA(typeCloseable))
                     {
                     code.add(new JumpNType(argResource, typeCloseable, labelSkipClose));
                     }
                 code.add(new Invoke_00(argResource, methodClose));
                 code.add(labelSkipClose);
-                code.add(new GuardEnd(getEndLabel()));
+                code.add(new GuardEnd(labelFallThrough));
 
                 code.add(opCatch);
                 Label labelSkipThrow   = new Label("skip_throw");
-                Label labelFallThrough = new Label();
                 code.add(new JumpNotNull(regException, labelSkipThrow));
                 code.add(new Throw(regCatch));
                 code.add(labelSkipThrow);
