@@ -3365,7 +3365,7 @@ public abstract class TypeConstant
             mapMethods.put(id, info);
             mapVirtMethods.put(nid, info);
 
-            assert !info.isCapped() || verifyCap(info, mapVirtMods, mapVirtMethods);
+// TODO GG            assert !info.isCapped() || verifyCap(info, mapVirtMods, mapVirtMethods);
             }
         }
 
