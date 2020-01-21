@@ -787,11 +787,14 @@ public class NamedTypeExpression
             //    }
             //
 
+            boolean       fAllowFormalVirtual = false;
             ClassConstant idTarget;
             switch (constTarget.getFormat())
                 {
                 case ThisClass:
                 case ParentClass:
+                    fAllowFormalVirtual = true;
+                    // fall through
                 case ChildClass:
                     idTarget = (ClassConstant) ((PseudoConstant) constTarget).getDeclarationLevelClass();
                     break;
@@ -862,10 +865,14 @@ public class NamedTypeExpression
                         {
                         ClassConstant  idBase  = ((ClassConstant) idClass).getOutermost();
                         ClassStructure clzBase = (ClassStructure) idBase.getComponent();
-                        boolean        fFormal = !(component instanceof MethodStructure &&
-                                                    ((MethodStructure) component).isFunction());
+
                         // Note: keep the formal types when in a constructor
-                        typeTarget = pool.ensureVirtualTypeConstant(clzBase, clzTarget, fFormal, false);
+                        boolean fFormalParent = !(component instanceof MethodStructure &&
+                                            ((MethodStructure) component).isFunction());
+                        boolean fFormalChIld = fFormalParent && fAllowFormalVirtual && paramTypes == null;
+
+                        typeTarget = pool.ensureVirtualTypeConstant(
+                                clzBase, clzTarget, fFormalParent, fFormalChIld);
                         assert typeTarget != null;
                         }
                     else

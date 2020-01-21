@@ -1697,21 +1697,24 @@ public class ConstantPool
         ClassStructure   clzParent = (ClassStructure) clzChild.getParent();
         IdentityConstant idParent  = clzParent.getIdentityConstant();
 
+        TypeConstant typeParent;
+        TypeConstant typeTarget;
         if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent, false))
             {
             // we've reached the "top"
-            TypeConstant typeParent = fFormal ? clzBase.getFormalType() : clzBase.getCanonicalType();
-            return ensureVirtualChildTypeConstant(typeParent, sName);
+            typeParent = fFormal ? clzBase.getFormalType() : clzBase.getCanonicalType();
+            typeTarget = ensureVirtualChildTypeConstant(typeParent, sName);
             }
-
-        if (!clzParent.isVirtualChild())
+        else if (clzParent.isVirtualChild())
+            {
+            typeParent = ensureVirtualTypeConstant(clzBase, clzParent, fFormal, true);
+            typeTarget = ensureVirtualChildTypeConstant(typeParent, sName);
+            }
+        else
             {
             // somehow the classes didn't coalesce
             return null;
             }
-
-        TypeConstant typeParent = ensureVirtualTypeConstant(clzBase, clzParent, fFormal, true);
-        TypeConstant typeTarget = ensureVirtualChildTypeConstant(typeParent, sName);
 
         if (fParameterize && clzChild.getTypeParamCount() > 0)
             {
