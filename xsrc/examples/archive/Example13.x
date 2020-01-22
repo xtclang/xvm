@@ -527,3 +527,9 @@ in.readPointer(pointer)
 in.fromPointer(pointer)
 in.dereference(pointer)     // ok
 in.follow(pointer)
+
+if (x.is(List))
+    {
+    x.add(item);
+    }
+    
