@@ -1,4 +1,4 @@
-module TestMixins
+module TestMixins.xqiz.it
     {
     import Ecstasy.collections.HashMap;
     import Ecstasy.collections.ListMap;
@@ -17,8 +17,8 @@ module TestMixins
 
     void run()
         {
+        console.println("It compiles!");
         }
-
 
     // ---------------------------------------------------------------------------------------------
 
@@ -73,8 +73,6 @@ module TestMixins
                 {
                 root    = out;
                 current = out;
-
-                out.addObject(value);
                 }
             finally
                 {
@@ -261,14 +259,14 @@ module TestMixins
             ArrayOutputStream!<ArrayOutputStream> openArray()
                 {
                 ensureActive();
-                return new @CloseCap @PointerAwareElementOutput ArrayOutputStream(this, count);
+                return new @CloseCap @PointerAwareElementOutput ArrayOutputStream(this);
                 }
 
             @Override
             FieldOutputStream<ArrayOutputStream> openObject()
                 {
                 ensureActive();
-                return new @CloseCap @PointerAwareFieldOutput FieldOutputStream(this, count);
+                return new @CloseCap @PointerAwareFieldOutput FieldOutputStream(this);
                 }
 
             @Override
@@ -306,7 +304,7 @@ module TestMixins
                 }
 
             @Override
-            ArrayOutputStream<FieldOutputStream> openArray()
+            ArrayOutputStream<FieldOutputStream> openArray(String name)
                 {
                 ensureActive();
                 return new @CloseCap @PointerAwareElementOutput ArrayOutputStream(this, name);
@@ -329,6 +327,13 @@ module TestMixins
         mixin PointerAwareDocOutput
                 into DocOutputStream
             {
+            protected PointerAwareDocOutput
+                    writePointerOrValue(Object value,
+                                        function void(String) writePointer,
+                                        function void() writeValue)
+                {
+                return this;
+                }
             }
 
         mixin PointerAwareElementOutput
@@ -339,6 +344,14 @@ module TestMixins
             PointerAwareElementOutput add(Doc value)
                 {
                 return writePointerOrValue(value, &addPointerReference(_), &super(value));
+                }
+
+            protected void addPointerReference(String pointer)
+                {
+                using (val out = openObject())
+                    {
+                    out.add("$ref", pointer);
+                    }
                 }
             }
 
@@ -353,4 +366,4 @@ module TestMixins
                 }
             }
         }
-}
+    }

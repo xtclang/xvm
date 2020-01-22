@@ -7,11 +7,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Constants;
@@ -178,15 +180,22 @@ public class AnnotatedTypeExpression
         ConstantPool pool           = pool();
         TypeConstant typeUnderlying = type.ensureTypeConstant(ctx);
 
-        Annotation   anno     = annotation.ensureAnnotation(pool());
-        TypeConstant typeAnno = anno.getAnnotationType();
+        Annotation anno      = annotation.ensureAnnotation(pool());
+        Constant   constAnno = anno.getAnnotationClass();
 
         // until it's resolved let's assume it's disassociated
-        m_fDisassociate = typeAnno.containsUnresolved()
-                || typeAnno.getExplicitClassInto().containsUnresolved() // TODO GG - comment this line out and it blows
-                || typeAnno.getExplicitClassInto().isIntoVariableType();
+        boolean fIntoVar = true;
+        if (!constAnno.containsUnresolved())
+            {
+            IdentityConstant idAnno   = (IdentityConstant) constAnno;
+            TypeConstant     typeInto = ((ClassStructure) idAnno.getComponent()).getTypeInto();
 
-        return isDisassociated()
+            fIntoVar = !typeInto.containsUnresolved() && typeInto.isIntoVariableType();
+            }
+
+        m_fDisassociate = fIntoVar;
+
+        return fIntoVar
                 ? typeUnderlying    // our annotation is not added to the underlying type constant
                 : pool.ensureAnnotatedTypeConstant(typeUnderlying, anno);
         }

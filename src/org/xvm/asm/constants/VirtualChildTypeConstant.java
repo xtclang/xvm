@@ -58,13 +58,15 @@ public class VirtualChildTypeConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a constant whose value is a data type.
+     * Construct a constant whose value is a virtual child type.
      *
      * @param pool        the ConstantPool that will contain this Constant
      * @param typeParent  the parent's type
      * @param sName       the child's name
+     * @param fThisClass  if true, this type should allow auto narrowing of the child type
      */
-    public VirtualChildTypeConstant(ConstantPool pool, TypeConstant typeParent, String sName)
+    public VirtualChildTypeConstant(ConstantPool pool, TypeConstant typeParent, String sName,
+                                    boolean fThisClass)
         {
         super(pool, typeParent);
 
@@ -77,7 +79,8 @@ public class VirtualChildTypeConstant
             {
             throw new IllegalArgumentException("name is required");
             }
-        m_constName = pool.ensureStringConstant(sName);
+        m_constName  = pool.ensureStringConstant(sName);
+        m_fThisClass = fThisClass;
         }
 
     /**
@@ -94,7 +97,8 @@ public class VirtualChildTypeConstant
         {
         super(pool, format, in);
 
-        m_iName = readIndex(in);
+        m_iName      = readIndex(in);
+        m_fThisClass = in.readBoolean();
         }
 
     @Override
@@ -183,13 +187,15 @@ public class VirtualChildTypeConstant
     @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
-        return pool.ensureVirtualChildTypeConstant(type, m_constName.getValue());
+        return m_fThisClass
+            ? pool.ensureThisVirtualChildTypeConstant(type, m_constName.getValue())
+            : pool.ensureVirtualChildTypeConstant    (type, m_constName.getValue());
         }
 
     @Override
     public boolean isAutoNarrowing(boolean fAllowVirtChild)
         {
-        return fAllowVirtChild;
+        return fAllowVirtChild || m_fThisClass;
         }
 
     @Override
@@ -246,14 +252,14 @@ public class VirtualChildTypeConstant
     @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
-        TypeConstant typeOriginal = m_typeParent;
-        TypeConstant typeResolved = typeOriginal;
+        TypeConstant typeParentOriginal = m_typeParent;
+        TypeConstant typeParentResolved = typeParentOriginal;
 
-        if (typeOriginal.isAutoNarrowing(false))
+        if (typeParentOriginal.isAutoNarrowing(false))
             {
-            typeResolved = typeOriginal.resolveAutoNarrowing(pool, fRetainParams, typeTarget);
+            typeParentResolved = typeParentOriginal.resolveAutoNarrowing(pool, fRetainParams, typeTarget);
             }
-        else if (typeTarget != null && typeTarget.isA(typeResolved))
+        else if (typeTarget != null && !typeTarget.equals(this))
             {
             // strip the immutability and access modifiers
             while (typeTarget instanceof ImmutableTypeConstant ||
@@ -261,11 +267,20 @@ public class VirtualChildTypeConstant
                 {
                 typeTarget = typeTarget.getUnderlyingType();
                 }
-            typeResolved = typeTarget;
+
+            if (typeTarget.isA(typeParentResolved))
+                {
+                typeParentResolved = typeTarget;
+                }
+            else if (m_fThisClass && typeTarget.isA(this))
+                {
+                return typeTarget;
+                }
             }
-        return typeOriginal == typeResolved
+
+        return typeParentOriginal == typeParentResolved
                 ? this
-                : cloneSingle(pool, typeResolved);
+                : pool.ensureVirtualChildTypeConstant(typeParentResolved, m_constName.getValue());
         }
 
     @Override
@@ -468,7 +483,12 @@ public class VirtualChildTypeConstant
         if (n == 0)
             {
             VirtualChildTypeConstant that = (VirtualChildTypeConstant) obj;
-            return this.m_constName.compareTo(that.m_constName);
+
+            n = this.m_constName.compareTo(that.m_constName);
+            if (n == 0)
+                {
+                return Boolean.compare(this.m_fThisClass, that.m_fThisClass);
+                }
             }
         return n;
         }
@@ -476,7 +496,8 @@ public class VirtualChildTypeConstant
     @Override
     public String getValueString()
         {
-        return m_typeParent.getValueString() + '.' + m_constName.getValue();
+        return (m_fThisClass ? "this:" : "") +
+                m_typeParent.getValueString() + '.' + m_constName.getValue();
         }
 
 
@@ -497,6 +518,7 @@ public class VirtualChildTypeConstant
         super.assemble(out);
 
         writePackedLong(out, m_constName.getPosition());
+        out.writeBoolean(m_fThisClass);
         }
 
 
@@ -505,7 +527,7 @@ public class VirtualChildTypeConstant
     @Override
     public int hashCode()
         {
-        return m_typeParent.hashCode() + m_constName.hashCode();
+        return m_typeParent.hashCode() + m_constName.hashCode() + Boolean.hashCode(m_fThisClass);
         }
 
 
@@ -520,4 +542,10 @@ public class VirtualChildTypeConstant
      * The StringConstant representing this virtual child's name.
      */
     protected StringConstant m_constName;
+
+    /**
+     * Having this flag set means that this VirtualChildTypeConstant will "auto narrow" in a manner
+     * that is analogous to a TerminalTypeConstant around ThisClassConstant.
+     */
+    protected boolean m_fThisClass;
     }

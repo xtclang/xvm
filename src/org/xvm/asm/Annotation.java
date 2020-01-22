@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ResolvableConstant;
+import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.Severity;
@@ -135,7 +136,10 @@ public class Annotation
      */
     public TypeConstant getAnnotationType()
         {
-        return getConstantPool().ensureTerminalTypeConstant(getAnnotationClass());
+        Constant constAnno = getAnnotationClass();
+        return constAnno.containsUnresolved()
+                ? new TerminalTypeConstant(getConstantPool(), constAnno) // unresolved
+                : constAnno.getType();
         }
 
     /**

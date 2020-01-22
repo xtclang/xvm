@@ -1378,22 +1378,23 @@ public abstract class AstNode
             if (cReturns > 0)
                 {
                 TypeConstant[] atypeMethodReturn = sigMethod.getRawReturns();
+                TypeConstant   typeCtx           = infoTarget.getType();
 
                 for (int i = 0; i < cReturns; i++)
                     {
                     TypeConstant typeReturn       = atypeReturn[i];
                     TypeConstant typeMethodReturn = atypeMethodReturn[i];
 
-                    if (typeMethodReturn.isAssignableTo(typeReturn))
+                    if (!typeMethodReturn.isCovariantReturn(typeReturn, typeCtx))
                         {
-                        if (!typeMethodReturn.isA(typeReturn))
+                        if (typeMethodReturn.getConverterTo(typeReturn) != null)
                             {
                             fConvert = true;
                             }
-                        }
-                    else
-                        {
-                        continue NextMethod;
+                        else
+                            {
+                            continue NextMethod;
+                            }
                         }
                     }
                 }

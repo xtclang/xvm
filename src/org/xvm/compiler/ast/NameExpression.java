@@ -1945,8 +1945,9 @@ public class NameExpression
                                         ClassConstant  idBase  = idTarget.getOutermost();
                                         ClassStructure clzBase = (ClassStructure) idBase.getComponent();
                                         boolean        fFormal = !(component instanceof MethodStructure &&
-                                                                        ((MethodStructure) component).isFunction());
-                                        type = pool.ensureVirtualTypeConstant(clzBase, clzTarget, fFormal, false);
+                                                                 ((MethodStructure) component).isFunction());
+                                        type = pool.ensureVirtualTypeConstant(clzBase, clzTarget,
+                                            fFormal, /*fParameterize*/ false, /*fAutoNarrowing*/ false);
                                         }
                                     }
                                 }

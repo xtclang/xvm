@@ -787,11 +787,14 @@ public class NamedTypeExpression
             //    }
             //
 
+            boolean       fThisClass          = false;
             boolean       fAllowFormalVirtual = false;
             ClassConstant idTarget;
             switch (constTarget.getFormat())
                 {
                 case ThisClass:
+                    fThisClass = true;
+                    // fall through
                 case ParentClass:
                     fAllowFormalVirtual = true;
                     // fall through
@@ -872,7 +875,7 @@ public class NamedTypeExpression
                         boolean fFormalChIld = fFormalParent && fAllowFormalVirtual && paramTypes == null;
 
                         typeTarget = pool.ensureVirtualTypeConstant(
-                                clzBase, clzTarget, fFormalParent, fFormalChIld);
+                                clzBase, clzTarget, fFormalParent, fFormalChIld, fThisClass);
                         assert typeTarget != null;
                         }
                     else
@@ -898,7 +901,7 @@ public class NamedTypeExpression
                     ClassConstant  idBase  = idTarget.getAutoNarrowingBase();
                     ClassStructure clzBase = (ClassStructure) idBase.getComponent();
 
-                    typeTarget = pool.ensureVirtualTypeConstant(clzBase, clzTarget, false, false);
+                    typeTarget = pool.ensureVirtualTypeConstant(clzBase, clzTarget, false, false, false);
                     }
                 }
 
