@@ -411,7 +411,7 @@ module TestReflection.xqiz.it
         Point p = new Point(3,4);
         analyzeStructure(p);
 
-        const Point3D(Int x, Int y, Int z) extends Point(x, y);
+        const Point3D(Int x, Int y, Int z) extends Point(x, y); // TODO GG BUGBUG prints out as "X, Z, Y"
         Point3D p3d = new Point3D(5,6,7);
         analyzeStructure(p3d);
         }
@@ -447,12 +447,12 @@ module TestReflection.xqiz.it
                                  |     isService={ref.isService}, isConst={ref.isConst}
                                  |     isImmutable={ref.isImmutable}, refName={ref.refName}, var={ref.is(Var)}
                                );
+                }
 
-                if (val s := &o.revealAs(Struct))
-                    {
-                    Object clone = c.instantiate(s);
-                    console.println($"clone={clone}");
-                    }
+            if (val s := &o.revealAs(Struct))
+                {
+                Object clone = c.instantiate(s);
+                console.println($"clone={clone}");
                 }
             }
 
