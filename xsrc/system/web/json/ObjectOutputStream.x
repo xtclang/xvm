@@ -684,37 +684,37 @@ class ObjectOutputStream(Schema schema, Writer writer)
         @Override
         PointerAwareElementOutput add(Doc value)
             {
-            return writePointerOrValue(value, &addPointerReference(_), &super(value))    /*TODO*/ .as(PointerAwareElementOutput);
+            return writePointerOrValue(value, &addPointerReference(_), &super(value));
             }
 
         @Override
         <Serializable> PointerAwareElementOutput addObject(Serializable value)
             {
-            return writePointerOrValue(value, &addPointerReference(_), &super(/* TODO GG */ Serializable, value))    /*TODO*/ .as(PointerAwareElementOutput);
+            return writePointerOrValue(value, &addPointerReference(_), &super(value));
             }
 
         @Override
         PointerAwareElementOutput addArray(Iterable<Doc> values)
             {
-            return writePointerOrValue(values, &addPointerReference(_), &super(values))    /*TODO*/ .as(PointerAwareElementOutput);
+            return writePointerOrValue(values, &addPointerReference(_), &super(values));
             }
 
         @Override
         PointerAwareElementOutput addArray(Iterable<IntNumber> values)
             {
-            return writePointerOrValue(values, &addPointerReference(_), &super(values))    /*TODO*/ .as(PointerAwareElementOutput);
+            return writePointerOrValue(values, &addPointerReference(_), &super(values));
             }
 
         @Override
         PointerAwareElementOutput addArray(Iterable<FPNumber> values)
             {
-            return writePointerOrValue(values, &addPointerReference(_), &super(values))    /*TODO*/ .as(PointerAwareElementOutput);
+            return writePointerOrValue(values, &addPointerReference(_), &super(values));
             }
 
         @Override
         <Serializable> PointerAwareElementOutput addObjectArray(Iterable<Serializable> values)
             {
-            return writePointerOrValue(values, &addPointerReference(_), &super(/* TODO GG */ Serializable, values))    /*TODO*/ .as(PointerAwareElementOutput);
+            return writePointerOrValue(values, &addPointerReference(_), &super(values));
             }
         }
 
@@ -736,37 +736,37 @@ class ObjectOutputStream(Schema schema, Writer writer)
         @Override
         PointerAwareFieldOutput add(String name, Doc value)
             {
-            return writePointerOrValue(value, &addPointerReference(name, _), &super(name, value))    /*TODO*/ .as(PointerAwareFieldOutput);
+            return writePointerOrValue(value, &addPointerReference(name, _), &super(name, value));
             }
 
         @Override
         <Serializable> PointerAwareFieldOutput addObject(String name, Serializable value)
             {
-            return writePointerOrValue(value, &addPointerReference(name, _), &super(/* TODO GG */ Serializable, name, value))    /*TODO*/ .as(PointerAwareFieldOutput);
+            return writePointerOrValue(value, &addPointerReference(name, _), &super(name, value));
             }
 
         @Override
         PointerAwareFieldOutput addArray(String name, Iterable<Doc> values)
             {
-            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values))    /*TODO*/ .as(PointerAwareFieldOutput);
+            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values));
             }
 
         @Override
         PointerAwareFieldOutput addArray(String name, Iterable<IntNumber> values)
             {
-            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values))    /*TODO*/ .as(PointerAwareFieldOutput);
+            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values));
             }
 
         @Override
         PointerAwareFieldOutput addArray(String name, Iterable<FPNumber> values)
             {
-            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values))    /*TODO*/ .as(PointerAwareFieldOutput);
+            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values));
             }
 
         @Override
         <Serializable> PointerAwareFieldOutput addObjectArray(String name, Iterable<Serializable> values)
             {
-            return writePointerOrValue(values, &addPointerReference(name, _), &super(/* TODO GG */ Serializable, name, values))    /*TODO*/ .as(PointerAwareFieldOutput);
+            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values));
             }
         }
     }

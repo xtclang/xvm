@@ -275,6 +275,14 @@ public class Register
         }
 
     /**
+     * @return true iff the register represents "super" pre-defined argument
+     */
+    public boolean isSuper()
+        {
+        return m_iArg == Op.A_SUPER;
+        }
+
+    /**
      * @return true iff the register represents "this:struct" pre-defined argument
      */
     public boolean isStruct()

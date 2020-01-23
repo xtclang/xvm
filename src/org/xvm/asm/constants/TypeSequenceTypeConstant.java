@@ -82,6 +82,12 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public boolean isImmutable()
+        {
+        return true;
+        }
+
+    @Override
     public boolean isAccessSpecified()
         {
         return false;

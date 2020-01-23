@@ -114,7 +114,8 @@ public class FBind
                     {
                     throw new IllegalStateException();
                     }
-                hFunction = xRTFunction.makeHandle(chain, frame.m_nDepth + 1);
+                hFunction = xRTFunction.makeHandle(chain, frame.m_nDepth + 1)
+                                       .bindTarget(frame.getThis());
                 }
             else if (m_nFunctionId < CONSTANT_OFFSET)
                 {

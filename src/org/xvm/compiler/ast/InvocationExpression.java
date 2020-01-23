@@ -4,12 +4,12 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -31,7 +31,6 @@ import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
-import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
@@ -480,7 +479,7 @@ public class InvocationExpression
             TypeConstant typeFn = expr.getImplicitType(ctx);
             if (typeFn != null)
                 {
-                typeFn = testFunction(ctx, typeFn, atypeRequired, errs);
+                typeFn = testFunction(ctx, typeFn, 0, 0, atypeRequired, errs);
                 if (typeFn != null)
                     {
                     return calculateReturnType(typeFn);
@@ -702,10 +701,10 @@ public class InvocationExpression
                 MethodConstant  idMethod    = (MethodConstant) argMethod;
                 MethodStructure method      = m_method;
                 boolean         fCondReturn = method.isConditionalReturn();
-                TypeConstant[] atypeParams  = idMethod.getRawParams();
-                int            cTypeParams  = method.getTypeParamCount();
-                int            cParams      = method.getVisibleParamCount();
-                int            cArgs        = args.size();
+                TypeConstant[]  atypeParams = idMethod.getRawParams();
+                int             cTypeParams = method.getTypeParamCount();
+                int             cParams     = method.getVisibleParamCount();
+                int             cArgs       = args.size();
 
                 if (cTypeParams > 0)
                     {
@@ -863,6 +862,8 @@ public class InvocationExpression
                 // must be a property or a variable of type function (@Auto conversion possibility
                 // already handled above); the function has two tuple sub-types, the second of which is
                 // the "return types" of the function
+                int          cTypeParams = 0;
+                int          cDefaults   = 0;
                 TypeConstant typeFn;
                 if (argMethod instanceof PropertyConstant)
                     {
@@ -878,7 +879,25 @@ public class InvocationExpression
                 else
                     {
                     assert argMethod instanceof Register;
+
                     typeFn = argMethod.getType().resolveTypedefs();
+
+                    if (((Register) argMethod).isSuper())
+                        {
+                        MethodStructure method = ctx.getMethod();
+
+                        cDefaults   = method.getDefaultParamCount();
+                        cTypeParams = method.getTypeParamCount();
+                        if (cTypeParams > 0 && typeFn.isA(pool.typeFunction()))
+                            {
+                            Argument[] aargTypeParam = new Argument[cTypeParams];
+                            for (int i = 0; i < cTypeParams; i++)
+                                {
+                                aargTypeParam[i] = new Register(pool.typeType(), i);
+                                }
+                            m_aargTypeParams = aargTypeParam;
+                            }
+                        }
                     }
 
                 if (!typeFn.isA(pool.typeFunction()))
@@ -890,12 +909,23 @@ public class InvocationExpression
 
                 if (exprName.isSuppressDeref())
                     {
-                    assert m_fBindParams;
-                    assert argMethod instanceof Register;
+                    assert argMethod instanceof Register && !m_fCall;
+
                     // this must be a scenario of binding a function at a register, e.g.:
                     //      function void (Int) fn1 = ...
                     //      function void ()    fn0 = &fn1(42);
-                    // so we will skip the exprName validation
+                    // validation of the exprName would produce a Ref<Function> (&fn1), so we skip it;
+                    if (((Register) argMethod).isSuper() && cTypeParams > 0)
+                        {
+                        // the caller doesn't expect to see type parameters in the signature;
+                        // we need to remove them from the function type
+                        TypeConstant[] atypeFnParams  = pool.extractFunctionParams(typeFn);
+                        TypeConstant[] atypeFnReturns = pool.extractFunctionReturns(typeFn);
+                        typeFn = pool.buildFunctionType(
+                                Arrays.copyOfRange(atypeFnParams, cTypeParams, atypeFnParams.length),
+                                atypeFnReturns);
+                        cTypeParams = 0;
+                        }
                     }
                 else
                     {
@@ -905,10 +935,12 @@ public class InvocationExpression
                         break Validate;
                         }
 
-                    expr = exprNew;
+                    expr   = exprNew;
+                    typeFn = exprNew.getType();
                     }
 
-                TypeConstant[] atypeResult = validateFunction(ctx, typeFn, errs);
+                TypeConstant[] atypeResult = validateFunction(ctx, typeFn,
+                                                cTypeParams, cDefaults, atypeRequired, errs);
                 if (atypeResult != null)
                     {
                     return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
@@ -930,10 +962,10 @@ public class InvocationExpression
                 // first we need to validate the function, to make sure that the type includes
                 // sufficient information about parameter and return types, and that it fits with
                 // the arguments that we have
-                TypeConstant typeFn = testFunction(ctx, exprNew.getType(), atypeRequired, errs);
+                TypeConstant typeFn = testFunction(ctx, exprNew.getType(), 0, 0, atypeRequired, errs);
                 if (typeFn != null)
                     {
-                    TypeConstant[] atypeResult = validateFunction(ctx, typeFn, errs);
+                    TypeConstant[] atypeResult = validateFunction(ctx, typeFn, 0, 0, atypeRequired, errs);
                     if (atypeResult != null)
                         {
                         return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
@@ -942,8 +974,7 @@ public class InvocationExpression
                 }
             }
 
-        return finishValidations(atypeRequired, atypeRequired == null ?
-            TypeConstant.NO_TYPES : atypeRequired, TypeFit.NoFit, null, errs);
+        return null;
         }
 
     @Override
@@ -1282,7 +1313,25 @@ public class InvocationExpression
             // not binding anything; not calling anything; just returning the function itself
             if (cLVals > 0)
                 {
-                aLVal[0].assign(argFn, code, errs);
+                if (argFn instanceof Register && ((Register) argFn).isSuper())
+                    {
+                    // super(...) function needs to bind a target
+                    Assignable lval = aLVal[0];
+                    if (lval.isLocalArgument())
+                        {
+                        code.add(new FBind(argFn, new int[0], NO_RVALUES, lval.getLocalArgument()));
+                        }
+                    else
+                        {
+                        Register regTemp = createRegister(argFn.getType(), true);
+                        code.add(new FBind(argFn, new int[0], NO_RVALUES, regTemp));
+                        aLVal[0].assign(regTemp, code, errs);
+                        }
+                    }
+                else
+                    {
+                    aLVal[0].assign(argFn, code, errs);
+                    }
                 }
             return;
             }
@@ -1635,7 +1684,9 @@ public class InvocationExpression
 
             if (arg instanceof Register)
                 {
-                Register reg = (Register) arg;
+                Register reg         = (Register) arg;
+                int      cTypeParams = 0;
+                int      cDefaults   = 0;
                 if (reg.isPredefined())
                     {
                     // report specific error messages for incorrect "this" or "super" use
@@ -1654,16 +1705,22 @@ public class InvocationExpression
                             break;
 
                         case Op.A_SUPER:
+                            {
                             if (!ctx.isMethod())
                                 {
                                 exprName.log(errs, Severity.ERROR, Compiler.NO_SUPER);
                                 return null;
                                 }
+                            MethodStructure method = ctx.getMethod();
+
+                            cTypeParams = method.getTypeParamCount();
+                            cDefaults   = method.getDefaultParamCount();
                             break;
+                            }
                         }
                     }
 
-                if (testFunction(ctx, arg.getType(), atypeReturn, errs) == null)
+                if (testFunction(ctx, arg.getType(), cTypeParams, cDefaults, atypeReturn, errs) == null)
                     {
                     return null;
                     }
@@ -1715,7 +1772,7 @@ public class InvocationExpression
                         throw new IllegalStateException("missing property: " + id + " on " + target.getTargetType());
                         }
 
-                    if (testFunction(ctx, prop.getType(), atypeReturn, errs) == null)
+                    if (testFunction(ctx, prop.getType(), 0, 0, atypeReturn, errs) == null)
                         {
                         return null;
                         }
@@ -2084,6 +2141,8 @@ public class InvocationExpression
      * @param ctx         the compiler context
      * @param typeFn      the type of the function (or the type of the object that should know how
      *                    to convert itself into a function)
+     * @param cTypeParams the number of type parameters the function carries
+     * @param cDefaults   the number of default parameters the function allows
      * @param atypeReturn (optional) an array of required return types
      * @param errs        the error listener to log errors to
      *
@@ -2093,6 +2152,8 @@ public class InvocationExpression
     protected TypeConstant testFunction(
             Context        ctx,
             TypeConstant   typeFn,
+            int            cTypeParams,
+            int            cDefaults,
             TypeConstant[] atypeReturn,
             ErrorListener  errs)
         {
@@ -2134,19 +2195,22 @@ public class InvocationExpression
             return null;
             }
 
-        int     cParams = atypeParams.length;
-        boolean fValid  = true;
+        int     cAllParams = atypeParams.length;
+        int     cVisible   = cAllParams - cTypeParams;
+        int     cRequired  = cVisible - cDefaults;
+        boolean fValid     = true;
 
         List<Expression> listArgs = args;
         int              cArgs    = listArgs.size();
-        if (cParams != cArgs)
+        if (cArgs < cRequired)
             {
-            log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cParams, cArgs);
+            log(errs, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cArgs);
             fValid = false;
             }
-        for (int i = 0, c = Math.min(cParams, cArgs); i < c; ++i)
+
+        for (int i = 0, c = Math.min(cVisible, cArgs); i < c; ++i)
             {
-            TypeConstant typeParam = atypeParams[i];
+            TypeConstant typeParam = atypeParams[cTypeParams + i];
             Expression   exprArg   = listArgs.get(i);
 
             ctx = ctx.enterInferring(typeParam);
@@ -2205,33 +2269,77 @@ public class InvocationExpression
     /**
      * Validate each of the arguments against their required types as dictated by the function type.
      *
-     * @param ctx     the compiler context
-     * @param typeFn  the type of the function
-     * @param errs    the error listener to log errors to
+     * @param ctx            the compiler context
+     * @param typeFn         the type of the function
+     * @param cTypeParams    the number of type parameters the function carries
+     * @param cDefaults      the number of default parameters the function allows
+     * @param atypeRequired  (optional) an array or required types
+     * @param errs           the error listener to log errors to
      *
-     * @return the type of the function return types, or null if the validation fails,
-     *         in which case an error has been reported
+     * @return the type of the function return types for a "call" scenario,
+     *         the type of the function itself for a "bind" scenario,
+     *         or null if the validation fails, in which case an error has been reported
      */
-    protected TypeConstant[] validateFunction(Context ctx, TypeConstant typeFn, ErrorListener errs)
+    protected TypeConstant[] validateFunction(
+            Context        ctx,
+            TypeConstant   typeFn,
+            int            cTypeParams,
+            int            cDefaults,
+            TypeConstant[] atypeRequired,
+            ErrorListener  errs)
         {
-        ConstantPool   pool      = pool();
-        TypeConstant[] atypeArgs = pool.extractFunctionParams(typeFn);
+        ConstantPool   pool        = pool();
+        TypeConstant[] atypeParams = pool.extractFunctionParams(typeFn);
+        int            cAllParams  = atypeParams.length;
+        int            cVisible    = cAllParams - cTypeParams;
+        int            cRequired   = cVisible - cDefaults;
+        int            cArgs       = args.size();
 
-        if (validateExpressions(ctx, args, atypeArgs, errs) != null)
+        if (cArgs < cRequired)
             {
-            if (m_fCall)
-                {
-                return pool.extractFunctionReturns(typeFn);
-                }
-
-            if (m_fBindParams)
-                {
-                typeFn = bindFunctionParameters(typeFn);
-                }
-
-            return new TypeConstant[] {typeFn};
+            log(errs, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cArgs);
+            return null;
             }
-        return null;
+
+        if (cTypeParams > 0)
+            {
+            atypeParams = Arrays.copyOfRange(atypeParams, cTypeParams, cAllParams);
+            }
+
+        if (validateExpressions(ctx, args, atypeParams, errs) == null)
+            {
+            return null;
+            }
+
+        if (m_fCall)
+            {
+            return pool.extractFunctionReturns(typeFn);
+            }
+
+        if (m_fBindParams)
+            {
+            typeFn = bindFunctionParameters(typeFn);
+            }
+
+        if (atypeRequired != null && atypeRequired.length > 0)
+            {
+            // the isA() on a function allows a reduction of the parameter number
+            // (allowing for default arguments), so we need to compensate here
+            TypeConstant   typeReqFn      = atypeRequired[0];
+            TypeConstant[] atypeReqParams = pool.extractFunctionParams(typeReqFn);
+            TypeConstant[] atypeFnParams  = pool.extractFunctionParams(typeFn);
+            int            cReqParams     = atypeReqParams == null ? 0 : atypeReqParams.length;
+            int            cFnParams      = atypeFnParams  == null ? 0 : atypeFnParams.length;
+
+            if (cReqParams < cFnParams)
+                {
+                // report the "wrong type" rather than the "wrong argument count"
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeReqFn, typeFn);
+                return null;
+                }
+            }
+
+        return new TypeConstant[] {typeFn};
         }
 
     /**
