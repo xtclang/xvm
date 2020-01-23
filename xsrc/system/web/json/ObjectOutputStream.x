@@ -102,7 +102,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
             }
 
         @Override
-        /* TODO public/protected */ Boolean canWrite = True;
+        /* TODO GG public/protected */ Boolean canWrite = True;
 
         @Override
         public/private ParentOutput parent;

@@ -303,8 +303,8 @@ public class CallChain
                 ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
 
                 return fReturnTuple
-                    ? frame.invoke1(this, nDepth, hThis, ahVar, iReturn)
-                    : frame.invokeT(this, nDepth, hThis, ahVar, iReturn);
+                    ? frame.invokeT(this, nDepth, hThis, ahVar, iReturn)
+                    : frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
                 }
 
             default:

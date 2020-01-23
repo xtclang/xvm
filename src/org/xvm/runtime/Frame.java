@@ -634,8 +634,15 @@ public class Frame
 
                     default:
                         // why did the compiler/verifier allow this?
-                        System.err.println("WARNING: suspicious assignment from: " + typeFrom.getValueString()
-                            + " to: " + typeTo.getValueString());
+                        if (typeFrom.isAutoNarrowing())
+                            {
+                            // TODO: how to get the narrowing context?
+                            }
+                        else
+                            {
+                            System.err.println("WARNING: suspicious assignment from: " + typeFrom.getValueString()
+                                + " to: " + typeTo.getValueString());
+                            }
                     }
                 }
 

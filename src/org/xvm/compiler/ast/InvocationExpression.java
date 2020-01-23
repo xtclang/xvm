@@ -1315,16 +1315,31 @@ public class InvocationExpression
                 {
                 if (argFn instanceof Register && ((Register) argFn).isSuper())
                     {
-                    // super(...) function needs to bind a target
+                    // super(...) function needs to bind a target and type parameters
+                    int[]      aiArg = new int[cTypeParams];
+                    Argument[] aArg;
+                    if (cTypeParams == 0)
+                        {
+                        aArg = NO_RVALUES;
+                        }
+                    else
+                        {
+                        for (int i = 0; i < cTypeParams; ++i)
+                            {
+                            aiArg[i] = i;
+                            }
+                        aArg = aargTypeParams;
+                        }
+
                     Assignable lval = aLVal[0];
                     if (lval.isLocalArgument())
                         {
-                        code.add(new FBind(argFn, new int[0], NO_RVALUES, lval.getLocalArgument()));
+                        code.add(new FBind(argFn, aiArg, aArg, lval.getLocalArgument()));
                         }
                     else
                         {
                         Register regTemp = createRegister(argFn.getType(), true);
-                        code.add(new FBind(argFn, new int[0], NO_RVALUES, regTemp));
+                        code.add(new FBind(argFn, aiArg, aArg, regTemp));
                         aLVal[0].assign(regTemp, code, errs);
                         }
                     }
