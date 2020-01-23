@@ -55,10 +55,7 @@ interface Writer
      * @return the contents of the Writer as a String
      */
     @Override
-    String toString()
-        {
-        return new String(toCharArray());
-        }
+    String toString();
 
 
     // ----- Closeable interface --------------------------------------------------------------------
