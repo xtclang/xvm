@@ -2238,6 +2238,14 @@ public class InvocationExpression
             ctx = ctx.exit();
             }
 
+        if (cArgs < cVisible)
+            {
+            // there are some default arguments; strip them from the function type
+            typeFn = pool.buildFunctionType(
+                    Arrays.copyOfRange(atypeParams, 0, cArgs),
+                    pool.extractFunctionReturns(typeFn));
+            }
+
         if (atypeReturn != null)
             {
             TypeConstant[] atypeFnRet = pool.extractFunctionReturns(typeFn);
