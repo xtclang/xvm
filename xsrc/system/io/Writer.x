@@ -58,7 +58,7 @@ interface Writer
     String toString();
 
 
-    // ----- Closeable interface --------------------------------------------------------------------
+    // ----- Closeable interface -------------------------------------------------------------------
 
     @Override
     void close()
