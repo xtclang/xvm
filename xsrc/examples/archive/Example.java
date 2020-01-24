@@ -104,3 +104,34 @@ if (x instanceof List)
     ((List) x).add(item);
     }
 
+public class Person
+    {
+    public Person(String name, String phone)
+        {
+        setName(name);
+        setPhone(phone);
+        }
+
+    private String name;
+    private String phone;
+
+    public String getName()
+        {
+        return name;
+        }
+
+    public void setName(String name)
+        {
+        assert name != null && name.length() > 0;
+        }
+
+    public String getPhone()
+        {
+        return phone;
+        }
+
+    public void setPhone(String phone)
+        {
+        this.phone = phone;
+        }
+    }
