@@ -546,7 +546,9 @@ public abstract class Expression
 
         // if there is a constant value, then the type itself indicates the immutable nature of the
         // expression
-        if (constVal != null && !constVal.equals(pool.ensureMatchAnyConstant(typeActual)))
+        if (constVal != null
+                && !constVal.equals(pool.ensureMatchAnyConstant(typeActual))
+                && !typeActual.isA(pool.typeService()))
             {
             typeActual = typeActual.ensureImmutable(pool);
             }
