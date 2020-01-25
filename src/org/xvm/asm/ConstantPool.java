@@ -34,6 +34,7 @@ import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.type.Decimal;
 
+import org.xvm.util.Auto;
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
@@ -3612,7 +3613,7 @@ public class ConstantPool
      */
     public static ConstantPool getCurrentPool()
         {
-        return s_tloPool.get();
+        return s_tloPool.get()[0];
         }
 
     /**
@@ -3622,9 +3623,23 @@ public class ConstantPool
      */
     public static void setCurrentPool(ConstantPool pool)
         {
-        s_tloPool.set(pool);
+        s_tloPool.get()[0] = pool;
         }
 
+    /**
+     * Temporarily update the current ConstantPool, restoring it when the returned AutoCloseable
+     * is closed.
+     *
+     * @param pool the new pool
+     *
+     * @return an Auto which will revert to the prior pool
+     */
+    public static Auto withPool(ConstantPool pool) {
+        ConstantPool[] poolHolder = s_tloPool.get();
+        ConstantPool pollPrior = poolHolder[0];
+        poolHolder[0] = pool;
+        return () -> poolHolder[0] = pollPrior;
+    }
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -3799,5 +3814,6 @@ public class ConstantPool
     /**
      * Thread local allowing to get the "current" ConstantPool without any context.
      */
-    private static final ThreadLocal<ConstantPool> s_tloPool = new ThreadLocal<>();
+    private static final ThreadLocal<ConstantPool[]> s_tloPool = ThreadLocal
+        .withInitial(() -> new ConstantPool[1]);
     }
