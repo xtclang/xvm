@@ -379,31 +379,8 @@ public class Context
 
         if (isReachable())
             {
-            for (Entry<String, Argument> entry : getNameMap().entrySet())
-                {
-                promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.Always);
-                }
-            for (Entry<String, Argument> entry : getNarrowingMap(true).entrySet())
-                {
-                promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
-                }
-            for (Entry<String, Argument> entry : getNarrowingMap(false).entrySet())
-                {
-                promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
-                }
-
-            for (Entry<String, TypeConstant> entry : getGenericTypeMap(Branch.Always).entrySet())
-                {
-                promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.Always);
-                }
-            for (Entry<String, TypeConstant> entry : getGenericTypeMap(Branch.WhenTrue).entrySet())
-                {
-                promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
-                }
-            for (Entry<String, TypeConstant> entry : getGenericTypeMap(Branch.WhenFalse).entrySet())
-                {
-                promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
-                }
+            promoteNarrowedTypes();
+            promoteNarrowedGenericTypes();
             }
         else
             {
@@ -563,6 +540,25 @@ public class Context
         }
 
     /**
+     * Promote narrowing type information from this context to its enclosing context.
+     */
+    protected void promoteNarrowedTypes()
+        {
+        for (Entry<String, Argument> entry : getNameMap().entrySet())
+            {
+            promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.Always);
+            }
+        for (Entry<String, Argument> entry : getNarrowingMap(true).entrySet())
+            {
+            promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
+            }
+        for (Entry<String, Argument> entry : getNarrowingMap(false).entrySet())
+            {
+            promoteNarrowedType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
+            }
+        }
+
+    /**
      * Promote narrowing type information for the specified argument from this context to its
      * enclosing context.
      *
@@ -575,6 +571,25 @@ public class Context
         if (branch == Branch.Always && !isVarDeclaredInThisScope(sName))
             {
             getOuterContext().replaceArgument(sName, branch, arg);
+            }
+        }
+
+    /**
+     * Promote narrowing generic type information from this context to its enclosing context.
+     */
+    protected void promoteNarrowedGenericTypes()
+        {
+        for (Entry<String, TypeConstant> entry : getGenericTypeMap(Branch.Always).entrySet())
+            {
+            promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.Always);
+            }
+        for (Entry<String, TypeConstant> entry : getGenericTypeMap(Branch.WhenTrue).entrySet())
+            {
+            promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
+            }
+        for (Entry<String, TypeConstant> entry : getGenericTypeMap(Branch.WhenFalse).entrySet())
+            {
+            promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
             }
         }
 
@@ -2018,6 +2033,31 @@ public class Context
             }
 
         @Override
+        protected void promoteNarrowedTypes()
+            {
+            // retain only our "false" entries in the parent's "false" context;
+            // consider an example:
+            //    Int? a; Int? b;
+            //    if (a != null &&  // IfContext : "a" is Int for "true"; null for "false"
+            //        b != null)    // AndContext: "b" is Int for "true"; null for "false"
+            //      {
+            //                      // exit from AndContext infers "a" and "b" are Int into
+            //      }               // the "true" branch of the parent IfContext
+            //    else
+            //      {
+            //                      // exit from AndContext infers nothing into the "false" branch
+            //      }               // of the parent IfContext
+            //
+
+            Map<String, Argument> map = getNarrowingMap(false);
+            if (!map.isEmpty())
+                {
+                getOuterContext().ensureNarrowingMap(false).keySet().retainAll(map.keySet());
+                }
+            super.promoteNarrowedTypes();
+            }
+
+        @Override
         protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
             {
             super.promoteNarrowedType(sName, arg, branch);
@@ -2034,6 +2074,19 @@ public class Context
                     getOuterContext().joinArgument(sName, branch, arg);
                     break;
                 }
+            }
+
+        @Override
+        protected void promoteNarrowedGenericTypes()
+            {
+            // retain only our "false" entries in the parent's "false" context
+            Map<String, TypeConstant> map = getGenericTypeMap(Branch.WhenFalse);
+            if (!map.isEmpty())
+                {
+                getOuterContext().ensureGenericTypeMap(Branch.WhenFalse).keySet().
+                    retainAll(map.keySet());
+                }
+            super.promoteNarrowedGenericTypes();
             }
 
         @Override
@@ -2107,6 +2160,19 @@ public class Context
             }
 
         @Override
+        protected void promoteNarrowedTypes()
+            {
+            // inversely to the AndContext, retain only our "true" entries in the parent's "true"
+            // context
+            Map<String, Argument> map = getNarrowingMap(true);
+            if (!map.isEmpty())
+                {
+                getOuterContext().ensureNarrowingMap(true).keySet().retainAll(map.keySet());
+                }
+            super.promoteNarrowedTypes();
+            }
+
+        @Override
         protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
             {
             super.promoteNarrowedType(sName, arg, branch);
@@ -2123,6 +2189,19 @@ public class Context
                     getOuterContext().joinArgument(sName, branch, arg);
                     break;
                 }
+            }
+
+        @Override
+        protected void promoteNarrowedGenericTypes()
+            {
+            // retain only our "true" entries in the parent's "true" context
+            Map<String, TypeConstant> map = getGenericTypeMap(Branch.WhenTrue);
+            if (!map.isEmpty())
+                {
+                getOuterContext().ensureGenericTypeMap(Branch.WhenTrue).keySet().
+                    retainAll(map.keySet());
+                }
+            super.promoteNarrowedGenericTypes();
             }
 
         @Override
