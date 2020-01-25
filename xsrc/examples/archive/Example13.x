@@ -613,3 +613,25 @@ finally
         exists = True;
         }
     }
+
+
+static const Singleton
+    {
+    construct()
+        {
+        // initialization stuff goes here
+        }
+    }
+
+console.println($"counter={PageCounter.hit()}");
+
+PageCounter.hit();
+
+static service PageCounter
+    {
+    Int count = 0;
+    Int hit()
+        {
+        return ++count;
+        }
+    }
