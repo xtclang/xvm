@@ -6,13 +6,16 @@ import java.lang.reflect.Field;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
+import org.xvm.compiler.Compiler;
+
+import org.xvm.util.Severity;
+
 
 /**
- * A type expression that can't figure out how to be a type exception. It pretends to be a type,
+ * A type expression that can't figure out how to be a type expression. It pretends to be a type,
  * but it's going to end in misery and compiler errors.
  */
 public class BadTypeExpression
@@ -68,6 +71,13 @@ public class BadTypeExpression
     @Override
     public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
+        }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, nonType.toString());
+        return null;
         }
 
 

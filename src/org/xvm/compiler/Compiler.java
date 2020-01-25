@@ -6,7 +6,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
-import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 
