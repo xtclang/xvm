@@ -715,7 +715,7 @@ public abstract class Utils
                     else
                         {
                         // the class must have a no-params constructor to call
-                        MethodStructure constructor = clz.findMethod(frame.poolCode().sigConstruct());
+                        MethodStructure constructor = clz.findMethod(frame.poolContext().sigConstruct());
                         iResult = constructor == null
                             ? frame.raiseException(
                                 "Missing default constructor at " + clz.getSimpleName())

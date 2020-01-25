@@ -104,3 +104,96 @@ if (x instanceof List)
     ((List) x).add(item);
     }
 
+public class Person
+    {
+    public Person(String name, String phone)
+        {
+        setName(name);
+        setPhone(phone);
+        }
+
+    private String name;
+    private String phone;
+
+    public String getName()
+        {
+        return name;
+        }
+
+    public void setName(String name)
+        {
+        assert name != null && name.length() > 0;
+        }
+
+    public String getPhone()
+        {
+        return phone;
+        }
+
+    public void setPhone(String phone)
+        {
+        this.phone = phone;
+        }
+    }
+
+public class Constants
+    {
+    public static final Constants INSTANCE = new Constants();
+
+    private Constants()
+        {
+        // initialization stuff goes here
+        }
+
+    private final String companyName;
+    private final String companyEmail;
+
+    public String getCompanyName()
+        {
+        return companyName;
+        }
+
+    public String getCompanyEmail()
+        {
+        return companyEmail;
+        }
+    }
+
+public class Singleton
+    {
+    public static final Singleton INSTANCE = new Singleton();
+
+    private Singleton()
+        {
+        // initialization stuff goes here
+        }
+    }
+
+PageCounter.hit();
+
+public class PageCounter
+    {
+    public static final PageCounter INSTANCE = new PageCounter();
+
+    private PageCounter() {}
+
+    private int count;
+
+    synchronized public void setCount(int count)
+        {
+        this.count = count;
+        }
+
+    synchronized public int getCount()
+        {
+        return count;
+        }
+
+    synchronized public int hit()
+        {
+        return ++count;
+        }
+    }
+
+// how to call the singleton
+PageCounter.INSTANCE.hit();

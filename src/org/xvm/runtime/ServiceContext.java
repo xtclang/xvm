@@ -45,6 +45,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle
  * The service context.
  */
 public class ServiceContext
+    implements Runnable
     {
     ServiceContext(Container container, ModuleStructure module, String sName, int nId)
         {
@@ -61,21 +62,108 @@ public class ServiceContext
         }
 
     /**
-     * Attempt to acquire the context lock.
+     * Attempt to complete all pending work.
+     *
+     * @return true if the context has no further processing to perform at this time
+     */
+    protected boolean drainWork()
+        {
+        Frame frame = nextFiber();
+
+        if (frame != null)
+            {
+            try (var x = ConstantPool.withPool(frame.poolContext()))
+                {
+                frame = execute(frame);
+
+                if (frame != null)
+                    {
+                    suspendFiber(frame);
+                    return false;
+                    }
+                }
+            catch (Throwable e)
+                {
+                // TODO: RTError
+                frame = getCurrentFrame();
+                if (frame != null)
+                    {
+                    MethodStructure function = frame.f_function;
+                    int nLine = 0;
+                    if (function != null)
+                        {
+                        nLine = function.calculateLineNumber(frame.m_iPC);
+                        }
+
+                    Utils.log(frame, "\nUnhandled exception at " + frame
+                        + (nLine > 0 ? "; line=" + nLine : "; iPC=" + frame.m_iPC));
+                    }
+                e.printStackTrace(System.out);
+                System.exit(-1);
+                }
+            }
+
+        return true;
+        }
+
+    /**
+     * Ensure this service is scheduled for processing.
+     */
+    protected void ensureScheduled()
+        {
+        if (tryAcquireSchedulingLock())
+            {
+            // try to complete processing locally if possible
+            if (drainWork())
+                {
+                // we've completed all processing
+                releaseSchedulingLock();
+                }
+            else
+                {
+                // continue asynchronously
+                f_container.schedule(this);
+                }
+            }
+        // else; already scheduled
+        }
+
+    @Override
+    public void run()
+        {
+        if (drainWork())
+            {
+            releaseSchedulingLock();
+            }
+        else
+            {
+            f_container.schedule(this);
+            }
+        }
+
+    /**
+     * Attempt to acquire the context's scheduling lock.
      *
      * @return {@code true} iff acquired
      */
-    public boolean tryLock()
+    protected boolean tryAcquireSchedulingLock()
         {
-        return !m_fLock && LOCK_HANDLE.compareAndSet(this, false, true);
+        return !m_fLockScheduling && SCHEDULING_LOCK_HANDLE.compareAndSet(this, false, true);
         }
 
     /**
      * Release the context lock.
      */
-    public void releaseLock()
+    protected void releaseSchedulingLock()
         {
-        m_fLock = false;
+        m_fLockScheduling = false;
+
+        // we've released the lock but work may have concurrently slipped in; if so try to relock
+        // and hand off processing to the runtime's thread-pool
+        if (isContended() && tryAcquireSchedulingLock())
+            {
+            f_container.schedule(this);
+            }
         }
 
     public Frame getCurrentFrame()
@@ -117,11 +205,13 @@ public class ServiceContext
     public void addRequest(Message msg)
         {
         f_queueMsg.add(msg);
+        ensureScheduled();
         }
 
     public void respond(Response response)
         {
         f_queueResponse.add(response);
+        ensureScheduled();
         }
 
     // get a next frame ready for execution
@@ -1127,11 +1217,12 @@ public class ServiceContext
     volatile Reentrancy m_reentrancy = Reentrancy.Prioritized;
 
     /**
-     * The context "lock", atomic operations are performed via {@link #LOCK_HANDLE}.
+     * The context scheduling "lock", atomic operations are performed via {@link #SCHEDULING_LOCK_HANDLE}.
      * <p>
-     * This lock must be held while processing a context.
+     * This lock must be acquired in order to schedule context processing and is not released until
+     * the context is not longer scheduled.
      */
-    volatile boolean m_fLock;
+    volatile boolean m_fLockScheduling;
 
     enum ServiceStatus
         {
@@ -1145,16 +1236,16 @@ public class ServiceContext
     final static ThreadLocal<ServiceContext> s_tloContext = new ThreadLocal<>();
 
     /**
-     * VarHandle for {@link #m_fLock}.
+     * VarHandle for {@link #m_fLockScheduling}.
      */
-    final static VarHandle LOCK_HANDLE;
+    final static VarHandle SCHEDULING_LOCK_HANDLE;
 
     static
         {
         try
             {
-            LOCK_HANDLE = MethodHandles.lookup().findVarHandle(ServiceContext.class,
-                "m_fLock", boolean.class);
+            SCHEDULING_LOCK_HANDLE = MethodHandles.lookup().findVarHandle(ServiceContext.class,
+                "m_fLockScheduling", boolean.class);
             }
         catch (IllegalAccessException | NoSuchFieldException e)
             {

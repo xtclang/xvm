@@ -532,4 +532,106 @@ if (x.is(List))
     {
     x.add(item);
     }
-    
+
+class Person(String name, String? phone);
+
+class Person
+    {
+    construct(String name, String? phone = Null)
+        {
+        this.name  = name;
+        this.phone = phone;
+        }
+
+    public/private String name
+
+    String? phone
+    }
+
+public/private String name.set(String name)
+    {
+    assert:arg name.size > 0;
+    super(name);
+    }
+
+public/private String name
+    {
+    void set(String name)
+        {
+        assert:arg name.size > 0;
+        super(name);
+        }
+    }
+
+public/private String name
+    {
+    String get()
+        {
+        return "Bob";
+        }
+
+    void set(String name)
+        {
+        assert:arg name.size > 0;
+        // do nothing with the name ... do not store it!
+        }
+    }
+
+construct(Duration remainingTime, Boolean independent = false)
+    {
+    assert remainingTime > Duration:0S;
+
+    // store off the previous timeout; it will be replaced by
+    // this timeout, and restored when this timeout is closed
+    previousTimeout = this:service.timeout;
+
+    // calculate the duration of this Timeout
+    duration = remainingTime;
+
+    Timeout? previousTimeout = this.previousTimeout;
+    if (!independent && previousTimeout != null)
+        {
+        // because the timeout is not independent, it must
+        // respect the current outgoing timeout that it is
+        // replacing
+        duration = duration.minOf(previousTimeout.remainingTime);
+        }
+    }
+finally
+    {
+    this:service.registerTimeout(this);
+    }
+protected construct(Key key)
+    {
+    this.key    = key;
+    this.expect = appends + deletes;
+    }
+finally
+    {
+    if (index := indexOf(key))
+        {
+        exists = True;
+        }
+    }
+
+
+static const Singleton
+    {
+    construct()
+        {
+        // initialization stuff goes here
+        }
+    }
+
+console.println($"counter={PageCounter.hit()}");
+
+PageCounter.hit();
+
+static service PageCounter
+    {
+    Int count = 0;
+    Int hit()
+        {
+        return ++count;
+        }
+    }

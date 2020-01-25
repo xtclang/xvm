@@ -91,6 +91,21 @@ public class Container
         ConstantPool.setCurrentPool(null);
         }
 
+    /**
+     * Schedule processing of the specified ServiceContext.
+     *
+     * @param service the ServiceContext to schedule
+     */
+    public void schedule(ServiceContext service)
+        {
+        // TODO: add a container level fair scheduling queue and submit the service there. The
+        // container should then follow a similar pattern and push processing of its fair scheduling
+        // queue to its parent container which eventually pushes to the runtime. Thus there is a
+        // hierarchy of fairness. For now though we just skip over all of this and push the processing
+        // directly to the top level runtime.
+        f_runtime.submit(service);
+        }
+
     public void invoke0(String sMethodName, ObjectHandle... ahArg)
         {
         ConstantPool poolPrev = ConstantPool.getCurrentPool();
@@ -434,14 +449,12 @@ public class Container
             f_runtime.f_idProducer.getAndIncrement());
 
         f_mapServices.put(context, context);
-        f_runtime.f_daemons.addService(context);
 
         return context;
         }
 
     public void removeServiceContext(ServiceContext context)
         {
-        f_runtime.f_daemons.removeService(context);
         f_mapServices.remove(context);
         }
 
