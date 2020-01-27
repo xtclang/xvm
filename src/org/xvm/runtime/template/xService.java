@@ -124,7 +124,7 @@ public class xService
     @Override
     public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return frame.f_context == ((ServiceHandle) hTarget).m_context ?
+        return frame.f_context == ((ServiceHandle) hTarget).f_context ?
             super.invoke1(frame, chain, hTarget, ahVar, iReturn) :
             xRTFunction.makeAsyncHandle(chain).call1(frame, hTarget, ahVar, iReturn);
         }
@@ -132,7 +132,7 @@ public class xService
     @Override
     public int invokeT(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return frame.f_context == ((ServiceHandle) hTarget).m_context ?
+        return frame.f_context == ((ServiceHandle) hTarget).f_context ?
             super.invokeT(frame, chain, hTarget, ahVar, iReturn) :
             xRTFunction.makeAsyncHandle(chain).callT(frame, hTarget, ahVar, iReturn);
         }
@@ -140,7 +140,7 @@ public class xService
     @Override
     public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        return frame.f_context == ((ServiceHandle) hTarget).m_context ?
+        return frame.f_context == ((ServiceHandle) hTarget).f_context ?
             super.invokeN(frame, chain, hTarget, ahVar, aiReturn) :
             xRTFunction.makeAsyncHandle(chain).callN(frame, hTarget, ahVar, aiReturn);
         }
@@ -155,33 +155,33 @@ public class xService
             {
             case "callLater":
                 {
-                return hService.m_context.callLater((FunctionHandle) hArg, Utils.OBJECTS_NONE);
+                return hService.f_context.callLater((FunctionHandle) hArg, Utils.OBJECTS_NONE);
                 }
 
             case "registerTimeout":
                 {
                 long cDelayMillis = ((JavaLong) hArg).getValue();
-                if (frame.f_context == hService.m_context)
+                if (frame.f_context == hService.f_context)
                     {
                     frame.f_fiber.m_ldtTimeout = cDelayMillis <= 0 ? 0 :
                         System.currentTimeMillis() + cDelayMillis;
                     }
                 else
                     {
-                    hService.m_context.m_cTimeoutMillis = Math.max(0, cDelayMillis);
+                    hService.f_context.m_cTimeoutMillis = Math.max(0, cDelayMillis);
                     }
                 return Op.R_NEXT;
                 }
 
             case "registerAsyncSection":
-                if (frame.f_context != hService.m_context)
+                if (frame.f_context != hService.f_context)
                     {
                     return frame.raiseException("Call out of context");
                     }
                 return frame.f_fiber.registerAsyncSection(frame, hArg);
 
             case "registerUnhandledExceptionNotification":
-                hService.m_context.m_hExceptionHandler = (FunctionHandle) hArg;
+                hService.f_context.m_hExceptionHandler = (FunctionHandle) hArg;
                 return Op.R_NEXT;
             }
 
@@ -197,7 +197,7 @@ public class xService
         switch (method.getName())
             {
             case "yield":
-                return frame.f_context == hService.m_context ? Op.R_YIELD : Op.R_NEXT;
+                return frame.f_context == hService.f_context ? Op.R_YIELD : Op.R_NEXT;
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -223,12 +223,12 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || hService.isAtomic(idProp))
+        if (frame.f_context == hService.f_context || hService.isAtomic(idProp))
             {
             return super.invokePreInc(frame, hTarget, idProp, iReturn);
             }
 
-        CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
+        CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendProperty01Request(
                 frame, idProp, this::invokePreInc);
 
         return frame.assignFutureResult(iReturn, cfResult);
@@ -239,12 +239,12 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || hService.isAtomic(idProp))
+        if (frame.f_context == hService.f_context || hService.isAtomic(idProp))
             {
             return super.invokePostInc(frame, hTarget, idProp, iReturn);
             }
 
-        CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
+        CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendProperty01Request(
                 frame, idProp, this::invokePostInc);
 
         return frame.assignFutureResult(iReturn, cfResult);
@@ -255,12 +255,12 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || hService.isAtomic(idProp))
+        if (frame.f_context == hService.f_context || hService.isAtomic(idProp))
             {
             return super.invokePreDec(frame, hTarget, idProp, iReturn);
             }
 
-        CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
+        CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendProperty01Request(
                 frame, idProp, this::invokePreDec);
 
         return frame.assignFutureResult(iReturn, cfResult);
@@ -271,12 +271,12 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || hService.isAtomic(idProp))
+        if (frame.f_context == hService.f_context || hService.isAtomic(idProp))
             {
             return super.invokePostDec(frame, hTarget, idProp, iReturn);
             }
 
-        CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
+        CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendProperty01Request(
                 frame, idProp, this::invokePostDec);
 
         return frame.assignFutureResult(iReturn, cfResult);
@@ -287,12 +287,12 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || hService.isAtomic(idProp))
+        if (frame.f_context == hService.f_context || hService.isAtomic(idProp))
             {
             return super.invokePropertyAdd(frame, hTarget, idProp, hArg);
             }
 
-        hService.m_context.sendProperty10Request(frame, idProp, hArg, this::invokePropertyAdd);
+        hService.f_context.sendProperty10Request(frame, idProp, hArg, this::invokePropertyAdd);
         return Op.R_NEXT;
         }
 
@@ -301,12 +301,12 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || hService.isAtomic(idProp))
+        if (frame.f_context == hService.f_context || hService.isAtomic(idProp))
             {
             return super.invokePropertySub(frame, hTarget, idProp, hArg);
             }
 
-        hService.m_context.sendProperty10Request(frame, idProp, hArg, this::invokePropertySub);
+        hService.f_context.sendProperty10Request(frame, idProp, hArg, this::invokePropertySub);
         return Op.R_NEXT;
         }
 
@@ -315,12 +315,12 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || hService.isAtomic(idProp))
+        if (frame.f_context == hService.f_context || hService.isAtomic(idProp))
             {
             return super.getPropertyValue(frame, hTarget, idProp, iReturn);
             }
 
-        CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
+        CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendProperty01Request(
                 frame, idProp, this::getPropertyValue);
 
         return frame.assignFutureResult(iReturn, cfResult);
@@ -331,7 +331,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || hService.isAtomic(idProp))
+        if (frame.f_context == hService.f_context || hService.isAtomic(idProp))
             {
             return super.getFieldValue(frame, hTarget, idProp, iReturn);
             }
@@ -344,12 +344,12 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || hService.isAtomic(idProp))
+        if (frame.f_context == hService.f_context || hService.isAtomic(idProp))
             {
             return super.setPropertyValue(frame, hTarget, idProp, hValue);
             }
 
-        hService.m_context.sendProperty10Request(frame, idProp, hValue, this::setPropertyValue);
+        hService.f_context.sendProperty10Request(frame, idProp, hValue, this::setPropertyValue);
 
         return Op.R_NEXT;
         }
@@ -360,7 +360,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        ServiceContext context = hService.m_context;
+        ServiceContext context = hService.f_context;
         ServiceContext contextCurrent = ServiceContext.getCurrentContext();
 
         if (context == null || context == contextCurrent || hService.isAtomic(idProp))
@@ -375,7 +375,7 @@ public class xService
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
-        return frame.assignValue(iReturn, xString.makeHandle(hService.m_context.toString()));
+        return frame.assignValue(iReturn, xString.makeHandle(hService.f_context.toString()));
         }
 
     /**
@@ -401,13 +401,13 @@ public class xService
     public static class ServiceHandle
             extends GenericHandle
         {
-        public ServiceContext m_context;
+        public final ServiceContext f_context;
 
         public ServiceHandle(TypeComposition clazz, ServiceContext context)
             {
             super(clazz);
 
-            m_context = context;
+            f_context = context;
             }
 
         /**

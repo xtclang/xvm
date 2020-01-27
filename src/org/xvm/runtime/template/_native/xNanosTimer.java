@@ -95,7 +95,7 @@ public class xNanosTimer
 
             case "schedule": // duration, alarm
                 {
-                if (frame.f_context != hTimer.m_context)
+                if (frame.f_context != hTimer.f_context)
                     {
                     return xRTFunction.makeAsyncNativeHandle(method).
                         call1(frame, hTarget, ahArg, iReturn);
@@ -286,6 +286,10 @@ public class xNanosTimer
             synchronized (f_setAlarms)
                 {
                 fRegistered = f_setAlarms.add(alarm);
+                if (fRegistered)
+                    {
+                    f_context.f_container.f_pendingWorkCount.incrementAndGet();
+                    }
                 }
             assert fRegistered;
             }
@@ -296,6 +300,10 @@ public class xNanosTimer
             synchronized (f_setAlarms)
                 {
                 fUnregistered = f_setAlarms.remove(alarm);
+                if (fUnregistered)
+                    {
+                    f_context.f_container.f_pendingWorkCount.decrementAndGet();
+                    }
                 }
             assert fUnregistered;
             }
@@ -415,7 +423,7 @@ public class xNanosTimer
                     }
 
                 TimerHandle.this.unregister(this);
-                TimerHandle.this.m_context.callLater(f_hFunction, Utils.OBJECTS_NONE);
+                TimerHandle.this.f_context.callLater(f_hFunction, Utils.OBJECTS_NONE);
                 }
 
             /**

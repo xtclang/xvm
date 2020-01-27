@@ -5,8 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import java.util.concurrent.ConcurrentHashMap;
-
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -29,7 +28,6 @@ import org.xvm.asm.constants.VersionConstant;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
 import org.xvm.runtime.template.xService;
-import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template._native.xLocalClock;
 import org.xvm.runtime.template._native.xNanosTimer;
@@ -103,7 +101,19 @@ public class Container
         // queue to its parent container which eventually pushes to the runtime. Thus there is a
         // hierarchy of fairness. For now though we just skip over all of this and push the processing
         // directly to the top level runtime.
-        f_runtime.submit(service);
+
+        f_pendingWorkCount.incrementAndGet();
+        f_runtime.submit(() ->
+            {
+            try
+                {
+                service.run();
+                }
+            finally
+                {
+                f_pendingWorkCount.decrementAndGet();
+                }
+            });
         }
 
     public void invoke0(String sMethodName, ObjectHandle... ahArg)
@@ -445,17 +455,8 @@ public class Container
 
     public ServiceContext createServiceContext(String sName, ModuleStructure module)
         {
-        ServiceContext context = new ServiceContext(this, module, sName,
+        return new ServiceContext(this, module, sName,
             f_runtime.f_idProducer.getAndIncrement());
-
-        f_mapServices.put(context, context);
-
-        return context;
-        }
-
-    public void removeServiceContext(ServiceContext context)
-        {
-        f_mapServices.remove(context);
         }
 
     /**
@@ -485,21 +486,7 @@ public class Container
 
     public boolean isIdle()
         {
-        for (ServiceContext context : f_mapServices.keySet())
-            {
-            if (context.isContended())
-                {
-                return false;
-                }
-
-            ServiceHandle hService = context.getService();
-            if (hService != null && !hService.isIdle())
-                {
-                return false;
-                }
-            }
-
-        return true;
+        return f_pendingWorkCount.get() == 0;
         }
 
     @Override
@@ -612,9 +599,6 @@ public class Container
     protected final ModuleStructure f_moduleApp;
     protected final ModuleConstant  f_idModule;
 
-    // service context map (concurrent set)
-    final Map<ServiceContext, ServiceContext> f_mapServices = new ConcurrentHashMap<>();
-
     // the service context for the container itself
     private ServiceContext m_contextMain;
 
@@ -629,6 +613,13 @@ public class Container
     private ObjectHandle m_hHomeDir;
     private ObjectHandle m_hCurDir;
     private ObjectHandle m_hTmpDir;
+
+    /**
+     * A counter tracking both the number of services which have pending invocations to process
+     * and the number of registered Alarms. While this count is above zero the container is
+     * considered to still have work to do and won't auto-shutdown.
+     */
+    public final AtomicLong f_pendingWorkCount = new AtomicLong();
 
     final Map<InjectionKey, Function<Frame, ObjectHandle>> f_mapResources = new HashMap<>();
     }

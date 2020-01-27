@@ -121,7 +121,7 @@ public class xOSStorage
         {
         ServiceHandle hStorage = (ServiceHandle) hTarget;
 
-        if (frame.f_context != hStorage.m_context)
+        if (frame.f_context != hStorage.f_context)
             {
             return xRTFunction.makeAsyncNativeHandle(method).
                 call1(frame, hTarget, new ObjectHandle[] {hArg}, iReturn);
@@ -228,7 +228,7 @@ public class xOSStorage
         {
         ServiceHandle hStorage = (ServiceHandle) hTarget;
 
-        if (frame.f_context != hStorage.m_context)
+        if (frame.f_context != hStorage.f_context)
             {
             // for now let's make sure all the calls are processed on the service fibers
             return xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
@@ -246,7 +246,7 @@ public class xOSStorage
         {
         ServiceHandle hStorage = (ServiceHandle) hTarget;
 
-        if (frame.f_context != hStorage.m_context)
+        if (frame.f_context != hStorage.f_context)
             {
             // for now let's make sure all the calls are processed on the service fibers
             return xRTFunction.makeAsyncNativeHandle(method).callN(frame, hTarget, ahArg, aiReturn);
@@ -374,7 +374,7 @@ public class xOSStorage
                 StringHandle hPathDir  = xString.makeHandle(pathDir.toString());
                 StringHandle hPathNode = xString.makeHandle(pathAbsolute.toString());
 
-                context.hStorage.m_context.callLater(hfnOnEvent, new ObjectHandle[]
+                context.hStorage.f_context.callLater(hfnOnEvent, new ObjectHandle[]
                     {
                     hPathDir, hPathNode, xBoolean.TRUE, xInt64.makeHandle(iKind)
                     });

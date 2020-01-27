@@ -566,14 +566,7 @@ public class ServiceContext
 
         addRequest(new ConstructRequest(frameCaller, constructor, clazz, future, ahArg));
 
-        return future.whenComplete((r, x) ->
-            {
-            if (x != null)
-                {
-                // the construction failed; we need to kill the service
-                f_container.removeServiceContext(this);
-                }
-            });
+        return future;
         }
 
     /**

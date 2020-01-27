@@ -884,7 +884,7 @@ public class xRTFunction
             {
             ServiceHandle hService = (ServiceHandle) hTarget;
 
-            if (frame.f_context == hService.m_context)
+            if (frame.f_context == hService.f_context)
                 {
                 return super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
@@ -896,7 +896,7 @@ public class xRTFunction
 
             int cReturns = iReturn == Op.A_IGNORE ? 0 : 1;
 
-            CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
+            CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendInvoke1Request(
                 frame, this, hService, ahVar, cReturns);
 
             // in the case of zero returns - fire and forget
@@ -908,7 +908,7 @@ public class xRTFunction
             {
             ServiceHandle hService = (ServiceHandle) hTarget;
 
-            if (frame.f_context == hService.m_context)
+            if (frame.f_context == hService.f_context)
                 {
                 return super.callTImpl(frame, hTarget, ahVar, iReturn);
                 }
@@ -918,7 +918,7 @@ public class xRTFunction
                 return frame.raiseException(xException.mutableObject(frame));
                 }
 
-            CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
+            CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendInvoke1Request(
                     frame, this, hService, ahVar, -1);
 
             return frame.assignFutureResult(iReturn, cfResult);
@@ -929,7 +929,7 @@ public class xRTFunction
             {
             ServiceHandle hService = (ServiceHandle) hTarget;
 
-            if (frame.f_context == hService.m_context)
+            if (frame.f_context == hService.f_context)
                 {
                 return super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
@@ -941,7 +941,7 @@ public class xRTFunction
 
             int cReturns = aiReturn.length;
 
-            CompletableFuture<ObjectHandle[]> cfResult = hService.m_context.sendInvokeNRequest(
+            CompletableFuture<ObjectHandle[]> cfResult = hService.f_context.sendInvokeNRequest(
                 frame, this, hService, ahVar, cReturns);
 
             if (cReturns == 0)

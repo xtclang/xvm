@@ -70,7 +70,7 @@ public class InterfaceProxy
     public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
-        if (frame.f_context == hProxy.m_context)
+        if (frame.f_context == hProxy.f_context)
             {
             hTarget = hProxy.m_hTarget;
             return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, iReturn);
@@ -82,7 +82,7 @@ public class InterfaceProxy
     public int invokeT(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
-        if (frame.f_context == hProxy.m_context)
+        if (frame.f_context == hProxy.f_context)
             {
             hTarget = hProxy.m_hTarget;
             return hTarget.getTemplate().invokeT(frame, chain, hTarget, ahVar, iReturn);
@@ -94,7 +94,7 @@ public class InterfaceProxy
     public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
-        if (frame.f_context == hProxy.m_context)
+        if (frame.f_context == hProxy.f_context)
             {
             hTarget = hProxy.m_hTarget;
             return hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, aiReturn);
@@ -106,13 +106,13 @@ public class InterfaceProxy
     public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
-        if (frame.f_context == hProxy.m_context)
+        if (frame.f_context == hProxy.f_context)
             {
             hTarget = hProxy.m_hTarget;
             return hTarget.getTemplate().getPropertyValue(frame, hTarget, idProp, iReturn);
             }
 
-        CompletableFuture<ObjectHandle> cfResult = hProxy.m_context.sendProperty01Request(
+        CompletableFuture<ObjectHandle> cfResult = hProxy.f_context.sendProperty01Request(
                 frame, idProp, this::getPropertyValue);
 
         return frame.assignFutureResult(iReturn, cfResult);
@@ -122,7 +122,7 @@ public class InterfaceProxy
     public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
-        if (frame.f_context == hProxy.m_context)
+        if (frame.f_context == hProxy.f_context)
             {
             hTarget = hProxy.m_hTarget;
             return hTarget.getTemplate().getFieldValue(frame, hTarget, idProp, iReturn);
@@ -136,13 +136,13 @@ public class InterfaceProxy
                                 ObjectHandle hValue)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
-        if (frame.f_context == hProxy.m_context)
+        if (frame.f_context == hProxy.f_context)
             {
             hTarget = hProxy.m_hTarget;
             return hTarget.getTemplate().setPropertyValue(frame, hTarget, idProp, hValue);
             }
 
-        hProxy.m_context.sendProperty10Request(frame, idProp, hValue, this::setPropertyValue);
+        hProxy.f_context.sendProperty10Request(frame, idProp, hValue, this::setPropertyValue);
 
         return Op.R_NEXT;
         }
@@ -152,7 +152,7 @@ public class InterfaceProxy
                              ObjectHandle hValue)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
-        if (frame.f_context == hProxy.m_context)
+        if (frame.f_context == hProxy.f_context)
             {
             hTarget = hProxy.m_hTarget;
             return hTarget.getTemplate().setFieldValue(frame, hTarget, idProp, hValue);
