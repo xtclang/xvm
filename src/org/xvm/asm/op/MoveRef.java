@@ -8,6 +8,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 
@@ -53,36 +55,42 @@ public class MoveRef
     @Override
     public int process(Frame frame, int iPC)
         {
-        Frame.VarInfo infoSrc = frame.getVarInfo(m_nFromValue);
-
-        if (infoSrc.isDynamic())
+        RefHandle    hRef;
+        boolean      fNextReg = frame.isNextRegister(m_nToValue);
+        TypeConstant typeReg  = null;
+        if (m_nFromValue >= 0)
             {
-            // the "dynamic ref" register must contain a RefHandle itself
-            RefHandle hRef = (RefHandle) frame.f_ahVar[m_nFromValue];
-
-            if (frame.isNextRegister(m_nToValue))
+            Frame.VarInfo infoSrc = frame.getVarInfo(m_nFromValue);
+            if (infoSrc.isDynamic())
                 {
-                frame.introduceResolvedVar(m_nToValue, infoSrc.getType());
+                // the "dynamic ref" register must contain a RefHandle itself
+                hRef = (RefHandle) frame.f_ahVar[m_nFromValue];
+                if (fNextReg)
+                    {
+                    typeReg = infoSrc.getType();
+                    }
                 }
-
-            // the destination type must be the same as the source
-            frame.assignValue(m_nToValue, hRef);
+            else
+                {
+                ClassComposition clzRef = xRef.INSTANCE.ensureParameterizedClass(
+                        frame.poolContext(), infoSrc.getType());
+                hRef    = new RefHandle(clzRef, frame, m_nFromValue);
+                typeReg = clzRef.getType();
+                }
             }
         else
             {
-            ClassComposition clzRef = xRef.INSTANCE.ensureParameterizedClass(
-                frame.poolContext(), infoSrc.getType());
-
-            RefHandle hRef = new RefHandle(clzRef, frame, m_nFromValue);
-
-            if (frame.isNextRegister(m_nToValue))
-                {
-                frame.introduceResolvedVar(m_nToValue, clzRef.getType());
-                }
-
-            // the destination type must be the same as the source
-            frame.assignValue(m_nToValue, hRef);
+            hRef    = null; // TODO GG
+            typeReg = null; // TODO GG
             }
+
+        if (fNextReg)
+            {
+            frame.introduceResolvedVar(m_nToValue, typeReg);
+            }
+
+        // the destination type must be the same as the source
+        frame.assignValue(m_nToValue, hRef);
 
         return iPC + 1;
         }

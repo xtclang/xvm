@@ -68,8 +68,8 @@ public class Frame
     public  int                     m_iPC;          // the program counter
     public  int                     m_iScope;       // current scope index (starts with 0)
 
-    private   int                   m_iGuard = -1;  // current guard index (-1 if none)
-    private   Guard[]               m_aGuard;       // at index i, the guard for the guard index i
+    private int                     m_iGuard = -1;  // current guard index (-1 if none)
+    private Guard[]                 m_aGuard;       // at index i, the guard for the guard index i
 
     public  ExceptionHandle         m_hException;   // an exception
     public  DeferredGuardAction     m_deferred;     // a deferred action to be performed by FinallyEnd
@@ -1918,7 +1918,7 @@ public class Frame
             }
 
         /**
-         * Construct a named VarIfo with unresolved type.
+         * Construct a named VarInfo with an unresolved type.
          */
         public VarInfo(int nTypeId, int nNameId, int nStyle)
             {
@@ -1926,11 +1926,11 @@ public class Frame
             m_nNameId = nNameId;
             m_nStyle  = nStyle;
 
-            assert getType() != null; // side effect or realizing the type
+            assert getType() != null; // side effect of realizing the type
             }
 
         /**
-         * Construct an unresolved VarIfo based on a custom resolver.
+         * Construct an unresolved VarInfo based on a custom resolver.
          */
         public VarInfo(int nTargetId, int nAuxId, VarTypeResolver resolver)
             {
@@ -1939,7 +1939,7 @@ public class Frame
             m_nStyle    = VAR_STANDARD;
             m_resolver  = resolver;
 
-            assert getType() != null; // side effect or realizing the type
+            assert getType() != null; // side effect of realizing the type
             }
 
         public String getName()
@@ -2052,6 +2052,7 @@ public class Frame
                     return "unknown ";
                 }
             }
+
         public String toString()
             {
             return getStyleName() + getName();
