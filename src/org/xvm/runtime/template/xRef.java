@@ -576,6 +576,22 @@ public class xRef
             }
 
         /**
+         * Create a RefHandle for a given referent.
+         *
+         * @param clazz      the class of the Ref (e.g. FutureRef<String>)
+         * @param hReferent  the referent handle
+         * @param fRO        if true, the Ref is immutable
+         */
+        public RefHandle(TypeComposition clazz, ObjectHandle hReferent, boolean fRO)
+            {
+            super(clazz);
+
+            setField(REFERENT, hReferent);
+            m_iVar     = REF_REFERENT;
+            m_fMutable = !fRO;
+            }
+
+        /**
          * Create a RefHandle for a given property.
          *
          * @param clazz    the class of the Ref (e.g. FutureRef<String>)

@@ -5,6 +5,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
@@ -12,6 +13,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
@@ -80,8 +82,25 @@ public class MoveRef
             }
         else
             {
-            hRef    = null; // TODO GG
-            typeReg = null; // TODO GG
+            switch (m_nFromValue)
+                {
+                case A_TARGET:
+                    {
+                    ConstantPool     pool         = frame.poolContext();
+                    ObjectHandle     hReferent    = frame.getThis();
+                    TypeConstant     typeReferent = hReferent.getType();
+                    TypeConstant     typeRef      = pool.ensureParameterizedTypeConstant(
+                                                        pool.typeRef(), typeReferent);
+                    ClassComposition clzRef       = frame.f_context.f_templates.resolveClass(typeRef);
+
+                    hRef    = new RefHandle(clzRef, hReferent, true);
+                    typeReg = clzRef.getType();
+                    break;
+                    }
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
 
         if (fNextReg)
