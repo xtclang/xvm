@@ -623,7 +623,17 @@ public abstract class ClassTemplate
                         return buildStringValue(frame, hTarget, iReturn);
 
                     case "makeImmutable":
-                        return makeImmutable(frame, hTarget);
+                        switch (makeImmutable(frame, hTarget))
+                            {
+                            case Op.R_NEXT:
+                                return frame.assignValue(iReturn, hTarget);
+
+                            case Op.R_EXCEPTION:
+                                return Op.R_EXCEPTION;
+
+                            default:
+                                throw new IllegalStateException();
+                            }
                     }
                 break;
 
