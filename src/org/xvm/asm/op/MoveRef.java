@@ -93,7 +93,7 @@ public class MoveRef
                                                         pool.typeRef(), typeReferent);
                     ClassComposition clzRef       = frame.f_context.f_templates.resolveClass(typeRef);
 
-                    hRef    = new RefHandle(clzRef, hReferent, true);
+                    hRef    = new RefHandle(clzRef, null, hReferent);
                     typeReg = clzRef.getType();
                     break;
                     }

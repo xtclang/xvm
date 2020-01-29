@@ -564,7 +564,7 @@ public class xRef
          * Create an unassigned RefHandle for a given clazz.
          *
          * @param clazz  the class of the Ref (e.g. FutureRef<String>)
-         * @param sName  optional name
+         * @param sName  an optional name
          */
         protected RefHandle(TypeComposition clazz, String sName)
             {
@@ -576,19 +576,17 @@ public class xRef
             }
 
         /**
-         * Create a RefHandle for a given referent.
+         * Create a RefHandle for a referent of a given class.
          *
          * @param clazz      the class of the Ref (e.g. FutureRef<String>)
+         * @param sName      an optional name
          * @param hReferent  the referent handle
-         * @param fRO        if true, the Ref is immutable
          */
-        public RefHandle(TypeComposition clazz, ObjectHandle hReferent, boolean fRO)
+        public RefHandle(TypeComposition clazz, String sName, ObjectHandle hReferent)
             {
-            super(clazz);
+            this(clazz, sName);
 
             setField(REFERENT, hReferent);
-            m_iVar     = REF_REFERENT;
-            m_fMutable = !fRO;
             }
 
         /**
