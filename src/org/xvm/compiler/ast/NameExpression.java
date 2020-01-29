@@ -982,10 +982,35 @@ public class NameExpression
 
                 case PropertyRef:
                     {
-                    PropertyConstant idProp    = (PropertyConstant) argRaw;
-                    Argument         argTarget = left == null
-                            ? new Register(ctx.getThisType(), Op.A_TARGET)
-                            : left.generateArgument(ctx, code, true, true, errs);
+                    PropertyConstant idProp = (PropertyConstant) argRaw;
+                    Argument         argTarget;
+                    switch (calculatePropertyAccess())
+                        {
+                        case SingletonParent:
+                            argTarget = pool().ensureSingletonConstConstant(idProp.getParentConstant());
+                            break;
+
+                        case Outer:
+                            {
+                            int      cSteps   = m_targetInfo.getStepsOut();
+                            Register regOuter = createRegister(m_targetInfo.getType(), true);
+                            code.add(new MoveThis(cSteps, regOuter));
+                            argTarget = regOuter;
+                            break;
+                            }
+
+                        case This:
+                            argTarget = new Register(ctx.getThisType(), Op.A_TARGET);
+                            break;
+
+                        case Left:
+                            assert !idProp.getComponent().isStatic();
+                            argTarget = left.generateArgument(ctx, code, true, true, errs);
+                            break;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
 
                     code.add(m_fAssignable
                             ? new P_Var(idProp, argTarget, argLVal)
