@@ -823,7 +823,7 @@ public class Lexer
             log(Severity.ERROR, CHAR_NO_TERM, null, lInitPos, source.getPosition());
             }
 
-        return new Token(lInitPos, source.getPosition(), Id.LIT_CHAR, new Character(ch));
+        return new Token(lInitPos, source.getPosition(), Id.LIT_CHAR, Character.valueOf(ch));
         }
 
     /**
