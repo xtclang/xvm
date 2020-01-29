@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Component.ResolutionCollector;
@@ -342,6 +343,21 @@ public class DifferenceTypeConstant
         {
         // this will be answered via duck-type check
         return Relation.INCOMPATIBLE;
+        }
+
+    @Override
+    protected boolean isDuckTypeAbleFrom(TypeConstant typeRight)
+        {
+        // HACK HACK: for now we only allow a diff to the Object (e.g. Stringable - Object)
+        // TODO GG: implement isInterfaceAssignableFrom()
+        return m_constType1.isInterfaceType() && m_constType2.equals(getConstantPool().typeObject());
+        }
+
+    @Override
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight,
+                                                               Access accessLeft, List<TypeConstant> listLeft)
+        {
+        return m_constType1.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft); // TODO GG
         }
 
     @Override

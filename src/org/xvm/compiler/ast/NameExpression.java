@@ -982,35 +982,8 @@ public class NameExpression
 
                 case PropertyRef:
                     {
-                    PropertyConstant idProp = (PropertyConstant) argRaw;
-                    Argument         argTarget;
-                    switch (calculatePropertyAccess())
-                        {
-                        case SingletonParent:
-                            argTarget = pool().ensureSingletonConstConstant(idProp.getParentConstant());
-                            break;
-
-                        case Outer:
-                            {
-                            int      cSteps   = m_targetInfo.getStepsOut();
-                            Register regOuter = createRegister(m_targetInfo.getType(), true);
-                            code.add(new MoveThis(cSteps, regOuter));
-                            argTarget = regOuter;
-                            break;
-                            }
-
-                        case This:
-                            argTarget = new Register(ctx.getThisType(), Op.A_TARGET);
-                            break;
-
-                        case Left:
-                            assert !idProp.getComponent().isStatic();
-                            argTarget = left.generateArgument(ctx, code, true, true, errs);
-                            break;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
+                    PropertyConstant idProp    = (PropertyConstant) argRaw;
+                    Argument         argTarget = generatePropertyTarget(ctx, code, idProp, errs);
 
                     code.add(m_fAssignable
                             ? new P_Var(idProp, argTarget, argLVal)
@@ -1054,8 +1027,8 @@ public class NameExpression
         }
 
     @Override
-    public Argument generateArgument(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(Context ctx, Code code,
+                                     boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         if (isConstant())
             {
@@ -1203,11 +1176,8 @@ public class NameExpression
             case PropertyRef:
                 {
                 PropertyConstant idProp    = (PropertyConstant) argRaw;
-                Argument         argTarget = left == null
-                        ? new Register(ctx.getThisType(), Op.A_TARGET)
-                        : left.generateArgument(ctx, code, true, true, errs);
-
-                Register regRef = createRegister(getType(), fUsedOnce);
+                Argument         argTarget = generatePropertyTarget(ctx, code, idProp, errs);
+                Register         regRef    = createRegister(getType(), fUsedOnce);
                 code.add(m_fAssignable
                         ? new P_Var(idProp, argTarget, regRef)
                         : new P_Ref(idProp, argTarget, regRef));
@@ -1269,6 +1239,37 @@ public class NameExpression
 
             default:
                 throw new IllegalStateException("arg=" + argRaw);
+            }
+        }
+
+    /**
+     * Helper method to generate an argument for the property target.
+     */
+    private Argument generatePropertyTarget(Context ctx, Code code,
+                                            PropertyConstant idProp, ErrorListener errs)
+        {
+        switch (calculatePropertyAccess())
+            {
+            case SingletonParent:
+                return pool().ensureSingletonConstConstant(idProp.getParentConstant());
+
+            case Outer:
+                {
+                int cSteps = m_targetInfo.getStepsOut();
+                Register regOuter = createRegister(m_targetInfo.getType(), true);
+                code.add(new MoveThis(cSteps, regOuter));
+                return regOuter;
+                }
+
+            case This:
+                return new Register(ctx.getThisType(), Op.A_TARGET);
+
+            case Left:
+                assert !idProp.getComponent().isStatic();
+                return left.generateArgument(ctx, code, true, true, errs);
+
+            default:
+                throw new IllegalStateException();
             }
         }
 

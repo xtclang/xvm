@@ -5762,7 +5762,7 @@ public abstract class TypeConstant
      *
      * @return false iff the duck-typing is known to be impossible
      */
-    private boolean isDuckTypeAbleFrom(TypeConstant typeRight)
+    protected boolean isDuckTypeAbleFrom(TypeConstant typeRight)
         {
         // interfaces are duck-type able except Tuple, Function and Orderable
         // (the later due to the fact that it's has no abstract methods and
