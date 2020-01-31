@@ -315,6 +315,15 @@ public class xByteArray
             }
 
         @Override
+        public void setCapacity(int nCapacity)
+            {
+            byte[] abOld = m_abValue;
+            byte[] abNew = new byte[nCapacity];
+            System.arraycopy(abOld, 0, abNew, 0, abOld.length);
+            m_abValue = abNew;
+            }
+
+        @Override
         public ObjectHandle getElement(int ix)
             {
             return xUInt8.makeHandle(m_abValue[ix]);

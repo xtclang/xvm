@@ -295,6 +295,15 @@ public class xIntArray
             }
 
         @Override
+        public void setCapacity(int nCapacity)
+            {
+            long[] alOld = m_alValue;
+            long[] alNew = new long[nCapacity];
+            System.arraycopy(alOld, 0, alNew, 0, alOld.length);
+            m_alValue = alNew;
+            }
+
+        @Override
         public ObjectHandle getElement(int ix)
             {
             return xInt64.makeHandle(m_alValue[ix]);

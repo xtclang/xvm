@@ -419,6 +419,26 @@ public class xArray
 
         switch (sPropName)
             {
+            case "capacity":
+                {
+                int nCapacityOld = hArray.getCapacity();
+                int nCapacityNew = (int) ((JavaLong) hValue).getValue();
+                int nSize        = hArray.m_cSize;
+
+                if (nCapacityNew < nSize)
+                    {
+                    return frame.raiseException(
+                        xException.illegalArgument(frame, "Capacity cannot be less then size "));
+                    }
+
+                // for now, no trimming
+                if (nCapacityNew > nCapacityOld)
+                    {
+                    hArray.setCapacity(nCapacityNew);
+                    }
+                return Op.R_NEXT;
+                }
+
             case "mutability":
                 hArray.m_mutability = Mutability.values()[((EnumHandle) hValue).getOrdinal()];
                 return Op.R_NEXT;
@@ -1042,6 +1062,15 @@ public class xArray
         public int getCapacity()
             {
             return m_ahValue.length;
+            }
+
+        @Override
+        public void setCapacity(int nCapacity)
+            {
+            ObjectHandle[] ahOld = m_ahValue;
+            ObjectHandle[] ahNew = new ObjectHandle[nCapacity];
+            System.arraycopy(ahOld, 0, ahNew, 0, ahOld.length);
+            m_ahValue = ahNew;
             }
 
         @Override

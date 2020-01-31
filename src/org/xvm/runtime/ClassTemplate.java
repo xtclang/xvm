@@ -1871,7 +1871,7 @@ public abstract class ClassTemplate
                 methGetter.markNative();
                 }
 
-            MethodStructure methSetter = prop.getGetter();
+            MethodStructure methSetter = prop.getSetter();
             if (methSetter != null)
                 {
                 methSetter.markNative();

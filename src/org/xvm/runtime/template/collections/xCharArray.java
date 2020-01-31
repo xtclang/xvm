@@ -312,6 +312,15 @@ public class xCharArray
             }
 
         @Override
+        public void setCapacity(int nCapacity)
+            {
+            char[] achOld = m_achValue;
+            char[] achNew = new char[nCapacity];
+            System.arraycopy(achOld, 0, achNew, 0, achOld.length);
+            m_achValue = achNew;
+            }
+
+        @Override
         public ObjectHandle getElement(int ix)
             {
             return xChar.makeHandle(m_achValue[ix]);

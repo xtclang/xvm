@@ -554,6 +554,7 @@ public abstract class ObjectHandle
             }
 
         abstract public int getCapacity();
+        abstract public void setCapacity(int nCapacity);
         abstract public ObjectHandle getElement(int ix);
         abstract public void deleteElement(int ix);
 
