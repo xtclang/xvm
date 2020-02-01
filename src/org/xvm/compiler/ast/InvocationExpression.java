@@ -388,7 +388,7 @@ public class InvocationExpression
                 assert typeFn.isA(pool.typeFunction());
                 if (m_fCall)
                     {
-                    return typeFn.getParamType(F_RETS).getParamTypesArray();
+                    return pool.extractFunctionReturns(typeFn);
                     }
 
                 if (m_fBindParams)
@@ -682,7 +682,7 @@ public class InvocationExpression
                 TypeConstant[] atypeResult;
                 if (m_fCall)
                     {
-                    atypeResult = typeFn.getParamType(F_RETS).getParamTypesArray();
+                    atypeResult = pool.extractFunctionReturns(typeFn);
                     }
                 else
                     {
@@ -1351,9 +1351,8 @@ public class InvocationExpression
             return;
             }
 
-        TypeConstant[] atypeSub    = typeFn.getParamTypesArray();
-        TypeConstant[] atypeParams = atypeSub[F_ARGS].getParamTypesArray();
-        int            cAll        = atypeParams.length;
+        TypeConstant[] atypeParams = pool().extractFunctionParams(typeFn);
+        int            cAll        = atypeParams == null ? 0 : atypeParams.length;
 
         if (m_fCall)
             {
@@ -2191,7 +2190,7 @@ public class InvocationExpression
                 }
             else
                 {
-                typeFn = idConvert.getRawReturns()[F_ARGS];
+                typeFn = idConvert.getRawReturns()[0];
                 }
             }
 
@@ -2516,19 +2515,6 @@ public class InvocationExpression
 
 
     // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * Function type first parameter is function param types tuple:
-     * <p/>
-     * {@code Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>}
-     */
-    public static final int F_ARGS = 0;
-    /**
-     * Function type second parameter is return types tuple:
-     * <p/>
-     * {@code Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>}
-     */
-    public static final int F_RETS = 1;
 
     protected Expression       expr;
     protected List<Expression> args;
