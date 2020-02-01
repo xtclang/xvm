@@ -471,27 +471,29 @@ public class ParameterizedTypeConstant
             if (constResolved.isParamsSpecified())
                 {
                 // scenario 3b
-                boolean        fDiff          = false;
-                TypeConstant[] aconstOriginal = constResolved.getParamTypesArray();
-                TypeConstant[] aconstResolved = aconstOriginal;
-                for (int i = 0, c = aconstOriginal.length; i < c; ++i)
-                    {
-                    TypeConstant constParamOriginal = aconstOriginal[i];
-                    TypeConstant constParamResolved = constParamOriginal.resolveGenerics(pool, this);
-                    if (constParamOriginal != constParamResolved)
-                        {
-                        if (aconstResolved == aconstOriginal)
-                            {
-                            aconstResolved = aconstOriginal.clone();
-                            }
-                        aconstResolved[i] = constParamResolved;
-                        fDiff = true;
-                        }
-                    }
-
-                return fDiff
-                        ? constResolved.adoptParameters(pool, aconstResolved)
-                        : constResolved;
+//                boolean        fDiff          = false;
+//                TypeConstant[] aconstOriginal = constResolved.getParamTypesArray();
+//                TypeConstant[] aconstResolved = aconstOriginal;
+//                for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+//                    {
+//                    TypeConstant constParamOriginal = aconstOriginal[i];
+//                    TypeConstant constParamResolved = constParamOriginal.resolveGenerics(pool, this);
+//                    if (constParamOriginal != constParamResolved)
+//                        {
+//                        if (aconstResolved == aconstOriginal)
+//                            {
+//                            aconstResolved = aconstOriginal.clone();
+//                            }
+//                        aconstResolved[i] = constParamResolved;
+//                        fDiff = true;
+//                        }
+//                    }
+//
+//                return fDiff
+//                        ? constResolved.adoptParameters(pool, aconstResolved)
+//                        : constResolved;
+                // TODO: explain
+                return constResolved;
                 }
             else
                 {
