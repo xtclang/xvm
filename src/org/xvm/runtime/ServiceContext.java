@@ -68,38 +68,57 @@ public class ServiceContext
      */
     protected boolean drainWork()
         {
-        Frame frame = nextFiber();
+        ServiceContext[] tloCtx = s_tloContext.get();
+        ServiceContext ctxPrior = tloCtx[0];
+        tloCtx[0] = this;
 
-        if (frame != null)
+        try
             {
-            try (var x = ConstantPool.withPool(frame.poolContext()))
-                {
-                frame = execute(frame);
+            Frame frame = nextFiber();
 
-                if (frame != null)
+            if (frame != null)
+                {
+
+                try (var x = ConstantPool.withPool(frame.poolContext()))
                     {
-                    suspendFiber(frame);
-                    return false;
+                    frame = execute(frame);
+
+                    if (frame != null)
+                        {
+                        suspendFiber(frame);
+                        return false;
+                        }
+                    }
+                catch (Throwable e)
+                    {
+                    // TODO: RTError
+                    frame = getCurrentFrame();
+                    if (frame != null)
+                        {
+                        MethodStructure function = frame.f_function;
+                        int nLine = 0;
+                        if (function != null)
+                            {
+                            nLine = function.calculateLineNumber(frame.m_iPC);
+                            }
+
+                        Utils.log(frame, "\nUnhandled exception at " + frame
+                            + (nLine > 0 ? "; line=" + nLine : "; iPC=" + frame.m_iPC));
+                        }
+                    e.printStackTrace(System.out);
+                    System.exit(-1);
                     }
                 }
-            catch (Throwable e)
-                {
-                // TODO: RTError
-                frame = getCurrentFrame();
-                if (frame != null)
-                    {
-                    MethodStructure function = frame.f_function;
-                    int nLine = 0;
-                    if (function != null)
-                        {
-                        nLine = function.calculateLineNumber(frame.m_iPC);
-                        }
+            }
+        finally
+            {
+            tloCtx[0] = ctxPrior;
 
-                    Utils.log(frame, "\nUnhandled exception at " + frame
-                        + (nLine > 0 ? "; line=" + nLine : "; iPC=" + frame.m_iPC));
-                    }
-                e.printStackTrace(System.out);
-                System.exit(-1);
+            if (ctxPrior != null)
+                {
+                // now that we've switched back to the caller's service context process any responses
+                // which may have arrived
+                ctxPrior.processResponses();
                 }
             }
 
@@ -173,7 +192,7 @@ public class ServiceContext
 
     public static ServiceContext getCurrentContext()
         {
-        return s_tloContext.get();
+        return s_tloContext.get()[0];
         }
 
     public ServiceContext getMainContext()
@@ -214,24 +233,28 @@ public class ServiceContext
         ensureScheduled();
         }
 
-    // get a next frame ready for execution
-    public Frame nextFiber()
+    protected void processResponses()
         {
-        // responses have the highest priority and no natural code runs there;
-        // process all we've got so far
         Queue<Response> qResponse = f_queueResponse;
         Response response;
         while ((response = qResponse.poll()) != null)
             {
             response.run();
             }
+        }
+
+    // get a next frame ready for execution
+    public Frame nextFiber()
+        {
+        // responses have the highest priority and no natural code runs there;
+        // process all we've got so far
+        processResponses();
 
         // pickup all the messages, but keep them in the "initial" state
         Queue<Message> qMsg = f_queueMsg;
         Message message;
         while ((message = qMsg.poll()) != null)
             {
-            s_tloContext.set(this);
             Frame frame = message.createFrame(this);
 
             suspendFiber(frame);
@@ -318,7 +341,6 @@ public class ServiceContext
         int iPCLast = iPC;
 
         m_frameCurrent = frame;
-        s_tloContext.set(this);
 
         switch (fiber.prepareRun(frame))
             {
@@ -1226,7 +1248,7 @@ public class ServiceContext
         }
     private volatile ServiceStatus m_status = ServiceStatus.Idle;
 
-    final static ThreadLocal<ServiceContext> s_tloContext = new ThreadLocal<>();
+    final static ThreadLocal<ServiceContext[]> s_tloContext = ThreadLocal.withInitial(() -> new ServiceContext[1]);
 
     /**
      * VarHandle for {@link #m_fLockScheduling}.
