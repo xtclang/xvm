@@ -106,7 +106,7 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      */
     FieldOutput add(String name, Doc value)
         {
-        using (val field = openField("name"))
+        using (val field = openField(name))
             {
             field.add(value);
             }

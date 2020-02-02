@@ -47,6 +47,16 @@ class ObjectOutputStream(Schema schema, Writer writer)
         return new HashMap();
         }
 
+    /**
+     * (Temporary method)
+     *
+     * @return an empty ElementOutput implementation
+     */
+    ElementOutputStream createElementOutput()
+        {
+        return new @CloseCap ElementOutputStream(Null) ;
+        }
+
 
     // ----- ObjectOutput implementation -----------------------------------------------------------
 
@@ -56,7 +66,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
         assert !closed;
         assert root == Null;
 
-        try (ElementOutputStream out = new ElementOutputStream(Null))
+        try (ElementOutputStream out = createElementOutput())
             {
             root    = out;
             current = out;
@@ -187,7 +197,8 @@ class ObjectOutputStream(Schema schema, Writer writer)
          */
         protected void ensureActive()
             {
-            if (&this == &current)
+            DocOutputStream<>? cur = current;
+            if (&this == &cur)
                 {
                 return;
                 }

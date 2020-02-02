@@ -5,13 +5,23 @@ module TestIO
     import Ecstasy.io.DataInputStream;
     import Ecstasy.io.InputStream;
     import Ecstasy.io.JavaDataInput;
+    import Ecstasy.io.ObjectInput;
+    import Ecstasy.io.ObjectOutput;
     import Ecstasy.io.Reader;
+    import Ecstasy.io.StringWriter;
+    import Ecstasy.io.Writer;
     import Ecstasy.io.UTF8Reader;
     import Ecstasy.web.json.Doc;
+    import Ecstasy.web.json.ElementOutput;
+    import Ecstasy.web.json.FieldOutput;
     import Ecstasy.web.json.Lexer;
     import Ecstasy.web.json.Lexer.Token;
+    import Ecstasy.web.json.ObjectOutputStream;
+    import Ecstasy.web.json.ObjectOutputStream.CloseCap;
+    import Ecstasy.web.json.ObjectOutputStream.ElementOutputStream;
     import Ecstasy.web.json.Parser;
     import Ecstasy.web.json.Printer;
+    import Ecstasy.web.json.Schema;
 
     @Inject Console console;
 
@@ -156,6 +166,14 @@ module TestIO
         {
         console.println("\n*** testJSONBuild()");
 
+        Schema schema = Schema.DEFAULT;
+        StringWriter writer = new StringWriter();
+        ObjectOutputStream  o_out = schema.createObjectOutput(writer).as(ObjectOutputStream);
+        ElementOutputStream e_out = o_out.createElementOutput();
+//        e_out.add(4);
+        build(e_out);
+        console.println($"result={writer}");
+
 //        console.println("BufferedPrinter:");
 //        BufferedPrinter p = new BufferedPrinter();
 //        build(p);
@@ -178,23 +196,24 @@ module TestIO
 //        console.println("\n(done)");
         }
 
-//    private void build(FieldOutput builder)
-//        {
-//        builder.add("$schema", "http://json-schema.org/schema#")
-//                .add("title", "Product")
-//                .add("type", "object")
-//                .addArray("required", ["id", "name", "price"])
-//                .addArray("numbers", [1,2,3])
-//                .openObject("properties")
-//                    .openObject("id")
-//                        .add("type", "number")
-//                        .add("description", "Product identifier")
-//                    .close()
-//                    .openObject("name")
-//                        .add("type", "string")
-//                        .add("description", "Name of the product")
-//                    .close()
-//                .close()
-//                .close();
-//        }
+    private void build(ElementOutput builder)
+        {
+        builder.openObject()
+                .add("$schema", "http://json-schema.org/schema#")
+                .add("title", "Product")
+                .add("type", "object")
+                .addArray("required", ["id", "name", "price"])
+                .addArray("numbers", [1,2,3])
+                .openObject("properties")
+                    .openObject("id")
+                        .add("type", "number")
+                        .add("description", "Product identifier")
+                    .close()
+                    .openObject("name")
+                        .add("type", "string")
+                        .add("description", "Name of the product")
+                    .close()
+                .close()
+                .close();
+        }
     }
