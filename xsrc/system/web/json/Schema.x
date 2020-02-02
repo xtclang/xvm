@@ -43,7 +43,7 @@ const Schema
         // use the module version if no version is specified
         if (version == Null)
             {
-            TODO version = ...
+            version = v:1; // TODO version = ...
             }
 
         this.version          = version;
@@ -66,7 +66,8 @@ const Schema
             }
 
         this.mappings    = mappingForType;
-        this.typeForName = typeForName;
+// TODO GG       this.typeForName = typeForName;
+        this.typeForName = typeForName.makeImmutable();
         }
 
     /**

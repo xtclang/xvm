@@ -68,11 +68,13 @@ module TestServices.xqiz.it
 
         @Inject Timer timer;
         timer.start();
-        for (Int i : 0..svcs.size-1)
+        Loop: for (TestService each : svcs)
             {
-            @Future Int spinResult = svcs[i].spin(10_000);
+            @Future Int spinResult = each.spin(10_000);
+            val i = Loop.count;
             &spinResult.whenComplete((n, e) ->
                 {
+                // TODO CP console.println($"{tag()} spin {Loop.count} yielded {n}; took {timer.elapsed.milliseconds} ms");
                 console.println($"{tag()} spin {i} yielded {n}; took {timer.elapsed.milliseconds} ms");
                 });
             }
