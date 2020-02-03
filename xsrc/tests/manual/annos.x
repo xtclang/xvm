@@ -6,6 +6,7 @@ module TestAnnotations.xqiz.it
         {
         testWatch();
         testMixin();
+        testMixin2();
         }
 
     function void (Int) logger = (Int v) ->
@@ -131,6 +132,38 @@ module TestAnnotations.xqiz.it
             console.println($"assert (skill) {skill}");
             }
         String skill;
+        }
+
+    void testMixin2()
+        {
+        new Parent().test();
+        new Parent().new @Parent.Mixin Parent.Child().test();
+
+        class Parent
+            {
+            mixin Mixin into Child
+                {
+                @Override
+                void test()
+                    {
+                    console.println("in test at Mixin");
+                    super();
+                    }
+                }
+
+            void test()
+                {
+                new @Mixin Child().test();
+                }
+
+            class Child
+                {
+                void test()
+                    {
+                    console.println("in test at Child");
+                    }
+                }
+            }
         }
     }
 

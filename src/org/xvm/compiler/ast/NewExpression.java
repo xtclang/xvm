@@ -322,59 +322,99 @@ public class NewExpression
                 this.left = exprLeftNew;
 
                 TypeConstant typeLeft = exprLeftNew.getType();
-                TypeInfo     infoLeft = typeLeft.ensureTypeInfo(errs);
 
-                NamedTypeExpression exprType = (NamedTypeExpression) type;
-                String              sChild   = exprType.getName();
-
-                assert exprType.isVirtualChild();
-
-                typeTarget = infoLeft.calculateChildType(pool, sChild);
-                if (typeTarget == null || !typeTarget.isVirtualChild())
+                // first, assume the name is relative to the parent's class, e.g.:
+                //      parent.new [@Mixin] Child<...>(...)
+                TypeExpression exprType = type;
+                while (exprType instanceof AnnotatedTypeExpression)
                     {
-                    log(errs, Severity.ERROR, Constants.VE_NEW_UNRELATED_PARENT,
-                            sChild, typeLeft.getValueString());
-                    fValid = false;
+                    exprType = exprType.unwrapIntroductoryType();
                     }
-                else
+
+                NamedTypeExpression exprNameType = (NamedTypeExpression) exprType;
+                if (exprNameType.isVirtualChild())
                     {
-                    exprType.setTypeConstant(typeTarget);
+                    String   sChild   = exprNameType.getName();
+                    TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
+
+                    typeTarget = infoLeft.calculateChildType(pool, sChild);
+                    if (typeTarget != null)
+                        {
+                        exprNameType.setTypeConstant(typeTarget);
+                        }
+                    }
+
+                if (typeTarget == null)
+                    {
+                    // now try to use the NameTypeExpression validation logic for a fully qualified
+                    // type scenario, such as:
+                    //      parent.new [@Mixin] Parent.Child<...>(...)
+                    TypeExpression exprTest = (TypeExpression) type.clone();
+                    Context        ctxTest  = ctx.enter();
+                    if (exprTest.validate(ctxTest, pool.typeType(), errs) == null)
+                        {
+                        fValid = false;
+                        }
+                    else
+                        {
+                        typeTarget = exprTest.ensureTypeConstant(ctx);
+                        }
+                    ctx.exit();
+                    exprTest.discard(true);
+                    }
+
+                if (typeTarget != null)
+                    {
+                    if (!typeTarget.isVirtualChild() ||
+                        !typeTarget.getParentType().getDefiningConstant().equals(
+                            typeLeft.getDefiningConstant()))
+                        {
+                        log(errs, Severity.ERROR, Constants.VE_NEW_UNRELATED_PARENT,
+                                typeTarget.getValueString(), typeLeft.getValueString());
+                        fValid = false;
+                        }
                     }
                 }
             }
 
-        if (fValid && typeRequired != null)
+        if (fValid)
             {
-            // infer type information from the required type; that information needs to be used to
-            // inform the validation of the type that we are "new-ing"
-            TypeConstant typeInferred = inferTypeFromRequired(typeTarget, typeRequired);
-            if (typeInferred != null)
+            if (typeRequired != null)
                 {
-                typeTarget = typeInferred;
-                type.setTypeConstant(typeTarget);
+                // infer type information from the required type; that information needs to be used to
+                // inform the validation of the type that we are "new-ing"
+                TypeConstant typeInferred = inferTypeFromRequired(typeTarget, typeRequired);
+                if (typeInferred != null)
+                    {
+                    typeTarget = typeInferred;
+                    type.setTypeConstant(typeTarget);
+                    }
+                }
+
+            // we intentionally do NOT pass the required type to the TypeExpression; instead, we use
+            // the inferred target type
+            TypeExpression exprTypeOld = this.type;
+            TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx,
+                    typeTarget == null ? null : typeTarget.getType(), errs);
+            if (exprTypeNew == null)
+                {
+                fValid = false;
+                }
+            else
+                {
+                this.type  = exprTypeNew;
+                typeTarget = exprTypeNew.ensureTypeConstant(ctx);
+
+                if (m_fDynamicAnno)
+                    {
+                    typeTarget = ((AnnotatedTypeConstant) typeTarget).stripParameters();
+                    }
+                typeResult = typeTarget;
                 }
             }
 
-        // we intentionally do NOT pass the required type to the TypeExpression; instead, we use
-        // the inferred target type
-        TypeExpression exprTypeOld = this.type;
-        TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx,
-                typeTarget == null ? null : typeTarget.getType(), errs);
-        if (exprTypeNew == null)
+        if (fValid)
             {
-            fValid = false;
-            }
-        else
-            {
-            this.type  = exprTypeNew;
-            typeTarget = exprTypeNew.ensureTypeConstant(ctx);
-
-            if (m_fDynamicAnno)
-                {
-                typeTarget = ((AnnotatedTypeConstant) typeTarget).stripParameters();
-                }
-            typeResult = typeTarget;
-
             if (left == null)
                 {
                 // now we should have enough type information to create the real anon inner class
@@ -432,10 +472,10 @@ public class NewExpression
                             }
                         }
                     }
-                else if (exprTypeNew instanceof ArrayTypeExpression)
+                else if (type instanceof ArrayTypeExpression)
                     {
                     // this is a "new X[]", "new X[c1]" or "new X[c1, ...]" construct
-                    ArrayTypeExpression exprArray = (ArrayTypeExpression) exprTypeNew;
+                    ArrayTypeExpression exprArray = (ArrayTypeExpression) type;
                     int                 cDims     = exprArray.getDimensions();
                     switch (cDims)
                         {

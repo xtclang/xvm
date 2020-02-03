@@ -544,7 +544,7 @@ public interface Constants
      */
     public static final String VE_NEW_DISALLOWS_PARENT                = "VERIFY-91";
     /**
-     * "{0}" is not related to the provided parent instance type "{1}".
+     * "{0}" is not a virtual child to the provided parent type "{1}".
      */
     public static final String VE_NEW_UNRELATED_PARENT                = "VERIFY-92";
     /**

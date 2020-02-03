@@ -438,8 +438,12 @@ public class NamedTypeExpression
         {
         if (left == null)
             {
-            // check for a virtual child scenario: "parent.new Child<...>(...)"
+            // check for a virtual child scenario: "parent.new [@Mixin] Child<...>(...)"
             AstNode parent = getParent();
+            while (parent instanceof AnnotatedTypeExpression)
+                {
+                parent = parent.getParent();
+                }
             if (parent instanceof NewExpression)
                 {
                 NewExpression exprNew = (NewExpression) parent;
@@ -567,6 +571,48 @@ public class NamedTypeExpression
         List<TypeExpression> listParams = paramTypes;
         boolean              fValid     = true;
         TypeConstant         type       = null;
+
+        if (m_constId == null || m_constId.containsUnresolved())
+            {
+            // first, try to re-resolve the type (ignore "deferred" or "error" scenarios)
+            ErrorListener errsTemp = errs.branch();
+            NameResolver  resolver = getNameResolver();
+            switch (resolver.resolve(errsTemp))
+                {
+                case DEFERRED:
+                case ERROR:
+                    break;
+
+                case RESOLVED:
+                    {
+                    Constant constId = resolver.getConstant();
+                    if (!constId.getFormat().isTypeable())
+                        {
+                        errsTemp.merge();
+                        log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, constId.getValueString());
+                        return null;
+                        }
+
+                    if (constId.getFormat() == Format.Property)
+                        {
+                        if (paramTypes != null)
+                            {
+                            errsTemp.merge();
+                            log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                            return null;
+                            }
+                        if (((PropertyConstant) constId).isFormalType() && names.size() > 1)
+                            {
+                            errsTemp.merge();
+                            log(errs, Severity.ERROR, Compiler.INVALID_FORMAL_TYPE_IDENTITY);
+                            return null;
+                            }
+                        }
+
+                    m_constId = inferAutoNarrowing(constId, errsTemp);
+                    }
+                }
+            }
 
         if (m_constId == null || m_constId.containsUnresolved())
             {
