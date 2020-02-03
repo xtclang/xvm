@@ -417,6 +417,12 @@ module TestReflection.xqiz.it
         const Point3D(Int x, Int y, Int z) extends Point(x, y); // TODO GG BUGBUG prints out as "X, Z, Y"
         Point3D p3d = new Point3D(5,6,7);
         analyzeStructure(p3d);
+
+        if (Point3D.StructType p3s := &p3d.revealAs(Point3D.StructType))
+            {
+            Point3D p3d2 = Point3D.instantiate(p3s);
+            assert p3d2 == p3d;
+            }
         }
 
     void analyzeStructure(Object o)
@@ -458,18 +464,6 @@ module TestReflection.xqiz.it
                 console.println($"clone={clone}");
                 }
             }
-
-        //java.lang.IllegalStateException
-        //	at org.xvm.asm.constants.UnresolvedTypeConstant.resolveAutoNarrowing(UnresolvedTypeConstant.java:266)
-        //	at org.xvm.compiler.ast.VariableDeclarationStatement.validateImpl(VariableDeclarationStatement.java:174)
-        //	at org.xvm.compiler.ast.Statement.validate(Statement.java:138)
-        //	at org.xvm.compiler.ast.AssignmentStatement.validateImpl(AssignmentStatement.java:404)
-        //	at org.xvm.compiler.ast.Statement.validate(Statement.java:138)
-        //	at org.xvm.compiler.ast.StatementBlock.validateImpl(StatementBlock.java:336)
-        //	at org.xvm.compiler.ast.Statement.validate(Statement.java:138)
-        //	at org.xvm.compiler.ast.StatementBlock.compileMethod(StatementBlock.java:267)
-        // TODO GG Point:PublicType p2 = Point.instantiate(s.as(Point.StructType));
-//        console.println($"p2={p2}");
         }
 
 

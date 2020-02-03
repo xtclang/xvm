@@ -1887,9 +1887,13 @@ public class InvocationExpression
                                       fNoFBind && fNoCall ? MethodKind.Any :
                                                             MethodKind.Function;
 
-                    Argument arg = findCallable(ctx, infoLeft, sName, kind, false, atypeReturn, errs);
+                    ErrorListener errsTemp = errs.branch();
+                    Argument      arg      = findCallable(ctx, infoLeft, sName, kind, false,
+                                                            atypeReturn, errsTemp);
                     if (arg instanceof MethodConstant)
                         {
+                        errsTemp.merge();
+
                         MethodConstant idMethod   = (MethodConstant) arg;
                         MethodInfo     infoMethod = infoLeft.getMethodById(idMethod);
                         assert infoMethod != null;
