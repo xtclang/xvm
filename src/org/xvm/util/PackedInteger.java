@@ -43,14 +43,14 @@ import java.math.BigInteger;
  * three bytes using either a medium or large encoding, we choose large for the same reason. Here
  * is the
  * <pre><code>
- *     significant bits  encoding
- *     ----------------  --------
- *           <= 7        Tiny
- *            8          Large
- *           9-13        Small
- *          14-16        Large
- *          17-21        Medium
- *          >= 22        Large
+ *     significant bits  encoding  bytes
+ *     ----------------  --------  -----
+ *           <= 7        Tiny      1
+ *            8          Large     2
+ *           9-13        Small     2
+ *          14-16        Large     3
+ *          17-21        Medium    3
+ *          >= 22        Large     4 or 8
  * </code></pre>
  */
 public class PackedInteger
