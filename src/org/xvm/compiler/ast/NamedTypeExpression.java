@@ -947,7 +947,7 @@ public class NamedTypeExpression
         {
         return isDynamic()
                 ? m_exprDynamic.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs)
-                : getType().getParamType(0).resolveAutoNarrowingBase(pool());
+                : getType().resolveAutoNarrowingBase(pool());
         }
 
 

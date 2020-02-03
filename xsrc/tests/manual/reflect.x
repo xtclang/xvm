@@ -123,6 +123,9 @@ module TestReflection.xqiz.it
 
         assert p := &str.revealAs(Point);
         console.println($"p={p}");
+
+        assert Point:struct p2 := &str.revealAs(Point:struct);
+        console.println($"p2={p2}");
         }
 
     void testForm()
