@@ -3516,18 +3516,17 @@ public class ConstantPool
      */
     public TypeConstant[] extractFunctionParams(TypeConstant typeFunction)
         {
-        if (typeFunction != null)
+        if (typeFunction != null && typeFunction.isA(typeFunction()))
             {
-            if (typeFunction.isA(typeFunction())
-                    && typeFunction.isParamsSpecified()
-                    && typeFunction.getParamsCount() > 0)
+            if (typeFunction.getParamsCount() > 0)
                 {
                 TypeConstant typeParams = typeFunction.getParamType(0);
-                if (typeParams.isA(typeTuple()) && typeParams.isParamsSpecified())
+                if (typeParams.isA(typeTuple()))
                     {
                     return typeParams.getParamTypesArray();
                     }
                 }
+            return TypeConstant.NO_TYPES;
             }
 
         return null;
@@ -3542,18 +3541,17 @@ public class ConstantPool
      */
     public TypeConstant[] extractFunctionReturns(TypeConstant typeFunction)
         {
-        if (typeFunction != null)
+        if (typeFunction != null && typeFunction.isA(typeFunction()))
             {
-            if (typeFunction.isA(typeFunction())
-                    && typeFunction.isParamsSpecified()
-                    && typeFunction.getParamsCount() > 1)
+            if (typeFunction.getParamsCount() > 1)
                 {
                 TypeConstant typeParams = typeFunction.getParamType(1);
-                if (typeParams.isA(typeTuple()) && typeParams.isParamsSpecified())
+                if (typeParams.isA(typeTuple()))
                     {
                     return typeParams.getParamTypesArray();
                     }
                 }
+            return TypeConstant.NO_TYPES;
             }
 
         return null;
