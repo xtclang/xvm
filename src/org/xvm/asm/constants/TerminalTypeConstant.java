@@ -674,6 +674,16 @@ public class TerminalTypeConstant
                     Parameter param = method.getParam(idTypeParam.getRegister());
                     if (param.getName().equals(sFormalName))
                         {
+                        if (typeActual.isFormalType())
+                            {
+                            // the only thing we could validate is that the "source" constraint (this)
+                            // is know to fit the "destination" constraint (actual). However, there
+                            // could be some context-specific knowledge that narrows the actual
+                            // formal type, making this check too restrictive;
+                            // let's leave the final assignability determination to the caller
+                            return typeActual;
+                            }
+
                         // The constraint type itself could be formal, for example (Array.x)
                         //   static <CompileType extends Hasher> Int hashCode(CompileType array)
                         // so trying to resolve a call, such as
@@ -687,7 +697,7 @@ public class TerminalTypeConstant
                         // the constraint type using that knowledge and only then validate
                         // the actual type against the resolved constraint.
 
-                        ConstantPool pool = getConstantPool();
+                        ConstantPool pool           = getConstantPool();
                         TypeConstant typeConstraint = idTypeParam.getConstraintType().
                             resolveGenerics(pool,
                                 sName -> sFormalName.equals(sName) ? typeActual : null);
