@@ -296,7 +296,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
         {
         if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
-            TODO GG return read<Serializable>(name, mapping.read<Serializable>(_), defaultValue);
+            return read<Serializable>(name, mapping.read<Serializable>(_), defaultValue);
             }
 
         throw new MissingMapping(type = Type<Serializable>);
@@ -498,7 +498,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
 
         if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
-            TODO GG return readObjectArray(name, mapping.read(_), defaultValue);
+            return readArray(name, mapping.read(_), defaultValue);
             }
 
         throw new MissingMapping(type = Type<Serializable>);

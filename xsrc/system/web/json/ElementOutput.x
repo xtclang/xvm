@@ -76,7 +76,7 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      */
     <Serializable> ElementOutput addObject(Serializable value)
         {
-        // TODO GG schema.ensureMapping(Serializable).write(this, value);
+        schema.ensureMapping(Serializable).write(this, value);
         return this;
         }
 

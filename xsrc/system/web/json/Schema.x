@@ -66,7 +66,10 @@ const Schema
             }
 
         this.mappings    = mappingForType;
-// TODO GG       this.typeForName = typeForName;
+
+// TODO CP should Map be ImmutableAble? maybe conditionally based on the Key/Value const'ness?
+        // at the moment, Map is not freezable (ImmutableAble), so we need to
+        // "freeze" it explicitly
         this.typeForName = typeForName.makeImmutable();
         }
 
