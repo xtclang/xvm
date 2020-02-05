@@ -396,7 +396,9 @@ public class InvocationExpression
                     {
                     // resolve the type parameters against all the arg types we know by now
                     resolver = makeTypeParameterResolver(ctx, method,
-                            m_fCall ? atypeReturn : pool.extractFunctionReturns(atypeReturn[0]));
+                            m_fCall  || atypeReturn == null
+                                ? atypeReturn
+                                : pool.extractFunctionReturns(atypeReturn[0]));
                     }
 
                 if (m_fCall)
@@ -793,7 +795,9 @@ public class InvocationExpression
                         System.arraycopy(atypeParams, cTypeParams, atype, 0, cParams);
 
                         GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method,
-                                fCall ? atypeReturn : pool.extractFunctionReturns(atypeReturn[0]));
+                                fCall || atypeReturn == null
+                                    ? atypeReturn
+                                    : pool.extractFunctionReturns(atypeReturn[0]));
                         atypeParams = resolveTypes(resolver, atype);
                         }
                     else
@@ -843,7 +847,10 @@ public class InvocationExpression
                         {
                         // re-resolve against the validated types
                         mapTypeParams = method.resolveTypeParameters(atypeArgs,
-                                fCall ? atypeReturn : pool.extractFunctionReturns(atypeReturn[0]), false);
+                                fCall || atypeReturn == null
+                                    ? atypeReturn
+                                    : pool.extractFunctionReturns(atypeReturn[0]),
+                                false);
                         if (mapTypeParams.size() < cTypeParams)
                             {
                             log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
