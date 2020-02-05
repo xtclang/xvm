@@ -4,6 +4,8 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
@@ -66,6 +68,28 @@ public class NullableTypeExpression
     protected void collectAnonInnerClassInfo(AnonInnerClass info)
         {
         log(info.getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_INTERSECTION);
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        TypeExpression exprOld = type;
+        TypeExpression exprNew = (TypeExpression) exprOld.validate(ctx, typeRequired, errs);
+        if (exprNew == null)
+            {
+            return null;
+            }
+        type = exprNew;
+
+        ConstantPool pool       = pool();
+        TypeConstant typeActual = pool.ensureIntersectionTypeConstant(
+                                        pool.typeNullable(), exprNew.ensureTypeConstant(ctx));
+        TypeConstant typeType   = typeActual.getType();
+
+        return finishValidation(typeRequired, typeType, TypeFit.Fit, typeType, errs);
         }
 
 

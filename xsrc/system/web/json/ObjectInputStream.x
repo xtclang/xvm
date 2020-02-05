@@ -248,7 +248,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> tokens)
         /**
          * Invoked when a child is reading.
          */
-        /* TODO protected */ void childReading()
+        /* TODO GG protected */ void childReading()
             {
             }
 
@@ -257,8 +257,8 @@ class ObjectInputStream(Schema schema, Iterator<Token> tokens)
          */
         protected conditional String named()
             {
-            // TODO GG: (String | Int)? id = this.id;
-            return id.is(String) ? (True, id.as(String)) : False;
+            (String | Int)? id = this.id;
+            return id.is(String) ? (True, id) : False;
             }
 
         /**
@@ -266,8 +266,8 @@ class ObjectInputStream(Schema schema, Iterator<Token> tokens)
          */
         protected conditional Int indexed()
             {
-            // TODO GG: (String | Int)? id = this.id;
-            return id.is(Int) ? (True, id.as(Int)) : False;
+            (String | Int)? id = this.id;
+            return id.is(Int) ? (True, id) : False;
             }
 
         /**
@@ -275,7 +275,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> tokens)
          *
          * @see [RFC 6901 §5](https://tools.ietf.org/html/rfc6901#section-5)
          */
-        /* TODO protected */ StringBuffer buildPointer(Int length)
+        /* TODO GG protected */ StringBuffer buildPointer(Int length)
             {
             Stringable? token  = id;
             Boolean     escape = False;

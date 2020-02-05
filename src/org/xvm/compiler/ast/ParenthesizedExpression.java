@@ -41,6 +41,12 @@ public class ParenthesizedExpression
         return CHILD_FIELDS;
         }
 
+    @Override
+    public TypeExpression toTypeExpression()
+        {
+        return expr.toTypeExpression();
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
