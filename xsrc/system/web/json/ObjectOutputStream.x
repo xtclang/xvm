@@ -239,8 +239,8 @@ class ObjectOutputStream(Schema schema, Writer writer)
          */
         protected conditional String named()
             {
-            // TODO GG: (String | Int)? id = this.id;
-            return id.is(String) ? (True, id.as(String)) : False;
+            (String | Int)? id = this.id;
+            return id.is(String) ? (True, id) : False;
             }
 
         /**
@@ -248,8 +248,8 @@ class ObjectOutputStream(Schema schema, Writer writer)
          */
         protected conditional Int indexed()
             {
-            // TODO GG: (String | Int)? id = this.id;
-            return id.is(Int) ? (True, id.as(Int)) : False;
+            (String | Int)? id = this.id;
+            return id.is(Int) ? (True, id) : False;
             }
 
         /**
