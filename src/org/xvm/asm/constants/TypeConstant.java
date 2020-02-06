@@ -5831,7 +5831,7 @@ public abstract class TypeConstant
                         TypeConstant typePLeft  = typeLeft.getGenericParamType(sName, Collections.EMPTY_LIST);
                         TypeConstant typePRight = typeRight.getGenericParamType(sName, Collections.EMPTY_LIST);
 
-                        if (!typePRight.isA(typePLeft))
+                        if (!typePRight.equals(typePLeft))
                             {
                             return false;
                             }
