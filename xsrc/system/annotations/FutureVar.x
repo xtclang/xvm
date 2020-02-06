@@ -516,7 +516,7 @@ mixin FutureVar<Referent>
      * figures solely to multiplex their own completion dependencies.
      */
     static class MultiCompleter<Referent>
-            extends DependentFuture<Referent> // InputType == Referent
+            extends DependentFuture<Referent, Referent>
         {
         construct(NotifyDependent first, NotifyDependent second)
             {
