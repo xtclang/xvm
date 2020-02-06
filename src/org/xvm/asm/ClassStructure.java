@@ -3411,7 +3411,7 @@ public class ClassStructure
                     m_listActual = listActual = new ArrayList<>(listActual); // clone
                     List<Map.Entry<StringConstant, TypeConstant>> entries = getTypeParamsAsList();
 
-                    // fill the missing actual parameters with the canonical types
+                    // fill the missing actual parameters with the canonical constraint types
                     // Note: since there is a possibility of Tuple self-reference
                     // (e.g. Tuple<ElementTypes extends Tuple<ElementTypes...>>)
                     // we'll prime each args with Object for now
@@ -3422,11 +3422,12 @@ public class ClassStructure
 
                     for (int i = cActual; i < cFormal; i++)
                         {
-                        // the canonical type itself could be formal, depending on another parameter
-                        TypeConstant typeCanonical = entries.get(i).getValue();
-                        listActual.set(i, typeCanonical.isFormalTypeSequence()
-                                ? typeCanonical
-                                : typeCanonical.resolveGenerics(pool, this));
+                        // the constraint type itself could be formal, depending on another parameter
+                        TypeConstant typeConstraint = entries.get(i).getValue();
+                        listActual.set(i, typeConstraint.isFormalTypeSequence() ||
+                                          !typeConstraint.containsFormalType(true)
+                                ? typeConstraint
+                                : typeConstraint.resolveGenerics(pool, this));
                         }
                     }
                 }

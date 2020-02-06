@@ -114,8 +114,12 @@ public class FBind
                     {
                     throw new IllegalStateException();
                     }
-                hFunction = xRTFunction.makeHandle(chain, frame.m_nDepth + 1)
-                                       .bindTarget(frame.getThis());
+                int nDepth = frame.m_nDepth + 1;
+                if (nDepth >= chain.getDepth())
+                    {
+                    return frame.raiseException("Invalid \"super\" reference");
+                    }
+                hFunction = xRTFunction.makeHandle(chain, nDepth).bindTarget(frame.getThis());
                 }
             else if (m_nFunctionId < CONSTANT_OFFSET)
                 {
