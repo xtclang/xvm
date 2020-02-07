@@ -212,9 +212,7 @@ public class ParameterizedTypeConstant
         {
         TypeConstant constResolved = m_constType.getExplicitClassInto();
 
-        return constResolved.isParamsSpecified()
-            ? constResolved.resolveGenerics(getConstantPool(), this)
-            : constResolved;
+        return constResolved.resolveGenerics(getConstantPool(), this);
         }
 
     @Override

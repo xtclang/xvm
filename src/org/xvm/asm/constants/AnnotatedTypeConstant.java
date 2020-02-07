@@ -158,7 +158,7 @@ public class AnnotatedTypeConstant
             // incorporating class the annotation is mixing into (regardless of the parameter name)
             Map<StringConstant, TypeConstant> mapFormal   = mixin.getTypeParams();
             Map<String, TypeConstant>         mapResolved = new HashMap<>(mapFormal.size());
-            List<TypeConstant>                listActual  = m_constType.getParamTypes();
+            List<TypeConstant>                listActual  = m_constType.normalizeParameters(pool).getParamTypes();
 
             for (StringConstant constName : mapFormal.keySet())
                 {
