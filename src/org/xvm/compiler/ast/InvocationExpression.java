@@ -38,6 +38,7 @@ import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -256,6 +257,14 @@ public class InvocationExpression
     public long getEndPosition()
         {
         return lEndPos;
+        }
+
+    @Override
+    protected void updateLineNumber(Code code)
+        {
+        // use the line that contains the method name (etc...) as the current line;
+        // this is dramatically better for fluent style coding convention
+        code.updateLineNumber(Source.calculateLine(expr.getStartPosition()));
         }
 
     @Override
@@ -1110,6 +1119,8 @@ public class InvocationExpression
     @Override
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
+        updateLineNumber(code);
+
         int cLVals = aLVal.length;
         int cRVals = getValueCount();
 
