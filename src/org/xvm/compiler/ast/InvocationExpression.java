@@ -262,9 +262,17 @@ public class InvocationExpression
     @Override
     protected void updateLineNumber(Code code)
         {
-        // use the line that contains the method name (etc...) as the current line;
-        // this is dramatically better for fluent style coding convention
-        code.updateLineNumber(Source.calculateLine(expr.getStartPosition()));
+        if (expr instanceof NameExpression)
+            {
+            // use the line that contains the method name (etc...) as the current line;
+            // this is dramatically better for fluent style coding convention
+            code.updateLineNumber(Source.calculateLine(
+                    ((NameExpression) expr).getNameToken().getStartPosition()));
+            }
+        else
+            {
+            super.updateLineNumber(code);
+            }
         }
 
     @Override
@@ -1119,8 +1127,6 @@ public class InvocationExpression
     @Override
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
-        updateLineNumber(code);
-
         int cLVals = aLVal.length;
         int cRVals = getValueCount();
 
@@ -1229,6 +1235,8 @@ public class InvocationExpression
 
                         if (m_fCall)
                             {
+                            updateLineNumber(code);
+
                             // it's a method, and we need to generate the necessary code that calls it;
                             // generate the arguments
                             int        cAll      = idMethod.getRawParams().length;
@@ -1458,6 +1466,8 @@ public class InvocationExpression
 
         if (m_fCall)
             {
+            updateLineNumber(code);
+
             int        cDefaults = cAll - cTypeParams - cArgs;
             Argument   arg       = null;
             Argument[] aArgs     = null;
