@@ -675,7 +675,7 @@ public class Compiler
      */
     public static final String TYPE_PARAMS_MISMATCH               = "COMPILER-18";
     /**
-     * Type parameter name is a duplicate.
+     * Type parameter name {0} is a duplicate.
      */
     public static final String DUPLICATE_TYPE_PARAM               = "COMPILER-19";
     /**

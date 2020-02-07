@@ -211,7 +211,7 @@ public class PropertyInfo
                         && !bodyAdd.getStructure().isSynthetic()    // synthetic might not be marked
                         && !fAnno)
                     {
-                    constId.log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_REQUIRED,
+                    constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
                             bodyAdd.getIdentity().getValueString(),
                             typeAdd.getValueString(),
                             typeResult.getValueString());
