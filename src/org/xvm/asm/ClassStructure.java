@@ -1510,10 +1510,11 @@ public class ClassStructure
     protected TypeConstant getGenericParamTypeImpl(ConstantPool pool, String sName,
                                                    List<TypeConstant> listActual, boolean fAllowInto)
         {
-        TypeConstant type = extractGenericType(pool, sName, listActual);
-        if (type != null)
+        int ix = indexOfGenericParameter(sName);
+        if (ix >= 0)
             {
-            return type;
+            // the formal name is declared at this level; don't traverse the contributions
+            return extractGenericType(pool, ix, listActual);
             }
 
         for (Contribution contrib : getContributionsAsList())
@@ -1545,14 +1546,17 @@ public class ClassStructure
                 case Implements:
                 case Incorporates:
                 case Extends:
+                    {
                     ClassStructure clzContrib = (ClassStructure)
                             typeContrib.getSingleUnderlyingClass(true).getComponent();
-                    type = clzContrib.getGenericParamTypeImpl(pool, sName, typeResolved.getParamTypes(), false);
+                    TypeConstant type = clzContrib.getGenericParamTypeImpl(
+                                            pool, sName, typeResolved.getParamTypes(), false);
                     if (type != null)
                         {
                         return type;
                         }
                     break;
+                    }
 
                 default:
                     throw new IllegalStateException();
@@ -1571,15 +1575,26 @@ public class ClassStructure
      *
      * @return the type corresponding to the specified formal type or null if cannot be determined
      */
-    protected TypeConstant extractGenericType(ConstantPool pool, String sName,
-                                              List<TypeConstant> list)
+    private TypeConstant extractGenericType(ConstantPool pool, String sName, List<TypeConstant> list)
         {
         int ix = indexOfGenericParameter(sName);
-        if (ix < 0)
-            {
-            return null;
-            }
 
+        return ix >= 0
+                ? extractGenericType(pool, ix, list)
+                : null;
+        }
+
+    /**
+     * Extract a generic type for the formal parameter at the specified index from the specified list.
+     *
+     * @param pool   the ConstantPool to use
+     * @param ix     the index
+     * @param list   the actual type list
+     *
+     * @return the type corresponding to the specified formal type or null if cannot be determined
+     */
+    private TypeConstant extractGenericType(ConstantPool pool, int ix, List<TypeConstant> list)
+        {
         if (isTuple())
             {
             return pool.ensureParameterizedTypeConstant(pool.typeTuple(),
