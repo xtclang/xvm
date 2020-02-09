@@ -302,8 +302,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             }
 
         Boolean[] values = new Boolean[];
-        // TODO GG using (ElementInput elements = openArray())
-        using (val elements = openArray())
+        using (ElementInput<ElementInput> elements = openArray())
             {
             while (elements.canRead)
                 {
@@ -330,7 +329,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             }
 
         String[] values = new String[];
-        using (val elements = openArray())
+        using (ElementInput<ElementInput> elements = openArray())
             {
             while (elements.canRead)
                 {
@@ -357,7 +356,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             }
 
         Int[] values = new Int[];
-        using (val elements = openArray())
+        using (ElementInput<ElementInput> elements = openArray())
             {
             while (elements.canRead)
                 {
@@ -384,7 +383,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             }
 
         Dec[] values = new Dec[];
-        using (val elements = openArray())
+        using (ElementInput<ElementInput> elements = openArray())
             {
             while (elements.canRead)
                 {
@@ -446,7 +445,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             }
 
         Serializable[] values = new Serializable[];
-        using (val elements = openArray())
+        using (ElementInput<ElementInput> elements = openArray())
             {
             while (elements.canRead)
                 {
