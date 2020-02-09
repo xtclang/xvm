@@ -4324,7 +4324,7 @@ public abstract class TypeConstant
 
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapMixinMethods.entrySet())
             {
-            layerOnMixinMethod(pool, infoSource, idBase, mapMethods, mapVirtMethods,
+            layerOnMixinMethod(pool, typeOrigin, infoSource, idBase, mapMethods, mapVirtMethods,
                     entry.getKey(), entry.getValue(), errs);
             }
 
@@ -4393,6 +4393,7 @@ public abstract class TypeConstant
      * Layer on the passed mixin method contributions onto the base methods.
      *
      * @param pool            the constant pool to use
+     * @param typeOrigin      the type to build the TypeInfo for
      * @param infoBase        the TypeInfo for the type that is being mixed into
      * @param idBaseClass     the identity of the class (etc) that is being mixed into
      * @param mapMethods      methods already collected from the base
@@ -4403,6 +4404,7 @@ public abstract class TypeConstant
      */
     private void layerOnMixinMethod(
             ConstantPool                    pool,
+            TypeConstant                    typeOrigin,
             TypeInfo                        infoBase,
             IdentityConstant                idBaseClass,
             Map<MethodConstant, MethodInfo> mapMethods,
@@ -4442,6 +4444,54 @@ public abstract class TypeConstant
 
         Object     nidContrib = idMixinMethod.getNestedIdentity(); // resolved
         MethodInfo methodBase = infoBase.getMethodByNestedId(nidContrib);
+        if (methodBase == null && !methodMixin.isCapped())
+            {
+            Map<Object, MethodInfo> mapBaseMethods = infoBase.getVirtMethods();
+
+            // the following logic is similar to the "layerOnMethods()" algorithm, except it isn't
+            // concerned with an @Override and capping, assuming that all those issues have already
+            // been dealt with;
+            // another important difference is that it uses "typeOrigin" as a narrowing context,
+            // allowing to "align" co-variant returns of the mixin's methods
+            List<Object> listMatches = typeOrigin.collectPotentialSuperMethods(
+                    methodMixin.getHead().getMethodStructure(),
+                    nidContrib, methodMixin.getSignature(), mapBaseMethods);
+           if (!listMatches.isEmpty())
+                {
+                int cMatches = listMatches.size();
+                if (cMatches == 1)
+                    {
+                    methodBase = mapBaseMethods.get(listMatches.get(0));
+                    }
+                else
+                    {
+                    // now we need find a method that would be the unambiguously best choice;
+                    // collect the signatures into an array and a lookup map (sig->nid)
+                    SignatureConstant[]            aSig     = new SignatureConstant[cMatches];
+                    Map<SignatureConstant, Object> mapNids  = new HashMap<>(cMatches);
+                    for (int i = 0; i < cMatches; i++)
+                        {
+                        Object            nid = listMatches.get(i);
+                        SignatureConstant sig = mapBaseMethods.get(nid).getSignature();
+
+                        aSig[i] = sig;
+                        mapNids.put(sig, nid);
+                        }
+
+                    SignatureConstant sigBest = selectBest(aSig);
+                    if (sigBest == null)
+                        {
+                        log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS,
+                                methodMixin.getIdentity().getPathString());
+                        }
+                    else
+                        {
+                        methodBase = mapBaseMethods.get(mapNids.get(sigBest));
+                        }
+                    }
+                }
+            }
+
         if (methodBase != null && methodBase.getIdentity().equals(methodMixin.getIdentity()))
             {
             // keep whatever the base has got
