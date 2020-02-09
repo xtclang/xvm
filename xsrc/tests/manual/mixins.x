@@ -160,11 +160,8 @@ module TestMixins.xqiz.it
                 }
             }
 
-        /**
-         * TODO GG get rid of type parameters on this declaration (and should they even be permitted?)
-         */
-        mixin CloseCap<ParentOutput extends (ElementOutputStream | ArrayOutputStream | FieldOutputStream)?>
-                into DocOutputStream<ParentOutput>
+        mixin CloseCap
+                into DocOutputStream
             {
             construct()
                 {
@@ -336,9 +333,12 @@ module TestMixins.xqiz.it
                 }
             }
 
-        mixin PointerAwareElementOutput
-                into (ElementOutputStream | ArrayOutputStream)
-                extends PointerAwareDocOutput
+        /**
+         * TODO GG get rid of type parameters on this declaration
+         */
+        mixin PointerAwareElementOutput<ParentOutput extends (ElementOutputStream | ArrayOutputStream | FieldOutputStream)?>
+                into (ElementOutputStream<ParentOutput> | ArrayOutputStream<ParentOutput>)
+                extends PointerAwareDocOutput<ParentOutput>
             {
             @Override
             PointerAwareElementOutput add(Doc value)

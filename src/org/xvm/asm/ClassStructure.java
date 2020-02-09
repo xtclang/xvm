@@ -2230,6 +2230,8 @@ public class ClassStructure
                         {
                         continue nextContribution;
                         }
+                    break;
+
                 case Annotation:
                 case Incorporates:
                 case Extends:
@@ -2380,6 +2382,8 @@ public class ClassStructure
                         {
                         continue nextContribution;
                         }
+                    break;
+
                 case Annotation:
                 case Incorporates:
                 case Extends:

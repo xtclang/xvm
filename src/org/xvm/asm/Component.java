@@ -2938,6 +2938,17 @@ public abstract class Component
             }
 
         /**
+         * Update the type being contributed by this contribution to a narrower one.
+         *
+         * @param  type  the updated TypeConstant for this contribution
+         */
+        public void narrowType(TypeConstant type)
+            {
+            assert m_typeContrib != null && type.isA(m_typeContrib);
+            m_typeContrib = type;
+            }
+
+        /**
          * @return the PropertyConstant specifying the reference to delegate to; never null
          */
         public PropertyConstant getDelegatePropertyConstant()

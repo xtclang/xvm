@@ -311,11 +311,9 @@ class ObjectOutputStream(Schema schema, Writer writer)
 
     /**
      * Virtual child mixin "cap" required for all ElementOutput / FieldOutput implementations.
-     *
-     * TODO GG get rid of type parameters on this declaration (and should they even be permitted?)
      */
-    mixin CloseCap<ParentOutput extends (ElementOutputStream | ArrayOutputStream | FieldOutputStream)?>
-            into DocOutputStream<ParentOutput>
+    mixin CloseCap
+            into DocOutputStream
         {
         construct()
             {

@@ -16,6 +16,7 @@ import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ComponentBifurcator;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
@@ -35,6 +36,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
@@ -1831,9 +1833,93 @@ public class TypeCompositionStatement
                 }
             }
 
+        if (!component.isParameterized())
+            {
+            addImplicitTypeParameters(component, errs);
+            }
+
         if (format == Format.CONST)
             {
             component.synthesizeConstInterface(false);
+            }
+        }
+
+    /**
+     * If there are any undeclared formal parameters for the "extend", "implement" or "into"
+     * contributions, add them to the component's formal parameter list.
+     *
+     * @param component  the ClassStructure we're creating
+     * @param errs       the error listener
+     */
+    private void addImplicitTypeParameters(ClassStructure component, ErrorListener errs)
+        {
+        ListMap<StringConstant, TypeConstant> mapTypeParams = null;
+        for (Contribution contrib : component.getContributionsAsList())
+            {
+            switch (contrib.getComposition())
+                {
+                case Extends:
+                case Implements:
+                case Into:
+                    break;
+
+                default:
+                    // disregard any other contribution
+                    continue;
+                }
+
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            if (!typeContrib.isExplicitClassIdentity(true) ||
+                 typeContrib.isParamsSpecified())
+                {
+                // TODO: how to allow "into A | B" or "into A + B" to be similarly treated?
+                continue;
+                }
+
+            IdentityConstant idContrib  = (IdentityConstant) typeContrib.getDefiningConstant();
+            ClassStructure   clzContrib = (ClassStructure) idContrib.getComponent();
+
+            if (clzContrib.isParameterized())
+                {
+                if (mapTypeParams == null)
+                    {
+                    mapTypeParams = new ListMap<>(clzContrib.getTypeParams());
+                    }
+                else
+                    {
+                    // collect the formal types and verify that there are no collisions
+                    for (Map.Entry<StringConstant, TypeConstant> entry : clzContrib.getTypeParams().entrySet())
+                        {
+                        StringConstant constName      = entry.getKey();
+                        TypeConstant   typeConstraint = entry.getValue();
+
+                        TypeConstant typeOld = mapTypeParams.get(constName);
+                        if (typeOld == null)
+                            {
+                            mapTypeParams.put(constName, typeConstraint);
+                            }
+                        else if (!typeOld.equals(typeConstraint))
+                            {
+                            // {0} type parameter {1} must be of type {2}, but has been specified as {3} by {4}.
+                            log(errs, Severity.ERROR, Constants.VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
+                                name.getValueText(), constName.getValue(), typeOld.getValueString(),
+                                typeConstraint.getValueString(), contrib.getTypeConstant().getValueString());
+                            return;
+                            }
+                        }
+                    }
+
+                // update the contribution
+                contrib.narrowType(clzContrib.getFormalType());
+                }
+            }
+
+        if (mapTypeParams != null)
+            {
+            for (Map.Entry<StringConstant, TypeConstant> entry : mapTypeParams.entrySet())
+                {
+                component.addTypeParam(entry.getKey().getValue(), entry.getValue());
+                }
             }
         }
 
