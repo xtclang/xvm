@@ -363,6 +363,10 @@ public class xFutureVar
             }
 
         // wait for the assignment/completion; the service is responsible for timing out
+        //
+        // TODO GG: as a result of returning R_BLOCK, some callers have no options but to throw
+        // naturally (e.g. xRef.actOnReferent()); an alternative approach is to create a new
+        // "waiting" frame and return R_CALL.
         return Op.R_BLOCK;
         }
 

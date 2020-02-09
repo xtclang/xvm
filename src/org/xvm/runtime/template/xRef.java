@@ -61,6 +61,13 @@ public class xRef
     @Override
     public void initDeclared()
         {
+        // register the native identity template
+        ClassStructure structId   = (ClassStructure) f_struct.getChild("Identity");
+        Identity       templateId = new Identity(f_templates, structId, true);
+        templateId.initDeclared();
+
+        f_templates.registerNativeTemplate(structId.getCanonicalType(), templateId);
+
         s_sigGet = f_struct.findMethod("get", 0).getIdentityConstant().getSignature();
 
         markNativeMethod("equals", null, BOOLEAN);
@@ -94,6 +101,10 @@ public class xRef
 
             case "assigned":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned()));
+
+            case "identity":
+                return actOnReferent(frame, hRef,
+                    h -> frame.assignValue(iReturn, Identity.ensureIdentity(h)));
 
             case "isService":
                 return actOnReferent(frame, hRef,
@@ -152,12 +163,10 @@ public class xRef
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        RefHandle hRef = (RefHandle) hTarget;
-
         switch (method.getName())
             {
             case "get":
-                return getReferentImpl(frame, hRef, true, iReturn);
+                return getReferentImpl(frame, (RefHandle) hTarget, true, iReturn);
 
             case "equals":
                 {
@@ -555,7 +564,7 @@ public class xRef
         }
 
 
-    // ----- handle class -----
+    // ----- handle classes ------------------------------------------------------------------------
 
     public static class RefHandle
             extends GenericHandle
@@ -920,7 +929,8 @@ public class xRef
         private int             index = -1;
         }
 
+
     // ----- constants -----------------------------------------------------------------------------
 
-    protected static SignatureConstant s_sigGet;
+    private static SignatureConstant s_sigGet;
     }
