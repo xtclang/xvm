@@ -218,7 +218,8 @@ module TestMixins.xqiz.it
             @Override
             ElementOutputStream add(Doc value)
                 {
-                if (value != Null || !parent.is(FieldOutputStream))
+                ParentOutput parent = this.parent;
+                if (value != Null && parent.is(ElementOutputStream!))
                     {
                     prepareWrite();
                     }

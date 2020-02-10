@@ -282,6 +282,53 @@ public class UnionTypeConstant
         }
 
     @Override
+    public boolean isNestMateOf(IdentityConstant idClass)
+        {
+        TypeConstant type1 = m_constType1;
+        TypeConstant type2 = m_constType2;
+
+        // if a formal type's constraint is fully covered by another type, combining the formal
+        // type doesn't change the "MateOf" relationship
+        if (type1.isFormalType())
+            {
+            TypeConstant type1C = ((FormalConstant) type1.getDefiningConstant()).getConstraintType();
+            if (type2.isA(type1C))
+                {
+                return type2.isNestMateOf(idClass);
+                }
+            }
+        else if (type2.isFormalType())
+            {
+            TypeConstant type2C = ((FormalConstant) type2.getDefiningConstant()).getConstraintType();
+            if (type1.isA(type2C))
+                {
+                return type1.isNestMateOf(idClass);
+                }
+            }
+
+        return type1.isNestMateOf(idClass) && type2.isNestMateOf(idClass);
+        }
+
+    @Override
+    public TypeConstant ensureNestMateAccess(IdentityConstant idClass, Access access)
+        {
+        TypeConstant type1 = m_constType1;
+        TypeConstant type2 = m_constType2;
+
+        TypeConstant type1A = type1.isNestMateOf(idClass)
+                ? type1.ensureNestMateAccess(idClass, access)
+                : type1;
+
+        TypeConstant type2A = type2.isNestMateOf(idClass)
+                ? type2.ensureNestMateAccess(idClass, access)
+                : type2;
+
+        return type1 == type1A && type2 == type2A
+                ? this
+                : cloneRelational(getConstantPool(), type1A, type2A);
+        }
+
+    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         TypeConstant type1   = m_constType1;

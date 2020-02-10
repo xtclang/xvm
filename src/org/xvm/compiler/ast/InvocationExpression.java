@@ -353,7 +353,7 @@ public class InvocationExpression
 
                 if (isNestMate(ctx, typeLeft))
                     {
-                    typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                    typeLeft = ensureNestMateAccess(ctx, typeLeft);
                     }
                 }
 
@@ -464,7 +464,7 @@ public class InvocationExpression
                 {
                 if (typeLeft == null || isNestMate(ctx, typeLeft))
                     {
-                    typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
+                    typeLeft = ensureNestMateAccess(ctx, typeLeft);
                     }
 
                 PropertyConstant idProp   = (PropertyConstant) argMethod;
@@ -681,7 +681,7 @@ public class InvocationExpression
 
                 if (fValid && isNestMate(ctx, typeLeft))
                     {
-                    typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                    typeLeft = ensureNestMateAccess(ctx, typeLeft);
                     }
                 }
 
@@ -973,9 +973,9 @@ public class InvocationExpression
                 TypeConstant typeFn;
                 if (argMethod instanceof PropertyConstant)
                     {
-                    if (typeLeft == null  || isNestMate(ctx, typeLeft))
+                    if (typeLeft == null || isNestMate(ctx, typeLeft))
                         {
-                        typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
+                        typeLeft = ensureNestMateAccess(ctx, typeLeft);
                         }
                     PropertyConstant idProp   = (PropertyConstant) argMethod;
                     PropertyInfo     infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);

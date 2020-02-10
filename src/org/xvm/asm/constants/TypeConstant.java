@@ -1066,6 +1066,8 @@ public abstract class TypeConstant
 
     /**
      * Check whether or not this type represents a "nest mate" of the specified class.
+     *
+     * @param idClass  the identity of the class
      */
     public boolean isNestMateOf(IdentityConstant idClass)
         {
@@ -1073,6 +1075,23 @@ public abstract class TypeConstant
                 isExplicitClassIdentity(true) &&
                 isSingleUnderlyingClass(false) &&
                 getSingleUnderlyingClass(false).isNestMateOf(idClass);
+        }
+
+    /**
+     * Create a type constant that provides the required access from the specified class context.
+     *
+     * @param idClass  the identity of the class
+     * @param access   the required access
+     */
+    public TypeConstant ensureNestMateAccess(IdentityConstant idClass, Access access)
+        {
+        if (!isNestMateOf(idClass))
+            {
+            isNestMateOf(idClass);
+            throw new AssertionError();
+            }
+
+        return getConstantPool().ensureAccessTypeConstant(this, access);
         }
 
 

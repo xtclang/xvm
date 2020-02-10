@@ -104,8 +104,16 @@ public class ImmutableTypeConstant
     public TypeConstant removeNullable(ConstantPool pool)
         {
         return isNullable()
-                ? pool.ensureImmutableTypeConstant(m_constType.removeNullable(pool))
+                ? cloneSingle(pool, m_constType.removeNullable(pool))
                 : this;
+        }
+
+    @Override
+    public TypeConstant ensureNestMateAccess(IdentityConstant idClass, Access access)
+        {
+        return access == getAccess()
+                ? this
+                : cloneSingle(getConstantPool(), m_constType.ensureNestMateAccess(idClass, access));
         }
 
     @Override

@@ -1723,17 +1723,9 @@ public class NameExpression
                     }
 
                 // TODO support or properties nested under something other than a class (need nested type infos?)
-                if (left instanceof NameExpression)
+                if (isNestMate(ctx, typeLeft))
                     {
-                    Argument arg = ((NameExpression) left).m_arg;
-
-                    // "this:target" has private access in this context
-                    // as well as a "nest mate" (a class that is collocated with the context class)
-                    if (arg instanceof Register &&
-                            ((Register) arg).isTarget() || isNestMate(ctx, typeLeft))
-                        {
-                        typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
-                        }
+                    typeLeft = ensureNestMateAccess(ctx, typeLeft);
                     }
 
                 TypeInfo         infoLeft = typeLeft.ensureTypeInfo(errs);
@@ -2071,9 +2063,9 @@ public class NameExpression
                 else
                     {
                     typeLeft = left.getImplicitType(ctx);
-                    if (isNestMate(ctx, typeLeft))
+                    if (typeLeft == null || isNestMate(ctx, typeLeft))
                         {
-                        typeLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                        typeLeft = ensureNestMateAccess(ctx, typeLeft);
                         }
                     PropertyInfo infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
                     if (infoProp != null)

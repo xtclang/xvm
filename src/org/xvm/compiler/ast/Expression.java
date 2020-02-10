@@ -1707,6 +1707,18 @@ public abstract class Expression
         }
 
     /**
+     * Create a type constant that provides the nest mate access from the specified class context.
+     *
+     * @param type  the type to modify access for; if null - use the context's type
+     */
+    protected TypeConstant ensureNestMateAccess(Context ctx, TypeConstant type)
+        {
+        return type == null
+                ? pool().ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE)
+                : type.ensureNestMateAccess(ctx.getThisClass().getIdentityConstant(), Access.PRIVATE);
+        }
+
+    /**
      * Generate a "this" or some other reserved register.
      *
      * @param code  the code block

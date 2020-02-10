@@ -125,6 +125,21 @@ public class AccessTypeConstant
         }
 
     @Override
+    public boolean isNullable()
+        {
+        assert !m_constType.isNullable();
+        return false;
+        }
+
+    @Override
+    public TypeConstant ensureNestMateAccess(IdentityConstant idClass, Access access)
+        {
+        return access == getAccess()
+            ? this
+            : cloneSingle(getConstantPool(), m_constType.ensureNestMateAccess(idClass, access));
+        }
+
+    @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         return pool.ensureAccessTypeConstant(type, m_access);
@@ -169,13 +184,6 @@ public class AccessTypeConstant
     public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
         {
         return super.checkProduction(sTypeName, m_access, listParams);
-        }
-
-    @Override
-    public boolean isNullable()
-        {
-        assert !m_constType.isNullable();
-        return false;
         }
 
 
