@@ -1085,11 +1085,7 @@ public abstract class TypeConstant
      */
     public TypeConstant ensureNestMateAccess(IdentityConstant idClass, Access access)
         {
-        if (!isNestMateOf(idClass))
-            {
-            isNestMateOf(idClass);
-            throw new AssertionError();
-            }
+        assert isNestMateOf(idClass);
 
         return getConstantPool().ensureAccessTypeConstant(this, access);
         }
