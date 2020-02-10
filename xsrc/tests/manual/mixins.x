@@ -100,7 +100,7 @@ module TestMixins.xqiz.it
                 }
 
             @Override
-            /* TODO GG public/protected */ Boolean canWrite = True;
+            public/protected Boolean canWrite = True;
 
             @Override
             public/private ParentOutput parent;

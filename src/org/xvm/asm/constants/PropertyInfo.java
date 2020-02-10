@@ -136,22 +136,22 @@ public class PropertyInfo
             {
             PropertyBody bodyAdd = aAdd[iAdd];
 
-            // allow duplicate interface properties to survive (see MethodInfo corollary)
-            if (bodyAdd.getImplementation().getExistence() != Existence.Interface)
+            // unlike the MethodInfo processing, we don't need to allow duplicate interface
+            // properties to survive; AAMOF if we allowed it to go on top, the "asInto" would
+            // produce wrong result by using the new head (from the contributing interface) that is
+            // no longer correctly represents all property aspects
+            for (int iThis = 0; iThis < cBase; ++iThis)
                 {
-                for (int iThis = 0; iThis < cBase; ++iThis)
-                    {
-                    PropertyBody bodyBase = aBase[iThis];
+                PropertyBody bodyBase = aBase[iThis];
 
-                    // discard duplicate "into" and class properties
-                    if (bodyAdd.equals(bodyBase) ||
-                        bodyAdd.getIdentity().equals(bodyBase.getIdentity())
-                            && bodyAdd.getImplementation() == Implementation.Implicit)
-                        {
-                        // we found a duplicate, so we can ignore it (it'll get added when we add
-                        // all of the bodies from this)
-                        continue NextLayer;
-                        }
+                // discard duplicate "into" and class properties
+                if (bodyAdd.equals(bodyBase) ||
+                    bodyAdd.getIdentity().equals(bodyBase.getIdentity())
+                        && bodyAdd.getImplementation() == Implementation.Implicit)
+                    {
+                    // we found a duplicate, so we can ignore it (it'll get added when we add
+                    // all of the bodies from this)
+                    continue NextLayer;
                     }
                 }
             if (listMerge == null)
@@ -190,7 +190,6 @@ public class PropertyInfo
 
         // check the property type and determine the type of the resulting property
         TypeConstant typeResult = this.getType();
-        Existence    exResult   = this.getExistence();
         for (int iAdd = cAdd - 1; iAdd >= 0; --iAdd)
             {
             PropertyBody bodyAdd = aAdd[iAdd];
@@ -203,7 +202,6 @@ public class PropertyInfo
                     {
                     // type has been narrowed
                     typeResult = typeAdd;
-                    exResult   = exAdd;
                     }
                 // the property type can only be wider if it is a read-only interface/into method
                 // or the layer-on is an annotation; otherwise it is an error

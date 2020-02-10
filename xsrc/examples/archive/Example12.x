@@ -301,7 +301,7 @@ class ComplicatedState
 
 --
 
-// proprerty "limit access"
+// property "limit access"
 
 class Base
     {

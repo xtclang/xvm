@@ -112,7 +112,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
             }
 
         @Override
-        /* TODO GG public/protected */ Boolean canWrite = True;
+        public/protected Boolean canWrite = True;
 
         @Override
         public/private ParentOutput parent;
@@ -678,7 +678,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
      * This is the pointer-aware implementation of the `ElementOutput` interface.
      */
     mixin PointerAwareElementOutput
-            // TODO into (ElementOutputStream | ArrayOutputStream)
+            // TODO GG into (ElementOutputStream | ArrayOutputStream)
             into DocOutputStream + ElementOutput
             extends PointerAwareDocOutput
         {
