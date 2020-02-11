@@ -1323,6 +1323,22 @@ public class TypeCompositionStatement
     public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
         ClassStructure component = (ClassStructure) getComponent();
+
+        // all of the contributions need to be resolved before we can proceed (because we're
+        // going to have to "follow" those contributions
+        ClassStructure clz = component;
+        do
+            {
+            if (clz.containsUnresolvedContribution())
+                {
+                mgr.requestRevisit();
+                return;
+                }
+
+            clz = clz.getContainingClass();
+            }
+        while (clz != null);
+
         if (m_fVirtChild)
             {
             // all of the enclosing component containers must have resolved, because we will depend
@@ -1339,21 +1355,6 @@ public class TypeCompositionStatement
 
                 parent = parent.getParent();
                 }
-
-            // all of the contributions need to be resolved before we can proceed (because we're
-            // going to have to "follow" those contributions
-            ClassStructure clz = component;
-            do
-                {
-                if (clz.containsUnresolvedContribution())
-                    {
-                    mgr.requestRevisit();
-                    return;
-                    }
-
-                clz = clz.getContainingClass();
-                }
-            while (clz != null);
             }
 
         Format format = component.getFormat();
