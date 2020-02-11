@@ -1349,25 +1349,6 @@ public class TypeInfo
             return infoMethod;
             }
 
-        IdentityConstant idParent = id.getClassIdentity();
-        if (!idParent.equals(getClassStructure().getIdentityConstant()))
-            {
-            MethodStructure method = (MethodStructure) id.getComponent();
-            if (method != null && method.getAccess() == Access.PRIVATE)
-                {
-                // drill down to the TypeInfo for the corresponding class in the hierarchy
-                TypeConstant typeParent = f_listmapClassChain.get(idParent).getType();
-                TypeInfo     infoParent = pool().ensureAccessTypeConstant(
-                                            typeParent, Access.PRIVATE).ensureTypeInfo();
-                infoMethod = infoParent.getMethodById(id);
-                if (infoMethod != null)
-                    {
-                    f_cacheById.put(id, infoMethod);
-                    }
-                return infoMethod;
-                }
-            }
-
         // try to find a method with the same signature
         infoMethod = getMethodByNestedId(id.resolveNestedIdentity(pool(), f_type));
         if (infoMethod != null)
