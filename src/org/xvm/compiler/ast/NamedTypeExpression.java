@@ -390,20 +390,6 @@ public class NamedTypeExpression
             type = pool.ensureImmutableTypeConstant(type);
             }
 
-        if (type.containsUnresolved())
-            {
-            m_typeValidate = type;
-            }
-        else
-            {
-            if (type.validate(ErrorListener.BLACKHOLE))
-                {
-                // we cannot report any error now, so let's just create a non-resolvable
-                // type that look like this type
-                return new UnresolvedTypeConstant(pool,
-                    new UnresolvedNameConstant(pool, getNames(), false));
-                }
-            }
         return type;
         }
 
@@ -528,12 +514,6 @@ public class NamedTypeExpression
                         {
                         m_typeUnresolved.resolve(calculateDefaultType(null, constIdNew));
                         m_typeUnresolved = null;
-                        }
-
-                    if (m_typeValidate != null)
-                        {
-                        m_typeValidate.validate(errsTemp);
-                        m_typeValidate = null;
                         }
                     }
 
@@ -1077,7 +1057,6 @@ public class NamedTypeExpression
     // unresolved constant that may have been created by this statement
     protected transient UnresolvedNameConstant m_constUnresolved;
     protected transient UnresolvedTypeConstant m_typeUnresolved;
-    protected transient TypeConstant           m_typeValidate;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NamedTypeExpression.class, "left", "paramTypes");
     }

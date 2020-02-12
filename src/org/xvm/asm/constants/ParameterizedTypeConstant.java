@@ -867,25 +867,22 @@ public class ParameterizedTypeConstant
         {
         if (!isValidated())
             {
-            boolean fHalt = false;
+            boolean fHalt = super.validate(errs);
+
+            // a parameterized type constant has to be followed by a terminal type constant
+            // specifying a class/interface identity
+            if (!fHalt && !m_constType.isExplicitClassIdentity(false))
+                {
+                log(errs, Severity.ERROR, VE_PARAM_TYPE_ILLEGAL, m_constType.getValueString());
+                fHalt = true;
+                }
 
             for (TypeConstant type : m_atypeParams)
                 {
                 fHalt |= type.validate(errs);
                 }
 
-            // a parameterized type constant has to be followed by a terminal type constant
-            // specifying a class/interface identity
-            if (!(m_constType.resolveTypedefs()).isExplicitClassIdentity(false))
-                {
-                log(errs, Severity.ERROR, VE_PARAM_TYPE_ILLEGAL, m_constType.getValueString());
-                fHalt = true;
-                }
-
-            if (!fHalt)
-                {
-                return super.validate(errs);
-                }
+            return fHalt;
             }
 
         return false;

@@ -16,6 +16,10 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
+import org.xvm.compiler.Compiler;
+
+import org.xvm.util.Severity;
+
 
 /**
  * Represent a type constant that will eventually be replaced with a real type constant.
@@ -413,12 +417,25 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public boolean validate(ErrorListener errs)
+        {
+        if (isTypeResolved())
+            {
+            return getResolvedType().validate(errs);
+            }
+
+        errs.log(Severity.ERROR, Compiler.NAME_UNRESOLVABLE, new Object[]{getValueString()}, this);
+        return true;
+        }
+
+    @Override
     public String getDescription()
         {
         return isTypeResolved()
                 ? "(resolved) " + getResolvedType().getDescription()
                 : m_constId.getDescription();
         }
+
 
     // ----- Object methods ------------------------------------------------------------------------
 
