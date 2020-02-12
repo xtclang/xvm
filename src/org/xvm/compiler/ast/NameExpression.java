@@ -2321,7 +2321,7 @@ public class NameExpression
                 PropertyStructure prop = (PropertyStructure) getIdentity(ctx).getComponent();
 
                 return !prop.isConstant() && left != null
-                        && ((NameExpression) left).isIdentityMode(ctx, true);
+                        && ((NameExpression) left).isIdentityMode(ctx, false);
                 }
             }
 

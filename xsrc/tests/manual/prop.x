@@ -1,11 +1,13 @@
 module TestProps.xqiz.it
     {
-    @Inject Ecstasy.io.Console console;
+    @Inject Console console;
+    @Inject Clock   clock;
 
     void run()
         {
         testMethodProperty();
         testLazyProperty();
+        testModuleProperty();
         testDelegation();
         testAccess();
         }
@@ -37,7 +39,7 @@ module TestProps.xqiz.it
 
     static Int calcStaticProperty()
         {
-        @Inject X.io.Console console;
+        @Inject Ecstasy.io.Console console;
 
         console.println(" - in calcStaticProperty()");
         return 3;
@@ -47,7 +49,13 @@ module TestProps.xqiz.it
         {
         console.println("\n** testLazyProperty()");
 
-        console.println(" lazy=" + lazy);
+        console.println("lazy=" + lazy);
+        }
+
+    static void testModuleProperty()
+        {
+        TestProps.console.println("\n** testModuleProperty()");
+        TestProps.console.println("now=" + this:module.clock.now);
         }
 
     @Lazy Int lazy.calc()

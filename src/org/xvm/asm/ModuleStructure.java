@@ -262,7 +262,13 @@ public class ModuleStructure
     @Override
     public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector)
         {
-        return moduleActual == null
+        if (sName.equals(getSimpleName()))
+            {
+            collector.resolvedComponent(this);
+            return ResolutionResult.RESOLVED;
+            }
+
+        return  moduleActual == null
                 ? super.resolveName(sName, access, collector)
                 : moduleActual.resolveName(sName, access, collector);
         }

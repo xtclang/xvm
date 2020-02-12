@@ -853,11 +853,17 @@ public class StatementBlock
                     SimpleCollector collector = new SimpleCollector();
                     if (component.resolveName(sName, access, collector) == ResolutionResult.RESOLVED)
                         {
-                        // properties and methods will use the TypeInfo for resolution
                         Constant constant = collector.getResolvedConstant();
-                        if (constant instanceof TypedefConstant || constant instanceof ClassConstant)
+                        switch (constant.getFormat())
                             {
-                            return constant;
+                            // properties and methods will use the TypeInfo for resolution
+                            case Property:
+                            case Method:
+                            case MultiMethod:
+                                break;
+
+                            default:
+                                return constant;
                             }
                         }
 
