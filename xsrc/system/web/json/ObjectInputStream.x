@@ -323,11 +323,9 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
 
     /**
      * Virtual child mixin "cap" required for all ElementInput / FieldInput implementations.
-     *
-     * TODO GG get rid of type parameters on this declaration (and should they even be permitted?)
      */
-    mixin CloseCap<ParentInput extends (ElementInputStream | ArrayInputStream | FieldInputStream)?>
-            into DocInputStream<ParentInput>
+    mixin CloseCap
+            into DocInputStream
         {
         construct()
             {
