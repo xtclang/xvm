@@ -380,9 +380,9 @@ public class ParameterizedTypeConstant
     @Override
     public boolean containsRecursiveType()
         {
-        for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+        for (TypeConstant type : m_atypeParams)
             {
-            if (m_atypeParams[i].containsRecursiveType())
+            if (type.containsRecursiveType())
                 {
                 return true;
                 }

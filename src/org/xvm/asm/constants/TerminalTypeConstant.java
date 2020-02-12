@@ -785,51 +785,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    protected TypeInfo buildTypeInfo(ErrorListener errs)
-        {
-        if (!isSingleDefiningConstant())
-            {
-            // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().ensureTypeInfoInternal(errs);
-            }
-
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case Module:
-            case Package:
-            case Class:
-            case NativeClass:
-                return super.buildTypeInfo(errs);
-
-            case Property:
-            case TypeParameter:
-            case FormalTypeChild:
-                {
-                ConstantPool pool           = getConstantPool();
-                TypeConstant typeConstraint = ((FormalConstant) constant).getConstraintType();
-                int          cInvalidations = pool.getInvalidationCount();
-
-                if (typeConstraint.isAutoNarrowing())
-                    {
-                    typeConstraint = typeConstraint.resolveAutoNarrowingBase(pool);
-                    }
-                return new TypeInfo(this, typeConstraint.ensureTypeInfoInternal(errs), cInvalidations);
-                }
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                return ((PseudoConstant) constant).getDeclarationLevelClass().getType()
-                        .ensureTypeInfoInternal(errs);
-
-            default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
-        }
-
-    @Override
     public boolean isNullable()
         {
         if (!isSingleDefiningConstant())
@@ -1346,6 +1301,67 @@ public class TerminalTypeConstant
             }
 
         return super.getTypeArgument();
+        }
+
+
+    // ----- TypeInfo support ----------------------------------------------------------------------
+
+    @Override
+    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
+        {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return constId.getReferredToType().ensureTypeInfo(idClass, errs);
+            }
+
+        return super.ensureTypeInfo(idClass, errs);
+        }
+
+    @Override
+    protected TypeInfo buildTypeInfo(ErrorListener errs)
+        {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return constId.getReferredToType().ensureTypeInfoInternal(errs);
+            }
+
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+            case NativeClass:
+                return super.buildTypeInfo(errs);
+
+            case Property:
+            case TypeParameter:
+            case FormalTypeChild:
+                {
+                ConstantPool pool           = getConstantPool();
+                TypeConstant typeConstraint = ((FormalConstant) constant).getConstraintType();
+                int          cInvalidations = pool.getInvalidationCount();
+
+                if (typeConstraint.isAutoNarrowing())
+                    {
+                    typeConstraint = typeConstraint.resolveAutoNarrowingBase(pool);
+                    }
+                return new TypeInfo(this, typeConstraint.ensureTypeInfoInternal(errs), cInvalidations);
+                }
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                return ((PseudoConstant) constant).getDeclarationLevelClass().getType()
+                        .ensureTypeInfoInternal(errs);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
         }
 
 

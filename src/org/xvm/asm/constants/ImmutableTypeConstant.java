@@ -109,17 +109,20 @@ public class ImmutableTypeConstant
         }
 
     @Override
-    public TypeConstant ensureNestMateAccess(IdentityConstant idClass, Access access)
-        {
-        return access == getAccess()
-                ? this
-                : cloneSingle(getConstantPool(), m_constType.ensureNestMateAccess(idClass, access));
-        }
-
-    @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         return pool.ensureImmutableTypeConstant(type);
+        }
+
+
+    // ----- TypeInfo support ----------------------------------------------------------------------
+
+    @Override
+    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
+        {
+        // the "immutable" keyword does not affect the TypeInfo, even though the type itself is
+        // slightly different
+        return m_constType.ensureTypeInfo(idClass, errs);
         }
 
     @Override

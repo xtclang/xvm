@@ -344,7 +344,7 @@ public class AnnotationExpression
             }
 
         TypeInfo       infoAnno    = typeAnno.ensureTypeInfo(errs);
-        MethodConstant idConstruct = findMethod(ctx, infoAnno, "construct", listArgs,
+        MethodConstant idConstruct = findMethod(ctx, typeAnno, infoAnno, "construct", listArgs,
                 MethodKind.Constructor, true, false, null, errs);
         if (idConstruct == null)
             {

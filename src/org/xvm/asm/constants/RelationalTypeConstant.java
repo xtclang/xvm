@@ -5,12 +5,15 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Collections;
 import java.util.List;
-
+import java.util.Map;
 import java.util.Set;
+
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -20,6 +23,8 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -96,9 +101,6 @@ public abstract class RelationalTypeConstant
         {
         return cloneRelational(pool, type1, type2);
         }
-
-
-    // ----- type algebra methods ------------------------------------------------------------------
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
@@ -410,6 +412,67 @@ public abstract class RelationalTypeConstant
         }
 
 
+    // ----- TypeInfo support ----------------------------------------------------------------------
+
+    @Override
+    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
+        {
+        int      cInvals = getConstantPool().getInvalidationCount();
+        TypeInfo info1   = m_constType1.ensureTypeInfo(idClass, errs);
+        TypeInfo info2   = m_constType2.ensureTypeInfo(idClass, errs);
+
+        return mergeTypeInfo(info1, info2, cInvals, errs);
+        }
+
+    @Override
+    protected TypeInfo buildTypeInfo(ErrorListener errs)
+        {
+        int       cInvals = getConstantPool().getInvalidationCount();
+        TypeInfo  info1   = m_constType1.ensureTypeInfoInternal(errs);
+        TypeInfo  info2   = m_constType2.ensureTypeInfoInternal(errs);
+
+        return info1 == null || info2 == null
+                ? null
+                : mergeTypeInfo(info1, info2, cInvals, errs);
+        }
+
+    /**
+     * @return merged TypeInfo
+     */
+    protected TypeInfo mergeTypeInfo(TypeInfo info1, TypeInfo info2, int cInvals, ErrorListener errs)
+        {
+        return new TypeInfo(this,
+                            cInvals,
+                            null,                   // struct
+                            0,                      // depth
+                            false,                  // synthetic
+                            mergeTypeParams(info1, info2, errs),
+                            mergeAnnotations(info1, info2, errs),
+                            null,                   // typeExtends
+                            null,                   // typeRebase
+                            null,                   // typeInto
+                            Collections.EMPTY_LIST, // listProcess,
+                            ListMap.EMPTY,          // listmapClassChain
+                            ListMap.EMPTY,          // listmapDefaultChain
+                            mergeProperties(info1, info2, errs),
+                            mergeMethods(info1, info2, errs),
+                            Collections.EMPTY_MAP,  // mapVirtProps
+                            Collections.EMPTY_MAP,  // mapVirtMethods
+                            ListMap.EMPTY,          // mapChildren
+                            info1.getProgress().worstOf(info2.getProgress())
+                            );
+        }
+
+
+    abstract protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs);
+
+    abstract protected Annotation[] mergeAnnotations(TypeInfo info1, TypeInfo info2, ErrorListener errs);
+
+    abstract protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs);
+
+    abstract protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs);
+
+
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
@@ -427,6 +490,7 @@ public abstract class RelationalTypeConstant
         return Usage.valueOf(m_constType1.consumesFormalType(sTypeName, access)
                           || m_constType2.consumesFormalType(sTypeName, access));
         }
+
 
     // ----- run-time support ----------------------------------------------------------------------
 

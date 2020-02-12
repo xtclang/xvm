@@ -1723,12 +1723,7 @@ public class NameExpression
                     }
 
                 // TODO support or properties nested under something other than a class (need nested type infos?)
-                if (isNestMate(ctx, typeLeft))
-                    {
-                    typeLeft = ensureNestMateAccess(ctx, typeLeft);
-                    }
-
-                TypeInfo         infoLeft = typeLeft.ensureTypeInfo(errs);
+                TypeInfo         infoLeft = getTypeInfo(ctx, typeLeft, errs);
                 IdentityConstant idChild  = infoLeft.findName(pool, sName);
                 if (idChild == null)
                     {
@@ -2063,11 +2058,9 @@ public class NameExpression
                 else
                     {
                     typeLeft = left.getImplicitType(ctx);
-                    if (typeLeft == null || isNestMate(ctx, typeLeft))
-                        {
-                        typeLeft = ensureNestMateAccess(ctx, typeLeft);
-                        }
-                    PropertyInfo infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
+
+                    TypeInfo     infoLeft = getTypeInfo(ctx, typeLeft, errs);
+                    PropertyInfo infoProp = infoLeft.findProperty(idProp);
                     if (infoProp != null)
                         {
                         type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft);

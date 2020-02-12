@@ -976,6 +976,7 @@ public abstract class AstNode
      * type "function void (Int, Int)", where parameters "b" and "d" remain unbound.
      *
      * @param ctx           the compilation context
+     * @param typeTarget    the type to search the method or function for
      * @param infoTarget    the type info on which to search for the method
      * @param sMethodName   the method name
      * @param listExprArgs  the expressions for arguments (which may not yet be validated)
@@ -990,6 +991,7 @@ public abstract class AstNode
      */
     protected MethodConstant findMethod(
             Context          ctx,
+            TypeConstant     typeTarget,
             TypeInfo         infoTarget,
             String           sMethodName,
             List<Expression> listExprArgs,
@@ -1031,7 +1033,6 @@ public abstract class AstNode
             }
 
         int                 cArgs      = fCall ? cExpr : -1;
-        TypeConstant        typeTarget = infoTarget.getType();
         Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs, kind);
 
         if (fAllowNested)
@@ -1079,7 +1080,7 @@ public abstract class AstNode
         Set<MethodConstant> setConvert = new HashSet<>();
         ErrorListener       errsTemp   = errs.branch();
 
-        collectMatchingMethods(ctx, infoTarget, setMethods, listExprArgs, fCall,
+        collectMatchingMethods(ctx, typeTarget, infoTarget, setMethods, listExprArgs, fCall,
                 mapNamedExpr, atypeReturn, setIs, setConvert, errsTemp);
 
         // now choose the best match
@@ -1098,7 +1099,7 @@ public abstract class AstNode
             setMethods = infoTarget.findMethods(sMethodName, typeTupleArg.getParamsCount(), kind);
 
             ErrorListener errsTempT = errs.branch();
-            collectMatchingMethods(ctx, infoTarget, setMethods, listExprArgs, fCall,
+            collectMatchingMethods(ctx, typeTarget, infoTarget, setMethods, listExprArgs, fCall,
                     mapNamedExpr, atypeReturn, setIs, setConvert, errsTempT);
 
             if (!setIs.isEmpty())
@@ -1206,6 +1207,7 @@ public abstract class AstNode
      */
     private void collectMatchingMethods(
             Context                 ctx,
+            TypeConstant            typeTarget,
             TypeInfo                infoTarget,
             Set<MethodConstant>     setMethods,
             List<Expression>        listExprArgs,
@@ -1378,14 +1380,13 @@ public abstract class AstNode
             if (cReturns > 0)
                 {
                 TypeConstant[] atypeMethodReturn = sigMethod.getRawReturns();
-                TypeConstant   typeCtx           = infoTarget.getType();
 
                 for (int i = 0; i < cReturns; i++)
                     {
                     TypeConstant typeReturn       = atypeReturn[i];
                     TypeConstant typeMethodReturn = atypeMethodReturn[i];
 
-                    if (!typeMethodReturn.isCovariantReturn(typeReturn, typeCtx))
+                    if (!typeMethodReturn.isCovariantReturn(typeReturn, typeTarget))
                         {
                         if (typeMethodReturn.getConverterTo(typeReturn) != null)
                             {

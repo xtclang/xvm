@@ -132,17 +132,18 @@ public class AccessTypeConstant
         }
 
     @Override
-    public TypeConstant ensureNestMateAccess(IdentityConstant idClass, Access access)
-        {
-        return access == getAccess()
-            ? this
-            : cloneSingle(getConstantPool(), m_constType.ensureNestMateAccess(idClass, access));
-        }
-
-    @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         return pool.ensureAccessTypeConstant(type, m_access);
+        }
+
+    // ----- TypeInfo support ----------------------------------------------------------------------
+
+    @Override
+    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
+        {
+        // someone has already picked the access level; just comply
+        return ensureTypeInfo(errs);
         }
 
     @Override
@@ -165,7 +166,6 @@ public class AccessTypeConstant
 
 
     // ----- type comparison support ---------------------------------------------------------------
-
 
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,

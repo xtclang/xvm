@@ -248,7 +248,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> tokens)
         /**
          * Invoked when a child is reading.
          */
-        /* TODO GG protected */ void childReading()
+        protected void childReading()
             {
             }
 
@@ -275,7 +275,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> tokens)
          *
          * @see [RFC 6901 §5](https://tools.ietf.org/html/rfc6901#section-5)
          */
-        /* TODO GG protected */ StringBuffer buildPointer(Int length)
+        protected StringBuffer buildPointer(Int length)
             {
             Stringable? token  = id;
             Boolean     escape = False;

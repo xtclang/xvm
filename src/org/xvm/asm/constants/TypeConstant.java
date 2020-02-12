@@ -1077,19 +1077,6 @@ public abstract class TypeConstant
                 getSingleUnderlyingClass(false).isNestMateOf(idClass);
         }
 
-    /**
-     * Create a type constant that provides the required access from the specified class context.
-     *
-     * @param idClass  the identity of the class
-     * @param access   the required access
-     */
-    public TypeConstant ensureNestMateAccess(IdentityConstant idClass, Access access)
-        {
-        assert isNestMateOf(idClass);
-
-        return getConstantPool().ensureAccessTypeConstant(this, access);
-        }
-
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 
@@ -1104,9 +1091,27 @@ public abstract class TypeConstant
         }
 
     /**
+     * Obtain all of the information about this type, while being used in a context of the
+     * specified class.
+     *
+     * @param idClass  the identity of the class
+     * @param errs     the error listener to log errors to
+     *
+     * @return the flattened TypeInfo that represents all aspects of this type when used in
+     *         a given class context
+     */
+    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
+        {
+        return (isNestMateOf(idClass)
+                ? getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE)
+                : this).
+            ensureTypeInfo(errs);
+        }
+
+    /**
      * Obtain all of the information about this type, resolved from its recursive composition.
      *
-     * @param errs  the error list to log errors to
+     * @param errs  the error listener to log errors to
      *
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */

@@ -377,40 +377,10 @@ public class IntersectionTypeConstant
         return pool.typeRef();
         }
 
+
+    // ----- TypeInfo support ----------------------------------------------------------------------
+
     @Override
-    protected TypeInfo buildTypeInfo(ErrorListener errs)
-        {
-        // we've been asked to resolve some type defined as "T1 | T2";  first, resolve T1 and T2
-        int      cInvals = getConstantPool().getInvalidationCount();
-        TypeInfo info1   = getUnderlyingType().ensureTypeInfoInternal(errs);
-        TypeInfo info2   = getUnderlyingType2().ensureTypeInfoInternal(errs);
-        if (info1 == null || info2 == null)
-            {
-            return null;
-            }
-
-        return new TypeInfo(this,
-                            cInvals,
-                            null,                   // struct
-                            0,                      // depth
-                            false,                  // synthetic
-                            mergeTypeParams(info1, info2, errs),
-                            mergeAnnotations(info1, info2, errs),
-                            null,                   // typeExtends
-                            null,                   // typeRebase
-                            null,                   // typeInto
-                            Collections.EMPTY_LIST, // listProcess,
-                            ListMap.EMPTY,          // listmapClassChain
-                            ListMap.EMPTY,          // listmapDefaultChain
-                            mergeProperties(info1, info2, errs),
-                            mergeMethods(info1, info2, errs),
-                            Collections.EMPTY_MAP,  // mapVirtProps
-                            Collections.EMPTY_MAP,  // mapVirtMethods
-                            ListMap.EMPTY,          // mapChildren
-                            info1.getProgress().worstOf(info2.getProgress())
-                            );
-        }
-
     protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
         ConstantPool           pool = getConstantPool();
@@ -460,12 +430,14 @@ public class IntersectionTypeConstant
         return map;
         }
 
+    @Override
     protected Annotation[] mergeAnnotations(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
         // TODO
         return null;
         }
 
+    @Override
     protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
         Map<PropertyConstant, PropertyInfo> map = new HashMap<>();
@@ -528,6 +500,7 @@ public class IntersectionTypeConstant
         return map;
         }
 
+    @Override
     protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
         Map<MethodConstant, MethodInfo> map = new HashMap<>();

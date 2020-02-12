@@ -428,7 +428,7 @@ public class NewExpression
                     errsTemp.merge();
                     }
 
-                boolean fNestMate = isNestMate(ctx, typeTarget);
+                boolean fNestMate = typeTarget.isNestMateOf(ctx.getThisClass().getIdentityConstant());
                 if (fAnon)
                     {
                     // since we are going to be extending the specified type, increase visibility from
@@ -451,10 +451,6 @@ public class NewExpression
                     ClassStructure clzTarget = (ClassStructure)
                             typeTarget.getSingleUnderlyingClass(false).getComponent();
                     m_fVirtualChild = clzTarget.isVirtualChild();
-
-                    // since we are new-ing a class that is a nest-mate of the current class, we can
-                    // increase visibility from the public default all the way to private
-                    typeTarget = pool.ensureAccessTypeConstant(typeResult, Access.PRIVATE);
 
                     if (m_fVirtualChild)
                         {
@@ -506,21 +502,20 @@ public class NewExpression
             else // left != null
                 {
                 m_fVirtualChild = true;
-                if (isNestMate(ctx, typeTarget))
-                    {
-                    typeTarget = pool.ensureAccessTypeConstant(typeResult, Access.PRIVATE);
-                    }
                 }
             }
 
         TypeInfo infoTarget = null;
         if (fValid)
             {
+            infoTarget = fAnon
+                    ? typeTarget.ensureTypeInfo(errs)
+                    : getTypeInfo(ctx, typeResult, errs);
+
             // the target type must be new-able
-            infoTarget = typeTarget.ensureTypeInfo(errs);
             if (!infoTarget.isNewable())
                 {
-                String sType = typeTarget.getValueString();
+                String sType = typeResult.getValueString();
                 if (infoTarget.isExplicitlyAbstract())
                     {
                     log(errs, Severity.ERROR, Constants.VE_NEW_ABSTRACT_TYPE, sType);
@@ -574,7 +569,7 @@ public class NewExpression
                 // any required dependency that it has one a super class constructor will be handled
                 // as if this were any other normal class)
                 ErrorListener errsTemp = errs.branch();
-                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodKind.Constructor,
+                idMethod = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs, MethodKind.Constructor,
                                 true, false, null, errsTemp);
                 if (idMethod == null && !listArgs.isEmpty())
                     {
@@ -585,7 +580,7 @@ public class NewExpression
                     // replaced by a constructor with the same signature as the super's constructor
                     // (note: the automatic creation of the synthetic no-arg constructor in the
                     // absence of any explicit constructor must do this same check)
-                    MethodConstant idSuper = findMethod(ctx, typeSuper.ensureTypeInfo(errs),
+                    MethodConstant idSuper = findMethod(ctx, typeSuper, typeSuper.ensureTypeInfo(errs),
                             "construct", listArgs, MethodKind.Constructor, true, false, null, errs);
                     if (idSuper == null)
                         {
@@ -615,8 +610,8 @@ public class NewExpression
                 }
             else
                 {
-                idMethod = findMethod(ctx, infoTarget, "construct", listArgs, MethodKind.Constructor,
-                                true, false, null, errs);
+                idMethod = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
+                                MethodKind.Constructor, true, false, null, errs);
                 }
 
             if (idMethod == null)

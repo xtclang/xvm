@@ -2158,8 +2158,8 @@ public class TypeCompositionStatement
             }
         else
             {
-            idSuper = findMethod(ctxValidate, infoSuper, "construct", listArgs, MethodKind.Constructor,
-                            true, false, null, errs);
+            idSuper = findMethod(ctxValidate, infoSuper.getType(), infoSuper, "construct", listArgs,
+                            MethodKind.Constructor, true, false, null, errs);
             if (idSuper == null)
                 {
                 // if an error have already been logged, this is additional information

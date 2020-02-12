@@ -1699,23 +1699,15 @@ public abstract class Expression
         }
 
     /**
-     * Checks whether or not the specified type represents a "nest mate" of the compiling class.
-     */
-    protected boolean isNestMate(Context ctx, TypeConstant type)
-        {
-        return type.isNestMateOf(ctx.getThisClass().getIdentityConstant());
-        }
-
-    /**
-     * Create a type constant that provides the nest mate access from the specified class context.
+     * Obtain a TypeInfo for the specified type in the specified class context.
      *
-     * @param type  the type to modify access for; if null - use the context's type
+     * @param type  the type to get the TypeInfo for; if null - use the context's type
      */
-    protected TypeConstant ensureNestMateAccess(Context ctx, TypeConstant type)
+    protected TypeInfo getTypeInfo(Context ctx, TypeConstant type, ErrorListener errs)
         {
         return type == null
-                ? pool().ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE)
-                : type.ensureNestMateAccess(ctx.getThisClass().getIdentityConstant(), Access.PRIVATE);
+                ? pool().ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE).ensureTypeInfo(errs)
+                : type.ensureTypeInfo(ctx.getThisClass().getIdentityConstant(), errs);
         }
 
     /**

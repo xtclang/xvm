@@ -36,6 +36,18 @@ public class RecursiveTypeConstant
         super(pool, format, in);
         }
 
+
+    // ----- type specific methods -----------------------------------------------------------------
+
+    /**
+     * @return the underlying type that the typedef represents
+     */
+    protected TypeConstant getReferredToType()
+        {
+        return ((TypedefConstant) ensureResolvedConstant()).getReferredToType();
+        }
+
+
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
@@ -56,6 +68,7 @@ public class RecursiveTypeConstant
         return null;
         }
 
+    @Override
     public boolean containsRecursiveType()
         {
         return true;
@@ -77,7 +90,6 @@ public class RecursiveTypeConstant
     public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
         {
         return ResolutionResult.UNKNOWN;
-
         }
 
     @Override
@@ -114,12 +126,6 @@ public class RecursiveTypeConstant
     public boolean isTuple()
         {
         return false;
-        }
-
-    @Override
-    public TypeInfo ensureTypeInfoInternal(ErrorListener errs)
-        {
-        return getConstantPool().typeObject().ensureTypeInfo(errs);
         }
 
     @Override
@@ -220,21 +226,27 @@ public class RecursiveTypeConstant
         return TypeConstant.Usage.NO;
         }
 
+    // ----- TypeInfo support ----------------------------------------------------------------------
+
+    @Override
+    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
+        {
+        return ensureTypeInfo(errs);
+        }
+
+    @Override
+    public TypeInfo ensureTypeInfoInternal(ErrorListener errs)
+        {
+        return getConstantPool().typeObject().ensureTypeInfo(errs);
+        }
+
+
+    // ----- run-time support ----------------------------------------------------------------------
+
     @Override
     public OpSupport getOpSupport(TemplateRegistry registry)
         {
         throw new UnsupportedOperationException();
-        }
-
-
-    // ----- Helper methods ------------------------------------------------------------------------
-
-    /**
-     * @return the underlying type that the typedef represents
-     */
-    protected TypeConstant getReferredToType()
-        {
-        return ((TypedefConstant) ensureResolvedConstant()).getReferredToType();
         }
 
 

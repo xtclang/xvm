@@ -187,48 +187,34 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    protected TypeInfo buildTypeInfo(ErrorListener errs)
+    public boolean isNestMateOf(IdentityConstant idClass)
         {
-        // we've been asked to resolve some type defined as "T1 - T2", which means that we need to
-        // first resolve T1 and T2, and then collect all the information from T1 that is not in T2
-        ConstantPool pool  = getConstantPool();
         TypeConstant type1 = m_constType1;
-        TypeConstant type2 = m_constType2;
-
         if (type1.isFormalType())
             {
-            // we know that a TypeInfo for a formal type is the same as a TypeInfo for its constraint;
-            // therefore we can simply apply the difference to the constraint
-            TypeConstant typeC1 = ((FormalConstant) type1.getDefiningConstant()).getConstraintType();
-            return typeC1.andNot(pool, type2).ensureTypeInfo(errs);
+            type1 = ((FormalConstant) type1.getDefiningConstant()).getConstraintType();
             }
-
-        int      cInvals = pool.getInvalidationCount();
-        TypeInfo info1   = type1.ensureTypeInfo(errs);
-        TypeInfo info2   = type2.ensureTypeInfo(errs);
-
-        return new TypeInfo(this,
-                            cInvals,
-                            null,                   // struct
-                            0,                      // depth
-                            false,                  // synthetic
-                            mergeTypeParams(info1, info2, errs),
-                            mergeAnnotations(info1, info2, errs),
-                            null,                   // typeExtends
-                            null,                   // typeRebase
-                            null,                   // typeInto
-                            Collections.EMPTY_LIST, // listProcess,
-                            ListMap.EMPTY,          // listmapClassChain
-                            ListMap.EMPTY,          // listmapDefaultChain
-                            mergeProperties(info1, info2, errs),
-                            mergeMethods(info1, info2, errs),
-                            Collections.EMPTY_MAP,  // mapVirtProps
-                            Collections.EMPTY_MAP,  // mapVirtMethods
-                            ListMap.EMPTY,          // mapChildren
-                            info1.getProgress().worstOf(info2.getProgress())
-                            );
+        return type1.isNestMateOf(idClass);
         }
 
+
+    // ----- TypeInfo support ----------------------------------------------------------------------
+
+    @Override
+    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
+        {
+        TypeConstant type1 = m_constType1;
+        if (type1.isFormalType())
+            {
+            TypeConstant typeC = ((FormalConstant) type1.getDefiningConstant()).getConstraintType();
+            TypeConstant typeN = typeC.andNot(getConstantPool(), m_constType2);
+            return typeN.ensureTypeInfo(idClass, errs);
+            }
+
+        return super.ensureTypeInfo(idClass, errs);
+        }
+
+    @Override
     protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
         Map<Object, ParamInfo> map1 = info1.getTypeParams();
@@ -261,12 +247,14 @@ public class DifferenceTypeConstant
         return map;
         }
 
+    @Override
     protected Annotation[] mergeAnnotations(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
         // TODO
         return null;
         }
 
+    @Override
     protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
         Map<PropertyConstant, PropertyInfo> map = new HashMap<>();
@@ -286,6 +274,7 @@ public class DifferenceTypeConstant
         return map;
         }
 
+    @Override
     protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
         Map<MethodConstant, MethodInfo> map = new HashMap<>();
@@ -305,6 +294,7 @@ public class DifferenceTypeConstant
             }
         return map;
         }
+
 
     // ----- type comparison support ---------------------------------------------------------------
 

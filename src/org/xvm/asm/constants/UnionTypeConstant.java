@@ -309,56 +309,10 @@ public class UnionTypeConstant
         return type1.isNestMateOf(idClass) && type2.isNestMateOf(idClass);
         }
 
-    @Override
-    public TypeConstant ensureNestMateAccess(IdentityConstant idClass, Access access)
-        {
-        TypeConstant type1 = m_constType1;
-        TypeConstant type2 = m_constType2;
 
-        TypeConstant type1A = type1.isNestMateOf(idClass)
-                ? type1.ensureNestMateAccess(idClass, access)
-                : type1;
-
-        TypeConstant type2A = type2.isNestMateOf(idClass)
-                ? type2.ensureNestMateAccess(idClass, access)
-                : type2;
-
-        return type1 == type1A && type2 == type2A
-                ? this
-                : cloneRelational(getConstantPool(), type1A, type2A);
-        }
+    // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
-    protected TypeInfo buildTypeInfo(ErrorListener errs)
-        {
-        TypeConstant type1   = m_constType1;
-        TypeConstant type2   = m_constType2;
-        int          cInvals = getConstantPool().getInvalidationCount();
-        TypeInfo     info1   = type1.ensureTypeInfo(errs);
-        TypeInfo     info2   = type2.ensureTypeInfo(errs);
-
-        return new TypeInfo(this,
-                            cInvals,
-                            null,                   // struct
-                            0,                      // depth
-                            false,                  // synthetic
-                            mergeTypeParams(info1, info2, errs),
-                            mergeAnnotations(info1, info2, errs),
-                            null,                   // typeExtends
-                            null,                   // typeRebase
-                            null,                   // typeInto
-                            Collections.EMPTY_LIST, // listProcess,
-                            ListMap.EMPTY,          // listmapClassChain
-                            ListMap.EMPTY,          // listmapDefaultChain
-                            mergeProperties(info1, info2, errs),
-                            mergeMethods(info1, info2, errs),
-                            Collections.EMPTY_MAP,  // mapVirtProps
-                            Collections.EMPTY_MAP,  // mapVirtMethods
-                            ListMap.EMPTY,          // mapChildren
-                            info1.getProgress().worstOf(info2.getProgress())
-                            );
-        }
-
     protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
         Map<Object, ParamInfo> map1 = info1.getTypeParams();
@@ -420,12 +374,14 @@ public class UnionTypeConstant
         return map;
         }
 
+    @Override
     protected Annotation[] mergeAnnotations(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
         // TODO
         return null;
         }
 
+    @Override
     protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
         Map<PropertyConstant, PropertyInfo> map = new HashMap<>();
@@ -471,6 +427,7 @@ public class UnionTypeConstant
         return map;
         }
 
+    @Override
     protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
         Map<MethodConstant, MethodInfo> map = new HashMap<>();

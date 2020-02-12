@@ -350,11 +350,6 @@ public class InvocationExpression
                     assert !fit.isFit();
                     return TypeConstant.NO_TYPES;
                     }
-
-                if (isNestMate(ctx, typeLeft))
-                    {
-                    typeLeft = ensureNestMateAccess(ctx, typeLeft);
-                    }
                 }
 
             // the return types are a combination of required and redundant types
@@ -462,17 +457,10 @@ public class InvocationExpression
             TypeConstant typeArg;
             if (argMethod instanceof PropertyConstant)
                 {
-                if (typeLeft == null || isNestMate(ctx, typeLeft))
-                    {
-                    typeLeft = ensureNestMateAccess(ctx, typeLeft);
-                    }
+                TypeInfo     infoLeft = getTypeInfo(ctx, typeLeft, errs);
+                PropertyInfo infoProp = infoLeft.findProperty((PropertyConstant) argMethod);
 
-                PropertyConstant idProp   = (PropertyConstant) argMethod;
-                PropertyInfo     infoProp = typeLeft.ensureTypeInfo().findProperty(idProp);
-
-                typeArg = infoProp == null
-                        ? pool.typeObject()
-                        : infoProp.getType();
+                typeArg = infoProp == null ? pool.typeObject() : infoProp.getType();
                 }
             else
                 {
@@ -678,11 +666,6 @@ public class InvocationExpression
                         fValid = false;
                         }
                     }
-
-                if (fValid && isNestMate(ctx, typeLeft))
-                    {
-                    typeLeft = ensureNestMateAccess(ctx, typeLeft);
-                    }
                 }
 
             // the return types are a combination of required and redundant types
@@ -737,7 +720,8 @@ public class InvocationExpression
                     boolean   fStatic;
                     if (component == null)
                         {
-                        TypeInfo info = m_targetinfo.getTargetType().ensureTypeInfo(errs);
+                        TypeConstant type = m_targetinfo.getTargetType();
+                        TypeInfo     info = getTypeInfo(ctx, type, errs);
                         fStatic = argMethod instanceof MethodConstant
                                 ? info.getMethodById((MethodConstant) argMethod).isFunction()
                                 : info.findProperty((PropertyConstant) argMethod).isConstant();
@@ -973,12 +957,8 @@ public class InvocationExpression
                 TypeConstant typeFn;
                 if (argMethod instanceof PropertyConstant)
                     {
-                    if (typeLeft == null || isNestMate(ctx, typeLeft))
-                        {
-                        typeLeft = ensureNestMateAccess(ctx, typeLeft);
-                        }
-                    PropertyConstant idProp   = (PropertyConstant) argMethod;
-                    PropertyInfo     infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
+                    TypeInfo     infoLeft = getTypeInfo(ctx, typeLeft, errs);
+                    PropertyInfo infoProp = infoLeft.findProperty((PropertyConstant) argMethod);
 
                     typeFn = infoProp == null ? pool.typeObject() : infoProp.getType();
                     }
@@ -1791,10 +1771,10 @@ public class InvocationExpression
                 {
                 typeLeft = ctx.getVar("this").getType();
 
-                TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
+                TypeInfo infoLeft = getTypeInfo(ctx, typeLeft, errs);
 
-                arg = findCallable(ctx, infoLeft, sName, MethodKind.Any, true,
-                        atypeReturn, ErrorListener.BLACKHOLE);
+                arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any,
+                    true, atypeReturn, ErrorListener.BLACKHOLE);
                 if (arg instanceof MethodConstant)
                     {
                     MethodStructure method = getMethod(infoLeft, arg);
@@ -1856,9 +1836,10 @@ public class InvocationExpression
 
             if (arg instanceof TargetInfo)
                 {
-                TargetInfo       target = (TargetInfo) arg;
-                TypeInfo         info   = target.getTargetType().ensureTypeInfo(errs);
-                IdentityConstant id     = target.getId();
+                TargetInfo       target     = (TargetInfo) arg;
+                TypeConstant     typeTarget = target.getTargetType();
+                TypeInfo         info       = typeTarget.ensureTypeInfo(errs);
+                IdentityConstant id         = target.getId();
                 if (id instanceof MultiMethodConstant)
                     {
                     // find the method based on the signature
@@ -1867,15 +1848,15 @@ public class InvocationExpression
                             fConstruct                                ? MethodKind.Constructor :
                             (fNoCall && fNoFBind) || target.hasThis() ? MethodKind.Any :
                                                                         MethodKind.Function;
-                    IdentityConstant idCallable = findCallable(ctx, info, sName, kind,
-                                                    id.isNested(), atypeReturn, errs);
+                    IdentityConstant idCallable = findCallable(ctx, typeTarget, info, sName,
+                            kind, id.isNested(), atypeReturn, errs);
                     if (idCallable == null)
                         {
                         // check to see if we would have found something had we included methods in
                         // the search
                         if (kind == MethodKind.Function &&
-                                findCallable(ctx, info, sName, MethodKind.Method, id.isNested(),
-                                    atypeReturn, ErrorListener.BLACKHOLE) != null)
+                                findCallable(ctx, typeTarget, info, sName, MethodKind.Method,
+                                    id.isNested(), atypeReturn, ErrorListener.BLACKHOLE) != null)
                             {
                             exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD, sName, target.getTargetType());
                             }
@@ -2000,8 +1981,8 @@ public class InvocationExpression
                                                             MethodKind.Function;
 
                     ErrorListener errsTemp = errs.branch();
-                    Argument      arg      = findCallable(ctx, infoLeft, sName, kind, false,
-                                                            atypeReturn, errsTemp);
+                    Argument      arg      = findCallable(ctx, typeLeft, infoLeft, sName, kind,
+                        false, atypeReturn, errsTemp);
                     if (arg instanceof MethodConstant)
                         {
                         errsTemp.merge();
@@ -2039,12 +2020,13 @@ public class InvocationExpression
                             // "this" is "Value.hashCode(value)"
                             // idProp.getFormalType() is NaturalHasher.Value
 
-                            TypeInfo infoType = nameLeft.getImplicitType(ctx).getParamType(0).ensureTypeInfo(errs);
+                            TypeConstant type     = nameLeft.getImplicitType(ctx).getParamType(0);
+                            TypeInfo     infoType = type.ensureTypeInfo(errs);
 
                             ErrorListener errsTemp = errs.branch();
 
-                            Argument arg = findCallable(ctx, infoType, sName, MethodKind.Function, false,
-                                                atypeReturn, errsTemp);
+                            Argument arg = findCallable(ctx, type, infoType, sName, MethodKind.Function,
+                                false, atypeReturn, errsTemp);
                             if (arg instanceof MethodConstant)
                                 {
                                 m_argMethod   = arg;
@@ -2076,8 +2058,8 @@ public class InvocationExpression
                         TypeInfo      infoLeft = typeLeft.ensureTypeInfo(errs);
                         ErrorListener errsTemp = errs.branch();
 
-                        Argument arg = findCallable(ctx, infoLeft, sName, MethodKind.Function, false,
-                                            atypeReturn, errsTemp);
+                        Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Function,
+                            false, atypeReturn, errsTemp);
                         if (arg instanceof MethodConstant)
                             {
                             m_argMethod   = arg;
@@ -2099,15 +2081,16 @@ public class InvocationExpression
                             MethodStructure method = ctx.getMethod();
                             if (method.isTypeParameter(iReg))
                                 {
-                                TypeInfo      infoLeft = reg.getType().getParamType(0).ensureTypeInfo(errs);
+                                TypeConstant  type     = reg.getType().getParamType(0);
+                                TypeInfo      infoType = typeLeft.ensureTypeInfo(errs);
                                 ErrorListener errsTemp = errs.branch();
 
-                                Argument  arg = findCallable(ctx, infoLeft, sName, MethodKind.Function, false,
-                                                        atypeReturn, errsTemp);
+                                Argument  arg = findCallable(ctx, type, infoType, sName, MethodKind.Function,
+                                    false, atypeReturn, errsTemp);
                                 if (arg instanceof MethodConstant)
                                     {
                                     m_argMethod   = arg;
-                                    m_method      = getMethod(infoLeft, arg);
+                                    m_method      = getMethod(infoType, arg);
                                     m_fBindTarget = false;
                                     m_idFormal    = method.getParam(iReg).
                                             asTypeParameterConstant(method.getIdentityConstant());
@@ -2124,10 +2107,10 @@ public class InvocationExpression
             // method/function to call
             // - methods are included because there is a left and it is NOT identity-mode
             // - functions are NOT included because the left is NOT identity-mode
-            TypeInfo      infoLeft = typeLeft.ensureTypeInfo(errs);
+            TypeInfo      infoLeft = getTypeInfo(ctx, typeLeft, errs);
             ErrorListener errsMain = errs.branch();
 
-            Argument arg = findCallable(ctx, infoLeft, sName, MethodKind.Method, false,
+            Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Method, false,
                                 atypeReturn, errsMain);
             if (arg != null)
                 {
@@ -2155,8 +2138,8 @@ public class InvocationExpression
 
                 ErrorListener errsAlt = errs.branch();
 
-                arg = findMethod(ctx, infoLeft, sName, listArgs, MethodKind.Function, !fNoCall, false,
-                            atypeReturn, errsAlt);
+                arg = findMethod(ctx, typeLeft, infoLeft, sName, listArgs, MethodKind.Function,
+                            !fNoCall, false, atypeReturn, errsAlt);
                 if (arg != null)
                     {
                     m_argMethod   = arg;
@@ -2174,7 +2157,7 @@ public class InvocationExpression
                 if (errsMain.hasError(Compiler.MISSING_METHOD) &&
                         infoLeft.findMethods(sName, -1, MethodKind.Any).isEmpty())
                     {
-                    NameExpression   exprFn   = (NameExpression) exprLeft;
+                    NameExpression   exprFn = (NameExpression) exprLeft;
                     IdentityConstant idParent;
                     if (exprFn.isIdentityMode(ctx, false))
                         {
@@ -2229,9 +2212,12 @@ public class InvocationExpression
 
     /**
      * Find a named method or function that best matches the specified requirements.
-     *
+     * </p>
+     * Note: we need to pass both typeParent and infoParent, since in some context sensitive cases
+     *  typeParent.ensureTypeInfo() != infoParent and infoParent.getType() != typeParent
      *
      * @param ctx           the context
+     * @param typeParent    the type to search the method or function for
      * @param infoParent    the TypeInfo to search for the method or function on
      * @param sName         the name of the method or function
      * @param kind          the kind of methods to include in the search
@@ -2244,6 +2230,7 @@ public class InvocationExpression
      */
     protected IdentityConstant findCallable(
             Context        ctx,
+            TypeConstant   typeParent,
             TypeInfo       infoParent,
             String         sName,
             MethodKind     kind,
@@ -2259,7 +2246,8 @@ public class InvocationExpression
             return prop.getIdentity();
             }
 
-        return findMethod(ctx, infoParent, sName, args, kind, m_fCall, fAllowNested, aRedundant, errs);
+        return findMethod(ctx, typeParent, infoParent, sName, args, kind,
+                    m_fCall, fAllowNested, aRedundant, errs);
         }
 
     /**

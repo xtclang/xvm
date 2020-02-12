@@ -1748,6 +1748,8 @@ public class TypeInfo
 
     /**
      * Obtain all of the matching methods for the specified name and the number of parameters.
+     * <p/>
+     * Note: the returned method constants could be synthetic and with auto-narrowing resolved.
      *
      * @param sName    the method name
      * @param cParams  the number of parameters (-1 for any)

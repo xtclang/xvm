@@ -230,7 +230,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
         /**
          * Invoked when a child is writing.
          */
-        /* TODO protected */ void childWriting()
+        protected void childWriting()
             {
             }
 
@@ -257,7 +257,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
          *
          * @see [RFC 6901 §5](https://tools.ietf.org/html/rfc6901#section-5)
          */
-        /* TODO protected */ StringBuffer buildPointer(Int length)
+        protected StringBuffer buildPointer(Int length)
             {
             Stringable? token  = id;
             Boolean     escape = False;
