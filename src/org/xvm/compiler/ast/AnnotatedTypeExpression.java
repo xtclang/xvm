@@ -280,20 +280,18 @@ public class AnnotatedTypeExpression
         annotation = exprNew;
 
         resetTypeConstant();
-        typeReferent = ensureTypeConstant(ctx);
-        typeAnno     = typeReferent.getType();
+        typeAnno = ensureTypeConstant(ctx).getType();
 
         if (typeRequired != null)
             {
             TypeConstant typeInferred = inferTypeFromRequired(typeAnno, typeRequired);
             if (typeInferred != null)
                 {
-                typeAnno     = typeInferred;
-                typeReferent = typeAnno.getParamType(0);
+                typeAnno = typeInferred;
                 }
             }
 
-        return finishValidation(typeRequired, typeAnno, TypeFit.Fit, typeReferent, errs);
+        return finishValidation(typeRequired, typeAnno, TypeFit.Fit, typeAnno, errs);
         }
 
 
