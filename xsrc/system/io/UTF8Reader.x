@@ -130,7 +130,7 @@ class UTF8Reader
     public/private Int lineNumber;
 
     @Override
-    public/private Int lineStartOffset; // TODO GG try changing "public" to "protected"
+    public/private Int lineStartOffset;
 
     @Override
     TextPosition position

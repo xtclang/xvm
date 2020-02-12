@@ -826,6 +826,7 @@ public class StatementBlock
             Access           access    = Access.PRIVATE;
             IdentityConstant idPrev    = null;
             TypeInfo         infoPrev  = null;
+            ErrorListener    errsTemp  = errs.branch();
             IdentityConstant idOuter   = getEnclosingClass().getIdentityConstant();
             if (idOuter instanceof ClassConstant)
                 {
@@ -888,24 +889,8 @@ public class StatementBlock
                                 isConstructor() ? Access.STRUCT : Access.PRIVATE);
                             }
 
-                        ErrorListener errsTemp = ErrorListener.BLACKHOLE.branch();
-
                         infoPrev = info = typeClz.ensureTypeInfo(errsTemp);
-
-                        if (errsTemp.hasSeriousErrors())
-                            {
-                            // the info could not be calculated correctly; using it may result
-                            // in confusing error messages
-                            if (id == idClz)
-                                {
-                                fHasThis &= !info.isStatic();
-                                typeThis  = null;
-                                ++cSteps;
-                                }
-                            node = node.getParent();
-                            continue WalkUpToTheRoot;
-                            }
-                        idPrev = idClz;
+                        idPrev   = idClz;
                         }
 
                     if (id == idClz)
@@ -1095,6 +1080,7 @@ public class StatementBlock
                 return component.getIdentityConstant();
                 }
 
+            errsTemp.merge(); // report any TypeInfo related errors we might have collected
             if (name == null)
                 {
                 log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
