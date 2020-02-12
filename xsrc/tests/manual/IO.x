@@ -8,7 +8,7 @@ module TestIO
     import Ecstasy.io.ObjectInput;
     import Ecstasy.io.ObjectOutput;
     import Ecstasy.io.Reader;
-    import Ecstasy.io.StringWriter;
+    import Ecstasy.io.TextPosition;
     import Ecstasy.io.Writer;
     import Ecstasy.io.UTF8Reader;
     import Ecstasy.web.json.Doc;
@@ -72,10 +72,10 @@ module TestIO
         {
         console.println("\n*** testUTF8Reader()");
 
-        InputStream     inRaw  = new ByteArrayInputStream(#./IO.x);
-        UTF8Reader      in     = new UTF8Reader(inRaw);
-        Boolean         dotdot = False;
-        Reader.Position pos    = in.position;
+        InputStream  inRaw  = new ByteArrayInputStream(#./IO.x);
+        UTF8Reader   in     = new UTF8Reader(inRaw);
+        Boolean      dotdot = False;
+        TextPosition pos    = in.position;
         loop: while (Char ch := in.next())
             {
             if (loop.count <= 20 || inRaw.remaining <= 10)
@@ -167,10 +167,9 @@ module TestIO
         console.println("\n*** testJSONBuild()");
 
         Schema schema = Schema.DEFAULT;
-        StringWriter writer = new StringWriter();
+        StringBuffer writer = new StringBuffer();
         ObjectOutputStream  o_out = schema.createObjectOutput(writer).as(ObjectOutputStream);
         ElementOutputStream e_out = o_out.createElementOutput();
-//        e_out.add(4);
         build(e_out);
         console.println($"result={writer}");
 

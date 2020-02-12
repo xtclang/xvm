@@ -1,5 +1,3 @@
-import Reader.AbstractPos;
-
 /**
  * A CharArrayReader provides a Reader interface on top of a raw `Char[]` or a `String`. Because its
  * unit of storage is already in the form of a `Char`, its navigation both forwards and backwards
@@ -46,11 +44,6 @@ class CharArrayReader(immutable Char[] chars)
         return size - offset;
         }
 
-    /**
-     * The offset of the first character (if any) in the current line.
-     */
-    protected/private Int lineStartOffset;
-
 
     // ----- Position implementation ---------------------------------------------------------------
 
@@ -58,13 +51,13 @@ class CharArrayReader(immutable Char[] chars)
      * Simple constant implementation of the Position interface.
      */
     private static const SimplePos(Int offset, Int lineNumber, Int lineOffset)
-            extends AbstractPos;
+            extends Reader.AbstractPos;
 
     /**
      * A Position implementation that packs all the data into a single Int.
      */
     private static const TinyPos
-            extends AbstractPos
+            extends Reader.AbstractPos
         {
         construct(Int offset, Int lineNumber, Int lineOffset)
             {
@@ -107,16 +100,13 @@ class CharArrayReader(immutable Char[] chars)
     public/private Int lineNumber;
 
     @Override
-    Int lineOffset.get()
-        {
-        return offset - lineStartOffset;
-        }
+    public/private Int lineStartOffset;
 
     @Override
-    AbstractPos position
+    TextPosition position
         {
         @Override
-        AbstractPos get()
+        TextPosition get()
             {
             return offset <= 0xFFFFFF && lineNumber <= 0xFFFFF && lineOffset <= 0xFFFFF
                     ? new TinyPos(offset, lineNumber, lineOffset)
@@ -124,7 +114,7 @@ class CharArrayReader(immutable Char[] chars)
             }
 
         @Override
-        void set(AbstractPos position)
+        void set(TextPosition position)
             {
             assert:arg position.is(SimplePos) || position.is(TinyPos);
 
@@ -233,7 +223,6 @@ class CharArrayReader(immutable Char[] chars)
     /**
      * @return the contents of this entire Reader, as an immutable Array of Char
      */
-    @Override
     immutable Char[] toCharArray()
         {
         return chars;
@@ -244,7 +233,7 @@ class CharArrayReader(immutable Char[] chars)
         {
         return str ?:
             {
-            String result = super();
+            String result = new String(chars);
             str = result;
             return result;
             };

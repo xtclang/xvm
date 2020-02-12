@@ -18,11 +18,22 @@ package io
     const EndOfFile(String? text = null, Exception? cause = null)
             extends IOException(text, cause);
 
+    /**
+     * A DataInputStream combines an InputStream with a DataInput.
+     */
     interface DataInputStream
             extends InputStream
             extends DataInput;
 
+    /**
+     * A DataOutputStream combines an OutputStream with a DataOutput.
+     */
     interface DataOutputStream
             extends OutputStream
             extends DataOutput;
+
+    /**
+     * A Writer is simply an `Appender<Char>`.
+     */
+    typedef Appender<Char> Writer;
     }

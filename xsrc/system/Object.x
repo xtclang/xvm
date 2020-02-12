@@ -31,6 +31,13 @@ class Object
      */
     String toString()
         {
+        if (this.is(Stringable))
+            {
+            val buf = new StringBuffer(estimateStringLength());
+            appendTo(buf);
+            return buf.toString();
+            }
+
         // the Object's rudimentary toString() shows class information only
         return this:class.toString();
         }

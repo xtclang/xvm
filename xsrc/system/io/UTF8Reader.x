@@ -52,11 +52,6 @@ class UTF8Reader
         return offset != rawOffset;
         }
 
-    /**
-     * The offset of the first character (if any) in the current line.
-     */
-    protected/private Int lineStartOffset;
-
 
     // ----- Position implementation ---------------------------------------------------------------
 
@@ -135,16 +130,13 @@ class UTF8Reader
     public/private Int lineNumber;
 
     @Override
-    Int lineOffset.get()
-        {
-        return offset - lineStartOffset;
-        }
+    public/private Int lineStartOffset; // TODO GG try changing "public" to "protected"
 
     @Override
-    Position position
+    TextPosition position
         {
         @Override
-        Position get()
+        TextPosition get()
             {
             return offset <= 0xFFFFF && lineNumber <= 0xFFFF && lineOffset <= 0xFFFF
                     && (rawOffset - offset) <= 0xFFF
@@ -153,7 +145,7 @@ class UTF8Reader
             }
 
         @Override
-        void set(Position position)
+        void set(TextPosition position)
             {
             assert:arg position.is(SimplePos) || position.is(TinyPos);
 

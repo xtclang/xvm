@@ -5,8 +5,8 @@ import io.ObjectOutput;
 
 
 /**
- * An [ObjectOutput] implementation for JSON serialization that emits the serialized form directly to
- * an underlying [Writer].
+ * An [ObjectOutput] implementation for JSON serialization that emits the serialized form directly
+ * to an underlying [Writer].
  */
 class ObjectOutputStream(Schema schema, Writer writer)
         implements ObjectOutput

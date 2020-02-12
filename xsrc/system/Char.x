@@ -9,6 +9,11 @@ const Char
     {
     // ----- constructors --------------------------------------------------------------------------
 
+    /**
+     * Construct a character from the codepoint indicated by the passed `UInt32` value.
+     *
+     * @param n  the codepoint for the character
+     */
     construct(UInt32 codepoint)
         {
         if (codepoint > 0x10FFFF ||                     // unicode limit
@@ -18,14 +23,80 @@ const Char
             }
         }
 
-    construct(Byte b)
+    /**
+     * Construct a character from the codepoint indicated by the passed UTF8 value.
+     *
+     * @param utf8  the character, in UTF8 format
+     */
+    construct(Byte[] utf8)
         {
-        construct Char(b.toUInt32());
+        Int length = utf8.size;
+        UInt32 codepoint;
+        switch (length)
+            {
+            case 1:
+                // ASCII value
+                codepoint = utf8[0].toUInt32();
+                if (codepoint > 0x7F)
+                    {
+                    throw new IllegalUTF($"Illegal ASCII code in 1-byte UTF8 format: {codepoint}");
+                    }
+                break;
+
+            case 2..6:
+                // #1s first byte  trailing  # trailing  bits  code-points
+                // --- ----------  --------  ----------  ----  -----------------------
+                //  0  0xxxxxxx    n/a           0         7   U+0000    - U+007F     (ASCII)
+                //  2  110xxxxx    10xxxxxx      1        11   U+0080    - U+07FF
+                //  3  1110xxxx    10xxxxxx      2        16   U+0800    - U+FFFF
+                //  4  11110xxx    10xxxxxx      3        21   U+10000   - U+1FFFFF
+                //  5  111110xx    10xxxxxx      4        26   U+200000  - U+3FFFFFF
+                //  6  1111110x    10xxxxxx      5        31   U+4000000 - U+7FFFFFFF
+                codepoint = utf8[0].toUInt32();
+                Int bits = (~codepoint).leftmostBit.trailingZeroCount;
+                if (length != 7 - bits)
+                    {
+                    throw new IllegalUTF($"Expected UTF8 length of {7 - bits} bytes; actual length is {length} bytes");
+                    }
+                codepoint &= 0b11111 >>> 5 - bits;
+
+                for (Int i : 1..length-1)
+                    {
+                    Byte b = utf8[i];
+                    if (b & 0b11000000 != 0b10000000)
+                        {
+                        throw new IllegalUTF("trailing unicode byte does not match 10xxxxxx");
+                        }
+                    codepoint = codepoint << 6 | (b & 0b00111111).toUInt32();
+                    }
+                break;
+
+            default:
+                throw new IllegalUTF($"Illegal UTF8 encoding length: {length}");
+            }
+
+        construct Char(codepoint);
         }
 
+    /**
+     * Construct a character from the codepoint indicated by the passed `Byte` value. This is
+     * primarily useful for codepoints in the ASCII range.
+     *
+     * @param codepoint  the codepoint for the character
+     */
+    construct(Byte codepoint)
+        {
+        construct Char(codepoint.toUInt32());
+        }
+
+    /**
+     * Construct a character from the codepoint indicated by the passed `Int` value.
+     *
+     * @param n  the codepoint for the character
+     */
     construct(Int n)
         {
-        construct Char(n.toUInt32());
+        construct Char(codepoint.toUInt32());
         }
 
 

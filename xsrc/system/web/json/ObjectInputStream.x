@@ -10,7 +10,7 @@ import Lexer.Token;
  * An [ObjectInput] implementation for JSON de-serialization that reads from a [Reader] or from a
  * stream of JSON tokens.
  */
-class ObjectInputStream(Schema schema, Iterator<Token> tokens)
+class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         implements ObjectInput
     {
     /**
@@ -21,7 +21,6 @@ class ObjectInputStream(Schema schema, Iterator<Token> tokens)
      */
     construct(Schema schema, Reader reader)
         {
-        this.reader = reader;
         construct ObjectInputStream(schema, new Lexer(reader));
         }
 
@@ -34,14 +33,9 @@ class ObjectInputStream(Schema schema, Iterator<Token> tokens)
     public/private Schema schema;
 
     /**
-     * The underlying [Reader] to read the JSON data from.
+     * The underlying stream of JSON tokens.
      */
-    protected/private Iterator<Token> tokens;
-
-    /**
-     * The underlying [Reader] to read the JSON data from.
-     */
-    protected/private Reader? reader;
+    protected/private Iterator<Token> lexer;
 
     /**
      * The root element.

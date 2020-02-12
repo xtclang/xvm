@@ -5,63 +5,32 @@
  */
 interface Reader
         extends Iterator<Char>
-        extends Position
+        extends TextPosition
         extends Closeable
     {
-    // ----- Position interface --------------------------------------------------------------------
+    // ----- TextPosition support ------------------------------------------------------------------
 
     /**
-     * The position within the character stream. The implementation of the Position is opaque to the
-     * caller, in order to hide the internal details that may be necessary for the implementation of
-     * Reader to efficiently restore a previous position.
-     */
-    static interface Position
-            extends immutable Orderable
-        {
-        /**
-         * The character offset within the reader, starting with zero.
-         */
-        @RO Int offset;
-
-        /**
-         * The line number, starting with zero.
-         */
-        @RO Int lineNumber;
-
-        /**
-         * The offset within the current line, starting with zero.
-         */
-        @RO Int lineOffset;
-
-        // ----- Orderable interface (funky) implementation ----------------------------------------
-
-        static <CompileType extends Position> Ordered compare(CompileType value1, CompileType value2)
-            {
-            return value1.offset <=> value2.offset;
-            }
-
-        static <CompileType extends Position> Boolean equals(CompileType value1, CompileType value2)
-            {
-            return value1.offset == value2.offset;
-            }
-        }
-
-    /**
-     * Optional base class for Position implementations.
+     * Optional base class for TextPosition implementations.
      */
     @Abstract
     protected static const AbstractPos
-            implements Position
+            implements TextPosition
         {
-        Int lineStartOffset.get()
+        @Override
+        Int estimateStringLength()
             {
-            return offset - lineOffset;
+            return 3 + lineNumber.estimateStringLength() + lineOffset.estimateStringLength();
             }
 
         @Override
-        String toString()
+        void appendTo(Appender<Char> appender)
             {
-            return $"({lineNumber}:{lineOffset})";
+            appender.add('(');
+            lineNumber.appendTo(appender);
+            appender.add(':');
+            lineOffset.appendTo(appender);
+            appender.add(')');
             }
         }
 
@@ -72,7 +41,7 @@ interface Reader
      * The current position within the character stream. This property allows the caller to save off
      * the current position, and also allows a previously saved position to be restored later.
      */
-    Position position;
+    TextPosition position;
 
     /**
      * True iff the end of the stream has been reached.
@@ -156,11 +125,11 @@ interface Reader
      * @throws IOException  represents the general category of input/output exceptions
      */
     @Op("[..]")
-    String slice(Range<Position> interval)
+    String slice(Range<TextPosition> interval)
         {
         String result;
 
-        try (Position current = position)
+        try (TextPosition current = position)
             {
             position = interval.lowerBound;
             result   = nextString(interval.upperBound.offset - offset + 1);
@@ -362,40 +331,6 @@ interface Reader
             {
             out.add(nextChar());
             --count;
-            }
-        }
-
-
-    // ----- conversions ---------------------------------------------------------------------------
-
-    /**
-     * @return the contents of this entire Reader, as an immutable Array of Char
-     */
-    immutable Char[] toCharArray()
-        {
-        return toString().toCharArray();
-        }
-
-    /**
-     * @return the contents of this entire Reader, as a String
-     */
-    @Override
-    String toString()
-        {
-        Position current = position;
-        try
-             {
-            reset();
-            StringBuffer buf = new StringBuffer();
-            while (Char ch := next())
-                {
-                buf.add(ch);
-                }
-            return buf.toString();
-            }
-        finally
-            {
-            position = current;
             }
         }
 

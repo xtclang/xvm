@@ -1,7 +1,7 @@
 import io.EndOfFile;
 import io.IOException;
 import io.Reader;
-import io.Reader.Position;
+import io.TextPosition;
 
 import numbers.Nibble;
 import numbers.UInt32;
@@ -158,7 +158,7 @@ class Lexer
      * A JSON token has a lexical identity (what the element type is), a location in the text stream
      * (with the ending position being the position _after_ the token), and an optional value.
      */
-    static const Token(Id id, Position start, Position end, Primitive value = Null);
+    static const Token(Id id, TextPosition start, TextPosition end, Primitive value = Null);
 
 
     // ----- Iterator ------------------------------------------------------------------------------
@@ -215,9 +215,9 @@ class Lexer
      */
     protected Token eatToken()
         {
-        Id        id;
-        Primitive val   = Null;
-        Position  start = reader.position;
+        Id           id;
+        Primitive    val   = Null;
+        TextPosition start = reader.position;
         switch (Char ch = reader.nextChar())
             {
             case '{':
@@ -276,7 +276,7 @@ class Lexer
                 throw new IOException($"unexpected '{ch}'");
             }
 
-        Position end = reader.position;
+        TextPosition end = reader.position;
         eatWhitespace();
         return new Token(id, start, end, val);
         }
@@ -288,7 +288,7 @@ class Lexer
      *
      * @return the number as an IntLiteral or an FPLiteral
      */
-    protected Primitive eatNumber(Char ch, Position start)
+    protected Primitive eatNumber(Char ch, TextPosition start)
         {
         Int     count = 0;
         Boolean fp    = False;
@@ -426,9 +426,9 @@ class Lexer
      */
     protected String eatString()
         {
-        Position      start   = reader.position;
-        Int           count   = 0;
-        StringBuffer? buf     = Null;
+        TextPosition  start = reader.position;
+        Int           count = 0;
+        StringBuffer? buf   = Null;
         while (Char ch := reader.next())
             {
             switch (ch)
@@ -436,10 +436,10 @@ class Lexer
                 case '\"':
                     if (buf == Null)
                         {
-                        Position end    = reader.position;
-                        reader.position = start;
-                        String result   = reader.nextString(count);
-                        reader.position = end;
+                        TextPosition cur = reader.position;
+                        reader.position  = start;
+                        String result    = reader.nextString(count);
+                        reader.position  = cur;
                         return result;
                         }
                     else
@@ -453,10 +453,10 @@ class Lexer
                         buf = new StringBuffer();
                         if (count > 0)
                             {
-                            Position cur    = reader.position;
-                            reader.position = start;
+                            TextPosition cur = reader.position;
+                            reader.position  = start;
                             buf.add(reader.nextChars(count));
-                            reader.position = cur;
+                            reader.position  = cur;
                             }
                         }
 

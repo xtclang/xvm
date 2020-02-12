@@ -1,72 +1,22 @@
 import io.Writer;
 
 /**
- * A StringWriter is an `Appender<Char>` that accumulates the characters to an internal buffer, and
- * tracks its position.
+ * A StringWriter is a delegating text [Writer] that tracks its current position.
  */
-class StringWriter
+class StringWriter(Writer writer)
         implements Writer
-        implements Stringable
+        implements TextPosition
     {
-    /**
-     * Construct a StringWriter.
-     *
-     * @param capacity  an optional value indicating the expected size of the resulting String
-     */
-    construct(Int capacity = 0)
-        {
-        chars = new Array<Char>(capacity);
-        }
-
-    /**
-     * The underlying representation of a StringWriter is a mutable array of characters.
-     */
-    private Char[] chars;
-
-
-    // ----- Writer methods ------------------------------------------------------------------------
+    // ----- TextPosition --------------------------------------------------------------------------
 
     @Override
-    immutable Char[] toCharArray()
-        {
-        return chars.ensureImmutable(True);
-        }
-
-    @Override
-    String toString()
-        {
-        return new String(chars);
-        }
-
-
-    // ----- Reader.Position methods ---------------------------------------------------------------
-
-    @Override
-    Int offset.get()
-        {
-        return chars.size;
-        }
+    public/private Int offset;
 
     @Override
     public/private Int lineNumber;
 
     @Override
-    public/private Int lineOffset;
-
-
-    // ----- Stringable methods --------------------------------------------------------------------
-
-    @Override
-    Int estimateStringLength()
-        {
-        return chars.size;
-        }
-
-    @Override
-    void appendTo(Appender<Char> appender)
-        {
-        appender.add(chars);
-        }
+    public/private Int lineStartOffset;
 
 
     // ----- Appender methods ----------------------------------------------------------------------
@@ -74,26 +24,22 @@ class StringWriter
     @Override
     StringWriter add(Char v)
         {
-        chars[chars.size] = v;
+        writer.add(v);
+
+        ++offset;
         if (v == '\n')
             {
             ++lineNumber;
-            lineOffset = 0;
+            lineStartOffset = offset;
             }
-        else
-            {
-            ++lineOffset;
-            }
+
         return this;
         }
 
     @Override
     StringWriter ensureCapacity(Int count)
         {
-        if (chars.capacity - chars.size < count)
-            {
-            chars.capacity = chars.size + count;
-            }
+        writer.ensureCapacity(count);
         return this;
         }
     }
