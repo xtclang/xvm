@@ -135,6 +135,7 @@ public class TypeInfo
 
         assert cInvalidations == 0 // necessary for TYPEINFO_PLACEHOLDER construction
             || cInvalidations <= type.getConstantPool().getInvalidationCount();
+        assert validateCapped();
         }
 
     /**
@@ -2210,6 +2211,25 @@ public class TypeInfo
             }
 
         return annotations;
+        }
+
+    /**
+     * Assertion helper: validate the integrity of all "capped" methods.
+     */
+    private boolean validateCapped()
+        {
+        for (MethodInfo info : f_mapMethods.values())
+            {
+            if (info.isCapped())
+                {
+                Object nid = info.getHead().getNarrowingNestedIdentity();
+                if (getMethodByNestedId(nid) == null)
+                    {
+                    return false;
+                    }
+                }
+            }
+        return true;
         }
 
     private static Annotation[] mergeAnnotations(Annotation[] anno1, Annotation[] anno2)
