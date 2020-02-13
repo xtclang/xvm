@@ -57,7 +57,9 @@ class Array<Element>
             {
             throw new IllegalArgument("capacity (" + capacity + ") must be >= 0");
             }
-
+        }
+    finally
+        {
         if (capacity > 0)
             {
             ElementImpl cur = new ElementImpl();
@@ -78,6 +80,9 @@ class Array<Element>
      * @param supply  the value or the supply function for initializing the elements of the array
      */
     construct(Int size, Element | function Element (Int) supply)
+        {
+        }
+    finally
         {
         if (size > 0)
             {
@@ -108,6 +113,9 @@ class Array<Element>
      */
     construct(Mutability mutability, Element... elements)
         {
+        }
+    finally
+        {
         Int size = elements.size;
         if (size > 0)
             {
@@ -125,9 +133,6 @@ class Array<Element>
             }
 
         this.mutability = mutability;
-        }
-    finally
-        {
         if (mutability == Constant)
             {
             makeImmutable();

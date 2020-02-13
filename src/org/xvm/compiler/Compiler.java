@@ -1205,6 +1205,10 @@ public class Compiler
      */
     public static final String DUPLICATE_NAME                      = "COMPILER-148";
     /**
+     * Virtual child {0} cannot be new'ed until after the parent has been constructed.
+     */
+    public static final String PARENT_NOT_CONSTRUCTED              = "COMPILER-149";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

@@ -457,8 +457,16 @@ public class NewExpression
                         int nSteps = ctx.getStepsToOuterClass(clzTarget.getVirtualParent());
                         if (nSteps >= 0)
                             {
-                            ctx.requireThis(getStartPosition(), errs);
-                            m_nVirtualParentSteps = nSteps;
+                            if (nSteps == 0 && ctx.isConstructor())
+                                {
+                                log(errs, Severity.ERROR, Compiler.PARENT_NOT_CONSTRUCTED,
+                                        clzTarget.getSimpleName());
+                                }
+                            else
+                                {
+                                ctx.requireThis(getStartPosition(), errs);
+                                m_nVirtualParentSteps = nSteps;
+                                }
                             }
                         else
                             {
