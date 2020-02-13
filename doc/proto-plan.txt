@@ -1,23 +1,10 @@
-- add a ReentrantLock for the ServiceContext to allow for an optimistic (message-less) context switch
-    - DaemonPool to acquire the lock prior to nextFiber() call
-    - ServiceContext.sendXyz() to set a target ServiceContext reference that would be used by
-      DaemonPool to attempt to switch to another context
-    - native code should be able to tryLock another context for a quick operation
-      (e.g. Buffer<Byte> to be locked by a FileChannel)
-
 - Stack overflow (fiber depth + frame depth within a fiber or cross-fiber frame depth)
-
-- createConst() processing for Set, Map etc.
 
 - Move op-code: "safe wrapper" logic
 
 - ServiceContext - the "register..." APIs are "fiber local" -- unless called from the outside
 
-- TypeInfo.findCallable() - use the same approach as Expression.findMethod()
-
 - native optimization Stringable methods on xInt*, xUInt*, etc.
-
-- consider a FormalTypeConstant instead of TerminalType(PropertyConstant)
 
 -- tuple support
    - InvocationExpression - needs to generate _xT ops (i.e. it must be able to testFit & validate for a tuple type)
@@ -67,6 +54,8 @@
   recipient's type system
 
 - generic type resolution for a turtle type should be Tuple<Type<A>,Type<B>, ...> instead of Tuple<A, B, ...>
+
+- optimize out Object.construct() calls
 
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
