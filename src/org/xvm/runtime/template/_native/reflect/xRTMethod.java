@@ -309,9 +309,7 @@ public class xRTMethod
                 chain = clazz.getMethodCallChain(nid);
                 if (chain.getDepth() == 0)
                     {
-                    // TODO: create an exception throwing chain
-                    throw new IllegalStateException("No call chain for method \"" + idMethod.getValueString() +
-                        "\" on " + hTarget.getType().getValueString() + frame.getStackTrace());
+                    return new CallChain.ExceptionChain(idMethod, hTarget.getType());
                     }
                 }
             return chain;
