@@ -678,8 +678,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
      * This is the pointer-aware implementation of the `ElementOutput` interface.
      */
     mixin PointerAwareElementOutput
-            // TODO GG into (ElementOutputStream | ArrayOutputStream)
-            into DocOutputStream + ElementOutput
+            into (ElementOutputStream | ArrayOutputStream)
             extends PointerAwareDocOutput
         {
         protected void addPointerReference(String pointer)

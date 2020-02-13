@@ -181,6 +181,13 @@ public class PropertyClassTypeConstant
         }
 
     @Override
+    public TypeConstant[] collectGenericParameters()
+        {
+        // property class type is not formalizable
+        return null;
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         return this;

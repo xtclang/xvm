@@ -299,6 +299,16 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public TypeConstant[] collectGenericParameters()
+        {
+        if (isTypeResolved())
+            {
+            return getResolvedType().collectGenericParameters();
+            }
+        throw new IllegalStateException();
+        }
+
+    @Override
     public TypeInfo getTypeInfo()
         {
         if (isTypeResolved())

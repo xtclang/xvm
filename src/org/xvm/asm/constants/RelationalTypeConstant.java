@@ -272,6 +272,52 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public TypeConstant[] collectGenericParameters()
+        {
+        TypeConstant[] atype1 = m_constType1.collectGenericParameters();
+        TypeConstant[] atype2 = m_constType2.collectGenericParameters();
+
+        if (atype1 == null || atype2 == null)
+            {
+            return null;
+            }
+
+        int c1 = atype1.length;
+        int c2 = atype2.length;
+
+        if (c1 == 0)
+            {
+            return atype2;
+            }
+        if (c2 == 0)
+            {
+            return atype1;
+            }
+
+        if (c1 == c2)
+            {
+            for (int i = 0; i < c1; i++)
+                {
+                TypeConstant type1 = atype1[i];
+                TypeConstant type2 = atype2[i];
+
+                assert type1.isGenericType() && type2.isGenericType();
+
+                PropertyConstant id1 = (PropertyConstant) type1.getDefiningConstant();
+                PropertyConstant id2 = (PropertyConstant) type2.getDefiningConstant();
+
+                if (!id1.getName().equals(id2.getName()) ||
+                    !id1.getConstraintType().equals(id2.getConstraintType()))
+                    {
+                    return null;
+                    }
+                }
+            return atype1;
+            }
+        return null;
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         TypeConstant constOriginal1 = m_constType1;

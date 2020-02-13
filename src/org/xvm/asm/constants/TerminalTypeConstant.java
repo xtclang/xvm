@@ -560,6 +560,11 @@ public class TerminalTypeConstant
             {
             case Module:
             case Package:
+            case Property:
+            case TypeParameter:
+            case FormalTypeChild:
+                return this;
+
             case Class:
             case NativeClass:
                 idClz = (IdentityConstant) constId;
@@ -570,11 +575,6 @@ public class TerminalTypeConstant
             case ChildClass:
                 idClz = ((PseudoConstant) constId).getDeclarationLevelClass();
                 break;
-
-            case Property:
-            case TypeParameter:
-            case FormalTypeChild:
-                return this;
 
             case Typedef:
                 return ((TypedefConstant) constId).getReferredToType().
@@ -605,6 +605,53 @@ public class TerminalTypeConstant
 
         // this type cannot adopt anything
         return this;
+        }
+
+    @Override
+    public TypeConstant[] collectGenericParameters()
+        {
+        Constant constId = ensureResolvedConstant();
+
+        IdentityConstant idClz;
+        switch (constId.getFormat())
+            {
+            case Module:
+            case Package:
+            case Property:
+            case TypeParameter:
+            case FormalTypeChild:
+                return TypeConstant.NO_TYPES;
+
+            case Class:
+            case NativeClass:
+                idClz = (IdentityConstant) constId;
+                break;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                idClz = ((PseudoConstant) constId).getDeclarationLevelClass();
+                break;
+
+            case Typedef:
+                return ((TypedefConstant) constId).getReferredToType().
+                    collectGenericParameters();
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constId);
+            }
+
+        if (isTuple())
+            {
+            return TypeConstant.NO_TYPES;
+            }
+
+        ClassStructure struct = (ClassStructure) idClz.getComponent();
+        if (struct.isParameterized())
+            {
+            return struct.getFormalType().getParamTypesArray();
+            }
+        return TypeConstant.NO_TYPES;
         }
 
     @Override

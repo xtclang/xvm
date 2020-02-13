@@ -250,6 +250,12 @@ public class VirtualChildTypeConstant
         }
 
     @Override
+    public TypeConstant[] collectGenericParameters()
+        {
+        return getChildStructure().getFormalType().getParamTypesArray();
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         TypeConstant typeParentOriginal = m_typeParent;

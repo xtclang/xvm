@@ -333,12 +333,9 @@ module TestMixins.xqiz.it
                 }
             }
 
-        /**
-         * TODO GG get rid of type parameters on this declaration
-         */
-        mixin PointerAwareElementOutput<ParentOutput extends (ElementOutputStream | ArrayOutputStream | FieldOutputStream)?>
-                into (ElementOutputStream<ParentOutput> | ArrayOutputStream<ParentOutput>)
-                extends PointerAwareDocOutput<ParentOutput>
+        mixin PointerAwareElementOutput
+                into (ElementOutputStream | ArrayOutputStream)
+                extends PointerAwareDocOutput
             {
             @Override
             PointerAwareElementOutput add(Doc value)

@@ -398,6 +398,13 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public TypeConstant[] collectGenericParameters()
+        {
+        // already parameterized type is not formalizable
+        return null;
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         // there are a number of scenarios to consider here;

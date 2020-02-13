@@ -36,7 +36,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
-import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
@@ -1854,7 +1853,7 @@ public class TypeCompositionStatement
      */
     private void addImplicitTypeParameters(ClassStructure component, ErrorListener errs)
         {
-        ListMap<StringConstant, TypeConstant> mapTypeParams = null;
+        ListMap<String, TypeConstant> mapTypeParams = null;
         for (Contribution contrib : component.getContributionsAsList())
             {
             switch (contrib.getComposition())
@@ -1869,57 +1868,51 @@ public class TypeCompositionStatement
                     continue;
                 }
 
-            TypeConstant typeContrib = contrib.getTypeConstant();
-            if (!typeContrib.isExplicitClassIdentity(true) ||
-                 typeContrib.isParamsSpecified())
+            TypeConstant   typeContrib  = contrib.getTypeConstant();
+            TypeConstant[] atypeGeneric = typeContrib.collectGenericParameters();
+            if (atypeGeneric == null || atypeGeneric.length == 0)
                 {
-                // TODO: how to allow "into A | B" or "into A + B" to be similarly treated?
                 continue;
                 }
 
-            IdentityConstant idContrib  = (IdentityConstant) typeContrib.getDefiningConstant();
-            ClassStructure   clzContrib = (ClassStructure) idContrib.getComponent();
-
-            if (clzContrib.isParameterized())
+            if (mapTypeParams == null)
                 {
-                if (mapTypeParams == null)
-                    {
-                    mapTypeParams = new ListMap<>(clzContrib.getTypeParams());
-                    }
-                else
-                    {
-                    // collect the formal types and verify that there are no collisions
-                    for (Map.Entry<StringConstant, TypeConstant> entry : clzContrib.getTypeParams().entrySet())
-                        {
-                        StringConstant constName      = entry.getKey();
-                        TypeConstant   typeConstraint = entry.getValue();
-
-                        TypeConstant typeOld = mapTypeParams.get(constName);
-                        if (typeOld == null)
-                            {
-                            mapTypeParams.put(constName, typeConstraint);
-                            }
-                        else if (!typeOld.equals(typeConstraint))
-                            {
-                            // {0} type parameter {1} must be of type {2}, but has been specified as {3} by {4}.
-                            log(errs, Severity.ERROR, Constants.VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
-                                name.getValueText(), constName.getValue(), typeOld.getValueString(),
-                                typeConstraint.getValueString(), contrib.getTypeConstant().getValueString());
-                            return;
-                            }
-                        }
-                    }
-
-                // update the contribution
-                contrib.narrowType(clzContrib.getFormalType());
+                mapTypeParams = new ListMap<>();
                 }
+
+            // collect the formal types and verify that there are no collisions
+            for (TypeConstant typeParam : atypeGeneric)
+                {
+                assert typeParam.isGenericType();
+
+                PropertyConstant idParam        = (PropertyConstant) typeParam.getDefiningConstant();
+                String           sName          = idParam.getName();
+                TypeConstant     typeConstraint = idParam.getConstraintType();
+
+                TypeConstant typeOld = mapTypeParams.get(sName);
+                if (typeOld == null)
+                    {
+                    mapTypeParams.put(sName, typeConstraint);
+                    }
+                else if (!typeOld.equals(typeConstraint))
+                    {
+                    // {0} type parameter {1} must be of type {2}, but has been specified as {3} by {4}.
+                    log(errs, Severity.ERROR, Constants.VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
+                        name.getValueText(), sName, typeOld.getValueString(),
+                        typeConstraint.getValueString(), contrib.getTypeConstant().getValueString());
+                    return;
+                    }
+                }
+
+            // update the contribution
+            contrib.narrowType(typeContrib.adoptParameters(pool(), atypeGeneric));
             }
 
         if (mapTypeParams != null)
             {
-            for (Map.Entry<StringConstant, TypeConstant> entry : mapTypeParams.entrySet())
+            for (Map.Entry<String, TypeConstant> entry : mapTypeParams.entrySet())
                 {
-                component.addTypeParam(entry.getKey().getValue(), entry.getValue());
+                component.addTypeParam(entry.getKey(), entry.getValue());
                 }
             }
         }

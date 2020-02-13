@@ -117,6 +117,13 @@ public class RecursiveTypeConstant
         }
 
     @Override
+    public TypeConstant[] collectGenericParameters()
+        {
+        // recursive type is not formalizable
+        return null;
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         return this;

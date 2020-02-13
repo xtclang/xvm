@@ -64,6 +64,13 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public TypeConstant[] collectGenericParameters()
+        {
+        // turtle type is not formalizable
+        return null;
+        }
+
+    @Override
     public boolean containsUnresolved()
         {
         return false;

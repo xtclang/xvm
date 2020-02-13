@@ -847,6 +847,23 @@ public abstract class TypeConstant
         }
 
     /**
+     * Collect an array of generic type parameters for this "formalizable" type.
+     * <p/>
+     * A type that has a {@link #isExplicitClassIdentity explicit class identity} is formalizable
+     * iff it is not already parameterized.
+     * <br>
+     * A relational type is formalizable if its both "legs" are formalizable and have identical
+     * or empty arrays of generic type parameters.
+     *
+     * @return null if the type is not formalizable; an empty array if the type doesn't have
+     *         generic type parameters; and a non-empty array otherwise
+     */
+    public TypeConstant[] collectGenericParameters()
+        {
+        return getUnderlyingType().collectGenericParameters();
+        }
+
+    /**
      * If this type is auto-narrowing (or has any references to auto-narrowing types), replace any
      * auto-narrowing portion with an explicit class identity in the context of the specified target.
      *
