@@ -16,6 +16,7 @@ module TestIO
     import Ecstasy.web.json.FieldOutput;
     import Ecstasy.web.json.Lexer;
     import Ecstasy.web.json.Lexer.Token;
+    import Ecstasy.web.json.ObjectInputStream;
     import Ecstasy.web.json.ObjectOutputStream;
     import Ecstasy.web.json.ObjectOutputStream.CloseCap;
     import Ecstasy.web.json.ObjectOutputStream.ElementOutputStream;
@@ -132,7 +133,7 @@ module TestIO
 
         console.println("no dups:");
         Reader reader = new CharArrayReader(ExampleJSON);
-        Parser parser = new Parser(reader, False);
+        Parser parser = new Parser(reader);
         while (Doc doc := parser.next())
             {
             console.println($"doc={doc}");
@@ -140,7 +141,8 @@ module TestIO
 
         console.println("collate dups:");
         reader = new CharArrayReader(ExampleJSON);
-        parser = new Parser(reader, True);
+        parser = new Parser(reader);
+        parser.collateDups = True;
         while (Doc doc := parser.next())
             {
             console.println($"doc={doc}");
@@ -152,7 +154,7 @@ module TestIO
         console.println("\n*** testJSONPrint()");
 
         Reader reader = new CharArrayReader(ExampleJSON);
-        Parser parser = new Parser(reader, False);
+        Parser parser = new Parser(reader);
         console.println($"raw doc=\n{ExampleJSON}");
         assert Doc doc := parser.next();
         console.println($"doc as structures={doc}");
@@ -171,8 +173,12 @@ module TestIO
         ObjectOutputStream  o_out = schema.createObjectOutput(writer).as(ObjectOutputStream);
         ElementOutputStream e_out = o_out.createElementOutput();
         build(e_out);
-        console.println($"result={writer}");
 
+        String s = writer.toString();
+        console.println($"result={s}");
+
+        Reader reader = new CharArrayReader(s);
+        ObjectInputStream o_in = new ObjectInputStream(schema, reader);
 //        console.println("BufferedPrinter:");
 //        BufferedPrinter p = new BufferedPrinter();
 //        build(p);
