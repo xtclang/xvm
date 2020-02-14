@@ -259,7 +259,7 @@ public class Parser
             }
         else
             {
-            lEndPos = getLastMatch().getEndPosition();
+            lEndPos = prev().getEndPosition();
             expect(Id.SEMICOLON);
             }
 
@@ -409,7 +409,7 @@ public class Parser
                             paramnames.add(new NamedTypeExpression(null, listParamName,
                                     null, null, null, tokName.getEndPosition()));
                             }
-                        type = new NamedTypeExpression(null, names, null, null, paramnames, getLastMatch().getEndPosition());
+                        type = new NamedTypeExpression(null, names, null, null, paramnames, prev().getEndPosition());
                         }
                     List<Expression> args = parseArgumentList(false, false, false);
                     compositions.add(new Composition.Incorporates(exprCondition, keyword, type, args, constraints));
@@ -438,7 +438,7 @@ public class Parser
                                 null, null, names.get(names.size()-1).getEndPosition());
                         List<VersionOverride> versions = parseVersionRequirement(false);
                         compositions.add(new Composition.Import(exprCondition, keyword, module,
-                                versions, getLastMatch().getEndPosition()));
+                                versions, prev().getEndPosition()));
                         fAny = true;
                         }
                         break;
@@ -517,12 +517,12 @@ public class Parser
                 StatementBlock body = null;
                 if (match(Id.L_CURLY) != null)
                     {
-                    Token tokLCurly2 = getLastMatch();
+                    Token tokLCurly2 = prev();
                     body = new StatementBlock(parseTypeCompositionComponents(null, new ArrayList<>(), false),
-                            tokLCurly2.getStartPosition(), getLastMatch().getEndPosition());
+                            tokLCurly2.getStartPosition(), prev().getEndPosition());
                     }
 
-                long lEndPos = getLastMatch().getEndPosition();
+                long lEndPos = prev().getEndPosition();
 
                 stmts.add(new TypeCompositionStatement(annotations, name, typeParams, args, body,
                         doc, lStartPos, lEndPos));
@@ -536,7 +536,7 @@ public class Parser
             }
 
         return new StatementBlock(parseTypeCompositionComponents(null, stmts, false),
-                tokLCurly.getStartPosition(), getLastMatch().getEndPosition());
+                tokLCurly.getStartPosition(), prev().getEndPosition());
         }
 
     /**
@@ -1138,7 +1138,7 @@ public class Parser
         {
         List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false, true);
         List<Parameter>      params           = parseParameterList(true);
-        long                 lEndPos          = getLastMatch().getEndPosition();
+        long                 lEndPos          = prev().getEndPosition();
         StatementBlock       body             = match(Id.SEMICOLON) == null ? parseStatementBlock() : null;
         Token                tokFinally       = null;
         StatementBlock       stmtFinally      = null;
@@ -1211,7 +1211,7 @@ public class Parser
             }
         else
             {
-            lEndPos = getLastMatch().getEndPosition();
+            lEndPos = prev().getEndPosition();
             expect(Id.SEMICOLON);
             }
 
@@ -1236,7 +1236,7 @@ public class Parser
             stmts.add(parseStatement());
             }
 
-        return new StatementBlock(stmts, tokStart.getStartPosition(), getLastMatch().getEndPosition());
+        return new StatementBlock(stmts, tokStart.getStartPosition(), prev().getEndPosition());
         }
 
     /**
@@ -1945,12 +1945,12 @@ public class Parser
         // there must be at least one case
         if (stmts.isEmpty())
             {
-            putBack(getLastMatch());
+            putBack(prev());
             expect(Id.CASE);
             }
 
         return new SwitchStatement(keyword, cond, new StatementBlock(stmts,
-                tokLCurly.getStartPosition(), getLastMatch().getEndPosition()));
+                tokLCurly.getStartPosition(), prev().getEndPosition()));
         }
 
     private boolean parseSwitchBlock(List<Statement> stmts, boolean fDefault)
@@ -2337,7 +2337,7 @@ public class Parser
         List<CatchStatement> catches = new ArrayList<>();
         while (match(Id.CATCH) != null)
             {
-            long lStartPos = getLastMatch().getStartPosition();
+            long lStartPos = prev().getStartPosition();
             expect(Id.L_PAREN);
             VariableDeclarationStatement var = new VariableDeclarationStatement(
                     parseTypeExpression(), expect(Id.IDENTIFIER), false);
@@ -3004,7 +3004,7 @@ public class Parser
                                     && ((ArrayTypeExpression) type).getDimensions() == 0))
                                 {
                                 args    = parseArgumentList(true, false, true);
-                                lEndPos = getLastMatch().getEndPosition();
+                                lEndPos = prev().getEndPosition();
                                 }
                             expr = new NewExpression(expr, keyword, type, args, lEndPos);
                             break;
@@ -3040,7 +3040,7 @@ public class Parser
                                     if (attempt.isClean())
                                         {
                                         attempt.keepResults();
-                                        lEndPos = getLastMatch().getEndPosition();
+                                        lEndPos = prev().getEndPosition();
                                         }
                                     else
                                         {
@@ -3074,7 +3074,7 @@ public class Parser
                 case L_PAREN:
                     // ArgumentList
                     expr = new InvocationExpression(expr, parseArgumentList(true, true, false),
-                            getLastMatch().getEndPosition());
+                            prev().getEndPosition());
                     break;
 
                 case L_SQUARE:
@@ -3086,7 +3086,7 @@ public class Parser
                         {
                         // "SomeClass[]"
                         TypeExpression type = new ArrayTypeExpression(expr.toTypeExpression(), 0,
-                                getLastMatch().getEndPosition());
+                                prev().getEndPosition());
                         expr = match(Id.COLON) == null
                                 ? type
                                 : parseComplexLiteral(type);
@@ -3096,7 +3096,7 @@ public class Parser
                         // "someArray[3]"
                         List<Expression> indexes = parseExpressionList();
                         expect(Id.R_SQUARE);
-                        expr = new ArrayAccessExpression(expr, indexes, getLastMatch().getEndPosition());
+                        expr = new ArrayAccessExpression(expr, indexes, prev().getEndPosition());
                         }
                     else
                         {
@@ -3109,7 +3109,7 @@ public class Parser
                             ++cExplicitDims;
                             }
                         TypeExpression type = new ArrayTypeExpression(expr.toTypeExpression(),
-                                cExplicitDims, getLastMatch().getEndPosition());
+                                cExplicitDims, prev().getEndPosition());
                         expr = match(Id.COLON) == null
                                 ? type
                                 : parseComplexLiteral(type);
@@ -3172,7 +3172,7 @@ public class Parser
                 IgnoredNameExpression exprIgnore = new IgnoredNameExpression(current());
                 return peek().getId() == Id.LAMBDA
                         ? new LambdaExpression(Collections.singletonList(exprIgnore),
-                            expect(Id.LAMBDA), parseLambdaBody(), getLastMatch().getStartPosition())
+                            expect(Id.LAMBDA), parseLambdaBody(), prev().getStartPosition())
                         : exprIgnore;
                 }
 
@@ -3190,7 +3190,7 @@ public class Parser
                 StatementBlock   body = peek().getId() == Id.L_CURLY
                                       ? parseTypeCompositionBody(keyword)
                                       : null ;
-                return new NewExpression(keyword, type, args, body, getLastMatch().getEndPosition());
+                return new NewExpression(keyword, type, args, body, prev().getEndPosition());
                 }
 
             case THROW:
@@ -3230,7 +3230,7 @@ public class Parser
                 if (fNormal && peek().getId() == Id.LAMBDA)
                     {
                     return new LambdaExpression(Collections.singletonList(new NameExpression(name)),
-                            expect(Id.LAMBDA), parseLambdaBody(), getLastMatch().getStartPosition());
+                            expect(Id.LAMBDA), parseLambdaBody(), prev().getStartPosition());
                     }
 
                 // the no-de-ref goes with the construct if there is a construct, not with the name
@@ -3239,7 +3239,7 @@ public class Parser
 
                 // parse qualified name (which is necessary because we may have to tack on a
                 // "construct" to the end)
-                long           lEndPos = getLastMatch().getEndPosition();
+                long           lEndPos = prev().getEndPosition();
                 NameExpression left    = null;
                 boolean        fQuit   = false;
                 Token          dot;
@@ -3320,7 +3320,7 @@ public class Parser
                         if (attempt.isClean())
                             {
                             attempt.keepResults();
-                            lEndPos = getLastMatch().getEndPosition();
+                            lEndPos = prev().getEndPosition();
                             }
                         else
                             {
@@ -3399,7 +3399,7 @@ public class Parser
                             }
 
                         // it's a Tuple literal
-                        return new TupleExpression(null, exprs, tokLParen.getStartPosition(), getLastMatch().getEndPosition());
+                        return new TupleExpression(null, exprs, tokLParen.getStartPosition(), prev().getEndPosition());
 
                     case R_PAREN:
                         // this is either a parenthesized expression or a single parameter for a
@@ -3414,7 +3414,7 @@ public class Parser
                             {
                             // just a parenthesized expression
                             return new ParenthesizedExpression(expr,
-                                    tokLParen.getStartPosition(), getLastMatch().getEndPosition());
+                                    tokLParen.getStartPosition(), prev().getEndPosition());
                             }
 
                     case IDENTIFIER:
@@ -3917,7 +3917,7 @@ public class Parser
                         break;
                         }
                     }
-                return new ListExpression(type, exprs, lStartPos, getLastMatch().getEndPosition());
+                return new ListExpression(type, exprs, lStartPos, prev().getEndPosition());
                 }
 
             case "Map":
@@ -3936,7 +3936,7 @@ public class Parser
                         break;
                         }
                     }
-                return new MapExpression(type, keys, values, getLastMatch().getEndPosition());
+                return new MapExpression(type, keys, values, prev().getEndPosition());
                 }
 
             case "Tuple":
@@ -3957,7 +3957,7 @@ public class Parser
                     exprs.add(parseExpression());
                     }
                 return new TupleExpression(type, exprs, type.getStartPosition(),
-                        getLastMatch().getEndPosition());
+                        prev().getEndPosition());
                 }
 
             case "Path":
@@ -4175,7 +4175,7 @@ public class Parser
                             ++cDims;
                             }
                         }
-                    long lEndPos = getLastMatch().getEndPosition();
+                    long lEndPos = prev().getEndPosition();
                     type = new ArrayTypeExpression(type, cDims + cIndexes, lEndPos);
 
                     // if there were only indexes, then we need to leave them in place because the
@@ -4260,7 +4260,7 @@ public class Parser
             putBack(name);
             }
 
-        return new FunctionTypeExpression(function, listReturn, listParam, getLastMatch().getEndPosition());
+        return new FunctionTypeExpression(function, listReturn, listParam, prev().getEndPosition());
         }
 
     /**
@@ -4338,11 +4338,11 @@ public class Parser
             if (expr == null)
                 {
                 expr = new NamedTypeExpression(immutable, names, tokAccess, tokNarrow,
-                        params, getLastMatch().getEndPosition());
+                        params, prev().getEndPosition());
                 }
             else
                 {
-                expr = new NamedTypeExpression(expr, names, params, getLastMatch().getEndPosition());
+                expr = new NamedTypeExpression(expr, names, params, prev().getEndPosition());
                 }
             }
         while (match(Id.DOT) != null);
@@ -4521,7 +4521,7 @@ public class Parser
         // while the annotation is technically a named type expression, it only allows a qualified
         // name (and none of the other things that are normally allowed in a named type expression)
         NamedTypeExpression type = new NamedTypeExpression(null, parseQualifiedName(),
-                null, null, null, getLastMatch().getEndPosition());
+                null, null, null, prev().getEndPosition());
 
         // a trailing argument list is only assumed to be part of the annotation if there is
         // no whitespace separating the annotation from the arguments
@@ -4532,7 +4532,7 @@ public class Parser
             args = parseArgumentList(true, false, false);
             }
 
-        long lEndPos = args == null ? type.getEndPosition() : getLastMatch().getEndPosition();
+        long lEndPos = args == null ? type.getEndPosition() : prev().getEndPosition();
         return new AnnotationExpression(type, args, lStartPos, lEndPos);
         }
 
@@ -4652,7 +4652,7 @@ public class Parser
                 {
                 Token tokStart = peek();
                 List<TypeExpression> listSeq = parseTypeParameterTypeList(true, false);
-                Token tokEnd   = getLastMatch();
+                Token tokEnd   = prev();
                 types.add(new TupleTypeExpression(listSeq, tokStart.getStartPosition(), tokEnd.getEndPosition()));
                 }
             else
@@ -4981,7 +4981,7 @@ public class Parser
                 if ((verb.getId() == Id.AVOID ? setGood : setBad).contains(ver))
                     {
                     log(Severity.ERROR, Compiler.CONFLICTING_VERSIONS, verb.getStartPosition(),
-                            getLastMatch().getEndPosition(), ver.toString());
+                            prev().getEndPosition(), ver.toString());
                     }
                 (verb.getId() == Id.AVOID ? setBad : setGood).add(ver);
 
@@ -5169,6 +5169,7 @@ public class Parser
         {
         final Token token = peek();
         next();
+        m_tokenPrev = token;
         return token;
         }
 
@@ -5258,9 +5259,9 @@ public class Parser
         {
         Mark mark = new Mark();
         mark.pos       = m_lexer.getPosition();
-        mark.token     = m_token          == null ? null : m_token         .clone();
-        mark.putBack   = m_tokenPutBack   == null ? null : m_tokenPutBack  .clone();
-        mark.lastMatch = m_tokenLastMatch == null ? null : m_tokenLastMatch.clone();
+        mark.token     = m_token        == null ? null : m_token       .clone();
+        mark.putBack   = m_tokenPutBack == null ? null : m_tokenPutBack.clone();
+        mark.lastMatch = m_tokenPrev    == null ? null : m_tokenPrev   .clone();
         mark.doc       = m_doc;
         mark.noRec     = m_fAvoidRecovery;
         return mark;
@@ -5271,7 +5272,7 @@ public class Parser
         m_lexer.setPosition(mark.pos);
         m_token          = mark.token;
         m_tokenPutBack   = mark.putBack;
-        m_tokenLastMatch = mark.lastMatch;
+        m_tokenPrev      = mark.lastMatch;
         m_doc            = mark.doc;
         m_fAvoidRecovery = mark.noRec;
         }
@@ -5305,7 +5306,7 @@ public class Parser
         Token token = peek();
         if (token.getId() == id)
             {
-            return m_tokenLastMatch = current();
+            return current();
             }
 
         if (token.getId() == Id.IDENTIFIER && id.ContextSensitive && token.getValue().equals(id.TEXT))
@@ -5314,13 +5315,14 @@ public class Parser
             next();
 
             // return the previously "current" token
-            return m_tokenLastMatch = token.convertToKeyword();
+            m_tokenPrev = token = token.convertToKeyword();
+            return token;
             }
 
         token = token.peel(id, m_source);
         if (token != null)
             {
-            m_tokenLastMatch = token;
+            m_tokenPrev = token;
             }
         return token;
         }
@@ -5345,9 +5347,9 @@ public class Parser
      *
      * @return the token most recently returned from the match method
      */
-    protected Token getLastMatch()
+    protected Token prev()
         {
-        return m_tokenLastMatch;
+        return m_tokenPrev;
         }
 
     /**
@@ -5367,7 +5369,7 @@ public class Parser
             return token;
             }
 
-        log(Severity.ERROR, EXPECTED_TOKEN, m_token.getStartPosition(), m_token.getEndPosition(),
+        log(Severity.ERROR, EXPECTED_TOKEN, m_tokenPrev.getEndPosition(), m_tokenPrev.getEndPosition(),
                 id, m_token.getId());
 
         // TODO remove this so there can be more than one error reported
@@ -5602,9 +5604,9 @@ public class Parser
     private Token m_tokenPutBack;
 
     /**
-     * The most recently matched token.
+     * The previous token (often the most recently matched token).
      */
-    private Token m_tokenLastMatch;
+    private Token m_tokenPrev;
 
     /**
      * The current token.
