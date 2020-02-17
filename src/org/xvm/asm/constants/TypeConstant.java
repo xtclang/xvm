@@ -2765,7 +2765,7 @@ public abstract class TypeConstant
                         if (infoNew.isVirtual())
                             {
                             assert infoOld.isVirtual();
-                            Object     nid       = entry.getKey().resolveNestedIdentity(pool, this);
+                            Object     nid       = entry.getKey().getNestedIdentity();
                             MethodInfo infoCheck = mapVirtMethods.put(nid, infoNew);
                             assert infoOld == infoCheck;
                             }
