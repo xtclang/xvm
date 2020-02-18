@@ -40,7 +40,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
     /**
      * The root element.
      */
-    /* TODO protected/private */ ElementInputStream? root;
+    protected/private ElementInputStream? root;
 
     /**
      * The current [DocInput] "node" (an element, array, or field) that is being read from.
@@ -230,13 +230,6 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
             {
             assert canRead;
             ensureActive();
-// TODO
-//            parent?.childReading();
-//            if (String name := named())
-//                {
-//                Printer.printString(name, reader);
-//                reader.add(':');
-//                }
             }
 
         /**
@@ -368,7 +361,13 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         construct(ParentInput parent, (String|Int)? id = Null)
             {
             construct DocInputStream(parent, id);
+            assert token := lexer.next();
             }
+
+        /**
+         * The initial token of the element.
+         */
+        protected/private Token token;
 
         @Override
         conditional ElementInputStream insideElement()
@@ -380,58 +379,85 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         ArrayInputStream<ElementInputStream> openArray()
             {
             prepareRead();
+            if (token.id != ArrayEnter)
+                {
+                throw new IllegalJSON($"Illegal token for start of array: {token}");
+                }
+
             canRead = False;
             return new @CloseCap ArrayInputStream(this);
-// TODO
-//            return schema.enablePointers
-//                    ? new @CloseCap @PointerAwareElementInput ArrayInputStream(this)
-//                    : new @CloseCap ArrayInputStream(this);
             }
 
         @Override
         FieldInputStream<ElementInputStream> openObject()
             {
             prepareRead();
+            if (token.id != ObjectEnter)
+                {
+                throw new IllegalJSON($"Illegal token for start of object: {token}");
+                }
+
             canRead = False;
             return new @CloseCap FieldInputStream(this);
-// TODO
-//            return schema.enablePointers
-//                    ? new @CloseCap @PointerAwareFieldInput FieldInputStream(this)
-//                    : new @CloseCap FieldInputStream(this);
             }
 
         @Override
         Boolean isNull()
             {
-            return False; // TODO
+            return token.id == NoVal;
             }
 
         @Override
         Doc readDoc()
             {
-            return Null; // TODO
-            }
+            prepareRead();
+            canRead = False;
 
-//        @Override
-//        ElementInputStream add(Doc value)
-//            {
-//            if (value != Null || schema.retainNulls || !parent.is(FieldInputStream))
-//                {
-//                prepareRead();
-//                Printer.DEFAULT.print(value, reader);
-//                }
-//
-//            canRead = False;
-//            return this;
-//            }
+            switch (token.id)
+                {
+                case NoVal:
+                case BoolVal:
+                case IntVal:
+                case FPVal:
+                case StrVal:
+                    return token.value;
+
+                case ArrayEnter:
+                case ObjectEnter:
+                    assert Doc doc := new Parser(lexer, token).next();
+                    return doc;
+
+                default:
+                    throw new IllegalJSON($"Illegal token for start of value: {token}");
+                }
+            }
 
         @Override
         ParentInput close()
             {
-            // if nothing was written, assume that the value was supposed to be `Null`
+            // if nothing was read, then exhaust the contents of the element
             if (canRead)
                 {
-//                add(Null);
+                switch (token.id)
+                    {
+                    case NoVal:
+                    case BoolVal:
+                    case IntVal:
+                    case FPVal:
+                    case StrVal:
+                        // nothing to expurgate
+                        break;
+
+                    case ArrayEnter:
+                    case ObjectEnter:
+                        new Parser(lexer, token).skip();
+                        break;
+
+                    default:
+                        throw new IllegalJSON($"Illegal token for start of value: {token}");
+                    }
+
+                canRead = False;
                 }
 
             return super();

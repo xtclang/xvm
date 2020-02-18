@@ -158,7 +158,59 @@ class Lexer
      * A JSON token has a lexical identity (what the element type is), a location in the text stream
      * (with the ending position being the position _after_ the token), and an optional value.
      */
-    static const Token(Id id, TextPosition start, TextPosition end, Primitive value = Null);
+    static const Token(Id id, TextPosition start, TextPosition end, Primitive value = Null)
+        {
+        @Override
+        Int estimateStringLength()
+            {
+            return 5
+                 + start.lineNumber.estimateStringLength()
+                 + start.lineOffset.estimateStringLength()
+                 + switch(id)
+                    {
+                    // TODO GG: case NoVal..FPVal: value.estimateStringLength();
+                    case NoVal, BoolVal, IntVal, FPVal: value.estimateStringLength();
+                    case StrVal:       value.estimateStringLength() + 2;
+                    default:           3;
+                    };
+            }
+
+        @Override
+        void appendTo(Appender<Char> appender)
+            {
+            appender.add('(');
+            start.lineNumber.appendTo(appender);
+            appender.add(':');
+            start.lineOffset.appendTo(appender);
+            "): ".appendTo(appender);
+            switch(id)
+                {
+                // TODO GG: case NoVal..FPVal:
+                case NoVal, BoolVal, IntVal, FPVal:
+                    value.appendTo(appender);
+                    break;
+                case StrVal:
+                    appender.add('\"');
+                    value.appendTo(appender);
+                    appender.add('\"');
+                    break;
+                default:
+                    appender.add('\'');
+                    appender.add(switch (id)
+                        {
+                        case ArrayEnter:  '[';
+                        case ArrayExit:   ']';
+                        case ObjectEnter: '{';
+                        case ObjectExit:  '}';
+                        case Colon:       ':';
+                        case Comma:       ',';
+                        default:          assert;
+                        });
+                    appender.add('\'');
+                    break;
+                }
+            }
+        }
 
 
     // ----- Iterator ------------------------------------------------------------------------------

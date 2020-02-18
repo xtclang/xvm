@@ -19,25 +19,34 @@ class Parser
     /**
      * Construct a JSON parser that processes a document from a Reader.
      *
-     * @param reader       the source of the JSON document text
-     * @param collateDups  pass True to allow duplicate names in JSON objects
+     * @param reader  the source of the JSON document text
      */
-    construct(Reader reader, Boolean collateDups = False)
+    construct(Reader reader)
         {
-        construct Parser(new Lexer(reader), collateDups);
+        construct Parser(new Lexer(reader));
         }
 
     /**
      * Construct a JSON parser that processes a document from a Lexer.
      *
-     * @param lexer        a JSON Lexer
-     * @param collateDups  pass True to allow duplicate names in JSON objects
+     * @param lexer  a JSON Lexer
      */
-    construct(Iterator<Token> lexer, Boolean collateDups = False)
+    construct(Iterator<Token> lexer)
         {
-        this.lexer       = lexer;
-        this.token      := lexer.next();
-        this.collateDups = collateDups;
+        this.lexer  = lexer;
+        this.token := lexer.next();
+        }
+
+    /**
+     * Construct a JSON parser that processes a document from a Lexer and a first pre-primed token.
+     *
+     * @param lexer  a JSON Lexer
+     * @param token  the first token (previously primed from the Lexer)
+     */
+    construct(Iterator<Token> lexer, Token token)
+        {
+        this.lexer = lexer;
+        this.token = token;
         }
 
 
@@ -72,7 +81,7 @@ class Parser
      *
      *     [name=[Ralph,George]]
      */
-    protected Boolean collateDups;
+    Boolean collateDups;
 
     /**
      * Determine if the parser has encountered the end of file (no tokens left).
@@ -91,6 +100,22 @@ class Parser
         return eof
                 ? False
                 : (True, parseDoc());
+        }
+
+
+    // ----- other ---------------------------------------------------------------------------------
+
+    /**
+     * Skip over the next JSON document.
+     *
+     * @param skipped  the optional array to accrue skipped tokens into
+     */
+    void skip(Token[]? skipped = Null)
+        {
+        if (!eof)
+            {
+            skipDoc(skipped);
+            }
         }
 
 
@@ -126,6 +151,36 @@ class Parser
         }
 
     /**
+     * Skip a JSON value, which is called a "document" here. A JSON value can be an individual
+     * value, an array of JSON values, or a JSON object, which is a sequence of name/value pairs.
+     *
+     * @param skipped  the optional array to accrue skipped tokens into
+     */
+    protected void skipDoc(Token[]? skipped)
+        {
+        switch (token?.id)
+            {
+            case NoVal:
+            case BoolVal:
+            case IntVal:
+            case FPVal:
+            case StrVal:
+                skipped?.add(token ?: assert);
+                return;
+
+            case ArrayEnter:
+                return skipArray(skipped);
+
+            case ObjectEnter:
+                return skipObject(skipped);
+            }
+
+        throw eof
+                ? new EndOfFile()
+                : new IllegalJSON($"unexpected token: {token}");
+        }
+
+    /**
      * Parse an array of JSON values.
      *
      * @return an array of JSON values
@@ -144,6 +199,25 @@ class Parser
             expect(ArrayExit);
             }
         return array;
+        }
+
+    /**
+     * Skip an array of JSON values.
+     *
+     * @param skipped  the optional array to accrue skipped tokens into
+     */
+    protected void skipArray(Token[]? skipped)
+        {
+        expect(ArrayEnter, skipped);
+        if (!match(ArrayExit, skipped))
+            {
+            do
+                {
+                skipDoc(skipped);
+                }
+            while (match(Comma, skipped));
+            expect(ArrayExit, skipped);
+            }
         }
 
     /**
@@ -199,6 +273,27 @@ class Parser
         }
 
     /**
+     * Skip a JSON object, which is a sequence of name/value pairs.
+     *
+     * @param skipped  the optional array to accrue skipped tokens into
+     */
+    protected void skipObject(Token[]? skipped)
+        {
+        expect(ObjectEnter, skipped);
+        if (!match(ObjectExit, skipped))
+            {
+            do
+                {
+                expect(StrVal, skipped);
+                expect(Colon, skipped);
+                skipDoc(skipped);
+                }
+            while (match(Comma, skipped));
+            expect(ObjectExit, skipped);
+            }
+        }
+
+    /**
      * Take the next [Token]. This automatically loads a new "next token", if one exists.
      *
      * @return the token
@@ -241,6 +336,23 @@ class Parser
         }
 
     /**
+     * Obtain the next token, which is expected to have the specified [Token.Id].
+     *
+     * @param id       the expected [Token.Id] of the next token
+     * @param skipped  the optional array to accrue skipped tokens into
+     *
+     * @return the expected Token
+     *
+     * @throws IllegalJSON if the expected Token is not the next token
+     */
+    protected Token expect(Id id, Token[]? skipped)
+        {
+        Token token = expect(id);
+        skipped?.add(token);
+        return token;
+        }
+
+    /**
      * Test if the next [Token] is of the specified [Token.Id], and if it is, take it.
      *
      * @param id  the [Token.Id] to use to determine if the next Token is the desired match
@@ -259,6 +371,26 @@ class Parser
         if (token.id == id)
             {
             advance();
+            return True, token;
+            }
+
+        return False;
+        }
+
+    /**
+     * Test if the next [Token] is of the specified [Token.Id], and if it is, take it.
+     *
+     * @param id       the [Token.Id] to use to determine if the next Token is the desired match
+     * @param skipped  the optional array to accrue skipped tokens into
+     *
+     * @return True iff the next Token has the specified Id
+     * @return (conditional) the matching Token
+     */
+    protected conditional Token match(Id id, Token[]? skipped)
+        {
+        if (Token token := match(id))
+            {
+            skipped?.add(token);
             return True, token;
             }
 
