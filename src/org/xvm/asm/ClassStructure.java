@@ -1616,7 +1616,7 @@ public class ClassStructure
     public Relation calculateAssignability(List<TypeConstant> listLeft, Access accessLeft,
                                            List<TypeConstant> listRight)
         {
-        ConstantPool pool = ConstantPool.getCurrentPool();
+        ConstantPool pool = getConstantPool();
 
         int cParamsLeft  = listLeft.size();
         int cParamsRight = listRight.size();
@@ -2018,7 +2018,7 @@ public class ClassStructure
                 case Annotation:
                 case Delegates:
                 case Implements:
-                    typeContrib = typeContrib.resolveGenerics(pool, typeRight.normalizeParameters(pool));
+                    typeContrib = typeContrib.resolveGenerics(pool, typeRight.normalizeParameters());
                     if (typeContrib != null)
                         {
                         relation = relation.bestOf(typeContrib.calculateRelation(typeLeft));
@@ -2708,7 +2708,7 @@ public class ClassStructure
      */
     public MethodStructure createInitializer(TypeConstant typeStruct, Map<Object, TypeComposition> mapFields)
         {
-        ConstantPool pool   = ConstantPool.getCurrentPool();
+        ConstantPool pool   = getConstantPool();
         int          nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS;
 
         // create an orphaned transient MethodStructure (using current pool)

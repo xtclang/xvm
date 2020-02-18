@@ -192,11 +192,11 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public TypeConstant removeNullable(ConstantPool pool)
+    public TypeConstant removeNullable()
         {
         if (isTypeResolved())
             {
-            return getResolvedType().removeNullable(pool);
+            return getResolvedType().removeNullable();
             }
         throw new IllegalStateException();
         }
@@ -214,11 +214,11 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveConstraints(ConstantPool pool)
+    public TypeConstant resolveConstraints()
         {
         return m_type == null
                 ? this
-                : m_type.resolveConstraints(pool);
+                : m_type.resolveConstraints();
         }
 
     @Override

@@ -177,7 +177,7 @@ public abstract class ClassTemplate
     public ClassComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... typeParams)
         {
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
-            getInceptionClassConstant().getType(), typeParams).normalizeParameters(pool);
+            getInceptionClassConstant().getType(), typeParams).normalizeParameters();
 
         TypeConstant typeMask = getCanonicalType().adoptParameters(pool, typeParams);
 
@@ -226,11 +226,9 @@ public abstract class ClassTemplate
      */
     protected ClassComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
         {
-        ConstantPool pool = typeInception.getConstantPool();
-
         assert !typeInception.isAccessSpecified();
-        assert typeInception.normalizeParameters(pool).equals(typeInception);
-        assert typeMask.normalizeParameters(pool).equals(typeMask);
+        assert typeInception.normalizeParameters().equals(typeInception);
+        assert typeMask.normalizeParameters().equals(typeMask);
 
         ClassComposition clz = m_mapCompositions.computeIfAbsent(typeInception, (typeI) ->
             {

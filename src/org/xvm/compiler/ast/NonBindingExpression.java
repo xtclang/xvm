@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
@@ -102,7 +101,7 @@ public class NonBindingExpression
             else
                 {
                 this.type = exprNewType;
-                typeArg   = exprNewType.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool());
+                typeArg   = exprNewType.ensureTypeConstant(ctx).resolveAutoNarrowingBase();
                 }
             }
 

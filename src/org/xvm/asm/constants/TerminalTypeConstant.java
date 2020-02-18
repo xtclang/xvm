@@ -531,20 +531,20 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveConstraints(ConstantPool pool)
+    public TypeConstant resolveConstraints()
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().resolveConstraints(pool);
+            return constId.getReferredToType().resolveConstraints();
             }
 
         Constant constId = getDefiningConstant();
         if (constId instanceof FormalConstant)
             {
             FormalConstant constFormal  = (FormalConstant) constId;
-            return constFormal.getConstraintType().resolveConstraints(pool);
+            return constFormal.getConstraintType().resolveConstraints();
             }
 
         return this;
@@ -862,12 +862,12 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant removeNullable(ConstantPool pool)
+    public TypeConstant removeNullable()
         {
         if (!isSingleDefiningConstant())
             {
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().removeNullable(pool);
+            return constId.getReferredToType().removeNullable();
             }
 
         Constant constant = getDefiningConstant();
@@ -882,12 +882,13 @@ public class TerminalTypeConstant
                     //       *is not* Nullable, which is not quite the same as other usages
                     //       of DifferenceType; consider adding a new TypeConstant for that case,
                     //       for example "FormalDifference"...
+                    ConstantPool pool = getConstantPool();
                     return pool.ensureDifferenceTypeConstant(this, pool.typeNullable());
                     }
                 break;
             }
 
-        return super.removeNullable(pool);
+        return super.removeNullable();
         }
 
     @Override
@@ -1389,13 +1390,12 @@ public class TerminalTypeConstant
             case TypeParameter:
             case FormalTypeChild:
                 {
-                ConstantPool pool           = getConstantPool();
                 TypeConstant typeConstraint = ((FormalConstant) constant).getConstraintType();
-                int          cInvalidations = pool.getInvalidationCount();
+                int          cInvalidations = getConstantPool().getInvalidationCount();
 
                 if (typeConstraint.isAutoNarrowing())
                     {
-                    typeConstraint = typeConstraint.resolveAutoNarrowingBase(pool);
+                    typeConstraint = typeConstraint.resolveAutoNarrowingBase();
                     }
                 return new TypeInfo(this, typeConstraint.ensureTypeInfoInternal(errs), cInvalidations);
                 }

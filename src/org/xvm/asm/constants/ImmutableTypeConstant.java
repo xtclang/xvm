@@ -101,10 +101,10 @@ public class ImmutableTypeConstant
         }
 
     @Override
-    public TypeConstant removeNullable(ConstantPool pool)
+    public TypeConstant removeNullable()
         {
         return isNullable()
-                ? cloneSingle(pool, m_constType.removeNullable(pool))
+                ? cloneSingle(getConstantPool(), m_constType.removeNullable())
                 : this;
         }
 

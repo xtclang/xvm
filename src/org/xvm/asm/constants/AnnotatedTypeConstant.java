@@ -150,7 +150,7 @@ public class AnnotatedTypeConstant
         Constant idAnno = getAnnotationClass();
         if (idAnno instanceof ClassConstant)
             {
-            ConstantPool   pool  = ConstantPool.getCurrentPool();
+            ConstantPool   pool  = getConstantPool();
             ClassStructure mixin = (ClassStructure) ((ClassConstant) idAnno).getComponent();
 
             // here we assume that the type parameters for the annotation mixin are
@@ -158,7 +158,7 @@ public class AnnotatedTypeConstant
             // incorporating class the annotation is mixing into (regardless of the parameter name)
             Map<StringConstant, TypeConstant> mapFormal   = mixin.getTypeParams();
             Map<String, TypeConstant>         mapResolved = new HashMap<>(mapFormal.size());
-            List<TypeConstant>                listActual  = m_constType.normalizeParameters(pool).getParamTypes();
+            List<TypeConstant>                listActual  = m_constType.normalizeParameters().getParamTypes();
 
             for (StringConstant constName : mapFormal.keySet())
                 {
@@ -247,11 +247,11 @@ public class AnnotatedTypeConstant
         }
 
     @Override
-    public TypeConstant removeNullable(ConstantPool pool)
+    public TypeConstant removeNullable()
         {
         return isNullable()
-                ? pool.ensureAnnotatedTypeConstant(getAnnotationClass(),
-                        getAnnotationParams(), m_constType.removeNullable(pool))
+                ? getConstantPool().ensureAnnotatedTypeConstant(getAnnotationClass(),
+                        getAnnotationParams(), m_constType.removeNullable())
                 : this;
         }
 

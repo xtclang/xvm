@@ -5,7 +5,6 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -28,8 +27,6 @@ import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
-
-import org.xvm.util.ListMap;
 
 
 /**
@@ -141,7 +138,7 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    public TypeConstant removeNullable(ConstantPool pool)
+    public TypeConstant removeNullable()
         {
         if (!isNullable())
             {
@@ -151,17 +148,17 @@ public class IntersectionTypeConstant
         if (m_constType1.isOnlyNullable())
             {
             assert !m_constType2.isOnlyNullable();
-            return m_constType2.removeNullable(pool);
+            return m_constType2.removeNullable();
             }
 
         if (m_constType2.isOnlyNullable())
             {
             assert !m_constType1.isOnlyNullable();
-            return m_constType1.removeNullable(pool);
+            return m_constType1.removeNullable();
             }
 
-        return m_constType1.removeNullable(pool).intersect(pool,
-               m_constType2.removeNullable(pool));
+        return m_constType1.removeNullable().intersect(getConstantPool(),
+               m_constType2.removeNullable());
         }
 
     @Override
@@ -610,8 +607,7 @@ public class IntersectionTypeConstant
         // allow widening a parameter type from T to Nullable | T
         if (isNullable())
             {
-            ConstantPool pool = ConstantPool.getCurrentPool();
-            return removeNullable(pool).isContravariantParameter(typeBase, typeCtx);
+            return removeNullable().isContravariantParameter(typeBase, typeCtx);
             }
         return false;
         }

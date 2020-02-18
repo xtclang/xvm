@@ -51,7 +51,7 @@ public class ElvisExpression
             }
 
         // nulls in the first expression are eliminated by using the second expression
-        type1 = type1.removeNullable(pool());
+        type1 = type1.removeNullable();
 
         TypeConstant typeResult = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
 
@@ -67,7 +67,7 @@ public class ElvisExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeFit fit = expr1.testFit(ctx, typeRequired.ensureNullable(pool()), errs);
+        TypeFit fit = expr1.testFit(ctx, typeRequired.ensureNullable(), errs);
         if (fit.isFit())
             {
             fit.combineWith(expr2.testFit(ctx, typeRequired, errs));
@@ -80,7 +80,7 @@ public class ElvisExpression
         {
         ConstantPool pool     = pool();
         TypeFit      fit      = TypeFit.Fit;
-        TypeConstant type1Req = typeRequired == null ? null : typeRequired.ensureNullable(pool);
+        TypeConstant type1Req = typeRequired == null ? null : typeRequired.ensureNullable();
         Expression   expr1New = expr1.validate(ctx, type1Req, errs);
         TypeConstant type1    = null;
         if (expr1New == null)
@@ -94,7 +94,7 @@ public class ElvisExpression
             }
 
         TypeConstant type2Req = type1 == null ? null :
-                Op.selectCommonType(type1.removeNullable(pool), null, errs);
+                Op.selectCommonType(type1.removeNullable(), null, errs);
 
         if (typeRequired != null && (type2Req == null || !expr2.testFit(ctx, type2Req, null).isFit()))
             {
@@ -129,7 +129,7 @@ public class ElvisExpression
             return replaceThisWith(expr1New);
             }
 
-        TypeConstant type1Non   = type1.removeNullable(pool);
+        TypeConstant type1Non   = type1.removeNullable();
         TypeConstant type2      = expr2New.getType();
         TypeConstant typeResult = Op.selectCommonType(type1Non, type2, errs);
         if (typeResult == null)
@@ -176,8 +176,7 @@ public class ElvisExpression
             return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
             }
 
-        ConstantPool pool     = pool();
-        TypeConstant typeTemp = getType().ensureNullable(pool);
+        TypeConstant typeTemp = getType().ensureNullable();
         Assignable   var      = createTempVar(code, typeTemp, false, errs);
         generateAssignment(ctx, code, var, errs);
 

@@ -99,7 +99,7 @@ public class RecursiveTypeConstant
         }
 
     @Override
-    public TypeConstant resolveConstraints(ConstantPool pool)
+    public TypeConstant resolveConstraints()
         {
         return this;
         }

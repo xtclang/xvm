@@ -550,7 +550,7 @@ public abstract class Expression
                 && !constVal.equals(pool.ensureMatchAnyConstant(typeActual))
                 && !typeActual.isA(pool.typeService()))
             {
-            typeActual = typeActual.ensureImmutable(pool);
+            typeActual = typeActual.ensureImmutable();
             }
 
         // if a required type is specified and the expression type isn't of the required type, then
@@ -583,7 +583,7 @@ public abstract class Expression
                     }
                 else
                     {
-                    typeActual = constConv.getType().ensureImmutable(pool);
+                    typeActual = constConv.getType().ensureImmutable();
                     idConv     = null;
                     }
                 constVal = constConv;
@@ -688,8 +688,7 @@ public abstract class Expression
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cTypeReqs, cActual);
             }
 
-        ConstantPool pool         = pool();
-        boolean      fCloneActual = true;
+        boolean fCloneActual = true;
 
         // for expressions that yield constant values, make sure that the types reflect that
         if (aconstVal != null)
@@ -697,7 +696,7 @@ public abstract class Expression
             for (int i = 0; i < cActual; ++i)
                 {
                 TypeConstant typeOrg = atypeActual[i];
-                TypeConstant typeImm = typeOrg.ensureImmutable(pool);
+                TypeConstant typeImm = typeOrg.ensureImmutable();
 
                 if (!typeOrg.equals(typeImm))
                     {
@@ -745,7 +744,7 @@ public abstract class Expression
                             else
                                 {
                                 idConv         = null;
-                                atypeActual[i] = constConv.getType().ensureImmutable(pool());
+                                atypeActual[i] = constConv.getType().ensureImmutable();
                                 }
                             aconstVal[i] = constConv;
                             }

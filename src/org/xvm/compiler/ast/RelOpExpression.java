@@ -449,10 +449,8 @@ public class RelOpExpression
             // try to resolve the formal types and see if there is an op that matches
             if (type1Act.containsFormalType(true) || type2Act.containsFormalType(true))
                 {
-                ConstantPool pool = pool();
-
-                type1Act = type1Act.resolveConstraints(pool);
-                type2Act = type2Act.resolveConstraints(pool);
+                type1Act = type1Act.resolveConstraints();
+                type2Act = type2Act.resolveConstraints();
 
                 ErrorListener errsAlt = errs.branch();
                 idOp = findOpMethod(type1Act, type2Act, typeRequired, errsAlt);

@@ -172,7 +172,7 @@ public class ListExpression
                     {
                     type = exprTypeNew;
                     }
-                typeElement = exprTypeNew.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool).
+                typeElement = exprTypeNew.ensureTypeConstant(ctx).resolveAutoNarrowingBase().
                         resolveGenericType("Element");
                 }
             }

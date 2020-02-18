@@ -638,9 +638,8 @@ public class MethodStructure
             if (!mapTypeParams.containsKey(sName) && fAllowFormal)
                 {
                 // no extra knowledge; assume that anything goes
-                ConstantPool pool           = getConstantPool();
-                TypeConstant typeConstraint = param.getType().resolveConstraints(pool).getParamType(0);
-                TypeConstant typePending    = new PendingTypeConstant(pool, typeConstraint);
+                TypeConstant typeConstraint = param.getType().resolveConstraints().getParamType(0);
+                TypeConstant typePending    = new PendingTypeConstant(getConstantPool(), typeConstraint);
                 mapTypeParams.put(sName, typePending);
                 }
             }

@@ -292,10 +292,10 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveConstraints(ConstantPool pool)
+    public TypeConstant resolveConstraints()
         {
         TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveConstraints(pool);
+        TypeConstant constResolved = constOriginal.resolveConstraints();
         boolean      fDiff         = constOriginal != constResolved;
 
         assert !constResolved.isParamsSpecified();
@@ -305,7 +305,7 @@ public class ParameterizedTypeConstant
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
             {
             TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamResolved = constParamOriginal.resolveConstraints(pool);
+            TypeConstant constParamResolved = constParamOriginal.resolveConstraints();
             if (constParamOriginal != constParamResolved)
                 {
                 if (aconstResolved == aconstOriginal)
@@ -320,7 +320,7 @@ public class ParameterizedTypeConstant
         if (fDiff)
             {
             ParameterizedTypeConstant typeResolved = (ParameterizedTypeConstant)
-                pool.ensureParameterizedTypeConstant(constResolved, aconstResolved);
+                getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved);
             return typeResolved;
             }
         return this;
@@ -561,7 +561,6 @@ public class ParameterizedTypeConstant
         ParameterizedTypeConstant that = (ParameterizedTypeConstant) typeActual;
 
         // the underlying terminal type for actual type must fit the formal type
-        ConstantPool pool         = ConstantPool.getCurrentPool();
         TypeConstant typeTermThis = this.m_constType;
         TypeConstant typeTermThat = that.m_constType;
         if (!typeTermThat.isA(typeTermThis))

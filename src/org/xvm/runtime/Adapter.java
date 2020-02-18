@@ -117,7 +117,7 @@ public class Adapter
             throw new IllegalArgumentException("ClassTypeConstant is not defined: " + sName);
             }
 
-        return fNullable ? pool.ensureNullableTypeConstant(constType) : constType;
+        return fNullable ? constType.ensureNullable() : constType;
         }
 
     public TypeConstant[] getTypeConstants(ClassTemplate template, String[] asType)

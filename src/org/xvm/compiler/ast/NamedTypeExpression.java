@@ -642,7 +642,7 @@ public class NamedTypeExpression
                 {
                 TypeConstant typeParent =
                     ((TypedefConstant) m_constId).getParentConstant().getType();
-                type = type.resolveGenerics(pool, typeParent.normalizeParameters(pool));
+                type = type.resolveGenerics(pool, typeParent.normalizeParameters());
                 }
             }
         else
@@ -973,7 +973,7 @@ public class NamedTypeExpression
         {
         return isDynamic()
                 ? m_exprDynamic.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs)
-                : getType().resolveAutoNarrowingBase(pool());
+                : getType().resolveAutoNarrowingBase();
         }
 
 

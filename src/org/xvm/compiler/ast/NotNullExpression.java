@@ -79,19 +79,18 @@ public class NotNullExpression
         TypeConstant type = expr.getImplicitType(ctx);
         return type == null
                 ? null
-                : type.removeNullable(pool());
+                : type.removeNullable();
         }
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        ConstantPool pool = pool();
         TypeFit      fit  = TypeFit.Fit;
         TypeConstant type = null;
 
         TypeConstant typeRequest = typeRequired == null
                 ? null
-                : typeRequired.ensureNullable(pool);
+                : typeRequired.ensureNullable();
         Expression   exprNew     = expr.validate(ctx, typeRequest, errs);
         if (exprNew == null)
             {
@@ -104,7 +103,7 @@ public class NotNullExpression
 
             // the second check is for not-nullable type that is still allowed to be assigned from null
             // (e.g. Object or Const)
-            if (!type.isNullable() && !pool.typeNull().isA(type))
+            if (!type.isNullable() && !pool().typeNull().isA(type))
                 {
                 exprNew.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
                 return replaceThisWith(exprNew);
@@ -121,7 +120,7 @@ public class NotNullExpression
                 exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ALWAYS_NULL);
                 }
 
-            type         = type.removeNullable(pool);
+            type         = type.removeNullable();
             m_labelShort = getParent().ensureShortCircuitLabel(this, ctx);
             }
 
@@ -138,14 +137,13 @@ public class NotNullExpression
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        ConstantPool pool     = pool();
         TypeConstant typeExpr = getType();
-        if (isConstant() || pool.typeNull().isA(typeExpr))
+        if (isConstant() || pool().typeNull().isA(typeExpr))
             {
             return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
             }
 
-        TypeConstant typeTemp = typeExpr.ensureNullable(pool);
+        TypeConstant typeTemp = typeExpr.ensureNullable();
         Assignable   var      = createTempVar(code, typeTemp, false, errs);
         generateAssignment(ctx, code, var, errs);
         return var.getRegister().narrowType(typeExpr);

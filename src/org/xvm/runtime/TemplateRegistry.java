@@ -279,7 +279,6 @@ public class TemplateRegistry
     // produce a ClassComposition based on the specified TypeConstant
     public ClassComposition resolveClass(TypeConstant typeActual)
         {
-        return getTemplate(typeActual).
-            ensureClass(typeActual.normalizeParameters(typeActual.getConstantPool()));
+        return getTemplate(typeActual).ensureClass(typeActual.normalizeParameters());
         }
     }

@@ -71,6 +71,11 @@ import org.xvm.util.Severity;
  * <li>Type constants that relate two underlying types include {@link IntersectionTypeConstant},
  *     {@link UnionTypeConstant}, and {@link DifferenceTypeConstant}.</li>
  * </ul>
+ *
+ * There are number of TypeConstant transformation APIs. If a transformation is based only on the
+ * state of the TypeConstant itself, it doesn't require passing a target ConstantPool, since
+ * the transformed constant doesn't create any new cross-pool dependencies and be can safely placed
+ * into the same constant pool.
  */
 public abstract class TypeConstant
         extends Constant
@@ -204,26 +209,24 @@ public abstract class TypeConstant
     /**
      * Create a potentially new type that represents "this" immutable type.
      *
-     * @param pool  the ConstantPool to place a potentially created new constant into
-     *
      * @return a type constant that represents an immutable type of this type constant
      */
-    public TypeConstant ensureImmutable(ConstantPool pool)
+    public TypeConstant ensureImmutable()
         {
         return isImmutable()
                 ? this
-                : pool.ensureImmutableTypeConstant(this);
+                : getConstantPool().ensureImmutableTypeConstant(this);
         }
 
     /**
      * If this type is an Immutable type, calculate the type without the immutability.
      *
-     * @param pool  the ConstantPool to place a potentially created new constant into
-     *
      * @return this TypeConstant without immutability
      */
-    public TypeConstant removeImmutable(ConstantPool pool)
+    public TypeConstant removeImmutable()
         {
+        ConstantPool pool = getConstantPool();
+
         // replace the TerminalType of the typeActual with the inception type
         Function<TypeConstant, TypeConstant> transformer = new Function<>()
             {
@@ -549,23 +552,19 @@ public abstract class TypeConstant
      * If null cannot be assigned to this type, then create a new type that minimally encompasses
      * this type and the Null value.
      *
-     * @param pool  the ConstantPool to place a potentially created new constant into
-     *
      * @return the type, modified if necessary to allow it to support Null values
      */
-    public TypeConstant ensureNullable(ConstantPool pool)
+    public TypeConstant ensureNullable()
         {
-        return pool.ensureNullableTypeConstant(this);
+        return getConstantPool().ensureNullableTypeConstant(this);
         }
 
     /**
      * If this type is a nullable type, calculate the type without the nullability.
      *
-     * @param pool  the ConstantPool to place a potentially created new constant into
-     *
      * @return this TypeConstant without Nullable
      */
-    public TypeConstant removeNullable(ConstantPool pool)
+    public TypeConstant removeNullable()
         {
         return this;
         }
@@ -748,29 +747,25 @@ public abstract class TypeConstant
     /**
      * If this type contains any formal type, replace that formal type with its constraint type.
      *
-     * @param pool  the ConstantPool to place a potentially created new constant into
-     *
      * @return the resulting type
      */
-    public TypeConstant resolveConstraints(ConstantPool pool)
+    public TypeConstant resolveConstraints()
         {
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.resolveConstraints(pool);
+        TypeConstant constResolved = constOriginal.resolveConstraints();
         return constResolved == constOriginal
                 ? this
-                : cloneSingle(pool, constResolved);
+                : cloneSingle(getConstantPool(), constResolved);
         }
 
     /**
-     * @param pool  the ConstantPool to place a potentially created new constant into
-     *
      * @return this same type, but with the number of parameters equal to the number of
      *         formal parameters for the the underlying terminal type, assigning missing
      *         type parameters to the corresponding canonical types
      */
-    public TypeConstant normalizeParameters(ConstantPool pool)
+    public TypeConstant normalizeParameters()
         {
-        return adoptParameters(pool, (TypeConstant[]) null);
+        return adoptParameters(getConstantPool(), (TypeConstant[]) null);
         }
 
     /**
@@ -890,14 +885,12 @@ public abstract class TypeConstant
      * Helper method that replaces an auto-narrowing "base" portion of the type, but doesn't
      * resolve any of the type parameters.
      *
-     * @param pool  the ConstantPool to place a potentially created new constant into
-     *
      * @return the TypeConstant with explicit base identity swapped in for an auto-narrowing
      *         base identity
      */
-    public TypeConstant resolveAutoNarrowingBase(ConstantPool pool)
+    public TypeConstant resolveAutoNarrowingBase()
         {
-        return resolveAutoNarrowing(pool, true, null);
+        return resolveAutoNarrowing(getConstantPool(), true, null);
         }
 
     /**
@@ -970,11 +963,10 @@ public abstract class TypeConstant
      */
     public boolean isSequence()
         {
-        ConstantPool pool      = getConstantPool();
         TypeConstant constThis = resolveTypedefs();
         assert !constThis.containsUnresolved();
 
-        constThis = constThis.resolveAutoNarrowingBase(pool);
+        constThis = constThis.resolveAutoNarrowingBase();
         return     constThis.isEcstasy("String")
                 || constThis.isEcstasy("Array")
                 || constThis.isEcstasy("List")
@@ -1002,8 +994,8 @@ public abstract class TypeConstant
 
         if (typeThis.getParamsCount() != typeThat.getParamsCount())
             {
-            typeThis = typeThis.normalizeParameters(pool);
-            typeThat = typeThat.normalizeParameters(pool);
+            typeThis = typeThis.normalizeParameters();
+            typeThat = typeThat.normalizeParameters();
             }
 
         // when the types are the same, then the values are comparable; in the case that the value
@@ -1032,7 +1024,7 @@ public abstract class TypeConstant
 
         if (typeThis.isNullable() || typeThat.isNullable())
             {
-            return typeThis.removeNullable(pool).equals(typeThat.removeNullable(pool));
+            return typeThis.removeNullable().equals(typeThat.removeNullable());
             }
 
         return false;
@@ -1160,7 +1152,7 @@ public abstract class TypeConstant
         // - normalize the type to make sure that all formal parameters are filled in
         typeResolved = typeResolved.
                             resolveAutoNarrowing(pool, false, null).
-                            normalizeParameters(pool);
+                            normalizeParameters();
         if (typeResolved != this)
             {
             info = typeResolved.ensureTypeInfo(errs);
@@ -1765,7 +1757,7 @@ public abstract class TypeConstant
                     }
                 }
 
-            TypeConstant typeNormalized = this.normalizeParameters(pool);
+            TypeConstant typeNormalized = this.normalizeParameters();
 
             for (int i = 0; i < cClassParams; ++i)
                 {
@@ -4556,7 +4548,7 @@ public abstract class TypeConstant
      */
     public Relation calculateRelation(TypeConstant typeLeft)
         {
-        ConstantPool pool = ConstantPool.getCurrentPool();
+        ConstantPool pool = getConstantPool();
         if (this.equals(typeLeft) || typeLeft.equals(pool.typeObject()))
             {
             return Relation.IS_A;
@@ -4587,7 +4579,7 @@ public abstract class TypeConstant
             if (typeLeft.isImmutabilitySpecified())
                 {
                 relation = typeRight.isImmutable()
-                    ? typeRight.calculateRelation(typeLeft.removeImmutable(pool))
+                    ? typeRight.calculateRelation(typeLeft.removeImmutable())
                     : Relation.INCOMPATIBLE;
 
                 mapRelations.put(typeLeft, relation);
@@ -4596,7 +4588,7 @@ public abstract class TypeConstant
 
             if (typeRight.isImmutabilitySpecified())
                 {
-                relation = typeRight.removeImmutable(pool).calculateRelation(typeLeft);
+                relation = typeRight.removeImmutable().calculateRelation(typeLeft);
 
                 mapRelations.put(typeLeft, relation);
                 return relation;
@@ -4618,8 +4610,8 @@ public abstract class TypeConstant
 
                 if (relation == Relation.INCOMPATIBLE)
                     {
-                    TypeConstant typeLeftN  = typeLeft.normalizeParameters(pool);
-                    TypeConstant typeRightN = typeRight.normalizeParameters(pool);
+                    TypeConstant typeLeftN  = typeLeft.normalizeParameters();
+                    TypeConstant typeRightN = typeRight.normalizeParameters();
                     if (typeLeftN.isDuckTypeAbleFrom(typeRightN))
                         {
                         // left is an interface; check the duck-typing
@@ -4689,7 +4681,6 @@ public abstract class TypeConstant
      */
     protected Relation findContribution(TypeConstant typeLeft)
         {
-        ConstantPool pool      = ConstantPool.getCurrentPool();
         TypeConstant typeRight = this;
 
         assert !typeLeft.isRelationalType() && typeLeft.isSingleDefiningConstant();
@@ -4704,7 +4695,7 @@ public abstract class TypeConstant
         switch (accessRight)
             {
             case STRUCT:
-                if (typeLeft.equals(pool.typeStruct()))
+                if (typeLeft.equals(getConstantPool().typeStruct()))
                     {
                     return Relation.IS_A;
                     }
@@ -4832,8 +4823,8 @@ public abstract class TypeConstant
                         && idRight.isCongruentWith((PseudoConstant) constIdLeft))
                     {
                     // without any additional context, it should be assignable in some direction
-                    typeRight = typeRight.resolveAutoNarrowing(pool, false, null);
-                    typeLeft  = typeLeft.resolveAutoNarrowing(pool, false, null);
+                    typeRight = typeRight.resolveAutoNarrowing(typeRight.getConstantPool(), false, null);
+                    typeLeft  = typeLeft.resolveAutoNarrowing(typeLeft.getConstantPool(), false, null);
 
                     Relation relRightIsLeft = typeRight.calculateRelation(typeLeft);
                     return relRightIsLeft == Relation.INCOMPATIBLE
@@ -4991,7 +4982,6 @@ public abstract class TypeConstant
             return null;
             }
 
-        ConstantPool     pool    = ConstantPool.getCurrentPool();
         IdentityConstant idLeft  = typeLeft.getSingleUnderlyingClass(true);
         IdentityConstant idRight = typeRight.getSingleUnderlyingClass(true);
 
@@ -5005,6 +4995,7 @@ public abstract class TypeConstant
             idRight = ((NativeRebaseConstant) idRight).getClassConstant();
             }
 
+        ConstantPool pool = idLeft.getConstantPool();
         if (idLeft.equals(pool.clzTuple()))
             {
             if (!typeRight.isTuple())

@@ -372,9 +372,7 @@ public class AssignmentStatement
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
-        boolean      fValid = true;
-        ConstantPool pool   = pool();
-
+        boolean    fValid       = true;
         AstNode    nodeLeft     = lvalue;
         Expression exprLeftCopy = null;
         boolean    fConditional = isConditional();
@@ -443,13 +441,13 @@ public class AssignmentStatement
                 TypeConstant[] atypeTest = atypeLeft;
                 if (op.getId() == Id.COND_NN_ASN)
                     {
-                    atypeTest = new TypeConstant[] {atypeLeft[0].ensureNullable(pool)};
+                    atypeTest = new TypeConstant[] {atypeLeft[0].ensureNullable()};
                     }
                 else if (fConditional)
                     {
                     int cLeft = atypeLeft.length;
                     atypeTest = new TypeConstant[cLeft + 1];
-                    atypeTest[0] = pool.typeBoolean();
+                    atypeTest[0] = pool().typeBoolean();
                     System.arraycopy(atypeLeft, 0, atypeTest, 1, cLeft);
                     }
 
@@ -543,7 +541,7 @@ public class AssignmentStatement
                     TypeConstant typeReq = exprLeft.getType();
                     if (typeReq != null)
                         {
-                        typeReq = typeReq.ensureNullable(pool);
+                        typeReq = typeReq.ensureNullable();
                         }
 
                     exprRightNew = exprRight.validate(ctx, typeReq, errs);
@@ -561,7 +559,7 @@ public class AssignmentStatement
                         if (atypeRight.length == 1)
                             {
                             atypeRight = new TypeConstant[]
-                                    { atypeRight[0].removeNullable(pool) };
+                                    { atypeRight[0].removeNullable() };
                             }
                         }
                     }
@@ -572,7 +570,7 @@ public class AssignmentStatement
                     int            cLVals     = atypeLVals.length;
                     int            cReq       = cLVals + 1;
                     TypeConstant[] atypeReq   = new TypeConstant[cReq];
-                    atypeReq[0] = pool.typeBoolean();
+                    atypeReq[0] = pool().typeBoolean();
                     System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
 
                     exprRightNew = exprRight.validateMulti(ctx, atypeReq, errs);

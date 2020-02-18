@@ -4,7 +4,6 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -21,7 +20,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
-import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
@@ -102,11 +100,11 @@ public class UnionTypeConstant
         }
 
     @Override
-    public TypeConstant removeNullable(ConstantPool pool)
+    public TypeConstant removeNullable()
         {
         return isNullable()
-                ? m_constType1.removeNullable(pool).combine(pool,
-                  m_constType2.removeNullable(pool))
+                ? m_constType1.removeNullable().combine(getConstantPool(),
+                  m_constType2.removeNullable())
                 : this;
         }
 

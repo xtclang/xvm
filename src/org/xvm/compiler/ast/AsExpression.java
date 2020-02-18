@@ -54,8 +54,7 @@ public class AsExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        ConstantPool   pool        = pool();
-        TypeExpression exprType    = (TypeExpression) expr2.validate(ctx, pool.typeType(), errs);
+        TypeExpression exprType    = (TypeExpression) expr2.validate(ctx, pool().typeType(), errs);
         TypeConstant   type        = null;
         TypeConstant   typeRequest = null;
         boolean        fValid      = true;
@@ -74,7 +73,7 @@ public class AsExpression
                 }
             else
                 {
-                type = exprType.ensureTypeConstant(ctx).resolveAutoNarrowingBase(pool);
+                type = exprType.ensureTypeConstant(ctx).resolveAutoNarrowingBase();
                 }
 
             if (expr1.testFit(ctx, type, null).isFit())

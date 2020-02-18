@@ -2994,8 +2994,7 @@ public abstract class Component
             {
             TypeConstant typeContrib = getTypeConstant();
 
-            typeContrib = typeContrib.normalizeParameters(pool)
-                                     .resolveGenerics(pool, resolver);
+            typeContrib = typeContrib.normalizeParameters().resolveGenerics(pool, resolver);
 
             return getComposition() != Composition.Incorporates ||
                     checkConditionalIncorporate(typeContrib.getParamTypesArray()) ?
@@ -3020,7 +3019,7 @@ public abstract class Component
 
             assert typeContrib.isSingleDefiningConstant();
 
-            typeContrib = typeContrib.normalizeParameters(pool);
+            typeContrib = typeContrib.normalizeParameters();
             if (!typeContrib.isParamsSpecified())
                 {
                 return typeContrib;

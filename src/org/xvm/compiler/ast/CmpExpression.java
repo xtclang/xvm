@@ -303,11 +303,11 @@ public class CmpExpression
                 {
                 if (fFormal1)
                     {
-                    type1 = type1.resolveConstraints(pool);
+                    type1 = type1.resolveConstraints();
                     }
                 if (fFormal2)
                     {
-                    type2 = type2.resolveConstraints(pool);
+                    type2 = type2.resolveConstraints();
                     }
                 // since it's guaranteed that neither type contains formal, we can recurse
                 typeCommon = chooseCommonType(type1, type2, fCheck);
@@ -334,11 +334,11 @@ public class CmpExpression
             {
             case COMP_EQ:
                 typeTrue  = typeNull;
-                typeFalse = typeTarget.removeNullable(pool);
+                typeFalse = typeTarget.removeNullable();
                 break;
 
             case COMP_NEQ:
-                typeTrue  = typeTarget.removeNullable(pool);
+                typeTrue  = typeTarget.removeNullable();
                 typeFalse = typeNull;
                 break;
             }

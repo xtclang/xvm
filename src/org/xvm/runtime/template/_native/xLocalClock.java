@@ -123,7 +123,7 @@ public class xLocalClock
         GenericHandle hTimeZone = m_hTimeZone;
         if (hTimeZone == null)
             {
-            ConstantPool    pool           = ConstantPool.getCurrentPool();
+            ConstantPool    pool           = pool();
             ClassStructure  structTimeZone = f_templates.getClassStructure("TimeZone");
             TypeConstant    typeTimeZone   = structTimeZone.getCanonicalType();
             TypeComposition clzTimeZone    = f_templates.resolveClass(typeTimeZone);

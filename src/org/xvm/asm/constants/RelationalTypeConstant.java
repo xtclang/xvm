@@ -218,16 +218,16 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveConstraints(ConstantPool pool)
+    public TypeConstant resolveConstraints()
         {
         TypeConstant constOriginal1 = m_constType1;
         TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.resolveConstraints(pool);
-        TypeConstant constResolved2 = constOriginal2.resolveConstraints(pool);
+        TypeConstant constResolved1 = constOriginal1.resolveConstraints();
+        TypeConstant constResolved2 = constOriginal2.resolveConstraints();
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
-                : cloneRelational(pool, constResolved1, constResolved2);
+                : cloneRelational(getConstantPool(), constResolved1, constResolved2);
         }
 
     @Override

@@ -73,7 +73,7 @@ public class IsExpression
         if (fit.isFit())
             {
             TypeConstant typeTarget = exprTarget.getType();
-            TypeConstant typeTest   = exprTest.getType().getParamType(0).resolveAutoNarrowingBase(pool);
+            TypeConstant typeTest   = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
 
             if (typeTarget.isTypeOfType() && !typeTest.isFormalType() && exprTest.isConstant())
                 {
@@ -129,7 +129,7 @@ public class IsExpression
             Expression exprTest = expr2;
             if (exprTest.isConstant())
                 {
-                argType = exprTest.getType().getParamType(0).resolveAutoNarrowingBase(pool());
+                argType = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
                 }
             else
                 {
@@ -148,7 +148,7 @@ public class IsExpression
             Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
         Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
-        Argument argType   = expr2.getType().getParamType(0).resolveAutoNarrowingBase(pool());
+        Argument argType   = expr2.getType().getParamType(0).resolveAutoNarrowingBase();
         code.add(fWhenTrue
                 ? new JumpType(argTarget, argType, label)
                 : new JumpNType(argTarget, argType, label));

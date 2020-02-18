@@ -479,7 +479,6 @@ public class TernaryExpression
 
     private TypeConstant[] resolveConstraints(TypeConstant[] atype)
         {
-        ConstantPool   pool   = pool();
         int            cTypes = atype.length;
         TypeConstant[] atypeR = null;
 
@@ -493,7 +492,7 @@ public class TernaryExpression
                     {
                     atypeR = new TypeConstant[cTypes];
                     }
-                atypeR[i] = type.resolveConstraints(pool);
+                atypeR[i] = type.resolveConstraints();
                 }
 
             }

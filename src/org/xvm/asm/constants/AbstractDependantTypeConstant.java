@@ -121,13 +121,13 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
-    public TypeConstant resolveConstraints(ConstantPool pool)
+    public TypeConstant resolveConstraints()
         {
         TypeConstant constOriginal = getParentType();
-        TypeConstant constResolved = constOriginal.resolveConstraints(pool);
+        TypeConstant constResolved = constOriginal.resolveConstraints();
         return constResolved == constOriginal
                 ? this
-                : cloneSingle(pool, constResolved);
+                : cloneSingle(getConstantPool(), constResolved);
         }
 
     @Override

@@ -124,18 +124,17 @@ public class TypeParameterConstant
 
         assert typeConstraint.isTypeOfType() && typeConstraint.isParamsSpecified();
 
-        ConstantPool pool = getConstantPool();
-
         typeConstraint = typeConstraint.getParamType(0);
         if (typeConstraint.containsTypeParameter(true))
             {
-            return typeConstraint.resolveConstraints(pool);
+            return typeConstraint.resolveConstraints();
             }
 
         if (!typeConstraint.isParamsSpecified() && typeConstraint.isExplicitClassIdentity(true))
             {
             // create a normalized formal type
-            ClassStructure clz = (ClassStructure) typeConstraint.getSingleUnderlyingClass(true).getComponent();
+            ConstantPool   pool = getConstantPool();
+            ClassStructure clz  = (ClassStructure) typeConstraint.getSingleUnderlyingClass(true).getComponent();
             if (clz.isParameterized())
                 {
                 Set<StringConstant> setFormalNames = clz.getTypeParams().keySet();
