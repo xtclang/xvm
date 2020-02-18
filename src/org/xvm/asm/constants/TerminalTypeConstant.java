@@ -797,12 +797,12 @@ public class TerminalTypeConstant
             case Package:
                 return false;
 
-            case Class:
-                idClz = (ClassConstant) constant;
-                break;
-
             case NativeClass:
                 idClz = ((NativeRebaseConstant) constant).getClassConstant();
+                break;
+
+            case Class:
+                idClz = (ClassConstant) constant;
                 break;
 
             case Property:
@@ -1099,11 +1099,11 @@ public class TerminalTypeConstant
             {
             case Module:
             case Package:
+            case NativeClass:
                 // these are always class types (not interface types)
                 return (IdentityConstant) constant;
 
             case Class:
-            case NativeClass:
                 if (!fAllowInterface)
                     {
                     // must not be an interface
