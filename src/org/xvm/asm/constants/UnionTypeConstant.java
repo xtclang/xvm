@@ -256,7 +256,7 @@ public class UnionTypeConstant
         }
 
     @Override
-    public boolean supportsCompare(ConstantPool pool, TypeConstant that, boolean fThatIsConstant)
+    public boolean supportsCompare(TypeConstant that, boolean fThatIsConstant)
         {
         if (that instanceof UnionTypeConstant)
             {
@@ -267,13 +267,13 @@ public class UnionTypeConstant
 
             if (type1This.equals(type1That) && type2This.equals(type2That))
                 {
-                return type1This.supportsCompare(pool, type1That, false)
-                    || type2This.supportsCompare(pool, type2That, false);
+                return type1This.supportsCompare(type1That, false)
+                    || type2This.supportsCompare(type2That, false);
                 }
             if (type1This.equals(type2That) && type2This.equals(type1That))
                 {
-                return type1This.supportsCompare(pool, type2That, false)
-                    || type2This.supportsCompare(pool, type1That, false);
+                return type1This.supportsCompare(type2That, false)
+                    || type2This.supportsCompare(type1That, false);
                 }
             }
         return false;

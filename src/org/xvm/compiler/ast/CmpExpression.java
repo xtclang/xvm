@@ -264,19 +264,17 @@ public class CmpExpression
             return typeCommon;
             }
 
-        ConstantPool pool = pool();
-
         if (typeCommon != null && fCheck)
             {
             boolean fConstant1 = expr1.isConstant();
             boolean fConstant2 = expr2.isConstant();
 
             if (usesEquals()
-                    ? typeCommon.supportsEquals (pool,  type1, fConstant1) &&
-                      typeCommon.supportsEquals (pool,  type2, fConstant2)
+                    ? typeCommon.supportsEquals (type1, fConstant1) &&
+                      typeCommon.supportsEquals (type2, fConstant2)
                    // Compare
-                    : typeCommon.supportsCompare(pool, type1, fConstant1) &&
-                      typeCommon.supportsCompare(pool, type2, fConstant2))
+                    : typeCommon.supportsCompare(type1, fConstant1) &&
+                      typeCommon.supportsCompare(type2, fConstant2))
                 {
                 return typeCommon;
                 }
@@ -288,6 +286,7 @@ public class CmpExpression
         if (typeCommon == null)
             {
             // equality check for any Ref objects is allowed
+            ConstantPool pool = pool();
             if (usesEquals()
                     && type1.isA(pool.typeRef())
                     && type2.isA(pool.typeRef()))
@@ -318,9 +317,8 @@ public class CmpExpression
 
     private boolean checkNullComparison(Context ctx, NameExpression exprTarget, ErrorListener errs)
         {
-        ConstantPool pool       = pool();
         TypeConstant typeTarget = exprTarget.getType();
-        TypeConstant typeNull   = pool.typeNull();
+        TypeConstant typeNull   = pool().typeNull();
         TypeConstant typeTrue   = null;
         TypeConstant typeFalse  = null;
 

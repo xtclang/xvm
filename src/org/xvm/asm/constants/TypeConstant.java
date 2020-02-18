@@ -977,20 +977,20 @@ public abstract class TypeConstant
     /**
      * Determine compatibility for purposes of comparing equality.
      *
-     *
-     * @param pool             the ConstantPool to place a potentially created new constant into
      * @param that             another type
      * @param fThatIsConstant  if the value of the other type is a constant
      *
      * @return true iff a value of this type can be compared with a value of the other type for
      *         equality
      */
-    public boolean supportsEquals(ConstantPool pool, TypeConstant that, boolean fThatIsConstant)
+    public boolean supportsEquals(TypeConstant that, boolean fThatIsConstant)
         {
         assert that != null;
 
+        ConstantPool pool = getConstantPool();
+
         TypeConstant typeThis = this.resolveAutoNarrowing(pool, false, null);
-        TypeConstant typeThat = that.resolveAutoNarrowing(pool, false, null);
+        TypeConstant typeThat = that.resolveAutoNarrowing(that.getConstantPool(), false, null);
 
         if (typeThis.getParamsCount() != typeThat.getParamsCount())
             {
@@ -1033,19 +1033,20 @@ public abstract class TypeConstant
     /**
      * Determine compatibility for purposes of comparing order.
      *
-     * @param pool             the ConstantPool to place a potentially created new constant into
      * @param that             another type
      * @param fThatIsConstant  if the value of the other type is a constant
      *
      * @return true iff a value of this type can be compared with a value of the other type for
      *         order
      */
-    public boolean supportsCompare(ConstantPool pool, TypeConstant that, boolean fThatIsConstant)
+    public boolean supportsCompare(TypeConstant that, boolean fThatIsConstant)
         {
         assert that != null;
 
+        ConstantPool pool = getConstantPool();
+
         TypeConstant typeThis = this.resolveAutoNarrowing(pool, false, null);
-        TypeConstant typeThat = that.resolveAutoNarrowing(pool, false, null);
+        TypeConstant typeThat = that.resolveAutoNarrowing(that.getConstantPool(), false, null);
 
         if (typeThis.equals(typeThat) || fThatIsConstant && typeThat.isA(typeThis))
             {
