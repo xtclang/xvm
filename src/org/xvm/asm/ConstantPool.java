@@ -3619,10 +3619,7 @@ public class ConstantPool
      */
     public ClassComposition ensureClassComposition(TypeConstant typeInception, ClassTemplate template)
         {
-        if (typeInception.getConstantPool() != this || typeInception.getPosition() < 0)
-            {
-            throw new AssertionError();
-            }
+        assert typeInception.getConstantPool() == this && typeInception.getPosition() >= 0;
         assert !typeInception.isAccessSpecified();
         assert typeInception.normalizeParameters().equals(typeInception);
 
