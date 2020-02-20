@@ -121,11 +121,7 @@ public class UnresolvedTypeConstant
     @Override
     public boolean isExplicitClassIdentity(boolean fAllowParams)
         {
-        if (isTypeResolved())
-            {
-            return m_type.isExplicitClassIdentity(fAllowParams);
-            }
-        throw new IllegalStateException();
+        return isTypeResolved() && getResolvedType().isExplicitClassIdentity(fAllowParams);
         }
 
     @Override
@@ -174,6 +170,18 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public boolean isConstant()
+        {
+        return isTypeResolved() && getResolvedType().isConstant();
+        }
+
+    @Override
+    public boolean isTypeOfType()
+        {
+        return isTypeResolved() && getResolvedType().isTypeOfType();
+        }
+
+    @Override
     public boolean isImmutabilitySpecified()
         {
         return isTypeResolved() && getResolvedType().isImmutabilitySpecified();
@@ -183,6 +191,14 @@ public class UnresolvedTypeConstant
     public boolean isAccessSpecified()
         {
         return isTypeResolved() && getResolvedType().isAccessSpecified();
+        }
+
+    @Override
+    public Access getAccess()
+        {
+        return isTypeResolved()
+                ? getResolvedType().getAccess()
+                : Access.PUBLIC;
         }
 
     @Override
@@ -208,6 +224,12 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
+        {
+        return isTypeResolved() && getResolvedType().isSingleUnderlyingClass(fAllowInterface);
+        }
+
+    @Override
     public String getEcstasyClassName()
         {
         return isTypeResolved() ? getResolvedType().getEcstasyClassName() : "?";
@@ -216,9 +238,9 @@ public class UnresolvedTypeConstant
     @Override
     public TypeConstant resolveConstraints()
         {
-        return m_type == null
-                ? this
-                : m_type.resolveConstraints();
+        return isTypeResolved()
+                ? getResolvedType().resolveConstraints()
+                : this;
         }
 
     @Override
@@ -234,50 +256,46 @@ public class UnresolvedTypeConstant
     @Override
     public void bindTypeParameters(MethodConstant idMethod)
         {
-        if (m_type != null)
+        if (isTypeResolved())
             {
-            m_type.bindTypeParameters(idMethod);
+            getResolvedType().bindTypeParameters(idMethod);
             }
         }
 
     @Override
     public boolean containsGenericParam(String sName)
         {
-        if (isTypeResolved())
-            {
-            return getResolvedType().containsGenericParam(sName);
-            }
-        throw new IllegalStateException();
+        return isTypeResolved() && getResolvedType().containsGenericParam(sName);
         }
 
     @Override
     protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
-        if (isTypeResolved())
-            {
-            return getResolvedType().getGenericParamType(sName, listParams);
-            }
-        throw new IllegalStateException();
+        return isTypeResolved()
+                ? getResolvedType().getGenericParamType(sName, listParams)
+                : null;
+        }
+
+    @Override
+    public boolean isAutoNarrowing(boolean fAllowVirtChild)
+        {
+        return isTypeResolved() && getResolvedType().isAutoNarrowing(fAllowVirtChild);
         }
 
     @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
-        if (isTypeResolved())
-            {
-            return getResolvedType().resolveAutoNarrowing(pool, fRetainParams, typeTarget);
-            }
-        throw new IllegalStateException();
+        return isTypeResolved()
+                ? getResolvedType().resolveAutoNarrowing(pool, fRetainParams, typeTarget)
+                : this;
         }
 
     @Override
     public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
-        if (isTypeResolved())
-            {
-            return getResolvedType().resolveGenerics(pool, resolver);
-            }
-        throw new IllegalStateException();
+        return isTypeResolved()
+                ? getResolvedType().resolveGenerics(pool, resolver)
+                : this;
         }
 
     @Override
@@ -291,21 +309,45 @@ public class UnresolvedTypeConstant
     @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
-        if (isTypeResolved())
-            {
-            return getResolvedType().adoptParameters(pool, atypeParams);
-            }
-        throw new IllegalStateException();
+        return isTypeResolved()
+                ? getResolvedType().adoptParameters(pool, atypeParams)
+                : this;
         }
 
     @Override
     public TypeConstant[] collectGenericParameters()
         {
-        if (isTypeResolved())
-            {
-            return getResolvedType().collectGenericParameters();
-            }
-        throw new IllegalStateException();
+        return isTypeResolved()
+                ? getResolvedType().collectGenericParameters()
+                : null;
+        }
+
+    @Override
+    public boolean consumesFormalType(String sTypeName, Access access)
+        {
+        return isTypeResolved() && getResolvedType().consumesFormalType(sTypeName, access);
+        }
+
+    @Override
+    protected Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
+        {
+        return isTypeResolved()
+                ? getResolvedType().checkConsumption(sTypeName, access, listParams)
+                : Usage.NO;
+        }
+
+    @Override
+    public boolean producesFormalType(String sTypeName, Access access)
+        {
+        return isTypeResolved() && getResolvedType().producesFormalType(sTypeName, access);
+        }
+
+    @Override
+    protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
+        {
+        return isTypeResolved()
+                ? getResolvedType().checkProduction(sTypeName, access, listParams)
+                : Usage.NO;
         }
 
     @Override
@@ -347,14 +389,6 @@ public class UnresolvedTypeConstant
         return isTypeResolved()
                 ? getResolvedType().getFormat()
                 : Format.UnresolvedType;
-        }
-
-    @Override
-    public boolean isAutoNarrowing(boolean fAllowVirtChild)
-        {
-        return isTypeResolved()
-                ? getResolvedType().isAutoNarrowing(fAllowVirtChild)
-                : super.isAutoNarrowing(fAllowVirtChild);
         }
 
     @Override

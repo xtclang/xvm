@@ -1985,6 +1985,9 @@ public class ClassStructure
                 assert typeLeft.isAutoNarrowing(false);
                 return findContribution(typeLeft.resolveAutoNarrowing(pool, false, null), typeRight, fAllowInto);
 
+            case UnresolvedName:
+                return Relation.INCOMPATIBLE;
+
             default:
                 throw new IllegalStateException("unexpected constant: " + constIdLeft);
             }

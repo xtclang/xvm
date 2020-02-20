@@ -4838,6 +4838,9 @@ public abstract class TypeConstant
                 return clzRight.findContribution(typeLeft, typeRight, true);
                 }
 
+            case UnresolvedName:
+                return Relation.INCOMPATIBLE;
+
             default:
                 throw new IllegalStateException("unexpected constant: " + constIdRight);
             }
