@@ -226,18 +226,10 @@ public abstract class ClassTemplate
      */
     protected ClassComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
         {
-        assert !typeInception.isAccessSpecified();
-        assert typeInception.normalizeParameters().equals(typeInception);
+        ClassComposition clz = typeInception.getConstantPool().
+                ensureClassComposition(typeInception, this);
+
         assert typeMask.normalizeParameters().equals(typeMask);
-
-        ClassComposition clz = m_mapCompositions.computeIfAbsent(typeInception, (typeI) ->
-            {
-            OpSupport support = typeI.isAnnotated() && typeI.isIntoVariableType()
-                    ? typeI.getOpSupport(f_templates)
-                    : this;
-
-            return new ClassComposition(support, typeI);
-            });
 
         return typeMask.equals(typeInception) ? clz : clz.maskAs(typeMask);
         }
@@ -2051,21 +2043,4 @@ public abstract class ClassTemplate
      * Canonical type composition.
      */
     protected ClassComposition m_clazzCanonical;
-
-    /**
-     * A cache of "instantiate-able" ClassCompositions keyed by the "inception type". Most of the
-     * time the revealed type is identical to the inception type and is defined by a
-     * {@link ClassConstant} referring to a concrete natural class (not an interface).
-     *
-     * The only exceptions are the native types (e.g. Ref, Service), for which the inception type is
-     * defined by a {@link org.xvm.asm.constants.NativeRebaseConstant} class constant and the
-     * revealed type refers to the corresponding natural interface.
-     *
-     * We assume that for a given template, there will never be two instantiate-able classes with
-     * the same inception type, but different revealed type. OTOH, the ClassComposition may
-     * hide (or mask) its original identity via the {@link TypeComposition#maskAs(TypeConstant)}
-     * operation and later reveal it back. All those transformations are handled by the
-     * ClassComposition itself and are not known or controllable by the ClassTemplate.
-     */
-    private Map<TypeConstant, ClassComposition> m_mapCompositions = new ConcurrentHashMap<>();
     }

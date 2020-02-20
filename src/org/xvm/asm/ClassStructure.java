@@ -2708,14 +2708,14 @@ public class ClassStructure
      */
     public MethodStructure createInitializer(TypeConstant typeStruct, Map<Object, TypeComposition> mapFields)
         {
-        ConstantPool pool   = getConstantPool();
+        ConstantPool pool   = typeStruct.getConstantPool();
         int          nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS;
 
-        // create an orphaned transient MethodStructure (using current pool)
+        // create an orphaned transient MethodStructure (using the target's pool)
         MethodConstant idMethod = pool.ensureMethodConstant(
                 getIdentityConstant(), "default", TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
 
-        MethodStructure method = new MethodStructure(this, nFlags, idMethod, null,
+        MethodStructure method = new MethodStructure(pool, nFlags, idMethod, null,
                 Annotation.NO_ANNOTATIONS, Parameter.NO_PARAMS, Parameter.NO_PARAMS, true, false);
 
         MethodStructure.Code code = method.createCode();
@@ -3162,6 +3162,10 @@ public class ClassStructure
 
         // register the type parameters
         m_mapParams = registerTypeParams(m_mapParams);
+
+        // invalidate cached types
+        m_typeCanonical = null;
+        m_typeFormal    = null;
         }
 
     @Override

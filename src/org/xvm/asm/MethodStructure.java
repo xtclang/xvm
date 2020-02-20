@@ -1562,7 +1562,7 @@ public class MethodStructure
         MethodConstant id = getIdentityConstant();
         StringBuilder  sb = new StringBuilder();
         sb.append("host=\"")
-          .append(getParent().getParent().getName())
+          .append(getIdentityConstant().getNamespace().getName())
           .append("\", id=\"")
           .append(id.getValueString());
 

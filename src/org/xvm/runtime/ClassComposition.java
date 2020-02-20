@@ -16,6 +16,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.AccessTypeConstant;
+import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -48,31 +49,30 @@ public class ClassComposition
      *
      * @param support the OpSupport implementation for the inception type
      */
-    protected ClassComposition(OpSupport support, TypeConstant typeInception)
+    public ClassComposition(OpSupport support, TypeConstant typeInception)
         {
         assert typeInception.isSingleDefiningConstant();
         assert typeInception.getAccess() == Access.PUBLIC;
 
+        ConstantPool  pool     = typeInception.getConstantPool();
         ClassTemplate template = support.getTemplate(typeInception);
+
         if (support instanceof ClassTemplate)
             {
             support = template;
             }
 
-        ConstantPool pool = typeInception.getConstantPool();
-
-        f_clzInception = this;
-        f_support = support;
-        f_template = template;
-        f_typeInception = pool.ensureAccessTypeConstant(typeInception, Access.PRIVATE);
-        f_typeStructure = pool.ensureAccessTypeConstant(typeInception, Access.STRUCT);
-        f_typeRevealed = typeInception;
+        f_clzInception    = this;
+        f_support         = support;
+        f_template        = template;
+        f_typeInception   = pool.ensureAccessTypeConstant(typeInception, Access.PRIVATE);
+        f_typeStructure   = pool.ensureAccessTypeConstant(typeInception, Access.STRUCT);
+        f_typeRevealed    = typeInception;
         f_mapCompositions = new ConcurrentHashMap<>();
-        f_mapProxies = new ConcurrentHashMap<>();
-        f_mapMethods = new ConcurrentHashMap<>();
-        f_mapGetters = new ConcurrentHashMap<>();
-        f_mapSetters = new ConcurrentHashMap<>();
-        f_mapFields  = f_template.isGenericHandle() ? createFieldLayout() : null;
+        f_mapProxies      = new ConcurrentHashMap<>();
+        f_mapMethods      = new ConcurrentHashMap<>();
+        f_mapGetters      = new ConcurrentHashMap<>();
+        f_mapSetters      = new ConcurrentHashMap<>();
         }
 
     /**
@@ -80,19 +80,20 @@ public class ClassComposition
      */
     private ClassComposition(ClassComposition clzInception, TypeConstant typeRevealed)
         {
-        f_clzInception = clzInception;
-        f_support = clzInception.f_support;
-        f_template = clzInception.f_template;
-        f_typeInception = clzInception.f_typeInception;
-        f_typeStructure = clzInception.f_typeStructure;
-        f_typeRevealed = typeRevealed;
+        f_clzInception    = clzInception;
+        f_support         = clzInception.f_support;
+        f_template        = clzInception.f_template;
+        f_typeInception   = clzInception.f_typeInception;
+        f_typeStructure   = clzInception.f_typeStructure;
+        f_typeRevealed    = typeRevealed;
         f_mapCompositions = f_clzInception.f_mapCompositions;
-        f_mapProxies = f_clzInception.f_mapProxies;
-        f_mapMethods = f_clzInception.f_mapMethods;
-        f_mapGetters = f_clzInception.f_mapGetters;
-        f_mapSetters = f_clzInception.f_mapSetters;
-        f_mapFields = f_clzInception.f_mapFields;
-        m_methodInit = f_clzInception.m_methodInit;
+        f_mapProxies      = f_clzInception.f_mapProxies;
+        f_mapMethods      = f_clzInception.f_mapMethods;
+        f_mapGetters      = f_clzInception.f_mapGetters;
+        f_mapSetters      = f_clzInception.f_mapSetters;
+
+        m_mapFields       = f_clzInception.m_mapFields;
+        m_methodInit      = f_clzInception.m_methodInit;
         }
 
     /**
@@ -239,7 +240,7 @@ public class ClassComposition
     @Override
     public MethodStructure ensureAutoInitializer()
         {
-        if (f_mapFields == null)
+        if (m_mapFields.isEmpty())
             {
             return null;
             }
@@ -247,7 +248,7 @@ public class ClassComposition
         MethodStructure method = m_methodInit;
         if (method == null)
             {
-            m_methodInit = method = f_template.f_struct.createInitializer(f_typeStructure, f_mapFields);
+            m_methodInit = method = f_template.f_struct.createInitializer(f_typeStructure, m_mapFields);
             }
         return method.isAbstract() ? null : method;
         }
@@ -255,13 +256,13 @@ public class ClassComposition
     @Override
     public boolean isInflated(Object nid)
         {
-        return f_mapFields != null && f_mapFields.get(nid) != null;
+        return m_mapFields.get(nid) != null;
         }
 
     @Override
     public boolean isLazy(Object nid)
         {
-        TypeComposition clz = f_mapFields.get(nid);
+        TypeComposition clz = m_mapFields.get(nid);
         return clz instanceof PropertyComposition &&
                 ((PropertyComposition) clz).isLazy();
         }
@@ -335,8 +336,8 @@ public class ClassComposition
         List<String> listNames = m_listNames;
         if (listNames == null)
             {
-            Map<Object, TypeComposition> mapFields = f_mapFields;
-            if (mapFields == null)
+            Map<Object, TypeComposition> mapFields = m_mapFields;
+            if (mapFields.isEmpty())
                 {
                 listNames = Collections.EMPTY_LIST;
                 }
@@ -405,8 +406,8 @@ public class ClassComposition
     @Override
     public Map<Object, ObjectHandle> initializeStructure()
         {
-        Map<Object, TypeComposition> mapCached = f_mapFields;
-        if (mapCached == null)
+        Map<Object, TypeComposition> mapCached = m_mapFields;
+        if (mapCached.isEmpty())
             {
             return null;
             }
@@ -455,19 +456,28 @@ public class ClassComposition
 
     /**
      * Create a map of fields that serves as a prototype for all instances of this class.
-     *
-     * @return a prototype map
      */
-    private Map<Object, TypeComposition> createFieldLayout()
+    public void ensureFieldLayout()
         {
-        ConstantPool pool = f_typeInception.getConstantPool();
+        if (m_mapFields != null)
+            {
+            return;
+            }
+
+        if (!f_template.isGenericHandle())
+            {
+            m_mapFields = Collections.EMPTY_MAP;
+            return;
+            }
 
         TypeConstant typePublic = f_typeInception.getUnderlyingType();
         if (typePublic instanceof PropertyClassTypeConstant)
             {
-            return null;
+            m_mapFields = Collections.EMPTY_MAP;
+            return;
             }
 
+        ConstantPool pool       = typePublic.getConstantPool();
         TypeConstant typeStruct = pool.ensureAccessTypeConstant(typePublic, Access.STRUCT);
         TypeInfo     infoStruct = typeStruct.ensureTypeInfo();
 
@@ -509,7 +519,7 @@ public class ClassComposition
                 assert !infoProp.isRefAnnotated();
                 }
             }
-        return mapFields.isEmpty() ? null : mapFields;
+        m_mapFields = mapFields.isEmpty() ? Collections.EMPTY_MAP : mapFields;
         }
 
     /**
@@ -579,11 +589,20 @@ public class ClassComposition
     /**
      * Template for class fields (values are either nulls or TypeComposition for refs).
      */
-    private final Map<Object, TypeComposition> f_mapFields;
+    private Map<Object, TypeComposition> m_mapFields;
 
     /**
      * A cache of derivative TypeCompositions keyed by the "revealed type".
-     */
+     * <p/>
+     * We assume that there will never be two instantiate-able classes with the same inception type,
+     * but different revealed type. The ClassComposition may hide (or mask) its original identity
+     * via the {@link #maskAs(TypeConstant)} operation and later reveal it back.
+     * <p/>
+     * Most of the time the revealed type is identical to the inception type so this map is going
+     * to be empty. One exception is the native types (e.g. Ref, Service), for which the inception
+     * type is defined by a {@link NativeRebaseConstant} class constant and the revealed type refers
+     * to the corresponding natural interface.
+     * */
     private final Map<TypeConstant, ClassComposition> f_mapCompositions;
 
     /**

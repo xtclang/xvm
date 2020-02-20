@@ -26,11 +26,17 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Vector;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.xvm.asm.Constant.Format;
 
 import org.xvm.asm.constants.*;
 import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo.Progress;
+
+import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.OpSupport;
 
 import org.xvm.type.Decimal;
 
@@ -3604,6 +3610,38 @@ public class ConstantPool
         }
 
 
+    // ----- run-time helpers  ---------------------------------------------------------------------
+
+    /**
+     * Produce a ClassComposition for the specified inception type.
+     *
+     * Note: the passed inception type should be normalized (all formal parameters resolved).
+     */
+    public ClassComposition ensureClassComposition(TypeConstant typeInception, ClassTemplate template)
+        {
+        if (typeInception.getConstantPool() != this || typeInception.getPosition() < 0)
+            {
+            throw new AssertionError();
+            }
+        assert !typeInception.isAccessSpecified();
+        assert typeInception.normalizeParameters().equals(typeInception);
+
+        ClassComposition clz = m_mapCompositions.computeIfAbsent(typeInception, (type) ->
+            {
+            OpSupport support = type.isAnnotated() && type.isIntoVariableType()
+                    ? type.getOpSupport(template.f_templates)
+                    : template;
+
+            return new ClassComposition(support, type);
+            });
+
+        // we need to make this call outside of the constructor due to a possible recursion
+        // (ConcurrentHashMap.computeIfAbsent doesn't allow that)
+        clz.ensureFieldLayout();
+        return clz;
+        }
+
+
     // ----- out-of-context helpers  ---------------------------------------------------------------
 
     /**
@@ -3808,6 +3846,14 @@ public class ConstantPool
      * A list of classes that cause any derived TypeInfos to be invalidated.
      */
     private final List<IdentityConstant> f_listInvalidated = new Vector<>();
+
+    /**
+     * A cache of "instantiate-able" ClassCompositions keyed by the "inception type".
+     *
+     * Any ClassComposition in this map is defined by a {@link ClassConstant} referring to a
+     * concrete natural class. It also keeps the secondary map of compositions for revealed types.
+     */
+    private Map<TypeConstant, ClassComposition> m_mapCompositions = new ConcurrentHashMap<>();
 
     /**
      * Thread local allowing to get the "current" ConstantPool without any context.
