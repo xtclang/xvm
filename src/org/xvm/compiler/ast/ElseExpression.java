@@ -70,6 +70,8 @@ public class ElseExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        // TODO CP: we need to fork the context and collect "short-circuit" branches
+        //          during the ensureShortCircuitLabel() call
         TypeFit      fit      = TypeFit.Fit;
         Expression   expr1New = expr1.validate(ctx, typeRequired, errs);
         TypeConstant type1    = null;
@@ -88,7 +90,10 @@ public class ElseExpression
             {
             type2Req = typeRequired;
             }
-        Expression expr2New = expr2.validate(ctx, type2Req, errs);
+
+        // TODO CP: this is a temporary solution; simply ignore the impact of the "else"
+        Context ctx2 = ctx.enter();
+        Expression expr2New = expr2.validate(ctx2, type2Req, errs);
         if (expr2New == null)
             {
             fit = TypeFit.NoFit;
@@ -97,6 +102,8 @@ public class ElseExpression
             {
             expr2 = expr2New;
             }
+
+        ctx2.discard();
 
         if (!fit.isFit())
             {
