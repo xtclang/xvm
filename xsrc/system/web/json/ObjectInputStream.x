@@ -1,4 +1,5 @@
 import collections.HashMap;
+import collections.ListMap;
 
 import io.Reader;
 import io.ObjectInput;
@@ -103,10 +104,11 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
     class DocInputStream<ParentInput extends (ElementInputStream | ArrayInputStream | FieldInputStream)?>
             implements DocInput<ParentInput>
         {
-        construct(ParentInput parent, (String|Int)? id = Null)
+        construct(ParentInput parent, (String|Int)? id, Token[]? tokens)
             {
             this.parent = parent;
             this.id     = id;
+            this.lexer  = tokens?.iterator() : parent?.lexer : this.ObjectInputStream.lexer;
             }
 
         @Override
@@ -135,6 +137,11 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
          * If the DocInput is inside a JSON array, then it has an array index.
          */
         protected/private (String | Int)? id;
+
+        /**
+         * The stream of JSON tokens for this DocInputStream.
+         */
+        protected/private Iterator<Token> lexer;
 
         @Override
         conditional ElementInputStream<ParentInput> insideElement()
@@ -226,6 +233,9 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
             while (&this != &current);
             }
 
+        /**
+         * Make sure that this DocInput can be read from, and is ready to read from.
+         */
         protected void prepareRead()
             {
             assert canRead;
@@ -233,9 +243,38 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
             }
 
         /**
-         * Invoked when a child is reading.
+         * Take the next token.
          */
-        protected void childReading()
+        protected Token takeToken()
+            {
+            if (Token token := lexer.next())
+                {
+                return token;
+                }
+
+            canRead = False;
+            throw new IllegalJSON($"Unexpected EOF");
+            }
+
+        /**
+         * Take the next token.
+         */
+        protected Token expectToken(Lexer.Id id)
+            {
+            Token token = takeToken();
+            if (token.id == id)
+                {
+                return token;
+                }
+
+            canRead = False;
+            throw new IllegalJSON($"Expected {id}; found {token}.");
+            }
+
+        /**
+         * Invoked when a child has closed.
+         */
+        protected void childClosed(DocInputStream! child)
             {
             }
 
@@ -343,7 +382,9 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
                 ensureActive();
                 }
 
-            return super();
+            ParentInput parent = super();
+            parent?.childClosed(this);
+            return parent;
             }
         }
 
@@ -358,15 +399,19 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
             extends DocInputStream<ParentInput>
             implements ElementInput<ParentInput>
         {
-        construct(ParentInput parent, (String|Int)? id = Null)
+        construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
             {
-            construct DocInputStream(parent, id);
-            assert token := lexer.next();
+            construct DocInputStream(parent, id, tokens);
+            }
+        finally
+            {
+            token = takeToken();
             }
 
         /**
          * The initial token of the element.
          */
+        @Unassigned
         protected/private Token token;
 
         @Override
@@ -381,6 +426,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
             prepareRead();
             if (token.id != ArrayEnter)
                 {
+                canRead = False;
                 throw new IllegalJSON($"Illegal token for start of array: {token}");
                 }
 
@@ -394,6 +440,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
             prepareRead();
             if (token.id != ObjectEnter)
                 {
+                canRead = False;
                 throw new IllegalJSON($"Illegal token for start of object: {token}");
                 }
 
@@ -428,6 +475,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
                     return doc;
 
                 default:
+                    canRead = False;
                     throw new IllegalJSON($"Illegal token for start of value: {token}");
                 }
             }
@@ -454,6 +502,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
                         break;
 
                     default:
+                        canRead = False;
                         throw new IllegalJSON($"Illegal token for start of value: {token}");
                     }
 
@@ -476,29 +525,25 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
             extends DocInputStream<ParentInput>
             implements ElementInput<ParentInput>
         {
-        construct(ParentInput parent, (String|Int)? id = Null)
+        construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
             {
-            construct DocInputStream(parent, id);
+            construct DocInputStream(parent, id, tokens);
             }
         finally
             {
-//            prepareRead();
-//            reader.add('[');
+            loadNext(first = True);
             }
 
         /**
-         * Count of how many elements have been added to the JSON array.
+         * The initial token of the element.
+         */
+        @Unassigned
+        protected/private Token token;
+
+        /**
+         * Count of how many elements have been read from the JSON array.
          */
         protected Int count;
-
-//        @Override
-//        void childReading() // TODO CP make sure that null elements are not omitted
-//            {
-//            if (count++ > 0)
-//                {
-//                reader.add(',');
-//                }
-//            }
 
         @Override
         conditional ArrayInputStream insideArray()
@@ -509,55 +554,131 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         @Override
         ArrayInputStream!<ArrayInputStream> openArray()
             {
-            ensureActive();
+            prepareRead();
             return new @CloseCap ArrayInputStream(this, count);
-// TODO
-//            return schema.enablePointers
-//                    ? new @CloseCap @PointerAwareElementInput ArrayInputStream(this, count)
-//                    : new @CloseCap ArrayInputStream(this, count);
             }
 
         @Override
         FieldInputStream<ArrayInputStream> openObject()
             {
-            ensureActive();
+            prepareRead();
             return new @CloseCap FieldInputStream(this, count);
-// TODO
-//            return schema.enablePointers
-//                    ? new @CloseCap @PointerAwareFieldInput FieldInputStream(this, count)
-//                    : new @CloseCap FieldInputStream(this, count);
             }
 
         @Override
         Boolean isNull()
             {
-            return False; // TODO
+            return !canRead || token.id == NoVal;
             }
 
         @Override
         Doc readDoc()
             {
-            return Null; // TODO
-            }
+            prepareRead();
 
-//        @Override
-//        ArrayInputStream add(Doc value)
-//            {
-//            ensureActive();
-//
-//            // this is analogous to opening a nested ElementInputStream and having it read, except
-//            // the ArrayInputStream incorporates that functionality at this level
-//            childReading();
-//            Printer.DEFAULT.print(value, reader);
-//
-//            return this;
-//            }
+            switch (token.id)
+                {
+                case NoVal:
+                case BoolVal:
+                case IntVal:
+                case FPVal:
+                case StrVal:
+                    ++count;
+                    return token.value;
+
+                case ArrayEnter:
+                case ObjectEnter:
+                    assert Doc doc := new Parser(lexer, token).next();
+                    loadNext();
+                    return doc;
+
+                default:
+                    canRead = False;
+                    throw new IllegalJSON($"Illegal token for start of value: {token}");
+                }
+            }
 
         @Override
         ParentInput close()
             {
-//            reader.add(']');
+            // if nothing was read, then exhaust the contents of the element
+            if (canRead)
+                {
+                do
+                    {
+                    switch (token.id)
+                        {
+                        case NoVal:
+                        case BoolVal:
+                        case IntVal:
+                        case FPVal:
+                        case StrVal:
+                            // nothing to expurgate
+                            break;
+
+                        case ArrayEnter:
+                        case ObjectEnter:
+                            new Parser(lexer, token).skip();
+                            break;
+
+                        default:
+                            canRead = False;
+                            throw new IllegalJSON($"Illegal token for start of value: {token}");
+                        }
+                    }
+                while (loadNext());
+                }
+
             return super();
+            }
+
+        @Override
+        void childClosed(DocInputStream! child)
+            {
+            if (child.lexer == this.lexer)
+                {
+                loadNext();
+                }
+            super(child);
+            }
+
+        /**
+         * Load the token of the value of the next array element. If there are no more elements,
+         * then set `canRead` to `False`.
+         *
+         * Note: The assumption is that prepareRead() (or equivalent) has already been invoked.
+         *
+         * @return True iff the stream appears to contain a next element
+         */
+        protected Boolean loadNext(Boolean first = False)
+            {
+            if (!first)
+                {
+                ++count;
+                Token trailing = takeToken();
+                switch (trailing.id)
+                    {
+                    case Comma:
+                        break;
+
+                    case ArrayExit:
+                        canRead = False;
+                        return False;
+
+                    default:
+                        canRead = False;
+                        throw new IllegalJSON($"Expected ',' or ']'; found {trailing}.");
+                    }
+                }
+
+            token = takeToken();
+            if (first && token.id == ArrayExit)
+                {
+                canRead = False;
+                return False;
+                }
+
+            return True;
             }
         }
 
@@ -573,30 +694,31 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
             extends DocInputStream<ParentInput>
             implements FieldInput<ParentInput>
         {
-        construct(ParentInput parent, (String|Int)? id = Null)
+        construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
             {
-            construct DocInputStream(parent, id);
+            construct DocInputStream(parent, id, tokens);
             }
         finally
             {
-//            prepareRead();
-//            reader.add('{');
+            loadNext(first = True);
             }
 
-//        Boolean first = True;
-//
-//        @Override
-//        void childReading()
-//            {
-//            if (first)
-//                {
-//                first = False;
-//                }
-//            else
-//                {
-//                reader.add(',');
-//                }
-//            }
+        /**
+         * The next loaded key name of the next key-value pair.
+         */
+        String? name;
+
+        /**
+         * The first token of the value of the next key-value pair.
+         */
+        @Unassigned
+        Token token;
+
+        /**
+         * A lazily constructed map of the key-value pairs that were skipped over. (The values are
+         * stored as an array of their raw tokens.)
+         */
+        ListMap<String, Token[]>? skipped;
 
         @Override
         conditional FieldInputStream insideObject()
@@ -607,58 +729,119 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         @Override
         ElementInputStream<FieldInputStream> openField(String name)
             {
-            ensureActive();
-            return new @CloseCap ElementInputStream(this, name);
-// TODO
-//            return schema.enablePointers
-//                    ? new @CloseCap @PointerAwareElementInput ElementInputStream(this, name)
-//                    : new @CloseCap ElementInputStream(this, name);
+            prepareRead();
+
+            // check if the next key/value pair is the one that we're looking for
+            if (this.name? == name)
+                {
+                return new @CloseCap ElementInputStream(this, name);
+                }
+
+            // check if we've already skipped over the name that we're looking for
+            if (schema.randomAccess, Token[] tokens := skipped?.get(name))
+                {
+                return new @CloseCap ElementInputStream(this, name, tokens); // TODO
+                }
+
+            // advance through the key/value pairs until the specified name is found
+            TODO
             }
 
         @Override
         ArrayInputStream<FieldInputStream> openArray(String name)
             {
-            ensureActive();
+            prepareRead();
             return new @CloseCap ArrayInputStream(this, name);
-// TODO
-//            return schema.enablePointers
-//                    ? new @CloseCap @PointerAwareElementInput ArrayInputStream(this, name)
-//                    : new @CloseCap ArrayInputStream(this, name);
             }
 
         @Override
         FieldInputStream!<FieldInputStream> openObject(String name)
             {
-            ensureActive();
+            prepareRead();
             return new @CloseCap FieldInputStream(this, name);
-// TODO
-//            return schema.enablePointers
-//                    ? new @CloseCap @PointerAwareFieldInput FieldInputStream(this, name)
-//                    : new @CloseCap FieldInputStream(this, name);
             }
 
         @Override
         conditional String nextName()
             {
-            TODO
+            String? name = this.name;
+            return name == Null
+                    ? False
+                    : (True, name);
             }
 
         @Override
         Boolean contains(String name)
             {
-            TODO
+            // check the next name
+            if (name == this.name?)
+                {
+                return True;
+                }
+
+            // check the "remainder" (skipped names)
+            if (skipped?.contains(name))
+                {
+                return True;
+                }
+
+            // if randomAccess is enabled, then peek ahead to find the name
+            if (schema.randomAccess)
+                {
+                TODO implement random access feature
+                }
+
+            return False;
             }
 
         @Override
         Map<String, Doc>? takeRemainder()
             {
-            TODO
+            if (schema.storeRemainders)
+                {
+                Map<String, Doc> remainder = new ListMap();
+
+                for ((String name, Token[] tokens) : skipped?)
+                    {
+                    assert Doc doc := new Parser(tokens.iterator()).next();
+                    remainder.put(name, doc);
+                    }
+
+                while (canRead)
+                    {
+                    String name = this.name? : assert;
+                    remainder.put(name, readDoc(name));
+                    }
+
+                return remainder;
+                }
+            else
+                {
+                return Null;
+                }
             }
 
         @Override
         Boolean isNull(String name)
             {
-            TODO
+            // first, quick-check the current key/value
+            if (name == this.name?)
+                {
+                return token.id == NoVal;
+                }
+
+            // check the skipped key/value pairs (if any)
+            if (Token[] value := skipped?.get(name))
+                {
+                return value.size == 1 && value[0].id == NoVal;
+                }
+
+            if (schema.randomAccess)
+                {
+                TODO read in the rest of the document and answer the question
+                }
+
+            return True;
             }
 
         @Override
@@ -670,192 +853,98 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         @Override
         ParentInput close()
             {
-//            reader.add('}');
+            // if nothing was read, then exhaust the contents of the element
+            if (canRead)
+                {
+                do
+                    {
+                    switch (token.id)
+                        {
+                        case NoVal:
+                        case BoolVal:
+                        case IntVal:
+                        case FPVal:
+                        case StrVal:
+                            // nothing to expurgate
+                            break;
+
+                        case ArrayEnter:
+                        case ObjectEnter:
+                            new Parser(lexer, token).skip();
+                            break;
+
+                        default:
+                            canRead = False;
+                            throw new IllegalJSON($"Illegal token for start of value: {token}");
+                        }
+                    }
+                while (loadNext());
+                }
+
             return super();
             }
+
+        @Override
+        void childClosed(DocInputStream! child)
+            {
+            if (child.lexer == this.lexer)
+                {
+                loadNext();
+                }
+            super(child);
+            }
+
+        /**
+         * Load the name and first token of the value of the next key-value pair. If there are no
+         * more key-value pairs, then set `canRead` to `False`.
+         *
+         * Note: The assumption is that prepareRead() (or equivalent) has already been invoked.
+         *
+         * @return True iff the stream appears to contain a next key-value pair
+         */
+        protected Boolean loadNext(Boolean first = False)
+            {
+            if (!first)
+                {
+                Token trailing = takeToken();
+                switch (trailing.id)
+                    {
+                    case Comma:
+                        break;
+
+                    case ObjectExit:
+                        name    = Null;
+                        canRead = False;
+                        return False;
+
+                    default:
+                        canRead = False;
+                        throw new IllegalJSON($"Expected ',' or '}'; found {trailing}.");
+                    }
+                }
+
+            Token next = takeToken();
+            switch (next.id)
+                {
+                case StrVal:
+                    name = next.value.as(String);
+                    expectToken(Colon);
+                    token = takeToken();
+                    return True;
+
+                case ObjectExit:
+                    if (first)
+                        {
+                        name    = Null;
+                        canRead = False;
+                        return False;
+                        }
+                    continue;
+
+                default:
+                    canRead = False;
+                    throw new IllegalJSON($"Expected field name (a string value); found {next}.");
+                }
+            }
         }
-
-
-//    // ----- Pointer support -----------------------------------------------------------------------
-//
-//    /**
-//     * The shared base implementation support for pointers in an ObjectInputStream.
-//     */
-//    mixin PointerAwareDocInput
-//            into DocInputStream
-//        {
-//        /**
-//         * Recursion indicator: Only writes from the outside are "de-dup'd" using pointers, and this
-//         * flag allows the implementation to differentiate between the writes that originate from
-//         * outside, versus various writes that originate internally (for example, when relying
-//         * internally on the `Doc`-based write methods).
-//         */
-//        protected Boolean inside = False;
-//
-//        @Override
-//        <Serializable> conditional String findPointer(Serializable object)
-//            {
-//            return pointers.get(&object.identity);
-//            }
-//
-//        /**
-//         * Determine if the specified object has already been written and a pointer registered for
-//         * it, in which case, write the pointer String instead of the full object; otherwise, write
-//         * the full object value.
-//         *
-//         * @param value         the value to write
-//         * @param writePointer  the function to delegate to in order to write out the pointer only
-//         * @param writeValue    the function to delegate to in order to write the full object value
-//         *
-//         * @return this
-//         */
-//        protected PointerAwareDocInput writePointerOrValue(Object value,
-//                                                            function void(String) writePointer,
-//                                                            function void() writeValue)
-//            {
-//            Boolean alreadyInside = inside;
-//            if (alreadyInside || value.is(Primitive))
-//                {
-//                writeValue();
-//                return this;
-//                }
-//
-//            try
-//                {
-//                inside = True;
-//
-//                if (String pointer := pointers.get(&value.identity))
-//                    {
-//                    writePointer(pointer);
-//                    }
-//                else
-//                    {
-//                    registerPointer(value);
-//                    writeValue();
-//                    }
-//                }
-//            finally
-//                {
-//                inside = alreadyInside;
-//                }
-//
-//            return this;
-//            }
-//
-//        /**
-//         * Given a value that will be added to this DocInput, associate the value with the pointer
-//         * to this DocInput.
-//         */
-//        protected void registerPointer(Object value)
-//            {
-//            if (!value.is(Primitive))
-//                {
-//                pointers.putIfAbsent(&value.identity, pointer);
-//                }
-//            }
-//        }
-//
-//    /**
-//     * This is the pointer-aware implementation of the `ElementInput` interface.
-//     */
-//    mixin PointerAwareElementInput
-//            into (ElementInputStream | ArrayInputStream)
-//            extends PointerAwareDocInput
-//        {
-//        protected void addPointerReference(String pointer)
-//            {
-//            using (val in = openObject())
-//                {
-//                in.add("$ref", pointer);
-//                }
-//            }
-//
-//        @Override
-//        PointerAwareElementInput add(Doc value)
-//            {
-//            return writePointerOrValue(value, &addPointerReference(_), &super(value));
-//            }
-//
-//        @Override
-//        <Serializable> PointerAwareElementInput addObject(Serializable value)
-//            {
-//            return writePointerOrValue(value, &addPointerReference(_), &super(value));
-//            }
-//
-//        @Override
-//        PointerAwareElementInput addArray(Iterable<Doc> values)
-//            {
-//            return writePointerOrValue(values, &addPointerReference(_), &super(values));
-//            }
-//
-//        @Override
-//        PointerAwareElementInput addArray(Iterable<IntNumber> values)
-//            {
-//            return writePointerOrValue(values, &addPointerReference(_), &super(values));
-//            }
-//
-//        @Override
-//        PointerAwareElementInput addArray(Iterable<FPNumber> values)
-//            {
-//            return writePointerOrValue(values, &addPointerReference(_), &super(values));
-//            }
-//
-//        @Override
-//        <Serializable> PointerAwareElementInput addObjectArray(Iterable<Serializable> values)
-//            {
-//            return writePointerOrValue(values, &addPointerReference(_), &super(values));
-//            }
-//        }
-//
-//    /**
-//     * This is the pointer-aware implementation of the `FieldInput` interface.
-//     */
-//    mixin PointerAwareFieldInput
-//            into FieldInputStream
-//            extends PointerAwareDocInput
-//        {
-//        protected void addPointerReference(String name, String pointer)
-//            {
-//            using (val in = openObject(name))
-//                {
-//                in.add("$ref", pointer);
-//                }
-//            }
-//
-//        @Override
-//        PointerAwareFieldInput add(String name, Doc value)
-//            {
-//            return writePointerOrValue(value, &addPointerReference(name, _), &super(name, value));
-//            }
-//
-//        @Override
-//        <Serializable> PointerAwareFieldInput addObject(String name, Serializable value)
-//            {
-//            return writePointerOrValue(value, &addPointerReference(name, _), &super(name, value));
-//            }
-//
-//        @Override
-//        PointerAwareFieldInput addArray(String name, Iterable<Doc> values)
-//            {
-//            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values));
-//            }
-//
-//        @Override
-//        PointerAwareFieldInput addArray(String name, Iterable<IntNumber> values)
-//            {
-//            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values));
-//            }
-//
-//        @Override
-//        PointerAwareFieldInput addArray(String name, Iterable<FPNumber> values)
-//            {
-//            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values));
-//            }
-//
-//        @Override
-//        <Serializable> PointerAwareFieldInput addObjectArray(String name, Iterable<Serializable> values)
-//            {
-//            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values));
-//            }
-//        }
     }

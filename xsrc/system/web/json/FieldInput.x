@@ -85,7 +85,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
     /**
      * Test the element for existence without altering the input position within the document.
      *
-     * @param name          the name of the JSON property to check for absence or a `null` value
+     * @param name  the name of the JSON property to check for absence or a `null` value
      *
      * @return True iff the element is `null` or does not exist
      */
