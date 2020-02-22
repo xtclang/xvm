@@ -863,6 +863,13 @@ public class InvocationExpression
                         int ix = 0;
                         for (TypeConstant typeArg : mapTypeParams.values())
                             {
+                            if (typeArg.containsUnresolved())
+                                {
+                                log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
+                                        method.getParam(ix).getName());
+                                break Validate;
+                                }
+
                             TypeConstant typeParam = idMethod.getRawParams()[ix].getParamType(0);
 
                             // there's a possibility that type parameter constraints refer to

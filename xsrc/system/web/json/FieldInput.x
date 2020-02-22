@@ -498,7 +498,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
 
         if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
-            return readArray(name, mapping.read(_), defaultValue);
+            return readArray(name, mapping.read<Serializable>(_), defaultValue);
             }
 
         throw new MissingMapping(type = Type<Serializable>);

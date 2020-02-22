@@ -723,6 +723,11 @@ public abstract class Op
                 return null;
                 }
 
+            if (constant.containsUnresolved())
+                {
+                throw new IllegalStateException("Unresolved constant: " + constant);
+                }
+
             constant = m_pool.register(constant);
 
             // keep track of how many times each constant is registered
