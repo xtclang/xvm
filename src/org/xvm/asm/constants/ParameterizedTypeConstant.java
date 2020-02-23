@@ -852,7 +852,7 @@ public class ParameterizedTypeConstant
     protected void registerConstants(ConstantPool pool)
         {
         m_constType   = (TypeConstant) pool.register(m_constType);
-        m_atypeParams = (TypeConstant[]) registerConstants(pool, m_atypeParams);
+        m_atypeParams = registerTypeConstants(pool, m_atypeParams);
         }
 
     @Override

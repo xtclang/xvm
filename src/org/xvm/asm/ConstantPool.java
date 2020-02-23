@@ -2374,8 +2374,8 @@ public class ConstantPool
 
     private SignatureConstant getSignature(String sClass, String sMethod, int cParams)
         {
-        return ((ClassStructure) getImplicitlyImportedComponent(sClass)).
-                findMethod(sMethod, cParams).getIdentityConstant().getSignature();
+        return (SignatureConstant) register(((ClassStructure) getImplicitlyImportedComponent(sClass)).
+                findMethod(sMethod, cParams).getIdentityConstant().getSignature());
         }
 
 
@@ -2390,7 +2390,7 @@ public class ConstantPool
     @Override
     public Iterator<? extends XvmStructure> getContained()
         {
-        return new Iterator<XvmStructure>()
+        return new Iterator<>()
             {
             private final ArrayList<Constant> listConst = m_listConst;
             private int iNext = 0;
@@ -2866,7 +2866,7 @@ public class ConstantPool
                     {
                     try
                         {
-                        TypeInfo info = type.ensureTypeInfo(errlist);
+                        type.ensureTypeInfo(errlist);
                         if (errlist.isAbortDesired())
                             {
                             return true;

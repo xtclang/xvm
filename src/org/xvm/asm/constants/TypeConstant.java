@@ -5900,6 +5900,21 @@ public abstract class TypeConstant
         return true;
         }
 
+    /**
+     * Helper method for registering an array of TypeConstants.
+     */
+    protected static TypeConstant[] registerTypeConstants(ConstantPool pool, TypeConstant[] atype)
+        {
+        atype = (TypeConstant[]) registerConstants(pool, atype);
+
+        for (int i = 0, c = atype.length; i < c; i++)
+            {
+            atype[i].registerConstants(pool);
+            }
+        return atype;
+        }
+
+
     // ----- inner class: Origin -------------------------------------------------------------------
 
     /**

@@ -678,8 +678,8 @@ public class SignatureConstant
     protected void registerConstants(ConstantPool pool)
         {
         m_constName     = (StringConstant) pool.register(m_constName);
-        m_aconstParams  = (TypeConstant[]) registerConstants(pool, m_aconstParams);
-        m_aconstReturns = (TypeConstant[]) registerConstants(pool, m_aconstReturns);
+        m_aconstParams  = TypeConstant.registerTypeConstants(pool, m_aconstParams);
+        m_aconstReturns = TypeConstant.registerTypeConstants(pool, m_aconstReturns);
         }
 
     @Override
