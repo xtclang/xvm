@@ -63,15 +63,15 @@ public class Mixin
             implements Frame.Continuation
         {
         // passed in arguments
-        private final MethodStructure  constructor;
-        private final ObjectHandle     hStruct;
-        private final ObjectHandle[]   ahVar;
-        private final int              iReturn;
+        private final MethodStructure constructor;
+        private final ObjectHandle    hStruct;
+        private final ObjectHandle[]  ahVar;
+        private final int             iReturn;
 
         // internal fields
-        private TypeConstant           typeNext;
-        private int                    ixStep;
-        private List<FullyBoundHandle> listFinalizers;
+        private TypeConstant          typeNext;
+        private int                   ixStep;
+        private List<Frame> listFinalizable;
 
         public Construct(MethodStructure constructor,
                          boolean         fInitStruct,
@@ -178,19 +178,19 @@ public class Mixin
 
                     case 6:
                         {
-                        ObjectHandle           hPublic = hStruct.ensureAccess(Access.PUBLIC);
-                        List<FullyBoundHandle> listFn  = listFinalizers;
-                        if (listFn == null)
+                        ObjectHandle hPublic      = hStruct.ensureAccess(Access.PUBLIC);
+                        List<Frame>  listFinalize = listFinalizable;
+                        if (listFinalize == null)
                             {
                             return frameCaller.assignValue(iReturn, hPublic);
                             }
 
                         // create a chain (stack) of finalizers
-                        int              cFn        = listFn.size();
-                        FullyBoundHandle hfnFinally = listFn.get(cFn - 1);
+                        int              cFn        = listFinalize.size();
+                        FullyBoundHandle hfnFinally = listFinalize.get(cFn - 1).m_hfnFinally;
                         for (int i = cFn - 2; i >= 0; i--)
                             {
-                            hfnFinally = listFn.get(i).chain(hfnFinally);
+                            hfnFinally = listFinalize.get(i).m_hfnFinally.chain(hfnFinally);
                             }
 
                         return hfnFinally.callChain(frameCaller, hPublic, frame_ ->
@@ -221,21 +221,21 @@ public class Mixin
 
         private void prepareFinalizer(Frame frame, MethodStructure ctor, ObjectHandle[] ahVar)
             {
+            if (listFinalizable == null)
+                {
+                listFinalizable = new ArrayList<>();
+                }
+
             FullyBoundHandle hfn = Utils.makeFinalizer(ctor, ahVar);
             if (hfn == null)
                 {
-                // in case super constructors have their own finalizers
-                // we need a non-null anchor
-                frame.m_hfnFinally = FullyBoundHandle.NO_OP;
+                // in case super constructors have their own finalizers, we need a non-null anchor
+                // that may be replaced by Frame.chainFinalizers()
+                hfn = FullyBoundHandle.NO_OP;
                 }
-            else
-                {
-                if (listFinalizers == null)
-                    {
-                    listFinalizers = new ArrayList<>();
-                    }
-                listFinalizers.add(frame.m_hfnFinally = hfn);
-                }
+
+            frame.m_hfnFinally = hfn;
+            listFinalizable.add(frame);
             }
         }
 
