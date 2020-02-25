@@ -109,7 +109,7 @@ public class Call_T0
                 return chain.callSuperNN(frame, ((TupleHandle) hArg).m_ahValue, Utils.ARGS_NONE);
                 }
 
-            if (m_nFunctionId < CONSTANT_OFFSET)
+            if (m_nFunctionId <= CONSTANT_OFFSET)
                 {
                 MethodStructure function = getMethodStructure(frame);
                 if (function == null)

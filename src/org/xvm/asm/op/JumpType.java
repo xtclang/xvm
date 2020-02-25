@@ -72,7 +72,7 @@ public class JumpType
     protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue)
         {
         TypeConstant typeTest;
-        if (m_nArg2 < CONSTANT_OFFSET)
+        if (m_nArg2 <= CONSTANT_OFFSET)
             {
             typeTest = frame.resolveType(m_nArg2);
             }

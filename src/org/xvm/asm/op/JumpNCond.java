@@ -52,7 +52,6 @@ public class JumpNCond
     @Override
     protected int processUnaryOp(Frame frame, int iPC)
         {
-        // TODO remove after ConstantRegistry is implemented
         if (m_cond == null)
             {
             m_cond = (ConditionalConstant) frame.getConstant(m_nArg);

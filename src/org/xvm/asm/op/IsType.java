@@ -73,7 +73,7 @@ public class IsType
         {
         TypeConstant typeTarget = hValue.getType();
         TypeConstant typeTest;
-        if (m_nValue2 < CONSTANT_OFFSET)
+        if (m_nValue2 <= CONSTANT_OFFSET)
             {
             typeTest = frame.resolveType(m_nValue2);
             }

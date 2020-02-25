@@ -112,7 +112,7 @@ public class Call_NT
                 return chain.callSuperN1(frame, ahVar, m_nRetValue, true);
                 }
 
-            if (m_nFunctionId < CONSTANT_OFFSET)
+            if (m_nFunctionId <= CONSTANT_OFFSET)
                 {
                 MethodStructure function = getMethodStructure(frame);
                 if (function == null)

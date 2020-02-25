@@ -106,7 +106,7 @@ public class Call_10
                 return chain.callSuper10(frame, hArg);
                 }
 
-            if (m_nFunctionId < CONSTANT_OFFSET)
+            if (m_nFunctionId <= CONSTANT_OFFSET)
                 {
                 MethodStructure function = getMethodStructure(frame);
                 if (function == null)

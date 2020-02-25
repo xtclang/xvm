@@ -93,7 +93,7 @@ public class Call_01
                 // the return type must be identical to the property type
                 if (frame.isNextRegister(m_nRetValue))
                     {
-                    frame.introduceVar(m_nRetValue, chain.getProperty().getType());
+                    frame.introduceResolvedVar(m_nRetValue, chain.getProperty().getType());
                     }
                 }
             else
@@ -104,7 +104,7 @@ public class Call_01
             return chain.callSuper01(frame, m_nRetValue);
             }
 
-        if (m_nFunctionId < CONSTANT_OFFSET)
+        if (m_nFunctionId <= CONSTANT_OFFSET)
             {
             MethodStructure function = getMethodStructure(frame);
             if (function == null)

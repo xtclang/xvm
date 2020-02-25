@@ -7,11 +7,12 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.OpProperty;
 import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -97,9 +98,14 @@ public class P_Get
                 {
                 if (m_nTarget == A_STACK)
                     {
-                    // TODO: the actual type needs to be injected by the compiler/verifier
-                    frame.introducePropertyVar(m_nRetValue,
-                        Op.CONSTANT_OFFSET - hTarget.getType().getPosition(), constProperty);
+                    // TODO GG: the actual type needs to be injected by the compiler/verifier
+                    TypeConstant typeTarget = hTarget.getType();
+                    ConstantPool pool       = frame.poolContext();
+                    TypeConstant typeProp   = typeTarget.containsGenericParam(constProperty.getName())
+                            ? constProperty.getFormalType().resolveGenerics(pool, typeTarget).getType()
+                            : constProperty.getType().resolveGenerics(pool, typeTarget);
+
+                    frame.introduceResolvedVar(m_nRetValue, typeProp);
                     }
                 else
                     {

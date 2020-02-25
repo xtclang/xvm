@@ -1016,6 +1016,15 @@ public class Frame
         }
 
     /**
+     * @return an array of function's local constants
+     */
+    public Constant[] localConstants()
+        {
+        assert f_function != null;
+        return f_function.getLocalConstants();
+        }
+
+    /**
      * @return the ConstantPool to be used for this frame when reading constants referred to by the
      *         compiled code
      */
@@ -1053,7 +1062,7 @@ public class Frame
     public Constant getConstant(int iArg)
         {
         assert iArg <= Op.CONSTANT_OFFSET;
-        return poolCode().getConstant(Op.CONSTANT_OFFSET - iArg);
+        return localConstants()[Op.CONSTANT_OFFSET - iArg];
         }
 
     /**
@@ -1405,19 +1414,6 @@ public class Frame
         }
 
     /**
-     * Introduce a new unnamed standard variable for the specified type.
-     *
-     * Note: this method increments up the "nextVar" index
-     *
-     * @param nVar       the variable to introduce
-     * @param constType  the type constant
-     */
-    public void introduceVar(int nVar, TypeConstant constType)
-        {
-        introduceVar(nVar, constType.getPosition(), 0, VAR_STANDARD, null);
-        }
-
-    /**
      * Introduce a new standard variable for the specified type id.
      *
      * Note: this method increments up the "nextVar" index
@@ -1556,7 +1552,7 @@ public class Frame
                 }
 
             Parameter param = f_function.getParam(nVar);
-            info = f_aInfo[nVar] = new VarInfo(param.getType().getPosition(), 0, VAR_STANDARD);
+            info = f_aInfo[nVar] = new VarInfo(param.getType(), VAR_STANDARD);
             info.setName(param.getName());
             }
         return info;
@@ -1964,7 +1960,7 @@ public class Frame
                 {
                 if (m_resolver == null)
                     {
-                    type = (TypeConstant) poolCode().getConstant(m_nTypeId);
+                    type = (TypeConstant) localConstants()[m_nTypeId];
                     }
                 else
                     {

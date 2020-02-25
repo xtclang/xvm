@@ -91,13 +91,11 @@ public class Call_0T
             switch (chain.callSuper01(frame, A_STACK))
                 {
                 case R_NEXT:
-                    return frame.assignTuple(m_nRetValue,
-                        new ObjectHandle[] {frame.popStack()});
+                    return frame.assignTuple(m_nRetValue, frame.popStack());
 
                 case R_CALL:
                     frame.m_frameNext.addContinuation(frameCaller ->
-                        frameCaller.assignTuple(m_nRetValue,
-                            new ObjectHandle[] {frame.popStack()}));
+                        frameCaller.assignTuple(m_nRetValue, frame.popStack()));
                     return R_CALL;
 
                 case R_EXCEPTION:
@@ -108,7 +106,7 @@ public class Call_0T
                 }
             }
 
-        if (m_nFunctionId < CONSTANT_OFFSET)
+        if (m_nFunctionId <= CONSTANT_OFFSET)
             {
             MethodStructure function = getMethodStructure(frame);
             if (function == null)

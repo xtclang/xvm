@@ -121,7 +121,7 @@ public class FBind
                     }
                 hFunction = xRTFunction.makeHandle(chain, nDepth).bindTarget(frame.getThis());
                 }
-            else if (m_nFunctionId < CONSTANT_OFFSET)
+            else if (m_nFunctionId <= CONSTANT_OFFSET)
                 {
                 MethodStructure function = getMethodStructure(frame);
                 if (function == null)

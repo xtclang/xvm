@@ -988,7 +988,7 @@ public abstract class Op
     protected static int encodeArgument(Argument arg, ConstantRegistry registry)
         {
         return arg instanceof Constant
-                ? Op.CONSTANT_OFFSET - ((Constant) arg).getPosition()   // TODO eventually: registry.indexOf((Constant) arg)
+                ? Op.CONSTANT_OFFSET - registry.indexOf((Constant) arg)
                 : ((Register) arg).getIndex();
         }
 
