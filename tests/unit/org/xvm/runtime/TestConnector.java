@@ -37,14 +37,12 @@ public class TestConnector
 
         int cModules = asArg.length / 2;
         String[] asModule = new String[cModules];
-        String[] asFile   = new String[1 + cModules];
-
-        asFile[0] = "system";
+        String[] asFile   = new String[cModules];
 
         for (int i = 0; i < cModules; i++)
             {
             asModule[i] = asArg[2*i];
-            asFile[i+1] = asArg[2*i + 1];
+            asFile[i]   = asArg[2*i + 1];
             }
 
         CommandLine cmd = new CommandLine(asFile);
@@ -53,24 +51,22 @@ public class TestConnector
 
         if (System.getProperties().containsKey("DEBUG"))
             {
-            ModuleStructure module = repository.loadModule(asModule[0]);
+            ModuleStructure module = repository.loadModule(asArg[0]);
             if (module != null)
                 {
                 out("Code dump:");
-                ConstantPool.setCurrentPool(module.getConstantPool());
                 dump(module);
-                ConstantPool.setCurrentPool(null);
                 }
             }
 
         Connector connector = new Connector(repository);
 
-        for (int i = 0; i < cModules; i++)
+        for (String sModule : asModule)
             {
-            System.out.println("\n++++++ Loading module: " + asModule[i] + " +++++++\n");
+            System.out.println("\n++++++ Loading module: " + sModule + " +++++++\n");
 
             // +++ that is the actual use +++
-            connector.loadModule(asModule[i]);
+            connector.loadModule(sModule);
 
             // configuration of the container happens here
 

@@ -2,7 +2,7 @@
  * Simple console.
  */
 class TerminalConsole
-        implements io.Console
+        implements Console
     {
     @Override
     void print(Object o);

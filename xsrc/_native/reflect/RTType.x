@@ -55,7 +55,7 @@ const RTType<DataType, OuterType>
     @Override
     @Lazy Map<String, MultiMethod<DataType>> multimethods.calc()
         {
-        import collections.HashMap;
+        import Ecstasy.collections.HashMap;
 
         Map<String, MultiMethod<DataType>> multis = new HashMap();
 

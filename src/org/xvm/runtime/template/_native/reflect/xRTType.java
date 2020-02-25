@@ -338,7 +338,7 @@ public class xRTType
     public static TypeHandle makeHandle(TypeConstant type, TypeConstant typeOuter)
         {
         ClassComposition clzType = INSTANCE.ensureClass(type.getType());
-        // TODO - implement outer type
+        // TODO GG - implement outer type
 
         // unfortunately, "makeHandle" is called from places where we cannot easily invoke the
         // default initializer, so we need to do it by hand
@@ -1080,7 +1080,7 @@ public class xRTType
     public ClassComposition ensurePropertyArray(TypeConstant typeTarget)
         {
         assert typeTarget != null;
-        ConstantPool pool = ConstantPool.getCurrentPool();
+        ConstantPool pool = pool();
         TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                 pool.ensureParameterizedTypeConstant(pool.typeProperty(), typeTarget));
         return f_templates.resolveClass(typePropertyArray);
@@ -1108,7 +1108,7 @@ public class xRTType
     public ClassComposition ensureMethodArray(TypeConstant typeTarget)
         {
         assert typeTarget != null;
-        ConstantPool pool = ConstantPool.getCurrentPool();
+        ConstantPool pool = pool();
         TypeConstant typeMethodArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                 pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget));
         return f_templates.resolveClass(typeMethodArray);
@@ -1136,7 +1136,7 @@ public class xRTType
     public TypeConstant ensureConstructorType(TypeConstant typeTarget, TypeConstant typeParent)
         {
         assert typeTarget != null;
-        ConstantPool pool = ConstantPool.getCurrentPool();
+        ConstantPool pool = pool();
         TypeConstant typeParams  = typeParent == null
                 ? pool.ensureParameterizedTypeConstant(pool.typeTuple(), TypeConstant.NO_TYPES)
                 : pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeParent);
@@ -1149,7 +1149,7 @@ public class xRTType
      */
     public ClassComposition ensureConstructorArray(TypeConstant typeTarget, TypeConstant typeParent)
         {
-        ConstantPool pool = ConstantPool.getCurrentPool();
+        ConstantPool pool = pool();
 
         assert typeTarget != null;
 

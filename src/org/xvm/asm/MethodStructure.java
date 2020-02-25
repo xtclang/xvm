@@ -1359,7 +1359,8 @@ public class MethodStructure
             that.m_code = this.m_code.cloneOnto(that);
             }
 
-        // note: ignoring the m_structFinally field
+        // force the reload of the m_structFinally
+        that.m_structFinally = null;
 
         return that;
         }

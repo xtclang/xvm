@@ -2803,16 +2803,28 @@ public abstract class TypeConstant
 
         // layer on an "into" of either "into Ref" or "into Var"
         ConstantPool pool     = getConstantPool();
+        TypeConstant typeProp = info.getType();
         TypeConstant typeBase = info.isVar()
                                     ? pool.typeVarRB()
                                     : info.requiresNativeRef()
                                         ? pool.typeRefRB()
-                                        : pool.typeRefNaked();
-        TypeConstant typeProp = info.getType();
+                                        : null;
 
-        TypeConstant typeInto = pool.ensureAccessTypeConstant(
-            pool.ensureParameterizedTypeConstant(typeBase, typeProp), Access.PROTECTED);
-        TypeInfo     infoInto = typeInto.ensureTypeInfoInternal(errs);
+        TypeConstant typeInto;
+        TypeInfo     infoInto;
+        if (typeBase == null)
+            {
+            // NakedRef belongs to a different pool
+            infoInto = pool.getNakedRefInfo(typeProp);
+            typeInto = infoInto.getType();
+            }
+        else
+            {
+            typeInto = pool.ensureAccessTypeConstant(
+                        pool.ensureParameterizedTypeConstant(typeBase, typeProp), Access.PROTECTED);
+            infoInto = typeInto.ensureTypeInfoInternal(errs);
+            }
+
         if (infoInto == null)
             {
             fComplete = false;

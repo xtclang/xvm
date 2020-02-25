@@ -1025,16 +1025,6 @@ public class Frame
         }
 
     /**
-     * @return the ConstantPool to be used for this frame when reading constants referred to by the
-     *         compiled code
-     */
-    public ConstantPool poolCode()
-        {
-        assert f_function != null;
-        return f_function.getConstantPool();
-        }
-
-    /**
      * @return the ConstantPool to be used to create new constants that may be required by the
      *         run-time execution
      */
@@ -2109,15 +2099,14 @@ public class Frame
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
-            ConstantPool poolCode = frame.poolCode();
-            ConstantPool poolCtx  = frame.poolContext();
+            ConstantPool pool = frame.poolContext();
 
-            PropertyConstant constProperty = (PropertyConstant) poolCode.getConstant(iAuxId);
+            PropertyConstant constProperty = (PropertyConstant) pool.getConstant(iAuxId);
             TypeConstant typeTarget = frame.getLocalType(nTargetReg, null);
 
             return typeTarget.containsGenericParam(constProperty.getName())
-                ? constProperty.getFormalType().resolveGenerics(poolCtx, typeTarget).getType()
-                : constProperty.getType().resolveGenerics(poolCtx, typeTarget);
+                ? constProperty.getFormalType().resolveGenerics(pool, typeTarget).getType()
+                : constProperty.getType().resolveGenerics(pool, typeTarget);
             }
         };
 
@@ -2130,16 +2119,15 @@ public class Frame
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
-            ConstantPool poolCode = frame.poolCode();
-            ConstantPool poolCtx  = frame.poolContext();
+            ConstantPool pool = frame.poolContext();
 
-            MethodConstant idMethod = (MethodConstant) poolCode.getConstant(nTargetReg);
+            MethodConstant idMethod = (MethodConstant) pool.getConstant(nTargetReg);
             return iAuxId >= 0
                 ? idMethod.getRawReturns()[iAuxId].
-                    resolveGenerics(poolCtx, frame.getGenericsResolver())
-                : poolCtx.ensureParameterizedTypeConstant(
-                    poolCtx.typeTuple(), idMethod.getSignature().getRawReturns()).
-                        resolveGenerics(poolCtx, frame.getGenericsResolver());
+                    resolveGenerics(pool, frame.getGenericsResolver())
+                : pool.ensureParameterizedTypeConstant(
+                    pool.typeTuple(), idMethod.getSignature().getRawReturns()).
+                        resolveGenerics(pool, frame.getGenericsResolver());
             }
         };
 

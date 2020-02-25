@@ -75,7 +75,7 @@ public class CatchStart
 
     void preWrite(ConstantRegistry registry)
         {
-        m_nType = encodeArgument(getRegisterType(ConstantPool.getCurrentPool()), registry);
+        m_nType = encodeArgument(getRegisterType(), registry);
 
         if (m_constName != null)
             {

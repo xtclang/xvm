@@ -15,6 +15,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
+import org.xvm.asm.FileStructure;
+import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.TypedefStructure;
 
@@ -37,43 +40,45 @@ import org.xvm.runtime.template.xService;
  */
 public class TemplateRegistry
     {
-    public final ModuleStructure f_moduleRoot;
-    public final Adapter f_adapter;
-
-    // cache - IdentityConstant by name (only for core classes)
-    private final Map<String, IdentityConstant> f_mapIdByName = new ConcurrentHashMap<>();
-
-    // cache - ClassTemplates by type
-    private final Map<TypeConstant, ClassTemplate> f_mapTemplatesByType = new ConcurrentHashMap<>();
-
-    public TemplateRegistry(ModuleStructure moduleRoot)
+    public TemplateRegistry(ModuleRepository repository)
         {
-        f_moduleRoot = moduleRoot;
-        f_adapter = new Adapter(this, moduleRoot);
+        f_repository = repository;
         }
 
-    public void loadNativeTemplates(ModuleStructure moduleRoot)
+    public void loadNativeTemplates()
         {
+        ModuleStructure moduleRoot   = f_repository.loadModule(Constants.ECSTASY_MODULE);
+        ModuleStructure moduleNative = f_repository.loadModule(NATIVE_MODULE);
+
+        // "root" is a merge of "native" module into the "system"
+        FileStructure containerRoot = new FileStructure(moduleRoot);
+        containerRoot.merge(moduleNative);
+
+        // obtain the cloned modules that belong to the merged container
+        m_moduleSystem = (ModuleStructure) containerRoot.getChild(Constants.ECSTASY_MODULE);
+        m_moduleNative = (ModuleStructure) containerRoot.getChild(NATIVE_MODULE);
+
+        ConstantPool pool = containerRoot.getConstantPool();
+        ConstantPool.setCurrentPool(pool);
+
         Class clzObject = xObject.class;
-        URL url = clzObject.getProtectionDomain().getCodeSource().getLocation();
-        String sRoot = url.getFile();
+        URL    url      = clzObject.getProtectionDomain().getCodeSource().getLocation();
+        String sRoot    = url.getFile();
 
-        File dirNative = new File(sRoot, "org/xvm/runtime/template");
+        File dirTemplates = new File(sRoot, "org/xvm/runtime/template");
         Map<String, Class> mapTemplateClasses = new HashMap<>();
-        scanNativeDirectory(dirNative, "", mapTemplateClasses);
-
-        ConstantPool pool = moduleRoot.getConstantPool();
+        scanNativeDirectory(dirTemplates, "", mapTemplateClasses);
 
         // we need a number of INSTANCE static variables to be set up right away
         // (they are used by the ClassTemplate constructor)
-        storeNativeTemplate(new xObject(this, (ClassStructure) pool.clzObject().getComponent(), true));
-        storeNativeTemplate(new xEnum(this, (ClassStructure) pool.clzEnum().getComponent(), true));
-        storeNativeTemplate(new xConst(this, (ClassStructure) pool.clzConst().getComponent(), true));
-        storeNativeTemplate(new xService(this, (ClassStructure) pool.clzService().getComponent(), true));
+        storeNativeTemplate(new xObject (this, getClassStructure("Object"),  true));
+        storeNativeTemplate(new xEnum   (this, getClassStructure("Enum"),    true));
+        storeNativeTemplate(new xConst  (this, getClassStructure("Const"),   true));
+        storeNativeTemplate(new xService(this, getClassStructure("Service"), true));
 
         for (Map.Entry<String, Class> entry : mapTemplateClasses.entrySet())
             {
-            ClassStructure structClass = (ClassStructure) moduleRoot.getChildByPath(entry.getKey());
+            ClassStructure structClass = getClassStructure(entry.getKey());
             if (structClass == null)
                 {
                 // this is a native class for a composite type;
@@ -114,6 +119,7 @@ public class TemplateRegistry
             {
             template.initDeclared();
             }
+        ConstantPool.setCurrentPool(null);
         }
 
     // sPackage is either empty or ends with a dot
@@ -164,22 +170,31 @@ public class TemplateRegistry
         f_mapTemplatesByType.putIfAbsent(type, template);
         }
 
-    // ----- templates and structures -----
+    // ----- templates and structures --------------------------------------------------------------
+
+    public FileStructure getFileStructure()
+        {
+        return m_moduleSystem.getFileStructure();
+        }
 
     // used only by the native templates
     public ClassStructure getClassStructure(String sName)
         {
         // this call (class by name) can only come from the root module
-        Component comp = f_moduleRoot.getChildByPath(sName);
+        Component comp = getComponent(sName);
         while (comp instanceof TypedefStructure)
             {
             comp = ((TypedefStructure) comp).getType().getSingleUnderlyingClass(true).getComponent();
             }
-        if (comp instanceof ClassStructure)
-            {
-            return (ClassStructure) comp;
-            }
-        throw new IllegalArgumentException("Class not found: " + sName);
+
+        return (ClassStructure) comp;
+        }
+
+    public Component getComponent(String sName)
+        {
+        return sName.startsWith(PREF_NATIVE)
+                ? m_moduleNative.getChildByPath(sName.substring(PREF_LENGTH))
+                : m_moduleSystem.getChildByPath(sName);
         }
 
     // this call (id by name) can only come from the root module
@@ -281,4 +296,18 @@ public class TemplateRegistry
         {
         return getTemplate(typeActual).ensureClass(typeActual.normalizeParameters());
         }
+
+    public static final String NATIVE_MODULE = "_native.xqiz.it";
+    public static final String PREF_NATIVE   = "_native.";
+    public static final int    PREF_LENGTH   = PREF_NATIVE.length();
+
+    private final ModuleRepository f_repository;
+    private       ModuleStructure m_moduleSystem;
+    private       ModuleStructure  m_moduleNative;
+
+    // cache - IdentityConstant by name (only for core classes)
+    private final Map<String, IdentityConstant> f_mapIdByName = new ConcurrentHashMap<>();
+
+    // cache - ClassTemplates by type
+    private final Map<TypeConstant, ClassTemplate> f_mapTemplatesByType = new ConcurrentHashMap<>();
     }

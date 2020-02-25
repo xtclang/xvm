@@ -142,6 +142,46 @@ public class FileStructure
             }
         }
 
+    /**
+     * Copy constructor.
+     *
+     * @param module  the module to copy
+     */
+    public FileStructure(ModuleStructure module)
+        {
+        super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
+
+        FileStructure fileStructure = module.getFileStructure();
+        nMajorVer  = fileStructure.nMajorVer;
+        nMinorVer  = fileStructure.nMinorVer;
+        pool       = new ConstantPool(this);
+
+        merge(module);
+        }
+
+    /**
+     * Merge the specified module into this FileStructure.
+     *
+     * @param module  the module to merge
+     */
+    public void merge(ModuleStructure module)
+        {
+        moduleName = module.getName();
+
+        ModuleStructure moduleClone = module.cloneBody();
+        addChild(moduleClone);
+        moduleClone.setContaining(this);
+
+        ConstantPool pool = this.getConstantPool();
+
+        moduleClone.cloneChildren(module.children());
+
+        moduleClone.registerConstants(pool);
+        moduleClone.registerChildrenConstants(pool);
+
+        pool.setNakedRefType(module.getConstantPool().getNakedRefType());
+        }
+
 
     // ----- serialization -------------------------------------------------------------------------
 

@@ -90,6 +90,8 @@ public class MultiMethodStructure
     @Override
     public int getChildrenCount()
         {
+        ensureChildren();
+
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;
         return  map == null             ? 0
               : m_tloIgnoreNative.get() ? (int) map.values().stream().filter(m -> !m.isTransient()).count()

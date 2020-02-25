@@ -1633,6 +1633,7 @@ public abstract class Component
      */
     public boolean hasChildren()
         {
+        ensureChildren();
         return m_childByName != null && !m_childByName.isEmpty();
         }
 
@@ -2004,6 +2005,7 @@ public abstract class Component
 
         that.m_sibling     = null;
         that.m_childByName = null;
+        that.m_abChildren  = null;
 
         return that;
         }

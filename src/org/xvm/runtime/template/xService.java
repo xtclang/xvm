@@ -60,7 +60,7 @@ public class xService
     @Override
     protected ClassConstant getInceptionClassConstant()
         {
-        return this == INSTANCE ? INCEPTION_CLASS : super.getInceptionClassConstant();
+        return this == INSTANCE ? INCEPTION_CLASS : (ClassConstant) super.getInceptionClassConstant();
         }
 
     public boolean isService()

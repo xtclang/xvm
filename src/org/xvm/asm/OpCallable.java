@@ -134,7 +134,7 @@ public abstract class OpCallable extends Op
     protected MethodStructure getVirtualConstructor(Frame frame, ObjectHandle hParent)
         {
         // suffix "C" indicates the compile-time constants; "R" - the run-time
-        ClassConstant idParentR = hParent.getTemplate().getClassConstant();
+        ClassConstant idParentR = (ClassConstant) hParent.getTemplate().getClassConstant();
         if (m_constructor != null)
             {
             if (m_idParent.equals(idParentR))
@@ -173,7 +173,7 @@ public abstract class OpCallable extends Op
      */
     protected ExceptionHandle reportMissingConstructor(Frame frame, ObjectHandle hParent)
         {
-        ClassConstant     idParentR      = hParent.getTemplate().getClassConstant();
+        IdentityConstant  idParentR      = hParent.getTemplate().getClassConstant();
         SignatureConstant sigConstructor = getMethodStructure(frame).getIdentityConstant().getSignature();
 
         return xException.makeHandle(frame, "Missing constructor \"" + sigConstructor.getValueString() +

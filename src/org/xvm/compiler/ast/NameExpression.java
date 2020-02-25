@@ -1843,7 +1843,7 @@ public class NameExpression
                 {
                 // assert !reg.isPredefined(); // REVIEW GG: see SoftVar.x
                 m_plan = Plan.RegisterRef;
-                return reg.ensureRegType(pool, !m_fAssignable);
+                return reg.ensureRegType(!m_fAssignable);
                 }
             else
                 {

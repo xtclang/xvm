@@ -269,10 +269,10 @@ public class FSNodeConstant
         switch (m_fmt)
             {
             case FSDir:
-                return pool.ensureEcstasyTypeConstant("_native.fs.CPDirectory");
+                return pool.ensureEcstasyTypeConstant("fs.Directory");
             case FSFile:
             case FSLink:
-                return pool.ensureEcstasyTypeConstant("_native.fs.CPFile");
+                return pool.ensureEcstasyTypeConstant("fs.File");
             default:
                 throw new IllegalStateException();
             }

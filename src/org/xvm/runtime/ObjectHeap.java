@@ -6,7 +6,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
@@ -28,13 +27,11 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 public class ObjectHeap
     {
     public final TemplateRegistry f_templates;
-    public final ConstantPool f_poolRoot;
 
     private Map<Constant, ObjectHandle> m_mapConstants = new ConcurrentHashMap<>();
 
-    public ObjectHeap(ConstantPool pool, TemplateRegistry templates)
+    public ObjectHeap(TemplateRegistry templates)
         {
-        f_poolRoot = pool;
         f_templates = templates;
         }
 
@@ -134,6 +131,8 @@ public class ObjectHeap
      */
     public TypeConstant getConstType(Constant constValue)
         {
+        String sComponent;
+
         switch (constValue.getFormat())
             {
             case Char:
@@ -168,9 +167,6 @@ public class ObjectHeap
             case UInt8Array:
             case Tuple:
             case Path:
-            case FileStore:
-            case FSDir:
-            case FSFile:
             case Date:
             case Time:
             case DateTime:
@@ -180,25 +176,38 @@ public class ObjectHeap
             case Module:
                 return constValue.getType();
 
+            case FileStore:
+                sComponent = "_native.fs.CPFileStore";
+                break;
+
+            case FSDir:
+                sComponent = "_native.fs.CPDirectory";
+                break;
+
+            case FSFile:
+                sComponent = "_native.fs.CPFile";
+                break;
+
             case Map:
-                return f_poolRoot.ensureEcstasyTypeConstant("collections.ListMap");
+                sComponent = "collections.ListMap";
+                break;
 
             case Set:
             case MapEntry:
-                throw new UnsupportedOperationException("TODO: " + constValue);
-
             case Package:
                 throw new UnsupportedOperationException("TODO: " + constValue);
 
             case Class:
-                return f_poolRoot.typeClass();
+                return constValue.getConstantPool().typeClass();
 
             case PropertyClassType:
-                return f_poolRoot.ensureEcstasyTypeConstant("_native.reflect.RTProperty");
+                sComponent = "reflect.RTProperty";
+                break;
 
             case Method:
-                return f_poolRoot.ensureEcstasyTypeConstant(((MethodConstant) constValue).isFunction()
-                        ? "_native.reflect.RTFunction" : "_native.reflect.RTMethod");
+                sComponent = ((MethodConstant) constValue).isFunction()
+                        ? "_native.reflect.RTFunction" : "_native.reflect.RTMethod";
+                break;
 
             case AnnotatedType:
             case ParameterizedType:
@@ -208,7 +217,8 @@ public class ObjectHeap
             case UnionType:
             case IntersectionType:
             case DifferenceType:
-                return f_poolRoot.ensureEcstasyTypeConstant("_native.reflect.RTType");
+                sComponent = "_native.reflect.RTType";
+                break;
 
             case MultiMethod:   // REVIEW does the compiler ever generate this?
             case Typedef:       // REVIEW does the compiler ever generate this?
@@ -220,5 +230,7 @@ public class ObjectHeap
             default:
                 throw new IllegalStateException(constValue.toString());
             }
+
+        return f_templates.getComponent(sComponent).getIdentityConstant().getType();
         }
     }

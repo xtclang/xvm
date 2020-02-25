@@ -10,7 +10,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkerContext;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
@@ -54,15 +54,16 @@ public class Container
         f_runtime  = runtime;
         f_sAppName = sAppName;
 
-        f_moduleRoot = repository.loadModule(Constants.ECSTASY_MODULE);
-
-        f_moduleApp = repository.loadModule(sAppName);
-        if (f_moduleApp == null)
+        ModuleStructure moduleApp = repository.loadModule(sAppName);
+        if (moduleApp == null)
             {
             throw new IllegalStateException("Unable to load module \"" + sAppName + "\"");
             }
 
-        f_idModule   = f_moduleApp.getIdentityConstant();
+        FileStructure container = templates.getFileStructure();
+        container.merge(moduleApp);
+
+        f_idModule   = (ModuleConstant) container.getChild(moduleApp.getName()).getIdentityConstant();
         f_templates  = templates;
         f_heapGlobal = heapGlobal;
         }
@@ -74,12 +75,10 @@ public class Container
             throw new IllegalStateException("Already started");
             }
 
-        ModuleStructure structModule = (ModuleStructure) f_idModule.getComponent();
-        ConstantPool.setCurrentPool(structModule.getConstantPool());
+        ConstantPool pool = f_idModule.getConstantPool();
+        ConstantPool.setCurrentPool(pool);
 
-        m_templateModule = f_templates.getTemplate(f_idModule);
-
-        m_contextMain = createServiceContext(f_sAppName, structModule);
+        m_contextMain = createServiceContext(f_sAppName, pool);
         xService.INSTANCE.createServiceHandle(m_contextMain,
             xService.INSTANCE.getCanonicalClass(),
             xService.INSTANCE.getCanonicalType());
@@ -119,11 +118,11 @@ public class Container
     public void invoke0(String sMethodName, ObjectHandle... ahArg)
         {
         ConstantPool poolPrev = ConstantPool.getCurrentPool();
-        ConstantPool.setCurrentPool(m_templateModule.pool());
+        ConstantPool.setCurrentPool(f_idModule.getConstantPool());
 
         try
             {
-            TypeInfo infoApp = m_templateModule.getCanonicalType().ensureTypeInfo();
+            TypeInfo infoApp = f_idModule.getType().ensureTypeInfo();
             int cArgs = ahArg == null ? 0 : ahArg.length;
 
             TypeConstant[] atypeArg;
@@ -145,12 +144,12 @@ public class Container
 
             if (idMethod == null)
                 {
-                System.err.println("Missing: " +  sMethodName + " method for " + m_templateModule);
+                System.err.println("Missing: " +  sMethodName + " method for " + f_idModule.getValueString());
                 return;
                 }
 
             TypeConstant     typeModule = f_idModule.getType();
-            ClassComposition clzModule  = m_templateModule.ensureClass(typeModule, typeModule);
+            ClassComposition clzModule  = f_templates.resolveClass(typeModule);
             CallChain        chain      = clzModule.getMethodCallChain(idMethod.getSignature());
             FunctionHandle   hFunction  = xRTFunction.makeHandle(chain, 0);
 
@@ -200,7 +199,7 @@ public class Container
 
             Function<Frame, ObjectHandle> supplierTimer = (frame) ->
                 templateRTTimer.createServiceHandle(
-                    createServiceContext("Timer", f_moduleRoot),
+                    createServiceContext("Timer", f_idModule.getConstantPool()),
                     templateRTTimer.getCanonicalClass(), typeTimer);
             f_mapResources.put(new InjectionKey("timer", typeTimer), supplierTimer);
             }
@@ -213,7 +212,7 @@ public class Container
 
             Function<Frame, ObjectHandle> supplierConsole = (frame) ->
                 templateRTConsole.createServiceHandle(
-                    createServiceContext("Console", f_moduleRoot),
+                    createServiceContext("Console", f_idModule.getConstantPool()),
                     templateRTConsole.getCanonicalClass(), typeConsole);
 
             f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
@@ -246,7 +245,7 @@ public class Container
                 {
                 TypeConstant typeClock = f_templates.getTemplate("Clock").getCanonicalType();
                 m_hLocalClock = hClock = templateRTClock.createServiceHandle(
-                    createServiceContext("LocalClock", f_moduleRoot),
+                    createServiceContext("LocalClock", f_idModule.getConstantPool()),
                     templateRTClock.getCanonicalClass(), typeClock);
                 }
             }
@@ -453,9 +452,9 @@ public class Container
             }
         }
 
-    public ServiceContext createServiceContext(String sName, ModuleStructure module)
+    public ServiceContext createServiceContext(String sName, ConstantPool pool)
         {
-        return new ServiceContext(this, module, sName,
+        return new ServiceContext(this, pool, sName,
             f_runtime.f_idProducer.getAndIncrement());
         }
 
@@ -515,16 +514,9 @@ public class Container
     @Override
     public boolean isPresent(IdentityConstant constId)
         {
-        if (constId.getModuleConstant().equals(f_moduleRoot.getIdentityConstant()))
-            {
-            // part of the Ecstasy module
-            // TODO
-            return true;
-            }
-
         if (constId.getModuleConstant().equals(f_idModule))
             {
-            // part of the app module
+            // part of the Ecstasy module
             // TODO
             return true;
             }
@@ -595,8 +587,6 @@ public class Container
     public final TemplateRegistry f_templates;
     public final ObjectHeap       f_heapGlobal;
 
-    protected final ModuleStructure f_moduleRoot;
-    protected final ModuleStructure f_moduleApp;
     protected final ModuleConstant  f_idModule;
 
     // the service context for the container itself
@@ -604,7 +594,6 @@ public class Container
 
     // the module
     private final String f_sAppName;
-    private ClassTemplate m_templateModule;
 
     private ObjectHandle m_hLocalClock;
     private ObjectHandle m_hOSStorage;

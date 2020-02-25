@@ -6,11 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import java.util.concurrent.ConcurrentHashMap;
-
 import java.util.function.Function;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Format;
@@ -20,9 +19,9 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
@@ -55,6 +54,8 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
+
+import org.xvm.util.Handy;
 
 
 /**
@@ -103,9 +104,9 @@ public abstract class ClassTemplate
     /**
      * Obtain the ClassConstant for this {@link ClassTemplate}.
      */
-    public ClassConstant getClassConstant()
+    public IdentityConstant getClassConstant()
         {
-        return (ClassConstant) f_struct.getIdentityConstant();
+        return f_struct.getIdentityConstant();
         }
 
     /**
@@ -117,7 +118,7 @@ public abstract class ClassTemplate
      * Note: the following should always hold true:
      *      getInceptionClass().asTypeConstant().getOpSupport() == this;
      */
-    protected ClassConstant getInceptionClassConstant()
+    protected IdentityConstant getInceptionClassConstant()
         {
         return getClassConstant();
         }
@@ -192,7 +193,7 @@ public abstract class ClassTemplate
      */
     public ClassComposition ensureClass(TypeConstant typeActual)
         {
-        ClassConstant constInception = getInceptionClassConstant();
+        IdentityConstant constInception = getInceptionClassConstant();
 
         if (typeActual.getDefiningConstant().equals(constInception))
             {
@@ -1824,8 +1825,8 @@ public abstract class ClassTemplate
      */
     protected void markNativeMethod(String sName, String[] asParamType, String[] asRetType)
         {
-        TypeConstant[] atypeArg = f_templates.f_adapter.getTypeConstants(this, asParamType);
-        TypeConstant[] atypeRet = f_templates.f_adapter.getTypeConstants(this, asRetType);
+        TypeConstant[] atypeArg = getTypeConstants(this, asParamType);
+        TypeConstant[] atypeRet = getTypeConstants(this, asRetType);
 
         MethodStructure method = f_struct.findMethod(sName, atypeArg, atypeRet);
         if (method == null)
@@ -1837,6 +1838,113 @@ public abstract class ClassTemplate
             {
             method.markNative();
             }
+        }
+
+    /**
+     * Get a class type for the specified name in the context of the specified template.
+     */
+    protected TypeConstant[] getTypeConstants(ClassTemplate template, String[] asType)
+        {
+        if (asType == null)
+            {
+            return null;
+            }
+
+        int cTypes = asType.length;
+        TypeConstant[] aType = new TypeConstant[cTypes];
+        for (int i = 0; i < cTypes; i++)
+            {
+            aType[i] = getClassType(asType[i].trim(), template);
+            }
+        return aType;
+        }
+
+    protected TypeConstant getClassType(String sName, ClassTemplate template)
+        {
+        ConstantPool pool = template.pool();
+
+        if (sName.startsWith("@"))
+            {
+            int ofEnd = sName.indexOf(" ", 1);
+            if (ofEnd < 0)
+                {
+                throw new IllegalArgumentException("Invalid annotation: " + sName);
+                }
+            TypeConstant typeAnno = getClassType(sName.substring(1, ofEnd), template);
+            TypeConstant typeMain = getClassType(sName.substring(ofEnd + 1), template);
+            return pool.ensureAnnotatedTypeConstant(typeAnno.getDefiningConstant(), null, typeMain);
+            }
+
+        boolean fNullable = sName.endsWith("?");
+        if (fNullable)
+            {
+            sName = sName.substring(0, sName.length() - 1);
+            }
+
+        TypeConstant constType = null;
+
+        int ofTypeParam = sName.indexOf('<');
+        if (ofTypeParam >= 0)
+            {
+            String sParam = sName.substring(ofTypeParam + 1, sName.length() - 1);
+            String sSimpleName = sName.substring(0, ofTypeParam);
+
+            // TODO: auto-narrowing (ThisTypeConstant)
+            if (sSimpleName.endsWith("!"))
+                {
+                sSimpleName = sSimpleName.substring(0, sSimpleName.length() - 1);
+                }
+
+            IdentityConstant idClass = f_templates.getIdentityConstant(sSimpleName);
+            if (idClass != null)
+                {
+                String[] asType = Handy.parseDelimitedString(sParam, ',');
+                TypeConstant[] acType = getTypeConstants(template, asType);
+
+                constType = pool.ensureClassTypeConstant(idClass, null, acType);
+                }
+            }
+        else
+            {
+            if (sName.equals("this"))
+                {
+                IdentityConstant constId = template == null ?
+                    pool.clzObject() : template.f_struct.getIdentityConstant();
+                return pool.ensureThisTypeConstant(constId, null);
+                }
+
+            if (template != null && template.f_struct.indexOfGenericParameter(sName) >= 0)
+                {
+                // generic type property
+                PropertyStructure prop = (PropertyStructure) template.f_struct.getChild(sName);
+                return pool.ensureTerminalTypeConstant(prop.getIdentityConstant());
+                }
+
+            Component component = f_templates.getComponent(sName);
+            if (component != null)
+                {
+                IdentityConstant constId = component.getIdentityConstant();
+                switch (constId.getFormat())
+                    {
+                    case Module:
+                    case Package:
+                    case Class:
+                        constType = constId.getType();
+                        break;
+
+                    case Typedef:
+                        constType = ((TypedefStructure) component).getType();
+                        break;
+                    }
+                }
+            }
+
+        if (constType == null)
+            {
+            throw new IllegalArgumentException("ClassTypeConstant is not defined: " + sName);
+            }
+
+        return fNullable ? constType.ensureNullable() : constType;
         }
 
     /**

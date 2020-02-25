@@ -2191,7 +2191,6 @@ public class ConstantPool
     public TypeConstant      typeOuter()        {TypeConstant      c = m_typeOuter;       if (c == null) {m_typeOuter       = c = ensureTerminalTypeConstant(clzOuter()                      );} return c;}
     public TypeConstant      typeRef()          {TypeConstant      c = m_typeRef;         if (c == null) {m_typeRef         = c = ensureTerminalTypeConstant(clzRef()                        );} return c;}
     public TypeConstant      typeRefRB()        {TypeConstant      c = m_typeRefRB;       if (c == null) {m_typeRefRB       = c = makeNativeRebase(clzRef()                                  );} return c;}
-    public TypeConstant      typeRefNaked()     {TypeConstant      c = m_typeRefNaked;    if (c == null) {m_typeRefNaked    = c = ensureTerminalTypeConstant(getImplicitlyImportedIdentity("#Ref"));} return c;}
     public TypeConstant      typeVar()          {TypeConstant      c = m_typeVar;         if (c == null) {m_typeVar         = c = ensureTerminalTypeConstant(clzVar()                        );} return c;}
     public TypeConstant      typeVarRB()        {TypeConstant      c = m_typeVarRB;       if (c == null) {m_typeVarRB       = c = makeNativeRebase(clzVar()                                  );} return c;}
     public TypeConstant      typeStruct()       {TypeConstant      c = m_typeStruct;      if (c == null) {m_typeStruct      = c = ensureTerminalTypeConstant(clzStruct()                     );} return c;}
@@ -3035,7 +3034,6 @@ public class ConstantPool
         m_typeOuter       = null;
         m_typeRef         = null;
         m_typeRefRB       = null;
-        m_typeRefNaked    = null;
         m_typeVar         = null;
         m_typeVarRB       = null;
         m_typeStruct      = null;
@@ -3641,6 +3639,68 @@ public class ConstantPool
 
     // ----- out-of-context helpers  ---------------------------------------------------------------
 
+    public TypeConstant getNakedRefType()
+        {
+        return m_typeNakedRef;
+        }
+
+    public void setNakedRefType(TypeConstant typeNakedRef)
+        {
+        m_typeNakedRef = typeNakedRef;
+        }
+
+    public TypeInfo getNakedRefInfo(TypeConstant typeReferent)
+        {
+        return m_mapRefTypes.computeIfAbsent(typeReferent, this::computeNakedRefInfo);
+        }
+
+    private TypeInfo computeNakedRefInfo(TypeConstant typeReferent)
+        {
+        GenericTypeResolver resolver =
+                sFormalName -> sFormalName.equals("Referent") ? typeReferent : null;
+
+        TypeInfo info = m_typeNakedRef.ensureTypeInfo();
+
+        Map<Object, ParamInfo> mapTypeParams = new HashMap<>();
+        mapTypeParams.put("Referent", new ParamInfo("Referent", typeReferent, typeObject()));
+
+        MethodConstant id        = info.findMethods("get", 0, TypeInfo.MethodKind.Method).iterator().next();
+        MethodInfo     method    = info.getMethodById(id);
+        MethodBody     body      = method.getHead();
+        MethodBody     bodyNew   = body.resolveGenerics(this, resolver);
+        MethodInfo     methodNew = new MethodInfo(bodyNew);
+
+        Map<MethodConstant, MethodInfo> mapMethods = new HashMap<>(info.getMethods());
+        mapMethods.remove(id);
+        mapMethods.put(methodNew.getIdentity(), methodNew);
+
+        Map<Object, MethodInfo> mapVirtMethods = new HashMap<>(info.getVirtMethods());
+        mapVirtMethods.remove(id.getSignature());
+        mapVirtMethods.put(bodyNew.getSignature(), methodNew);
+
+        return new TypeInfo(
+                info.getType(),         // unresolved formal type from the "native" pool
+                0,                      // cInvals
+                null,                   // struct
+                0,                      // depth
+                true,                   // synthetic
+                mapTypeParams,
+                Annotation.NO_ANNOTATIONS,
+                typeObject(),           // typeExtends
+                null,                   // typeRebase
+                null,                   // typeInto
+                Collections.EMPTY_LIST, // listProcess,
+                ListMap.EMPTY,          // listmapClassChain
+                ListMap.EMPTY,          // listmapDefaultChain
+                Collections.EMPTY_MAP,  // mapProps
+                mapMethods,
+                Collections.EMPTY_MAP,  // mapVirtProps
+                mapVirtMethods,
+                ListMap.EMPTY,          // mapChildren
+                Progress.Complete
+                );
+        }
+
     /**
      * @return a ContextPool associated with the current thread
      */
@@ -3750,7 +3810,6 @@ public class ConstantPool
     private transient TypeConstant      m_typeOuter;
     private transient TypeConstant      m_typeRef;
     private transient TypeConstant      m_typeRefRB;
-    private transient TypeConstant      m_typeRefNaked;
     private transient TypeConstant      m_typeVar;
     private transient TypeConstant      m_typeVarRB;
     private transient TypeConstant      m_typeType;
@@ -3851,6 +3910,16 @@ public class ConstantPool
      * concrete natural class. It also keeps the secondary map of compositions for revealed types.
      */
     private Map<TypeConstant, ClassComposition> m_mapCompositions = new ConcurrentHashMap<>();
+
+    /**
+     * NakedRef is a fundamental formal type that comes from the "_native" module,
+     */
+    private transient TypeConstant m_typeNakedRef;
+
+    /**
+     * A cache of TypeInfo for parameterized NakedRef types.
+     */
+    private Map<TypeConstant, TypeInfo> m_mapRefTypes = new ConcurrentHashMap<>();
 
     /**
      * Thread local allowing to get the "current" ConstantPool without any context.

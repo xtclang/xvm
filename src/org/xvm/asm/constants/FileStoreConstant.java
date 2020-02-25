@@ -141,7 +141,7 @@ public class FileStoreConstant
     @Override
     public TypeConstant getType()
         {
-        return getConstantPool().ensureEcstasyTypeConstant("_native.fs.CPFileStore");
+        return getConstantPool().ensureEcstasyTypeConstant("fs.FileStore");
         }
 
     @Override

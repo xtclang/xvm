@@ -78,7 +78,7 @@ public class xRef
     @Override
     protected ClassConstant getInceptionClassConstant()
         {
-        return this == INSTANCE ? INCEPTION_CLASS : getClassConstant();
+        return this == INSTANCE ? INCEPTION_CLASS : (ClassConstant) getClassConstant();
         }
 
     @Override

@@ -44,17 +44,9 @@ public class Connector
         {
         m_repository = repository;
         f_runtime    = new Runtime();
-
-        ModuleStructure moduleRoot = repository.loadModule(Constants.ECSTASY_MODULE);
-
-        f_templates  = new TemplateRegistry(moduleRoot);
-        f_heapGlobal = new ObjectHeap(moduleRoot.getConstantPool(), f_templates);
-
-        ConstantPool.setCurrentPool(moduleRoot.getConstantPool());
-
-        f_templates.loadNativeTemplates(moduleRoot);
-
-        ConstantPool.setCurrentPool(null);
+        f_templates  = new TemplateRegistry(repository);
+        f_heapGlobal = new ObjectHeap(f_templates);
+        f_templates.loadNativeTemplates();
         }
 
     /**

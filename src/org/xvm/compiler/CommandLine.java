@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.FileRepository;
@@ -22,9 +23,13 @@ import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.TypeCompositionStatement;
+
+import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
@@ -121,21 +126,48 @@ public class CommandLine
 
         configureRepository();
 
-        // what are the modules that need to be compiled/loaded?
-        selectTargets();
-        checkTerminalFailure();
+        List<File> listSysFiles = new ArrayList<>(2);
+        listSysFiles.add(new File("system"));
+        listSysFiles.add(new File("_native"));
 
+        Map<File, Node> mapSysModules = selectTargets(listSysFiles);
+        checkTerminalFailure();
+        modules = mapSysModules;
+
+        boolean fRebuild = buildModules(mapSysModules, true, false);
+
+        Map<File, Node> mapModules = selectTargets(sources);
+        checkTerminalFailure();
+        modules.putAll(mapModules);
+
+        buildModules(mapModules, false, fRebuild);
+
+        return repoBuild;
+        }
+
+    /**
+     * @param fRebuild if true, the module should not be read from disk and must be re-compiled
+     *
+     * @return true iff any of the modules were re-compiled
+     */
+    protected boolean buildModules(Map<File, Node> mapModules, boolean fFromNative, boolean fRebuild)
+        {
         // parse the modules
-        parseSource();
+        parseSource(mapModules);
         checkTerminalFailure();
 
         // register names
-        registerNames();
+        registerNames(mapModules);
 
-        if (!readModules())
+        if (!fRebuild)
+            {
+            fRebuild = !readModules(mapModules);
+            }
+
+        if (fRebuild)
             {
             // create the parse tree
-            populateNamespace();
+            populateNamespace(mapModules);
             checkCompilerErrors();
             checkTerminalFailure();
 
@@ -143,6 +175,8 @@ public class CommandLine
             resolveDependencies();
             checkCompilerErrors();
             checkTerminalFailure();
+
+            processNativeDependencies();
 
             // expression resolution
             validateExpressions();
@@ -155,7 +189,7 @@ public class CommandLine
             checkTerminalFailure();
 
             // write out the results
-            emitModules();
+            emitModules(mapModules);
             checkTerminalFailure();
 
             if (opts.verbose)
@@ -163,8 +197,11 @@ public class CommandLine
                 dump();
                 }
             }
-
-        return repoBuild;
+        else
+            {
+            processNativeDependencies();
+            }
+        return fRebuild;
         }
 
     /**
@@ -410,31 +447,33 @@ public class CommandLine
     /**
      * Select the modules to compile/load.
      */
-    protected void selectTargets()
+    protected Map<File, Node> selectTargets(List<File> listSources)
         {
-        if (sources.isEmpty())
+        Map<File, Node> mapModules = new ListMap();
+        if (listSources.isEmpty())
             {
-            sources.add(new File("module.x"));
+            listSources.add(new File("module.x"));
             }
-        for (File file : sources)
+        for (File file : listSources)
             {
             File moduleFile = findModule(file);
             if (moduleFile != null && !modules.containsKey(moduleFile))
                 {
-                modules.put(moduleFile, buildTree(moduleFile, 0));
+                mapModules.put(moduleFile, buildTree(moduleFile, 0));
                 }
             }
-        if (modules.isEmpty())
+        if (mapModules.isEmpty())
             {
             deferred.add("xtc: No module found to compile.");
             error = true;
             }
-        else if (modules.size() > 1 && opts.destination != null && !opts.destination.isDirectory())
+        else if (mapModules.size() > 1 && opts.destination != null && !opts.destination.isDirectory())
             {
             // -D option can't be just a single file if there is more than one module to compile
             deferred.add("xtc: Multiple modules found to compile, but output destination is a single file.");
             error = true;
             }
+        return mapModules;
         }
 
     /**
@@ -635,30 +674,15 @@ public class CommandLine
                 }
             }
 
-        // check if the module is the "Ecstasy" module and add native classes if so
-        if (fRoot && Constants.ECSTASY_MODULE.equals(getModuleName(node.filePkg)))
-            {
-            File fileNative = new File(node.fileDir.getParentFile(), "_native");
-            if (fileNative.isDirectory())
-                {
-                DirNode nodeNative = (DirNode) buildTree(fileNative, 0);
-                if (nodeNative != null)
-                    {
-                    nodeNative.parent = node;
-                    node.packages.add(nodeNative);
-                    }
-                }
-            }
-
         return node.filePkg == null && node.sources.isEmpty() && node.packages.isEmpty() ? null : node;
         }
 
     /**
      * Parse all of the source code that needs to be compiled and calculate timestamps.
      */
-    protected void parseSource()
+    protected void parseSource(Map<File, Node> mapModules)
         {
-        for (Node module : modules.values())
+        for (Node module : mapModules.values())
             {
             module.parse();
             module.checkErrors();
@@ -668,9 +692,9 @@ public class CommandLine
     /**
      * Register module names.
      */
-    protected void registerNames()
+    protected void registerNames(Map<File, Node> mapModules)
         {
-        for (Node module : modules.values())
+        for (Node module : mapModules.values())
             {
             module.registerNames();
             }
@@ -680,9 +704,9 @@ public class CommandLine
      * Link all of the AST objects for each module into a single parse tree, and create the outline
      * of the finished FileStructure.
      */
-    protected void populateNamespace()
+    protected void populateNamespace(Map<File, Node> mapModules)
         {
-        for (Node module : modules.values())
+        for (Node module : mapModules.values())
             {
             String name = module.name();
             if (modulesByName.containsKey(name))
@@ -738,6 +762,22 @@ public class CommandLine
         for (Compiler compiler : modulesByName.values())
             {
             compiler.logRemainingDeferredAsErrors();
+            }
+        }
+
+    /**
+     * Resolve dependencies among multiple modules that are being compiled at the same time.
+     */
+    protected void processNativeDependencies()
+        {
+        ModuleStructure moduleNative = repoBuild.loadModule(TemplateRegistry.NATIVE_MODULE);
+        ClassStructure  clzNakedRef  = (ClassStructure) moduleNative.getChild("NakedRef");
+        TypeConstant    typeNakedRef = clzNakedRef.getFormalType();
+
+        for (String sModule : repoBuild.getModuleNames())
+            {
+            ModuleStructure module = repoBuild.loadModule(sModule);
+            module.getConstantPool().setNakedRefType(typeNakedRef);
             }
         }
 
@@ -807,24 +847,24 @@ public class CommandLine
     /**
      * Emit the results of compilation.
      */
-    protected void emitModules()
+    protected void emitModules(Map<File, Node> mapModules)
         {
-        for (Node module : modules.values())
+        for (Node nodeModule : mapModules.values())
             {
             if (repoResult != null)
                 {
-                repoResult.storeModule((ModuleStructure) module.getType().getComponent());
+                repoResult.storeModule((ModuleStructure) nodeModule.getType().getComponent());
                 }
             else
                 {
                 // figure out where to put the resulting module
-                File file = module.getFile().getParentFile();
+                File file = nodeModule.getFile().getParentFile();
 
                 // at this point, we either have a directory or a file to put it in; resolve that to
                 // an actual compiled module file name
                 if (file.isDirectory())
                     {
-                    String sName = module.name();
+                    String sName = nodeModule.name();
                     int ofDot = sName.indexOf('.');
                     if (ofDot > 0)
                         {
@@ -833,7 +873,7 @@ public class CommandLine
                     file = new File(file, sName + ".xtc");
                     }
 
-                FileStructure struct = module.getType().getComponent().getFileStructure();
+                FileStructure struct = nodeModule.getType().getComponent().getFileStructure();
                 try
                     {
                     struct.writeTo(file);
@@ -845,7 +885,7 @@ public class CommandLine
                             + file.getAbsolutePath() + "\"");
                     error = true;
                     }
-                module.checkErrors();
+                nodeModule.checkErrors();
                 }
             }
         }
@@ -854,18 +894,17 @@ public class CommandLine
      * Load modules from disk.
      *
      * @return true iff all the modules were loaded and saved into the build repository
+     *         and don't require any re-compilation
      */
-    protected boolean readModules()
+    protected boolean readModules(Map<File, Node> mapModules)
         {
-        int                 cModules   = modules.size();
+        int                 cModules   = mapModules.size();
         List<FileStructure> listFiles  = new ArrayList<>(cModules);
         BuildRepository     repoTemp   = new BuildRepository();
-        File                fileRoot   = null;
-        ModuleStructure     structRoot = null;
 
-        for (File fileSrc : modules.keySet())
+        for (File fileSrc : mapModules.keySet())
             {
-            Node module = modules.get(fileSrc);
+            Node module = mapModules.get(fileSrc);
 
             // figure out where to find the module
             File file = module.getFile().getParentFile();
@@ -892,12 +931,6 @@ public class CommandLine
                     ModuleStructure structModule = structFile.getModule();
                     repoTemp.storeModule(structModule);
                     listFiles.add(structFile);
-
-                    if (structModule.getName().equals(Constants.ECSTASY_MODULE))
-                        {
-                        fileRoot   = fileSrc;
-                        structRoot = structModule;
-                        }
                     }
                 catch (Exception e)
                     {
@@ -907,25 +940,18 @@ public class CommandLine
 
             if (!fUseExisting)
                 {
-                if (structRoot != null)
-                    {
-                    // the root Ecstasy module has no external dependencies and doesn't have
-                    // to be recompiled
-                    modules.remove(fileRoot);
-                    repoBuild.storeModule(structRoot);
-                    }
                 return false;
                 }
             module.checkErrors();
             }
 
+        repoBuild.storeAll(repoTemp);
+
         // link the modules
         for (FileStructure structFile : listFiles)
             {
-            structFile.linkModules(repoTemp);
+            structFile.linkModules(repoBuild);
             }
-
-        repoBuild.storeAll(repoTemp);
         return true;
         }
 

@@ -32,7 +32,7 @@ public class PropertyComposition
      * Construct the PropertyComposition for a given property of the specified parent.
      *
      * @param clzParent  the parent's ClassComposition
-     * @param infoProp   the property name
+     * @param infoProp   the property info
      */
     public PropertyComposition(ClassComposition clzParent, PropertyInfo infoProp)
         {
@@ -172,8 +172,9 @@ public class PropertyComposition
         return f_mapMethods.computeIfAbsent(nidMethod,
             nid ->
                 {
-                MethodConstant idNested = (MethodConstant) f_infoProp.getIdentity().
-                    appendNestedIdentity(ConstantPool.getCurrentPool(), nid);
+                PropertyConstant idBase   = f_infoProp.getIdentity();
+                MethodConstant   idNested = (MethodConstant) idBase.appendNestedIdentity(
+                                                idBase.getConstantPool(), nid);
 
                 MethodInfo info = f_infoParent.getMethodByNestedId(idNested.getNestedIdentity());
                 return info == null
@@ -189,8 +190,9 @@ public class PropertyComposition
             id ->
                 {
                 // see if there's a nested property first; default to the base otherwise
-                PropertyConstant idNested = (PropertyConstant) f_infoProp.getIdentity().
-                    appendNestedIdentity(ConstantPool.getCurrentPool(), id.getNestedIdentity());
+                PropertyConstant idBase   = f_infoProp.getIdentity();
+                PropertyConstant idNested = (PropertyConstant) idBase.appendNestedIdentity(
+                                                idBase.getConstantPool(), id.getNestedIdentity());
 
                 PropertyInfo infoProp = f_infoParent.findProperty(idNested);
                 return infoProp == null
@@ -205,8 +207,9 @@ public class PropertyComposition
         return f_mapSetters.computeIfAbsent(idProp,
             id ->
                 {
-                PropertyConstant idNested = (PropertyConstant) f_infoProp.getIdentity().
-                    appendNestedIdentity(ConstantPool.getCurrentPool(), id.getNestedIdentity());
+                PropertyConstant idBase   = f_infoProp.getIdentity();
+                PropertyConstant idNested = (PropertyConstant) idBase.appendNestedIdentity(
+                                                idBase.getConstantPool(), id.getNestedIdentity());
 
                 PropertyInfo infoProp = f_infoParent.findProperty(idNested);
                 return infoProp == null

@@ -6,6 +6,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.util.Handy;
@@ -87,6 +88,25 @@ public class MethodBody
         m_sig    = body.m_sig;
         m_target = body.m_target;
         m_impl   = impl;
+        }
+
+    /**
+     * Create a MethodBody based on this body, but with resolved method.
+     *
+     * @param pool      the ConstantPool to create the resolved constants at
+     * @param resolver  the resolver
+     *
+     * @return a new MethodBody
+     */
+    public MethodBody resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
+        {
+        assert m_impl != Implementation.Capped;
+
+        SignatureConstant   sig  = m_sig.resolveGenericTypes(pool, resolver);
+        MethodConstant      id   = pool.ensureMethodConstant(m_id.getNamespace(), sig);
+        MethodBody          body = new MethodBody(id, sig, m_impl, null);
+        body.setMethodStructure(getMethodStructure());
+        return body;
         }
 
     /**

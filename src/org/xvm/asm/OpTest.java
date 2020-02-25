@@ -82,8 +82,19 @@ public abstract class OpTest
             if (isBinaryOp())
                 {
                 m_nValue2 = encodeArgument(m_argVal2, registry);
-                // NOTE: IsType is a binary op that doesn't get injected with the common type
-                m_nType   = m_typeCommon == null ? -1 : encodeArgument(m_typeCommon, registry);
+
+                // encode the common type and discard it to be recalculated using the correct pool
+                // (Note: IsType is a binary op that doesn't get injected with the common type)
+                TypeConstant typeCommon = m_typeCommon;
+                if (typeCommon == null)
+                    {
+                    m_nType = -1;
+                    }
+                else
+                    {
+                    m_nType      = encodeArgument(typeCommon, registry);
+                    m_typeCommon = null;
+                    }
                 }
             m_nRetValue = encodeArgument(m_argReturn, registry);
             }

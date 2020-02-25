@@ -47,16 +47,15 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle
 public class ServiceContext
     implements Runnable
     {
-    ServiceContext(Container container, ModuleStructure module, String sName, int nId)
+    ServiceContext(Container container, ConstantPool pool, String sName, int nId)
         {
         f_container = container;
-        f_module    = module;
         f_sName     = sName;
         f_nId       = nId;
 
         f_heapGlobal    = container.f_heapGlobal;
         f_templates     = container.f_templates;
-        f_pool          = module.getConstantPool();
+        f_pool          = pool;
         f_queueMsg      = new ConcurrentLinkedQueue<>();
         f_queueResponse = new ConcurrentLinkedQueue<>();
         }
@@ -78,7 +77,6 @@ public class ServiceContext
 
             if (frame != null)
                 {
-
                 try (var x = ConstantPool.withPool(frame.poolContext()))
                     {
                     frame = execute(frame);
@@ -177,7 +175,7 @@ public class ServiceContext
         {
         m_fLockScheduling = false;
 
-        // we've released the lock but work may have concurrently slipped in; if so try to relock
+        // we've released the lock but work may have concurrently slipped in; if so try to re-lock
         // and hand off processing to the runtime's thread-pool
         if (isContended() && tryAcquireSchedulingLock())
             {
@@ -202,7 +200,7 @@ public class ServiceContext
 
     public ServiceContext createContext(String sName)
         {
-        return f_container.createServiceContext(sName, f_module);
+        return f_container.createServiceContext(sName, f_pool);
         }
 
     public ServiceHandle getService()
@@ -1198,17 +1196,16 @@ public class ServiceContext
 
     // ----- constants and fields ------------------------------------------------------------------
 
-    public final Container f_container;
-    public final ModuleStructure f_module;
+    public final Container        f_container;
     public final TemplateRegistry f_templates;
-    public final ObjectHeap f_heapGlobal;
-    public final ConstantPool f_pool;
+    public final ObjectHeap       f_heapGlobal;
+    public final ConstantPool     f_pool;
 
-    private final Queue<Message> f_queueMsg;
+    private final Queue<Message>  f_queueMsg;
     private final Queue<Response> f_queueResponse;
 
-    private final int f_nId; // the service id
-    public final String f_sName; // the service name
+    private final int    f_nId;   // the service id
+    public  final String f_sName; // the service name
 
     protected ServiceHandle m_hService;
 

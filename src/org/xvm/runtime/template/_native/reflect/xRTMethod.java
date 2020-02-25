@@ -240,7 +240,7 @@ public class xRTMethod
 
     public static MethodHandle makeHandle(TypeConstant typeTarget, MethodConstant idMethod)
         {
-        ConstantPool pool = ConstantPool.getCurrentPool();
+        ConstantPool pool = INSTANCE.pool();
         TypeConstant type = idMethod.getSignature().asMethodType(pool, typeTarget);
 
         return new MethodHandle(type, idMethod);

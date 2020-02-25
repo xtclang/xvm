@@ -15,7 +15,7 @@ public interface ModuleRepository
      *
      * @return a set of domain names
      */
-    default public Set<String> getDomainNames()
+    default Set<String> getDomainNames()
         {
         Set<String> modules = getModuleNames();
         Set<String> domains = new TreeSet<>();
@@ -38,7 +38,7 @@ public interface ModuleRepository
      *
      * @return a set of qualified module names
      */
-    default public Set<String> getModuleNames(String sDomain)
+    default Set<String> getModuleNames(String sDomain)
         {
         Set<String> modules = getModuleNames();
         Set<String> names = new TreeSet<>();
@@ -56,7 +56,7 @@ public interface ModuleRepository
      *
      * @return a set of qualified module names
      */
-    public Set<String> getModuleNames();
+    Set<String> getModuleNames();
 
     /**
      * Determine the set of available versions of the specified module.
@@ -67,7 +67,7 @@ public interface ModuleRepository
      *         note that the set may contain a null value, indicating a
      *         versionless module; or null if the module does not exist
      */
-    default public VersionTree<Boolean> getAvailableVersions(String sModule)
+    default VersionTree<Boolean> getAvailableVersions(String sModule)
         {
         ModuleStructure module = loadModule(sModule);
         return module == null ? null : module.getFileStructure().getVersionTree();
@@ -80,7 +80,7 @@ public interface ModuleRepository
      *
      * @return a ModuleStructure, or null if the specified module is unavailable
      */
-    public ModuleStructure loadModule(String sModule);
+    ModuleStructure loadModule(String sModule);
 
     /**
      * Load the specified version of the specified module.
@@ -92,7 +92,7 @@ public interface ModuleRepository
      *
      * @return a ModuleStructure, or null if the specified module is unavailable
      */
-    default public ModuleStructure loadModule(String sModule, Version version, boolean fExact)
+    default ModuleStructure loadModule(String sModule, Version version, boolean fExact)
         {
         ModuleStructure module = loadModule(sModule);
         if (module == null)
@@ -100,15 +100,16 @@ public interface ModuleRepository
             return null;
             }
 
-        Version useVersion = null;
-        if (module.getFileStructure().containsVersion(version))
+        Version       useVersion = null;
+        FileStructure container  = module.getFileStructure();
+        if (container.containsVersion(version))
             {
             useVersion = version;
             }
         else
             {
             // check each version in the module to see if it would work; keep the most appropriate one
-            for (Version possibleVer : module.getFileStructure().getVersionTree())
+            for (Version possibleVer : container.getVersionTree())
                 {
                 if (possibleVer.isSubstitutableFor(version))
                     {
@@ -136,9 +137,9 @@ public interface ModuleRepository
                 }
             }
 
-        if (module.getFileStructure().getVersionTree().size() > 1)
+        if (container.getVersionTree().size() > 1)
             {
-            module.getFileStructure().purgeVersionsExcept(useVersion);
+            container.purgeVersionsExcept(useVersion);
             }
 
         return module;
@@ -153,5 +154,5 @@ public interface ModuleRepository
      *         indicate that the repository is read-only, that the specified
      *         module is not able to be stored in the repository, etc.
      */
-    public void storeModule(ModuleStructure module);
+    void storeModule(ModuleStructure module);
     }

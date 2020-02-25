@@ -149,7 +149,7 @@ public class ModuleConstant
         ModuleStructure struct = getFileStructure().getModule(sName);
         if (struct == null)
             {
-            throw new IllegalStateException("could not find module: " + sName);
+            return null;
             }
 
         ModuleStructure structOrigin = struct.getFingerprintOrigin();
