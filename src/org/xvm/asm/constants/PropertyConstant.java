@@ -209,6 +209,12 @@ public class PropertyConstant
             typeTarget = getClassIdentity().getType();
             }
 
+        Access access = getComponent().getAccess();
+        if (access.isLessAccessibleThan(typeTarget.getAccess()))
+            {
+            typeTarget = typeTarget.getConstantPool().ensureAccessTypeConstant(typeTarget, access);
+            }
+
         PropertyInfo infoThis = typeTarget.ensureTypeInfo().findProperty(this);
 
         assert infoThis != null;
