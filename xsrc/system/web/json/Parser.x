@@ -86,7 +86,7 @@ class Parser
     /**
      * Determine if the parser has encountered the end of file (no tokens left).
      */
-    protected Boolean eof.get()
+    Boolean eof.get()
         {
         return token == Null;
         }
@@ -119,7 +119,7 @@ class Parser
         }
 
 
-    // ----- internal ------------------------------------------------------------------------------
+    // ----- advanced ------------------------------------------------------------------------------
 
     /**
      * Parse a JSON value, which is called a "document" here. A JSON value can be an individual
@@ -127,7 +127,7 @@ class Parser
      *
      * @return a JSON value
      */
-    protected Doc parseDoc()
+    Doc parseDoc()
         {
         switch (token?.id)
             {
@@ -156,7 +156,7 @@ class Parser
      *
      * @param skipped  the optional array to accrue skipped tokens into
      */
-    protected void skipDoc(Token[]? skipped)
+    void skipDoc(Token[]? skipped)
         {
         switch (token?.id)
             {
@@ -165,7 +165,8 @@ class Parser
             case IntVal:
             case FPVal:
             case StrVal:
-                skipped?.add(token ?: assert);
+                Token value = take();
+                skipped?.add(value);
                 return;
 
             case ArrayEnter:
@@ -185,7 +186,7 @@ class Parser
      *
      * @return an array of JSON values
      */
-    protected Array<Doc> parseArray()
+    Array<Doc> parseArray()
         {
         Doc[] array = new Doc[];
         expect(ArrayEnter);
@@ -206,7 +207,7 @@ class Parser
      *
      * @param skipped  the optional array to accrue skipped tokens into
      */
-    protected void skipArray(Token[]? skipped)
+    void skipArray(Token[]? skipped)
         {
         expect(ArrayEnter, skipped);
         if (!match(ArrayExit, skipped))
@@ -225,7 +226,7 @@ class Parser
      *
      * @return a Map representing a JSON object
      */
-    protected Map<String, Doc> parseObject()
+    Map<String, Doc> parseObject()
         {
         ListMap<String, Doc> map = new ListMap();
         expect(ObjectEnter);
@@ -277,7 +278,7 @@ class Parser
      *
      * @param skipped  the optional array to accrue skipped tokens into
      */
-    protected void skipObject(Token[]? skipped)
+    void skipObject(Token[]? skipped)
         {
         expect(ObjectEnter, skipped);
         if (!match(ObjectExit, skipped))
@@ -298,18 +299,29 @@ class Parser
      *
      * @return the token
      */
-    protected Token take()
+    Token peek()
+        {
+        return token?;
+        throw new IllegalJSON("Unexpected EOF");
+        }
+
+    /**
+     * Take the next [Token]. This automatically loads a new "next token", if one exists.
+     *
+     * @return the token
+     */
+    Token take()
         {
         Token? token = this.token;
         advance();
         return token?;
-        throw new EndOfFile();
+        throw new IllegalJSON("Unexpected EOF");
         }
 
     /**
      * Replace the next [Token] with the token that follows it, or Null if there are no more tokens.
      */
-    protected void advance()
+    void advance()
         {
         Token? next = Null;
         next := lexer.next();
@@ -325,7 +337,7 @@ class Parser
      *
      * @throws IllegalJSON if the expected Token is not the next token
      */
-    protected Token expect(Id id)
+    Token expect(Id id)
         {
         if (Token token := match(id))
             {
@@ -345,7 +357,7 @@ class Parser
      *
      * @throws IllegalJSON if the expected Token is not the next token
      */
-    protected Token expect(Id id, Token[]? skipped)
+    Token expect(Id id, Token[]? skipped)
         {
         Token token = expect(id);
         skipped?.add(token);
@@ -360,7 +372,7 @@ class Parser
      * @return True iff the next Token has the specified Id
      * @return (conditional) the matching Token
      */
-    protected conditional Token match(Id id)
+    conditional Token match(Id id)
         {
         Token? token = this.token;
         if (token == Null)
@@ -386,7 +398,7 @@ class Parser
      * @return True iff the next Token has the specified Id
      * @return (conditional) the matching Token
      */
-    protected conditional Token match(Id id, Token[]? skipped)
+    conditional Token match(Id id, Token[]? skipped)
         {
         if (Token token := match(id))
             {

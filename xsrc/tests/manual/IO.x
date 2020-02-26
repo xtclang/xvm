@@ -12,13 +12,16 @@ module TestIO
     import Ecstasy.io.Writer;
     import Ecstasy.io.UTF8Reader;
     import Ecstasy.web.json.Doc;
+    import Ecstasy.web.json.ElementInput;
     import Ecstasy.web.json.ElementOutput;
+    import Ecstasy.web.json.FieldInput;
     import Ecstasy.web.json.FieldOutput;
     import Ecstasy.web.json.Lexer;
     import Ecstasy.web.json.Lexer.Token;
+    import Ecstasy.web.json.Mapping;
     import Ecstasy.web.json.ObjectInputStream;
+    import Ecstasy.web.json.ObjectInputStream.ElementInputStream;
     import Ecstasy.web.json.ObjectOutputStream;
-    import Ecstasy.web.json.ObjectOutputStream.CloseCap;
     import Ecstasy.web.json.ObjectOutputStream.ElementOutputStream;
     import Ecstasy.web.json.Parser;
     import Ecstasy.web.json.Printer;
@@ -35,6 +38,7 @@ module TestIO
         testJSONParse();
         testJSONPrint();
         testJSONBuild();
+        testPoint();
         }
 
     void testInputStream()
@@ -220,5 +224,66 @@ module TestIO
                     .close()
                 .close()
                 .close();
+        }
+
+    void testPoint()
+        {
+        static const Point(Int x, Int y);
+
+        static const PointMapper
+                implements Mapping<Point>
+            {
+            @Override
+            String typeName.get()
+                {
+                return "point";
+                }
+
+            @Override
+            <ObjectType extends Point> ObjectType read<ObjectType>(ElementInput in)
+                {
+                using (FieldInput fields = in.openObject())
+                    {
+                    return new Point(fields.readInt("x"), fields.readInt("y")).as(ObjectType);
+                    }
+//                Doc doc = in.readDoc();
+//                Map<String, Doc> map = doc.as(Map<String, Doc>);
+//                return new Point(map["x"].as(IntLiteral).toInt(), map["y"].as(IntLiteral).toInt()).as(ObjectType);
+                }
+
+            @Override
+            <ObjectType extends Point> void write(ElementOutput out, ObjectType value)
+                {
+                out.openObject()
+                    .add("x", value.x)
+                    .add("y", value.y)
+                    .close();
+                }
+            }
+
+        static String ExamplePoint =
+                `|  {
+                 |  "x" : 31,
+                 |  "y" : 7
+                 |  }
+                ;
+
+        console.println($"json={ExamplePoint}");
+        Schema             schema = Schema.DEFAULT;
+//        ObjectInputStream  o_in   = schema.createObjectInput(new CharArrayReader(ExamplePoint)); // TODO GG needs better error message
+        Reader             reader = new CharArrayReader(ExamplePoint);
+        ObjectInputStream  o_in   = schema.createObjectInput(reader).as(ObjectInputStream);
+        ElementInputStream e_in   = o_in.createElementInput();
+        PointMapper        mapper = new PointMapper();
+        Point              point  = mapper.read<Point>(e_in);
+        console.println($"point={point}");
+
+        Schema schemaRA = new Schema([new PointMapper()], randomAccess = True);
+        Schema schemaSA = new Schema([new PointMapper()], randomAccess = False);
+
+//        Point point1 = schemaRA.createObjectInput(new CharArrayReader(ExamplePoint)).read<Point>();
+//        console.println($"point={point1}");
+//        Point point2 = schemaSA.createObjectInput(new CharArrayReader(ExamplePoint)).read<Point>();
+//        console.println($"point={point2}");
         }
     }

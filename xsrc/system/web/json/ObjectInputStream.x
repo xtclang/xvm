@@ -8,21 +8,32 @@ import Lexer.Token;
 
 
 /**
- * An [ObjectInput] implementation for JSON de-serialization that reads from a [Reader] or from a
- * stream of JSON tokens.
+ * An [ObjectInput] implementation for JSON de-serialization that reads from a [Reader], or from a
+ * stream of JSON tokens, or from a JSON parser.
  */
-class ObjectInputStream(Schema schema, Iterator<Token> lexer)
+class ObjectInputStream(Schema schema, Parser parser)
         implements ObjectInput
     {
     /**
      * Construct an ObjectInputStream from a [Reader].
      *
      * @param schema  the JSON `Schema` to use
-     * @param reader  the `Reader` to read from
+     * @param reader  the `Reader` to read JSON text from
      */
     construct(Schema schema, Reader reader)
         {
         construct ObjectInputStream(schema, new Lexer(reader));
+        }
+
+    /**
+     * Construct an ObjectInputStream from a [Lexer].
+     *
+     * @param schema  the JSON `Schema` to use
+     * @param lexer  the `Lexer` to obtain JSON tokens from
+     */
+    construct(Schema schema, Iterator<Token> lexer)
+        {
+        construct ObjectInputStream(schema, new Parser(lexer));
         }
 
 
@@ -34,9 +45,9 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
     public/private Schema schema;
 
     /**
-     * The underlying stream of JSON tokens.
+     * The underlying JSON parser, which uses a look-ahead of exactly one token.
      */
-    protected/private Iterator<Token> lexer;
+    protected/private Parser parser;
 
     /**
      * The root element.
@@ -57,9 +68,40 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
      * A cache of all of the previously deserialized objects indexed by their JSON pointers.
      */
     @Lazy
-    protected/private Map<String, Object> pointers.calc()
+    protected/private Map<String, Object> pointers
         {
-        return new HashMap();
+        @Override
+        Map<String, Object> calc()
+            {
+            return new HashMap();
+            }
+
+        void reset() // TODO GG this isn't visible via &pointers.reset()
+            {
+//            if (assigned) // TODO GG this isn't visible
+            if (&pointers.assigned)
+                {
+                get().clear();
+                }
+            }
+        }
+    protected void resetPointers()
+        {
+        if (&pointers.assigned)
+            {
+            pointers.clear();
+            }
+        }
+
+
+    /**
+     * (Temporary method)
+     *
+     * @return an ElementInput implementation
+     */
+    ElementInputStream createElementInput()
+        {
+        return new @CloseCap ElementInputStream(Null);
         }
 
 
@@ -71,44 +113,48 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         assert !closed;
         assert root == Null;
 
-        try (ElementInputStream in = new ElementInputStream(Null))
+//        &pointers.reset(); // TODO GG
+        resetPointers();
+        using (ElementInputStream in = new ElementInputStream(Null))
             {
-            root    = in;
-            current = in;
-
             return in.read<ObjectType>();
-            }
-        finally
-            {
-            root    = Null;
-            current = Null;
             }
         }
 
     @Override
     void close()
         {
-        root?.close();
         root    = Null;
         current = Null;
         closed  = True;
+//        &pointers.reset(); // TODO GG
+        resetPointers();
         }
 
 
     // ----- DocInputStream -----------------------------------------------------------------------
 
     /**
+     * TODO doc
+     */
+    typedef ElementInputStream | ArrayInputStream | FieldInputStream AnyStream;
+
+    /**
      * Base virtual child implementation for the various DocInput / ElementInput / FieldInput
      * implementations.
      */
-    class DocInputStream<ParentInput extends (ElementInputStream | ArrayInputStream | FieldInputStream)?>
+    class DocInputStream<ParentInput extends AnyStream?>
             implements DocInput<ParentInput>
         {
         construct(ParentInput parent, (String|Int)? id, Token[]? tokens)
             {
             this.parent = parent;
             this.id     = id;
-            this.lexer  = tokens?.iterator() : parent?.lexer : this.ObjectInputStream.lexer;
+            this.parser = new Parser(tokens?.iterator()) : parent?.parser : this.ObjectInputStream.parser;
+            }
+        finally
+            {
+            assert loadNext(first = True);
             }
 
         @Override
@@ -139,9 +185,9 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         protected/private (String | Int)? id;
 
         /**
-         * The stream of JSON tokens for this DocInputStream.
+         * The underlying JSON parser, which uses a look-ahead of exactly one token.
          */
-        protected/private Iterator<Token> lexer;
+        protected/private Parser parser;
 
         @Override
         conditional ElementInputStream<ParentInput> insideElement()
@@ -176,12 +222,17 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         @Override
         ParentInput close()
             {
-            assert &this == &current;
+            if (canRead)
+                {
+                do
+                    {
+                    parser.skip();
+                    }
+                while (loadNext());
+                }
 
-            // close this node, and make the parent node into the current node
+            // close this node
             canRead = False;
-            ParentInput parent = this.parent;
-            current = parent;
             return parent;
             }
 
@@ -216,15 +267,14 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
          */
         protected void ensureActive()
             {
+            DocInputStream!<>? current = this.ObjectInputStream.current;
             if (&this == &current)
                 {
                 return;
                 }
 
-            DocInputStream!<>? current = this.ObjectInputStream.current;
             assert current != Null;
             assert current.hasParent(this);
-
             do
                 {
                 current = current.close();
@@ -243,39 +293,34 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
             }
 
         /**
-         * Take the next token.
-         */
-        protected Token takeToken()
-            {
-            if (Token token := lexer.next())
-                {
-                return token;
-                }
-
-            canRead = False;
-            throw new IllegalJSON($"Unexpected EOF");
-            }
-
-        /**
-         * Take the next token.
-         */
-        protected Token expectToken(Lexer.Id id)
-            {
-            Token token = takeToken();
-            if (token.id == id)
-                {
-                return token;
-                }
-
-            canRead = False;
-            throw new IllegalJSON($"Expected {id}; found {token}.");
-            }
-
-        /**
          * Invoked when a child has closed.
+         *
+         * @param child  the child that closed
          */
         protected void childClosed(DocInputStream! child)
             {
+            if (child.&parser == this.&parser)
+                {
+                loadNext();
+                }
+            }
+
+        /**
+         * Set up the first token of the "next" value.
+         *
+         * For an array, load the first token of the value of the next array element. If there are
+         * no more elements, then set `canRead` to `False`.
+         *
+         * For an object, load the name and first token of the value of the next key-value pair. If
+         * there are no more key-value pairs, then set `canRead` to `False`.
+         *
+         * Note: The assumption is that prepareRead() (or equivalent) has already been invoked.
+         *
+         * @return True iff the stream appears to contain a next element
+         */
+        protected Boolean loadNext(Boolean first = False)
+            {
+            return first;
             }
 
         /**
@@ -383,7 +428,17 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
                 }
 
             ParentInput parent = super();
-            parent?.childClosed(this);
+            if (parent == Null)
+                {
+                assert &root == &this;
+                root    = Null;
+                current = Null;
+                }
+            else
+                {
+                current = parent.as(DocInputStream<>?);
+                parent.childClosed(this);
+                }
             return parent;
             }
         }
@@ -395,7 +450,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
      * The ElementInputStream is an implementation of [ElementInput] that represents the reading
      * of a single value (which in turn may be an array or object).
      */
-    class ElementInputStream<ParentInput extends (ElementInputStream | ArrayInputStream | FieldInputStream)?>
+    class ElementInputStream<ParentInput extends AnyStream?>
             extends DocInputStream<ParentInput>
             implements ElementInput<ParentInput>
         {
@@ -403,16 +458,6 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
             {
             construct DocInputStream(parent, id, tokens);
             }
-        finally
-            {
-            token = takeToken();
-            }
-
-        /**
-         * The initial token of the element.
-         */
-        @Unassigned
-        protected/private Token token;
 
         @Override
         conditional ElementInputStream insideElement()
@@ -424,12 +469,6 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         ArrayInputStream<ElementInputStream> openArray()
             {
             prepareRead();
-            if (token.id != ArrayEnter)
-                {
-                canRead = False;
-                throw new IllegalJSON($"Illegal token for start of array: {token}");
-                }
-
             canRead = False;
             return new @CloseCap ArrayInputStream(this);
             }
@@ -438,12 +477,6 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         FieldInputStream<ElementInputStream> openObject()
             {
             prepareRead();
-            if (token.id != ObjectEnter)
-                {
-                canRead = False;
-                throw new IllegalJSON($"Illegal token for start of object: {token}");
-                }
-
             canRead = False;
             return new @CloseCap FieldInputStream(this);
             }
@@ -451,7 +484,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         @Override
         Boolean isNull()
             {
-            return token.id == NoVal;
+            return parser.peek().id == NoVal;
             }
 
         @Override
@@ -459,57 +492,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
             {
             prepareRead();
             canRead = False;
-
-            switch (token.id)
-                {
-                case NoVal:
-                case BoolVal:
-                case IntVal:
-                case FPVal:
-                case StrVal:
-                    return token.value;
-
-                case ArrayEnter:
-                case ObjectEnter:
-                    assert Doc doc := new Parser(lexer, token).next();
-                    return doc;
-
-                default:
-                    canRead = False;
-                    throw new IllegalJSON($"Illegal token for start of value: {token}");
-                }
-            }
-
-        @Override
-        ParentInput close()
-            {
-            // if nothing was read, then exhaust the contents of the element
-            if (canRead)
-                {
-                switch (token.id)
-                    {
-                    case NoVal:
-                    case BoolVal:
-                    case IntVal:
-                    case FPVal:
-                    case StrVal:
-                        // nothing to expurgate
-                        break;
-
-                    case ArrayEnter:
-                    case ObjectEnter:
-                        new Parser(lexer, token).skip();
-                        break;
-
-                    default:
-                        canRead = False;
-                        throw new IllegalJSON($"Illegal token for start of value: {token}");
-                    }
-
-                canRead = False;
-                }
-
-            return super();
+            return parser.parseDoc();
             }
         }
 
@@ -521,24 +504,15 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
      * a sequence of values into a JSON array (each of which may in turn be a single JSON value, or
      * an array, or an object).
      */
-    class ArrayInputStream<ParentInput extends (ElementInputStream | ArrayInputStream | FieldInputStream)?>
+    class ArrayInputStream<ParentInput extends AnyStream?>
             extends DocInputStream<ParentInput>
             implements ElementInput<ParentInput>
         {
         construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
             {
             construct DocInputStream(parent, id, tokens);
+            parser.expect(ArrayEnter);
             }
-        finally
-            {
-            loadNext(first = True);
-            }
-
-        /**
-         * The initial token of the element.
-         */
-        @Unassigned
-        protected/private Token token;
 
         /**
          * Count of how many elements have been read from the JSON array.
@@ -568,114 +542,38 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         @Override
         Boolean isNull()
             {
-            return !canRead || token.id == NoVal;
+            return !canRead || parser.peek().id == NoVal;
             }
 
         @Override
         Doc readDoc()
             {
             prepareRead();
-
-            switch (token.id)
-                {
-                case NoVal:
-                case BoolVal:
-                case IntVal:
-                case FPVal:
-                case StrVal:
-                    ++count;
-                    return token.value;
-
-                case ArrayEnter:
-                case ObjectEnter:
-                    assert Doc doc := new Parser(lexer, token).next();
-                    loadNext();
-                    return doc;
-
-                default:
-                    canRead = False;
-                    throw new IllegalJSON($"Illegal token for start of value: {token}");
-                }
+            Doc doc = parser.parseDoc();
+            loadNext();
+            return doc;
             }
 
         @Override
-        ParentInput close()
-            {
-            // if nothing was read, then exhaust the contents of the element
-            if (canRead)
-                {
-                do
-                    {
-                    switch (token.id)
-                        {
-                        case NoVal:
-                        case BoolVal:
-                        case IntVal:
-                        case FPVal:
-                        case StrVal:
-                            // nothing to expurgate
-                            break;
-
-                        case ArrayEnter:
-                        case ObjectEnter:
-                            new Parser(lexer, token).skip();
-                            break;
-
-                        default:
-                            canRead = False;
-                            throw new IllegalJSON($"Illegal token for start of value: {token}");
-                        }
-                    }
-                while (loadNext());
-                }
-
-            return super();
-            }
-
-        @Override
-        void childClosed(DocInputStream! child)
-            {
-            if (child.lexer == this.lexer)
-                {
-                loadNext();
-                }
-            super(child);
-            }
-
-        /**
-         * Load the token of the value of the next array element. If there are no more elements,
-         * then set `canRead` to `False`.
-         *
-         * Note: The assumption is that prepareRead() (or equivalent) has already been invoked.
-         *
-         * @return True iff the stream appears to contain a next element
-         */
         protected Boolean loadNext(Boolean first = False)
             {
-            if (!first)
+            if (first)
                 {
-                ++count;
-                Token trailing = takeToken();
-                switch (trailing.id)
+                if (parser.match(ArrayExit))
                     {
-                    case Comma:
-                        break;
-
-                    case ArrayExit:
-                        canRead = False;
-                        return False;
-
-                    default:
-                        canRead = False;
-                        throw new IllegalJSON($"Expected ',' or ']'; found {trailing}.");
+                    canRead = False;
+                    return False;
                     }
                 }
-
-            token = takeToken();
-            if (first && token.id == ArrayExit)
+            else
                 {
-                canRead = False;
-                return False;
+                ++count;
+                if (!parser.match(Comma))
+                    {
+                    canRead = False;
+                    parser.expect(ArrayExit);
+                    return False;
+                    }
                 }
 
             return True;
@@ -690,17 +588,14 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
      * a sequence of name/value pairs into a JSON object (each value of which may in turn be a
      * single JSON value, or an array, or an object).
      */
-    class FieldInputStream<ParentInput extends (ElementInputStream | ArrayInputStream | FieldInputStream)?>
+    class FieldInputStream<ParentInput extends AnyStream?>
             extends DocInputStream<ParentInput>
             implements FieldInput<ParentInput>
         {
         construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
             {
             construct DocInputStream(parent, id, tokens);
-            }
-        finally
-            {
-            loadNext(first = True);
+            parser.expect(ObjectEnter);
             }
 
         /**
@@ -709,16 +604,25 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         String? name;
 
         /**
-         * The first token of the value of the next key-value pair.
-         */
-        @Unassigned
-        Token token;
-
-        /**
          * A lazily constructed map of the key-value pairs that were skipped over. (The values are
          * stored as an array of their raw tokens.)
          */
         ListMap<String, Token[]>? skipped;
+
+// TODO GG: COMPILER-43: Type mismatch: Ecstasy:collections.Array<Ecstasy:web.json.Lexer.Token> expected, Ecstasy:Object found. ("result")
+//        function Token[] (Map.Entry<String, Token[]>) TAKE = e ->
+//            {
+//            val result = e.value;
+//            e.remove();
+//            return result;
+//            };
+
+        static Token[] takeTokens(Map<String, Token[]>.Entry entry)
+            {
+            val result = entry.value;
+            entry.remove();
+            return result;
+            }
 
         @Override
         conditional FieldInputStream insideObject()
@@ -740,7 +644,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
             // check if we've already skipped over the name that we're looking for
             if (schema.randomAccess, Token[] tokens := skipped?.get(name))
                 {
-                return new @CloseCap ElementInputStream(this, name, tokens); // TODO
+                return new @CloseCap ElementInputStream(this, name, tokens);
                 }
 
             // advance through the key/value pairs until the specified name is found
@@ -827,7 +731,7 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
             // first, quick-check the current key/value
             if (name == this.name?)
                 {
-                return token.id == NoVal;
+                return parser.peek().id == NoVal;
                 }
 
             // check the skipped key/value pairs (if any)
@@ -847,104 +751,56 @@ class ObjectInputStream(Schema schema, Iterator<Token> lexer)
         @Override
         Doc readDoc(String name, Doc defaultValue = Null)
             {
-            TODO
-            }
-
-        @Override
-        ParentInput close()
-            {
-            // if nothing was read, then exhaust the contents of the element
-            if (canRead)
+            if (name == this.name)
                 {
-                do
-                    {
-                    switch (token.id)
-                        {
-                        case NoVal:
-                        case BoolVal:
-                        case IntVal:
-                        case FPVal:
-                        case StrVal:
-                            // nothing to expurgate
-                            break;
-
-                        case ArrayEnter:
-                        case ObjectEnter:
-                            new Parser(lexer, token).skip();
-                            break;
-
-                        default:
-                            canRead = False;
-                            throw new IllegalJSON($"Illegal token for start of value: {token}");
-                        }
-                    }
-                while (loadNext());
-                }
-
-            return super();
-            }
-
-        @Override
-        void childClosed(DocInputStream! child)
-            {
-            if (child.lexer == this.lexer)
-                {
+                Doc doc = parser.parseDoc();
                 loadNext();
+                return doc;
                 }
-            super(child);
+
+            if (schema.randomAccess, Token[] tokens := skipped?.processIfPresent(name, takeTokens))
+                {
+                return new Parser(tokens.iterator()).parseDoc();
+                }
+
+            if (seek(name))
+                {
+                Doc doc = parser.parseDoc();
+                loadNext();
+                return doc;
+                }
+
+            return defaultValue;
             }
 
-        /**
-         * Load the name and first token of the value of the next key-value pair. If there are no
-         * more key-value pairs, then set `canRead` to `False`.
-         *
-         * Note: The assumption is that prepareRead() (or equivalent) has already been invoked.
-         *
-         * @return True iff the stream appears to contain a next key-value pair
-         */
+        @Override
         protected Boolean loadNext(Boolean first = False)
             {
-            if (!first)
+            if (first)
                 {
-                Token trailing = takeToken();
-                switch (trailing.id)
+                if (parser.match(ObjectExit))
                     {
-                    case Comma:
-                        break;
-
-                    case ObjectExit:
-                        name    = Null;
-                        canRead = False;
-                        return False;
-
-                    default:
-                        canRead = False;
-                        throw new IllegalJSON($"Expected ',' or '}'; found {trailing}.");
+                    name    = Null;
+                    canRead = False; //
+                    return False;
                     }
                 }
-
-            Token next = takeToken();
-            switch (next.id)
+            else if (!parser.match(Comma))
                 {
-                case StrVal:
-                    name = next.value.as(String);
-                    expectToken(Colon);
-                    token = takeToken();
-                    return True;
-
-                case ObjectExit:
-                    if (first)
-                        {
-                        name    = Null;
-                        canRead = False;
-                        return False;
-                        }
-                    continue;
-
-                default:
-                    canRead = False;
-                    throw new IllegalJSON($"Expected field name (a string value); found {next}.");
+                canRead = False;
+                parser.expect(ObjectExit);
+                return False;
                 }
+
+            name = parser.expect(StrVal).value.as(String);
+            parser.expect(Colon);
+            return True;
+            }
+
+        protected Boolean seek(String name)
+            {
+            // TODO
+            return False;
             }
         }
     }
