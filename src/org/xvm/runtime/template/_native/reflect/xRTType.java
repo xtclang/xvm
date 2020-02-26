@@ -37,12 +37,14 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
+import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
+import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
@@ -102,7 +104,15 @@ public class xRTType
 
         // TODO ops: add x3, or, and, sub x3
 
-        getCanonicalType().invalidateTypeInfo();
+        ClassConstant   idType     = pool().clzType();
+        TypeConstant    typeType   = idType.getType();
+        ClassStructure  structType = (ClassStructure) idType.getComponent();
+
+        structType.findMethod("hashCode", 2).markNative();
+        structType.findMethod("equals"  , 3).markNative();
+        structType.findMethod("compare" , 3).markNative();
+
+        typeType.invalidateTypeInfo();
         }
 
     @Override
@@ -278,6 +288,29 @@ public class xRTType
         throw new UnsupportedOperationException();
         }
 
+    @Override
+    protected int callEqualsImpl(Frame frame,  ClassComposition clazz,
+                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return frame.assignValue(iReturn, xBoolean.makeHandle(
+            (((TypeHandle) hValue1).getDataType()).equals(((TypeHandle) hValue2).getDataType())));
+        }
+
+    @Override
+    protected int callCompareImpl(Frame frame, ClassComposition clazz,
+                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return frame.assignValue(iReturn, xOrdered.makeHandle(
+            (((TypeHandle) hValue1).getDataType()).compareTo(((TypeHandle) hValue2).getDataType())));
+        }
+
+    @Override
+    protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+        {
+        return frame.assignValue(iReturn,
+            xInt64.makeHandle(((TypeHandle) hTarget).getDataType().hashCode()));
+        }
+
 
     // ----- IndexSupport (turtle types only) ------------------------------------------------------
 
@@ -371,6 +404,33 @@ public class xRTType
         public TypeConstant getOuterType()
             {
             return getType().getParamType(1);
+            }
+
+        @Override
+        public boolean isNativeEqual()
+            {
+            return true;
+            }
+
+        @Override
+        public int compareTo(ObjectHandle that)
+            {
+            return that instanceof TypeHandle
+                    ? this.getDataType().compareTo(((TypeHandle) that).getDataType())
+                    : 1;
+            }
+
+        @Override
+        public int hashCode()
+            {
+            return getDataType().hashCode();
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            return obj instanceof TypeHandle &&
+                    this.getDataType().equals(((TypeHandle) obj).getDataType());
             }
         }
 
