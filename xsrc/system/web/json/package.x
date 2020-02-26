@@ -14,7 +14,7 @@ package json
             extends IOException(text, cause);
 
     /**
-     * A MissingMapping exception is raised when a [Mapping] is required for a particule Ecstasy
+     * A MissingMapping exception is raised when a [Mapping] is required for a particular Ecstasy
      * type or JSON document format, and no corresponding Mapping is available.
      */
     const MissingMapping(String? text = null, Exception? cause = null, Type? type = null)

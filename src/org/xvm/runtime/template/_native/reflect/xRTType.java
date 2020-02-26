@@ -354,11 +354,13 @@ public class xRTType
      * Inner class: TypeHandle. This is a handle to a native type.
      */
     public static class TypeHandle
-        extends ObjectHandle.GenericHandle
+            extends GenericHandle
         {
         protected TypeHandle(TypeComposition clazz)
             {
             super(clazz);
+
+            m_fMutable = false;
             }
 
         public TypeConstant getDataType()

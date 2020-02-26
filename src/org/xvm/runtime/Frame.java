@@ -1223,15 +1223,13 @@ public class Frame
                 int cAll     = f_function.getParamCount();
                 if (cDefault > 0 && iArg < cAll && iArg >= cAll - cDefault)
                     {
-                    hValue = ObjectHandle.DEFAULT;
+                    return getDefaultArgument(iArg);
                     }
-                else
-                    {
-                    VarInfo info  = f_aInfo[iArg];
-                    String  sName = info == null ? "" : info.getName();
-                    throw xException.illegalState(this,
-                        "Unassigned value: \"" + sName + '"').getException();
-                    }
+
+                VarInfo info  = f_aInfo[iArg];
+                String  sName = info == null ? "" : info.getName();
+                throw xException.illegalState(this,
+                    "Unassigned value: \"" + sName + '"').getException();
                 }
 
             if (hValue == ObjectHandle.DEFAULT)

@@ -299,7 +299,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             return read<Serializable>(name, mapping.read<Serializable>(_), defaultValue);
             }
 
-        throw new MissingMapping(type = Type<Serializable>);
+        throw new MissingMapping(type = Serializable);
         }
 
     /**
@@ -501,7 +501,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             return readArray(name, mapping.read<Serializable>(_), defaultValue);
             }
 
-        throw new MissingMapping(type = Type<Serializable>);
+        throw new MissingMapping(type = Serializable);
         }
 
     /**
