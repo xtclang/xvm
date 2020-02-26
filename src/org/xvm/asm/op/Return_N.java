@@ -12,6 +12,7 @@ import org.xvm.asm.Register;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
 
@@ -82,7 +83,15 @@ public class Return_N
         for (int i = cArgs - 1; i >= 0; --i)
             {
             int          nArg = m_anArg[i];
-            ObjectHandle hArg = frame.getReturnValue(nArg);
+            ObjectHandle hArg;
+            try
+                {
+                hArg = frame.getReturnValue(nArg);
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return frame.raiseException(e);
+                }
 
             ahArg[i] = hArg;
 

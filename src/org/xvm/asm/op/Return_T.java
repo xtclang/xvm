@@ -11,6 +11,7 @@ import org.xvm.asm.OpReturn;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
@@ -74,7 +75,15 @@ public class Return_T
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hArg = frame.getReturnValue(m_nArg);
+        ObjectHandle hArg;
+        try
+            {
+            hArg = frame.getReturnValue(m_nArg);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
 
         if (isDeferred(hArg))
             {

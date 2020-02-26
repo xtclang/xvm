@@ -1207,7 +1207,7 @@ public class Frame
     /**
      * @return an ObjectHandle (could be DeferredCallHandle), or null if the value is "pending future"
      *
-     * @throw ExceptionHandle.WrapperException if the async assignment has failed
+     * @throw ExceptionHandle.WrapperException if the value cannot be retrieved
      */
     public ObjectHandle getArgument(int iArg)
                 throws ExceptionHandle.WrapperException
@@ -1236,13 +1236,7 @@ public class Frame
 
             if (hValue == ObjectHandle.DEFAULT)
                 {
-                Constant constValue = f_function.getParam(iArg).getDefaultValue();
-                if (constValue == null)
-                    {
-                    throw xException.illegalState(this, "Unknown default value for argument \"" +
-                        f_function.getParam(iArg).getName() + '"').getException();
-                    }
-                return getConstHandle(constValue);
+                return getDefaultArgument(iArg);
                 }
 
             VarInfo info = f_aInfo[iArg];
@@ -1294,17 +1288,41 @@ public class Frame
         }
 
     /**
+     * @return the default value for the specified argument
+     *
+     * @throw ExceptionHandle.WrapperException if the default value cannot be retrieved
+     */
+    private ObjectHandle getDefaultArgument(int iArg)
+            throws ExceptionHandle.WrapperException
+        {
+        Constant constValue = f_function.getParam(iArg).getDefaultValue();
+        if (constValue == null)
+            {
+            throw xException.illegalState(this, "Unknown default value for argument \"" +
+                f_function.getParam(iArg).getName() + '"').getException();
+            }
+        return getConstHandle(constValue);
+        }
+
+    /**
      * Unlike getArgument(), this could return a non-completed FutureHandle and it never throws
      *
      * @return an ObjectHandle (could be DeferredCallHandle)
+     *
+     * @throw ExceptionHandle.WrapperException if the default value cannot be retrieved
      */
     public ObjectHandle getReturnValue(int iArg)
+            throws ExceptionHandle.WrapperException
         {
-        return iArg >= 0
+        ObjectHandle hValue = iArg >= 0
                 ? f_ahVar[iArg]
                 : iArg <= Op.CONSTANT_OFFSET
                         ? getConstHandle(iArg)
                         : getPredefinedArgument(iArg);
+
+        return hValue == ObjectHandle.DEFAULT
+                 ? getDefaultArgument(iArg)
+                 : hValue;
         }
 
     /**
