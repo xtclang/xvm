@@ -1405,49 +1405,6 @@ public class InvocationExpression
             argFn = regFn;
             }
 
-        if (!m_fCall && !m_fBindParams)
-            {
-            // not binding anything; not calling anything; just returning the function itself
-            if (cLVals > 0)
-                {
-                if (argFn instanceof Register && ((Register) argFn).isSuper())
-                    {
-                    // super(...) function needs to bind a target and type parameters
-                    int[]      aiArg = new int[cTypeParams];
-                    Argument[] aArg;
-                    if (cTypeParams == 0)
-                        {
-                        aArg = NO_RVALUES;
-                        }
-                    else
-                        {
-                        for (int i = 0; i < cTypeParams; ++i)
-                            {
-                            aiArg[i] = i;
-                            }
-                        aArg = aargTypeParams;
-                        }
-
-                    Assignable lval = aLVal[0];
-                    if (lval.isLocalArgument())
-                        {
-                        code.add(new FBind(argFn, aiArg, aArg, lval.getLocalArgument()));
-                        }
-                    else
-                        {
-                        Register regTemp = createRegister(argFn.getType(), true);
-                        code.add(new FBind(argFn, aiArg, aArg, regTemp));
-                        aLVal[0].assign(regTemp, code, errs);
-                        }
-                    }
-                else
-                    {
-                    aLVal[0].assign(argFn, code, errs);
-                    }
-                }
-            return;
-            }
-
         TypeConstant[] atypeParams = pool().extractFunctionParams(typeFn);
         int            cAll        = atypeParams == null ? 0 : atypeParams.length;
 
@@ -1583,8 +1540,9 @@ public class InvocationExpression
             return;
             }
 
-        // bind (or partially bind) the function
-        assert m_fBindParams;
+        // see if we need to bind (or partially bind) the function
+        int[]      aiArg = null;
+        Argument[] aArg  = null;
 
         // count the number of parameters to bind, which includes all type parameters and all
         // default values, so for a function:
@@ -1602,31 +1560,51 @@ public class InvocationExpression
                 }
             }
 
-        int[]      aiArg = new int[cBind];
-        Argument[] aArg  = new Argument[cBind];
-        for (int i = 0; i < cTypeParams; ++i)
+        if (cBind > 0)
             {
-            aiArg[i] = i;
-            aArg [i] = aargTypeParams[i];
-            }
-
-        for (int i = 0, iBind = cTypeParams; i < cArgs; ++i)
-            {
-            Expression exprArg = args.get(i);
-            if (!exprArg.isNonBinding())
+            aiArg = new int[cBind];
+            aArg  = new Argument[cBind];
+            for (int i = 0; i < cTypeParams; ++i)
                 {
-                aiArg[iBind] = cTypeParams + i;
-                aArg [iBind] = exprArg.generateArgument(ctx, code, true, true, errs);
-                iBind++;
+                aiArg[i] = i;
+                aArg [i] = aargTypeParams[i];
+                }
+
+            for (int i = 0, iBind = cTypeParams; i < cArgs; ++i)
+                {
+                Expression exprArg = args.get(i);
+                if (!exprArg.isNonBinding())
+                    {
+                    aiArg[iBind] = cTypeParams + i;
+                    aArg [iBind] = exprArg.generateArgument(ctx, code, true, true, errs);
+                    iBind++;
+                    }
                 }
             }
-
-        Register regFn = new Register(getType());
-        code.add(new FBind(argFn, aiArg, aArg, regFn));
+        else if (argFn instanceof Register && ((Register) argFn).isSuper())
+            {
+            // non-bound super(...) function still needs to bind a target
+            aiArg = new int[0];
+            aArg  = NO_RVALUES;
+            }
 
         if (cLVals > 0)
             {
-            aLVal[0].assign(regFn, code, errs);
+            Assignable lval = aLVal[0];
+            if (aiArg == null)
+                {
+                lval.assign(argFn, code, errs);
+                }
+            else if (lval.isLocalArgument())
+                {
+                code.add(new FBind(argFn, aiArg, aArg, lval.getLocalArgument()));
+                }
+            else
+                {
+                Register regFn = new Register(getType());
+                code.add(new FBind(argFn, aiArg, aArg, regFn));
+                lval.assign(regFn, code, errs);
+                }
             }
         }
 
