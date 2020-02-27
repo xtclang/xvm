@@ -31,13 +31,13 @@ module TestIO
 
     void run()
         {
-//        testInputStream();
-//        testJavaUTF();
-//        testUTF8Reader();
-//        testJSONLex();
-//        testJSONParse();
-//        testJSONPrint();
-//        testJSONBuild();
+        testInputStream();
+        testJavaUTF();
+        testUTF8Reader();
+        testJSONLex();
+        testJSONParse();
+        testJSONPrint();
+        testJSONBuild();
         testPoint();
         }
 
