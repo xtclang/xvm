@@ -14,11 +14,13 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -1144,9 +1146,16 @@ public class Frame
                 : getPredefinedArgumentType(iArg, hArg);
         }
 
-    protected TypeConstant getRegisterType(int iArg)
+    /**
+     * Obtain the type of the specified register.
+     *
+     * @param nRegister  the register
+     *
+     * @return the actual type of the specified register
+     */
+    protected TypeConstant getRegisterType(int nRegister)
         {
-        VarInfo info = getVarInfo(iArg);
+        VarInfo info = getVarInfo(nRegister);
         if (info.isStandard())
             {
             return info.getType(); // always resolved
@@ -1193,15 +1202,6 @@ public class Frame
             System.err.println("ERROR: Unresolved type " + type);
             }
         return type;
-        }
-
-    /**
-     * @return true iff the specified argument refers to a constant (iArg < 0)
-     *         or the corresponding register (iArg >= 0) is assigned.
-     */
-    public boolean isAssigned(int iArg)
-        {
-        return iArg < 0 || f_ahVar[iArg] != null;
         }
 
     /**
@@ -1614,34 +1614,69 @@ public class Frame
     @Override
     public TypeConstant resolveGenericType(String sFormalName)
         {
-        // first try to use "this" type
-        ObjectHandle hThis = f_hThis;
-        if (hThis != null)
+        return f_hThis == null
+                ? null
+                : f_hThis.getType().resolveGenericType(sFormalName);
+        }
+
+    @Override
+    public TypeConstant resolveFormalType(FormalConstant constFormal)
+        {
+        MethodStructure method   = f_function;
+        MethodConstant  idMethod = method.getIdentityConstant();
+        int             nRegister;
+
+        FindRegister:
+        switch (constFormal.getFormat())
             {
-            TypeConstant type = hThis.getType().resolveGenericType(sFormalName);
-            if (type != null)
+            case Property:
                 {
-                return type;
+                String sFormalName = constFormal.getName();
+                if (method.getIdentityConstant().isLambda())
+                    {
+                    // generic types are passed to lambdas as type parameters
+                    // (see
+                    for (int i = 0, c = method.getTypeParamCount(); i < c; i++)
+                        {
+                        Parameter param = method.getParam(i);
+
+                        if (sFormalName.equals(param.getName()))
+                            {
+                            nRegister = i;
+                            break FindRegister;
+                            }
+                        }
+                    return null;
+                    }
+                return resolveGenericType(sFormalName);
                 }
+
+            case TypeParameter:
+                {
+                // look for a match only amongst the method's formal type parameters
+                TypeParameterConstant constParam = (TypeParameterConstant) constFormal;
+
+                if (!constParam.getMethod().equals(idMethod))
+                    {
+                    return null;
+                    }
+
+                nRegister = constParam.getRegister();
+                break;
+                }
+
+            case FormalTypeChild:
+                throw new UnsupportedOperationException("TODO");
+
+            default:
+                throw new IllegalStateException();
             }
 
-        // then look for a name match only amongst the method's formal type parameters
-        MethodStructure method = f_function;
-        for (int i = 0, c = method.getTypeParamCount(); i < c; i++)
-            {
-            Parameter param = method.getParam(i);
+        TypeConstant typeType = f_ahVar[nRegister].getType();
 
-            if (sFormalName.equals(param.getName()))
-                {
-                TypeConstant typeType = f_ahVar[i].getType();
-
-                // type parameter's type must be of Type<DataType, OuterType>
-                assert typeType.isTypeOfType() && typeType.getParamsCount() >= 1;
-                return typeType.getParamType(0);
-                }
-            }
-
-        return null;
+        // type parameter's type must be of Type<DataType, OuterType>
+        assert typeType.isTypeOfType() && typeType.getParamsCount() >= 1;
+        return typeType.getParamType(0);
         }
 
     // temporary

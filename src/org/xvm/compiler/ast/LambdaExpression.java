@@ -194,9 +194,8 @@ public class LambdaExpression
     @Override
     public TypeConstant[] getReturnTypes()
         {
-        TypeConstant   typeFn    = isValidated() ? getType() : m_typeRequired;
-        TypeConstant[] aRetTypes = pool().extractFunctionReturns(typeFn);
-        return aRetTypes;
+        TypeConstant typeFn = isValidated() ? getType() : m_typeRequired;
+        return pool().extractFunctionReturns(typeFn);
         }
 
     @Override
@@ -888,7 +887,7 @@ public class LambdaExpression
     MethodStructure instantiateLambda(ErrorListener errs)
         {
         TypeConstant[] atypes   = null;
-        String[]       asParams = null;
+        String[]       asParams;
         if (paramNames == null)
             {
             // build an array of types and an array of names
@@ -925,9 +924,8 @@ public class LambdaExpression
 
         Component            container = getParent().getComponent();
         MultiMethodStructure structMM  = container.ensureMultiMethodStructure(METHOD_NAME);
-        MethodStructure      lambda    = structMM.createLambda(atypes, asParams);
 
-        return lambda;
+        return structMM.createLambda(atypes, asParams);
         }
 
     /**
@@ -977,7 +975,7 @@ public class LambdaExpression
                 TypeConstant[]        atypeAllParams = new TypeConstant[cAllParams];
                 String[]              asAllParams    = new String[cAllParams];
                 int                   iParam         = 0;
-                List<Op>              listMoveOp     = new ArrayList(cBindArgs);
+                List<Op>              listMoveOp     = new ArrayList<>(cBindArgs);
 
                 aBindArgs = new Argument[cBindArgs];
 
@@ -1009,34 +1007,34 @@ public class LambdaExpression
                 for (Entry<String, Boolean> entry : mapCapture.entrySet())
                     {
                     String       sCapture    = entry.getKey();
-                    Argument     argCapture  = mapRegisters.get(sCapture);
-                    TypeConstant typeCapture = argCapture.getType();
+                    Register     regCapture  = mapRegisters.get(sCapture);
+                    TypeConstant typeCapture = regCapture.getType();
                     boolean      fImplicitDeref = false;
                     if (entry.getValue())
                         {
                         // it's a read/write capture; capture the Var
                         typeCapture = pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
-                        Register regVal = (Register) argCapture;
+                        Register regVal = regCapture;
                         Register regVar = new Register(typeCapture, Op.A_STACK);
                         listMoveOp.add(new MoveVar(regVal, regVar));
-                        argCapture     = regVar;
+                        regCapture = regVar;
                         fImplicitDeref = true;
                         }
-                    else if (argCapture instanceof Register && !((Register) argCapture).isEffectivelyFinal())
+                    else if (!regCapture.isEffectivelyFinal())
                         {
                         // it's a read-only capture, but since we were unable to prove that the
                         // register was effectively final, we need to capture the Ref
                         typeCapture = pool.ensureParameterizedTypeConstant(pool.typeRef(), typeCapture);
-                        Register regVal = (Register) argCapture;
+                        Register regVal = regCapture;
                         Register regVar = new Register(typeCapture, Op.A_STACK);
                         listMoveOp.add(new MoveRef(regVal, regVar));
-                        argCapture     = regVar;
+                        regCapture     = regVar;
                         fImplicitDeref = true;
                         }
 
                     asAllParams   [iParam] = sCapture;
                     atypeAllParams[iParam] = typeCapture;
-                    aBindArgs     [iParam] = argCapture;
+                    aBindArgs     [iParam] = regCapture;
 
                     if (fImplicitDeref)
                         {

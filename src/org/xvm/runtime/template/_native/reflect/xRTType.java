@@ -142,11 +142,10 @@ public class xRTType
         if (idProp instanceof FormalTypeChildConstant)
             {
             TypeConstant typeTarget = hThis.getDataType();
-            String       sName      = idProp.getName();
-            TypeConstant typeValue  = typeTarget.resolveGenericType(sName);
+            TypeConstant typeValue  = typeTarget.resolveFormalType(idProp);
 
             return typeValue == null
-                ? frame.raiseException("Unknown formal type: " + sName)
+                ? frame.raiseException("Unknown formal type: " + idProp.getName())
                 : frame.assignValue(iReturn, typeValue.getTypeHandle());
             }
 
@@ -444,7 +443,6 @@ public class xRTType
         {
         TypeConstant                      typeTarget  = hType.getDataType();
         TypeInfo                          infoTarget  = typeTarget.ensureTypeInfo();
-        boolean                           fDeepParams = typeTarget.isParameterizedDeep();
         ConstantPool                      poolCtx     = frame.poolContext();
         Map<String, ChildInfo>            mapInfos    = infoTarget.getChildInfosByName();
         Map<StringConstant, TypeConstant> mapResult   = new ListMap<>();
@@ -802,7 +800,6 @@ public class xRTType
         TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
         Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
         ArrayList<ObjectHandle>             listProps  = new ArrayList<>(mapProps.size());
-        ConstantPool                        pool       = frame.poolContext();
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
             {
             PropertyConstant idProp   = entry.getKey();

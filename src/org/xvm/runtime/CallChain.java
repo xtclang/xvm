@@ -405,4 +405,13 @@ public class CallChain
         private final MethodConstant f_idMethod;
         private final TypeConstant   f_typeTarget;
         }
+
+
+    // ----- debugging support ---------------------------------------------------------------------
+
+    @Override
+    public String toString()
+        {
+        return "depth=" + getDepth();
+        }
     }

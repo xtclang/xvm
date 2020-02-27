@@ -138,7 +138,7 @@ public class PropertyConstant
                     }
                 }
 
-            TypeConstant typeResolved = resolver.resolveGenericType(getName());
+            TypeConstant typeResolved = resolver.resolveFormalType(this);
 
             // prevent a recursive resolution into "Tuple<...>"
             return typeResolved == null || typeResolved.isFormalTypeSequence()
@@ -146,7 +146,7 @@ public class PropertyConstant
                     : typeResolved;
             }
 
-        return resolver.resolveGenericType(getName());
+        return resolver.resolveFormalType(this);
         }
 
     // ----- type-specific functionality -----------------------------------------------------------

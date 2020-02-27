@@ -157,7 +157,7 @@ public class TypeParameterConstant
         MethodStructure method = (MethodStructure) getMethod().getComponent();
         return method == null
                 ? null
-                : resolver.resolveGenericType(getName());
+                : resolver.resolveFormalType(this);
         }
 
 

@@ -105,7 +105,7 @@ public class FormalTypeChildConstant
         if (typeConstraint.containsGenericParam(getName()))
             {
             TypeConstant type = typeConstraint.getSingleUnderlyingClass(true).getFormalType().
-                                    resolveGenericType(getName());
+                                    resolveFormalType(this);
             assert type.isGenericType();
 
             PropertyConstant idProp = (PropertyConstant) type.getDefiningConstant();
@@ -122,7 +122,7 @@ public class FormalTypeChildConstant
 
         return typeResolved == null
                 ? null
-                : typeResolved.resolveGenericType(getName());
+                : typeResolved.resolveFormalType(this);
         }
 
 
