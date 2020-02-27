@@ -10,6 +10,9 @@ import Lexer.Token;
 /**
  * An [ObjectInput] implementation for JSON de-serialization that reads from a [Reader], or from a
  * stream of JSON tokens, or from a JSON parser.
+ *
+ * @param schema  the JSON `Schema` to use
+ * @param parser  the `Parser` to use to parse JSON documents
  */
 class ObjectInputStream(Schema schema, Parser parser)
         implements ObjectInput
@@ -76,6 +79,9 @@ class ObjectInputStream(Schema schema, Parser parser)
             return new HashMap();
             }
 
+        /**
+         * Clear any pointer information that has been collected.
+         */
         void reset() // TODO GG this isn't visible via &pointers.reset()
             {
 //            if (assigned) // TODO GG this isn't visible
@@ -85,6 +91,12 @@ class ObjectInputStream(Schema schema, Parser parser)
                 }
             }
         }
+
+    /**
+     * (Temporary method)
+     *
+     * Clear any pointer information that has been collected.
+     */
     protected void resetPointers()
         {
         if (&pointers.assigned)
@@ -92,7 +104,6 @@ class ObjectInputStream(Schema schema, Parser parser)
             pointers.clear();
             }
         }
-
 
     /**
      * (Temporary method)
@@ -115,7 +126,7 @@ class ObjectInputStream(Schema schema, Parser parser)
 
 //        &pointers.reset(); // TODO GG
         resetPointers();
-        using (ElementInputStream in = new ElementInputStream(Null))
+        using (ElementInputStream in = new @CloseCap ElementInputStream(Null))
             {
             return in.read<ObjectType>();
             }
@@ -135,7 +146,8 @@ class ObjectInputStream(Schema schema, Parser parser)
     // ----- DocInputStream -----------------------------------------------------------------------
 
     /**
-     * TODO doc
+     * The ObjectInputStream uses three specific JSON stream implementations internally to dissect
+     * a stream of JSON tokens into the desired corresponding Ecstasy types, values, and structures.
      */
     typedef ElementInputStream | ArrayInputStream | FieldInputStream AnyStream;
 
@@ -169,7 +181,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         @Override
         Doc metadataFor(String attribute)
             {
-            TODO
+            return parent?.metadataFor(attribute) : Null;
             }
 
         @Override
@@ -216,7 +228,17 @@ class ObjectInputStream(Schema schema, Parser parser)
         @Override
         <Serializable> Serializable dereference<Serializable>(String pointer)
             {
-            TODO
+            assert schema.enablePointers;
+            if (Object value := pointers.get(pointer))
+                {
+                if (value.is(Serializable))
+                    {
+                    return value;
+                    }
+
+                throw new IllegalJSON($"Type mismatch for JSON pointer=\"{pointer}\"; required type={Serializable}, actual type={&value.actualType}");
+                }
+            throw new IllegalJSON($"Missing value for JSON pointer=\"{pointer}\"; required type={Serializable}");
             }
 
         @Override
@@ -410,6 +432,10 @@ class ObjectInputStream(Schema schema, Parser parser)
         finally
             {
             current = this;
+            if (parent == Null)
+                {
+                root = this.as(ElementInputStream);
+                }
             }
 
         @Override
@@ -663,6 +689,12 @@ class ObjectInputStream(Schema schema, Parser parser)
             {
             prepareRead();
             return new @CloseCap FieldInputStream(this, name);
+            }
+
+        @Override
+        Doc metadataFor(String attribute)
+            {
+            TODO
             }
 
         @Override

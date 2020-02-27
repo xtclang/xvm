@@ -217,12 +217,16 @@ const Schema
      */
     <ObjectType> conditional Mapping<ObjectType> getMapping(Type<ObjectType> type)
         {
-        if (Mapping mapping := mappings.get(type), mapping.Serializable.is(ObjectType))
+        if (Mapping mapping := mappings.get(type), mapping.Serializable.is(Type<ObjectType>))
             {
             return True, mapping.as(Mapping<ObjectType>);
             }
 
-        // TODO if (Type typeAlt := typeMapper.<ObjectType> )
+        if (Type typeAlt := typeMapper.selectType(type))
+            {
+            return True, mappings[typeAlt].as(Mapping<ObjectType>);
+            }
+
         if (enableReflection)
             {
             return True, defaultMapping;

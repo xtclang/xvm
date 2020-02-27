@@ -31,13 +31,13 @@ module TestIO
 
     void run()
         {
-        testInputStream();
-        testJavaUTF();
-        testUTF8Reader();
-        testJSONLex();
-        testJSONParse();
-        testJSONPrint();
-        testJSONBuild();
+//        testInputStream();
+//        testJavaUTF();
+//        testUTF8Reader();
+//        testJSONLex();
+//        testJSONParse();
+//        testJSONPrint();
+//        testJSONBuild();
         testPoint();
         }
 
@@ -283,7 +283,7 @@ module TestIO
 
 //        Point point1 = schemaRA.createObjectInput(new CharArrayReader(ExamplePoint)).read<Point>();
 //        console.println($"point={point1}");
-//        Point point2 = schemaSA.createObjectInput(new CharArrayReader(ExamplePoint)).read<Point>();
-//        console.println($"point={point2}");
+        Point point2 = schemaSA.createObjectInput(new CharArrayReader(ExamplePoint)).read<Point>();
+        console.println($"point={point2}");
         }
     }
