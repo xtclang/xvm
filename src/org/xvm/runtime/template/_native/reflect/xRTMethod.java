@@ -10,6 +10,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -287,9 +288,8 @@ public class xRTMethod
             return getMethodInfo().getIdentity().getSignature().getRawReturns()[iArg];
             }
 
-        CallChain getCallChain(Frame frame, ObjectHandle hTarget)
+        private CallChain getCallChain(Frame frame, ObjectHandle hTarget)
             {
-            CallChain chain;
             TypeComposition clazz    = hTarget.getComposition();
             MethodConstant  idMethod = getMethodId();
             MethodStructure method   = getMethod();
@@ -298,15 +298,17 @@ public class xRTMethod
                 method = (MethodStructure) idMethod.getComponent();
                 }
 
+            CallChain chain;
             if (method != null && method.getAccess() == Constants.Access.PRIVATE)
                 {
                 chain = new CallChain(method);
                 }
             else
                 {
-                Object nid = idMethod.resolveNestedIdentity(frame.poolContext(), frame.getGenericsResolver());
+                SignatureConstant sig = idMethod.getSignature().
+                        resolveGenericTypes(frame.poolContext(), frame.getGenericsResolver());
 
-                chain = clazz.getMethodCallChain(nid);
+                chain = clazz.getMethodCallChain(sig);
                 if (chain.getDepth() == 0)
                     {
                     return new CallChain.ExceptionChain(idMethod, hTarget.getType());

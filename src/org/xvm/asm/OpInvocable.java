@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.SignatureConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -132,9 +133,10 @@ public abstract class OpInvocable extends Op
             return m_chain = new CallChain(method);
             }
 
-        Object nid = idMethod.resolveNestedIdentity(frame.poolContext(), frame.getGenericsResolver());
+        SignatureConstant sig = idMethod.getSignature().
+                resolveGenericTypes(frame.poolContext(), frame.getGenericsResolver());
 
-        CallChain chain = clazz.getMethodCallChain(nid);
+        CallChain chain = clazz.getMethodCallChain(sig);
         if (chain.getDepth() == 0)
             {
             return new CallChain.ExceptionChain(idMethod, hTarget.getType());

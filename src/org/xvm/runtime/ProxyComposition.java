@@ -8,6 +8,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -138,9 +139,9 @@ public class ProxyComposition
         }
 
     @Override
-    public CallChain getMethodCallChain(Object nidMethod)
+    public CallChain getMethodCallChain(SignatureConstant sigMethod)
         {
-        return f_clzOrigin.getMethodCallChain(nidMethod);
+        return f_clzOrigin.getMethodCallChain(sigMethod);
         }
 
     @Override

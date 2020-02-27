@@ -10,6 +10,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -161,11 +162,11 @@ public interface TypeComposition
     boolean isAtomic(PropertyConstant idProp);
 
     /**
-     * @param nidMethod  the method identity (SignatureConstant or NestedIdentity)
+     * @param sigMethod  the method signature
      *
      * @return a call chain for the method
      */
-    CallChain getMethodCallChain(Object nidMethod);
+    CallChain getMethodCallChain(SignatureConstant sigMethod);
 
     /**
      * @param idProp  the property id

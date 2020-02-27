@@ -5,7 +5,6 @@ import java.util.Map;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
@@ -13,6 +12,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -167,18 +167,18 @@ public class PropertyComposition
         }
 
     @Override
-    public CallChain getMethodCallChain(Object nidMethod)
+    public CallChain getMethodCallChain(SignatureConstant sigMethod)
         {
-        return f_mapMethods.computeIfAbsent(nidMethod,
-            nid ->
+        return f_mapMethods.computeIfAbsent(sigMethod,
+            sig ->
                 {
                 PropertyConstant idBase   = f_infoProp.getIdentity();
                 MethodConstant   idNested = (MethodConstant) idBase.appendNestedIdentity(
-                                                idBase.getConstantPool(), nid);
+                                                idBase.getConstantPool(), sig);
 
                 MethodInfo info = f_infoParent.getMethodByNestedId(idNested.getNestedIdentity());
                 return info == null
-                    ? f_clzRef.getMethodCallChain(nid)
+                    ? f_clzRef.getMethodCallChain(sig)
                     : new CallChain(info.ensureOptimizedMethodChain(f_infoParent));
                 });
         }
@@ -310,8 +310,8 @@ public class PropertyComposition
     private final ClassComposition f_clzRef;
     private final PropertyInfo     f_infoProp;
 
-    // cached method call chain by nid (the top-most method first)
-    private final Map<Object, CallChain> f_mapMethods;
+    // cached method call chain by signature (the top-most method first)
+    private final Map<SignatureConstant, CallChain> f_mapMethods;
 
     // cached property getter call chain by property id (the top-most method first)
     private final Map<PropertyConstant, CallChain> f_mapGetters;

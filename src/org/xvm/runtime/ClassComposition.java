@@ -20,6 +20,7 @@ import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -286,10 +287,9 @@ public class ClassComposition
         }
 
     @Override
-    public CallChain getMethodCallChain(Object nidMethod)
+    public CallChain getMethodCallChain(SignatureConstant sigMethod)
         {
-        // we only cache the PUBLIC access chains; all others are cached at the op-code level
-        return f_mapMethods.computeIfAbsent(nidMethod,
+        return f_mapMethods.computeIfAbsent(sigMethod,
             nid ->
                 {
                 TypeInfo info = isStruct()
