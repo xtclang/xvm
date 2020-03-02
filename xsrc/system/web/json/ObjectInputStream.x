@@ -84,8 +84,7 @@ class ObjectInputStream(Schema schema, Parser parser)
          */
         void reset() // TODO GG this isn't visible via &pointers.reset()
             {
-//            if (assigned) // TODO GG this isn't visible
-            if (&pointers.assigned)
+            if (assigned)
                 {
                 get().clear();
                 }

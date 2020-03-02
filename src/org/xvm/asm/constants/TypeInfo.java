@@ -1034,12 +1034,13 @@ public class TypeInfo
         Map<String, PropertyInfo> map = mapProps.get(idProp);
         if (map == null)
             {
-            int cDepth = idProp.getNestedDepth();
-            for (PropertyInfo prop : f_mapProps.values())
+            for (Map.Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet())
                 {
-                IdentityConstant constParent = prop.getParent();
+                PropertyConstant idTest = entry.getKey();
+                PropertyInfo     prop   = entry.getValue();
+
                 // only include the properties nested under the specified property
-                if (constParent == idProp || constParent.trailingPathEquals(idProp, cDepth))
+                if (idTest.getParentConstant().equals(idProp))
                     {
                     if (map == null)
                         {

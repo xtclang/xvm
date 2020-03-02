@@ -1999,6 +1999,8 @@ public class NameExpression
                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                     }
 
+                // argRaw refers to the actual property identity, while the targetInfo may point to
+                // a context specific id (i.e. nested)
                 PropertyConstant  idProp = (PropertyConstant) argRaw;
                 PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
                 TypeConstant      type   = prop.getType();
@@ -2040,6 +2042,7 @@ public class NameExpression
                         }
                     else
                         {
+                        idProp   = (PropertyConstant) m_targetInfo.getId();
                         typeLeft = m_targetInfo.getTargetType();
                         type     = typeLeft.ensureTypeInfo(errs).findProperty(idProp).getType();
                         }
@@ -2095,7 +2098,13 @@ public class NameExpression
                 if (isSuppressDeref())
                     {
                     m_plan = Plan.PropertyRef;
-                    return idProp.getRefType(typeLeft);
+
+                    TypeInfo     infoLeft = getTypeInfo(ctx, typeLeft, errs);
+                    PropertyInfo infoProp = infoLeft.findProperty(idProp);
+
+                    return infoProp.isCustomLogic()
+                            ? pool.ensurePropertyClassTypeConstant(typeLeft, idProp)
+                            : infoProp.getBaseRefType();
                     }
                 else
                     {

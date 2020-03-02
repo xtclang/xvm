@@ -939,7 +939,7 @@ public class StatementBlock
                             }
                         else
                             {
-                            idResult = prop.getIdentity();
+                            idResult = prop.getIdentity().ensureNestedIdentity(pool, idProp);
                             }
 
                         if (idResult == null)
@@ -1505,11 +1505,22 @@ public class StatementBlock
             this.hasThis    = hasThis;
             this.typeTarget = typeTarget;
             this.stepsOut   = stepsOut;
-            this.type       = id instanceof PropertyConstant
-                                    ? ((PropertyConstant) id).isFormalType()
-                                        ? id.getFormalType()
-                                        : id.getType()
-                                    : null;
+
+            if (id instanceof PropertyConstant)
+                {
+                PropertyConstant idProp   = (PropertyConstant) id;
+                PropertyInfo     infoProp = typeTarget.ensureTypeInfo().findProperty(idProp);
+
+                this.type = infoProp == null
+                        ? idProp.isFormalType()
+                                ? idProp.getFormalType()
+                                : idProp.getType()
+                        : infoProp.getType();
+                }
+            else
+                {
+                this.type = null;
+                }
             }
 
         /**

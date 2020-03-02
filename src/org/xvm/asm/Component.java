@@ -37,11 +37,13 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypedefConstant;
 
+import org.xvm.compiler.Constants;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -1707,14 +1709,7 @@ public abstract class Component
      */
     public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector)
         {
-        Component component = getChild(sName);
-        if (component != null && component.canBeSeen(access))
-            {
-            collector.resolvedComponent(component);
-            return ResolutionResult.RESOLVED;
-            }
-
-        return ResolutionResult.UNKNOWN;
+        return resolveContributedName(sName, access, collector, true);
         }
 
     protected boolean canBeSeen(Access access)
@@ -1979,6 +1974,126 @@ public abstract class Component
         {
         Component parent = (Component) this.getContaining();
         parent.replaceChild(this, that);
+        }
+
+    /**
+     * Determine if the specified name is referring to a name introduced by any of the contributions
+     * for this class.
+     * <p/>
+     * Note, that this method is used *before* the integrity of the structures is validated,
+     * so must be ready for "infinite recursions", that will be reported later.
+     *
+     * @param sName       the name to resolve
+     * @param access      the accessibility to use to determine if the name is visible
+     * @param collector   the collector to which the potential name matches will be reported
+     * @param fAllowInto  if false, the "into" contributions should not be looked at
+     *
+     * @return the resolution result is one of: RESOLVED, UNKNOWN or POSSIBLE
+     */
+    protected ResolutionResult resolveContributedName(
+            String sName, Access access, ResolutionCollector collector, boolean fAllowInto)
+        {
+        Component child = getChild(sName);
+        if (child != null && child.canBeSeen(access))
+            {
+            switch (child.getIdentityConstant().getFormat())
+                {
+                case Property:
+                case Module:
+                case Package:
+                case Class:
+                case Typedef:
+                    collector.resolvedComponent(child);
+                    return ResolutionResult.RESOLVED;
+                }
+            return ResolutionResult.UNKNOWN;
+            }
+
+        // no child by that name; check if it was introduced by a contribution
+        NextContribution: for (Contribution contrib : getContributionsAsList())
+            {
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            if (typeContrib.containsUnresolved())
+                {
+                return ResolutionResult.POSSIBLE;
+                }
+
+            switch (contrib.getComposition())
+                {
+                case Into:
+                    if (!fAllowInto)
+                        {
+                        continue NextContribution;
+                        }
+                    access = access.minOf(Access.PROTECTED);
+                    break;
+
+                case Annotation:
+                case Delegates:
+                case Implements:
+                    access = Access.PUBLIC;
+                    break;
+
+                case Extends:
+                    access = access.minOf(Access.PROTECTED);
+                    break;
+
+                case Incorporates:
+                    fAllowInto = false;
+                    access = access.minOf(Access.PROTECTED);
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+
+            // because some of the components in the graph that we would need to visit in order to
+            // answer the question about generic type parameters are not yet ready to answer those
+            // questions, we rely instead on a virtual child's knowledge of its parents' type
+            // parameters to short-circuit that search; we know that the virtual child type can
+            // answer the question precisely because it exists (they are created no earlier than a
+            // certain stage)
+            if (typeContrib.isVirtualChild())
+                {
+                // check the paren't formal type
+                TypeConstant typeFormal = typeContrib.getParentType().resolveGenericType(sName);
+                if (typeFormal != null)
+                    {
+                    collector.resolvedConstant(typeFormal.getDefiningConstant());
+                    return ResolutionResult.RESOLVED;
+                    }
+                }
+
+            if (typeContrib.isExplicitClassIdentity(true))
+                {
+                ClassStructure clzContrib =
+                        (ClassStructure) typeContrib.getSingleUnderlyingClass(true).getComponent();
+
+                if (m_FVisited != null && m_FVisited.booleanValue() == fAllowInto)
+                    {
+                    // recursive contribution
+                    collector.getErrorListener().log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
+                            new Object[] {getName(), contrib.getComposition().toString().toLowerCase()}, this);
+                    return ResolutionResult.ERROR;
+                    }
+
+                m_FVisited = fAllowInto;
+                ResolutionResult result =
+                        clzContrib.resolveContributedName(sName, access, collector, fAllowInto);
+                m_FVisited = null;
+
+                if (result != ResolutionResult.UNKNOWN)
+                    {
+                    return result;
+                    }
+                }
+            else
+                {
+                return typeContrib.resolveContributedName(sName, collector);
+                }
+            }
+
+        return ResolutionResult.UNKNOWN;
         }
 
     /**
@@ -3462,4 +3577,9 @@ public abstract class Component
      * a modification has occurred.
      */
     private boolean m_fModified;
+
+    /**
+     * Recursion check for {@link #resolveContributedName}. Not thread-safe.
+     */
+    private Boolean m_FVisited;
     }

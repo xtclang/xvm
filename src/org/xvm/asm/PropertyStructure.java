@@ -560,8 +560,6 @@ public class PropertyStructure
         if (result == ResolutionResult.RESOLVED)
             {
             // we only allow static properties (constants) and singleton classes
-            result = ResolutionResult.UNKNOWN;
-
             Constant constant = collectorTemp.getResolvedConstant();
             switch (constant.getFormat())
                 {
@@ -589,8 +587,10 @@ public class PropertyStructure
                     break;
                     }
                 }
+            return ResolutionResult.UNKNOWN;
             }
-        return result;
+
+        return super.resolveName(sName, access, collector);
         }
 
     @Override
