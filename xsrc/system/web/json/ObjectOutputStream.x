@@ -54,7 +54,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
      */
     ElementOutputStream createElementOutput()
         {
-        return new @CloseCap ElementOutputStream(Null) ;
+        return new @CloseCap ElementOutputStream<Nullable>(Null) ;
         }
 
 

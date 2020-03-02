@@ -156,22 +156,7 @@ public class AnnotatedTypeConstant
             // here we assume that the type parameters for the annotation mixin are
             // structurally and semantically congruent with the type parameters for the
             // incorporating class the annotation is mixing into (regardless of the parameter name)
-            Map<StringConstant, TypeConstant> mapFormal   = mixin.getTypeParams();
-            Map<String, TypeConstant>         mapResolved = new HashMap<>(mapFormal.size());
-            List<TypeConstant>                listActual  = m_constType.normalizeParameters().getParamTypes();
-
-            for (StringConstant constName : mapFormal.keySet())
-                {
-                String sFormalName = constName.getValue();
-
-                TypeConstant typeResolved = mixin.getGenericParamType(pool, sFormalName, listActual);
-                if (typeResolved != null)
-                    {
-                    mapResolved.put(sFormalName, typeResolved);
-                    }
-                }
-
-            return mixin.getFormalType().resolveGenerics(pool, mapResolved::get);
+            return mixin.getFormalType().resolveGenerics(pool, m_constType);
             }
 
         // REVIEW the only other option is the constAnno to be a PseudoConstant (referring to a virtual

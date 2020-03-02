@@ -112,7 +112,7 @@ class ObjectInputStream(Schema schema, Parser parser)
      */
     ElementInputStream createElementInput()
         {
-        return new @CloseCap ElementInputStream(Null);
+        return new @CloseCap ElementInputStream<Nullable>(Null);
         }
 
 
@@ -126,7 +126,7 @@ class ObjectInputStream(Schema schema, Parser parser)
 
 //        &pointers.reset(); // TODO GG
         resetPointers();
-        using (ElementInputStream in = new @CloseCap ElementInputStream(Null))
+        using (ElementInputStream in = new @CloseCap ElementInputStream<Nullable>(Null))
             {
             return in.read<ObjectType>();
             }
