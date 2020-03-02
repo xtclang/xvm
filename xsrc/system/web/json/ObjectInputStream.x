@@ -655,15 +655,7 @@ class ObjectInputStream(Schema schema, Parser parser)
          */
         ListMap<String, Token[]>? skipped;
 
-// TODO GG: COMPILER-43: Type mismatch: Ecstasy:collections.Array<Ecstasy:web.json.Lexer.Token> expected, Ecstasy:Object found. ("result")
-//        function Token[] (Map.Entry<String, Token[]>) TAKE = e ->
-//            {
-//            val result = e.value;
-//            e.remove();
-//            return result;
-//            };
-
-        static Token[] takeTokens(Map<String, Token[]>.Entry entry)
+        private static Token[] takeTokens(Map<String, Token[]>.Entry entry)
             {
             val result = entry.value;
             entry.remove();

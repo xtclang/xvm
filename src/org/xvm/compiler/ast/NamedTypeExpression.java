@@ -366,7 +366,7 @@ public class NamedTypeExpression
 
         // constId has been already "auto-narrowed" by resolveNames()
         ConstantPool pool = pool();
-        TypeConstant type = calculateDefaultType(ctx, constId);
+        TypeConstant type = calculateDefaultType(ctx, constId, ErrorListener.BLACKHOLE);
 
         if (listParams != null)
             {
@@ -512,7 +512,7 @@ public class NamedTypeExpression
 
                     if (m_typeUnresolved != null)
                         {
-                        m_typeUnresolved.resolve(calculateDefaultType(null, constIdNew));
+                        m_typeUnresolved.resolve(calculateDefaultType(null, constIdNew, errs));
                         m_typeUnresolved = null;
                         }
                     }
@@ -628,7 +628,7 @@ public class NamedTypeExpression
                 }
             else
                 {
-                type = calculateDefaultType(ctx, m_constId);
+                type = calculateDefaultType(ctx, m_constId, errs);
                 }
 
             if (type.containsGenericType(false))
@@ -771,7 +771,7 @@ public class NamedTypeExpression
      *
      * @return a resulting type
      */
-    protected TypeConstant calculateDefaultType(Context ctx, Constant constTarget)
+    protected TypeConstant calculateDefaultType(Context ctx, Constant constTarget, ErrorListener errs)
         {
         ConstantPool pool = pool();
 
@@ -928,6 +928,11 @@ public class NamedTypeExpression
                     ClassStructure clzBase = (ClassStructure) idBase.getComponent();
 
                     typeTarget = pool.ensureVirtualTypeConstant(clzBase, clzTarget, false, false, false);
+                    }
+
+                if (!clzTarget.isParameterized() && paramTypes != null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                     }
                 }
 
