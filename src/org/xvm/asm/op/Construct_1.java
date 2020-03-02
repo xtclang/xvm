@@ -86,6 +86,10 @@ public class Construct_1
                 }
 
             MethodStructure constructor = getMethodStructure(frame);
+            if (constructor == null)
+                {
+                return R_EXCEPTION;
+                }
 
             ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
             ahVar[0] = hArg;

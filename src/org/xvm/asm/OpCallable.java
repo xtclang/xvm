@@ -18,9 +18,6 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-
-import org.xvm.runtime.template.xException;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -145,9 +142,13 @@ public abstract class OpCallable extends Op
             }
 
         MethodStructure constructor = getMethodStructure(frame);
-        ClassStructure  clzTargetC  = (ClassStructure) constructor.getParent().getParent();
-        ClassStructure  clzParentC  = (ClassStructure) clzTargetC.getParent();
-        ClassConstant   idParentC   = (ClassConstant) clzParentC.getIdentityConstant();
+        if (constructor == null)
+            {
+            return null;
+            }
+        ClassStructure clzTargetC = (ClassStructure) constructor.getParent().getParent();
+        ClassStructure clzParentC = (ClassStructure) clzTargetC.getParent();
+        ClassConstant  idParentC  = (ClassConstant)  clzParentC.getIdentityConstant();
 
         if (!idParentR.equals(idParentC))
             {
@@ -169,15 +170,20 @@ public abstract class OpCallable extends Op
         }
 
     /**
-     * @return an exception handle
+     * @return R_EXCEPTION
      */
-    protected ExceptionHandle reportMissingConstructor(Frame frame, ObjectHandle hParent)
+    protected int reportMissingConstructor(Frame frame, ObjectHandle hParent)
         {
-        IdentityConstant  idParentR      = hParent.getTemplate().getClassConstant();
-        SignatureConstant sigConstructor = getMethodStructure(frame).getIdentityConstant().getSignature();
+        IdentityConstant idParent    = hParent.getTemplate().getClassConstant();
+        MethodStructure  constructor = getMethodStructure(frame);
+        if (constructor == null)
+            {
+            return R_EXCEPTION;
+            }
 
-        return xException.makeHandle(frame, "Missing constructor \"" + sigConstructor.getValueString() +
-                                     "\" at class " + idParentR.getValueString());
+        SignatureConstant sigConstructor = constructor.getIdentityConstant().getSignature();
+        return frame.raiseException("Missing constructor \"" + sigConstructor.getValueString() +
+                                     "\" at class " + idParent.getValueString());
         }
 
     @Override
@@ -260,8 +266,13 @@ public abstract class OpCallable extends Op
                     ConstantPool        pool     = frame.poolContext();
                     GenericTypeResolver resolver = frame.getGenericsResolver();
 
-                    TypeConstant typeParent = idParent.getType().resolveGenerics(pool, resolver);
+                    TypeConstant typeParent = idParent.getFormalType().resolveGenerics(pool, resolver);
                     m_function = function   = (MethodStructure) idFunction.getComponent();
+                    if (function == null)
+                        {
+                        m_function = function = typeParent.findCallable(idFunction.getSignature());
+                        }
+
                     if (function == null)
                         {
                         frame.raiseException("Unresolvable or ambiguous function \"" +

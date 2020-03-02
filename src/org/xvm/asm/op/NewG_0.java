@@ -82,8 +82,13 @@ public class NewG_0
     public int process(Frame frame, int iPC)
         {
         MethodStructure  constructor = getMethodStructure(frame);
-        ClassComposition clzTarget   = frame.resolveClass(m_nTypeValue);
-        ObjectHandle     hParent     = clzTarget.isInstanceChild() ? frame.getThis() : null;
+        if (constructor == null)
+            {
+            return R_EXCEPTION;
+            }
+
+        ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
+        ObjectHandle     hParent   = clzTarget.isInstanceChild() ? frame.getThis() : null;
 
         if (frame.isNextRegister(m_nRetValue))
             {

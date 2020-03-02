@@ -89,6 +89,10 @@ public class New_N
     public int process(Frame frame, int iPC)
         {
         MethodStructure constructor = getMethodStructure(frame);
+        if (constructor == null)
+            {
+            return R_EXCEPTION;
+            }
 
         try
             {

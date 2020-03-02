@@ -93,7 +93,7 @@ public class NewC_0
             MethodStructure constructor = getVirtualConstructor(frame, hParent);
             if (constructor == null)
                 {
-                return frame.raiseException(reportMissingConstructor(frame, hParent));
+                return reportMissingConstructor(frame, hParent);
                 }
 
             if (isDeferred(hParent))

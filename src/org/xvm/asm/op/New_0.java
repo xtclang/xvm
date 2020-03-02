@@ -79,6 +79,10 @@ public class New_0
     public int process(Frame frame, int iPC)
         {
         MethodStructure constructor = getMethodStructure(frame);
+        if (constructor == null)
+            {
+            return R_EXCEPTION;
+            }
 
         ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
 

@@ -53,8 +53,13 @@ public class Construct_0
     public int process(Frame frame, int iPC)
         {
         MethodStructure constructor = getMethodStructure(frame);
-        ObjectHandle    hStruct     = frame.getThis();
-        ObjectHandle[]  ahVar       = new ObjectHandle[constructor.getMaxVars()];
+        if (constructor == null)
+            {
+            return R_EXCEPTION;
+            }
+
+        ObjectHandle    hStruct = frame.getThis();
+        ObjectHandle[]  ahVar   = new ObjectHandle[constructor.getMaxVars()];
 
         frame.chainFinalizer(Utils.makeFinalizer(constructor, ahVar));
 

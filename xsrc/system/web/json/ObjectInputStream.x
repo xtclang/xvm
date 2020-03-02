@@ -55,7 +55,7 @@ class ObjectInputStream(Schema schema, Parser parser)
     /**
      * The root element.
      */
-    protected/private ElementInputStream? root;
+    protected/private RootInputStream? root;
 
     /**
      * The current [DocInput] "node" (an element, array, or field) that is being read from.
@@ -106,13 +106,14 @@ class ObjectInputStream(Schema schema, Parser parser)
         }
 
     /**
-     * (Temporary method)
+     * Create the root ElementInput to read JSON data from the ObjectInputStream.
      *
-     * @return an ElementInput implementation
+     * @return the root ElementInput
      */
-    ElementInputStream createElementInput()
+    RootInputStream ensureElementInput()
         {
-        return new @CloseCap ElementInputStream<Nullable>(Null);
+        assert !closed;
+        return root ?: new @CloseCap RootInputStream();
         }
 
 
@@ -121,15 +122,7 @@ class ObjectInputStream(Schema schema, Parser parser)
     @Override
     <ObjectType> ObjectType read<ObjectType>()
         {
-        assert !closed;
-        assert root == Null;
-
-//        &pointers.reset(); // TODO GG
-        resetPointers();
-        using (ElementInputStream in = new @CloseCap ElementInputStream<Nullable>(Null))
-            {
-            return in.read<ObjectType>();
-            }
+        return ensureElementInput().read<ObjectType>();
         }
 
     @Override
@@ -138,8 +131,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         root    = Null;
         current = Null;
         closed  = True;
-//        &pointers.reset(); // TODO GG
-        resetPointers();
+        resetPointers(); // TODO GG &pointers.reset();
         }
 
 
@@ -432,10 +424,6 @@ class ObjectInputStream(Schema schema, Parser parser)
         finally
             {
             current = this;
-            if (parent == Null)
-                {
-                root = this.as(ElementInputStream);
-                }
             }
 
         @Override
@@ -454,17 +442,8 @@ class ObjectInputStream(Schema schema, Parser parser)
                 }
 
             ParentInput parent = super();
-            if (parent == Null)
-                {
-                assert &root == &this;
-                root    = Null;
-                current = Null;
-                }
-            else
-                {
-                current = parent.as(DocInputStream<>?);
-                parent.childClosed(this);
-                }
+            current = parent?.as(DocInputStream<>?) : Null;
+            parent?.childClosed(this);
             return parent;
             }
         }
@@ -519,6 +498,48 @@ class ObjectInputStream(Schema schema, Parser parser)
             prepareRead();
             canRead = False;
             return parser.parseDoc();
+            }
+        }
+
+
+    // ----- RootInputStream -----------------------------------------------------------------------
+
+    /**
+     * The RootInputStream is an implementation of [ElementInput] that represents reading an entire
+     * JSON document, but unlike ElementInputStream, documents may be arranged in sequence.
+     */
+    class RootInputStream
+            extends ElementInputStream<Nullable>
+        {
+        construct()
+            {
+            assert root == Null;
+            construct ElementInputStream<Nullable>(Null);  // TODO GG: infer <Nullable>
+            }
+        finally
+            {
+            root = this;
+            }
+
+        @Override
+        Boolean canRead.get()
+            {
+            return !closed && !parser.eof;
+            }
+
+        @Override
+        void prepareRead()
+            {
+            super();
+            resetPointers(); // TODO GG &pointers.reset();
+            }
+
+        @Override
+        Nullable close() // TODO GG: ParentInput close() doesn't compile
+            {
+            super();
+            root = Null;
+            return Null;
             }
         }
 

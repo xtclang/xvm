@@ -92,9 +92,13 @@ public class NewG_1
         try
             {
             MethodStructure constructor = getMethodStructure(frame);
+            if (constructor == null)
+                {
+                return R_EXCEPTION;
+                }
 
             ObjectHandle[] ahVar = frame.getArguments(
-                new int[]{m_nArgValue}, constructor.getMaxVars());
+                                        new int[]{m_nArgValue}, constructor.getMaxVars());
             if (ahVar == null)
                 {
                 return R_REPEAT;

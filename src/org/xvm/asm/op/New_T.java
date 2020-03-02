@@ -115,6 +115,10 @@ public class New_T
     protected int complete(Frame frame, ObjectHandle[] ahArg)
         {
         MethodStructure constructor = getMethodStructure(frame);
+        if (constructor == null)
+            {
+            return R_EXCEPTION;
+            }
 
         IdentityConstant constClz  = constructor.getParent().getParent().getIdentityConstant();
         ClassTemplate    template  = frame.ensureTemplate(constClz);

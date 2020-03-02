@@ -107,8 +107,13 @@ public class Construct_T
     protected int complete(Frame frame, ObjectHandle[] ahArg)
         {
         MethodStructure constructor = getMethodStructure(frame);
-        ObjectHandle    hStruct     = frame.getThis();
-        ObjectHandle[]  ahVar       = Utils.ensureSize(ahArg, constructor.getMaxVars());
+        if (constructor == null)
+            {
+            return R_EXCEPTION;
+            }
+
+        ObjectHandle    hStruct = frame.getThis();
+        ObjectHandle[]  ahVar   = Utils.ensureSize(ahArg, constructor.getMaxVars());
 
         frame.chainFinalizer(Utils.makeFinalizer(constructor, ahVar));
 

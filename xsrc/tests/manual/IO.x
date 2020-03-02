@@ -254,10 +254,15 @@ module TestIO
             @Override
             <ObjectType extends Point> void write(ElementOutput out, ObjectType value)
                 {
-                out.openObject()
-                    .add("x", value.x)
-                    .add("y", value.y)
-                    .close();
+                using (FieldOutput fields = out.openObject())
+                    {
+                    fields.add("x", value.x)
+                          .add("y", value.y);
+                    }
+//                out.openObject()
+//                    .add("x", value.x)
+//                    .add("y", value.y)
+//                    .close();
                 }
             }
 
@@ -273,7 +278,7 @@ module TestIO
 //        ObjectInputStream  o_in   = schema.createObjectInput(new CharArrayReader(ExamplePoint)); // TODO GG needs better error message
         Reader             reader = new CharArrayReader(ExamplePoint);
         ObjectInputStream  o_in   = schema.createObjectInput(reader).as(ObjectInputStream);
-        ElementInputStream e_in   = o_in.createElementInput();
+        ElementInputStream e_in   = o_in.ensureElementInput();
         PointMapper        mapper = new PointMapper();
         Point              point  = mapper.read<Point>(e_in);
         console.println($"point={point}");

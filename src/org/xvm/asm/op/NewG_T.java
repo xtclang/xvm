@@ -116,9 +116,14 @@ public class NewG_T
 
     protected int complete(Frame frame, ObjectHandle[] ahArg)
         {
-        MethodStructure  constructor = getMethodStructure(frame);
-        ClassComposition clzTarget   = frame.resolveClass(m_nTypeValue);
-        ObjectHandle     hParent     = clzTarget.isInstanceChild() ? frame.getThis() : null;
+        MethodStructure constructor = getMethodStructure(frame);
+        if (constructor == null)
+            {
+            return R_EXCEPTION;
+            }
+
+        ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
+        ObjectHandle     hParent   = clzTarget.isInstanceChild() ? frame.getThis() : null;
 
         if (frame.isNextRegister(m_nRetValue))
             {

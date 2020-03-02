@@ -104,7 +104,7 @@ public class NewCG_1
             MethodStructure constructor = getVirtualConstructor(frame, hParent);
             if (constructor == null)
                 {
-                return frame.raiseException(reportMissingConstructor(frame, hParent));
+                return reportMissingConstructor(frame, hParent);
                 }
 
             ObjectHandle[] ahVar = frame.getArguments(

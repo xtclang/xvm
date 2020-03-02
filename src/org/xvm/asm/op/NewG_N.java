@@ -92,6 +92,10 @@ public class NewG_N
         try
             {
             MethodStructure constructor = getMethodStructure(frame);
+            if (constructor == null)
+                {
+                return R_EXCEPTION;
+                }
 
             ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
             if (ahVar == null)

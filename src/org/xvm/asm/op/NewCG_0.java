@@ -100,7 +100,7 @@ public class NewCG_0
             MethodStructure constructor = getVirtualConstructor(frame, hParent);
             if (constructor == null)
                 {
-                return frame.raiseException(reportMissingConstructor(frame, hParent));
+                return reportMissingConstructor(frame, hParent);
                 }
 
             ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
