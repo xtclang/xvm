@@ -5,20 +5,27 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -271,8 +278,81 @@ public class PropertyClassTypeConstant
     @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
-        // TODO: merge the custom methods
-        return getRefType().buildTypeInfo(errs);
+        ConstantPool pool     = getConstantPool();
+        int          cInvals  = pool.getInvalidationCount();
+        PropertyInfo infoProp = getPropertyInfo();
+        TypeConstant typeBase = pool.ensureAccessTypeConstant(infoProp.getBaseRefType(), Access.PROTECTED);
+        TypeInfo     infoBase = typeBase.buildTypeInfo(errs);
+
+        PropertyStructure prop = infoProp.getHead().getStructure();
+
+        Map<Object           , ParamInfo>    mapTypeParams      = new HashMap<>();
+        Map<PropertyConstant , PropertyInfo> mapContribProps    = new HashMap<>();
+        Map<MethodConstant   , MethodInfo  > mapContribMethods  = new HashMap<>();
+        ListMap<String       , ChildInfo   > mapContribChildren = new ListMap<>();
+        ArrayList<PropertyConstant>          listExplode        = new ArrayList<>();
+
+        IdentityConstant constId = (IdentityConstant) infoBase.getType().getDefiningConstant();
+
+        collectChildInfo(constId, false, prop, mapTypeParams,
+            mapContribProps, mapContribMethods, mapContribChildren, listExplode, 0, errs);
+
+        if (!listExplode.isEmpty())
+            {
+            // TODO: explode properties
+            }
+
+        if (mapContribProps.isEmpty() && mapContribMethods.isEmpty() && mapContribChildren.isEmpty())
+            {
+            // nothing has been added
+            return infoBase;
+            }
+
+        Map<PropertyConstant, PropertyInfo> mapProps       = infoBase.getProperties();
+        Map<MethodConstant  , MethodInfo  > mapMethods     = infoBase.getMethods();
+        Map<Object          , PropertyInfo> mapVirtProps   = infoBase.getVirtProperties();
+        Map<Object          , MethodInfo  > mapVirtMethods = infoBase.getVirtMethods();
+        ListMap<String      , ChildInfo   > mapChildren    = new ListMap<>();
+
+        if (!mapContribProps.isEmpty())
+            {
+            // process properties by moving them to the base ref level
+            Map<PropertyConstant, PropertyInfo> mapContrib = new HashMap<>(mapContribProps.size());
+            for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
+                {
+                PropertyConstant idContrib = entry.getKey();
+                PropertyConstant idReplace = pool.ensurePropertyConstant(constId, idContrib.getName());
+                mapContrib.put(idReplace, entry.getValue());
+                }
+
+            layerOnProps(constId, true, null, mapProps, mapVirtProps, this, mapContrib, errs);
+            }
+
+        if (!mapContribMethods.isEmpty())
+            {
+            // process methods by moving them to the base ref level
+            Map<MethodConstant, MethodInfo> mapContrib = new HashMap<>(mapContribMethods.size());
+            for (Map.Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
+                {
+                MethodConstant idContrib = entry.getKey();
+                MethodConstant idReplace = pool.ensureMethodConstant(constId, idContrib.getSignature());
+                mapContrib.put(idReplace, entry.getValue());
+                }
+            layerOnMethods(constId, true, null, mapMethods, mapVirtMethods, this, mapContrib, errs);
+            }
+
+        if (!mapContribChildren.isEmpty())
+            {
+            // TODO process children
+            }
+
+        return new TypeInfo(this, cInvals, infoBase.getClassStructure(),
+                0, false, mapTypeParams,
+                Annotation.NO_ANNOTATIONS,
+                typeBase, null, null,
+                Collections.EMPTY_LIST, ListMap.EMPTY, ListMap.EMPTY,
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
+                TypeInfo.Progress.Complete);
         }
 
 

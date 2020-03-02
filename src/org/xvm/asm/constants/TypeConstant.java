@@ -2539,7 +2539,7 @@ public abstract class TypeConstant
                 collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, nBaseRank, errs);
 
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
-                if (!createMemberInfo(constId, isInterface(constId, struct), struct, mapTypeParams,
+                if (!collectChildInfo(constId, isInterface(constId, struct), struct, mapTypeParams,
                         mapContribProps, mapContribMethods, mapContribChildren, listExplode, nBaseRank, errs))
                     {
                     fIncomplete = true;
@@ -3617,6 +3617,73 @@ public abstract class TypeConstant
         }
 
     /**
+     * Generate the info for the child structures of the specified contributed structure.
+     *
+     * @param constId        the identity of the class (used for logging error information)
+     * @param fInterface     if the class is an interface type
+     * @param structContrib  the class structure, property structure, or method structure or typedef
+     * @param mapTypeParams  the map of type parameters
+     * @param mapProps       the properties of the class
+     * @param mapMethods     the methods of the class
+     * @param mapChildren    the child types of the class
+     * @param listExplode    used to collect the list of properties that must be "exploded"
+     * @param nBaseRank      the base rank for any properties added by "this" class
+     * @param errs           the error list to log any errors to
+     *
+     * @return true iff the processing was able to obtain all of its dependencies
+     */
+    protected boolean collectChildInfo(
+            IdentityConstant                    constId,
+            boolean                             fInterface,
+            Component                           structContrib,
+            Map<Object          , ParamInfo>    mapTypeParams,
+            Map<PropertyConstant, PropertyInfo> mapProps,
+            Map<MethodConstant  , MethodInfo>   mapMethods,
+            ListMap<String, ChildInfo>          mapChildren,
+            List<PropertyConstant>              listExplode,
+            int                                 nBaseRank,
+            ErrorListener                       errs)
+        {
+        boolean fComplete = true;
+
+        // recurse through children
+        for (Component child : structContrib.children())
+            {
+            if (child instanceof MultiMethodStructure)
+                {
+                for (MethodStructure method : ((MultiMethodStructure) child).methods())
+                    {
+                    if (!method.getIdentityConstant().isLambda())
+                        {
+                        fComplete &= createMemberInfo(constId, fInterface, method, mapTypeParams,
+                            mapProps, mapMethods, mapChildren, listExplode, nBaseRank, errs);
+                        }
+                    }
+                }
+            else if (child instanceof PropertyStructure)
+                {
+                fComplete &= createMemberInfo(constId, fInterface, child, mapTypeParams,
+                    mapProps, mapMethods, mapChildren, listExplode, nBaseRank, errs);
+                }
+            else if (child instanceof ClassStructure || child instanceof TypedefStructure)
+                {
+                String sName = child.getIdentityConstant().getNestedName();
+                if (sName != null)
+                    {
+                    // it should not be possible for there to be more than one at this level with
+                    // the same name
+                    if (mapChildren.containsKey(sName))
+                        {
+                        log(errs, Severity.ERROR, VE_NAME_COLLISION, constId, sName);
+                        }
+                    mapChildren.put(sName, new ChildInfo(child));
+                    }
+                }
+            }
+        return fComplete;
+        }
+
+    /**
      * Generate the members of the "this" class of "this" type.
      *
      * @param constId        the identity of the class (used for logging error information)
@@ -3644,9 +3711,8 @@ public abstract class TypeConstant
             int                                 nBaseRank,
             ErrorListener                       errs)
         {
-        ConstantPool pool      = getConstantPool();
-        boolean      fComplete = true;
-        boolean      fRebase   = constId instanceof NativeRebaseConstant;
+        ConstantPool pool    = getConstantPool();
+        boolean      fRebase = constId instanceof NativeRebaseConstant;
 
         if (structContrib instanceof MethodStructure)
             {
@@ -3705,43 +3771,8 @@ public abstract class TypeConstant
                 mapProps.put(idParam, propParam);
                 }
             }
-
-        // recurse through children
-        for (Component child : structContrib.children())
-            {
-            if (child instanceof MultiMethodStructure)
-                {
-                for (MethodStructure method : ((MultiMethodStructure) child).methods())
-                    {
-                    if (!method.getIdentityConstant().isLambda())
-                        {
-                        fComplete &= createMemberInfo(constId, fInterface, method, mapTypeParams,
-                                mapProps, mapMethods, mapChildren, listExplode, nBaseRank, errs);
-                        }
-                    }
-                }
-            else if (child instanceof PropertyStructure)
-                {
-                fComplete &= createMemberInfo(constId, fInterface, child, mapTypeParams,
-                        mapProps, mapMethods, mapChildren, listExplode, nBaseRank, errs);
-                }
-            else if (child instanceof ClassStructure || child instanceof TypedefStructure)
-                {
-                String sName = child.getIdentityConstant().getNestedName();
-                if (sName != null)
-                    {
-                    // it should not be possible for there to be more than one at this level with
-                    // the same name
-                    if (mapChildren.containsKey(sName))
-                        {
-                        log(errs, Severity.ERROR, VE_NAME_COLLISION, constId, sName);
-                        }
-                    mapChildren.put(sName, new ChildInfo(child));
-                    }
-                }
-            }
-
-        return fComplete;
+        return collectChildInfo(constId, fInterface, structContrib,
+                mapTypeParams, mapProps, mapMethods, mapChildren, listExplode, nBaseRank, errs);
         }
 
     /**

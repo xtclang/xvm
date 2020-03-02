@@ -82,7 +82,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         /**
          * Clear any pointer information that has been collected.
          */
-        void reset() // TODO GG this isn't visible via &pointers.reset()
+        void reset()
             {
             if (assigned)
                 {
@@ -130,7 +130,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         root    = Null;
         current = Null;
         closed  = True;
-        resetPointers(); // TODO GG &pointers.reset();
+        &pointers.reset();
         }
 
 
@@ -530,7 +530,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         void prepareRead()
             {
             super();
-            resetPointers(); // TODO GG &pointers.reset();
+            &pointers.reset();
             }
 
         @Override
