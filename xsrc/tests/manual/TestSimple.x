@@ -8,10 +8,6 @@ module TestSimple.xqiz.it
         {
         }
 
-    function Int[] (Map.Entry<String, Int[]>) TAKE = e ->
-        {
-        Int[] result = e.value;
-        e.remove();
-        return result;
-        };
+    Map<Int, String, Int> m;
+    String<> s;
     }

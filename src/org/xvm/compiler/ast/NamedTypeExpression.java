@@ -930,7 +930,18 @@ public class NamedTypeExpression
                     typeTarget = pool.ensureVirtualTypeConstant(clzBase, clzTarget, false, false, false);
                     }
 
-                if (!clzTarget.isParameterized() && paramTypes != null)
+                boolean fValid;
+                if (clzTarget.isParameterized())
+                    {
+                    int cParams = paramTypes == null ? 0 : paramTypes.size();
+                    fValid = cParams <= clzTarget.getTypeParamCount();
+                    }
+                else
+                    {
+                    fValid = paramTypes == null;
+                    }
+
+                if (!fValid)
                     {
                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                     }
