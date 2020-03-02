@@ -1,51 +1,43 @@
 /**
  * A reflection-based [Mapping] implementation.
  */
-const ReflectionMapping
-        implements Mapping<Object>
+const ReflectionMapping<Serializable>
+        implements Mapping<Serializable>
     {
-    @Override
-    <ObjectType extends Serializable> ObjectType read<ObjectType>(ElementInput in)
+    construct()
         {
-        if (in.schema.enableMetadata)
-            {
-            // use metadata to determine what to read
-            TODO
-            }
-
-        if (ObjectType != Object)
-            {
-            // use ObjectType to determine what to read
-            TODO
-            }
-
-        throw new MissingMapping(type=ObjectType);
+        TODO
         }
 
     @Override
-    <ObjectType extends Serializable> void write(ElementOutput out, ObjectType value)
+    Serializable read(ElementInput in)
         {
-        // if no type information is provided, then use the runtime type of the object itself as
-        // the source of reflection information for the contents of the JSON serialization
-        Type type = ObjectType == Object
-                ? &value.actualType
-                : ObjectType;
+        TODO
+        }
 
+    @Override
+    void write(ElementOutput out, Serializable value)
+        {
         if (value.is(Nullable))
             {
-            // out.
+            out.add(Null);
+            return;
             }
 
+        Type type = &value.actualType;
         if (type.is(Type<Number>))
             {
+            TODO
             }
         else if (type.is(Type<Boolean>))
             {
+            TODO
             }
         else
             {
+            TODO
             }
 
-        TODO
+        // TODO
         }
     }

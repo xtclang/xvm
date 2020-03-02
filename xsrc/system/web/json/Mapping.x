@@ -9,26 +9,25 @@ interface Mapping<Serializable>
      * metadata, or allows the Mapping to be identified in the metadata related to objects
      * emitted by this Mapping.
      */
-    @RO String? typeName;
+    @RO String? typeName.get()
+        {
+        return Null;
+        }
 
     /**
      * Read a value of type `Serializable` from the provided `ElementInput`.
      *
-     * @param ObjectType  the type to read, which may be more specific than the `Serializable`
-     *                    type
-     * @param in          the `ElementInput` to read from
+     * @param in  the `ElementInput` to read from
      *
      * @return a `Serializable` object
      */
-    <ObjectType extends Serializable> ObjectType read<ObjectType>(ElementInput in);
+    Serializable read(ElementInput in);
 
     /**
      * Write a value of type `Serializable` to the provided `ElementOutput`.
      *
-     * @param ObjectType  the type to write, which may be more specific than the `Serializable`
-     *                    type
      * @param out    the `ElementOutput` to write to
-     * @param value  the `ObjectType` value to write
+     * @param value  the `Serializable` value to write
      */
-    <ObjectType extends Serializable> void write(ElementOutput out, ObjectType value);
+    void write(ElementOutput out, Serializable value);
     }

@@ -229,6 +229,7 @@ module TestIO
     void testPoint()
         {
         static const Point(Int x, Int y);
+        static const Segment(Point p1, Point p2);
 
         static const PointMapper
                 implements Mapping<Point>
@@ -240,11 +241,11 @@ module TestIO
                 }
 
             @Override
-            <ObjectType extends Point> ObjectType read<ObjectType>(ElementInput in)
+            Point read(ElementInput in)
                 {
                 using (FieldInput fields = in.openObject())
                     {
-                    return new Point(fields.readInt("x"), fields.readInt("y")).as(ObjectType);
+                    return new Point(fields.readInt("x"), fields.readInt("y"));
                     }
 //                Doc doc = in.readDoc();
 //                Map<String, Doc> map = doc.as(Map<String, Doc>);
@@ -252,7 +253,7 @@ module TestIO
                 }
 
             @Override
-            <ObjectType extends Point> void write(ElementOutput out, ObjectType value)
+            void write(ElementOutput out, Point value)
                 {
                 using (FieldOutput fields = out.openObject())
                     {
@@ -263,6 +264,35 @@ module TestIO
 //                    .add("x", value.x)
 //                    .add("y", value.y)
 //                    .close();
+                }
+            }
+
+        static const SegmentMapper
+                implements Mapping<Segment>
+            {
+            @Override
+            String typeName.get()
+                {
+                return "segment";
+                }
+
+            @Override
+            Segment read(ElementInput in)
+                {
+                using (FieldInput fields = in.openObject())
+                    {
+                    return new Segment(fields.readObject<Point>("p1"), fields.readObject<Point>("p2"));
+                    }
+                }
+
+            @Override
+            void write(ElementOutput out, Segment value)
+                {
+                using (FieldOutput fields = out.openObject())
+                    {
+                    fields.addObject("p1", value.p1)
+                          .addObject("p2", value.p2);
+                    }
                 }
             }
 
@@ -283,12 +313,22 @@ module TestIO
         Point              point  = mapper.read<Point>(e_in);
         console.println($"point={point}");
 
-        Schema schemaRA = new Schema([new PointMapper()], randomAccess = True);
-        Schema schemaSA = new Schema([new PointMapper()], randomAccess = False);
+//        Schema schemaSA = new Schema([new PointMapper(), new SegmentMapper()], randomAccess = False);  // TODO GG
+        Mapping[] mappings = new Mapping[]; mappings.add(new PointMapper()); mappings.add(new SegmentMapper());
+        Schema schemaSA = new Schema(mappings);
+        testSer(schemaSA, "point", point);
+        testSer(schemaSA, "segment", new Segment(point, new Point(1,99)));
 
-//        Point point1 = schemaRA.createObjectInput(new CharArrayReader(ExamplePoint)).read<Point>();
-//        console.println($"point={point1}");
-        Point point2 = schemaSA.createObjectInput(new CharArrayReader(ExamplePoint)).read<Point>();
-        console.println($"point={point2}");
+        private <Ser> void testSer(Schema schema, String name, Ser val)
+            {
+            StringBuffer sb = new StringBuffer();
+            schema.createObjectOutput(sb).write(val);
+
+            String s = sb.toString();
+            console.println($"JSON written out={s}");
+
+            Ser val2 = schema.createObjectInput(new CharArrayReader(s)).read<Ser>();
+            console.println($"read back in={val2}");
+            }
         }
     }

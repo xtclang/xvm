@@ -5,19 +5,19 @@ const LiteralMapping<Serializable extends Doc>
         implements Mapping<Serializable>
     {
     @Override
-    <ObjectType extends Serializable> ObjectType read<ObjectType>(ElementInput in)
+    Serializable read(ElementInput in)
         {
         Doc value = in.readDoc();
-        if (value.is(ObjectType))
+        if (value.is(Serializable))
             {
             return value;
             }
 
-        throw new IllegalJSON($"Type implementation={Serializable}; expected={ObjectType}; actual={&value.actualType}");
+        throw new IllegalJSON($"Type expected={Serializable}; actual={&value.actualType}");
         }
 
     @Override
-    <ObjectType extends Serializable> void write(ElementOutput out, ObjectType value)
+    void write(ElementOutput out, Serializable value)
         {
         out.add(value);
         }

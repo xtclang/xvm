@@ -296,7 +296,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
         {
         if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
-            return read<Serializable>(name, mapping.read<Serializable>(_), defaultValue);
+            return read<Serializable>(name, mapping.read(_), defaultValue);
             }
 
         throw new MissingMapping(type = Serializable);
@@ -322,17 +322,18 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
         {
         if (isNull(name))
             {
-            return defaultValue?;
-            }
-        else
-            {
-            using (val element = openField(name))
+            if (defaultValue.is(Serializable))
                 {
-                return deserialize(element);
+                return defaultValue;
                 }
+
+            throw new IllegalJSON($"Value required of type \"{Serializable}\"; no value found");
             }
 
-        throw new IllegalJSON($"{Serializable} value required; no value found");
+        using (val element = openField(name))
+            {
+            return deserialize(element);
+            }
         }
 
 
@@ -493,12 +494,13 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
         {
         if (isNull(name))
             {
-            return defaultValue ?: [];
+            return defaultValue?;
+            throw new IllegalJSON($"Array required of type \"{Serializable}\"; no value found");
             }
 
         if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
-            return readArray(name, mapping.read<Serializable>(_), defaultValue);
+            return readArray(name, mapping.read(_), defaultValue);
             }
 
         throw new MissingMapping(type = Serializable);
@@ -526,7 +528,8 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
         {
         if (isNull(name))
             {
-            return defaultValue ?: [];
+            return defaultValue?;
+            throw new IllegalJSON($"Array required of type \"{Serializable}\"; no value found");
             }
 
         Serializable[] values = new Serializable[];

@@ -173,14 +173,13 @@ const Schema
         }
 
     /**
-     * A lazily instantiated default Mapping that handles any object.
-     TODO CP need Mapping<T> not <Object> - needs to be a const, and cache the pre-calc'd reflection data inside
+     * A lazily instantiated cache of reflection-based Mapping objects.
      */
     @Lazy
-    Mapping<Object> defaultMapping.calc()
+    ReflectionMapper reflectionMapper.calc()
         {
         assert enableReflection;
-        return new ReflectionMapping();
+        return new ReflectionMapper();
         }
 
 
@@ -229,7 +228,7 @@ const Schema
 
         if (enableReflection)
             {
-            return True, defaultMapping;
+            return True, reflectionMapper.ensureMapping(ObjectType);
             }
 
         return False;
@@ -385,5 +384,36 @@ const Schema
             }
 
         private Map<Type, Type> cache = new HashMap();
+        }
+
+
+    // ----- ReflectionMapper service --------------------------------------------------------------
+
+    /**
+     * A service that creates and caches [ReflectionMapping] instances.
+     */
+    service ReflectionMapper
+        {
+        /**
+         * Given a `Type`, obtain a [ReflectionMapping] instance for that type.
+         *
+         * @param type  the `Type` to obtain a Mapping for
+         *
+         * @return a [ReflectionMapping] instance for that type
+         */
+        <ObjectType> ReflectionMapping<ObjectType> ensureMapping(Type<ObjectType> type)
+            {
+            if (ReflectionMapping<> mapping := cache.get(type))
+                {
+                return mapping.as(ReflectionMapping<ObjectType>);
+                }
+
+            assert type == ObjectType;
+            val mapping = new ReflectionMapping<ObjectType>();
+            cache.put(type, mapping);
+            return mapping;
+            }
+
+        private Map<Type, ReflectionMapping<>> cache = new HashMap();
         }
     }

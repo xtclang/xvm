@@ -231,7 +231,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
         {
         if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
-            return read<Serializable>(mapping.read<Serializable>(_), defaultValue);
+            return read<Serializable>(mapping.read(_), defaultValue);
             }
 
         throw new MissingMapping(type = Serializable);
@@ -253,11 +253,17 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
     <Serializable> Serializable read<Serializable>(function Serializable(ElementInput!<>) deserialize,
                                                    Serializable? defaultValue = Null)
         {
-        return isNull()
-                ? defaultValue?
-                : deserialize(this);
+        if (isNull())
+            {
+            if (defaultValue.is(Serializable))
+                {
+                return defaultValue;
+                }
 
-        throw new IllegalJSON($"{Serializable} value required; no value found");
+            throw new IllegalJSON($"Value required of type \"{Serializable}\"; no value found");
+            }
+
+        return deserialize(this);
         }
 
 
@@ -416,7 +422,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
 
         if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
-            return readArray(mapping.read<Serializable>(_), defaultValue);
+            return readArray(mapping.read(_), defaultValue);
             }
 
         throw new MissingMapping(type = Serializable);
@@ -449,7 +455,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             {
             while (elements.canRead)
                 {
-                values.add(elements.read<Serializable>(deserialize));
+                values.add(elements.read(deserialize));
                 }
             }
         return values;

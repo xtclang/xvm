@@ -4,24 +4,25 @@
 const IntNumberMapping<Serializable extends IntNumber>
         implements Mapping<Serializable>
     {
-    assert()
+    construct()
         {
-        assert CONVERSION.contains(Serializable);
+        assert function IntNumber(IntLiteral) fn := CONVERSION.get(Serializable);
+        convert = fn.as(function Serializable(IntLiteral));
+        }
+
+    /**
+     * The function that converts an IntLiteral to the desired integer type.
+     */
+    function Serializable(IntLiteral) convert;
+
+    @Override
+    Serializable read(ElementInput in)
+        {
+        return convert(in.readIntLiteral());
         }
 
     @Override
-    <ObjectType extends Serializable> ObjectType read<ObjectType>(ElementInput in)
-        {
-        if (function IntNumber(IntLiteral) convert := CONVERSION.get(ObjectType))
-            {
-            return convert(in.readIntLiteral()).as(ObjectType);
-            }
-
-        throw new MissingMapping(type=ObjectType);
-        }
-
-    @Override
-    <ObjectType extends Serializable> void write(ElementOutput out, ObjectType value)
+    void write(ElementOutput out, Serializable value)
         {
         out.add(value.toIntLiteral());
         }
