@@ -934,7 +934,7 @@ public class NamedTypeExpression
                 if (clzTarget.isParameterized())
                     {
                     int cParams = paramTypes == null ? 0 : paramTypes.size();
-                    fValid = cParams <= clzTarget.getTypeParamCount();
+                    fValid = clzTarget.isTuple() || cParams <= clzTarget.getTypeParamCount();
                     }
                 else
                     {
