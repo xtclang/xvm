@@ -6,8 +6,9 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        }
+        @Inject Directory curDir;
 
-    Map<Int, String, Int> m;
-    String<> s;
+        console.println(curDir);
+        assert !curDir.find("NO_SUCH_FILE");
+        }
     }

@@ -12,7 +12,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -27,6 +26,7 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
@@ -704,7 +704,7 @@ public class ServiceContext
             {
             case 0:
                 fiberCaller.f_context.respond(
-                        new Response(fiberCaller, xTuple.H_VOID, frame.m_hException, future));
+                        new Response<ObjectHandle>(fiberCaller, xTuple.H_VOID, frame.m_hException, future));
                 break;
 
             case  1:
@@ -720,7 +720,8 @@ public class ServiceContext
                         hException = xException.mutableObject(frame);
                         }
                     }
-                fiberCaller.f_context.respond(new Response(fiberCaller, hReturn, hException, future));
+                fiberCaller.f_context.respond(
+                        new Response<ObjectHandle>(fiberCaller, hReturn, hException, future));
                 break;
                 }
 
@@ -750,7 +751,8 @@ public class ServiceContext
                             }
                         }
                     }
-                fiberCaller.f_context.respond(new Response(fiberCaller, hTuple, hException, future));
+                fiberCaller.f_context.respond(
+                        new Response<ObjectHandle>(fiberCaller, hTuple, hException, future));
                 break;
                 }
 
@@ -764,7 +766,16 @@ public class ServiceContext
                     for (int i = 0, c = ahReturn.length; i < c; i++)
                         {
                         ObjectHandle hReturn = ahReturn[i];
-                        if (hReturn.isMutable() && !hReturn.isService())
+                        if (hReturn == null)
+                            {
+                            // this is only possible for a conditional return of "False"
+                            assert i > 0 && ahReturn[0].equals(xBoolean.FALSE);
+
+                            // since "null" indicates a deferred future value, replace it with
+                            // the DEFAULT value (see Utils.GET_AND_RETURN)
+                            ahReturn[i] = ObjectHandle.DEFAULT;
+                            }
+                        else if (hReturn.isMutable() && !hReturn.isService())
                             {
                             hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
                             if (hReturn == null)
@@ -777,7 +788,8 @@ public class ServiceContext
                             }
                         }
                     }
-                fiberCaller.f_context.respond(new Response(fiberCaller, ahReturn, hException, future));
+                fiberCaller.f_context.respond(new
+                        Response<ObjectHandle[]>(fiberCaller, ahReturn, hException, future));
                 break;
                 }
             }

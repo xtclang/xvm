@@ -871,6 +871,14 @@ public abstract class Utils
                             {
                             return R_REPEAT;
                             }
+
+                        // services may replace "null" elements of a negative conditional return
+                        // with the DEFAULT value (see ServiceContext.sendResponse)
+                        if (hValue == ObjectHandle.DEFAULT)
+                            {
+                            assert i > 0 && ahValue[0].equals(xBoolean.FALSE);
+                            hValue = null;
+                            }
                         ahValue[i] = hValue;
                         }
 
