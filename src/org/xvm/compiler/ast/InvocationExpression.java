@@ -1833,15 +1833,15 @@ public class InvocationExpression
                             fConstruct                                ? MethodKind.Constructor :
                             (fNoCall && fNoFBind) || target.hasThis() ? MethodKind.Any :
                                                                         MethodKind.Function;
-                    IdentityConstant idCallable = findCallable(ctx, typeTarget, info, sName,
-                            kind, id.isNested(), atypeReturn, errs);
+                    IdentityConstant idCallable = findMethod(ctx, typeTarget, info, sName,
+                            args, kind, !fNoCall, id.isNested(), atypeReturn, errs);
                     if (idCallable == null)
                         {
                         // check to see if we would have found something had we included methods in
                         // the search
                         if (kind == MethodKind.Function &&
-                                findCallable(ctx, typeTarget, info, sName, MethodKind.Method,
-                                    id.isNested(), atypeReturn, ErrorListener.BLACKHOLE) != null)
+                                findMethod(ctx, typeTarget, info, sName, args, MethodKind.Method,
+                                    !fNoCall, id.isNested(), atypeReturn, ErrorListener.BLACKHOLE) != null)
                             {
                             exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD, sName, target.getTargetType());
                             }

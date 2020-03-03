@@ -2003,6 +2003,7 @@ public abstract class Component
                 case Package:
                 case Class:
                 case Typedef:
+                case MultiMethod:
                     collector.resolvedComponent(child);
                     return ResolutionResult.RESOLVED;
                 }

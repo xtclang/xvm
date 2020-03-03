@@ -66,6 +66,8 @@ module TestDefAsn.xqiz.it
         console.println("i=" + i);
         }
 
+    String name = "top-level property";
+
     void testNameHiding()
         {
         static conditional (String, Int) name()

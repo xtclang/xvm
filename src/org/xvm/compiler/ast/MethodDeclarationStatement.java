@@ -545,13 +545,13 @@ public class MethodDeclarationStatement
                 }
             }
 
-        // methods are opaque, so everything inside the curlies can be deferred until we get to the
-        // validateContent() stage
-        mgr.processChildrenExcept((child) -> child == body);
-
         MethodStructure method = (MethodStructure) getComponent();
         if (method != null)
             {
+            // methods are opaque, so everything inside the curlies can be deferred until we get to the
+            // validateContent() stage
+            mgr.processChildrenExcept((child) -> child == body);
+
             // sort out which annotations go on the method, and which belong to the return type
             if (!method.resolveAnnotations() || !method.resolveTypedefs())
                 {
@@ -590,8 +590,10 @@ public class MethodDeclarationStatement
             {
             // we are in an error state; we choose not to proceed with compilation
             mgr.deferChildren();
+            return;
             }
-        else if (method.getChildrenCount() > 0)
+
+        if (method.getChildrenCount() > 0)
             {
             // the discovery of new structures means that any TypeInfo that was already created will
             // be wrong
@@ -647,7 +649,8 @@ public class MethodDeclarationStatement
             TypeConstant   type = pool().ensureAccessTypeConstant(clz.getCanonicalType(), Access.PRIVATE);
             TypeInfo       info = type.ensureTypeInfo(errs);
             PropertyInfo   prop = info.findProperty(method.getName());
-            if (prop != null)
+            if (prop != null &&
+                prop.getIdentity().getNestedDepth() == method.getIdentityConstant().getNestedDepth() - 1)
                 {
                 log(errs, Severity.ERROR, Compiler.METHOD_NAME_COLLISION,
                         method.getName(), prop.getIdentity().getNamespace().getPathString());
