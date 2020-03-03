@@ -158,5 +158,5 @@ public class xTerminalConsole
         return Op.R_NEXT;
         };
 
-    private boolean m_fEcho;
+    private boolean m_fEcho = true;
     }
