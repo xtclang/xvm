@@ -89,6 +89,12 @@ public class MultipleLValueStatement
         }
 
     @Override
+    protected boolean isRValue(Expression exprChild)
+        {
+        return false;
+        }
+
+    @Override
     protected boolean allowsShortCircuit(AstNode nodeChild)
         {
         assert indexOfChild(nodeChild) >= 0;

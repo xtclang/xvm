@@ -24,6 +24,17 @@ module TestDefAsn.xqiz.it
         {
         console.println("\n** testDefAssignment()");
 
+        static (String, Int) name()
+            {
+            return "hello", 5;
+            }
+
+        String n;
+        Int    c;
+        (n, c) = name();
+
+        assert n.size == c;
+
         Int i;
         Boolean f1 = gimmeTrue();
         Boolean f2 = gimmeTrue();
