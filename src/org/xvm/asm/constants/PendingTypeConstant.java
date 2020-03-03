@@ -3,6 +3,8 @@ package org.xvm.asm.constants;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
@@ -111,6 +113,30 @@ public class PendingTypeConstant
     protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
         return typeRight.calculateRelation(m_typeConstraint);
+        }
+
+    @Override
+    public boolean consumesFormalType(String sTypeName, Access access)
+        {
+        return false;
+        }
+
+    @Override
+    protected Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
+        {
+        return Usage.NO;
+        }
+
+    @Override
+    public boolean producesFormalType(String sTypeName, Access access)
+        {
+        return false;
+        }
+
+    @Override
+    protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
+        {
+        return Usage.NO;
         }
 
 
