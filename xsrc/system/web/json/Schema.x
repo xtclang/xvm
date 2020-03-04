@@ -15,7 +15,6 @@ import io.ObjectOutput;
  *
  * TODO ReflectionMapping implementation
  * TODO NullableMapping as a wrapper around another Mapping
- * TODO "metadata" implementation
  * TODO "pointer" implementation
  * TODO versioning support
  * TODO split out JSON library into its own (non-core) module
@@ -252,9 +251,23 @@ const Schema
         throw new UnsupportedOperation($"No JSON Schema Mapping found for Type={type}");
         }
 
-    conditional Mapping getMapping(Doc doc)
+    /**
+     * Examine the specified name to determine if it is part of a name/value pair that holds
+     * metadata information.
+     *
+     * @param name  a name from a name/value pair in a JSON object
+     *
+     * @return True iff the name/value pair should be treated as metadata
+     */
+    Boolean isMetadata(String name)
         {
-        TODO
+        return name.size >= 1 && switch (name[0])
+            {
+            case '$': True;
+            case '@': True;
+            case '_': True;
+            default : False;
+            };
         }
 
     /**

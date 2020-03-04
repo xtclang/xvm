@@ -21,6 +21,7 @@ module TestIO
     import Ecstasy.web.json.Mapping;
     import Ecstasy.web.json.ObjectInputStream;
     import Ecstasy.web.json.ObjectInputStream.ElementInputStream;
+    import Ecstasy.web.json.ObjectInputStream.FieldInputStream;
     import Ecstasy.web.json.ObjectOutputStream;
     import Ecstasy.web.json.ObjectOutputStream.ElementOutputStream;
     import Ecstasy.web.json.Parser;
@@ -39,6 +40,7 @@ module TestIO
         testJSONPrint();
         testJSONBuild();
         testPoint();
+        testMetadata();
         }
 
     void testInputStream()
@@ -371,6 +373,52 @@ module TestIO
                     }
                 }
             }
+        }
 
+    void testMetadata()
+        {
+        console.println("\n*** testMetadata()");
+
+        Schema schema00 = new Schema(randomAccess = False, enableMetadata = False);
+        Schema schemaR0 = new Schema(randomAccess = True , enableMetadata = False);
+        Schema schema0M = new Schema(randomAccess = False, enableMetadata = True );
+        Schema schemaRM = new Schema(randomAccess = True , enableMetadata = True );
+
+        static String Example1 =
+                `|  {
+                 |  "y" : 7,
+                 |  "x" : 31
+                 |  }
+                ;
+        assert openObject(schema00, Example1).metadataFor("$type") == Null;
+        assert openObject(schemaR0, Example1).metadataFor("$type") == Null;
+        assert openObject(schema0M, Example1).metadataFor("$type") == Null;
+        assert openObject(schemaRM, Example1).metadataFor("$type") == Null;
+
+        static String Example2 =
+                `|  {
+                 |  "$type" : "point",
+                 |  "y" : 7,
+                 |  "x" : 31,
+                 |  "$id" : "whatever"
+                 |  }
+                ;
+        assert openObject(schema00, Example2).metadataFor("$type") == Null;
+        assert openObject(schemaR0, Example2).metadataFor("$type") == Null;
+        assert openObject(schema0M, Example2).metadataFor("$type") == "point";
+        assert openObject(schemaRM, Example2).metadataFor("$type") == "point";
+
+        assert openObject(schema00, Example2).metadataFor("$id") == Null;
+        assert openObject(schemaR0, Example2).metadataFor("$id") == Null;
+        assert openObject(schema0M, Example2).metadataFor("$id") == Null;
+        assert openObject(schemaRM, Example2).metadataFor("$id") == "whatever";
+
+        private FieldInputStream openObject(Schema schema, String json)
+            {
+            Reader             reader = new CharArrayReader(json);
+            ObjectInputStream  o_in   = schema.createObjectInput(reader).as(ObjectInputStream);
+            ElementInputStream e_in   = o_in.ensureElementInput();
+            return e_in.openObject().as(FieldInputStream);
+            }
         }
     }

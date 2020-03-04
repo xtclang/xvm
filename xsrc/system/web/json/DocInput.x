@@ -39,6 +39,10 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
      *
      * All leading properties that begin with an "@", a "$", or an "_" character are assumed to be
      * metadata properties.
+     *
+     * @param attribute  the metadata attribute name
+     *
+     * @return the value of the metadata attribute, or `Null`
      */
     Doc metadataFor(String attribute);
 

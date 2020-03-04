@@ -647,13 +647,13 @@ class ObjectInputStream(Schema schema, Parser parser)
         /**
          * The next loaded key name of the next key-value pair.
          */
-        String? name;
+        protected String? name;
 
         /**
-         * A lazily constructed map of the key-value pairs that were skipped over. (The values are
+         * A lazily constructed map of the name/value pairs that were skipped over. (The values are
          * stored as an array of their raw tokens.)
          */
-        ListMap<String, Token[]>? skipped;
+        protected ListMap<String, Token[]>? skipped;
 
         /**
          * Take the `Token[]` value of the entry identified by the `String` key, removing the entry
@@ -702,7 +702,19 @@ class ObjectInputStream(Schema schema, Parser parser)
         @Override
         Doc metadataFor(String attribute)
             {
-            TODO
+            if (schema.enableMetadata && schema.isMetadata(attribute),
+                    Token[]? tokens := seek(attribute, skip=schema.randomAccess, take=False))
+                {
+                if (tokens == Null)
+                    {
+                    // the attribute name was found, but it has not yet been read
+                    tokens = skipAndStore(attribute);
+                    }
+
+                return docFromTokens(tokens);
+                }
+
+            return Null;
             }
 
         @Override
@@ -746,8 +758,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                 {
                 for ((String name, Token[] tokens) : skipped?)
                     {
-                    assert Doc doc := new Parser(tokens.iterator()).next();
-                    remainder.put(name, doc);
+                    remainder.put(name, docFromTokens(tokens));
                     }
                 skipped?.clear();
                 }
@@ -778,7 +789,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                     }
                 else
                     {
-                    return new Parser(tokens.iterator()).parseDoc();
+                    return docFromTokens(tokens);
                     }
                 }
 
@@ -788,25 +799,41 @@ class ObjectInputStream(Schema schema, Parser parser)
         @Override
         protected Boolean loadNext(Boolean first = False)
             {
-            if (first)
+            Boolean collectMetadata = False;
+            while (True)
                 {
-                if (parser.match(ObjectExit))
+                if (first)
+                    {
+                    if (parser.match(ObjectExit))
+                        {
+                        name    = Null;
+                        canRead = False;
+                        return False;
+                        }
+
+                    collectMetadata = schema.enableMetadata;
+                    first           = False;
+                    }
+                else if (!parser.match(Comma))
                     {
                     name    = Null;
                     canRead = False;
+                    parser.expect(ObjectExit);
                     return False;
                     }
-                }
-            else if (!parser.match(Comma))
-                {
-                canRead = False;
-                parser.expect(ObjectExit);
-                return False;
-                }
 
-            name = parser.expect(StrVal).value.as(String);
-            parser.expect(Colon);
-            return True;
+                String current = parser.expect(StrVal).value.as(String);
+                parser.expect(Colon);
+                if (collectMetadata && schema.isMetadata(current))
+                    {
+                    skipAndStore(current);
+                    }
+                else
+                    {
+                    name = current;
+                    return True;
+                    }
+                }
             }
 
         /**
@@ -849,13 +876,7 @@ class ObjectInputStream(Schema schema, Parser parser)
 
                     if (collect)
                         {
-                        Token[] tokens = new Token[];
-                        parser.skip(tokens);
-                        if (skipped == Null)
-                            {
-                            skipped = new ListMap<String, Token[]>();
-                            }
-                        skipped?.put(current, tokens);
+                        skipAndStore(current);
                         }
                     else
                         {
@@ -867,6 +888,29 @@ class ObjectInputStream(Schema schema, Parser parser)
                 }
 
             return False;
+            }
+
+        private Token[] skipAndStore(String current)
+            {
+            Token[] tokens = new Token[];
+            parser.skip(tokens);
+            if (skipped == Null)
+                {
+                skipped = new ListMap<String, Token[]>();
+                }
+            skipped?.put(current, tokens);
+            return tokens;
+            }
+
+        private Doc docFromTokens(Token[] tokens)
+            {
+            if (tokens.size == 1)
+                {
+                return tokens[0].value;
+                }
+
+            assert Doc doc := new Parser(tokens.iterator()).next();
+            return doc;
             }
         }
     }
