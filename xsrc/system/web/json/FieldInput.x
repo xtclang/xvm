@@ -59,16 +59,24 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
     conditional String nextName();
 
     /**
-     * Test if the JSON object contains the specified name.
+     * Test if the JSON object contains the specified name from an unread name/value pair, and if it
+     * does, whether the corresponding value is not `null`.
      *
-     * (If strict ordering is enforced, this method is only guaranteed to test the immediately next
-     * name.)
+     * The behavior of this method depends largely on whether the [Schema.randomAccess] option is
+     * enabled:
+     * * If the [Schema.randomAccess] is `False`, then only the next name/value pair is evaluated.
+     * * If the [Schema.randomAccess] is `True`, then potentially all unread name/value pairs are
+     *   evaluated, starting with the current name/value pair, followed by any previously-skipped
+     *   name/value pairs, followed by the sequence of yet-to-be-read name/value pairs, until the
+     *   specified name is found (or the name/value pairs are exhausted).
      *
      * @param name  the name to test for
      *
-     * @return True iff the name is present in the JSON object
+     * @return True iff the name is present (as specified by the documentation of this method) and
+     *         unread in the JSON object
+     * @return (conditional) True iff the corresponding value is not `null`
      */
-    Boolean contains(String name);
+    conditional Boolean contains(String name);
 
     /**
      * If any fields of the current JSON object have _not_ been read, combine those fields into a
@@ -83,13 +91,19 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
     // ----- single values -------------------------------------------------------------------------
 
     /**
-     * Test the element for existence without altering the input position within the document.
+     * Test for the existence of an unread name/value pair with the specified name without altering
+     * the input position within the document (unless the [Schema.randomAccess] option is enabled).
      *
      * @param name  the name of the JSON property to check for absence or a `null` value
      *
      * @return True iff the element is `null` or does not exist
      */
-    Boolean isNull(String name);
+    Boolean isNull(String name)
+        {
+        Boolean notNull = False;
+        notNull := contains(name);
+        return !notNull;
+        }
 
     /**
      * Read the specified array value as a JSON `Doc` object.

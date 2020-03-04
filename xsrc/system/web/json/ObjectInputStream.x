@@ -655,6 +655,10 @@ class ObjectInputStream(Schema schema, Parser parser)
          */
         ListMap<String, Token[]>? skipped;
 
+        /**
+         * Take the `Token[]` value of the entry identified by the `String` key, removing the entry
+         * in the process.
+         */
         private static Token[] takeTokens(Map<String, Token[]>.Entry entry)
             {
             val result = entry.value;
@@ -719,24 +723,18 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         @Override
-        Boolean contains(String name)
+        conditional Boolean contains(String name)
             {
-            // check the next name
             if (name == this.name?)
                 {
-                return True;
+                return True, parser.peek().id != NoVal;
                 }
 
-            // check the "remainder" (skipped names)
-            if (skipped?.contains(name))
+            if (schema.randomAccess, Token[]? tokens := seek(name))
                 {
-                return True;
-                }
-
-            // if randomAccess is enabled, then peek ahead to find the name
-            if (schema.randomAccess)
-                {
-                TODO implement random access feature
+                return True, (tokens == Null
+                        ? parser.peek().id != NoVal
+                        : !(tokens.size == 1 && tokens[0].id == NoVal));
                 }
 
             return False;
@@ -770,48 +768,20 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         @Override
-        Boolean isNull(String name)
-            {
-            // first, quick-check the current key/value
-            if (name == this.name?)
-                {
-                return parser.peek().id == NoVal;
-                }
-
-            // check the skipped key/value pairs (if any)
-            if (Token[] value := skipped?.get(name))
-                {
-                return value.size == 1 && value[0].id == NoVal;
-                }
-
-            if (schema.randomAccess)
-                {
-                TODO read in the rest of the document and answer the question
-                }
-
-            return True;
-            }
-
-        @Override
         Doc readDoc(String name, Doc defaultValue = Null)
             {
-            if (name == this.name)
+            if (Token[]? tokens := seek(name, take=True))
                 {
-                Doc doc = parser.parseDoc();
-                loadNext();
-                return doc;
-                }
-
-            if (schema.randomAccess, Token[] tokens := skipped?.processIfPresent(name, takeTokens))
-                {
-                return new Parser(tokens.iterator()).parseDoc();
-                }
-
-            if (seek(name))
-                {
-                Doc doc = parser.parseDoc();
-                loadNext();
-                return doc;
+                if (tokens == Null)
+                    {
+                    Doc doc = parser.parseDoc();
+                    loadNext();
+                    return doc;
+                    }
+                else
+                    {
+                    return new Parser(tokens.iterator()).parseDoc();
+                    }
                 }
 
             return defaultValue;
@@ -825,7 +795,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                 if (parser.match(ObjectExit))
                     {
                     name    = Null;
-                    canRead = False; //
+                    canRead = False;
                     return False;
                     }
                 }
@@ -841,9 +811,61 @@ class ObjectInputStream(Schema schema, Parser parser)
             return True;
             }
 
-        protected Boolean seek(String name)
+        /**
+         * Find the specified name in the document
+         *
+         * @param name  the name to find
+         * @param skip  pass True to skip ahead if necessary
+         *
+         * @return True iff the name was found
+         * @return (conditional) a `Token[]` of the tokens making up the corresponding value iff the
+         *         name was previously skipped; otherwise Null iff the name matches the next
+         *         name/value pair
+         */
+        protected conditional Token[]? seek(String name, Boolean skip = True, Boolean take = False)
             {
-            // TODO
+            // check the next name
+            if (name == this.name?)
+                {
+                return True, Null;
+                }
+
+            // check the "remainder" (skipped names)
+            if (Token[] tokens := take ? skipped?.processIfPresent(name, takeTokens) : skipped?.get(name))
+                {
+                return True, tokens;
+                }
+
+            // if skpping ahead is allowed, then proceed until the name is found or the end reached
+            if (skip)
+                {
+                Boolean collect = schema.randomAccess || schema.storeRemainders;
+                for (String? current = this.name; current != Null; current = this.name)
+                    {
+                    if (current == name)
+                        {
+                        return True, Null;
+                        }
+
+                    if (collect)
+                        {
+                        Token[] tokens = new Token[];
+                        parser.skip(tokens);
+                        if (skipped == Null)
+                            {
+                            skipped = new ListMap<String, Token[]>();
+                            }
+                        skipped?.put(current, tokens);
+                        }
+                    else
+                        {
+                        parser.skip();
+                        }
+
+                    loadNext();
+                    }
+                }
+
             return False;
             }
         }

@@ -8,6 +8,19 @@ import io.ObjectInput;
 import io.ObjectOutput;
 
 
+/**
+ * A JSON Schema represents the ability to read and write Ecstasy objects (of a particular group of
+ * Ecstasy types) from and to JSON textual data, or conversely, the ability to transform JSON
+ * textual data from and to Ecstasy object graphs.
+ *
+ * TODO ReflectionMapping implementation
+ * TODO NullableMapping as a wrapper around another Mapping
+ * TODO "random access" and "remainder" implementation
+ * TODO "metadata" implementation
+ * TODO "pointer" implementation
+ * TODO versioning support
+ * TODO split out JSON library into its own (non-core) module
+ */
 const Schema
         implements io.TextFormat
     {

@@ -228,6 +228,8 @@ module TestIO
 
     void testPoint()
         {
+        console.println("\n*** testPoint()");
+
         static const Point(Int x, Int y);
         static const Segment(Point p1, Point p2);
 
@@ -303,6 +305,13 @@ module TestIO
                  |  }
                 ;
 
+        static String ExampleRandom =
+                `|  {
+                 |  "y" : 7,
+                 |  "x" : 31
+                 |  }
+                ;
+
         console.println($"json={ExamplePoint}");
         Schema             schema = Schema.DEFAULT;
 //        ObjectInputStream  o_in   = schema.createObjectInput(new CharArrayReader(ExamplePoint)); // TODO GG needs better error message
@@ -310,7 +319,7 @@ module TestIO
         ObjectInputStream  o_in   = schema.createObjectInput(reader).as(ObjectInputStream);
         ElementInputStream e_in   = o_in.ensureElementInput();
         PointMapper        mapper = new PointMapper();
-        Point              point  = mapper.read<Point>(e_in);
+        Point              point  = mapper.read(e_in);
         console.println($"point={point}");
 
 //        Schema schemaSA = new Schema([new PointMapper(), new SegmentMapper()], randomAccess = False);  // TODO GG
@@ -325,10 +334,43 @@ module TestIO
             schema.createObjectOutput(sb).write(val);
 
             String s = sb.toString();
-            console.println($"JSON written out={s}");
+            console.println($"JSON {name} written out={s}");
 
             Ser val2 = schema.createObjectInput(new CharArrayReader(s)).read<Ser>();
-            console.println($"read back in={val2}");
+            console.println($"read {name} back in={val2}");
             }
+
+        console.println("\n(random access tests)");
+        Schema schemaRA = new Schema([new PointMapper()], randomAccess = True);
+        testSer(schemaRA, "point", point);
+        testDeser("seq-seq", schemaSA, ExamplePoint , False);
+        testDeser("seq-rnd", schemaSA, ExampleRandom, True );
+        testDeser("rnd-seq", schemaRA, ExamplePoint , False);
+        testDeser("rnd-rnd", schemaRA, ExampleRandom, False);
+
+        private void testDeser(String test, Schema schema, String json, Boolean failureExpected)
+            {
+            try
+                {
+                Point point = schema.createObjectInput(new CharArrayReader(json)).read<Point>();
+                console.println($"read: {point}");
+                if (failureExpected)
+                    {
+                    console.println($"Test \"{test}\" finished, BUT IT SHOULD HAVE FAILED!!!");
+                    }
+                }
+            catch (Exception e)
+                {
+                if (failureExpected)
+                    {
+                    console.println($"Test \"{test}\" correctly failed as expected.");
+                    }
+                else
+                    {
+                    console.println($"Test \"{test}\" failed with \"{e}\", BUT IT SHOULD NOT HAVE FAILED!!!");
+                    }
+                }
+            }
+
         }
     }

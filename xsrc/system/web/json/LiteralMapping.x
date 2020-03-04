@@ -13,6 +13,11 @@ const LiteralMapping<Serializable extends Doc>
             return value;
             }
 
+        if (value.is(IntLiteral) && Serializable.is(Type<FPLiteral>))
+            {
+            return value.toFPLiteral().as(Serializable);
+            }
+
         throw new IllegalJSON($"Type expected={Serializable}; actual={&value.actualType}");
         }
 
