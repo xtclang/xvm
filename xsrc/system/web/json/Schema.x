@@ -15,7 +15,6 @@ import io.ObjectOutput;
  *
  * TODO ReflectionMapping implementation
  * TODO NullableMapping as a wrapper around another Mapping
- * TODO "random access" and "remainder" implementation
  * TODO "metadata" implementation
  * TODO "pointer" implementation
  * TODO versioning support
@@ -403,7 +402,8 @@ const Schema
     // ----- ReflectionMapper service --------------------------------------------------------------
 
     /**
-     * A service that creates and caches [ReflectionMapping] instances.
+     * A service that creates and caches [ReflectionMapping] and other [Mapping] instances necessary
+     * to serialize and deserialize previously encountered types.
      */
     service ReflectionMapper
         {
@@ -414,11 +414,11 @@ const Schema
          *
          * @return a [ReflectionMapping] instance for that type
          */
-        <ObjectType> ReflectionMapping<ObjectType> ensureMapping(Type<ObjectType> type)
+        <ObjectType> Mapping<ObjectType> ensureMapping(Type<ObjectType> type)
             {
-            if (ReflectionMapping<> mapping := cache.get(type))
+            if (Mapping<> mapping := cache.get(type))
                 {
-                return mapping.as(ReflectionMapping<ObjectType>);
+                return mapping.as(Mapping<ObjectType>);
                 }
 
             assert type == ObjectType;
@@ -427,6 +427,6 @@ const Schema
             return mapping;
             }
 
-        private Map<Type, ReflectionMapping<>> cache = new HashMap();
+        private Map<Type, Mapping<>> cache = new HashMap();
         }
     }

@@ -677,20 +677,12 @@ class ObjectInputStream(Schema schema, Parser parser)
             {
             prepareRead();
 
-            // check if the next key/value pair is the one that we're looking for
-            if (this.name? == name)
-                {
-                return new @CloseCap ElementInputStream(this, name);
-                }
-
-            // check if we've already skipped over the name that we're looking for
-            if (schema.randomAccess, Token[] tokens := skipped?.get(name))
+            if (Token[]? tokens := seek(name, take=True))
                 {
                 return new @CloseCap ElementInputStream(this, name, tokens);
                 }
 
-            // advance through the key/value pairs until the specified name is found
-            TODO
+            throw new IllegalJSON($"Missing field {name}");
             }
 
         @Override
@@ -743,28 +735,34 @@ class ObjectInputStream(Schema schema, Parser parser)
         @Override
         Map<String, Doc>? takeRemainder()
             {
-            if (schema.storeRemainders)
+            if (!schema.storeRemainders)
                 {
-                Map<String, Doc> remainder = new ListMap();
+                return Null;
+                }
 
+            Map<String, Doc> remainder = new ListMap();
+
+            if (schema.randomAccess)
+                {
                 for ((String name, Token[] tokens) : skipped?)
                     {
                     assert Doc doc := new Parser(tokens.iterator()).next();
                     remainder.put(name, doc);
                     }
-
-                while (canRead)
-                    {
-                    String name = this.name? : assert;
-                    remainder.put(name, readDoc(name));
-                    }
-
-                return remainder;
+                skipped?.clear();
                 }
-            else
+
+            if (canRead)
                 {
-                return Null;
+                prepareRead();
+
+                for (String? current = this.name; current != Null; current = this.name)
+                    {
+                    remainder.put(current, readDoc(current));
+                    }
                 }
+
+            return remainder;
             }
 
         @Override
