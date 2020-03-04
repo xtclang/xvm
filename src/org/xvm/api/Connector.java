@@ -5,15 +5,12 @@ import java.io.IOException;
 
 import java.util.List;
 
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
-import org.xvm.asm.ModuleStructure;
 
-import org.xvm.runtime.Container;
+import org.xvm.runtime.CoreContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.Runtime;
@@ -73,8 +70,7 @@ public class Connector
             List<ModuleRepository> listRepo = ((LinkedRepository) m_repository).asList();
             listRepo.add(repo);
 
-            m_repository = new LinkedRepository(
-                listRepo.toArray(new ModuleRepository[listRepo.size()]));
+            m_repository = new LinkedRepository(listRepo.toArray(new ModuleRepository[0]));
             }
         else
             {
@@ -92,17 +88,7 @@ public class Connector
             throw new IllegalStateException("Connector is already activated");
             }
 
-        m_container = new Container(f_runtime, sAppName, m_repository, f_templates, f_heapGlobal);
-        }
-
-    public Runtime getRuntime()
-        {
-        return f_runtime;
-        }
-
-    public Container getContainer()
-        {
-        return m_container;
+        m_container = new CoreContainer(f_runtime, sAppName, m_repository, f_templates, f_heapGlobal);
         }
 
     /**
@@ -182,7 +168,7 @@ public class Connector
     /**
      * The container associated with this Connector.
      */
-    private Container m_container;
+    private CoreContainer m_container;
 
     /**
      * Status indicator.
