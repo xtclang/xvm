@@ -778,8 +778,7 @@ public abstract class AstNode
                     for (AstNode node : mgrKids.takeRevisitList())
                         {
                         // TODO clean up / clarify error logging
-                        node.log(errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP,
-                                node.getComponent().getIdentityConstant().toString());
+                        node.log(errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP, node.toString());
                         return false;
                         }
                     }
