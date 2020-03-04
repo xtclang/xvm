@@ -680,9 +680,8 @@ public abstract class Utils
                 }
 
             IdentityConstant constValue = constSingleton.getValue();
+            int              iResult;
 
-            ObjectHeap heap = ctxCurr.f_heapGlobal;
-            int        iResult;
             switch (constValue.getFormat())
                 {
                 case Module:
@@ -699,13 +698,12 @@ public abstract class Utils
                 case Class:
                     {
                     ClassConstant idClz = (ClassConstant) constValue;
-                    ClassStructure clz   = (ClassStructure) idClz.getComponent();
+                    ClassStructure clz  = (ClassStructure) idClz.getComponent();
 
                     assert clz.isSingleton();
 
-                    ClassTemplate template = heap.f_templates.getTemplate(idClz);
-
-                    Format format = template.f_struct.getFormat();
+                    ClassTemplate template = ctxCurr.f_templates.getTemplate(idClz);
+                    Format        format   = template.f_struct.getFormat();
                     if (format == Format.ENUMVALUE)
                         {
                         // this can happen if the constant's handle was not initialized or

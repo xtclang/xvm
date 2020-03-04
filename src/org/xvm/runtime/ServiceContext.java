@@ -11,6 +11,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.LinkerContext;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -58,6 +59,18 @@ public class ServiceContext
         f_pool          = pool;
         f_queueMsg      = new ConcurrentLinkedQueue<>();
         f_queueResponse = new ConcurrentLinkedQueue<>();
+        }
+
+    // ----- accessors -----------------------------------------------------------------------------
+
+    public Runtime getRuntime()
+        {
+        return f_container.f_runtime;
+        }
+
+    public LinkerContext getLinkerContext()
+        {
+        return f_container;
         }
 
     /**

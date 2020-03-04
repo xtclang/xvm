@@ -4,7 +4,6 @@ package org.xvm.runtime;
 import org.xvm.api.Connector;
 
 import org.xvm.asm.Component;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -15,7 +14,7 @@ import org.xvm.compiler.CommandLine;
 
 
 /**
- * The connector test,
+ * The connector test.
  *
  * TestConnector [module name] [module path]
  */

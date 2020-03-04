@@ -57,7 +57,7 @@ public class JumpCond
             m_cond = (ConditionalConstant) frame.getConstant(m_nArg);
             }
 
-        LinkerContext ctx = frame.f_context.f_container;
+        LinkerContext ctx = frame.f_context.getLinkerContext();
         return m_cond.evaluate(ctx) ? jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1;
         }
 

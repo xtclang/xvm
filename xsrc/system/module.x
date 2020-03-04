@@ -133,9 +133,15 @@ module Ecstasy.xtclang.org
     interface Module
             extends Package
         {
-        // TODO version number
+        /**
+         * The version of the module, if the version is known.
+         */
+        @RO Version? version;
 
-        // TODO list of depends-on other modules
+        /**
+         * The array of modules that this module depends on.
+         */
+        @RO immutable Module[] dependsOn;
         }
 
     /**
@@ -147,6 +153,11 @@ module Ecstasy.xtclang.org
      */
     interface Package
         {
+        /**
+         * Test to see if this package represents a module import and if so, return it.
+         */
+        conditional Module isModuleImport();
+
         // TODO what is the class for this
 
         // TODO name-to-contents map

@@ -175,7 +175,7 @@ public abstract class OSFileNode
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    protected static class NodeHandle
+    public static class NodeHandle
             extends GenericHandle
         {
         protected final Path f_path;
@@ -189,6 +189,11 @@ public abstract class OSFileNode
             f_path = path;
 
             setField("store", hOSStore);
+            }
+
+        public Path getPath()
+            {
+            return f_path;
             }
         }
 

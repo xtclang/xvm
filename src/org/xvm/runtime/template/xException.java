@@ -46,6 +46,7 @@ public class xException
         s_clzUnsupportedOperation = f_templates.getTemplate("UnsupportedOperation").getCanonicalClass();
         s_clzDivisionByZero       = f_templates.getTemplate("numbers.Number.DivisionByZero").getCanonicalClass();
         s_clzPathException        = f_templates.getTemplate("fs.PathException").getCanonicalClass();
+        s_clzIOException          = f_templates.getTemplate("io.IOException").getCanonicalClass();
 
         METHOD_FORMAT_EXCEPTION = f_struct.findMethod("formatExceptionString", 2);
 
@@ -153,9 +154,14 @@ public class xException
 
     public static ExceptionHandle pathException(Frame frame, String sMsg, ObjectHandle path)
         {
-        ExceptionHandle hException = makeHandle(frame, s_clzPathException, "IOException: " + sMsg);
+        ExceptionHandle hException = makeHandle(frame, s_clzPathException, sMsg);
         hException.setField("path", path);
         return hException;
+        }
+
+    public static ExceptionHandle ioException(Frame frame, String sMsg)
+        {
+        return makeHandle(frame, s_clzIOException, sMsg);
         }
 
     // ---- ObjectHandle helpers -----
@@ -201,6 +207,7 @@ public class xException
     private static ClassComposition s_clzUnsupportedOperation;
     private static ClassComposition s_clzDivisionByZero;
     private static ClassComposition s_clzPathException;
+    private static ClassComposition s_clzIOException;
 
     private static MethodStructure METHOD_FORMAT_EXCEPTION;
     }

@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import java.util.concurrent.atomic.AtomicLong;
+
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -36,8 +37,6 @@ import org.xvm.runtime.template._native.xTerminalConsole;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
-
-import static org.xvm.asm.Op.A_STACK;
 
 
 /**
@@ -269,7 +268,7 @@ public class Container
             MethodStructure  constructor     = templateStorage.f_struct.findConstructor();
 
             switch (templateStorage.construct(frame, constructor, clzStorage,
-                                              null, Utils.OBJECTS_NONE, A_STACK))
+                                              null, Utils.OBJECTS_NONE, Op.A_STACK))
                 {
                 case Op.R_NEXT:
                     hStorage = frame.popStack();
@@ -405,7 +404,7 @@ public class Container
                 {
                 ObjectHandle hTargetReal = frameCaller.peekStack();
                 int          iResult     = hTargetReal.getTemplate().getPropertyValue(
-                                                frameCaller, hTargetReal, idProp, A_STACK);
+                                                frameCaller, hTargetReal, idProp, Op.A_STACK);
                 switch (iResult)
                     {
                     case Op.R_NEXT:
@@ -426,7 +425,7 @@ public class Container
             }
 
         ClassTemplate template = hTarget.getTemplate();
-        switch (template.getPropertyValue(frame, hTarget, idProp, A_STACK))
+        switch (template.getPropertyValue(frame, hTarget, idProp, Op.A_STACK))
             {
             case Op.R_NEXT:
                 {
@@ -540,10 +539,11 @@ public class Container
 
 
     // ----- inner class: InjectionKey -------------------------------------------------------------
+
     public static class InjectionKey
         {
-        public final String f_sName;
         public final TypeConstant f_type;
+        public final String       f_sName;
 
         public InjectionKey(String sName, TypeConstant type)
             {
@@ -567,7 +567,7 @@ public class Container
             InjectionKey that = (InjectionKey) o;
 
             return Objects.equals(this.f_sName, that.f_sName) &&
-                   Objects.equals(this.f_type, that.f_type);
+                   Objects.equals(this.f_type,  that.f_type);
             }
 
         @Override
@@ -579,7 +579,7 @@ public class Container
         @Override
         public String toString()
             {
-            return "Key: " + f_sName + ", " + f_type;
+            return "Key: " + f_sName + ", " + f_type.getValueString();
             }
         }
 
