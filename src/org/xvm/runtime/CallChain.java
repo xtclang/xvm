@@ -270,7 +270,7 @@ public class CallChain
                 {
                 MethodStructure methodSuper = bodySuper.getMethodStructure();
                 ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getMaxVars()];
-                ahVar[1] = hArg;
+                ahVar[0] = hArg;
 
                 return frame.invoke1(this, nDepth, hThis, ahVar, Op.A_IGNORE);
                 }
