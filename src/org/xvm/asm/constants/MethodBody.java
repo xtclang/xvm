@@ -23,7 +23,7 @@ public class MethodBody
     public MethodBody(MethodStructure method)
         {
         this(method.getIdentityConstant(), method.getIdentityConstant().getSignature(),
-                Implementation.Explicit, null);
+                method.isNative() ? Implementation.Native : Implementation.Explicit, null);
 
         assert method.getAccess() == Access.PRIVATE;
         m_structMethod = method;
