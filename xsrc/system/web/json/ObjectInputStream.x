@@ -814,6 +814,8 @@ class ObjectInputStream(Schema schema, Parser parser)
          *
          * @param name  the name to find
          * @param skip  pass True to skip ahead if necessary
+         * @param take  pass True to remove the tokens from the previously skipped name/value pairs
+         *              if the name was previously skipped
          *
          * @return True iff the name was found
          * @return (conditional) a `Token[]` of the tokens making up the corresponding value iff the
@@ -837,7 +839,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             // if skpping ahead is allowed, then proceed until the name is found or the end reached
             if (skip)
                 {
-                Boolean collect = schema.randomAccess || schema.storeRemainders;
+                Boolean collect = schema.randomAccess;
                 for (String? current = this.name; current != Null; current = this.name)
                     {
                     if (current == name)

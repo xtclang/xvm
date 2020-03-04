@@ -68,7 +68,7 @@ const Schema
 
         // add specified mappings
         ListMap<Type, Mapping> mappingForType = new ListMap();
-        Map<String, Type>      typeForName    = new HashMap();
+        HashMap<String, Type>  typeForName    = new HashMap();
         for (Mapping mapping : mappings)
             {
             if (mappingForType.putIfAbsent(mapping.Serializable, mapping))
@@ -78,10 +78,6 @@ const Schema
             }
 
         this.mappings    = mappingForType;
-
-// TODO CP should Map be ImmutableAble? maybe conditionally based on the Key/Value const'ness?
-        // at the moment, Map is not freezable (ImmutableAble), so we need to
-        // "freeze" it explicitly
         this.typeForName = typeForName.makeImmutable();
         }
 
