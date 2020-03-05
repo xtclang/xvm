@@ -105,6 +105,29 @@ const Char
     UInt32 codepoint;
 
 
+    // ----- numeric conversion support ------------------------------------------------------------
+
+    conditional Int isDigit()
+        {
+        Int codepoint = this.codepoint.toInt();
+        return codepoint <= 0x39 && codepoint >= 0x30
+                ? (True, codepoint - 0x30)
+                : False;
+        }
+
+    conditional Int isHexit()
+        {
+        Int codepoint = this.codepoint.toInt();
+        return switch (codepoint)
+            {
+            case 0x30..0x39: (True, codepoint - 0x30);
+            case 0x41..0x46: (True, codepoint - 0x41 + 0x0A);
+            case 0x61..0x66: (True, codepoint - 0x61 + 0x0A);
+            default: False;
+            };
+        }
+
+
     // ----- Sequential ----------------------------------------------------------------------------
 
     @Override
