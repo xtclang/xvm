@@ -6,9 +6,26 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        @Inject Directory curDir;
-
-        console.println(curDir);
-        assert !curDir.find("NO_SUCH_FILE");
+        new Derived().read<String>();
         }
+
+    class Base
+        {
+        <Ser> Ser read<Ser>(Ser? defaultValue = Null)
+            {
+            console.println($"Base {Ser}");
+            return "a".as(Ser);
+            }
+        }
+
+    class Derived
+            extends Base
+        {
+        @Override
+        <Serializable> Serializable read<Serializable>(Serializable? defaultValue = Null)
+            {
+            console.println($"Der {Serializable}");
+            return super(defaultValue);
+            }
+         }
     }

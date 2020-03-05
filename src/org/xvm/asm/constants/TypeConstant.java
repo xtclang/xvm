@@ -4946,7 +4946,9 @@ public abstract class TypeConstant
      */
     public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx)
         {
-        if (typeBase.equals(this))
+        // types may be equivalent, but not equal, for examples if some parameters are not
+        // specified: ("Array" and "Array<Object>")
+        if (typeBase.isA(this) && this.isA(typeBase))
             {
             return true;
             }
@@ -4958,8 +4960,6 @@ public abstract class TypeConstant
             TypeConstant typeThisR = this    .resolveAutoNarrowing(pool, false, typeCtx);
             TypeConstant typeBaseR = typeBase.resolveAutoNarrowing(pool, false, typeCtx);
 
-            // types may be equivalent, but not equal, for examples if some parameters are not
-            // specified: ("Array" and "Array<Object>")
             return typeBaseR.isA(typeThisR) && typeThisR.isA(typeBaseR);
             }
         return false;
