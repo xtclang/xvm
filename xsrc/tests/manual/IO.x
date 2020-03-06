@@ -42,16 +42,14 @@ module TestIO
         testPoint();
         testMetadata();
 
-        // TODO GG
-        // 2020-03-05 21:30:05.536 Service "TestIO" (id=0), fiber 3: Unhandled exception: Ecstasy:Exception Unknown outer
-        // 	at web.json.Schema.TypeMapper.selectType(Ecstasy:Type<Ecstasy:Object>, Ecstasy:Type<selectType(?)#ObjectType>) (line=394, op=MoveThis)
-        // 	at <web.json.Schema.TypeMapper> (iPC=0, op=)
-        //     =========
-        //   at web.json.Schema.getMapping(Ecstasy:Type<Ecstasy:Object>, Ecstasy:Type<getMapping(?)#ObjectType>)
-        //
-        // java.lang.NullPointerException
-        // 	at org.xvm.asm.op.MoveThis.process(MoveThis.java:175)
-        //
+        // TODO CP
+        // 2020-03-06 08:59:36.539 Service "TestIO" (id=0), fiber 3: Unhandled exception: Ecstasy:web.json.MissingMapping
+        //	at web.json.ElementInput.read(Ecstasy:Type<Ecstasy:Object>, Ecstasy:Nullable | read(?)#Serializable) (line=237, op=New_N)
+        //	at web.json.ObjectInputStream.read(Ecstasy:Type<Ecstasy:Object>) (line=124, op=Invoke_N1)
+        //	at testPointers().testSegment(Ecstasy:web.json.Schema, Ecstasy:String) (line=468, op=Invoke_11)
+        //	at testPointers() (line=461, op=Invoke_N0)
+        //	at run() (line=55, op=Invoke_00)
+        //	at <TestIO> (iPC=0, op=)
         // testPointers();
         }
 

@@ -15,7 +15,6 @@ import org.xvm.asm.LinkerContext;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 
@@ -593,11 +592,11 @@ public class ServiceContext
 
     // send and asynchronous "construct service" message to this context
     public CompletableFuture<ServiceHandle> sendConstructRequest(Frame frameCaller,
-                MethodStructure constructor, ClassComposition clazz, ObjectHandle[] ahArg)
+                MethodStructure constructor, ClassComposition clazz, ObjectHandle hParent, ObjectHandle[] ahArg)
         {
         CompletableFuture<ServiceHandle> future = new CompletableFuture<>();
 
-        addRequest(new ConstructRequest(frameCaller, constructor, clazz, future, ahArg));
+        addRequest(new ConstructRequest(frameCaller, constructor, clazz, future, hParent, ahArg));
 
         return future;
         }
@@ -853,16 +852,18 @@ public class ServiceContext
         {
         private final MethodStructure                  f_constructor;
         private final ClassComposition                 f_clazz;
+        private final ObjectHandle                     f_hParent;
         private final ObjectHandle[]                   f_ahArg;
         private final CompletableFuture<ServiceHandle> f_future;
 
         public ConstructRequest(Frame frameCaller, MethodStructure constructor, ClassComposition clazz,
-                                CompletableFuture<ServiceHandle> future, ObjectHandle[] ahArg)
+                                CompletableFuture<ServiceHandle> future, ObjectHandle hParent, ObjectHandle[] ahArg)
             {
             super(frameCaller);
 
             f_constructor = constructor;
             f_clazz       = clazz;
+            f_hParent     = hParent;
             f_ahArg       = ahArg;
             f_future      = future;
             }
@@ -876,7 +877,7 @@ public class ServiceContext
                     {
                     xService service = (xService) f_clazz.getTemplate();
 
-                    return service.constructSync(frame, f_constructor, f_clazz, f_ahArg, 0);
+                    return service.constructSync(frame, f_constructor, f_clazz, f_hParent, f_ahArg, 0);
                     }
 
                 public String toString()

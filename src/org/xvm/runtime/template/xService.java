@@ -68,10 +68,10 @@ public class xService
         return true;
         }
 
-    public int constructSync(Frame frame, MethodStructure constructor,
-                             ClassComposition clazz, ObjectHandle[] ahArg, int iReturn)
+    public int constructSync(Frame frame, MethodStructure constructor, ClassComposition clazz,
+                             ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {
-        switch (super.construct(frame, constructor, clazz, null, ahArg, Op.A_STACK))
+        switch (super.construct(frame, constructor, clazz, hParent, ahArg, Op.A_STACK))
             {
             case Op.R_NEXT:
                 {
@@ -103,7 +103,7 @@ public class xService
         {
         ServiceContext contextNew = frame.f_context.createContext(f_sName);
 
-        CompletableFuture cfResult = contextNew.sendConstructRequest(frame, constructor, clazz, ahArg);
+        CompletableFuture cfResult = contextNew.sendConstructRequest(frame, constructor, clazz, hParent, ahArg);
 
         return frame.assignFutureResult(iReturn, cfResult);
         }
