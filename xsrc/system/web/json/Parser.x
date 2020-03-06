@@ -58,9 +58,20 @@ class Parser
     protected/private Iterator<Token> lexer;
 
     /**
+     * The "next next" [Token] to process. This is only non-`Null` after a token has been "put
+     * back".
+     */
+    protected/private Token? nextToken = Null;
+
+    /**
      * The next [Token] to process.
      */
     protected/private Token? token = Null;
+
+    /**
+     * The previous [Token] processed (allowing the parser to "back up" one token).
+     */
+    protected/private Token? prevToken = Null;
 
     /**
      * True causes the values for duplicate identical names inside a JSON object to be collated
@@ -323,9 +334,26 @@ class Parser
      */
     void advance()
         {
-        Token? next = Null;
-        next := lexer.next();
-        this.token = next;
+        Token? next = this.nextToken;
+        if (next == Null)
+            {
+            next := lexer.next();
+            }
+
+        prevToken = token;
+        token     = next;
+        nextToken = Null;
+        }
+
+    /**
+     * Back up one token. This can only be performed once, until the parser has advanced again.
+     */
+    void rewind()
+        {
+        assert prevToken != Null;
+        nextToken = token;
+        token     = prevToken;
+        prevToken = Null;
         }
 
     /**

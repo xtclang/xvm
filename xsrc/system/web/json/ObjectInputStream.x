@@ -220,6 +220,62 @@ class ObjectInputStream(Schema schema, Parser parser)
         <Serializable> Serializable dereference<Serializable>(String pointer)
             {
             assert schema.enablePointers;
+
+            if (pointer.size == 0)
+                {
+                throw new IllegalJSON("Root document pointer (\"\") is not supported");
+                }
+
+            if (Int steps := pointer[0].isDigit())
+                {
+                // this is a relative pointer format
+                Int    cur  = 1;
+                Int    last = pointer.size - 1;
+                String suffix;
+
+                // TODO GG this should not be necessary
+                suffix = "";
+
+                Loop: while (True)
+                    {
+                    if (cur > last)
+                        {
+                        // the pointer points to a node containing this node, which is not supported
+                        throw new IllegalJSON($"Parent document pointer (\"{pointer}\") is not supported.");
+                        }
+
+                    Char ch = pointer[cur];
+                    if (Int n := ch.isDigit())
+                        {
+                        steps = steps * 10 + n;
+                        }
+                    else
+                        {
+                        switch (ch)
+                            {
+                            case '/':
+                                suffix = pointer[cur..last];
+                                break Loop;
+
+                            case '#':
+                                throw new IllegalJSON($"Index position / member name pointer \"{pointer}\" is not supported.");
+
+                            default:
+                                throw new IllegalJSON($"Illegal pointer: \"{pointer}\".");
+                            }
+                        }
+                    }
+
+                DocInputStream!<> node = this;
+                for (Int i = 0; i < steps; ++i)
+                    {
+                    node = node.parent ?: throw new IllegalJSON(
+                            $"Illegal relative pointer \"{pointer}\" from node \"{this.pointer}\".");
+                    }
+
+                pointer = node.pointer + suffix;
+                }
+
             if (Object value := pointers.get(pointer))
                 {
                 if (value.is(Serializable))
@@ -229,6 +285,7 @@ class ObjectInputStream(Schema schema, Parser parser)
 
                 throw new IllegalJSON($"Type mismatch for JSON pointer=\"{pointer}\"; required type={Serializable}, actual type={&value.actualType}");
                 }
+
             throw new IllegalJSON($"Missing value for JSON pointer=\"{pointer}\"; required type={Serializable}");
             }
 
@@ -474,7 +531,9 @@ class ObjectInputStream(Schema schema, Parser parser)
             {
             prepareRead();
             canRead = False;
-            return new @CloseCap ArrayInputStream(this);
+            return schema.enablePointers
+                    ? new @CloseCap @PointerAware ArrayInputStream(this)
+                    : new @CloseCap ArrayInputStream(this);
             }
 
         @Override
@@ -575,7 +634,9 @@ class ObjectInputStream(Schema schema, Parser parser)
         ArrayInputStream!<ArrayInputStream> openArray()
             {
             prepareRead();
-            return new @CloseCap ArrayInputStream(this, count);
+            return schema.enablePointers
+                    ? new @CloseCap @PointerAware ArrayInputStream(this, count)
+                    : new @CloseCap ArrayInputStream(this, count);
             }
 
         @Override
@@ -679,7 +740,9 @@ class ObjectInputStream(Schema schema, Parser parser)
 
             if (Token[]? tokens := seek(name, take=True))
                 {
-                return new @CloseCap ElementInputStream(this, name, tokens);
+                return schema.enablePointers
+                        ? new @CloseCap @PointerAware ElementInputStream(this, name, tokens)
+                        : new @CloseCap ElementInputStream(this, name, tokens);
                 }
 
             throw new IllegalJSON($"Missing field {name}");
@@ -689,7 +752,9 @@ class ObjectInputStream(Schema schema, Parser parser)
         ArrayInputStream<FieldInputStream> openArray(String name)
             {
             prepareRead();
-            return new @CloseCap ArrayInputStream(this, name);
+            return schema.enablePointers
+                    ? new @CloseCap @PointerAware ArrayInputStream(this, name)
+                    : new @CloseCap ArrayInputStream(this, name);
             }
 
         @Override
@@ -911,6 +976,113 @@ class ObjectInputStream(Schema schema, Parser parser)
 
             assert Doc doc := new Parser(tokens.iterator()).next();
             return doc;
+            }
+        }
+
+
+    // ----- PointerAware mixin --------------------------------------------------------------------
+
+    /**
+     * Adds pointer-peeking and de-referencing to the object-read operations on the [ElementInput]
+     * implementations.
+     */
+    mixin PointerAware
+            into (ElementInputStream | ArrayInputStream)
+        {
+        /**
+         * To avoid multiple peek-aheads for a pointer on a single read, this flag is used to track
+         * whether the current read-in-progress has already peeked ahead for a pointer.
+         */
+        protected Boolean pointerChecked = False;
+
+        @Override
+        <Serializable> Serializable read<Serializable>(Serializable? defaultValue = Null)
+            {
+            Boolean alreadyChecked = pointerChecked;
+            try
+                {
+                if (!alreadyChecked, Serializable value := pointerCheck())
+                    {
+                    return value;
+                    }
+
+                return registerPointer(alreadyChecked, super(defaultValue));
+                }
+            finally
+                {
+                pointerChecked = alreadyChecked;
+                }
+            }
+
+        @Override
+        <Serializable> Serializable readUsing<Serializable>(
+                function Serializable(ElementInput!<>) deserialize,
+                Serializable? defaultValue = Null)
+            {
+            Boolean alreadyChecked = pointerChecked;
+            try
+                {
+                if (!alreadyChecked, Serializable value := pointerCheck())
+                    {
+                    return value;
+                    }
+
+                return registerPointer(alreadyChecked, super(deserialize, defaultValue));
+                }
+            finally
+                {
+                pointerChecked = alreadyChecked;
+                }
+            }
+
+        /**
+         * Check to see if the next value is a JSON pointer, which is encoded in JSON as an object
+         * containing a "$ref" name/value pair.
+         *
+         * @return True iff the next value is a JSON pointer
+         * @return (conditional) the value pointed to
+         */
+        <Serializable> conditional Serializable pointerCheck()
+            {
+            if (!pointerChecked && parser.peek().id == ObjectEnter)
+                {
+                parser.advance();
+                Token name = parser.peek();
+                parser.rewind();
+
+                if (name.id == StrVal && name.value.as(String) == "$ref")
+                    {
+                    Map<String, Doc> doc = readDoc().as(Map<String, Doc>); // TODO eventually: optimize
+                    assert Doc pointer := doc.get("$ref");
+                    if (pointer.is(String))
+                        {
+                        return True, dereference(pointer);
+                        }
+
+                    throw new IllegalJSON($"Pointer type={&pointer.actualType}; String expected.");
+                    }
+                }
+
+            pointerChecked = True;
+            return False;
+            }
+
+        /**
+         * Register the specified value to be associated with this node's [pointer].
+         *
+         * @param suppressRegistration  pass `True` to prevent the pointer from being registered
+         * @param value                 the value to register with this node's pointer
+         *
+         * @return the value
+         */
+        <Serializable> Serializable registerPointer(Boolean suppressRegistration, Serializable value)
+            {
+            if (!suppressRegistration)
+                {
+                pointers.put(this.pointer, value);
+                }
+
+            return value;
             }
         }
     }

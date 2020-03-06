@@ -41,6 +41,18 @@ module TestIO
         testJSONBuild();
         testPoint();
         testMetadata();
+
+        // TODO GG
+        // 2020-03-05 21:30:05.536 Service "TestIO" (id=0), fiber 3: Unhandled exception: Ecstasy:Exception Unknown outer
+        // 	at web.json.Schema.TypeMapper.selectType(Ecstasy:Type<Ecstasy:Object>, Ecstasy:Type<selectType(?)#ObjectType>) (line=394, op=MoveThis)
+        // 	at <web.json.Schema.TypeMapper> (iPC=0, op=)
+        //     =========
+        //   at web.json.Schema.getMapping(Ecstasy:Type<Ecstasy:Object>, Ecstasy:Type<getMapping(?)#ObjectType>)
+        //
+        // java.lang.NullPointerException
+        // 	at org.xvm.asm.op.MoveThis.process(MoveThis.java:175)
+        //
+        // testPointers();
         }
 
     void testInputStream()
@@ -228,77 +240,77 @@ module TestIO
                 .close();
         }
 
-    void testPoint()
+    const Point(Int x, Int y);
+    const Segment(Point p1, Point p2);
+
+    const PointMapper
+            implements Mapping<Point>
         {
-        console.println("\n*** testPoint()");
-
-        static const Point(Int x, Int y);
-        static const Segment(Point p1, Point p2);
-
-        static const PointMapper
-                implements Mapping<Point>
+        @Override
+        String typeName.get()
             {
-            @Override
-            String typeName.get()
-                {
-                return "point";
-                }
+            return "point";
+            }
 
-            @Override
-            Point read(ElementInput in)
+        @Override
+        Point read(ElementInput in)
+            {
+            using (FieldInput fields = in.openObject())
                 {
-                using (FieldInput fields = in.openObject())
-                    {
-                    return new Point(fields.readInt("x"), fields.readInt("y"));
-                    }
+                return new Point(fields.readInt("x"), fields.readInt("y"));
+                }
 //                Doc doc = in.readDoc();
 //                Map<String, Doc> map = doc.as(Map<String, Doc>);
 //                return new Point(map["x"].as(IntLiteral).toInt(), map["y"].as(IntLiteral).toInt()).as(ObjectType);
-                }
+            }
 
-            @Override
-            void write(ElementOutput out, Point value)
+        @Override
+        void write(ElementOutput out, Point value)
+            {
+            using (FieldOutput fields = out.openObject())
                 {
-                using (FieldOutput fields = out.openObject())
-                    {
-                    fields.add("x", value.x)
-                          .add("y", value.y);
-                    }
+                fields.add("x", value.x)
+                      .add("y", value.y);
+                }
 //                out.openObject()
 //                    .add("x", value.x)
 //                    .add("y", value.y)
 //                    .close();
-                }
             }
+        }
 
-        static const SegmentMapper
-                implements Mapping<Segment>
+    const SegmentMapper
+            implements Mapping<Segment>
+        {
+        @Override
+        String typeName.get()
             {
-            @Override
-            String typeName.get()
-                {
-                return "segment";
-                }
+            return "segment";
+            }
 
-            @Override
-            Segment read(ElementInput in)
+        @Override
+        Segment read(ElementInput in)
+            {
+            using (FieldInput fields = in.openObject())
                 {
-                using (FieldInput fields = in.openObject())
-                    {
-                    return new Segment(fields.readObject<Point>("p1"), fields.readObject<Point>("p2"));
-                    }
-                }
-
-            @Override
-            void write(ElementOutput out, Segment value)
-                {
-                using (FieldOutput fields = out.openObject())
-                    {
-                    fields.addObject("p1", value.p1)
-                          .addObject("p2", value.p2);
-                    }
+                return new Segment(fields.read<Point>("p1"), fields.read<Point>("p2"));
                 }
             }
+
+        @Override
+        void write(ElementOutput out, Segment value)
+            {
+            using (FieldOutput fields = out.openObject())
+                {
+                fields.addObject("p1", value.p1)
+                      .addObject("p2", value.p2);
+                }
+            }
+        }
+
+    void testPoint()
+        {
+        console.println("\n*** testPoint()");
 
         static String ExamplePoint =
                 `|  {
@@ -419,6 +431,42 @@ module TestIO
             ObjectInputStream  o_in   = schema.createObjectInput(reader).as(ObjectInputStream);
             ElementInputStream e_in   = o_in.ensureElementInput();
             return e_in.openObject().as(FieldInputStream);
+            }
+        }
+
+    void testPointers()
+        {
+        console.println("\n*** testMetadata()");
+
+        Schema schema = new Schema([new PointMapper()], enablePointers = True);
+
+        static String RelativeExample =
+                `|  {
+                 | "p1": {
+                 |       "x" : -1,
+                 |       "y" : 28
+                 |       },
+                 | "p2": {"$ref" : "1/p1"}
+                 ;
+
+        static String AbsoluteExample =
+                `|  {
+                 | "p1": {
+                 |       "x" : 1,
+                 |       "y" : 9
+                 |       },
+                 | "p2": {"$ref" : "/p2"}
+                 ;
+
+        testSegment(schema, RelativeExample);
+        testSegment(schema, AbsoluteExample);
+
+        private void testSegment(Schema schema, String json)
+            {
+            Reader             reader = new CharArrayReader(json);
+            ObjectInputStream  o_in   = schema.createObjectInput(reader).as(ObjectInputStream);
+            Segment            segment = o_in.read<Segment>();
+            console.println($"json={json}, segment={segment}");
             }
         }
     }

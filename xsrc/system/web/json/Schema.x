@@ -15,7 +15,6 @@ import io.ObjectOutput;
  *
  * TODO ReflectionMapping implementation
  * TODO NullableMapping as a wrapper around another Mapping
- * TODO "pointer" implementation
  * TODO versioning support
  * TODO split out JSON library into its own (non-core) module
  */

@@ -306,11 +306,11 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is null or missing and no default value is provided, or if
      *                      the value is not of the requested type
      */
-    <Serializable> Serializable readObject(String name, Serializable? defaultValue = Null)
+    <Serializable> Serializable read<Serializable>(String name, Serializable? defaultValue = Null)
         {
         if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
-            return read<Serializable>(name, mapping.read(_), defaultValue);
+            return readUsing<Serializable>(name, mapping.read(_), defaultValue);
             }
 
         throw new MissingMapping(type = Serializable);
@@ -330,9 +330,9 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is null or missing and no default value is provided, or if
      *                      the value is not of the requested type
      */
-    <Serializable> Serializable read<Serializable>(String name,
-                                                   function Serializable(ElementInput<>) deserialize,
-                                                   Serializable? defaultValue = Null)
+    <Serializable> Serializable readUsing<Serializable>(String name,
+                                                        function Serializable(ElementInput<>) deserialize,
+                                                        Serializable? defaultValue = Null)
         {
         if (isNull(name))
             {
@@ -514,7 +514,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
 
         if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
-            return readArray(name, mapping.read(_), defaultValue);
+            return readArrayUsing(name, mapping.read(_), defaultValue);
             }
 
         throw new MissingMapping(type = Serializable);
@@ -536,9 +536,9 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is null or missing and no default value is provided, or if
      *                      the value is not of the requested type
      */
-    <Serializable> Serializable[] readArray(String name,
-                                            function Serializable(ElementInput) deserialize,
-                                            Serializable[]? defaultValue = Null)
+    <Serializable> Serializable[] readArrayUsing(String name,
+                                                 function Serializable(ElementInput) deserialize,
+                                                 Serializable[]? defaultValue = Null)
         {
         if (isNull(name))
             {
@@ -551,7 +551,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             {
             while (elements.canRead)
                 {
-                values.add(elements.read<Serializable>(deserialize));
+                values.add(elements.readUsing<Serializable>(deserialize));
                 }
             }
         return values;

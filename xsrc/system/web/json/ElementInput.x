@@ -231,7 +231,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
         {
         if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
-            return read<Serializable>(mapping.read(_), defaultValue);
+            return readUsing<Serializable>(mapping.read(_), defaultValue);
             }
 
         throw new MissingMapping(type = Serializable);
@@ -250,8 +250,8 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is null and no default value is provided, or if the value
      *                      is not of the requested type
      */
-    <Serializable> Serializable read<Serializable>(function Serializable(ElementInput!<>) deserialize,
-                                                   Serializable? defaultValue = Null)
+    <Serializable> Serializable readUsing<Serializable>
+            (function Serializable(ElementInput!<>) deserialize, Serializable? defaultValue = Null)
         {
         if (isNull())
             {
@@ -422,7 +422,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
 
         if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
             {
-            return readArray(mapping.read(_), defaultValue);
+            return readArrayUsing(mapping.read(_), defaultValue);
             }
 
         throw new MissingMapping(type = Serializable);
@@ -442,8 +442,8 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is null and no default value is provided, or if the value
      *                      is not of the requested type
      */
-    <Serializable> Serializable[] readArray(function Serializable(ElementInput!<>) deserialize,
-                                            Serializable[]? defaultValue = Null)
+    <Serializable> Serializable[] readArrayUsing(function Serializable(ElementInput!<>) deserialize,
+                                                 Serializable[]? defaultValue = Null)
         {
         if (isNull())
             {
@@ -455,7 +455,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             {
             while (elements.canRead)
                 {
-                values.add(elements.read(deserialize));
+                values.add(elements.readUsing(deserialize));
                 }
             }
         return values;
