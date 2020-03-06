@@ -1117,8 +1117,6 @@ public class InvocationExpression
         int cLVals = aLVal.length;
         int cRVals = getValueCount();
 
-        assert cLVals <= cRVals;
-
         Argument[] aargResult = new Argument[cRVals];
         for (int i = 0; i < cRVals; i++)
             {
