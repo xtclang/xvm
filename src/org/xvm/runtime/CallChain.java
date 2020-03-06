@@ -234,6 +234,7 @@ public class CallChain
                 return hThis.getTemplate().invokeNativeN(frame, bodySuper.getMethodStructure(),
                     hThis, Utils.OBJECTS_NONE, iReturn);
 
+            case Default:
             case Explicit:
                 {
                 MethodStructure methodSuper = bodySuper.getMethodStructure();
@@ -266,6 +267,7 @@ public class CallChain
                 return hThis.getTemplate().invokeNative1(frame, bodySuper.getMethodStructure(),
                     hThis, hArg, Op.A_IGNORE);
 
+            case Default:
             case Explicit:
                 {
                 MethodStructure methodSuper = bodySuper.getMethodStructure();
@@ -298,6 +300,7 @@ public class CallChain
                     ? hThis.getTemplate().invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn)
                     : hThis.getTemplate().invokeNativeT(frame, methodSuper, hThis, ahArg, iReturn);
 
+            case Default:
             case Explicit:
                 {
                 ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
@@ -328,6 +331,7 @@ public class CallChain
             case Native:
                 return hThis.getTemplate().invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
 
+            case Default:
             case Explicit:
                 return frame.invokeN(this, nDepth, hThis,
                     Utils.ensureSize(ahArg, methodSuper.getMaxVars()), aiReturn);
