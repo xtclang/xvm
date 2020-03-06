@@ -96,9 +96,9 @@ public class P_Get
 
             if (frame.isNextRegister(m_nRetValue))
                 {
+                // TODO GG: the actual type needs to be injected by the compiler/verifier
                 if (m_nTarget == A_STACK)
                     {
-                    // TODO GG: the actual type needs to be injected by the compiler/verifier
                     TypeConstant typeTarget = hTarget.getType();
                     ConstantPool pool       = frame.poolContext();
                     TypeConstant typeProp   = typeTarget.containsGenericParam(constProperty.getName())
@@ -109,7 +109,7 @@ public class P_Get
                     }
                 else
                     {
-                    frame.introducePropertyVar(m_nRetValue, m_nTarget, constProperty);
+                    frame.introducePropertyVar(m_nRetValue, m_nTarget, m_nPropId);
                     }
                 }
 

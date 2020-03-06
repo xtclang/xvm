@@ -1470,13 +1470,13 @@ public class Frame
      * @param nVar       the variable to introduce
      * @param nTargetId  if positive, the register number holding a target (handle);
      *                     otherwise a constant id pointing to local property holding the target
-     * @param constProp  the property constant whose type needs to be resolved in the context
+     * @param nPropId    the property constant id (whose type needs to be resolved in the context)
      */
-    public void introducePropertyVar(int nVar, int nTargetId, PropertyConstant constProp)
+    public void introducePropertyVar(int nVar, int nTargetId, int nPropId)
         {
         f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
 
-        f_aInfo[nVar] = new VarInfo(nTargetId, constProp.getPosition(), PROPERTY_RESOLVER);
+        f_aInfo[nVar] = new VarInfo(nTargetId, nPropId, PROPERTY_RESOLVER);
         }
 
     /**
@@ -1935,14 +1935,14 @@ public class Frame
     // variable into (support for Refs and debugger)
     public class VarInfo
         {
-        private int m_nTypeId;
-        private TypeConstant m_type;
-        private int m_nNameId;
-        private String m_sVarName;
-        private int m_nStyle; // one of the VAR_* values
-        private RefHandle m_ref; // an "active" reference to this register TODO: should be a WeakRef
+        private int             m_nTypeId;
+        private TypeConstant    m_type;
+        private int             m_nNameId;
+        private String          m_sVarName;
+        private int             m_nStyle; // one of the VAR_* values
+        private RefHandle       m_ref; // an "active" reference to this register TODO: should be a WeakRef
         private VarTypeResolver m_resolver;
-        private int m_nTargetId; // an id of the target used to resolve this VarInfo's type
+        private int             m_nTargetId; // an id of the target used to resolve this VarInfo's type
 
         /**
          * Construct an unnamed VarInfo based on the resolved type.
@@ -1962,8 +1962,6 @@ public class Frame
             m_nTypeId = nTypeId;
             m_nNameId = nNameId;
             m_nStyle  = nStyle;
-
-            assert getType() != null; // side effect of realizing the type
             }
 
         /**
@@ -2145,15 +2143,15 @@ public class Frame
         {
         /**
          * @param nTargetReg  the register or property to retrieve the property of
-         * @param iAuxId      the PropertyConstant id (absolute)
+         * @param iPropId     the PropertyConstant id (relative)
          */
         @Override
-        public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
+        public TypeConstant resolve(Frame frame, int nTargetReg, int iPropId)
             {
             ConstantPool pool = frame.poolContext();
 
-            PropertyConstant constProperty = (PropertyConstant) pool.getConstant(iAuxId);
-            TypeConstant typeTarget = frame.getLocalType(nTargetReg, null);
+            PropertyConstant constProperty = (PropertyConstant) frame.getConstant(iPropId);
+            TypeConstant     typeTarget    = frame.getLocalType(nTargetReg, null);
 
             return typeTarget.containsGenericParam(constProperty.getName())
                 ? constProperty.getFormalType().resolveGenerics(pool, typeTarget).getType()
