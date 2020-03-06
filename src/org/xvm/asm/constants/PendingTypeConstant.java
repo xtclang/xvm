@@ -98,6 +98,12 @@ public class PendingTypeConstant
         }
 
     @Override
+    public boolean containsFormalType(boolean fAllowParams)
+        {
+        return true;
+        }
+
+    @Override
     public TypeInfo ensureTypeInfo(ErrorListener errs)
         {
         return m_typeConstraint.ensureTypeInfo(errs);
