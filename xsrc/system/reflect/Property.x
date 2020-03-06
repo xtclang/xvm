@@ -66,6 +66,18 @@ interface Property<Target, Referent, Implementation extends Ref<Referent>>
     // ----- dynamic behavior ----------------------------------------------------------------------
 
     /**
+     * If this "same" property exists on another type (such as the `StructType` for the class, or
+     * a type from a super-class or sub-class), obtain the corresponding property that targets that
+     * type.
+     *
+     * @param type  the type to search for a corresponding property
+     *
+     * @return True iff the "same" property exists on the specified type
+     * @return (conditional) the corresponding property from the specified type
+     */
+    <DataType> conditional Property!<DataType> retarget(Type<DataType> type);
+
+    /**
      * Given an object reference of a type that contains this method, obtain the invocable function
      * that corresponds to this method on that object.
      */
