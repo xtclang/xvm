@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.FileRepository;
@@ -771,13 +772,17 @@ public class CommandLine
     protected void processNativeDependencies()
         {
         ModuleStructure moduleNative = repoBuild.loadModule(TemplateRegistry.NATIVE_MODULE);
-        ClassStructure  clzNakedRef  = (ClassStructure) moduleNative.getChild("NakedRef");
-        TypeConstant    typeNakedRef = clzNakedRef.getFormalType();
 
-        for (String sModule : repoBuild.getModuleNames())
+        try (var x = ConstantPool.withPool(moduleNative.getConstantPool()))
             {
-            ModuleStructure module = repoBuild.loadModule(sModule);
-            module.getConstantPool().setNakedRefType(typeNakedRef);
+            ClassStructure  clzNakedRef  = (ClassStructure) moduleNative.getChild("NakedRef");
+            TypeConstant    typeNakedRef = clzNakedRef.getFormalType();
+
+            for (String sModule : repoBuild.getModuleNames())
+                {
+                ModuleStructure module = repoBuild.loadModule(sModule);
+                module.getConstantPool().setNakedRefType(typeNakedRef);
+                }
             }
         }
 

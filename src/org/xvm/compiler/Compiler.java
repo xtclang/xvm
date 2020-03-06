@@ -173,13 +173,13 @@ public class Compiler
             return;
             }
 
-        enter();
+        try (var x = ConstantPool.withPool(m_structFile.getConstantPool()))
+            {
+            // first time through, load any module dependencies
+            setStage(Stage.Loading);
+            m_structFile.linkModules(m_repos);
+            }
 
-        // first time through, load any module dependencies
-        setStage(Stage.Loading);
-        m_structFile.linkModules(m_repos);
-
-        exit();
         setStage(Stage.Loaded);
         }
 
@@ -206,23 +206,23 @@ public class Compiler
             return true;
             }
 
-        enter();
-
-        // recursively resolve all of the unresolved global names, and if anything couldn't get done
-        // in one pass, then store it off in a list to tackle next time
-        if (!alreadyReached(Stage.Resolving))
+        try (var x = ConstantPool.withPool(m_structFile.getConstantPool()))
             {
-            // first time through: resolve starting from the module, and recurse down
-            setStage(Stage.Resolving);
-            m_mgr = new StageMgr(m_stmtModule, Stage.Resolved, m_errs);
+            // recursively resolve all of the unresolved global names, and if anything couldn't get done
+            // in one pass, then store it off in a list to tackle next time
+            if (!alreadyReached(Stage.Resolving))
+                {
+                // first time through: resolve starting from the module, and recurse down
+                setStage(Stage.Resolving);
+                m_mgr = new StageMgr(m_stmtModule, Stage.Resolved, m_errs);
+                }
+
+            if (m_mgr.processComplete())
+                {
+                setStage(Stage.Resolved);
+                }
             }
 
-        if (m_mgr.processComplete())
-            {
-            setStage(Stage.Resolved);
-            }
-
-        exit();
         return m_mgr.isComplete() || m_errs.isAbortDesired();
         }
 
@@ -249,23 +249,23 @@ public class Compiler
             return true;
             }
 
-        enter();
-
-        // recursively resolve all of the unresolved global names, and if anything couldn't get done
-        // in one pass, the manager will keep track of what remains to be done
-        if (!alreadyReached(Stage.Validating))
+        try (var x = ConstantPool.withPool(m_structFile.getConstantPool()))
             {
-            // first time through: resolve starting from the module, and recurse down
-            setStage(Stage.Validating);
-            m_mgr = new StageMgr(m_stmtModule, Stage.Validated, m_errs);
+            // recursively resolve all of the unresolved global names, and if anything couldn't get done
+            // in one pass, the manager will keep track of what remains to be done
+            if (!alreadyReached(Stage.Validating))
+                {
+                // first time through: resolve starting from the module, and recurse down
+                setStage(Stage.Validating);
+                m_mgr = new StageMgr(m_stmtModule, Stage.Validated, m_errs);
+                }
+
+            if (m_mgr.processComplete())
+                {
+                setStage(Stage.Validated);
+                }
             }
 
-        if (m_mgr.processComplete())
-            {
-            setStage(Stage.Validated);
-            }
-
-        exit();
         return m_mgr.isComplete() || m_errs.isAbortDesired();
         }
 
@@ -292,31 +292,31 @@ public class Compiler
             return true;
             }
 
-        enter();
-
-        // recursively resolve all of the unresolved global names, and if anything couldn't get done
-        // in one pass, then store it off in a list to tackle next time
-        if (!alreadyReached(Stage.Emitting))
+        try (var x = ConstantPool.withPool(m_structFile.getConstantPool()))
             {
-            // first time through: resolve starting from the module, and recurse down
-            setStage(Stage.Emitting);
-            m_mgr = new StageMgr(m_stmtModule, Stage.Emitted, m_errs);
-            }
-
-        if (m_mgr.processComplete())
-            {
-            setStage(Stage.Emitted);
-
-            if (m_errs.getSeverity().compareTo(Severity.ERROR) < 0)
+            // recursively resolve all of the unresolved global names, and if anything couldn't get done
+            // in one pass, then store it off in a list to tackle next time
+            if (!alreadyReached(Stage.Emitting))
                 {
-                // "purge" the constant pool and do a final validation on the entire module structure
-                m_structFile.reregisterConstants(true);
-                m_structFile.validate(m_errs);
-                m_structFile.setErrorListener(null);
+                // first time through: resolve starting from the module, and recurse down
+                setStage(Stage.Emitting);
+                m_mgr = new StageMgr(m_stmtModule, Stage.Emitted, m_errs);
+                }
+
+            if (m_mgr.processComplete())
+                {
+                setStage(Stage.Emitted);
+
+                if (m_errs.getSeverity().compareTo(Severity.ERROR) < 0)
+                    {
+                    // "purge" the constant pool and do a final validation on the entire module structure
+                    m_structFile.reregisterConstants(true);
+                    m_structFile.validate(m_errs);
+                    m_structFile.setErrorListener(null);
+                    }
                 }
             }
 
-        exit();
         return m_mgr.isComplete() || m_errs.isAbortDesired();
         }
 
@@ -398,22 +398,6 @@ public class Compiler
             {
             m_stage = stage;
             }
-        }
-
-    /**
-     * Start a stage processing.
-     */
-    private void enter()
-        {
-        ConstantPool.setCurrentPool(m_structFile.getConstantPool());
-        }
-
-    /**
-     * Finish a stage processing.
-     */
-    private void exit()
-        {
-        ConstantPool.setCurrentPool(null);
         }
 
 

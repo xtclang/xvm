@@ -333,9 +333,8 @@ public class xOSStorage
         @Override
         public void run()
             {
-            try
+            try (var x = ConstantPool.withPool(f_pool))
                 {
-                ConstantPool.setCurrentPool(f_pool);
                 while (true)
                     {
                     processKey(f_service.take());
