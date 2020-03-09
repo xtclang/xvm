@@ -10,12 +10,17 @@
  *           {
  *           console.print(", ");
  *           }
- *       console.print("{eachPerson.count}={person.name}");
+ *       console.print($"{eachPerson.count}={person.name}");
  *       }
  *
  * Produces the output:
  *
  *   0=Bob, 1=Sue, 2=Amit
+ *
+ * @param Key    the [Map.Key] type, available on a label for a "for" loop of the for-each variety
+ *               iterating over a Map
+ * @param Value  the [Map.Value] type, available on a label for a "for" loop of the for-each variety
+ *               iterating over a Map
  */
 interface Label<Key, Value>
     {
@@ -46,8 +51,8 @@ interface Label<Key, Value>
      * For a Label that identifies a loop within which the last iteration is detectable, this value
      * will be true after the last iteration has begun.
      *
-     * For a non-loop Label, or a Label that identifies a loop in which the last iteration is *not*
-     * detectable, an attempt to access this property is illegal.
+     * For a non-loop Label, or a Label that identifies a loop in which the last iteration is
+     * **not** detectable, an attempt to access this property is illegal.
      */
     @RO Boolean last;
 
