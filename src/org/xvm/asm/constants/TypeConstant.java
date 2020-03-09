@@ -3299,21 +3299,13 @@ public abstract class TypeConstant
             else
                 {
                 // override is not specified
-                MethodInfo methodBase = mapVirtMethods.get(nidContrib);
-                if (methodBase != null)
+                if (fSelf)
                     {
-                    // nidContrib directly points to a "super" method, so it must be in the list
-                    assert listMatches.contains(nidContrib);
-
-                    methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
-                    }
-
-                for (Object nid : listMatches)
-                    {
-                    MethodInfo methodMatch = mapVirtMethods.get(nid);
-                    if (methodMatch != null)
+                    // report "override required" if necessary
+                    for (Object nid : listMatches)
                         {
-                        if (fSelf && !methodMatch.getIdentity().equals(methodContrib.getIdentity()))
+                        MethodInfo methodMatch = mapVirtMethods.get(nid);
+                        if (methodMatch != null && !methodMatch.getIdentity().equals(methodContrib.getIdentity()))
                             {
                             log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
                                 getValueString(),
@@ -3321,14 +3313,44 @@ public abstract class TypeConstant
                                 methodContrib.getIdentity().getPathString()
                                 );
                             }
+                        }
+                    }
 
-                        if (methodBase == null && !nid.equals(nidContrib) && methodMatch.isCapped())
+                // find the best base method to layer on; use a capped base method only if nothing
+                // else matches
+                MethodInfo methodBase = mapVirtMethods.get(nidContrib);
+                if (methodBase == null || methodBase.isCapped())
+                    {
+                    for (Object nid : listMatches)
+                        {
+                        MethodInfo methodMatch = mapVirtMethods.get(nid);
+                        if (methodMatch != null && !nid.equals(nidContrib))
                             {
-                            // we have a match, but there is no base; TODO: is this correct always?
-                            methodBase   = methodMatch;
-                            methodResult = methodMatch.layerOn(methodContrib, fSelf, errs);
+                            if (methodMatch.isCapped())
+                                {
+                                if (methodBase == null)
+                                    {
+                                    // take a possible match, but keep looking
+                                    methodBase = methodMatch;
+                                    }
+                                }
+                            else
+                                {
+                                methodBase = methodMatch;
+                                break;
+                                }
                             }
                         }
+                    }
+                else
+                    {
+                    // nidContrib directly points to a "super" method, so it must be in the list
+                    assert listMatches.contains(nidContrib);
+                    }
+
+                if (methodBase != null)
+                    {
+                    methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
                     }
 
                 if (idDelegate != null)
@@ -4526,17 +4548,24 @@ public abstract class TypeConstant
             }
 
         MethodInfo methodResult;
-        if (methodBase == null)
+        if (methodBase == null || methodMixin.isCapped())
             {
             methodResult = methodMixin;
             }
         else
             {
+            if (methodBase.isCapped())
+                {
+                methodBase = infoBase.getNarrowingMethod(methodBase);
+                assert methodBase != null;
+                }
+
             // it's possible that the base has a narrower method signature then the mixin,
             // in which case, the mixin's info should be ignored/replaced
             SignatureConstant sigBase  = methodBase.getSignature();
             SignatureConstant sigMixin = methodMixin.getSignature();
-            if (!sigBase.equals(sigMixin) && sigBase.isSubstitutableFor(sigMixin, this))
+            if (sigBase.isSubstitutableFor(sigMixin, this) &&
+                    !sigMixin.isSubstitutableFor(sigBase, this))
                 {
                 methodResult = methodBase;
                 }

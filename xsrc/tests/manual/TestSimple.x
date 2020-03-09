@@ -6,26 +6,44 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        new Derived().read<String>();
+        new @Mix Base1().read<String>();
         }
 
-    class Base
+    interface Iface
         {
-        <Ser> Ser read<Ser>(Ser? defaultValue = Null)
+        <Ser> Ser read<Ser>();
+        }
+
+    class Base1
+            implements Iface
+        {
+        @Override
+        <Ser> Ser read<Ser>()
             {
-            console.println($"Base {Ser}");
+            console.println($"B1 {Ser}");
             return "a".as(Ser);
             }
         }
 
-    class Derived
-            extends Base
+    class Base2
+            implements Iface
         {
         @Override
-        <Serializable> Serializable read<Serializable>(Serializable? defaultValue = Null)
+        <Ser> Ser read<Ser>(Ser? defaultValue = Null)
             {
-            console.println($"Der {Serializable}");
-            return super(defaultValue);
+            console.println($"B2 {Ser}");
+            return "a".as(Ser);
             }
          }
+
+    mixin Mix
+        into (Base1 | Base2)
+        {
+        @Override
+        <Ser> Ser read<Ser>()
+            {
+            console.println($"Mix {Ser}");
+            return super();
+            }
+        }
     }

@@ -1497,8 +1497,11 @@ public abstract class AstNode
                 {
                 boolean fOldBetter = sigMethod.isSubstitutableFor(sigBest, typeTarget);
                 boolean fNewBetter = sigBest.isSubstitutableFor(sigMethod, typeTarget);
-                if (fOldBetter ^ fNewBetter)
+                if (fOldBetter || fNewBetter)
                     {
+                    // if both are substitutable to each other, we can take any
+                    // (though we could also get the target's info, find the corresponding
+                    //  TypeInfo and choose a more accommodating MethodInfo)
                     if (fNewBetter)
                         {
                         idBest  = idMethod;
@@ -1507,8 +1510,8 @@ public abstract class AstNode
                     }
                 else
                     {
-                    // note: theoretically could still be one better than either of these two, but
-                    // for now, just assume it's an error at this point
+                    // note: theoretically there could still be one better than either of these two,
+                    // but for now, just assume it's an error at this point
                     log(errs, Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
                             idBest.getSignature().getValueString());
                     return null;

@@ -1242,7 +1242,8 @@ public class TypeInfo
         }
 
     /**
-     * Find the MethodInfo for the specified SignatureConstant.
+     * Find the MethodInfo for the specified SignatureConstant. If possible, find
+     * a non-capped method; return a capped one *only* if nothing else matches.
      *
      * @param sig  a SignatureConstant
      *
@@ -1270,6 +1271,7 @@ public class TypeInfo
 
         mapBySig = ensureMethodsBySignature();
 
+        MethodInfo methodCapped = null;
         for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
             {
             MethodConstant idTest     = entry.getKey();
@@ -1293,6 +1295,11 @@ public class TypeInfo
                 if (sigTest0.equals(sig) || sigTest0.isSubstitutableFor(sig, typeThis))
                     {
                     mapBySig.putIfAbsent(sig, methodTest);
+                    if (methodTest.isCapped())
+                        {
+                        methodCapped = methodTest;
+                        break;
+                        }
                     return methodTest;
                     }
 
@@ -1301,6 +1308,11 @@ public class TypeInfo
                 if (sigTest1.equals(sig) || sigTest1.isSubstitutableFor(sig, typeThis))
                     {
                     mapBySig.putIfAbsent(sig, methodTest);
+                    if (methodTest.isCapped())
+                        {
+                        methodCapped = methodTest;
+                        break;
+                        }
                     return methodTest;
                     }
 
@@ -1313,10 +1325,20 @@ public class TypeInfo
                     if (sigTest2.equals(sig) || sigTest2.isSubstitutableFor(sig, typeThis))
                         {
                         mapBySig.putIfAbsent(sig, methodTest);
+                        if (methodTest.isCapped())
+                            {
+                            methodCapped = methodTest;
+                            break;
+                            }
                         return methodTest;
                         }
                     }
                 }
+            }
+
+        if (methodCapped != null)
+            {
+            return methodCapped;
             }
 
         // check well-known native methods
@@ -1915,6 +1937,30 @@ public class TypeInfo
         }
 
     /**
+     * Get the method that the specified capped method is narrowed by.
+     *
+     * @param methodCapped  a capped method
+     *
+     * @return the narrowing method (should never after the construction - see validateCapped())
+     */
+    public MethodInfo getNarrowingMethod(MethodInfo methodCapped)
+        {
+        assert methodCapped.isCapped();
+
+        Object nidNarrowing = methodCapped.getHead().getNarrowingNestedIdentity();
+        for (int i = 0; i < 32; i++)
+            {
+            methodCapped = getMethodByNestedId(nidNarrowing);
+            if (!methodCapped.isCapped())
+                {
+                break;
+                }
+            nidNarrowing = methodCapped.getHead().getNarrowingNestedIdentity();
+            }
+        return methodCapped;
+        }
+
+    /**
      * Obtain all of the auto conversion methods found on this type.
      *
      * @return a set of zero or more method constants
@@ -2219,15 +2265,11 @@ public class TypeInfo
      */
     private boolean validateCapped()
         {
-        for (MethodInfo info : f_mapMethods.values())
+        for (MethodInfo method : f_mapMethods.values())
             {
-            if (info.isCapped())
+            if (method.isCapped() && getNarrowingMethod(method) == null)
                 {
-                Object nid = info.getHead().getNarrowingNestedIdentity();
-                if (getMethodByNestedId(nid) == null)
-                    {
-                    return false;
-                    }
+                return false;
                 }
             }
         return true;
