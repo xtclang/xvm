@@ -52,7 +52,9 @@ public class Parameter
     @Override
     public long getStartPosition()
         {
-        return type.getStartPosition();
+        return type == null
+                ? name.getStartPosition()
+                : type.getStartPosition();
         }
 
     @Override
