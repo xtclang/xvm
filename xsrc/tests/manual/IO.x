@@ -41,16 +41,7 @@ module TestIO
         testJSONBuild();
         testPoint();
         testMetadata();
-
-        // TODO CP
-        // 2020-03-06 08:59:36.539 Service "TestIO" (id=0), fiber 3: Unhandled exception: Ecstasy:web.json.MissingMapping
-        //	at web.json.ElementInput.read(Ecstasy:Type<Ecstasy:Object>, Ecstasy:Nullable | read(?)#Serializable) (line=237, op=New_N)
-        //	at web.json.ObjectInputStream.read(Ecstasy:Type<Ecstasy:Object>) (line=124, op=Invoke_N1)
-        //	at testPointers().testSegment(Ecstasy:web.json.Schema, Ecstasy:String) (line=468, op=Invoke_11)
-        //	at testPointers() (line=461, op=Invoke_N0)
-        //	at run() (line=55, op=Invoke_00)
-        //	at <TestIO> (iPC=0, op=)
-        // testPointers();
+        testPointers();
         }
 
     void testInputStream()
@@ -434,26 +425,29 @@ module TestIO
 
     void testPointers()
         {
-        console.println("\n*** testMetadata()");
+        console.println("\n*** testPointers()");
 
-        Schema schema = new Schema([new PointMapper()], enablePointers = True);
+        Mapping[] mappings = new Mapping[]; mappings.add(new PointMapper()); mappings.add(new SegmentMapper());
+        Schema schema = new Schema(mappings, enablePointers = True);
 
         static String RelativeExample =
-                `|  {
+                `| {
                  | "p1": {
                  |       "x" : -1,
                  |       "y" : 28
                  |       },
                  | "p2": {"$ref" : "1/p1"}
+                 | }
                  ;
 
         static String AbsoluteExample =
-                `|  {
+                `| {
                  | "p1": {
                  |       "x" : 1,
                  |       "y" : 9
                  |       },
-                 | "p2": {"$ref" : "/p2"}
+                 | "p2": {"$ref" : "/p1"}
+                 | }
                  ;
 
         testSegment(schema, RelativeExample);
@@ -467,4 +461,19 @@ module TestIO
             console.println($"json={json}, segment={segment}");
             }
         }
+
+    static String ReflectionExample =
+            `| {
+             | "$type" : "Segment",
+             | "p1": {
+             |       "$type" : "Point",
+             |       "x" : -1,
+             |       "y" : 28
+             |       },
+             | "p2": {
+             |       "x" : 77,
+             |       "y" : 98
+             |       },
+             | }
+             ;
     }

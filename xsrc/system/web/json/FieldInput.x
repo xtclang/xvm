@@ -141,7 +141,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             }
 
         throw new IllegalJSON(
-                $"Boolean value required; {doc == Null ? "no value" : &doc.actualType} found");
+                $"Boolean value required for {name}; {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -169,7 +169,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             }
 
         throw new IllegalJSON(
-                $"String value required; {doc == Null ? "no value" : &doc.actualType} found");
+                $"String value required for {name}; {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -197,7 +197,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             }
 
         throw new IllegalJSON(
-                $"IntLiteral value required; {doc == Null ? "no value" : &doc.actualType} found");
+                $"IntLiteral value required for {name}; {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -230,7 +230,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             }
 
         throw new IllegalJSON(
-                $"FPLiteral value required; {doc == Null ? "no value" : &doc.actualType} found");
+                $"FPLiteral value required for {name}; {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -258,7 +258,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             }
 
         throw new IllegalJSON(
-                $"Int value required; {doc == Null ? "no value" : &doc.actualType} found");
+                $"Int value required for {name}; {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -291,7 +291,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             }
 
         throw new IllegalJSON(
-                $"Dec value required; {doc == Null ? "no value" : &doc.actualType} found");
+                $"Dec value required for {name}; {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -341,12 +341,12 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
                 return defaultValue;
                 }
 
-            throw new IllegalJSON($"Value required of type \"{Serializable}\"; no value found");
+            throw new IllegalJSON($"Value required of type \"{Serializable}\" for {name}; no value found");
             }
 
         using (val element = openField(name))
             {
-            return deserialize(element);
+            return element.readUsing(deserialize, defaultValue);
             }
         }
 
@@ -373,7 +373,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
         Doc value = readDoc(name);
         return value.is(Doc[])
                 ? value
-                : throw new IllegalJSON($"Doc[] value required; {&value.actualType} found");
+                : throw new IllegalJSON($"Doc[] value required for {name}; {&value.actualType} found");
         }
 
     /**
@@ -509,7 +509,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
         if (isNull(name))
             {
             return defaultValue?;
-            throw new IllegalJSON($"Array required of type \"{Serializable}\"; no value found");
+            throw new IllegalJSON($"Array required of type \"{Serializable}\" for {name}; no value found");
             }
 
         if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
@@ -543,7 +543,7 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
         if (isNull(name))
             {
             return defaultValue?;
-            throw new IllegalJSON($"Array required of type \"{Serializable}\"; no value found");
+            throw new IllegalJSON($"Array required of type \"{Serializable}\" for {name}; no value found");
             }
 
         Serializable[] values = new Serializable[];

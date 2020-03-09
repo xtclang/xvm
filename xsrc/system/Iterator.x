@@ -282,7 +282,8 @@ interface Iterator<Element>
         }
 
 
-    // ----- metadata -----------------------------------------------------------------------------
+    // ----- metadata ------------------------------------------------------------------------------
+
     /**
      * Metadata: Are the elements of the iterator known to be distinct?
      */
@@ -366,7 +367,7 @@ interface Iterator<Element>
      *
      * @return a new iterator representing the filtered contents of this iterator
      */
-    Iterator filter(function Boolean (Element) include)
+    Iterator! filter(function Boolean (Element) include)
         {
         if (knownEmpty())
             {
@@ -418,7 +419,7 @@ interface Iterator<Element>
      *
      * @return a new iterator representing only the distinct set of elements from this iterator
      */
-    Iterator dedup()
+    Iterator! dedup()
         {
         if (knownEmpty() || knownDistinct())
             {
@@ -438,7 +439,7 @@ interface Iterator<Element>
      *
      * @return a new iterator representing the same elements from this iterator in a sorted order
      */
-    Iterator sort(Orderer? order = Null)
+    Iterator! sort(Orderer? order = Null)
         {
         if (order == Null)
             {
@@ -463,7 +464,7 @@ interface Iterator<Element>
      *
      * @return a new iterator representing the same elements from this iterator, but in reverse order
      */
-    Iterator reverse()
+    Iterator! reverse()
         {
         if (knownEmpty())
             {
@@ -485,7 +486,7 @@ interface Iterator<Element>
      *
      * @return a new iterator with the specified functionality attached to it
      */
-    Iterator peek(function void observe(Element))
+    Iterator! peek(function void observe(Element))
         {
         if (knownEmpty())
             {
@@ -507,7 +508,7 @@ interface Iterator<Element>
      *
      * @return a new iterator that does not include the first `count` elements of this iterator
      */
-    Iterator skip(Int count)
+    Iterator! skip(Int count)
         {
         assert:bounds count >= 0;
 
@@ -537,7 +538,7 @@ interface Iterator<Element>
      *
      * @return a new iterator that only includes up to the first `count` elements of this iterator
      */
-    Iterator limit(Int count)
+    Iterator! limit(Int count)
         {
         assert:bounds count >= 0;
 
@@ -570,7 +571,7 @@ interface Iterator<Element>
      *
      * @return a new iterator that does not include the first `count` elements of this iterator
      */
-    Iterator extract(Interval<Int> interval)
+    Iterator! extract(Interval<Int> interval)
         {
         if (knownEmpty())
             {
@@ -602,7 +603,7 @@ interface Iterator<Element>
      * @return a first clone of this iterator
      * @return a second clone of this iterator
      */
-    (Iterator, Iterator) duplicate()
+    (Iterator!, Iterator!) duplicate()
         {
         if (knownEmpty())
             {
@@ -674,6 +675,25 @@ interface Iterator<Element>
             {
             return False;
             }
+        }
+
+
+    // ----- Markable ------------------------------------------------------------------------------
+
+    /**
+     * Create a markable implementation of this iterator, if this iterator is not already
+     * [Markable].
+     *
+     * @return a Markable Iterator
+     */
+    Iterator! + Markable ensureMarkable()
+        {
+        if (this.is(Markable))
+            {
+            return this;
+            }
+
+        return new MarkedIterator<Element>(this);
         }
 
 

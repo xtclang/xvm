@@ -122,7 +122,7 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the specified pointer does not have an already-deserialized object
      *                      associated with it, or if there is a type mismatch
      */
-    <Serializable> Serializable dereference<Serializable>(String pointer);
+    <Serializable> Serializable dereference(String pointer);
 
 
     // ----- Closeable methods ---------------------------------------------------------------------

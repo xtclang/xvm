@@ -13,6 +13,7 @@ import Lexer.Token;
  */
 class Parser
         implements Iterator<Doc>
+        implements Markable
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -33,6 +34,7 @@ class Parser
      */
     construct(Iterator<Token> lexer)
         {
+        lexer       = lexer.ensureMarkable();
         this.lexer  = lexer;
         this.token := lexer.next();
         }
@@ -45,7 +47,7 @@ class Parser
      */
     construct(Iterator<Token> lexer, Token token)
         {
-        this.lexer = lexer;
+        this.lexer = lexer.ensureMarkable();
         this.token = token;
         }
 
@@ -55,23 +57,12 @@ class Parser
     /**
      * The underlying [Lexer].
      */
-    protected/private Iterator<Token> lexer;
-
-    /**
-     * The "next next" [Token] to process. This is only non-`Null` after a token has been "put
-     * back".
-     */
-    protected/private Token? nextToken = Null;
+    protected/private Markable + Iterator<Token> lexer;
 
     /**
      * The next [Token] to process.
      */
     protected/private Token? token = Null;
-
-    /**
-     * The previous [Token] processed (allowing the parser to "back up" one token).
-     */
-    protected/private Token? prevToken = Null;
 
     /**
      * True causes the values for duplicate identical names inside a JSON object to be collated
@@ -100,6 +91,37 @@ class Parser
     Boolean eof.get()
         {
         return token == Null;
+        }
+
+
+    // ----- Markable ------------------------------------------------------------------------------
+
+    protected static const Mark(Object mark, Token? token);
+
+    @Override
+    Object mark()
+        {
+        return new Mark(lexer.mark(), token);
+        }
+
+    @Override
+    void restore(Object mark, Boolean unmark = False)
+        {
+        assert mark.is(Mark);
+        lexer.restore(mark.mark);
+        token = mark.token;
+
+        if (unmark)
+            {
+            this.unmark(mark);
+            }
+        }
+
+    @Override
+    void unmark(Object mark)
+        {
+        assert mark.is(Mark);
+        lexer.unmark(mark.mark);
         }
 
 
@@ -334,26 +356,9 @@ class Parser
      */
     void advance()
         {
-        Token? next = this.nextToken;
-        if (next == Null)
-            {
-            next := lexer.next();
-            }
-
-        prevToken = token;
-        token     = next;
-        nextToken = Null;
-        }
-
-    /**
-     * Back up one token. This can only be performed once, until the parser has advanced again.
-     */
-    void rewind()
-        {
-        assert prevToken != Null;
-        nextToken = token;
-        token     = prevToken;
-        prevToken = Null;
+        Token? next = Null;
+        next := lexer.next();
+        this.token = next;
         }
 
     /**

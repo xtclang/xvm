@@ -430,9 +430,10 @@ const Schema
                 }
 
             assert type == ObjectType;
-            val mapping = new ReflectionMapping<ObjectType>();
-            cache.put(type, mapping);
-            return mapping;
+            TODO CP
+//            val mapping = new ReflectionMapping<ObjectType>();
+//            cache.put(type, mapping);
+//            return mapping;
             }
 
         private Map<Type, Mapping<>> cache = new HashMap();

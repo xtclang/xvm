@@ -36,7 +36,7 @@ class ObjectInputStream(Schema schema, Parser parser)
      */
     construct(Schema schema, Iterator<Token> lexer)
         {
-        construct ObjectInputStream(schema, new Parser(lexer));
+        construct ObjectInputStream(schema, new Parser(lexer.ensureMarkable()));
         }
 
 
@@ -217,7 +217,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         @Override
-        <Serializable> Serializable dereference<Serializable>(String pointer)
+        <Serializable> Serializable dereference(String pointer)
             {
             assert schema.enablePointers;
 
@@ -996,7 +996,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         protected Boolean pointerChecked = False;
 
         @Override
-        <Serializable> Serializable read<Serializable>(Serializable? defaultValue = Null)
+        <Serializable> Serializable read(Serializable? defaultValue = Null)
             {
             Boolean alreadyChecked = pointerChecked;
             try
@@ -1015,8 +1015,8 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         @Override
-        <Serializable> Serializable readUsing<Serializable>(
-                function Serializable(ElementInput!<>) deserialize,
+        <Serializable> Serializable readUsing(
+                function Serializable(ElementInput<>) deserialize,
                 Serializable? defaultValue = Null)
             {
             Boolean alreadyChecked = pointerChecked;
@@ -1046,9 +1046,10 @@ class ObjectInputStream(Schema schema, Parser parser)
             {
             if (!pointerChecked && parser.peek().id == ObjectEnter)
                 {
+                Object mark = parser.mark();
                 parser.advance();
                 Token name = parser.peek();
-                parser.rewind();
+                parser.restore(mark);
 
                 if (name.id == StrVal && name.value.as(String) == "$ref")
                     {

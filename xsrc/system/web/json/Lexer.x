@@ -115,6 +115,7 @@ import numbers.UInt32;
  */
 class Lexer
         implements Iterator<Token>
+        implements Markable
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -224,6 +225,32 @@ class Lexer
             }
 
         return True, eatToken();
+        }
+
+
+    // ----- Markable ------------------------------------------------------------------------------
+
+    @Override
+    Object mark()
+        {
+        return reader.position;
+        }
+
+    @Override
+    void restore(Object mark, Boolean unmark = False)
+        {
+        assert mark.is(TextPosition);
+        reader.position = mark;
+
+        if (unmark)
+            {
+            this.unmark(mark);
+            }
+        }
+
+    @Override
+    void unmark(Object mark)
+        {
         }
 
 

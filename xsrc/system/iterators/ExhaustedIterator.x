@@ -3,6 +3,7 @@
  */
 const ExhaustedIterator<Element>
         implements Iterator<Element>
+        implements Markable
     {
     @Override
     conditional Element next()
@@ -26,5 +27,24 @@ const ExhaustedIterator<Element>
     conditional Int knownSize()
         {
         return True, 0;
+        }
+
+
+    // ----- Markable ------------------------------------------------------------------------------
+
+    @Override
+    Object mark()
+        {
+        return Null;
+        }
+
+    @Override
+    void restore(Object mark, Boolean unmark = False)
+        {
+        }
+
+    @Override
+    void unmark(Object mark)
+        {
         }
     }
