@@ -1934,46 +1934,53 @@ public class NameExpression
                 // determine the type of the class
                 if (aTypeParams != null || (typeDesired != null && typeDesired.isA(pool.typeType())))
                     {
-                    TypeConstant type = null;
-                    if (aTypeParams == null)
-                        {
-                        ClassConstant  idTarget  = (ClassConstant) constant;
-                        Component      component = getComponent();
-                        ClassStructure clzThis   = component.getContainingClass();
+                    TypeConstant   type      = null;
+                    ClassConstant  idTarget  = (ClassConstant) constant;
+                    Component      component = getComponent();
+                    ClassStructure clzThis   = component.getContainingClass();
+                    ClassStructure clzTarget = (ClassStructure) idTarget.getComponent();
 
-                        if (clzThis != null)
+                    if (clzThis != null)
+                        {
+                        IdentityConstant idThis = clzThis.getIdentityConstant();
+                        if (idThis.equals(idTarget))
                             {
-                            IdentityConstant idThis = clzThis.getIdentityConstant();
-                            if (idThis.equals(idTarget))
+                            type = clzThis.getFormalType();
+                            }
+                        else
+                            {
+                            if (idTarget.isNestMateOf(idThis))
                                 {
-                                type = clzThis.getFormalType();
-                                }
-                            else
-                                {
-                                if (idTarget.isNestMateOf(idThis))
+                                if (clzTarget.isVirtualChild())
                                     {
-                                    ClassStructure clzTarget = (ClassStructure) idTarget.getComponent();
-                                    if (clzTarget.isVirtualChild())
-                                        {
-                                        ClassConstant  idBase  = idTarget.getOutermost();
-                                        ClassStructure clzBase = (ClassStructure) idBase.getComponent();
-                                        boolean        fFormal = !(component instanceof MethodStructure &&
-                                                                 ((MethodStructure) component).isFunction());
-                                        type = pool.ensureVirtualTypeConstant(clzBase, clzTarget,
-                                            fFormal, /*fParameterize*/ false, /*fAutoNarrowing*/ false);
-                                        }
+                                    ClassConstant  idBase  = idTarget.getOutermost();
+                                    ClassStructure clzBase = (ClassStructure) idBase.getComponent();
+                                    boolean        fFormal = !(component instanceof MethodStructure &&
+                                                             ((MethodStructure) component).isFunction());
+                                    type = pool.ensureVirtualTypeConstant(clzBase, clzTarget,
+                                        fFormal, /*fParameterize*/ false, /*fAutoNarrowing*/ false);
                                     }
                                 }
                             }
-
-                        if (type == null)
-                            {
-                            type = pool.ensureTerminalTypeConstant(idTarget);
-                            }
                         }
-                    else
+
+                    if (type == null)
                         {
-                        type = pool.ensureClassTypeConstant(constant, null, aTypeParams);
+                        type = pool.ensureTerminalTypeConstant(idTarget);
+                        }
+
+                   if (aTypeParams != null)
+                        {
+                        if (clzTarget.isTuple() ||
+                            clzTarget.isParameterized() &&
+                                aTypeParams.length <= clzTarget.getTypeParamCount())
+                            {
+                            type = pool.ensureParameterizedTypeConstant(type, aTypeParams);
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                            }
                         }
 
                     m_plan = Plan.TypeOfClass;
