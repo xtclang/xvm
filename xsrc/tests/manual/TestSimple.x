@@ -6,44 +6,29 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        new @Mix Base1().read<String>();
+        Iface[] faces = [new Class1(), new Class2()];
+        for (Iface face : faces)
+            {
+            console.println(face.getValue());
+            }
         }
 
     interface Iface
         {
-        <Ser> Ser read<Ser>();
+        Int getValue();
         }
 
-    class Base1
+    class Class1
             implements Iface
         {
         @Override
-        <Ser> Ser read<Ser>()
-            {
-            console.println($"B1 {Ser}");
-            return "a".as(Ser);
-            }
+        Int getValue() {return 1;}
         }
 
-    class Base2
+    class Class2
             implements Iface
         {
         @Override
-        <Ser> Ser read<Ser>(Ser? defaultValue = Null)
-            {
-            console.println($"B2 {Ser}");
-            return "a".as(Ser);
-            }
-         }
-
-    mixin Mix
-        into (Base1 | Base2)
-        {
-        @Override
-        <Ser> Ser read<Ser>()
-            {
-            console.println($"Mix {Ser}");
-            return super();
-            }
+        Int getValue() {return 2;}
         }
     }

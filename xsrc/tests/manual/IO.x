@@ -324,9 +324,7 @@ module TestIO
         Point              point  = mapper.read(e_in);
         console.println($"point={point}");
 
-//        Schema schemaSA = new Schema([new PointMapper(), new SegmentMapper()], randomAccess = False);  // TODO GG
-        Mapping[] mappings = new Mapping[]; mappings.add(new PointMapper()); mappings.add(new SegmentMapper());
-        Schema schemaSA = new Schema(mappings);
+        Schema schemaSA = new Schema([new PointMapper(), new SegmentMapper()]);
         testSer(schemaSA, "point", point);
         testSer(schemaSA, "segment", new Segment(point, new Point(1,99)));
 

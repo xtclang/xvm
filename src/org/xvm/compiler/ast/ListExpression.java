@@ -113,6 +113,27 @@ public class ListExpression
         }
 
     @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        int cElements = exprs.size();
+        if (cElements > 0 && typeRequired != null && typeRequired.isA(pool().typeSequence()))
+            {
+            TypeConstant typeElement = typeRequired.resolveGenericType("Element");
+            TypeFit      fit         = TypeFit.Fit;
+            for (int i = 0; i < cElements; ++i)
+                {
+                fit = fit.combineWith(exprs.get(i).testFit(ctx, typeElement, errs));
+                if (!fit.isFit())
+                    {
+                    break;
+                    }
+                }
+            return fit;
+            }
+        return super.testFit(ctx, typeRequired, errs);
+        }
+
+    @Override
     protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
         {
         if (exprs.isEmpty())
