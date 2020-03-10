@@ -317,7 +317,6 @@ module TestIO
 
         console.println($"json={ExamplePoint}");
         Schema             schema = Schema.DEFAULT;
-//        ObjectInputStream  o_in   = schema.createObjectInput(new CharArrayReader(ExamplePoint)); // TODO GG needs better error message
         Reader             reader = new CharArrayReader(ExamplePoint);
         ObjectInputStream  o_in   = schema.createObjectInput(reader).as(ObjectInputStream);
         ElementInputStream e_in   = o_in.ensureElementInput();

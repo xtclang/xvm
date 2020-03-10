@@ -1193,6 +1193,14 @@ public class Compiler
      */
     public static final String PARENT_NOT_CONSTRUCTED              = "COMPILER-149";
     /**
+     * Parameter type mismatch for {0} method; required {1}, actual {2}.
+     */
+    public static final String INCOMPATIBLE_PARAMETER_TYPE         = "COMPILER-150";
+    /**
+     * Return type mismatch for {0} method; required {1}, actual {2}.
+     */
+    public static final String INCOMPATIBLE_RETURN_TYPE            = "COMPILER-151";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

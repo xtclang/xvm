@@ -1123,16 +1123,14 @@ public abstract class AstNode
             }
         else
             {
-            // there are no fatal errors so far; report a miss
+            // if there was a problem with parameters or return values, collectMatchingMethods()
+            // would have reported an error; simply report a miss as a backstop
             if (kind == MethodKind.Constructor)
                 {
                 log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
                 }
             else
                 {
-                // TODO: create a signature representation of what is known
-                //       for example, if we are looking for "foo" in invocation "a.foo(x-> x.bar())"
-                //       and "bar" is missing - we'll get here complaining about "foo" rather than "bar"
                 log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName, typeTarget.getValueString());
                 }
             }
@@ -1295,6 +1293,10 @@ public abstract class AstNode
                 TypeConstant typeParam = atypeParam[cTypeParams + i];
                 TypeConstant typeArg   = atypeArgs[i];
 
+                TypeConstant typeExpr = exprArg.isValidated()
+                        ? exprArg.getType()
+                        : exprArg.getImplicitType(ctx);
+
                 // check if the method's parameter type fits the argument expression
                 if (typeParam != null)
                     {
@@ -1315,9 +1317,6 @@ public abstract class AstNode
                     // the challenge is that the inferred expression could be more forgiving
                     // than its original implicit type would suggest (e.g. NewExpression);
                     // for the type parameter resolution below, lets pick the narrowest type
-                    TypeConstant typeExpr = exprArg.isValidated()
-                            ? exprArg.getType()
-                            : exprArg.getImplicitType(ctx);
                     if (typeArg == null)
                         {
                         typeArg = typeExpr;
@@ -1330,6 +1329,13 @@ public abstract class AstNode
                         }
                     atypeArgs[i] = typeArg;
                     }
+                else if (typeParam != null)
+                    {
+                    log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
+                            sigMethod.getName(),
+                            typeParam.getValueString(),
+                            typeExpr == null ? exprArg.toString() : typeExpr.getValueString());
+                    }
 
                 if (typeParam != null)
                     {
@@ -1339,6 +1345,53 @@ public abstract class AstNode
                 if (!fit.isFit())
                     {
                     break;
+                    }
+                }
+
+            if (fit.isFit() && cTypeParams > 0)
+                {
+                // re-resolve the type parameters since we could have narrowed some
+                ListMap<String, TypeConstant> mapTypeParams =
+                        method.resolveTypeParameters(atypeArgs, atypeReturn, true);
+                if (mapTypeParams.size() < cTypeParams)
+                    {
+                    // different arguments/returns cause the formal type to resolve into
+                    // incompatible types
+                    log(errsTemp, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
+                            method.collectUnresolvedTypeParameters(mapTypeParams.keySet()));
+                    fit = TypeFit.NoFit;
+                    }
+                else
+                    {
+                    sigMethod = idMethod.getSignature().resolveGenericTypes(pool, mapTypeParams::get);
+                    }
+                }
+
+            if (fit.isFit() && cReturns > 0)
+                {
+                TypeConstant[] atypeMethodReturn = sigMethod.getRawReturns();
+
+                for (int i = 0; i < cReturns; i++)
+                    {
+                    TypeConstant typeReturn       = atypeReturn[i];
+                    TypeConstant typeMethodReturn = atypeMethodReturn[i];
+
+                    if (!typeMethodReturn.isCovariantReturn(typeReturn, typeTarget))
+                        {
+                        if (typeMethodReturn.getConverterTo(typeReturn) != null)
+                            {
+                            fConvert = true;
+                            }
+                        else
+                            {
+                            log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_TYPE,
+                                    sigMethod.getName(),
+                                    typeReturn.getValueString(),
+                                    typeMethodReturn.getValueString());
+                            fit = TypeFit.NoFit;
+                            break ;
+                            }
+                        }
                     }
                 }
 
@@ -1360,43 +1413,6 @@ public abstract class AstNode
                         }
                     }
                 continue; // NextMethod
-                }
-
-            if (cTypeParams > 0)
-                {
-                // re-resolve the type parameters since we could have narrowed some
-                ListMap<String, TypeConstant> mapTypeParams =
-                        method.resolveTypeParameters(atypeArgs, atypeReturn, true);
-                if (mapTypeParams.size() < cTypeParams)
-                    {
-                    // different arguments/returns cause the formal type to resolve into
-                    // incompatible types
-                    continue;
-                    }
-                sigMethod = idMethod.getSignature().resolveGenericTypes(pool, mapTypeParams::get);
-                }
-
-            if (cReturns > 0)
-                {
-                TypeConstant[] atypeMethodReturn = sigMethod.getRawReturns();
-
-                for (int i = 0; i < cReturns; i++)
-                    {
-                    TypeConstant typeReturn       = atypeReturn[i];
-                    TypeConstant typeMethodReturn = atypeMethodReturn[i];
-
-                    if (!typeMethodReturn.isCovariantReturn(typeReturn, typeTarget))
-                        {
-                        if (typeMethodReturn.getConverterTo(typeReturn) != null)
-                            {
-                            fConvert = true;
-                            }
-                        else
-                            {
-                            continue NextMethod;
-                            }
-                        }
-                    }
                 }
 
             if (fConvert)
