@@ -308,12 +308,20 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
      */
     <Serializable> Serializable read<Serializable>(String name, Serializable? defaultValue = Null)
         {
-        if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
+        if (isNull(name))
             {
-            return readUsing<Serializable>(name, mapping.read(_), defaultValue);
+            if (defaultValue.is(Serializable))
+                {
+                return defaultValue;
+                }
+
+            throw new IllegalJSON($"Value required of type \"{Serializable}\" for {name}; no value found");
             }
 
-        throw new MissingMapping(type = Serializable);
+        using (val element = openField(name))
+            {
+            return element.read(defaultValue);
+            }
         }
 
     /**
@@ -512,12 +520,15 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             throw new IllegalJSON($"Array required of type \"{Serializable}\" for {name}; no value found");
             }
 
-        if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
+        Serializable[] values = new Serializable[];
+        using (val elements = openArray(name))
             {
-            return readArrayUsing(name, mapping.read(_), defaultValue);
+            while (elements.canRead)
+                {
+                values.add(elements.read<Serializable>());
+                }
             }
-
-        throw new MissingMapping(type = Serializable);
+        return values;
         }
 
     /**

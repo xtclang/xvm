@@ -41,10 +41,14 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
      * metadata properties.
      *
      * @param attribute  the metadata attribute name
+     * @param peekAhead  pass `True` to search only within the confines of the current `DocInput`,
+     *                   peeking ahead in the input if necessary; the default, `False`, searches
+     *                   from the current `DocInput` to its parent and so on, until a JSON object
+     *                   (such as would be represented by a [FieldInput]) is encountered
      *
      * @return the value of the metadata attribute, or `Null`
      */
-    Doc metadataFor(String attribute);
+    Doc metadataFor(String attribute, Boolean peekAhead=False);
 
 
     // ----- context -------------------------------------------------------------------------------
