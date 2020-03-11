@@ -3111,8 +3111,49 @@ public abstract class Component
         public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
             {
             TypeConstant typeContrib = getTypeConstant();
+            boolean      fNormalize  = true;
 
-            typeContrib = typeContrib.normalizeParameters().resolveGenerics(pool, resolver);
+            if (typeContrib.isExplicitClassIdentity(true) && !typeContrib.isParamsSpecified())
+                {
+                IdentityConstant id  = typeContrib.getSingleUnderlyingClass(true);
+                ClassStructure   clz = (ClassStructure) id.getComponent();
+                if (clz.isParameterized())
+                    {
+                    // check if generic type parameters were implicitly added
+                    // (see TypeCompositionStatement.addImplicitTypeParameters)
+                    // and only then resolve them accordingly
+                    boolean fSynthetic = false;
+                    for (StringConstant constName : clz.getTypeParams().keySet())
+                        {
+                        if (clz.getChild(constName.getValue()).isSynthetic())
+                            {
+                            fSynthetic = true;
+                            break;
+                            }
+                        }
+
+                    if (fSynthetic)
+                        {
+                        TypeConstant typeContribNew = clz.getFormalType().resolveGenerics(pool, resolver);
+
+                        if (typeContrib.isAccessSpecified())
+                            {
+                            typeContribNew = pool.ensureAccessTypeConstant(typeContribNew, typeContrib.getAccess());
+                            }
+                        if (typeContrib.isImmutabilitySpecified())
+                            {
+                            typeContribNew = pool.ensureImmutableTypeConstant(typeContribNew);
+                            }
+                        typeContrib = typeContribNew;
+                        fNormalize  = false;
+                        }
+                    }
+                }
+
+            if (fNormalize)
+                {
+                typeContrib = typeContrib.normalizeParameters().resolveGenerics(pool, resolver);
+                }
 
             return getComposition() != Composition.Incorporates ||
                     checkConditionalIncorporate(typeContrib.getParamTypesArray()) ?
