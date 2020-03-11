@@ -500,8 +500,7 @@ public abstract class Component
         {
         return m_listContribs != null && m_listContribs
                 .stream()
-                .map(Contribution::getTypeConstant)
-                .anyMatch(Constant::containsUnresolved);
+                .anyMatch(Contribution::containsUnresolved);
         }
 
     /**
@@ -3043,6 +3042,49 @@ public abstract class Component
         public ModuleConstant getModuleConstant()
             {
             return m_constModule;
+            }
+
+        /**
+         * @return false iff all the contribution's elements are resolved
+         */
+        public boolean containsUnresolved()
+            {
+            if (getTypeConstant().containsUnresolved())
+                {
+                return true;
+                }
+
+            PropertyConstant constProp = m_constProp;
+            if (constProp != null)
+                {
+                if (constProp.containsUnresolved())
+                    {
+                    return true;
+                    }
+                }
+
+            Annotation anno = m_annotation;
+            if (anno != null)
+                {
+                if (anno.containsUnresolved())
+                    {
+                    return true;
+                    }
+                }
+
+            Map<StringConstant, TypeConstant> mapParams = m_mapParams;
+            if (mapParams != null)
+                {
+                for (TypeConstant type : mapParams.values())
+                    {
+                    if (type != null && type.containsUnresolved())
+                        {
+                        return true;
+                        }
+                    }
+                }
+
+            return false;
             }
 
         /**
