@@ -1912,7 +1912,8 @@ public class TypeCompositionStatement
             {
             for (Map.Entry<String, TypeConstant> entry : mapTypeParams.entrySet())
                 {
-                component.addTypeParam(entry.getKey(), entry.getValue());
+                component.addTypeParam(entry.getKey(), entry.getValue())
+                         .setSynthetic(true);
                 }
             }
         }

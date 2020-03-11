@@ -526,12 +526,14 @@ public class ClassStructure
         }
 
     /**
-     * Add a type parameter.
+     * Add a generic type parameter.
      *
      * @param sName            the type parameter name
      * @param typeConstraint   the type parameter constraint type
+     *
+     * @return a newly created PropertyStructure that represents the generic type parameter
      */
-    public void addTypeParam(String sName, TypeConstant typeConstraint)
+    public PropertyStructure addTypeParam(String sName, TypeConstant typeConstraint)
         {
         ListMap<StringConstant, TypeConstant> map = m_mapParams;
         if (map == null)
@@ -556,9 +558,10 @@ public class ClassStructure
             pool.clzType(), null, typeConstraint);
 
         // create the property and mark it as a type parameter
-        createProperty(false, Access.PUBLIC, Access.PUBLIC, typeConstraintType, sName)
-            .markAsGenericTypeParameter();
+        PropertyStructure prop = createProperty(false, Access.PUBLIC, Access.PUBLIC, typeConstraintType, sName);
+        prop.markAsGenericTypeParameter();
         markModified();
+        return prop;
         }
 
     /**
