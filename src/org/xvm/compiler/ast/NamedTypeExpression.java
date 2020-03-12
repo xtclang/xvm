@@ -229,7 +229,8 @@ public class NamedTypeExpression
                 return true;
                 }
 
-            if (parent instanceof AnnotatedTypeExpression)
+            if (parent instanceof AnnotatedTypeExpression &&
+                    type == ((AnnotatedTypeExpression) parent).type)
                 {
                 type = (TypeExpression) parent;
                 }

@@ -1293,15 +1293,17 @@ public abstract class AstNode
                 TypeConstant typeParam = atypeParam[cTypeParams + i];
                 TypeConstant typeArg   = atypeArgs[i];
 
-                TypeConstant typeExpr = exprArg.isValidated()
-                        ? exprArg.getType()
-                        : exprArg.getImplicitType(ctx);
-
                 // check if the method's parameter type fits the argument expression
                 if (typeParam != null)
                     {
                     ctx = ctx.enterInferring(typeParam);
                     }
+
+                // while typeArg represents the expression's implicit type, obtain the
+                // implicit type again now using the inferring context
+                TypeConstant typeExpr = exprArg.isValidated()
+                        ? exprArg.getType()
+                        : exprArg.getImplicitType(ctx);
 
                 // if *all* tests fail, report the errors from the first unsuccessful attempt
                 fit = exprArg.testFit(ctx, typeParam, errsTemp);
@@ -1312,8 +1314,6 @@ public abstract class AstNode
                         fConvert = true;
                         }
 
-                    // While typeArg represents the expression's implicit type; obtain the
-                    // implicit type again now using the inferring context;
                     // the challenge is that the inferred expression could be more forgiving
                     // than its original implicit type would suggest (e.g. NewExpression);
                     // for the type parameter resolution below, lets pick the narrowest type
