@@ -284,7 +284,7 @@ public class VirtualChildTypeConstant
                 }
             }
 
-        return typeParentOriginal == typeParentResolved
+        return typeParentOriginal == typeParentResolved && !m_fThisClass
                 ? this
                 : pool.ensureVirtualChildTypeConstant(typeParentResolved, m_constName.getValue());
         }
