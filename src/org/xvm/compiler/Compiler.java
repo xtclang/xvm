@@ -119,6 +119,14 @@ public class Compiler
         return getStage().compareTo(stage) >= 0;
         }
 
+    /**
+     * @return true if the compiler has decided to abort the process
+     */
+    public boolean isAbortDesired()
+        {
+        return m_errs.isAbortDesired();
+        }
+
 
     // ----- public API ----------------------------------------------------------------------------
 
@@ -223,7 +231,7 @@ public class Compiler
                 }
             }
 
-        return m_mgr.isComplete() || m_errs.isAbortDesired();
+        return m_mgr.isComplete();
         }
 
     /**
@@ -266,7 +274,7 @@ public class Compiler
                 }
             }
 
-        return m_mgr.isComplete() || m_errs.isAbortDesired();
+        return m_mgr.isComplete();
         }
 
     /**
@@ -317,7 +325,7 @@ public class Compiler
                 }
             }
 
-        return m_mgr.isComplete() || m_errs.isAbortDesired();
+        return m_mgr.isComplete();
         }
 
     /**

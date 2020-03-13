@@ -3538,6 +3538,11 @@ public abstract class Component
     public static class SimpleCollector
             implements ResolutionCollector
         {
+        public SimpleCollector(ErrorListener errs)
+            {
+            m_errs = errs;
+            }
+
         @Override
         public ResolutionResult resolvedComponent(Component component)
             {
@@ -3550,6 +3555,12 @@ public abstract class Component
             {
             m_constant = constant;
             return ResolutionResult.RESOLVED;
+            }
+
+        @Override
+        public ErrorListener getErrorListener()
+            {
+            return m_errs;
             }
 
         /**
@@ -3567,6 +3578,11 @@ public abstract class Component
          * The resolved constant.
          */
         private Constant m_constant;
+
+        /**
+         * The error listener.
+         */
+        private ErrorListener m_errs;
         }
 
 

@@ -4,7 +4,6 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -20,8 +19,6 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-
-import org.xvm.util.ListMap;
 
 
 /**
@@ -154,14 +151,16 @@ public class DifferenceTypeConstant
         {
         // for the DifferenceType to contribute a name, the first side needs to find it,
         // but the second should not
-        SimpleCollector  collector1 = new SimpleCollector();
+        ErrorListener    errs       = collector.getErrorListener();
+        SimpleCollector  collector1 = new SimpleCollector(errs);
         ResolutionResult result1    = m_constType1.resolveContributedName(sName, collector1);
 
         if (result1 == ResolutionResult.RESOLVED)
             {
-            ResolutionResult result2 = m_constType2.resolveContributedName(sName, new SimpleCollector());
+            ResolutionResult result2 = m_constType2.resolveContributedName(sName, new SimpleCollector(errs));
             if (result2 == ResolutionResult.RESOLVED)
                 {
+                // TODO: if the results are identical we can allow that
                 return ResolutionResult.UNKNOWN;
                 }
             collector.resolvedConstant(collector1.getResolvedConstant());

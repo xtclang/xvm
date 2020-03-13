@@ -276,14 +276,15 @@ public class IntersectionTypeConstant
         {
         // for the IntersectionType to contribute a name, both sides need to find exactly
         // the same component
-        SimpleCollector  collector1 = new SimpleCollector();
+        ErrorListener    errs       = collector.getErrorListener();
+        SimpleCollector  collector1 = new SimpleCollector(errs);
         ResolutionResult result1    = m_constType1.resolveContributedName(sName, collector1);
         if (result1 != ResolutionResult.RESOLVED)
             {
             return result1;
             }
 
-        SimpleCollector  collector2 = new SimpleCollector();
+        SimpleCollector  collector2 = new SimpleCollector(errs);
         ResolutionResult result2    = m_constType2.resolveContributedName(sName, collector2);
         if (result2 != ResolutionResult.RESOLVED)
             {

@@ -2382,7 +2382,7 @@ public class Context
             // inference; otherwise, the inference takes precedence
             if (!(arg instanceof TargetInfo))
                 {
-                SimpleCollector collector = new SimpleCollector();
+                SimpleCollector collector = new SimpleCollector(errs);
                 if (m_typeLeft.resolveContributedName(sName, collector) == ResolutionResult.RESOLVED)
                     {
                     // inference succeeded

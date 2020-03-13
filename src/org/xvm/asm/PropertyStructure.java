@@ -555,7 +555,7 @@ public class PropertyStructure
         // Note; we don't call into the super since the PropertyStructure's children are
         // "invisible" without the name qualification
 
-        SimpleCollector  collectorTemp = new SimpleCollector();
+        SimpleCollector  collectorTemp = new SimpleCollector(collector.getErrorListener());
         ResolutionResult result        = getType().resolveContributedName(sName, collectorTemp);
         if (result == ResolutionResult.RESOLVED)
             {

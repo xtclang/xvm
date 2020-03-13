@@ -851,7 +851,7 @@ public class StatementBlock
 
                     // first attempt: ask the component to resolve the name
                     // REVIEW - shouldn't all of this resolution info be present on the TypeInfo? i.e. shouldn't we rely on the TypeInfo instead of the Component?
-                    SimpleCollector collector = new SimpleCollector();
+                    SimpleCollector collector = new SimpleCollector(errs);
                     if (component.resolveName(sName, access, collector) == ResolutionResult.RESOLVED)
                         {
                         Constant constant = collector.getResolvedConstant();

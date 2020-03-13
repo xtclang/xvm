@@ -751,6 +751,11 @@ public class CommandLine
             for (Compiler compiler : modulesByName.values())
                 {
                 fDone &= compiler.resolveNames();
+
+                if (compiler.isAbortDesired())
+                    {
+                    return;
+                    }
                 }
             if (fDone)
                 {
@@ -799,6 +804,11 @@ public class CommandLine
             for (Compiler compiler : modulesByName.values())
                 {
                 fDone &= compiler.validateExpressions();
+
+                if (compiler.isAbortDesired())
+                    {
+                    return;
+                    }
                 }
             if (fDone)
                 {
@@ -828,6 +838,11 @@ public class CommandLine
                 try
                     {
                     fDone &= compiler.generateCode();
+
+                    if (compiler.isAbortDesired())
+                        {
+                        return;
+                        }
                     }
                 catch (RuntimeException e)
                     {
