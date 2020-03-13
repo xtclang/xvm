@@ -165,9 +165,8 @@ public abstract class IdentityConstant
             ClassConstant idThat = (ClassConstant) idClass;
 
             ClassStructure clzThis = (ClassStructure) idThis.getComponent();
-            if (!clzThis.isTopLevel() && !clzThis.isVirtualChild())
+            if (clzThis.isAnonInnerClass())
                 {
-                // not top level, not virtual - must be an anonymous class
                 return false;
                 }
 

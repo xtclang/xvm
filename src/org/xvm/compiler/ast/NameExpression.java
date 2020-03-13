@@ -1584,7 +1584,7 @@ public class NameExpression
                 {
                 NameExpression   exprLeft   = (NameExpression) left;
                 IdentityConstant idLeft     = exprLeft.getIdentity(ctx);
-                TypeInfo         info       = idLeft.ensureTypeInfo(Access.PUBLIC, errs);
+                TypeInfo         info       = getTypeInfo(ctx, idLeft.getType(), errs);
                 IdentityConstant idChild    = info.findName(pool, sName);
                 TypeInfo         infoClz    = idLeft.getValueType(null).ensureTypeInfo(errs);
                 IdentityConstant idClzChild = infoClz.findName(pool, sName);

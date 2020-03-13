@@ -6,29 +6,12 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        Iface[] faces = [new Class1(), new Class2()];
-        for (Iface face : faces)
-            {
-            console.println(face.getValue());
-            }
         }
 
-    interface Iface
+    private class Test
         {
-        Int getValue();
-        }
+        private enum FakeMark {NotPeeking}
 
-    class Class1
-            implements Iface
-        {
-        @Override
-        Int getValue() {return 1;}
-        }
-
-    class Class2
-            implements Iface
-        {
-        @Override
-        Int getValue() {return 2;}
+        private Object undo = FakeMark.NotPeeking;
         }
     }
