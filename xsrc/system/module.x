@@ -136,7 +136,8 @@ module Ecstasy.xtclang.org
         /**
          * The simple qualified name of the module, such as "Ecstasy".
          */
-        @Override @Lazy String simpleName.calc()
+        @Override
+        @RO String simpleName.get()
             {
             return qualifiedName.split('.')[0];
             }
@@ -144,7 +145,8 @@ module Ecstasy.xtclang.org
         /**
          * The fully qualified name of the module, such as "Ecstasy.xtclang.org".
          */
-        @Override @RO String qualifiedName.get()
+        @Override
+        @RO String qualifiedName.get()
             {
             assert Class clazz := &this.actualType.fromClass();
             return clazz.name;

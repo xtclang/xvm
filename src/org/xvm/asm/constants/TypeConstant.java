@@ -4782,8 +4782,6 @@ public abstract class TypeConstant
             {
             case Module:
             case Package:
-                return constIdRight.equals(constIdLeft) ? Relation.IS_A : Relation.INCOMPATIBLE;
-
             case Class:
             case NativeClass:
                 {

@@ -6,12 +6,7 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        }
-
-    private class Test
-        {
-        private enum FakeMark {NotPeeking}
-
-        private Object undo = FakeMark.NotPeeking;
+        Module ecstasy = this:module;
+        console.println(ecstasy.qualifiedName);
         }
     }
