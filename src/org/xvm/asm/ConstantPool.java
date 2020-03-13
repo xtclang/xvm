@@ -1698,7 +1698,7 @@ public class ConstantPool
         }
 
     /**
-     * Give the specified base and child classes, a TypeConstant representing a virtual child.
+     * Given the specified base and child classes, a TypeConstant representing a virtual child.
      *
      * @param clzBase        the base class
      * @param clzChild       the child class
