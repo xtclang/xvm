@@ -62,8 +62,8 @@ interface ComponentTemplate
         }
 
     /**
-     * The name of the template. The name ordinarily identifies the template within the scope of its
-     * parent; the exceptions to this rule are the file and method templates.
+     * The simple name of the template. The name ordinarily identifies the template within the scope
+     * of its parent; the exceptions to this rule are the file and method templates.
      */
     @RO String name;
 

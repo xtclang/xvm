@@ -134,6 +134,23 @@ module Ecstasy.xtclang.org
             extends Package
         {
         /**
+         * The simple qualified name of the module, such as "Ecstasy".
+         */
+        @Override @Lazy String simpleName.calc()
+            {
+            return qualifiedName.split('.')[0];
+            }
+
+        /**
+         * The fully qualified name of the module, such as "Ecstasy.xtclang.org".
+         */
+        @Override @RO String qualifiedName.get()
+            {
+            assert Class clazz := &this.actualType.fromClass();
+            return clazz.name;
+            }
+
+        /**
          * The version of the module, if the version is known.
          */
         @RO Version? version;
@@ -142,6 +159,11 @@ module Ecstasy.xtclang.org
          * The array of modules that this module depends on.
          */
         @RO immutable Module[] dependsOn;
+
+        /**
+         * True iff the module contains at least one singleton service.
+         */
+        @RO Boolean containsSingletonServices;
         }
 
     /**
@@ -154,12 +176,25 @@ module Ecstasy.xtclang.org
     interface Package
         {
         /**
+         * The simple qualified name of the module, such as "maps".
+         */
+        @RO String simpleName.get()
+            {
+            assert Class clazz := &this.actualType.fromClass();
+            return clazz.name;
+            }
+
+        /**
+         * The fully qualified name of the module, such as "Ecstasy.xtclang.org:collections.map".
+         */
+        @RO String qualifiedName.get()
+            {
+            TODO // TODO GG
+            }
+
+        /**
          * Test to see if this package represents a module import and if so, return it.
          */
         conditional Module isModuleImport();
-
-        // TODO what is the class for this
-
-        // TODO name-to-contents map
         }
     }
