@@ -1807,20 +1807,22 @@ public class TypeInfo
 
             // the call to info.getTopmostMethodStructure(this) may change the content of
             // mapBySignature, so collect all the matching names first
-            Map<SignatureConstant, MethodInfo> mapCandidates = new HashMap<>();
+            Map<MethodConstant, MethodInfo> mapCandidates = new HashMap<>();
 
-            for (Map.Entry<SignatureConstant, MethodInfo> entry : ensureMethodsBySignature().entrySet())
+            for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
                 {
-                SignatureConstant sig = entry.getKey();
-                if (sig.getName().equals(sName))
+                MethodConstant idMethod = entry.getKey();
+
+                // only include the non-nested Methods
+                if (idMethod.getName().equals(sName) && idMethod.getNestedDepth() == f_cDepth + 2)
                     {
-                    mapCandidates.put(sig, entry.getValue());
+                    mapCandidates.put(idMethod, entry.getValue());
                     }
                 }
 
-            for (Map.Entry<SignatureConstant, MethodInfo> entry : mapCandidates.entrySet())
+            for (Entry<MethodConstant, MethodInfo> entry : mapCandidates.entrySet())
                 {
-                SignatureConstant sig  = entry.getKey();
+                MethodConstant  id     = entry.getKey();
                 MethodInfo      info   = entry.getValue();
                 MethodStructure method = info.getTopmostMethodStructure(this);
 
@@ -1835,7 +1837,7 @@ public class TypeInfo
                     continue;
                     }
 
-                int cAllParams  = sig.getParamCount();
+                int cAllParams  = method.getParamCount();
                 int cTypeParams = method.getTypeParamCount();
                 int cDefaults   = method.getDefaultParamCount();
                 int cRequired   = cAllParams - cTypeParams - cDefaults;
@@ -1848,8 +1850,8 @@ public class TypeInfo
                         }
 
                     MethodConstant idMethod = method.isFunction()
-                            ? method.getIdentityConstant()
-                            : resolveMethodConstant(info);
+                            ? id
+                            : resolveMethodConstant(id, info);
                     setMethods.add(idMethod);
                     }
                 }
