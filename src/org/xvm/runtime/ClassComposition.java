@@ -20,7 +20,6 @@ import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -287,9 +286,9 @@ public class ClassComposition
         }
 
     @Override
-    public CallChain getMethodCallChain(SignatureConstant sigMethod)
+    public CallChain getMethodCallChain(Object nidMethod)
         {
-        return f_mapMethods.computeIfAbsent(sigMethod,
+        return f_mapMethods.computeIfAbsent(nidMethod,
             nid ->
                 {
                 TypeInfo info = isStruct()
