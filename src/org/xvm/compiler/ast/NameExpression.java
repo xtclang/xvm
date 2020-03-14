@@ -2324,7 +2324,7 @@ public class NameExpression
                 // a non-constant-property name can be "identity mode" if at least one of the
                 // following is true:
                 //   1) there is no left and the context is static; or
-                //   2) there is a left, and it is in identity mode;
+                //   2) there is a left, and it is in identity mode, but this is not a class attribute
                 //
                 // Name         method  specifies  "static" context /   specifies
                 // refers to    context no-de-ref  identity mode        no-de-ref
@@ -2336,7 +2336,7 @@ public class NameExpression
                 // *[1] must have a left hand side in identity mode; otherwise it is an Error
                 PropertyStructure prop = (PropertyStructure) getIdentity(ctx).getComponent();
 
-                return !prop.isConstant() && left != null
+                return !prop.isConstant() && !m_fClassAttribute && left != null
                         && ((NameExpression) left).isIdentityMode(ctx, false);
                 }
             }
