@@ -85,6 +85,7 @@ public class MoveRef
             switch (m_nFromValue)
                 {
                 case A_TARGET:
+                case A_STRUCT:
                     {
                     ConstantPool     pool         = frame.poolContext();
                     ObjectHandle     hReferent    = frame.getThis();
