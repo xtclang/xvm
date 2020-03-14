@@ -7,15 +7,14 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        console.println(Base.PublicType.explicitlyImmutable);
-
-        if (Access access := Base.ProtectedType.accessSpecified())
-            {
-            console.println(access);
-            }
+        new Base();
         }
 
    class Base
         {
+        construct()
+            {
+            console.println(&this.actualType);
+            }
         }
     }
