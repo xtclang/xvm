@@ -73,6 +73,11 @@ interface Type<DataType, OuterType>
     // ----- state representation ------------------------------------------------------------------
 
     /**
+     * The TypeSystem that this type originates from.
+     */
+    @RO TypeSystem typeSystem;
+
+    /**
      * The form of the type.
      */
     @RO Form form;

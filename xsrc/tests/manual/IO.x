@@ -247,6 +247,12 @@ module TestIO
             using (FieldInput fields = in.openObject())
                 {
                 return new Point(fields.readInt("x"), fields.readInt("y"));
+//console.println($"reading point");
+//Int x = fields.readInt("x");
+//console.println($"x={x}");
+//Int y = fields.readInt("y");
+//console.println($"y={y}");
+//return new Point(x, y);
                 }
 //                Doc doc = in.readDoc();
 //                Map<String, Doc> map = doc.as(Map<String, Doc>);
@@ -283,6 +289,12 @@ module TestIO
             using (FieldInput fields = in.openObject())
                 {
                 return new Segment(fields.read<Point>("p1"), fields.read<Point>("p2"));
+//console.println($"reading segment");
+//Point p1 = fields.read<Point>("p1");
+//console.println($"p1={p1}");
+//Point p2 = fields.read<Point>("p2");
+//console.println($"p2={p2}");
+//return new Segment(p1, p2);
                 }
             }
 
@@ -452,10 +464,11 @@ module TestIO
 
         private void testSegment(Schema schema, String json)
             {
+            console.println($"json={json}");
             Reader             reader = new CharArrayReader(json);
             ObjectInputStream  o_in   = schema.createObjectInput(reader).as(ObjectInputStream);
             Segment            segment = o_in.read<Segment>();
-            console.println($"json={json}, segment={segment}");
+            console.println($"segment={segment}");
             }
         }
 

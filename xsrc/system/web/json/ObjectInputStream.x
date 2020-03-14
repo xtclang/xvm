@@ -157,7 +157,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
         finally
             {
-            assert loadNext(first = True);
+            loadNext(first = True);
             }
 
         @Override
@@ -256,7 +256,8 @@ class ObjectInputStream(Schema schema, Parser parser)
 
             if (pointer.size == 0)
                 {
-                throw new IllegalJSON("Root document pointer (\"\") is not supported");
+                throw new IllegalJSON("Root document pointer (\"\") from node"
+                        + $" \"{this.pointer}\" is not supported");
                 }
 
             if (Int steps := pointer[0].isDigit())
@@ -274,7 +275,8 @@ class ObjectInputStream(Schema schema, Parser parser)
                     if (cur > last)
                         {
                         // the pointer points to a node containing this node, which is not supported
-                        throw new IllegalJSON($"Parent document pointer (\"{pointer}\") is not supported.");
+                        throw new IllegalJSON($"Parent document pointer (\"{pointer}\") from node"
+                                + $" \"{this.pointer}\" is not supported");
                         }
 
                     Char ch = pointer[cur];
@@ -291,10 +293,12 @@ class ObjectInputStream(Schema schema, Parser parser)
                                 break Loop;
 
                             case '#':
-                                throw new IllegalJSON($"Index position / member name pointer \"{pointer}\" is not supported.");
+                                throw new IllegalJSON("Index position / member name pointer"
+                                        + $" \"{pointer}\" from node \"{this.pointer}\" is not supported");
 
                             default:
-                                throw new IllegalJSON($"Illegal pointer: \"{pointer}\".");
+                                throw new IllegalJSON(
+                                        $"Illegal pointer \"{pointer}\" from node \"{this.pointer}\"");
                             }
                         }
                     }
@@ -303,7 +307,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                 for (Int i = 0; i < steps; ++i)
                     {
                     node = node.parent ?: throw new IllegalJSON(
-                            $"Illegal relative pointer \"{pointer}\" from node \"{this.pointer}\".");
+                            $"Illegal relative pointer \"{pointer}\" from node \"{this.pointer}\"");
                     }
 
                 pointer = node.pointer + suffix;
@@ -316,10 +320,13 @@ class ObjectInputStream(Schema schema, Parser parser)
                     return value;
                     }
 
-                throw new IllegalJSON($"Type mismatch for JSON pointer=\"{pointer}\"; required type={Serializable}, actual type={&value.actualType}");
+                throw new IllegalJSON(
+                        $"Type mismatch for JSON pointer \"{pointer}\" from node \"{this.pointer}\""
+                        + $"; required type={Serializable}, actual type={&value.actualType}");
                 }
 
-            throw new IllegalJSON($"Missing value for JSON pointer=\"{pointer}\"; required type={Serializable}");
+            throw new IllegalJSON($"Missing value for JSON pointer \"{pointer}\" from node"
+                    + $" \"{this.pointer}\"; required type={Serializable}");
             }
 
         @Override
@@ -587,7 +594,7 @@ class ObjectInputStream(Schema schema, Parser parser)
 
             prepareRead();
             canRead = False;
-            return new @CloseCap FieldInputStream(this);
+            return new @CloseCap FieldInputStream(this, peekingAhead=peekAhead);
             }
 
         @Override
@@ -737,7 +744,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                 }
 
             prepareRead();
-            return new @CloseCap FieldInputStream(this, count);
+            return new @CloseCap FieldInputStream(this, count, peekingAhead=peekAhead);
             }
 
         @Override
@@ -900,7 +907,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                         : new @CloseCap ElementInputStream(this, name, tokens);
                 }
 
-            throw new IllegalJSON($"Missing field {name}");
+            throw new IllegalJSON($"Missing field \"{name}\" at \"{pointer}\"");
             }
 
         @Override
@@ -1269,21 +1276,15 @@ class ObjectInputStream(Schema schema, Parser parser)
             {
             if (!pointerChecked && parser.peek().id == ObjectEnter)
                 {
-                Object mark = parser.mark();
-                parser.advance();
-                Token name = parser.peek();
-                parser.restore(mark);
-
-                if (name.id == StrVal && name.value.as(String) == "$ref")
+                Doc pointer = metadataFor(schema.pointerKey, peekAhead=True);
+                if (pointer.is(String))
                     {
-                    Map<String, Doc> doc = readDoc().as(Map<String, Doc>); // TODO eventually: optimize
-                    assert Doc pointer := doc.get("$ref");
-                    if (pointer.is(String))
-                        {
-                        return True, dereference(pointer);
-                        }
-
-                    throw new IllegalJSON($"Pointer type={&pointer.actualType}; String expected.");
+                    return True, dereference(pointer);
+                    }
+                else if (pointer != Null)
+                    {
+                    throw new IllegalJSON($"Pointer type {&pointer.actualType} from node"
+                            + $" \"{this.pointer}\"; String expected");
                     }
                 }
 

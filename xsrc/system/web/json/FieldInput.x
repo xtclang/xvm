@@ -140,8 +140,8 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
             }
 
-        throw new IllegalJSON(
-                $"Boolean value required for {name}; {doc == Null ? "no value" : &doc.actualType} found");
+        throw new IllegalJSON($"Boolean value required for \"{name}\" at \"{pointer}\";"
+                + $" {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -168,8 +168,8 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
             }
 
-        throw new IllegalJSON(
-                $"String value required for {name}; {doc == Null ? "no value" : &doc.actualType} found");
+        throw new IllegalJSON($"String value required for \"{name}\" at \"{pointer}\";"
+                + $" {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -196,8 +196,8 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             return ensureIntLiteral(defaultValue?);
             }
 
-        throw new IllegalJSON(
-                $"IntLiteral value required for {name}; {doc == Null ? "no value" : &doc.actualType} found");
+        throw new IllegalJSON($"IntLiteral value required for \"{name}\" at \"{pointer}\";"
+                + $" {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -229,8 +229,8 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             return ensureFPLiteral(defaultValue?);
             }
 
-        throw new IllegalJSON(
-                $"FPLiteral value required for {name}; {doc == Null ? "no value" : &doc.actualType} found");
+        throw new IllegalJSON($"FPLiteral value required for \"{name}\" at \"{pointer}\";"
+                + $" {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -257,8 +257,8 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
             }
 
-        throw new IllegalJSON(
-                $"Int value required for {name}; {doc == Null ? "no value" : &doc.actualType} found");
+        throw new IllegalJSON($"Int value required for \"{name}\" at \"{pointer}\";"
+                + $" {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -290,8 +290,8 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
             }
 
-        throw new IllegalJSON(
-                $"Dec value required for {name}; {doc == Null ? "no value" : &doc.actualType} found");
+        throw new IllegalJSON($"Dec value required for \"{name}\" at \"{pointer}\";"
+                + $" {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -315,12 +315,13 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
                 return defaultValue;
                 }
 
-            throw new IllegalJSON($"Value required of type \"{Serializable}\" for {name}; no value found");
+            throw new IllegalJSON($"Value required of type \"{Serializable}\""
+                    + $" for \"{name}\" at \"{pointer}\"; no value found");
             }
 
         using (val element = openField(name))
             {
-            return element.read(defaultValue);
+            return element.read<Serializable>(defaultValue);
             }
         }
 
@@ -349,12 +350,13 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
                 return defaultValue;
                 }
 
-            throw new IllegalJSON($"Value required of type \"{Serializable}\" for {name}; no value found");
+            throw new IllegalJSON($"Value required of type \"{Serializable}\""
+                    + $" for \"{name}\" at \"{pointer}\"; no value found");
             }
 
         using (val element = openField(name))
             {
-            return element.readUsing(deserialize, defaultValue);
+            return element.readUsing<Serializable>(deserialize, defaultValue);
             }
         }
 
@@ -381,7 +383,8 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
         Doc value = readDoc(name);
         return value.is(Doc[])
                 ? value
-                : throw new IllegalJSON($"Doc[] value required for {name}; {&value.actualType} found");
+                : throw new IllegalJSON($"Doc[] value required for \"{name}\" at \"{pointer}\";"
+                        + $" {&value.actualType} found");
         }
 
     /**
@@ -517,7 +520,8 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
         if (isNull(name))
             {
             return defaultValue?;
-            throw new IllegalJSON($"Array required of type \"{Serializable}\" for {name}; no value found");
+            throw new IllegalJSON($"Array required of type \"{Serializable}\""
+                    + $" for \"{name}\" at \"{pointer}\"; no value found");
             }
 
         Serializable[] values = new Serializable[];
@@ -554,7 +558,8 @@ interface FieldInput<ParentInput extends (ElementInput | FieldInput)?>
         if (isNull(name))
             {
             return defaultValue?;
-            throw new IllegalJSON($"Array required of type \"{Serializable}\" for {name}; no value found");
+            throw new IllegalJSON($"Array required of type \"{Serializable}\""
+                    + $" for \"{name}\" at \"{pointer}\"; no value found");
             }
 
         Serializable[] values = new Serializable[];

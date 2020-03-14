@@ -67,8 +67,8 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
             }
 
-        throw new IllegalJSON(
-                $"Boolean value required; {doc == Null ? "no value" : &doc.actualType} found");
+        throw new IllegalJSON($"Boolean value required at \"{pointer}\";"
+                + $" {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -94,8 +94,8 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
             }
 
-        throw new IllegalJSON(
-                $"String value required; {doc == Null ? "no value" : &doc.actualType} found");
+        throw new IllegalJSON($"String value required at \"{pointer}\";"
+                + $" {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -121,8 +121,8 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             return ensureIntLiteral(defaultValue?);
             }
 
-        throw new IllegalJSON(
-                $"IntLiteral value required; {doc == Null ? "no value" : &doc.actualType} found");
+        throw new IllegalJSON($"IntLiteral value required at \"{pointer}\";"
+                + $" {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -153,8 +153,8 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             return ensureFPLiteral(defaultValue?);
             }
 
-        throw new IllegalJSON(
-                $"FPLiteral value required; {doc == Null ? "no value" : &doc.actualType} found");
+        throw new IllegalJSON($"FPLiteral value required at \"{pointer}\";"
+                + $" {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -180,8 +180,8 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
             }
 
-        throw new IllegalJSON(
-                $"Int value required; {doc == Null ? "no value" : &doc.actualType} found");
+        throw new IllegalJSON($"Int value required at \"{pointer}\";"
+                + $" {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -212,8 +212,8 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
             }
 
-        throw new IllegalJSON(
-                $"Dec value required; {doc == Null ? "no value" : &doc.actualType} found");
+        throw new IllegalJSON($"Dec value required at \"{pointer}\";"
+                + $" {doc == Null ? "no value" : &doc.actualType} found");
         }
 
     /**
@@ -227,14 +227,10 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is null and no default value is provided, or if the value
      *                      is not of the requested type
      */
-    <Serializable> Serializable read<Serializable>(Serializable? defaultValue = Null)
+    <Serializable> Serializable read(Serializable? defaultValue = Null)
         {
-        if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
-            {
-            return readUsing<Serializable>(mapping.read(_), defaultValue);
-            }
-
-        throw new MissingMapping(type = Serializable);
+        Mapping<Serializable> mapping = schema.ensureMapping(Serializable, this);
+        return readUsing<Serializable>(mapping.read(_), defaultValue);
         }
 
     /**
@@ -250,8 +246,8 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      * @throws IllegalJSON  if the value is null and no default value is provided, or if the value
      *                      is not of the requested type
      */
-    <Serializable> Serializable readUsing<Serializable>
-            (function Serializable(ElementInput!<>) deserialize, Serializable? defaultValue = Null)
+    <Serializable> Serializable readUsing(function Serializable(ElementInput!<>) deserialize,
+                                          Serializable? defaultValue = Null)
         {
         if (isNull())
             {
@@ -260,7 +256,8 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
                 return defaultValue;
                 }
 
-            throw new IllegalJSON($"Value required of type \"{Serializable}\"; no value found");
+            throw new IllegalJSON($"Value required at \"{pointer}\""
+                    + $" of type \"{Serializable}\"; no value found");
             }
 
         return deserialize(this);
@@ -288,7 +285,8 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
         Doc value = readDoc();
         return value.is(Doc[])
                 ? value
-                : throw new IllegalJSON($"Doc[] value required; {&value.actualType} found");
+                : throw new IllegalJSON($"Doc[] value required at \"{pointer}\";"
+                        + $" {&value.actualType} found");
         }
 
     /**
@@ -420,12 +418,15 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue ?: [];
             }
 
-        if (Mapping<Serializable> mapping := schema.getMapping(Serializable))
+        Serializable[] values = new Serializable[];
+        using (ElementInput<ElementInput> elements = openArray())
             {
-            return readArrayUsing(mapping.read(_), defaultValue);
+            while (elements.canRead)
+                {
+                values.add(elements.read<Serializable>());
+                }
             }
-
-        throw new MissingMapping(type = Serializable);
+        return values;
         }
 
     /**

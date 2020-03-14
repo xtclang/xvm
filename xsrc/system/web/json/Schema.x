@@ -13,8 +13,8 @@ import io.ObjectOutput;
  * Ecstasy types) from and to JSON textual data, or conversely, the ability to transform JSON
  * textual data from and to Ecstasy object graphs.
  *
- * TODO ReflectionMapping implementation
- * TODO NullableMapping as a wrapper around another Mapping
+ * TODO ReflectionMapping creation
+ * TODO integrate with new TypeSystem API
  * TODO versioning support
  * TODO split out JSON library into its own (non-core) module
  */
@@ -37,53 +37,94 @@ const Schema
      *                          serialization of custom objects non-primitive JSON types
      * @param enableReflection  pass `True` to use reflection as the basis for serialization and
      *                          deserialization of types for which the Mapping is missing
+     * @param typeSystem        pass the TypeSystem to use for reflection; the TypeSystem must be
+     *                          the type system that contains the JSON module, or a TypeSystem
+     *                          derived thereof; defaults to the type system that contains the JSON
+     *                          module
      * @param retainNulls       pass `True` to treat JSON `null` values as significant
      * @param storeRemainders   pass `True` to collect and store any metadata and unread properties
      *                          together as a means of supporting forward version compatibility
      */
-    construct(Mapping[] mappings         = [],
-              Version?  version          = Null,
-              Boolean   randomAccess     = False,
-              Boolean   enableMetadata   = False,
-              Boolean   enablePointers   = False,
-              Boolean   enableReflection = False,
-              Boolean   retainNulls      = False,
-              Boolean   storeRemainders  = False)
+    construct(Mapping[]   mappings         = [],
+              Version?    version          = Null,
+              Boolean     randomAccess     = False,
+              Boolean     enableMetadata   = False,
+              String      typeKey          = "$type",
+              Boolean     enablePointers   = False,
+              String      pointerKey       = "$ref",
+              Boolean     enableReflection = False,
+              TypeSystem? typeSystem       = Null,
+              Boolean     retainNulls      = False,
+              Boolean     storeRemainders  = False)
         {
+        // verify that the type system is the TypeSystem that includes this class, or a TypeSystem
+        // that derives from the TypeSystem that includes this class
+        if (typeSystem? != &this.actualType.typeSystem)
+            {
+            TODO
+            }
+
         // use the module version if no version is specified
         if (version == Null)
             {
-            version = v:1; // TODO version = ...
+            version = v:1; // TODO calculate version of the TypeSystem: version = ...
             }
 
+        // store off specified options
         this.version          = version;
         this.randomAccess     = randomAccess;
-        this.enableMetadata   = enableMetadata;
+        this.enableMetadata   = enableMetadata | enablePointers;    // pointers require metadata
+        this.typeKey          = typeKey;
         this.enablePointers   = enablePointers;
+        this.pointerKey       = pointerKey;
         this.enableReflection = enableReflection;
         this.retainNulls      = retainNulls;
         this.storeRemainders  = storeRemainders;
+// TODO GG this.typeSystem       = typeSystem ?: &this.actualType.typeSystem;
 
-        // add specified mappings
-        ListMap<Type, Mapping> mappingForType = new ListMap();
-        HashMap<String, Type>  typeForName    = new HashMap();
+        // build indexes for the provided mappings
+        ListMap<Type, Mapping> mappingByType = new ListMap();
+        HashMap<String, Type>  typeByName    = new HashMap();
         for (Mapping mapping : mappings)
             {
-            if (mappingForType.putIfAbsent(mapping.Serializable, mapping))
-                {
-                typeForName.putIfAbsent(mapping.typeName?, mapping.Serializable);
-                }
+            mappingByType.putIfAbsent(mapping.Serializable, mapping);
+            typeByName.putIfAbsent(mapping.typeName?, mapping.Serializable);
             }
 
-        this.mappings    = mappingForType;
-        this.typeForName = typeForName.makeImmutable();
+        this.mappingByType = mappingByType;
+        this.typeByName    = typeByName.makeImmutable();
         }
 
     /**
      * The "default" Schema, which is not aware of any custom serialization or deserialization
      * mechanisms.
      */
-    static Schema DEFAULT = new Schema(enableMetadata = True, enablePointers = True, enableReflection = True);
+    static Schema DEFAULT = new Schema(
+            enableReflection = True,
+            enableMetadata   = True,
+            enablePointers   = True,
+            randomAccess     = True);
+
+
+    // ----- TextFormat interface ------------------------------------------------------------------
+
+    @Override
+    @RO String name.get()
+        {
+        return "JSON";
+        }
+
+    @Override
+    ObjectInput createObjectInput(Reader reader)
+        {
+        return new ObjectInputStream(this, reader);
+        }
+
+    @Override
+    ObjectOutput createObjectOutput(Writer writer)
+        {
+        return new ObjectOutputStream(this, writer);
+        }
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -125,6 +166,12 @@ const Schema
     Boolean enableMetadata;
 
     /**
+     * The String name in a name/value pair that identifies the type of the JSON object that is used
+     * to determine the type of the Ecstasy object if the use of metadata is enabled in the schema.
+     */
+    String typeKey;
+
+    /**
      * An option to allow lookup of deserialized values and objects using JSON pointers. This allows
      * for "graph serialization", in which the same Ecstasy object instance can be referenced from
      * multiple locations within the deserialized object graph.
@@ -137,11 +184,23 @@ const Schema
     Boolean enablePointers;
 
     /**
+     * The String name in a name/value pair that identifies that the JSON object acts as a pointer
+     * to a previously read object, if the use of pointers is enabled in the schema.
+     */
+    String pointerKey;
+
+    /**
      * An option to handle any types and classes of objects that do not have a known mapping by
      * using a "catch-all" mapping. The "catch-all" mapping uses reflection to serialize and
      * deserialize objects without a custom [Mapping] implementation.
      */
     Boolean enableReflection;
+
+    /**
+     * The TypeSystem that the reflection-based capabilities will use.
+     */
+    @Unassigned // TODO GG remove
+    TypeSystem typeSystem;
 
     /**
      * An option to treat null values as significant. This is generally only useful for "pretty
@@ -162,93 +221,250 @@ const Schema
     /**
      * A prioritized mapping from Ecstasy types to JSON Mapping implementations.
      */
-    ListMap<Type, Mapping> mappings;
+    ListMap<Type, Mapping> mappingByType;
 
     /**
      * A mapping from JSON metadata type names to Ecstasy types.
      */
-    Map<String, Type> typeForName;
+    Map<String, Type> typeByName;
+
+
+    // ----- Mapping look-up -----------------------------------------------------------------------
+
+    /**
+     * Find or create a mapping for the specified type and optional metadata.
+     *
+     * @param type  the type for which a Mapping is required
+     * @param in    (optional) the ElementInput that the mapping will be used to read from; this
+     *              allows the schema to look for type metadata, if that option is enabled
+     *
+     * @return the Mapping for the specified type and optional metadata
+     *
+     * @throws IllegalJSON     for exceptions related to reading or processing metadata
+     * @throws MissingMapping  if no appropriate mapping can be provided
+     */
+    <ObjectType> Mapping<ObjectType> ensureMapping(Type<ObjectType> type, ElementInput? in=Null)
+        {
+        if (in != Null && enableMetadata && !in.isNull())
+            {
+            Doc typeInfo = in.metadataFor(typeKey, peekAhead=True);
+            if (typeInfo.is(String))
+                {
+                return ensureMappingByName(typeInfo, type);
+                }
+            else if (typeInfo != Null)
+                {
+                throw new IllegalJSON(
+                        $"\"{typeKey}\" metadata at \"{in.pointer}\" must be a \"String\"");
+                }
+            }
+
+        return ensureMappingByType(type);
+        }
+
+    /**
+     * Search for a mapping for the specified type name and type constraint.
+     *
+     * @param typeName        the name used to find the specific type mapping
+     * @param typeConstraint  the type constraint for the Mapping (which may indicate the same
+     *                        type as the `typeName`, or may be a wider type thereof)
+     *
+     * @return the selected Mapping
+     *
+     * @throws MissingMapping  if no appropriate mapping can be provided
+     */
+    <ObjectType> Mapping<ObjectType> ensureMappingByName(String typeName, Type<ObjectType> typeConstraint)
+        {
+        if (Type type := typeByName.get(typeName))
+            {
+            if (type.isA(typeConstraint))
+                {
+                return ensureMappingByType(type.as(Type<ObjectType>));
+                }
+            else
+                {
+                throw new MissingMapping($"Mapping for \"{typeName}\" is of type {type},"
+                        + $" but specified type constraint is {typeConstraint}");
+                }
+            }
+        else
+            {
+            return mapper.ensureMappingByName(typeName, typeConstraint);
+            }
+        }
+
+    /**
+     * Search for (or create if possible) a mapping for the specified type.
+     *
+     * @param type  the type for the Mapping
+     *
+     * @return the selected Mapping
+     *
+     * @throws MissingMapping  if no appropriate mapping can be provided
+     */
+    <ObjectType> Mapping<ObjectType> ensureMappingByType(Type<ObjectType> type)
+        {
+        if (val mapping := mappingByType.get(type))
+            {
+            return mapping.as(Mapping<ObjectType>);
+            }
+        else
+            {
+            return mapper.ensureMappingByType(type);
+            }
+        }
 
     /**
      * A lazily instantiated type mapping service.
      */
     @Lazy
-    TypeMapper typeMapper.calc()
+    MappingService mapper.calc()
         {
-        return new TypeMapper();
+        return new MappingService();
         }
 
     /**
-     * A lazily instantiated cache of reflection-based Mapping objects.
+     * A service that handles the Mapping lookups (and if necessary, creation) when the Mapping is
+     * not obvious or present in the Schema.
      */
-    @Lazy
-    ReflectionMapper reflectionMapper.calc()
+    service MappingService
         {
-        assert enableReflection;
-        return new ReflectionMapper();
-        }
-
-
-    // ----- TextFormat implementation --------------------------------------------------------------
-
-    @Override
-    @RO String name.get()
-        {
-        return "JSON";
-        }
-
-    @Override
-    ObjectInput createObjectInput(Reader reader)
-        {
-        return new ObjectInputStream(this, reader);
-        }
-
-    @Override
-    ObjectOutput createObjectOutput(Writer writer)
-        {
-        return new ObjectOutputStream(this, writer);
-        }
-
-
-    // ----- helpers
-
-    /**
-     * Search for a mapping for the specified type.
-     *
-     * @param type  the type for which a Mapping is required
-     *
-     * @return True iff a Mapping was found
-     * @return (conditional) the selected Mapping
-     */
-    <ObjectType> conditional Mapping<ObjectType> getMapping(Type<ObjectType> type)
-        {
-        if (Mapping mapping := mappings.get(type), mapping.Serializable.is(Type<ObjectType>))
+        construct()
             {
-            return True, mapping.as(Mapping<ObjectType>);
+            // clone the look-up tables from the schema
+            this.mappingByType = this.Schema.mappingByType.ensureMutable();
+            this.typeByName    = new HashMap<String, Type>().putAll(this.Schema.typeByName);
             }
 
-        if (Type typeAlt := typeMapper.selectType(type))
+
+        // ----- API -------------------------------------------------------------------------------
+
+        /**
+         * Search for a mapping for the specified type name and type constraint.
+         *
+         * @param typeName        the name used to find the specific type mapping
+         * @param typeConstraint  the type constraint for the Mapping (which may indicate the same
+         *                        type as the `typeName`, or may be a wider type thereof)
+         *
+         * @return the selected Mapping
+         *
+         * @throws MissingMapping  if no appropriate mapping can be provided
+         */
+        <ObjectType> Mapping<ObjectType> ensureMappingByName(String typeName, Type<ObjectType> typeConstraint)
             {
-            return True, mappings[typeAlt].as(Mapping<ObjectType>);
+            // try to parse the name into a type of the current type system
+            TODO reflection-based name-to-type conversion
             }
 
-        if (enableReflection)
+        /**
+         * Search for (or create if possible) a mapping for the specified type.
+         *
+         * @param type  the type for the Mapping
+         *
+         * @return the selected Mapping
+         *
+         * @throws MissingMapping  if no appropriate mapping can be provided
+         */
+        <ObjectType> Mapping<ObjectType> ensureMappingByType(Type<ObjectType> type)
             {
-            return True, reflectionMapper.ensureMapping(ObjectType);
+// TODO
+//                {
+//                return True, mappingByType[typeAlt].as(Mapping<ObjectType>);
+//                }
+
+            if (enableReflection)
+                {
+//                return mapper.createReflectionMapping(type);
+                }
+
+            TODO
             }
 
-        return False;
+
+        // ----- properties ------------------------------------------------------------------------
+        
+        /**
+         * A lookup cache from Ecstasy type to JSON Mapping.
+         */
+        protected/private ListMap<Type, Mapping> mappingByType;
+
+        /**
+         * A lookup cache from JSON metadata type name to Ecstasy type.
+         */
+        protected/private Map<String, Type> typeByName;
+
+        /**
+         * Given a `Type`, check if there is a compatible `Mapping`, such as one that handles a
+         * superclass of the specified `Type`.
+         *
+         * @param type  the `Type` to find a Mapping for
+         *
+         * @return True iff a compatible Mapping type was found
+         * @return (conditional) the `Type` for which a compatible `Mapping` exists
+         *
+         * @throws UnsupportedOperation if no compatible Mapping can be found
+         */
+        <ObjectType> conditional Type<ObjectType> selectType(Type<ObjectType> type)
+            {
+// TODO
+//            if (Type mappingType := cache.get(type))
+//                {
+//                return True, mappingType.as(Type<ObjectType>);
+//                }
+
+// TODO
+//            for (Type mappingType : mappingByType.keys)
+//                {
+//                if (type.isA(mappingType))
+//                    {
+//                    cache.put(type, mappingType);
+//                    return True, mappingType.as(Type<ObjectType>);
+//                    }
+//                }
+
+            return False;
+            }
+
+        /**
+         * Create a reflection-based mapping for the specified type.
+         *
+         * @param type  the type for the Mapping
+         *
+         * @return True iff a Mapping could be created
+         * @return (conditional) the created Mapping for the specified type
+         */
+        protected <ObjectType> conditional Mapping<ObjectType> createReflectionMapping(Type<ObjectType> type)
+            {
+            // TODO
+            return False;
+            }
+
+
+        /**
+         * Given a `Type`, obtain a [ReflectionMapping] instance for that type.
+         *
+         * @param type  the `Type` to obtain a Mapping for
+         *
+         * @return a [ReflectionMapping] instance for that type
+         */
+        <ObjectType> Mapping<ObjectType> ensureMapping(Type<ObjectType> type)
+            {
+//            if (Mapping<> mapping := cache.get(type))
+//                {
+//                return mapping.as(Mapping<ObjectType>);
+//                }
+
+            assert type == ObjectType;
+            TODO CP
+//            val mapping = new ReflectionMapping<ObjectType>();
+//            cache.put(type, mapping);
+//            return mapping;
+            }
+
         }
 
-    <ObjectType> Mapping<ObjectType> ensureMapping(Type<ObjectType> type)
-        {
-        if (Mapping<ObjectType> mapping := getMapping(type))
-            {
-            return mapping;
-            }
 
-        throw new UnsupportedOperation($"No JSON Schema Mapping found for Type={type}");
-        }
+    // ----- helper methods ------------------------------------------------------------------------
 
     /**
      * Examine the specified name to determine if it is part of a name/value pair that holds
@@ -361,81 +577,5 @@ const Schema
                 }
             }
         return buf;
-        }
-
-
-    // ----- TypeMapper service --------------------------------------------------------------------
-
-    /**
-     * A service that looks for `Mapping`-by-type when there is **NOT** a Mapping that specifies
-     * that exact type. For example, annotated types may be handled by the non-annotated forms, and
-     * subclass types may be handled by a superclass type's `Mapping`.
-     */
-    service TypeMapper
-        {
-        /**
-         * Given a `Type`, check if there is a compatible `Mapping`, such as one that handles a
-         * superclass of the specified `Type`.
-         *
-         * @param type  the `Type` to find a Mapping for
-         *
-         * @return True iff a compatible Mapping type was found
-         * @return (conditional) the `Type` for which a compatible `Mapping` exists
-         *
-         * @throws UnsupportedOperation if no compatible Mapping can be found
-         */
-        <ObjectType> conditional Type<ObjectType> selectType(Type<ObjectType> type)
-            {
-            if (Type mappingType := cache.get(type))
-                {
-                return True, mappingType.as(Type<ObjectType>);
-                }
-
-            for (Type mappingType : mappings.keys)
-                {
-                if (type.isA(mappingType))
-                    {
-                    cache.put(type, mappingType);
-                    return True, mappingType.as(Type<ObjectType>);
-                    }
-                }
-
-            return False;
-            }
-
-        private Map<Type, Type> cache = new HashMap();
-        }
-
-
-    // ----- ReflectionMapper service --------------------------------------------------------------
-
-    /**
-     * A service that creates and caches [ReflectionMapping] and other [Mapping] instances necessary
-     * to serialize and deserialize previously encountered types.
-     */
-    service ReflectionMapper
-        {
-        /**
-         * Given a `Type`, obtain a [ReflectionMapping] instance for that type.
-         *
-         * @param type  the `Type` to obtain a Mapping for
-         *
-         * @return a [ReflectionMapping] instance for that type
-         */
-        <ObjectType> Mapping<ObjectType> ensureMapping(Type<ObjectType> type)
-            {
-            if (Mapping<> mapping := cache.get(type))
-                {
-                return mapping.as(Mapping<ObjectType>);
-                }
-
-            assert type == ObjectType;
-            TODO CP
-//            val mapping = new ReflectionMapping<ObjectType>();
-//            cache.put(type, mapping);
-//            return mapping;
-            }
-
-        private Map<Type, Mapping<>> cache = new HashMap();
         }
     }
