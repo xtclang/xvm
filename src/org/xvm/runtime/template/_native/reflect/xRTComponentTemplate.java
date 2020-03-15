@@ -57,7 +57,7 @@ public class xRTComponentTemplate
         markNativeProperty("synthetic");
 
         markNativeMethod("children", null, null);
-        markNativeMethod("toString", null, null);
+        markNativeMethod("toString", VOID, STRING);
 
         getCanonicalType().invalidateTypeInfo();
         }

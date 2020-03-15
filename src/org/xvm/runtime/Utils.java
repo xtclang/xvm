@@ -29,6 +29,7 @@ import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xOrdered;
+import org.xvm.runtime.template.xPackage;
 import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xString.StringHandle;
 
@@ -689,7 +690,8 @@ public abstract class Utils
                     break;
 
                 case Package:
-                    throw new UnsupportedOperationException("not implemented"); // TODO
+                    iResult = xPackage.INSTANCE.createConstHandle(frame, constValue);
+                    break;
 
                 case Property:
                     iResult = callPropertyInitializer(frame, (PropertyConstant) constValue);

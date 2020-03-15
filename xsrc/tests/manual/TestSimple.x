@@ -7,14 +7,25 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        new Base();
+        console.println(Ecstasy.qualifiedName);
+        console.println(TestSimple);
+        val x = TestSimple.ecstasy;
+//        console.println(x);
+        console.println(TestSimple.simpleName);
+        console.println(TestSimple.dependsOn);
+        console.println(Ecstasy.collections.maps.simpleName);
+        console.println(Ecstasy.collections.maps.qualifiedName);
+        new P.C();
         }
 
-   class Base
+    package P
         {
-        construct()
+        class C
             {
-            console.println(&this.actualType);
+            construct()
+                {
+                console.println(this:module.qualifiedName);
+                }
             }
         }
     }

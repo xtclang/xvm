@@ -33,6 +33,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
@@ -1823,8 +1824,16 @@ public abstract class TypeConstant
         TypeConstant typeRebase  = null;
         switch (struct.getFormat())
             {
-            case MODULE:
             case PACKAGE:
+                if (cContribs == 0)
+                    {
+                    PackageStructure pkg = (PackageStructure) struct;
+                    assert pkg.isModuleImport();
+                    // module import is completely synthetic
+                    break;
+                    }
+                // fall through
+            case MODULE:
             case ENUMVALUE:
             case ENUM:
             case CLASS:

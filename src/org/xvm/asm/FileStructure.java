@@ -723,6 +723,18 @@ public class FileStructure
         return false;
         }
 
+    @Override
+    public Component getChild(Constant constId)
+        {
+        if (constId instanceof ModuleConstant)
+            {
+            Component firstSibling = getChildByNameMap().get(((ModuleConstant) constId).getName());
+
+            return findLinkedChild(constId, firstSibling);
+            }
+        return super.getChild(constId);
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

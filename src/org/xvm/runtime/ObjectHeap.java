@@ -174,6 +174,7 @@ public class ObjectHeap
             case Range:
             case Version:
             case Module:
+            case Package:
                 return constValue.getType();
 
             case FileStore:
@@ -194,7 +195,6 @@ public class ObjectHeap
 
             case Set:
             case MapEntry:
-            case Package:
                 throw new UnsupportedOperationException("TODO: " + constValue);
 
             case Class:

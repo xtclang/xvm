@@ -1,35 +1,39 @@
 package org.xvm.runtime.template;
 
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Constants.Access;
-import org.xvm.asm.MethodStructure;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.PackageStructure;
 
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.collections.xArray;
 
 /**
- * TODO:
+ * Native implementation of Module interface.
  */
 public class xModule
-        extends ClassTemplate
+        extends xPackage
     {
     public static xModule INSTANCE;
 
     public xModule(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
 
         if (fInstance)
             {
@@ -40,6 +44,11 @@ public class xModule
     @Override
     public void initDeclared()
         {
+        markNativeProperty("simpleName");
+        markNativeProperty("qualifiedName");
+        markNativeProperty("dependsOn");
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override
@@ -47,37 +56,86 @@ public class xModule
         {
         if (constant instanceof ModuleConstant)
             {
-            ModuleConstant   constModule = (ModuleConstant) constant;
-            TypeConstant     typeModule  = constModule.getType();
-            ClassComposition clazz       = ensureClass(typeModule, typeModule);
+            ModuleConstant   idModule   = (ModuleConstant) constant;
+            TypeConstant     typeModule = idModule.getType();
+            ClassComposition clazz      = ensureClass(typeModule, typeModule);
 
-            MethodStructure methodID = clazz.ensureAutoInitializer();
-            if (methodID == null)
-                {
-                return frame.assignValue(Op.A_STACK, new ModuleHandle(clazz, f_struct.getName()));
-                }
-
-            ModuleHandle hStruct = new ModuleHandle(clazz.ensureAccess(Access.STRUCT), f_struct.getName());
-            Frame        frameID = frame.createFrame1(methodID, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
-
-            frameID.addContinuation(frameCaller ->
-                frameCaller.assignValue(Op.A_STACK, hStruct.ensureAccess(Access.PUBLIC)));
-
-            return frame.callInitialized(frameID);
+            return createPackageHandle(frame, clazz);
             }
 
         return super.createConstHandle(frame, constant);
         }
 
-    public static class ModuleHandle extends GenericHandle
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        String m_sName;
+        PackageHandle hModule = (PackageHandle) hTarget;
 
-        protected ModuleHandle(TypeComposition clazz, String sName)
+        switch (sPropName)
             {
-            super(clazz);
+            case "simpleName":
+                {
+                ModuleConstant idModule = (ModuleConstant) hModule.getId();
+                return frame.assignValue(iReturn,
+                        xString.makeHandle(idModule.getUnqualifiedName()));
+                }
 
-            m_sName = sName;
+            case "qualifiedName":
+                return buildStringValue(frame, hTarget, iReturn);
+
+            case "dependsOn":
+                {
+                ModuleConstant     idModule  = (ModuleConstant) hModule.getId();
+                ModuleStructure    module    = (ModuleStructure) idModule.getComponent();
+                List<ObjectHandle> listDeps  = new ArrayList<>();
+                boolean            fDeferred = false;
+
+                for (Component child : module.children())
+                    {
+                    if (child instanceof PackageStructure)
+                        {
+                        PackageStructure pkg = (PackageStructure) child;
+                        if (pkg.isModuleImport())
+                            {
+                            ModuleConstant idImport = pkg.getImportedModule().getIdentityConstant();
+                            ObjectHandle   hImport  = frame.getConstHandle(idImport);
+
+                            fDeferred |= Op.isDeferred(hImport);
+                            listDeps.add(hImport);
+                            }
+                        }
+                    }
+                ConstantPool   pool        = pool();
+                TypeConstant   typeArray   = pool.ensureParameterizedTypeConstant(
+                                                pool.typeArray(), pool.typeModule());
+                ClassComposition clzArray  = f_templates.resolveClass(typeArray);
+                ObjectHandle[]   ahModules = listDeps.toArray(Utils.OBJECTS_NONE);
+                if (fDeferred)
+                    {
+                    Frame.Continuation stepNext = frameCaller ->
+                        {
+                        frameCaller.pushStack(
+                            ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahModules));
+                        return Op.R_NEXT;
+                        };
+
+                    return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
+                    }
+
+                frame.pushStack(((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahModules));
+                return Op.R_NEXT;
+                }
             }
+
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        }
+
+    @Override
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        PackageHandle  hModule  = (PackageHandle) hTarget;
+        ModuleConstant idModule = (ModuleConstant) hModule.getId();
+        return frame.assignValue(iReturn,
+                xString.makeHandle(idModule.getName()));
         }
     }

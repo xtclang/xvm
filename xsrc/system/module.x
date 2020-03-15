@@ -146,11 +146,7 @@ module Ecstasy.xtclang.org
          * The fully qualified name of the module, such as "Ecstasy.xtclang.org".
          */
         @Override
-        @RO String qualifiedName.get()
-            {
-            assert Class clazz := &this.actualType.fromClass();
-            return clazz.name;
-            }
+        @RO String qualifiedName;
 
         /**
          * The version of the module, if the version is known.
@@ -178,21 +174,14 @@ module Ecstasy.xtclang.org
     interface Package
         {
         /**
-         * The simple qualified name of the module, such as "maps".
+         * The simple qualified name of the package, such as "maps".
          */
-        @RO String simpleName.get()
-            {
-            assert Class clazz := &this.actualType.fromClass();
-            return clazz.name;
-            }
+        @RO String simpleName;
 
         /**
-         * The fully qualified name of the module, such as "Ecstasy.xtclang.org:collections.map".
+         * The fully qualified name of the package, such as "Ecstasy.xtclang.org:collections.map".
          */
-        @RO String qualifiedName.get()
-            {
-            TODO // TODO GG
-            }
+        @RO String qualifiedName;
 
         /**
          * Test to see if this package represents a module import and if so, return it.

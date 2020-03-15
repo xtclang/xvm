@@ -33,6 +33,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.Mixin;
 import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xObject;
+import org.xvm.runtime.template.xPackage;
 import org.xvm.runtime.template.xService;
 
 
@@ -283,6 +284,10 @@ public class TemplateRegistry
 
                 case MODULE:
                     template = new xModule(this, structClass, false);
+                    break;
+
+                case PACKAGE:
+                    template = new xPackage(this, structClass, false);
                     break;
 
                 default:
