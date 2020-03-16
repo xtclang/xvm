@@ -403,13 +403,11 @@ public class ServiceContext
             switch (iPC)
                 {
                 case Op.R_RETURN_CALL:
-                    frame   = frame.f_framePrev;
-                    iPCLast = frame.m_iPC - 1;
+                    frame = frame.f_framePrev;
                     // fall-through
 
                 case Op.R_CALL:
                     m_frameCurrent = frame.m_frameNext;
-                    frame.m_iPC = iPCLast + 1;
                     frame.m_frameNext = null;
                     frame = m_frameCurrent;
                     aOp = frame.f_aOp;
@@ -424,7 +422,7 @@ public class ServiceContext
 
                     if (frame != null)
                         {
-                        iPC = frame.m_iPC;
+                        iPC = frame.m_iPC + 1;
                         }
                     if (continuation != null)
                         {
