@@ -172,6 +172,7 @@ module Ecstasy.xtclang.org
      * defining the package itself, while in this case we are defining the "Package" type.
      */
     interface Package
+            extends Const
         {
         /**
          * The simple qualified name of the package, such as "maps".

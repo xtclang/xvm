@@ -786,7 +786,10 @@ public abstract class ObjectHandle
         @Override
         public TypeConstant getType()
             {
-            return f_clzArray.getType();
+            TypeConstant type = f_clzArray.getType();
+            return isMutable()
+                    ? type
+                    : type.ensureImmutable();
             }
 
         @Override

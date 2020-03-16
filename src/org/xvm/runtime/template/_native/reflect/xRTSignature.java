@@ -443,7 +443,9 @@ public class xRTSignature
         @Override
         public TypeConstant getType()
             {
-            return f_type;
+            return isMutable()
+                    ? f_type
+                    : f_type.ensureImmutable();
             }
 
         public MethodConstant getMethodId()

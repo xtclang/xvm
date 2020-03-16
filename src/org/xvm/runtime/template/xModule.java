@@ -73,16 +73,6 @@ public class xModule
 
         switch (sPropName)
             {
-            case "simpleName":
-                {
-                ModuleConstant idModule = (ModuleConstant) hModule.getId();
-                return frame.assignValue(iReturn,
-                        xString.makeHandle(idModule.getUnqualifiedName()));
-                }
-
-            case "qualifiedName":
-                return buildStringValue(frame, hTarget, iReturn);
-
             case "dependsOn":
                 {
                 ModuleConstant     idModule  = (ModuleConstant) hModule.getId();
@@ -131,11 +121,14 @@ public class xModule
         }
 
     @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+    protected String getSimpleName(PackageHandle hModule)
         {
-        PackageHandle  hModule  = (PackageHandle) hTarget;
-        ModuleConstant idModule = (ModuleConstant) hModule.getId();
-        return frame.assignValue(iReturn,
-                xString.makeHandle(idModule.getName()));
+        return ((ModuleConstant) hModule.getId()).getUnqualifiedName();
+        }
+
+    @Override
+    protected String getQualifiedName(PackageHandle hModule)
+        {
+        return hModule.getId().getName();
         }
     }

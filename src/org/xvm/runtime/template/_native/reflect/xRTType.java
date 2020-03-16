@@ -631,6 +631,7 @@ public class xRTType
             f_constructor = constructor;
             f_aParams     = aParams;
             f_fParent     = fParent;
+            m_fMutable    = false;
             }
 
         @Override

@@ -385,9 +385,9 @@ public abstract class ClassTemplate
     public int proceedConstruction(Frame frame, MethodStructure constructor, boolean fInitStruct,
                                    ObjectHandle hStruct, ObjectHandle[] ahVar, int iReturn)
         {
-        assert fInitStruct == (constructor != null);
+        assert fInitStruct || constructor == null;
 
-        return new Construct(constructor, hStruct, ahVar, iReturn).proceed(frame);
+        return new Construct(constructor, fInitStruct, hStruct, ahVar, iReturn).proceed(frame);
         }
 
     /**
@@ -1994,6 +1994,7 @@ public abstract class ClassTemplate
         private int              ixStep;
 
         public Construct(MethodStructure constructor,
+                         boolean         fInitStruct,
                          ObjectHandle    hStruct,
                          ObjectHandle[]  ahVar,
                          int             iReturn)
@@ -2003,8 +2004,7 @@ public abstract class ClassTemplate
             this.ahVar       = ahVar;
             this.iReturn     = iReturn;
 
-            // no constructor means that the struct has already been initialized
-            ixStep = constructor == null ? 2 : 0;
+            ixStep = fInitStruct ? 0 : 1;
             }
 
         @Override
@@ -2037,25 +2037,31 @@ public abstract class ClassTemplate
                         }
 
                     case 1: // call the constructor
-                        {
-                        Frame frameCD = frameCaller.createFrame1(
-                                constructor, hStruct, ahVar, Op.A_IGNORE);
-
-                        FullyBoundHandle hfn = Utils.makeFinalizer(constructor, ahVar);
-                        if (hfn == null)
+                        if (constructor == null)
                             {
-                            // in case super constructors have their own finalizers
-                            // we need a non-null anchor
-                            frameCD.m_hfnFinally = FullyBoundHandle.NO_OP;
+                            ixStep++;
+                            // fall through
                             }
                         else
                             {
-                            hfnFinally = frameCD.m_hfnFinally = hfn;
-                            }
+                            Frame frameCD = frameCaller.createFrame1(
+                                    constructor, hStruct, ahVar, Op.A_IGNORE);
 
-                        iResult = frameCaller.callInitialized(frameCD);
-                        break;
-                        }
+                            FullyBoundHandle hfn = Utils.makeFinalizer(constructor, ahVar);
+                            if (hfn == null)
+                                {
+                                // in case super constructors have their own finalizers
+                                // we need a non-null anchor
+                                frameCD.m_hfnFinally = FullyBoundHandle.NO_OP;
+                                }
+                            else
+                                {
+                                hfnFinally = frameCD.m_hfnFinally = hfn;
+                                }
+
+                            iResult = frameCaller.callInitialized(frameCD);
+                            break;
+                            }
 
                     case 2: // validation
                         iResult = callValidator(frameCaller, hStruct);

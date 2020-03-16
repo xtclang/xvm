@@ -1,7 +1,7 @@
 module TestSimple.xqiz.it
     {
     import Ecstasy.collections.HashMap;
-    import Ecstasy.reflect.Access;
+    import Ecstasy.TypeSystem;
 
     @Inject Ecstasy.io.Console console;
 
@@ -9,23 +9,23 @@ module TestSimple.xqiz.it
         {
         console.println(Ecstasy.qualifiedName);
         console.println(TestSimple);
-        val x = TestSimple.ecstasy;
-//        console.println(x);
+        console.println(TestSimple.ecstasy);
         console.println(TestSimple.simpleName);
         console.println(TestSimple.dependsOn);
         console.println(Ecstasy.collections.maps.simpleName);
         console.println(Ecstasy.collections.maps.qualifiedName);
-        new P.C();
-        }
 
-    package P
-        {
-        class C
+        Module   thisModule = this:module;
+        Module[] allModules = [thisModule] + thisModule.dependsOn;
+
+        console.println(allModules);
+
+        TypeSystem ts = new TypeSystem(allModules);
+        console.println(ts);
+
+        if (Module mod := ts.moduleBySimpleName.get("TestSimple"))
             {
-            construct()
-                {
-                console.println(this:module.qualifiedName);
-                }
+            console.println($"ts={mod}");
             }
         }
     }

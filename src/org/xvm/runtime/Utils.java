@@ -18,7 +18,6 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -117,23 +116,6 @@ public abstract class Utils
             : xRTFunction.makeHandle(methodFinally).bindArguments(ahArg);
         }
 
-
-    /**
-     * Helper method for a method invocation that pushes the result onto the frame's stack.
-     *
-     * @param frame   the current frame
-     * @param hValue  the value to get a property for
-     * @param sig     the method signature
-     * @param ahArg   the method arguments
-     *
-     * @return one of R_EXCEPTION, R_NEXT or R_CALL values
-     */
-    public static int callMethod(Frame frame, ObjectHandle hValue, SignatureConstant sig,
-                                 ObjectHandle... ahArg)
-        {
-        return hValue.getComposition().getMethodCallChain(sig).invoke(frame, hValue, ahArg, Op.A_STACK);
-        }
-
     /**
      * Helper method for the "toString()" method invocation that pushes the result onto the frame's
      * stack.
@@ -145,7 +127,10 @@ public abstract class Utils
      */
     public static int callToString(Frame frame, ObjectHandle hValue)
         {
-        return callMethod(frame, hValue, frame.f_context.f_pool.sigToString(), Utils.OBJECTS_NONE);
+        CallChain chain = hValue.getComposition().getMethodCallChain(frame.poolContext().sigToString());
+        return chain.isNative()
+            ? hValue.getTemplate().buildStringValue(frame, hValue, Op.A_STACK)
+            : chain.invoke(frame, hValue, OBJECTS_NONE, Op.A_STACK);
         }
 
     /**

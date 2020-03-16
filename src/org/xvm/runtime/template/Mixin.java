@@ -71,7 +71,7 @@ public class Mixin
         // internal fields
         private TypeConstant          typeNext;
         private int                   ixStep;
-        private List<Frame> listFinalizable;
+        private List<Frame>           listFinalizable;
 
         public Construct(MethodStructure constructor,
                          boolean         fInitStruct,
@@ -144,7 +144,12 @@ public class Mixin
                         }
 
                     case 2: // call the base constructor
-                        if (constructor != null)
+                        if (constructor == null)
+                            {
+                            ixStep++;
+                            // fall through
+                            }
+                        else
                             {
                             Frame frameCtor = frameCaller.createFrame1(constructor, hStruct, ahVar, Op.A_IGNORE);
 
@@ -153,8 +158,6 @@ public class Mixin
                             iResult = frameCaller.callInitialized(frameCtor);
                             break;
                             }
-                        ixStep++;
-                        // fall through
 
                     case 3: // validation
                         iResult = callValidator(frameCaller, hStruct);

@@ -98,6 +98,7 @@ public class xClass
                         return frame.assignValue(iReturn, hInstance);
                         }
                     };
+                hFn.makeImmutable();
                 ahVar[2] = hFn;
                 }
             else

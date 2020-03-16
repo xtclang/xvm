@@ -13,7 +13,6 @@ import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -21,18 +20,20 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.numbers.xInt64;
+
 
 /**
  * Native implementation of Package interface.
  */
 public class xPackage
-        extends ClassTemplate
+        extends xConst
     {
     public static xPackage INSTANCE;
 
     public xPackage(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
 
         if (fInstance)
             {
@@ -65,23 +66,6 @@ public class xPackage
         return super.createConstHandle(frame, constant);
         }
 
-    protected int createPackageHandle(Frame frame, ClassComposition clazz)
-        {
-        MethodStructure methodID = clazz.ensureAutoInitializer();
-        if (methodID == null)
-            {
-            return frame.assignValue(Op.A_STACK, new PackageHandle(clazz));
-            }
-
-        PackageHandle hStruct = new PackageHandle(clazz.ensureAccess(Access.STRUCT));
-        Frame         frameID = frame.createFrame1(methodID, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);
-
-        frameID.addContinuation(frameCaller ->
-            frameCaller.assignValue(Op.A_STACK, hStruct.ensureAccess(Access.PUBLIC)));
-
-        return frame.callInitialized(frameID);
-        }
-
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
@@ -91,12 +75,11 @@ public class xPackage
             {
             case "simpleName":
                 {
-                PackageConstant idPackage = (PackageConstant) hPackage.getId();
-                return frame.assignValue(iReturn, xString.makeHandle(idPackage.getName()));
+                return frame.assignValue(iReturn, xString.makeHandle(getSimpleName(hPackage)));
                 }
 
             case "qualifiedName":
-                return buildStringValue(frame, hTarget, iReturn);
+                return frame.assignValue(iReturn, xString.makeHandle(getQualifiedName(hPackage)));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -105,12 +88,55 @@ public class xPackage
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
+        return frame.assignValue(iReturn,
+            xString.makeHandle(getQualifiedName((PackageHandle) hTarget)));
+        }
+
+    @Override
+    protected int callEstimateLength(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        return frame.assignValue(iReturn,
+            xInt64.makeHandle(getQualifiedName((PackageHandle) hTarget).length()));
+        }
+
+    @Override
+    protected int callAppendTo(Frame frame, ObjectHandle hTarget, ObjectHandle hAppender, int iReturn)
+        {
         PackageHandle hPackage = (PackageHandle) hTarget;
 
+        return xString.callAppendTo(frame,
+            xString.makeHandle(getQualifiedName(hPackage)), hAppender, iReturn);
+        }
+
+    /**
+     * @return a simple name for a package or module
+     */
+    protected String getSimpleName(PackageHandle hPackage)
+        {
+        return hPackage.getId().getName();
+        }
+
+    /**
+     * @return a qualified name for a package or module
+     */
+    protected String getQualifiedName(PackageHandle hPackage)
+        {
         PackageConstant idPackage = (PackageConstant) hPackage.getId();
         ModuleConstant  idModule  = idPackage.getModuleConstant();
-        return frame.assignValue(iReturn,
-            xString.makeHandle(idModule.getName() + ':' + idPackage.getPathString()));
+        return idModule.getName() + ':' + idPackage.getPathString();
+        }
+
+    /**
+     * Create a new PackageHandle for the specified ClassComposition and place it on the stack.
+     *
+     * @return one of R_NEXT, R_CALL or R_EXCEPTION
+     */
+    protected int createPackageHandle(Frame frame, ClassComposition clazz)
+        {
+        PackageHandle   hStruct     = new PackageHandle(clazz.ensureAccess(Access.STRUCT));
+        MethodStructure constructor = clazz.getTemplate().f_struct.findMethod("construct", 0);
+
+        return proceedConstruction(frame, constructor, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK);
         }
 
 

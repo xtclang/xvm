@@ -300,20 +300,33 @@ public class xRTFunction
     public static class FunctionHandle
             extends SignatureHandle
         {
+        /**
+         * Instantiate an immutable FunctionHandle for a function.
+         */
         protected FunctionHandle(MethodStructure function)
             {
             this(function.getIdentityConstant().getType(), function);
+
+            m_fMutable = false;
             }
 
+        /**
+         * Instantiate an immutable FunctionHandle for a method.
+         */
+        protected FunctionHandle(CallChain chain, int nDepth)
+            {
+            super(INSTANCE.ensureClass(chain.getMethod(nDepth).getIdentityConstant().getType()), chain, nDepth);
+
+            m_fMutable = false;
+            }
+
+        /**
+         * Instantiate a mutable FunctionHandle for a method or function.
+         */
         protected FunctionHandle(TypeConstant type, MethodStructure function)
             {
             super(INSTANCE.ensureClass(type),
                     function == null ? null : function.getIdentityConstant(), function, type);
-            }
-
-        protected FunctionHandle(CallChain chain, int nDepth)
-            {
-            super(INSTANCE.ensureClass(chain.getMethod(nDepth).getIdentityConstant().getType()), chain, nDepth);
             }
 
 
@@ -509,12 +522,7 @@ public class xRTFunction
             super(type, hDelegate == null ? null : hDelegate.f_method);
 
             m_hDelegate = hDelegate;
-            }
-
-        @Override
-        public boolean isMutable()
-            {
-            return m_hDelegate.isMutable();
+            m_fMutable  = hDelegate != null && hDelegate.isMutable();
             }
 
         @Override
@@ -612,7 +620,8 @@ public class xRTFunction
             {
             super(INSTANCE.getCanonicalType(), null);
 
-            f_op = op;
+            f_op       = op;
+            m_fMutable = false;
             }
 
         @Override
@@ -639,14 +648,9 @@ public class xRTFunction
             {
             super(type, hDelegate);
 
-            m_iArg = iArg;
-            m_hArg = hArg;
-            }
-
-        @Override
-        public boolean isMutable()
-            {
-            return m_hArg.isMutable() || super.isMutable();
+            m_iArg     = iArg;
+            m_hArg     = hArg;
+            m_fMutable = hDelegate.isMutable() || hArg.isMutable();
             }
 
         @Override
@@ -1124,11 +1128,17 @@ public class xRTFunction
         return new AsyncHandle(method);
         }
 
+    /**
+     * Create an immutable FunctionHandle for a given method chain.
+     */
     public static FunctionHandle makeHandle(CallChain chain, int nDepth)
         {
         return new FunctionHandle(chain, nDepth);
         }
 
+    /**
+     * Create an immutable FunctionHandle for a given function.
+     */
     public static FunctionHandle makeHandle(MethodStructure function)
         {
         return new FunctionHandle(function);

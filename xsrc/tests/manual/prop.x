@@ -16,25 +16,29 @@ module TestProps.xqiz.it
         {
         console.println("\n** testMethodProperty()");
 
+        TestProperty test = new TestProperty();
         for (Int i : 1..3)
             {
-            showMethodProperty();
+            test.showMethodProperty();
             }
         }
 
-    void showMethodProperty()
+    class TestProperty
         {
-        private Int x = 0;
-        // compiles as:
-        // private Int x;       // not inside the method compilation itself
-        // x = 0;               // THIS CODE gets compiled as part of the method
-                                // (but within an "if (!(&x.assigned))" check
+        void showMethodProperty()
+            {
+            private Int x = 0;
+            // compiles as:
+            // private Int x;       // not inside the method compilation itself
+            // x = 0;               // THIS CODE gets compiled as part of the method
+                                    // (but within an "if (!(&x.assigned))" check
 
-        static Int y = calcStaticProperty();
-        // compiles as a private static property, which should be initialized just once
-        // (before the method is called the very first time)
+            static Int y = calcStaticProperty();
+            // compiles as a private static property, which should be initialized just once
+            // (before the method is called the very first time)
 
-        console.println($" - in showMethodProperty(), ++x={++x}, y={y}");
+            console.println($" - in showMethodProperty(), ++x={++x}, y={y}");
+            }
         }
 
     static Int calcStaticProperty()
