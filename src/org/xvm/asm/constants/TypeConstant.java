@@ -1491,10 +1491,11 @@ public abstract class TypeConstant
         // annotated types require special handling
         if (isAnnotated())
             {
-            TypeConstant typeAnno = getUnderlyingType();
+            TypeConstant typeAnno = getUnderlyingType(); // remove "Access:PRIVATE" piece
             if (typeAnno instanceof AnnotatedTypeConstant)
                 {
-                return ((AnnotatedTypeConstant) typeAnno).buildPrivateInfo(constId, errs);
+                return ((AnnotatedTypeConstant) typeAnno).
+                        buildPrivateInfo(constId, struct, null, errs);
                 }
             log(errs, Severity.ERROR, VE_ANNOTATION_UNEXPECTED,
                     typeAnno.getValueString(), constId.getPathString());
@@ -1502,8 +1503,18 @@ public abstract class TypeConstant
             }
 
         // get a snapshot of the current invalidation count BEFORE building the TypeInfo
-        int cInvalidations = getConstantPool().getInvalidationCount();
+        ConstantPool pool     = getConstantPool();
+        int          cInvals  = pool.getInvalidationCount();
+        TypeInfo     infoBase = buildBaseTypeInfoImpl(constId, struct, Annotation.NO_ANNOTATIONS, cInvals, errs);
+        return infoBase;
+        }
 
+    /**
+     * Actual buildTypeInfo implementation for a base type.
+     */
+    TypeInfo buildBaseTypeInfoImpl(IdentityConstant constId, ClassStructure struct,
+                                   Annotation[] annoClass, int cInvalidations, ErrorListener errs)
+        {
         List<Contribution> listContribs = struct.getContributionsAsList();
         TypeConstant[]     atypeContrib = resolveContributionTypes(listContribs);
         TypeConstant[]     atypeCondInc = extractConditionalContributes(
@@ -1549,8 +1560,7 @@ public abstract class TypeConstant
         checkTypeParameterProperties(mapTypeParams, mapVirtProps, errs);
 
         TypeInfo info = new TypeInfo(this, cInvalidations, struct, 0, false, mapTypeParams,
-                Annotation.NO_ANNOTATIONS,
-                typeExtends, typeRebase, typeInto,
+                annoClass, typeExtends, typeRebase, typeInto,
                 listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 fComplete ? Progress.Complete : Progress.Incomplete);

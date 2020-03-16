@@ -6,9 +6,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import java.util.function.Consumer;
 
@@ -255,7 +254,8 @@ public class AnnotatedTypeConstant
      *
      * @return a new TypeInfo representing this annotated type
      */
-    TypeInfo buildPrivateInfo(IdentityConstant idBase, ErrorListener errs)
+    TypeInfo buildPrivateInfo(IdentityConstant idBase, ClassStructure struct,
+                              TypeInfo infoBase, ErrorListener errs)
         {
         // this can only be called from TypeConstant.buildTypeInfoImpl()
         assert getAccess() == Access.PUBLIC;
@@ -263,71 +263,98 @@ public class AnnotatedTypeConstant
         ConstantPool     pool           = getConstantPool();
         int              cInvals        = pool.getInvalidationCount();
         List<Annotation> listClassAnnos = new ArrayList<>();
-        TypeConstant     typeBase       = extractClassAnnotation(listClassAnnos, errs);
-        TypeConstant     typePrivate    = pool.ensureAccessTypeConstant(this, Access.PRIVATE);
+        List<Annotation> listAnnos      = new ArrayList<>();
+        TypeConstant     typeBase       = extractAnnotation(listClassAnnos, listAnnos, errs);
 
-        if (typeBase instanceof AnnotatedTypeConstant)
+        if (typeBase == null)
             {
-            AnnotatedTypeConstant typeAnnoBase = (AnnotatedTypeConstant) typeBase;
+            // an error must've been reported
+            return null;
+            }
 
-            TypeConstant typeMixin        = typeAnnoBase.getAnnotationType();
+        TypeConstant typePrivateBase = pool.ensureAccessTypeConstant(typeBase, Access.PRIVATE);
+
+        if (listAnnos.isEmpty())
+            {
+            // there are no other annotations except the "into Class" tags
+            assert !listClassAnnos.isEmpty();
+            assert infoBase == null;
+
+            TypeConstant typeTarget = pool.ensureAccessTypeConstant(this, Access.PRIVATE);
+
+            return typeTarget.buildBaseTypeInfoImpl(idBase, struct,
+                    listClassAnnos.toArray(Annotation.NO_ANNOTATIONS), cInvals, errs);
+            }
+
+        if (infoBase == null)
+            {
+            infoBase = typePrivateBase.buildBaseTypeInfoImpl(idBase, struct,
+                    listClassAnnos.toArray(Annotation.NO_ANNOTATIONS), cInvals, errs);
+            if (infoBase == null)
+                {
+                return null;
+                }
+            }
+        else
+            {
+            assert typePrivateBase.equals(infoBase.getType());
+            }
+
+        TypeConstant typeNext = typeBase;
+        TypeInfo     infoNext = infoBase;
+        for (int c = listAnnos.size(), i = c-1; i >= 0; --i)
+            {
+            Annotation anno = listAnnos.get(i);
+
+            AnnotatedTypeConstant typeAnno = pool.ensureAnnotatedTypeConstant(typeNext, anno);
+
+            TypeConstant typeMixin        = typeAnno.getAnnotationType();
             TypeConstant typeMixinPrivate = pool.ensureAccessTypeConstant(typeMixin, Access.PRIVATE);
             TypeInfo     infoMixin        = typeMixinPrivate.ensureTypeInfoInternal(errs);
+
             if (infoMixin == null)
                 {
                 return null;
                 }
 
-            typeBase = pool.ensureAccessTypeConstant(typeAnnoBase.getUnderlyingType(), Access.PRIVATE);
+            TypeConstant typeTarget = pool.ensureAccessTypeConstant(typeAnno, Access.PRIVATE);
 
-            TypeInfo infoBase = typeBase.ensureTypeInfoInternal(errs);
+            infoNext = typeNext.mergeMixinTypeInfo(typeTarget, cInvals, idBase,
+                    struct, infoNext, infoMixin,
+                    i == 0 ? listClassAnnos : Collections.EMPTY_LIST, errs);
+            if (infoNext == null)
+                {
+                return null;
+                }
+            typeNext = typeAnno;
 
-            return infoBase == null
-                    ? null
-                    : typeBase.mergeMixinTypeInfo(typePrivate, cInvals, idBase,
-                        infoBase.getClassStructure(), infoBase, infoMixin, listClassAnnos, errs);
+            // on the last round we must come back to "this" type
+            assert i > 0 || typeTarget.equals(pool.ensureAccessTypeConstant(this, Access.PRIVATE));
             }
-        else
-            {
-            // there are no other annotations except the "into Class" tags
-            assert !listClassAnnos.isEmpty();
 
-            typeBase = pool.ensureAccessTypeConstant(typeBase, Access.PRIVATE);
-
-            TypeInfo info = typeBase.ensureTypeInfoInternal(errs);
-
-            return info == null
-                    ? null
-                    : new TypeInfo(typePrivate, cInvals, info.getClassStructure(), 0, false,
-                        info.getTypeParams(), listClassAnnos.toArray(Annotation.NO_ANNOTATIONS),
-                        info.getExtends(), info.getRebases(), info.getInto(),
-                        info.getContributionList(), info.getClassChain(), info.getDefaultChain(),
-                        info.getProperties(), info.getMethods(),
-                        info.getVirtProperties(), info.getVirtMethods(),
-                        info.getChildInfosByName(), info.getProgress());
-            }
+        return infoNext;
         }
 
     /**
-     * Extract the type annotations in front of this type that have an "into" clause of "Class".
+     * Extract the type annotations in front of this type.
      *
-     * For example, if this type is @A->@B->@C->X and "@A" and "@B" are into class, then collect
-     * @A and @B into the listClassAnnos and return @C->X.
+     * All "into class" annotations are to be collected into the listClassAnnos; the rest goes
+     * into the listAnnos.
      *
-     * If "@A" is not into class then collect nothing and return itself.
+     * For example, if this type is @A->@B->@C->@D->X and @A and @B are into class, then collect @A
+     * and @B into the listClassAnnos; @C and @D into lisAnnos and return X.
      *
-     * @return the first underlying type that follows extracted "Class" annotations
+     * @return the first underlying type that follows extracted annotations
      */
-    private TypeConstant extractClassAnnotation(List<Annotation> listClassAnnos, ErrorListener errs)
+    private TypeConstant extractAnnotation(List<Annotation> listClassAnnos,
+                                           List<Annotation> listAnnos,
+                                           ErrorListener    errs)
         {
         List<Constant> listAnnoClz = new ArrayList<>();
         TypeConstant   typeCurr    = this;
-        TypeConstant   typeBase    = null;
 
         while (true)
             {
-            TypeConstant typeNext;
-
             switch (typeCurr.getFormat())
                 {
                 case AnnotatedType:
@@ -335,15 +362,14 @@ public class AnnotatedTypeConstant
                     AnnotatedTypeConstant typeAnno   = (AnnotatedTypeConstant) typeCurr;
                     Annotation            annotation = typeAnno.getAnnotation();
                     TypeConstant          typeMixin  = typeAnno.getAnnotationType();
-
-                    typeNext = typeCurr.getUnderlyingType();
+                    TypeConstant          typeNext   = typeCurr.getUnderlyingType();
 
                     // has to be an explicit class identity
                     if (!typeMixin.isExplicitClassIdentity(true))
                         {
                         log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
                             typeNext.getValueString(), typeMixin.getValueString());
-                        break;
+                        return null;
                         }
 
                     // has to be a mixin
@@ -351,7 +377,7 @@ public class AnnotatedTypeConstant
                         {
                         log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
                             typeMixin.getValueString());
-                        break;
+                        return null;
                         }
 
                     if (typeMixin.isAutoNarrowing(false))
@@ -366,46 +392,47 @@ public class AnnotatedTypeConstant
                         {
                         log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
                             this.getValueString(), annotation.getAnnotationClass().getValueString());
-                        break;
+                        return null;
                         }
 
                     // the annotation could be a mixin "into Class", which means that it's a
                     // non-virtual, compile-time mixin (like @Abstract)
                     TypeConstant typeInto = typeMixin.getExplicitClassInto();
-                    if (typeInto.isIntoClassType() && typeBase == null)
+                    if (typeInto.isIntoClassType())
                         {
-                        typeBase = typeNext;
                         listClassAnnos.add(annotation);
-                        break;
                         }
-
-                    // the mixin has to be able to apply to the remainder of the type constant chain
-                    if (!getUnderlyingType().isA(typeInto))
+                    else
                         {
-                        log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
-                            typeCurr.getUnderlyingType().getValueString(),
-                            typeMixin.getValueString(),
-                            typeInto.getValueString());
-                        break;
+                        // the mixin has to be able to apply to the remainder of the type constant chain
+                        if (!getUnderlyingType().isA(typeInto))
+                            {
+                            log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
+                                typeCurr.getUnderlyingType().getValueString(),
+                                typeMixin.getValueString(),
+                                typeInto.getValueString());
+                            }
+                        listAnnos.add(annotation);
                         }
 
                     listAnnoClz.add(typeAnno.getAnnotation().getAnnotationClass());
+
+                    typeCurr = typeNext;
                     break;
                     }
 
-                case ParameterizedType:
-                case TerminalType:
-                case VirtualChildType:
-                case AnonymousClassType:
-                    return typeBase == null ? this : typeBase;
-
                 default:
-                    typeNext = typeCurr.getUnderlyingType();
-                    break;
+                    if (typeCurr.isAnnotated())
+                        {
+                        // annotations must all be in-front
+                        log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL, typeCurr.getValueString());
+                        return null;
+                        }
+                    return typeCurr;
                 }
-            typeCurr = typeNext;
             }
         }
+
 
     // ----- type comparison support ---------------------------------------------------------------
 
