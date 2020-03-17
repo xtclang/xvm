@@ -1,4 +1,4 @@
-import Ecstasy.reflect.PackageTemplate;
+import ecstasy.reflect.PackageTemplate;
 
 
 /**

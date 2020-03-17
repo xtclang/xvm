@@ -19,6 +19,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Argument;
+import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
@@ -1462,8 +1463,13 @@ public class NameExpression
                 Constant constant = ((Constant) arg);
                 switch (constant.getFormat())
                     {
-                    case Module:
                     case Package:
+                        PackageStructure pkg = (PackageStructure) ((IdentityConstant) constant).getComponent();
+                        if (pkg.isModuleImport())
+                            {
+                            arg = constant = pkg.getImportedModule().getIdentityConstant();
+                            }
+                    case Module:
                     case Class:
                     case Typedef:
                         if (isSuppressDeref())

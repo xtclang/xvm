@@ -1,4 +1,4 @@
-import Ecstasy.reflect.Return;
+import ecstasy.reflect.Return;
 
 /**
  * Return value implementation.

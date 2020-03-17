@@ -1,5 +1,5 @@
-import Ecstasy.reflect.MethodTemplate;
-import Ecstasy.reflect.MultiMethodTemplate;
+import ecstasy.reflect.MethodTemplate;
+import ecstasy.reflect.MultiMethodTemplate;
 
 
 /**

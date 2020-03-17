@@ -1,12 +1,12 @@
-import Ecstasy.reflect.Annotation;
-import Ecstasy.reflect.ClassTemplate;
-import Ecstasy.reflect.ClassTemplate.Composition;
-import Ecstasy.reflect.ClassTemplate.Contribution;
-import Ecstasy.reflect.MultiMethodTemplate;
-import Ecstasy.reflect.PropertyTemplate;
-import Ecstasy.reflect.SourceCodeInfo;
-import Ecstasy.reflect.TypeParameter;
-import Ecstasy.reflect.TypeTemplate;
+import ecstasy.reflect.Annotation;
+import ecstasy.reflect.ClassTemplate;
+import ecstasy.reflect.ClassTemplate.Composition;
+import ecstasy.reflect.ClassTemplate.Contribution;
+import ecstasy.reflect.MultiMethodTemplate;
+import ecstasy.reflect.PropertyTemplate;
+import ecstasy.reflect.SourceCodeInfo;
+import ecstasy.reflect.TypeParameter;
+import ecstasy.reflect.TypeTemplate;
 
 
 /**

@@ -43,7 +43,7 @@ module TestProps.xqiz.it
 
     static Int calcStaticProperty()
         {
-        @Inject Ecstasy.io.Console console;
+        @Inject ecstasy.io.Console console;
 
         console.println(" - in calcStaticProperty()");
         return 3;

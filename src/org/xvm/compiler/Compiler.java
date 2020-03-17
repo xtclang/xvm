@@ -1137,7 +1137,7 @@ public class Compiler
      */
     public static final String DUPLICATE_METHOD                   = "COMPILER-133";
     /**
-     * The evaluating expression {0} has a type of "Ecstasy.Type"; it cannot match type {1}.
+     * The evaluating expression {0} has a type of "ecstasy.Type"; it cannot match type {1}.
      */
     public static final String NOT_TYPE_OF_TYPE                   = "COMPILER-134";
     /**
@@ -1149,7 +1149,7 @@ public class Compiler
      */
     public static final String UNSUPPORTED_DYNAMIC_TYPE_PARAMS    = "COMPILER-136";
     /**
-     * The evaluating expression {0} has a type of "Ecstasy.Type"; it always matches type {1}.
+     * The evaluating expression {0} has a type of "ecstasy.Type"; it always matches type {1}.
      */
     public static final String TYPE_MATCHES_ALWAYS                = "COMPILER-137";
     /**

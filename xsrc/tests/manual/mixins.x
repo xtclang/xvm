@@ -1,17 +1,17 @@
 module TestMixins.xqiz.it
     {
-    import Ecstasy.collections.HashMap;
-    import Ecstasy.collections.ListMap;
-    import Ecstasy.io.ByteArrayInputStream;
-    import Ecstasy.io.CharArrayReader;
-    import Ecstasy.io.DataInputStream;
-    import Ecstasy.io.InputStream;
-    import Ecstasy.io.JavaDataInput;
-    import Ecstasy.io.ObjectOutput;
-    import Ecstasy.io.Reader;
-    import Ecstasy.io.Writer;
-    import Ecstasy.io.UTF8Reader;
-    import Ecstasy.web.json.Doc;
+    import ecstasy.collections.HashMap;
+    import ecstasy.collections.ListMap;
+    import ecstasy.io.ByteArrayInputStream;
+    import ecstasy.io.CharArrayReader;
+    import ecstasy.io.DataInputStream;
+    import ecstasy.io.InputStream;
+    import ecstasy.io.JavaDataInput;
+    import ecstasy.io.ObjectOutput;
+    import ecstasy.io.Reader;
+    import ecstasy.io.Writer;
+    import ecstasy.io.UTF8Reader;
+    import ecstasy.web.json.Doc;
 
     @Inject Console console;
 

@@ -532,8 +532,8 @@ module TestMisc.xqiz.it
 
     void testConstants()
         {
-        import Ecstasy.collections.Hasher;
-        import Ecstasy.collections.NaturalHasher;
+        import ecstasy.collections.Hasher;
+        import ecstasy.collections.NaturalHasher;
 
         console.println("\n** testConstants()");
 

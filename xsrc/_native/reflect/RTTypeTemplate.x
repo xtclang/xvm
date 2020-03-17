@@ -1,8 +1,8 @@
-import Ecstasy.reflect.Access;
-import Ecstasy.reflect.Annotation;
-import Ecstasy.reflect.ClassTemplate.Composition;
-import Ecstasy.reflect.PropertyTemplate;
-import Ecstasy.reflect.TypeTemplate;
+import ecstasy.reflect.Access;
+import ecstasy.reflect.Annotation;
+import ecstasy.reflect.ClassTemplate.Composition;
+import ecstasy.reflect.PropertyTemplate;
+import ecstasy.reflect.TypeTemplate;
 
 
 /**

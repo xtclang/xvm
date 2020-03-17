@@ -1,11 +1,11 @@
-import Ecstasy.collections.HashMap;
+import ecstasy.collections.HashMap;
 
-import Ecstasy.fs.Directory;
-import Ecstasy.fs.File;
-import Ecstasy.fs.FileNotFound;
-import Ecstasy.fs.FileStore;
-import Ecstasy.fs.FileWatcher;
-import Ecstasy.fs.Path;
+import ecstasy.fs.Directory;
+import ecstasy.fs.File;
+import ecstasy.fs.FileNotFound;
+import ecstasy.fs.FileStore;
+import ecstasy.fs.FileWatcher;
+import ecstasy.fs.Path;
 
 /**
  * Native OSStorage service.

@@ -1,6 +1,6 @@
 module TestLoops.xqiz.it
     {
-    @Inject X.io.Console console;
+    @Inject ecstasy.io.Console console;
 
     void run()
         {
@@ -67,7 +67,7 @@ module TestLoops.xqiz.it
         {
         console.println("\n** testForEachCollection()");
 
-        X.collections.Collection<String> strs = ["hello", "world"];
+        ecstasy.collections.Collection<String> strs = ["hello", "world"];
         L1: for (String s : strs)
             {
             console.println("s=" + s);

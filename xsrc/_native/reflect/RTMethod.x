@@ -1,4 +1,4 @@
-import Ecstasy.reflect.Access;
+import ecstasy.reflect.Access;
 
 /**
  * The native Method implementation.

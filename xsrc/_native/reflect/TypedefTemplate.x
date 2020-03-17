@@ -1,5 +1,5 @@
-import Ecstasy.reflect.TypedefTemplate;
-import Ecstasy.reflect.TypeTemplate;
+import ecstasy.reflect.TypedefTemplate;
+import ecstasy.reflect.TypeTemplate;
 
 
 /**

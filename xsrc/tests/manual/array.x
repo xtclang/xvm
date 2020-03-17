@@ -1,6 +1,6 @@
 module TestArray.xqiz.it
     {
-    @Inject Ecstasy.io.Console console;
+    @Inject ecstasy.io.Console console;
 
     void run()
         {
@@ -171,7 +171,7 @@ module TestArray.xqiz.it
 
     void testNibble()
         {
-        import Ecstasy.numbers.Nibble;
+        import ecstasy.numbers.Nibble;
 
         console.println("\n** testNibble()");
 
@@ -184,7 +184,7 @@ module TestArray.xqiz.it
 
     void testBits()
         {
-        import Ecstasy.numbers.Bit;
+        import ecstasy.numbers.Bit;
 
         console.println("\n** testBits()");
 
@@ -208,9 +208,9 @@ module TestArray.xqiz.it
 
     void testComparable()
         {
-        import Ecstasy.collections.Hasher;
-        import Ecstasy.collections.NaturalHasher;
-        import Ecstasy.numbers.Bit;
+        import ecstasy.collections.Hasher;
+        import ecstasy.collections.NaturalHasher;
+        import ecstasy.numbers.Bit;
 
         console.println("\n** testComparable()");
 

@@ -1082,10 +1082,6 @@ public class ConstantPool
 
         switch (sName)
             {
-            case "Ecstasy":
-            case "X":
-                break;
-
             case "Appender":
             case "Assertion":
             case "Boolean":

@@ -1,5 +1,5 @@
-import Ecstasy.reflect.Access;
-import Ecstasy.reflect.ComponentTemplate;
+import ecstasy.reflect.Access;
+import ecstasy.reflect.ComponentTemplate;
 
 
 /**

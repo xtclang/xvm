@@ -1,13 +1,13 @@
 module TestMaps.xqiz.it
     {
-    import X.collections.HashMap;
-    import X.collections.ListMap;
-    import X.collections.maps.KeyEntries;
+    import ecstasy.collections.HashMap;
+    import ecstasy.collections.ListMap;
+    import ecstasy.collections.maps.KeyEntries;
 
-    import X.Duration;
+    import ecstasy.Duration;
 
-    @Inject X.io.Console console;
-    @Inject X.Timer      timer;
+    @Inject ecstasy.io.Console console;
+    @Inject ecstasy.Timer      timer;
 
     void run()
         {

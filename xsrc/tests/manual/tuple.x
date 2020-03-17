@@ -1,6 +1,6 @@
 module TestTuples.xqiz.it
     {
-    @Inject X.io.Console console;
+    @Inject ecstasy.io.Console console;
 
     void run()
         {

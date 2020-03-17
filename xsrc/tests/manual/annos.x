@@ -1,6 +1,6 @@
 module TestAnnotations.xqiz.it
     {
-    @Inject Ecstasy.io.Console console;
+    @Inject ecstasy.io.Console console;
 
     void run()
         {
@@ -11,7 +11,7 @@ module TestAnnotations.xqiz.it
 
     function void (Int) logger = (Int v) ->
         {
-        @Inject Ecstasy.io.Console console;
+        @Inject ecstasy.io.Console console;
         console.print($"->{v}");
         };
 

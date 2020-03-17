@@ -3,13 +3,13 @@
  */
 module MyApp.xqiz.it
     {
-    package x import ecstasy.xtclang.org v:"1.2.3";
+    package ecstasy import Ecstasy.xtclang.org v:"1.2.3";
 //          avoid v:"1.0.3"
 //          allow v:"1.2.1.rc2", v:"1.1.beta7"
 //          prefer v:"1.2.1", v:"1.1"
 //          avoid v:"2.0";
 
-    package Hibernate import:optional hibernate.redhat.com;
+    package hibernate import:optional Hibernate.redhat.com;
 
     package util
         {

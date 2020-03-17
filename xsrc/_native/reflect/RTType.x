@@ -1,7 +1,7 @@
-import Ecstasy.reflect.Access;
-import Ecstasy.reflect.Annotation;
-import Ecstasy.reflect.MultiMethod;
-import Ecstasy.reflect.TypeTemplate;
+import ecstasy.reflect.Access;
+import ecstasy.reflect.Annotation;
+import ecstasy.reflect.MultiMethod;
+import ecstasy.reflect.TypeTemplate;
 
 /**
  * The native Type implementation.
@@ -55,7 +55,7 @@ const RTType<DataType, OuterType>
     @Override
     @Lazy Map<String, MultiMethod<DataType>> multimethods.calc()
         {
-        import Ecstasy.collections.HashMap;
+        import ecstasy.collections.HashMap;
 
         Map<String, MultiMethod<DataType>> multis = new HashMap();
 
