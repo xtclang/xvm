@@ -6,7 +6,7 @@ module Example1
         {
         console.println("Hello world!");
 
-        @Inject Ecstasy.Timer timer;
+        @Inject ecstasy.Timer timer;
         timer.reset();
 
         @Inject FileStore storage;

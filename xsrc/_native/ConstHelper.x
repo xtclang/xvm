@@ -70,7 +70,7 @@ class ConstHelper
      */
     static Int freeze(Object[] fields)
         {
-        import Ecstasy.collections.ImmutableAble;
+        import ecstasy.collections.ImmutableAble;
 
         Int result = -1;
         for (Int i = 0, Int c = fields.size; i < c; i++)

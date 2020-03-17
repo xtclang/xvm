@@ -1,10 +1,10 @@
 module TestNumbers.xqiz.it
     {
-    import Ecstasy.numbers.Int8;
-    import Ecstasy.numbers.Int128;
-    import Ecstasy.numbers.UInt128;
+    import ecstasy.numbers.Int8;
+    import ecstasy.numbers.Int128;
+    import ecstasy.numbers.UInt128;
 
-    @Inject Ecstasy.io.Console console;
+    @Inject ecstasy.io.Console console;
 
     void run()
         {
@@ -208,7 +208,7 @@ module TestNumbers.xqiz.it
 
     void testFloat32()
         {
-        import Ecstasy.numbers.Float32;
+        import ecstasy.numbers.Float32;
 
         console.println("\n** testFloat32()");
 
@@ -229,7 +229,7 @@ module TestNumbers.xqiz.it
 
     void testFloat16()
         {
-        import Ecstasy.numbers.Float16;
+        import ecstasy.numbers.Float16;
 
         console.println("\n** testFloat16()");
 

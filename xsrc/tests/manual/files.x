@@ -1,10 +1,10 @@
 module TestFiles.xqiz.it
     {
-    import X.fs.Directory;
-    import X.fs.File;
-    import X.fs.FileWatcher;
-    import X.fs.Path;
-    import X.fs.FileStore;
+    import ecstasy.fs.Directory;
+    import ecstasy.fs.File;
+    import ecstasy.fs.FileWatcher;
+    import ecstasy.fs.Path;
+    import ecstasy.fs.FileStore;
 
     @Inject            Console   console;
     @Inject("storage") FileStore store;

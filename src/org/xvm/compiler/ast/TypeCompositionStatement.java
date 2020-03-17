@@ -345,7 +345,7 @@ public class TypeCompositionStatement
             {
             if (container instanceof ModuleStructure && sName.equals(X_PKG_IMPORT))
                 {
-                // it is illegal to take the "Ecstasy" namespace, because doing so would effectively
+                // it is illegal to take the "ecstasy" namespace, because doing so would effectively
                 // hide the Ecstasy core module
                 name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_COLLISION, X_PKG_IMPORT);
                 }
@@ -412,7 +412,7 @@ public class TypeCompositionStatement
                     if (getName().equals(ECSTASY_MODULE))
                         {
                         // yes, the Ecstasy core module imports itself, so by the law of turtles,
-                        // there exists a class named Ecstasy.Ecstasy.Ecstasy.Ecstasy.Ecstasy.Object
+                        // there exists a class named ecstasy.ecstasy.ecstasy.ecstasy.ecstasy.Object
                         modX = (ModuleStructure) component;
                         }
                     else

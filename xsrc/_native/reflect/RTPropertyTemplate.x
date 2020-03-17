@@ -1,4 +1,4 @@
-import Ecstasy.reflect.PropertyTemplate;
+import ecstasy.reflect.PropertyTemplate;
 
 
 /**

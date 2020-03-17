@@ -1,6 +1,6 @@
-import Ecstasy.reflect.MethodTemplate;
-import Ecstasy.reflect.Parameter;
-import Ecstasy.reflect.Return;
+import ecstasy.reflect.MethodTemplate;
+import ecstasy.reflect.Parameter;
+import ecstasy.reflect.Return;
 
 /**
  * The native Function implementation.

@@ -1,8 +1,8 @@
 module TestReflection.xqiz.it
     {
-    import Ecstasy.reflect.TypeTemplate;
+    import ecstasy.reflect.TypeTemplate;
 
-    @Inject Ecstasy.io.Console console;
+    @Inject ecstasy.io.Console console;
 
     void run()
         {
@@ -57,7 +57,7 @@ module TestReflection.xqiz.it
 
     void testInstanceOf()
         {
-        import Ecstasy.collections.HashMap;
+        import ecstasy.collections.HashMap;
 
         console.println("\n** testInstanceOf");
 
@@ -79,7 +79,7 @@ module TestReflection.xqiz.it
 
     void testMaskReveal()
         {
-        import Ecstasy.fs.Directory;
+        import ecstasy.fs.Directory;
 
         console.println("\n** testMaskReveal");
 
@@ -354,8 +354,8 @@ module TestReflection.xqiz.it
 
     void testBind()
         {
-        import Ecstasy.collections.ListMap;
-        import Ecstasy.reflect.Parameter;
+        import ecstasy.collections.ListMap;
+        import ecstasy.reflect.Parameter;
 
         console.println("\n** testBind");
 
@@ -382,7 +382,7 @@ module TestReflection.xqiz.it
         {
         console.println("\n** testChildTypes");
 
-        Type[] types = [Nullable, Map, Ecstasy.collections.HashMap, Type, Class];
+        Type[] types = [Nullable, Map, ecstasy.collections.HashMap, Type, Class];
         for (Type type : types)
             {
             console.println($"{type} children: {type.childTypes}");

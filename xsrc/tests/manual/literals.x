@@ -1,6 +1,6 @@
 module TestLiterals.xqiz.it
     {
-    import X.rt.Version;
+    import ecstasy.rt.Version;
 
     @Inject Console console;
 

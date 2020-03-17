@@ -1,4 +1,4 @@
-import Ecstasy.reflect.Parameter;
+import ecstasy.reflect.Parameter;
 
 /**
  * Parameter implementation.

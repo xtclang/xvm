@@ -1,10 +1,10 @@
 module TestQueues.xqiz.it
     {
-    import Ecstasy.collections.ArrayDeque;
-    import Ecstasy.collections.CircularArray;
-    import Ecstasy.collections.Queue;
+    import ecstasy.collections.ArrayDeque;
+    import ecstasy.collections.CircularArray;
+    import ecstasy.collections.Queue;
 
-    @Inject X.io.Console console;
+    @Inject ecstasy.io.Console console;
 
     void run()
         {

@@ -1,10 +1,10 @@
-import Ecstasy.fs.AccessDenied;
-import Ecstasy.fs.Directory;
-import Ecstasy.fs.File;
-import Ecstasy.fs.FileNode;
-import Ecstasy.fs.FileStore;
-import Ecstasy.fs.FileWatcher;
-import Ecstasy.fs.Path;
+import ecstasy.fs.AccessDenied;
+import ecstasy.fs.Directory;
+import ecstasy.fs.File;
+import ecstasy.fs.FileNode;
+import ecstasy.fs.FileStore;
+import ecstasy.fs.FileWatcher;
+import ecstasy.fs.Path;
 
 /**
  * Native OS FileStore implementation.
