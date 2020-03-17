@@ -3,6 +3,7 @@ package org.xvm.asm;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -34,6 +35,8 @@ import org.xvm.asm.constants.*;
 import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo.Progress;
 
+import org.xvm.compiler.Parser;
+import org.xvm.compiler.Source;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.OpSupport;
@@ -1072,293 +1075,54 @@ public class ConstantPool
      * @return the IdentityConstant for the specified name, or null if the name is not implicitly
      *         imported
      */
-    // TODO: optimize using clzXYZ() constants
     public IdentityConstant getImplicitlyImportedIdentity(String sName)
         {
-        String  sPkg = null;
-        String  sClz = null;
-        String  sSub = null;
-        String  sDef = null;
+        IdentityConstant id = m_implicits.get(sName);
 
-        switch (sName)
+        if (id == null)
             {
-            case "Appender":
-            case "Assertion":
-            case "Boolean":
-            case "Char":
-            case "Clock":
-            case "Closeable":
-            case "ConcurrentModification":
-            case "Const":
-            case "Date":
-            case "DateTime":
-            case "Deadlock":
-            case "Duration":
-            case "Enum":
-            case "Enumeration":
-            case "Exception":
-            case "IllegalArgument":
-            case "IllegalState":
-            case "Interval":
-            case "Iterable":
-            case "Iterator":
-            case "Module":
-            case "Nullable":
-            case "Ordered":
-            case "Object":
-            case "Orderable":
-            case "Outer":
-            case "OutOfBounds":
-            case "Package":
-            case "Range":
-            case "ReadOnly":
-            case "Ref":
-            case "Sequential":
-            case "Service":
-            case "String":
-            case "Stringable":
-            case "StringBuffer":
-            case "Struct":
-            case "Time":
-            case "TimedOut":
-            case "Timer":
-            case "TimeZone":
-            case "Type":
-            case "UnsupportedOperation":
-            case "Var":
-                sClz = sName;
-                break;
-
-            case "Inner":
-                sClz = "Outer";
-                sSub = "Inner";
-                break;
-
-            case "Bit":
-            case "FPLiteral":
-            case "FPNumber":
-            case "IntLiteral":
-            case "IntNumber":
-            case "Number":
-                sPkg = "numbers";
-                sClz = sName;
-                break;
-
-            case "Byte":
-                sPkg = "numbers";
-                sClz = "UInt8";
-                break;
-
-            case "Signum":
-                sPkg = "numbers";
-                sClz = "Number";
-                sSub = "Signum";
-                break;
-
-            case "Dec":
-                sPkg = "numbers";
-                sClz = "Dec64";
-                break;
-
-            case "Float":
-                sPkg = "numbers";
-                sClz = "Float64";
-                break;
-
-            case "Double":
-                sPkg = "numbers";
-                sClz = "Float128";
-                break;
-
-            case "Int":
-                sPkg = "numbers";
-                sClz = "Int64";
-                break;
-
-            case "UInt":
-                sPkg = "numbers";
-                sClz = "UInt64";
-                break;
-
-            case "StackFrame":
-                sClz = "Exception";
-                sSub = "StackFrame";
-                break;
-
-            case "Array":
-            case "Hashable":
-            case "List":
-            case "Map":
-            case "Matrix":
-            case "Sequence":
-            case "Set":
-            case "Tuple":
-            case "UniformIndexed":
-                sPkg = "collections";
-                sClz = sName;
-                break;
-
-            case "Entry":
-                sPkg = "collections";
-                sClz = "Map";
-                sSub = "Entry";
-                break;
-
-            case "Version":
-                sPkg = "rt";
-                sClz = sName;
-                break;
-
-            case "Class":
-            case "Function":
-            case "Property":
-            case "Method":
-                sPkg = "reflect";
-                sClz = sName;
-                break;
-
-            case "null":
-            case "Null":
-                sClz = "Nullable";
-                sSub = "Null";
-                break;
-
-            case "false":
-            case "False":
-                sClz = "Boolean";
-                sSub = "False";
-                break;
-
-            case "true":
-            case "True":
-                sClz = "Boolean";
-                sSub = "True";
-                break;
-
-            case "Lesser":
-            case "Equal":
-            case "Greater":
-                sClz = "Ordered";
-                sSub = sName;
-                break;
-
-            case "Abstract":
-                sPkg = "annotations";
-                sClz = "Abstract";
-                break;
-
-            case "Atomic":
-                sPkg = "annotations";
-                sClz = "AtomicVar";
-                break;
-
-            case "Auto":
-                sPkg = "annotations";
-                sClz = "AutoConversion";
-                break;
-
-            case "FutureVar":
-            case "Future":
-                sPkg = "annotations";
-                sClz = "FutureVar";
-                break;
-
-            case "Inject":
-                sPkg = "annotations";
-                sClz = "InjectedRef";
-                break;
-
-            case "Lazy":
-                sPkg = "annotations";
-                sClz = "LazyVar";
-                break;
-
-            case "Obscure":
-                sPkg = "annotations";
-                sClz = "ObscuringVar";
-                break;
-
-            case "Unassigned":
-                sPkg = "annotations";
-                sClz = "UnassignedVar";
-                break;
-
-            case "Op":
-                sPkg = "annotations";
-                sClz = "Operator";
-                break;
-
-            case "AnnotateRef":
-            case "AnnotateVar":
-            case "Override":
-            case "RO":
-                sPkg = "annotations";
-                sClz = sName;
-                break;
-
-            case "Soft":
-                sPkg = "annotations";
-                sClz = "SoftVar";
-                break;
-
-            case "Watch":
-                sPkg = "annotations";
-                sClz = "WatchVar";
-                break;
-
-            case "Weak":
-                sPkg = "annotations";
-                sClz = "WeakVar";
-                break;
-
-            case "Unchecked":
-                sPkg = "annotations";
-                sClz = "UncheckedInt";
-                break;
-
-            case "Console":
-                sPkg = "io";
-                sClz = sName;
-                break;
-
-            case "Directory":
-            case "File":
-            case "FileStore":
-            case "Path":
-                sPkg = "fs";
-                sClz = sName;
-                break;
-
-            case "#Ref":
-                sPkg = "_native";
-                sClz = "NakedRef";
-                break;
-
-            default:
-                return null;
-            }
-
-        IdentityConstant constId = modEcstasy();
-
-        if (sPkg != null)
-            {
-            constId = ensurePackageConstant(constId, sPkg);
-            }
-
-        if (sDef != null)
-            {
-            constId = ensureTypedefConstant(constId, sDef);
-            }
-        else if (sClz != null)
-            {
-            constId = ensureClassConstant(constId, sClz);
-            if (sSub != null)
+            String[] asParts = s_implicits.get(sName);
+            if (asParts == null)
                 {
-                constId = ensureClassConstant(constId, sSub);
+                return null;
                 }
+
+            int iPart = 1;
+            int cParts = asParts.length;
+            assert (cParts >= 2);
+
+            // module portion
+            assert asParts[0].equals(X_PKG_IMPORT);
+            id = modEcstasy();
+
+            // handle package portion
+            while (iPart < cParts)
+                {
+                String sPkg = asParts[iPart];
+                char ch = sPkg.charAt(0);
+                if (ch >= 'A' && ch <= 'Z')
+                    {
+                    // not a package
+                    break;
+                    }
+                else
+                    {
+                    id = ensurePackageConstant(id, sPkg);
+                    ++iPart;
+                    }
+                }
+
+            // handle class portion
+            while (iPart < cParts)
+                {
+                String sClz = asParts[iPart++];
+                id = ensureClassConstant(id, sClz);
+                }
+
+            m_implicits.put(sName, id);
             }
 
-        return constId;
+        return id;
         }
 
     /**
@@ -3131,6 +2895,7 @@ public class ConstantPool
         // discard any previous lookup structures, since contents may have changed
         m_mapConstants.clear();
         m_mapLocators.clear();
+        m_implicits.clear();
         }
 
 
@@ -3888,6 +3653,38 @@ public class ConstantPool
     private transient SignatureConstant m_sigCompare;
     private transient SignatureConstant m_sigValidator;
     private transient TypeInfo          m_infoPlaceholder;
+
+    /**
+     * A cached and pre-parsed image of the "implicit.x" file.
+     */
+    private static Map<String, String[]> s_implicits;
+    static
+        {
+        try
+            {
+            Source    src    = new Source(new File("implicit.x"), 0);
+            ErrorList errs   = new ErrorList(1);
+            Parser    parser = new Parser(src, errs);
+            s_implicits = parser.parseImplicits();
+            for (ErrorListener.ErrorInfo err : errs.getErrors())
+                {
+                System.err.println(err);
+                }
+            if (errs.hasSeriousErrors())
+                {
+                throw new IllegalStateException();
+                }
+            }
+        catch (Exception e)
+            {
+            throw e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
+            }
+        }
+
+    /**
+     * Cache of implicitly imported identities.
+     */
+    private Map<String, IdentityConstant> m_implicits = new HashMap<>();
 
     /**
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.

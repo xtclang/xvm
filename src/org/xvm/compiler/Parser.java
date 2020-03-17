@@ -7,8 +7,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Component;
@@ -101,17 +103,9 @@ public class Parser
             // prime the token stream
             next();
 
-            try
-                {
-                List<Statement> stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
-                m_root = new StatementBlock(stmts, m_source, stmts.get(0).getStartPosition(),
-                        stmts.get(stmts.size()-1).getEndPosition());
-                }
-            catch (UnsupportedOperationException e)
-                {
-                // temporary exception handling while compiler is being built
-                throw new CompilerException(e);
-                }
+            List<Statement> stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
+            m_root = new StatementBlock(stmts, m_source, stmts.get(0).getStartPosition(),
+                    stmts.get(stmts.size()-1).getEndPosition());
 
             // there shouldn't be more in the file; (note that a zero-length token doesn't count,
             // since it is probably the synthetic closing '}')
@@ -123,6 +117,30 @@ public class Parser
             }
 
         return m_root;
+        }
+
+    public Map<String, String[]> parseImplicits()
+        {
+        Map<String, String[]> imports = new HashMap<>();
+
+        // prime the token stream
+        next();
+
+        while (!eof())
+            {
+            ImportStatement stmt = parseImportStatement(null);
+            imports.put(stmt.getAliasName(), stmt.getQualifiedName());
+            }
+
+        // there shouldn't be more in the file; (note that a zero-length token doesn't count,
+        // since it is probably the synthetic closing '}')
+        Token next = peek();
+        if (next != null && next.getStartPosition() < next.getEndPosition())
+            {
+            log(Severity.ERROR, EXPECTED_EOF, next.getStartPosition(), next.getEndPosition(), next);
+            }
+
+        return imports;
         }
 
     /**
