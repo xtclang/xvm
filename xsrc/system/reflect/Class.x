@@ -120,9 +120,7 @@ const Class<PublicType, ProtectedType extends PublicType,
     Composition? composition;
 
     /**
-     * The provider of the singleton instance. The singleton itself cannot be held in a property of
-     * the class, because Class is a `const`, and the singleton may be a `service` (which cannot be
-     * immutable, and thus a reference to a `service` cannot be held by a `const`).
+     * The provider of the singleton instance, if the class represents a singleton.
      */
     private function PublicType()? obtainSingleton;
 
@@ -161,7 +159,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     Boolean extends(Class!<> clz)
         {
-        // one can only "incorporate" a mixin
+        // one can only "extend" a class (or a mixin extend a mixin)
         if (clz.composition?.template.format == Interface)
             {
             return False;
