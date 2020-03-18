@@ -2,91 +2,100 @@ module TestSimple.xqiz.it
     {
     @Inject ecstasy.io.Console console;
 
-    void run()
+    void run( )
         {
-        console.println("\nM12:");
-        new TestM12().f();
-
-        console.println("\nM21:");
-        new TestM21().f();
-
-        console.println("\n@M1 @M2:");
-        new @M1 @M2 TestBase().f();
-
-        console.println("\n@M2 @M1:");
-        new @M2 @M1 TestBase().f();
+        new Container().test();
         }
 
-    class TestBase
+    class Container
         {
-        public void f()
+        void test()
             {
-            console.println("TestBase:f");
+            console.println("\nM12:");
+            new TestA12().f();
+
+            console.println("\nM21:");
+            new TestB21().f();
+
+            console.println("\n@M1 @M2 A:");
+            new @M1 @M2 TestA().f();
+
+            console.println("\n@M2 @M1 B:");
+            new @M2 @M1 TestB().f();
             }
-        }
 
-    @M1 @M2
-    class TestM12
-            extends TestBase
-        {
-        @Override
-        public void f()
+        class TestBase
             {
-            console.println("TestM12:f");
-            super();
+            public void f()
+                {
+                console.println("TestA:f");
+                }
             }
-        }
 
-    @M2 @M1
-    class TestM21
-            extends TestBase
-        {
-        @Override
-        public void f()
+        class TestA
+                extends TestBase
             {
-            console.println("TestM21:f");
-            super();
+            @Override
+            public void f()
+                {
+                console.println("TestA:f");
+                }
             }
-        }
 
-    mixin M1
-        extends MBase
-        into TestBase
-        {
-        private Int hidden1 = 1;
-
-        @Override
-        public void f()
+        class TestB
+                extends TestBase
             {
-            console.println("M1:f");
-            super();
+            @Override
+            public void f()
+                {
+                console.println("TestB:f");
+                }
             }
-        }
 
-    mixin M2
-        extends MBase
-        into TestBase
-        {
-        private Int hidden2 = 2;
-
-        @Override
-        public void f()
+        @M1 @M2
+        class TestA12
+                extends TestA
             {
-            console.println("M2:f");
-            super();
+            @Override
+            public void f()
+                {
+                console.println("TestA12:f");
+                super();
+                }
             }
-        }
 
-    mixin MBase
-        into TestBase
-        {
-        private Int hidden0 = 0;
-
-        @Override
-        public void f()
+        @M2 @M1
+        class TestB21
+                extends TestB
             {
-            console.println("MBase:f");
-            super();
+            @Override
+            public void f()
+                {
+                console.println("TestB21:f");
+                super();
+                }
+            }
+
+        mixin M1
+            into (TestA | TestB)
+            {
+            @Override
+            public void f()
+                {
+                console.println("M1:f");
+                super();
+                }
+            }
+
+        mixin M2
+            into (TestA | TestB)
+            {
+            @Override
+            public void f()
+                {
+                console.println("M2:f");
+                super();
+                }
             }
         }
     }

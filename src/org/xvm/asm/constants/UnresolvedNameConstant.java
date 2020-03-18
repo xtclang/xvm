@@ -81,6 +81,28 @@ public class UnresolvedNameConstant
         return m_constId != null;
         }
 
+    /**
+     * Add a consumer that needs to be called when this named constant is resolved
+     *
+     * @param consumer  the consumer to add
+     */
+    public void addConsumer(Consumer<Constant> consumer)
+        {
+        Consumer<Constant> consumerCurr = m_consumer;
+        if (consumerCurr == null)
+            {
+            m_consumer = consumer;
+            }
+        else
+            {
+            m_consumer = constant ->
+                {
+                consumerCurr.accept(constant);
+                consumer    .accept(constant);
+                };
+            }
+        }
+
 
     // ----- ResolvableConstant methods ------------------------------------------------------------
 
@@ -96,6 +118,11 @@ public class UnresolvedNameConstant
         assert m_constId == null || m_constId == constant || m_constId.equals(constant);
         assert !(constant instanceof TypeConstant);
         m_constId = constant;
+
+        if (m_consumer != null)
+            {
+            m_consumer.accept(constant);
+            }
         }
 
 
@@ -305,4 +332,9 @@ public class UnresolvedNameConstant
      * True iff the type name is explicitly non-narrowing.
      */
     private boolean m_fNoNarrow;
+
+    /**
+     * A consumer that needs to be called when this name constant is resolved.
+     */
+    private Consumer<Constant> m_consumer;
     }

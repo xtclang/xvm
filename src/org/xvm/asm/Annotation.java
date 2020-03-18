@@ -10,8 +10,9 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ResolvableConstant;
-import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UnresolvedNameConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.util.Severity;
 
@@ -137,9 +138,16 @@ public class Annotation
     public TypeConstant getAnnotationType()
         {
         Constant constAnno = getAnnotationClass();
-        return constAnno.containsUnresolved()
-                ? new TerminalTypeConstant(getConstantPool(), constAnno) // unresolved
-                : constAnno.getType();
+        if (constAnno instanceof UnresolvedNameConstant)
+            {
+            UnresolvedNameConstant constUnresolved = (UnresolvedNameConstant) constAnno;
+            UnresolvedTypeConstant typeUnresolved =
+                    new UnresolvedTypeConstant(getConstantPool(), constUnresolved);
+            // when the annotation name is resolved - update the type constant
+            constUnresolved.addConsumer(constant -> typeUnresolved.resolve(constant.getType()));
+            return typeUnresolved;
+            }
+        return constAnno.getType();
         }
 
     /**
@@ -151,14 +159,6 @@ public class Annotation
         }
 
     /**
-     * Marks this Annotation as containing unresolved elements.
-     */
-    public void markUnresolved()
-        {
-        m_fUnresolved = true;
-        }
-
-    /**
      * Allows the caller to provide resolved Annotation parameters.
      *
      * @param aParams
@@ -166,8 +166,7 @@ public class Annotation
     public void resolveParams(Constant[] aParams)
         {
         assert m_aParams.length == aParams.length;
-        m_aParams     = aParams;
-        m_fUnresolved = false;
+        m_aParams = aParams;
         }
 
 
@@ -186,7 +185,7 @@ public class Annotation
      */
     public boolean containsUnresolved()
         {
-        if (m_fUnresolved || getAnnotationClass().containsUnresolved())
+        if (getAnnotationClass().containsUnresolved())
             {
             return true;
             }
@@ -408,9 +407,4 @@ public class Annotation
      * The annotation parameters.
      */
     private Constant[] m_aParams;
-
-    /**
-     * Used to track that the annotation is not resolved.
-     */
-    private transient boolean m_fUnresolved;
     }

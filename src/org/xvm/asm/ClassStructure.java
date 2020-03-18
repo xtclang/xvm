@@ -1935,7 +1935,7 @@ public class ClassStructure
                 case Extends:
                     {
                     // the identity constant for those contribution is always a class
-                    assert typeContrib.isSingleDefiningConstant();
+                    assert typeContrib.isExplicitClassIdentity(true);
 
                     ClassConstant constContrib = (ClassConstant)
                         typeContrib.getSingleUnderlyingClass(true);
@@ -1991,7 +1991,7 @@ public class ClassStructure
                 case Extends:
                     {
                     // the identity constant for extension is always a class
-                    assert typeContrib.isSingleDefiningConstant();
+                    assert typeContrib.isExplicitClassIdentity(true);
 
                     ClassConstant constContrib = (ClassConstant)
                         typeContrib.getSingleUnderlyingClass(true);
@@ -2138,14 +2138,14 @@ public class ClassStructure
                 case Incorporates:
                 case Extends:
                     // the identity constant for those contribution is always a class
-                    assert typeContrib.isSingleDefiningConstant();
+                    assert typeContrib.isExplicitClassIdentity(true);
                     break;
 
                 default:
                     throw new IllegalStateException();
                 }
 
-            if (typeContrib.isSingleDefiningConstant())
+            if (typeContrib.isExplicitClassIdentity(true))
                 {
                 TypeConstant typeResolved = contrib.resolveType(pool, this, listActual);
                 if (typeResolved == null || !typeResolved.isParamsSpecified())
@@ -2290,14 +2290,14 @@ public class ClassStructure
                 case Incorporates:
                 case Extends:
                     // the identity constant for those contribution is always a class
-                    assert typeContrib.isSingleDefiningConstant();
+                    assert typeContrib.isExplicitClassIdentity(true);
                     break;
 
                 default:
                     throw new IllegalStateException();
                 }
 
-            if (typeContrib.isSingleDefiningConstant())
+            if (typeContrib.isExplicitClassIdentity(true))
                 {
                 TypeConstant typeResolved = contrib.resolveType(pool, this, listActual);
                 if (typeResolved == null || !typeResolved.isParamsSpecified())
@@ -2560,14 +2560,14 @@ public class ClassStructure
                 case Incorporates:
                 case Extends:
                     // the identity constant for those contribution is always a class
-                    assert typeContrib.isSingleDefiningConstant();
+                    assert typeContrib.isExplicitClassIdentity(true);
                     break;
 
                 default:
                     throw new IllegalStateException();
                 }
 
-            if (typeContrib.isSingleDefiningConstant())
+            if (typeContrib.isExplicitClassIdentity(true))
                 {
                 TypeConstant typeResolved = contrib.resolveType(pool, this, listParams);
                 if (typeResolved != null)
