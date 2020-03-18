@@ -6,7 +6,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import java.util.function.Consumer;
@@ -250,12 +249,12 @@ public class AnnotatedTypeConstant
      * Create a TypeInfo for the private access type of this type.
      *
      * @param idBase  the identity of the class (etc) that is being annotated
+     * @param struct  the structure of the class that this type is based on
      * @param errs    the error list to log any errors to
      *
-     * @return a new TypeInfo representing this annotated type
+     * @return a new TypeInfo representing this annotated type (private)
      */
-    TypeInfo buildPrivateInfo(IdentityConstant idBase, ClassStructure struct,
-                              TypeInfo infoBase, ErrorListener errs)
+    TypeInfo buildPrivateInfo(IdentityConstant idBase, ClassStructure struct, ErrorListener errs)
         {
         // this can only be called from TypeConstant.buildTypeInfoImpl()
         assert getAccess() == Access.PUBLIC;
@@ -272,67 +271,30 @@ public class AnnotatedTypeConstant
             return null;
             }
 
+        Annotation[] aAnnoClass      = listClassAnnos.toArray(Annotation.NO_ANNOTATIONS);
         TypeConstant typePrivateBase = pool.ensureAccessTypeConstant(typeBase, Access.PRIVATE);
 
         if (listAnnos.isEmpty())
             {
             // there are no other annotations except the "into Class" tags
-            assert !listClassAnnos.isEmpty();
-            assert infoBase == null;
+            assert aAnnoClass.length > 0;
 
             TypeConstant typeTarget = pool.ensureAccessTypeConstant(this, Access.PRIVATE);
 
-            return typeTarget.buildBaseTypeInfoImpl(idBase, struct,
-                    listClassAnnos.toArray(Annotation.NO_ANNOTATIONS), cInvals, errs);
+            return typeTarget.buildBaseTypeInfoImpl(idBase, struct, aAnnoClass, cInvals, true, errs);
             }
 
+        TypeInfo infoBase = typePrivateBase.buildBaseTypeInfoImpl(
+                    idBase, struct, Annotation.NO_ANNOTATIONS, cInvals, true, errs);
         if (infoBase == null)
             {
-            infoBase = typePrivateBase.buildBaseTypeInfoImpl(idBase, struct,
-                    listClassAnnos.toArray(Annotation.NO_ANNOTATIONS), cInvals, errs);
-            if (infoBase == null)
-                {
-                return null;
-                }
-            }
-        else
-            {
-            assert typePrivateBase.equals(infoBase.getType());
+            return null;
             }
 
-        TypeConstant typeNext = typeBase;
-        TypeInfo     infoNext = infoBase;
-        for (int c = listAnnos.size(), i = c-1; i >= 0; --i)
-            {
-            Annotation anno = listAnnos.get(i);
+        TypeConstant typeTarget = pool.ensureAccessTypeConstant(this, Access.PRIVATE);
+        Annotation[] aAnnoMixin = listAnnos.toArray(Annotation.NO_ANNOTATIONS);
 
-            AnnotatedTypeConstant typeAnno = pool.ensureAnnotatedTypeConstant(typeNext, anno);
-
-            TypeConstant typeMixin        = typeAnno.getAnnotationType();
-            TypeConstant typeMixinPrivate = pool.ensureAccessTypeConstant(typeMixin, Access.PRIVATE);
-            TypeInfo     infoMixin        = typeMixinPrivate.ensureTypeInfoInternal(errs);
-
-            if (infoMixin == null)
-                {
-                return null;
-                }
-
-            TypeConstant typeTarget = pool.ensureAccessTypeConstant(typeAnno, Access.PRIVATE);
-
-            infoNext = typeNext.mergeMixinTypeInfo(typeTarget, cInvals, idBase,
-                    struct, infoNext, infoMixin,
-                    i == 0 ? listClassAnnos : Collections.EMPTY_LIST, errs);
-            if (infoNext == null)
-                {
-                return null;
-                }
-            typeNext = typeAnno;
-
-            // on the last round we must come back to "this" type
-            assert i > 0 || typeTarget.equals(pool.ensureAccessTypeConstant(this, Access.PRIVATE));
-            }
-
-        return infoNext;
+        return typeTarget.layerOnAnnotations(idBase, struct, infoBase, aAnnoMixin, aAnnoClass, cInvals, errs);
         }
 
     /**

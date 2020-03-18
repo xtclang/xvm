@@ -141,7 +141,7 @@ public class ClassStructure
         {
         for (Contribution contrib : getContributionsAsList())
             {
-            if (contrib.getComposition() == Composition.Incorporates)
+            if (contrib.getComposition() == Composition.Annotation)
                 {
                 TypeConstant type = contrib.getTypeConstant();
 
@@ -164,7 +164,7 @@ public class ClassStructure
         {
         for (Contribution contrib : getContributionsAsList())
             {
-            if (contrib.getComposition() == Composition.Incorporates)
+            if (contrib.getComposition() == Composition.Annotation)
                 {
                 TypeConstant type = contrib.getTypeConstant();
 
@@ -176,6 +176,38 @@ public class ClassStructure
                 }
             }
         return false;
+        }
+
+    /**
+     * Collect the annotations for this class.
+     *
+     * @param fIntoClass if true, return only the "Class" annotations (e.g. Abstract); otherwise
+     *                   only the "regular" mixins
+     *
+     * @return an array of annotations
+     */
+    public Annotation[] collectAnnotations(boolean fIntoClass)
+        {
+        List<Annotation> listAnnos = null;
+        for (Contribution contrib : getContributionsAsList())
+            {
+            if (contrib.getComposition() == Composition.Annotation)
+                {
+                Annotation anno = contrib.getAnnotation();
+
+                if (fIntoClass == anno.getAnnotationType().getExplicitClassInto().isIntoClassType())
+                    {
+                    if (listAnnos == null)
+                        {
+                        listAnnos = new ArrayList<>();
+                        }
+                    listAnnos.add(anno);
+                    }
+                }
+            }
+        return listAnnos == null
+                ? Annotation.NO_ANNOTATIONS
+                : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
         }
 
     /**
@@ -1885,7 +1917,6 @@ public class ClassStructure
                         break;
                         }
                     // fall through
-                case Annotation:
                 case Delegates:
                 case Implements:
                     typeContrib = typeContrib.resolveGenerics(pool, typeRight.normalizeParameters());
@@ -1899,6 +1930,7 @@ public class ClassStructure
                         }
                     break;
 
+                case Annotation:
                 case Incorporates:
                 case Extends:
                     {
@@ -1982,7 +2014,6 @@ public class ClassStructure
                     }
 
                 case Into:
-                case Annotation:
                 case Implements:
                     typeContrib = typeContrib.resolveGenerics(pool, new SimpleTypeResolver(listRight));
                     if (typeContrib != null)
@@ -2001,8 +2032,9 @@ public class ClassStructure
                     break;
 
                 case Delegates:
+                case Annotation:
                 case Incorporates:
-                    // delegation and incorporation cannot be of an intersection type
+                    // delegation, annotation and incorporation cannot be of an intersection type
                     return Relation.INCOMPATIBLE;
 
                 default:

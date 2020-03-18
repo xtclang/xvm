@@ -623,7 +623,7 @@ public abstract class Component
             for (ListIterator<Contribution> listIterator = list.listIterator(); listIterator.hasNext(); )
                 {
                 Contribution contribNext = listIterator.next();
-                if (contribNext.getComposition() != Composition.Annotation && contribNext.getComposition() != Composition.Into)
+                if (contribNext.getComposition() != Composition.Into)
                     {
                     listIterator.previous();
                     listIterator.add(contrib);
@@ -2028,7 +2028,6 @@ public abstract class Component
                     access = access.minOf(Access.PROTECTED);
                     break;
 
-                case Annotation:
                 case Delegates:
                 case Implements:
                     access = Access.PUBLIC;
@@ -2038,6 +2037,7 @@ public abstract class Component
                     access = access.minOf(Access.PROTECTED);
                     break;
 
+                case Annotation:
                 case Incorporates:
                     fAllowInto = false;
                     access = access.minOf(Access.PROTECTED);
@@ -3430,7 +3430,7 @@ public abstract class Component
                     sb.append(m_typeContrib.getDescription());
                     }
 
-                if (m_composition == Composition.Annotation)
+                if (m_composition == Composition.Annotation && m_annotation != null)
                     {
                     Constant[] aconstArgs = m_annotation.getParams();
                     if (aconstArgs.length > 0)

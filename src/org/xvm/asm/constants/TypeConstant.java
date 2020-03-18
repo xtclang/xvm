@@ -1494,8 +1494,7 @@ public abstract class TypeConstant
             TypeConstant typeAnno = getUnderlyingType(); // remove "Access:PRIVATE" piece
             if (typeAnno instanceof AnnotatedTypeConstant)
                 {
-                return ((AnnotatedTypeConstant) typeAnno).
-                        buildPrivateInfo(constId, struct, null, errs);
+                return ((AnnotatedTypeConstant) typeAnno).buildPrivateInfo(constId, struct, errs);
                 }
             log(errs, Severity.ERROR, VE_ANNOTATION_UNEXPECTED,
                     typeAnno.getValueString(), constId.getPathString());
@@ -1503,17 +1502,38 @@ public abstract class TypeConstant
             }
 
         // get a snapshot of the current invalidation count BEFORE building the TypeInfo
-        ConstantPool pool     = getConstantPool();
-        int          cInvals  = pool.getInvalidationCount();
-        TypeInfo     infoBase = buildBaseTypeInfoImpl(constId, struct, Annotation.NO_ANNOTATIONS, cInvals, errs);
-        return infoBase;
+        ConstantPool pool    = getConstantPool();
+        int          cInvals = pool.getInvalidationCount();
+
+        Annotation[] aAnnoMixin = struct.collectAnnotations(false);
+        Annotation[] aAnnoClass = struct.collectAnnotations(true);
+        if (aAnnoMixin.length > 0)
+            {
+            // build a partial info without the annotations
+            TypeInfo infoBase = buildBaseTypeInfoImpl(constId, struct, Annotation.NO_ANNOTATIONS,
+                    cInvals, /*fComplete*/ false, errs);
+
+            return layerOnAnnotations(constId, struct, infoBase, aAnnoMixin, aAnnoClass, cInvals, errs);
+            }
+
+        return buildBaseTypeInfoImpl(constId, struct, aAnnoClass, cInvals, /*fComplete*/ true, errs);
         }
 
     /**
-     * Actual buildTypeInfo implementation for a base type.
+     * Actual buildTypeInfo implementation for this type.
+     *
+     * @param constId         the identity constant of the class that this type is based on
+     * @param struct          the structure of the class that this type is based on
+     * @param aAnnoClass      an array of annotations for this type that mix into "Class"
+     * @param cInvalidations  the count of TypeInfo invalidations before staring building the info
+     * @param fComplete       if false, the "mixin" annotations have not yet been applied
+     * @param errs            the error list to log to
+     *
+     * @return the resulting TypeInfo
      */
     TypeInfo buildBaseTypeInfoImpl(IdentityConstant constId, ClassStructure struct,
-                                   Annotation[] annoClass, int cInvalidations, ErrorListener errs)
+                                   Annotation[] aAnnoClass, int cInvalidations,
+                                   boolean fComplete, ErrorListener errs)
         {
         List<Contribution> listContribs = struct.getContributionsAsList();
         TypeConstant[]     atypeContrib = resolveContributionTypes(listContribs);
@@ -1540,8 +1560,8 @@ public abstract class TypeConstant
         ListMap<IdentityConstant, Origin> listmapClassChain   = new ListMap<>();
         ListMap<IdentityConstant, Origin> listmapDefaultChain = new ListMap<>();
 
-        boolean fComplete = createCallChains(constId, struct, mapTypeParams,
-            listProcess, listmapClassChain, listmapDefaultChain, errs);
+        fComplete &= createCallChains(constId, struct, mapTypeParams,
+                listProcess, listmapClassChain, listmapDefaultChain, errs);
 
         // next, we need to process the list of contributions in order, asking each for its
         // properties and methods, and collecting all of them
@@ -1560,7 +1580,7 @@ public abstract class TypeConstant
         checkTypeParameterProperties(mapTypeParams, mapVirtProps, errs);
 
         TypeInfo info = new TypeInfo(this, cInvalidations, struct, 0, false, mapTypeParams,
-                annoClass, typeExtends, typeRebase, typeInto,
+            aAnnoClass, typeExtends, typeRebase, typeInto,
                 listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 fComplete ? Progress.Complete : Progress.Incomplete);
@@ -1568,6 +1588,52 @@ public abstract class TypeConstant
         return atypeCondInc == null || !fComplete
                 ? info
                 : mergeConditionalIncorporates(cInvalidations, constId, info, atypeCondInc, errs);
+        }
+
+    /**
+     * Layer on the specified annotations on top of the base TypeInfo using this type as a target.
+     *
+     * @param constId         the identity constant of the class that this type is based on
+     * @param struct          the structure of the class that this type is based on
+     * @param aAnnoMixin      an array of "mixin" annotations for this type
+     * @param aAnnoClass      an array of annotations for this type that mix into "Class"
+     * @param cInvalidations  the count of TypeInfo invalidations before staring building the info
+     * @param errs            the error list to log to
+     */
+    protected TypeInfo layerOnAnnotations(IdentityConstant constId, ClassStructure struct,
+                                          TypeInfo infoBase,
+                                          Annotation[] aAnnoMixin, Annotation[] aAnnoClass,
+                                          int cInvalidations, ErrorListener errs)
+        {
+        ConstantPool pool     = getConstantPool();
+        TypeInfo     infoNext = infoBase;
+        TypeConstant typeNext = infoBase.getType();
+
+        for (int c = aAnnoMixin.length, i = c-1; i >= 0; --i)
+            {
+            AnnotatedTypeConstant typeAnno = pool.ensureAnnotatedTypeConstant(typeNext, aAnnoMixin[i]);
+
+            TypeConstant typeMixin        = typeAnno.getAnnotationType();
+            TypeConstant typeMixinPrivate = pool.ensureAccessTypeConstant(typeMixin, Access.PRIVATE);
+            TypeInfo     infoMixin        = typeMixinPrivate.ensureTypeInfoInternal(errs);
+
+            if (infoMixin == null)
+                {
+                // we are always called with an incomplete info when building an annotated class
+                // (e.g. @M1 @M2 class TestM {}), rather than a run-time annotated type
+                // (e.g. new @M1 @M2 Test()), so it's permissible to return if the mixin info
+                // cannot yet be calculated at this time
+                return isComplete(infoBase) ? null : infoBase;
+                }
+
+            infoNext = typeNext.mergeMixinTypeInfo(this, cInvalidations, constId,
+                    struct, infoNext, infoMixin,
+                    i == 0 ? aAnnoClass : Annotation.NO_ANNOTATIONS, /*fAddProcess*/ true, errs);
+            typeNext = typeAnno;
+            }
+
+        assert infoNext.getType().equals(this);
+        return infoNext;
         }
 
     /**
@@ -2015,8 +2081,9 @@ public abstract class TypeConstant
             switch (contrib.getComposition())
                 {
                 case Annotation:
-                    log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL,
-                            typeContrib.getValueString(), constId.getPathString());
+                    // call processMixins() for validation only; the "mixin" annotations will be
+                    // processed separately at the end of buildTypeInfoImpl() method
+                    processMixins(constId, typeContrib, struct, new ArrayList<>(), errs);
                     break;
 
                 case Into:
@@ -2040,7 +2107,7 @@ public abstract class TypeConstant
                         break;
                         }
 
-                    processIncorporates(constId, typeContrib, struct, listProcess, errs);
+                    processMixins(constId, typeContrib, struct, listProcess, errs);
                     break;
 
                 case Delegates:
@@ -2119,30 +2186,27 @@ public abstract class TypeConstant
             // only process conditional incorporates
             Contribution contrib   = listContribs.get(iContrib);
             TypeConstant typeMixin = aContribType[iContrib];
-            Composition compose;
-            switch (compose = contrib.getComposition())
+            Composition  compose   = contrib.getComposition();
+
+            if (compose == Composition.Incorporates)
                 {
-                case Annotation:
-                    throw new IllegalStateException();
-
-                case Incorporates:
-                    if (contrib.getTypeParams() == null)
-                        {
-                        // a regular "incorporates"; process later
-                        assert typeMixin != null;
-                        continue;
-                        }
-                    else if (typeMixin == null)
-                        {
-                        // the conditional incorporates does not apply to "this" type
-                        continue;
-                        }
-                    // process now
-                    break;
-
-                default:
-                    // not now
+                if (contrib.getTypeParams() == null)
+                    {
+                    // a regular "incorporates"; process later
+                    assert typeMixin != null;
                     continue;
+                    }
+                else if (typeMixin == null)
+                    {
+                    // the conditional incorporates does not apply to "this" type
+                    continue;
+                    }
+                // process now
+                }
+            else
+                {
+                // not now
+                continue;
                 }
 
             // has to be an explicit class identity
@@ -2167,8 +2231,8 @@ public abstract class TypeConstant
                 }
             listCondContribs.add(typeMixin);
 
-            // call processIncorporates() for validation only
-            processIncorporates(constId, typeMixin, struct, new ArrayList<>(), errs);
+            // call processMixins() for validation only
+            processMixins(constId, typeMixin, struct, new ArrayList<>(), errs);
             }
 
         return listCondContribs == null
@@ -2198,11 +2262,11 @@ public abstract class TypeConstant
         }
 
     /**
-     * Process the "incorporates" contribution.
+     * Process the "incorporates" contribution for annotations or mixins.
      */
-    private void processIncorporates(IdentityConstant constId, TypeConstant typeContrib,
-                                     ClassStructure struct,
-                                     List<Contribution> listProcess, ErrorListener errs)
+    private void processMixins(IdentityConstant constId, TypeConstant typeContrib,
+                               ClassStructure struct,
+                               List<Contribution> listProcess, ErrorListener errs)
         {
         ConstantPool pool = getConstantPool();
 
@@ -2249,9 +2313,8 @@ public abstract class TypeConstant
                 return;
                 }
 
-            // check for duplicate mixin (not exact match!!!)
+            // check for duplicate mixin
             if (listProcess.stream().anyMatch(contribPrev ->
-                contribPrev.getComposition() == Composition.Incorporates &&
                     contribPrev.getTypeConstant().equals(typeContrib)))
                 {
                 log(errs, Severity.ERROR, VE_DUP_INCORPORATES,
@@ -2378,7 +2441,6 @@ public abstract class TypeConstant
                     }
                     break;
 
-                case Annotation:
                 case Implements:
                 case Incorporates:
                 case Delegates:
@@ -4341,7 +4403,7 @@ public abstract class TypeConstant
                 }
 
             info = mergeMixinTypeInfo(this, cInvalidations, idBase, infoBase.getClassStructure(),
-                    info, infoMixin, null, errs);
+                    info, infoMixin, Annotation.NO_ANNOTATIONS, /*fAddProcess*/ false, errs);
             }
         return info;
         }
@@ -4350,25 +4412,27 @@ public abstract class TypeConstant
      * For this type representing a base for an annotated type or a conditional incorporation,
      * merge the "source" TypeInfo with the TypeInfo of a mixin.
      *
-     * @param typeOrigin      the type to build the TypeInfo for
+     * @param typeTarget      the type to build the TypeInfo for
      * @param cInvalidations  the count of TypeInfo invalidations before staring building the info
      * @param idBase          the identity constant of the class that this type is based on
      * @param structBase      the ClassStructure for the base type
      * @param infoSource      the TypeInfo containing all previous incorporates
      * @param infoMixin       the TypeInfo for the mixin to be merged with the source TypeInfo
-     * @param listClassAnnos  the list of annotations for the type that mix into "Class"
+     * @param aAnnoClass      an array of annotations for the type that mix into "Class"
+     * @param fAddProcess     if true, the mixin annotation needs to be added to the process list
      * @param errs            the error listener to log into
      *
      * @return the resulting TypeInfo
      */
     protected TypeInfo mergeMixinTypeInfo(
-            TypeConstant     typeOrigin,
+            TypeConstant     typeTarget,
             int              cInvalidations,
             IdentityConstant idBase,
             ClassStructure   structBase,
             TypeInfo         infoSource,
             TypeInfo         infoMixin,
-            List<Annotation> listClassAnnos,
+            Annotation[]     aAnnoClass,
+            boolean          fAddProcess,
             ErrorListener    errs)
         {
         ConstantPool pool = getConstantPool();
@@ -4392,16 +4456,22 @@ public abstract class TypeConstant
 
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapMixinMethods.entrySet())
             {
-            layerOnMixinMethod(pool, typeOrigin, infoSource, idBase, mapMethods, mapVirtMethods,
+            layerOnMixinMethod(pool, typeTarget, infoSource, idBase, mapMethods, mapVirtMethods,
                     entry.getKey(), entry.getValue(), errs);
             }
 
-        // TODO handle mapChildren
+        List<Contribution> listProcess = infoMixin.getContributionList();
+        if (fAddProcess)
+            {
+            listProcess = new ArrayList<>(listProcess);
+            listProcess.add(new Contribution(Composition.Annotation,
+                    pool.ensureAccessTypeConstant(infoMixin.getType(), Access.PROTECTED)));
+            }
 
-        return new TypeInfo(typeOrigin, cInvalidations, structBase, 0, false, mapMixinParams,
-                listClassAnnos == null ? null : listClassAnnos.toArray(Annotation.NO_ANNOTATIONS),
+        // TODO handle mapChildren
+        return new TypeInfo(typeTarget, cInvalidations, structBase, 0, false, mapMixinParams, aAnnoClass,
                 infoMixin.getExtends(), infoMixin.getRebases(), infoMixin.getInto(),
-                infoMixin.getContributionList(), infoMixin.getClassChain(), infoMixin.getDefaultChain(),
+                listProcess, infoMixin.getClassChain(), infoMixin.getDefaultChain(),
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 Progress.Complete);
         }
@@ -4461,7 +4531,7 @@ public abstract class TypeConstant
      * Layer on the passed mixin method contributions onto the base methods.
      *
      * @param pool            the constant pool to use
-     * @param typeOrigin      the type to build the TypeInfo for
+     * @param typeTarget      the type to build the TypeInfo for
      * @param infoBase        the TypeInfo for the type that is being mixed into
      * @param idBaseClass     the identity of the class (etc) that is being mixed into
      * @param mapMethods      methods already collected from the base
@@ -4472,7 +4542,7 @@ public abstract class TypeConstant
      */
     private void layerOnMixinMethod(
             ConstantPool                    pool,
-            TypeConstant                    typeOrigin,
+            TypeConstant                    typeTarget,
             TypeInfo                        infoBase,
             IdentityConstant                idBaseClass,
             Map<MethodConstant, MethodInfo> mapMethods,
@@ -4519,9 +4589,9 @@ public abstract class TypeConstant
             // the following logic is similar to the "layerOnMethods()" algorithm, except it isn't
             // concerned with an @Override and capping, assuming that all those issues have already
             // been dealt with;
-            // another important difference is that it uses "typeOrigin" as a narrowing context,
+            // another important difference is that it uses "typeTarget" as a narrowing context,
             // allowing to "align" co-variant returns of the mixin's methods
-            List<Object> listMatches = typeOrigin.collectPotentialSuperMethods(
+            List<Object> listMatches = typeTarget.collectPotentialSuperMethods(
                     methodMixin.getHead().getMethodStructure(),
                     nidContrib, methodMixin.getSignature(), mapBaseMethods);
            if (!listMatches.isEmpty())
@@ -5056,7 +5126,8 @@ public abstract class TypeConstant
     protected static Relation checkReservedCompatibility(TypeConstant typeLeft, TypeConstant typeRight)
         {
         if (!typeLeft.isSingleDefiningConstant()    || !typeRight.isSingleDefiningConstant() ||
-            !typeLeft.isExplicitClassIdentity(true) || !typeRight.isExplicitClassIdentity(true))
+            !typeLeft.isExplicitClassIdentity(true) || !typeRight.isExplicitClassIdentity(true) ||
+             typeLeft.getAccess() != typeRight.getAccess())
             {
             return null;
             }

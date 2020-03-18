@@ -785,16 +785,14 @@ public class TypeCompositionStatement
                 throw new IllegalStateException();
             }
 
-        // validate and register annotations (as if they had been written as "incorporates" clauses)
-        // note that the annotations are added to the end of the list, and in reverse order of how
-        // they were encountered (as if they were the outer-most shells of a russian nesting doll)
+        // validate and register annotations
         if (annotations != null && !annotations.isEmpty())
             {
             if (compositions == null)
                 {
                 compositions = new ArrayList<>();
                 }
-            for (int i = annotations.size()-1; i >= 0; --i)
+            for (int i = 0, c = annotations.size(); i < c; i++)
                 {
                 AnnotationExpression annotation = annotations.get(i);
                 annotation.ensureAnnotation(pool);
@@ -1176,24 +1174,35 @@ public class TypeCompositionStatement
                         {
                         // these are all OK; other checks will be done after the types are resolvable
                         Composition.Incorporates incorp = (Composition.Incorporates) composition;
-                        ListMap<String, TypeConstant> mapConstraints = null;
-                        if (incorp.isConditional())
+                        if (incorp.isAnnotation())
                             {
-                            mapConstraints = new ListMap<>();
-                            for (Parameter constraint : incorp.getConstraints())
+                            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                                 {
-                                // type is null means no constraint
-                                TypeExpression type = constraint.getType();
-                                mapConstraints.put(constraint.getName(),
-                                        type == null ? null : type.ensureTypeConstant());
+                                // register the annotation
+                                struct.addAnnotation(incorp.ensureAnnotation(pool));
                                 }
                             }
-
-                        for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                        else
                             {
-                            // register the mixin that the component incorporates
-                            struct.addIncorporates(composition.getType().ensureTypeConstant(),
-                                    mapConstraints);
+                            ListMap<String, TypeConstant> mapConstraints = null;
+                            if (incorp.isConditional())
+                                {
+                                mapConstraints = new ListMap<>();
+                                for (Parameter constraint : incorp.getConstraints())
+                                    {
+                                    // type is null means no constraint
+                                    TypeExpression type = constraint.getType();
+                                    mapConstraints.put(constraint.getName(),
+                                            type == null ? null : type.ensureTypeConstant());
+                                    }
+                                }
+
+                            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                                {
+                                // register the mixin that the component incorporates
+                                struct.addIncorporates(composition.getType().ensureTypeConstant(),
+                                        mapConstraints);
+                                }
                             }
                         }
                     break;

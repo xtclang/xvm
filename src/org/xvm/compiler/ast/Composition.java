@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.xvm.asm.Annotation;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
@@ -202,7 +204,7 @@ public abstract class Composition
             {
             this(null, new Token(annotation.getStartPosition(), annotation.getStartPosition(),
                     Token.Id.INCORPORATES), annotation.type, annotation.args, null);
-            fAnnotation = true;
+            this.annotation = annotation;
             }
 
         /**
@@ -219,7 +221,13 @@ public abstract class Composition
          */
         public boolean isAnnotation()
             {
-            return fAnnotation;
+            return annotation != null;
+            }
+
+        public Annotation ensureAnnotation(ConstantPool pool)
+            {
+            assert isAnnotation();
+            return annotation.ensureAnnotation(pool);
             }
 
         /**
@@ -314,10 +322,10 @@ public abstract class Composition
         protected List<Expression> args;
         protected List<Parameter>  constraints;
 
-        private boolean fAnnotation;
+        protected AnnotationExpression annotation;
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Incorporates.class,
-                "condition", "type", "args", "constraints");
+                "condition", "type", "args", "constraints", "annotation");
         }
 
 
@@ -520,6 +528,12 @@ public abstract class Composition
             }
 
         @Override
+        protected Field[] getChildFields()
+            {
+            return CHILD_FIELDS;
+            }
+
+        @Override
         public String toString()
             {
             return toStartString() + '(' + expr + ')' + toEndString();
@@ -528,7 +542,7 @@ public abstract class Composition
         protected Expression expr;
         protected long       lEndPos;
 
-        private static final Field[] CHILD_FIELDS = fieldsForNames(Import.class, "condition", "expr");
+        private static final Field[] CHILD_FIELDS = fieldsForNames(Default.class, "condition", "expr");
         }
 
 
