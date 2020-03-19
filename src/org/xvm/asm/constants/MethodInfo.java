@@ -947,6 +947,18 @@ public class MethodInfo
                 case Field:
                 case Native:
                 case Explicit:
+                    if (!fMixin)
+                        {
+                        // some of the bodies could represent an annotation mixins methods
+                        // (e.g. @M class C {}, where both C and M have this method),
+                        // in which case we need to restart the count at "this type" level
+                        TypeConstant typeThis = infoType.getType();
+                        if (typeThis.isSingleDefiningConstant() &&
+                            typeThis.getDefiningConstant().equals(body.getIdentity().getNamespace()))
+                            {
+                            cMethods = 0;
+                            }
+                        }
                     cMethods++;
                     break;
 

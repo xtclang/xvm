@@ -2,7 +2,7 @@ module TestSimple.xqiz.it
     {
     @Inject ecstasy.io.Console console;
 
-    void run()
+    void run(   )
         {
         new Container().test();
         }
@@ -22,30 +22,20 @@ module TestSimple.xqiz.it
             test.other();
             }
 
-        class TestBase
+        @M
+        class TestA
                 implements Iface
             {
             @Override
-            void f()
+            void f(Boolean flag = false)
                 {
-                console.println("TestBase:f");
-                }
-            }
-
-        @M
-        class TestA
-                extends TestBase
-            {
-            @Override
-            void f()
-                {
-                console.println("TestA:f");
-                super();
+                console.println($"TestA:f {flag}");
+                super(); // this should not compile
                 }
 
             void other()
                 {
-                f();
+                f(true);
                 }
             }
 
@@ -53,10 +43,10 @@ module TestSimple.xqiz.it
                 extends TestA
             {
             @Override
-            void f()
+            void f(Boolean flag=false)
                 {
-                console.println("TestDA:f");
-                super();
+                console.println($"TestDA:f {flag}");
+                super(flag);
                 }
             }
 
@@ -64,10 +54,10 @@ module TestSimple.xqiz.it
             into TestA
             {
             @Override
-            void f()
+            void f(Boolean flag=false)
                 {
-                console.println("M:f");
-                super();
+                console.println($"M:f {flag}");
+                super(flag);
                 }
             }
         }
