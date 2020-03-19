@@ -4,6 +4,7 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -216,6 +217,11 @@ public class DifferenceTypeConstant
     @Override
     protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
+        if (info1 == null || info2 == null)
+            {
+            return Collections.EMPTY_MAP;
+            }
+
         Map<Object, ParamInfo> map1 = info1.getTypeParams();
         Map<Object, ParamInfo> map2 = info2.getTypeParams();
         Map<Object, ParamInfo> map  = new HashMap<>(map1);
@@ -256,6 +262,11 @@ public class DifferenceTypeConstant
     @Override
     protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
+        if (info1 == null || info2 == null)
+            {
+            return Collections.EMPTY_MAP;
+            }
+
         Map<PropertyConstant, PropertyInfo> map = new HashMap<>();
 
         for (Map.Entry<String, PropertyInfo> entry : info1.ensurePropertiesByName().entrySet())
@@ -276,6 +287,11 @@ public class DifferenceTypeConstant
     @Override
     protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
+        if (info1 == null || info2 == null)
+            {
+            return Collections.EMPTY_MAP;
+            }
+
         Map<MethodConstant, MethodInfo> map = new HashMap<>();
 
         for (Map.Entry<SignatureConstant, MethodInfo> entry : info1.ensureMethodsBySignature().entrySet())

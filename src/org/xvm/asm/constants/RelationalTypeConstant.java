@@ -482,47 +482,15 @@ public abstract class RelationalTypeConstant
             return null;
             }
 
-        if (info1 == null)
-            {
-            return copyIncomplete(info2, cInvals);
-            }
-
-        if (info2 == null)
-            {
-            return copyIncomplete(info1, cInvals);
-            }
-
         return mergeTypeInfo(info1, info2, cInvals, errs);
         }
 
     /**
-     * @return an incomplete TypeInfo based on the passed in info
-     */
-    protected TypeInfo copyIncomplete(TypeInfo info, int cInvals)
-        {
-        return new TypeInfo(this,
-                            cInvals,
-                            null,                   // struct
-                            0,                      // depth
-                            false,                  // synthetic
-                            info.getTypeParams(),
-                            info.getClassAnnotations(),
-                            null,                   // typeExtends
-                            null,                   // typeRebase
-                            null,                   // typeInto
-                            Collections.EMPTY_LIST, // listProcess,
-                            ListMap.EMPTY,          // listmapClassChain
-                            ListMap.EMPTY,          // listmapDefaultChain
-                            info.getProperties(),
-                            info.getMethods(),
-                            Collections.EMPTY_MAP,  // mapVirtProps
-                            Collections.EMPTY_MAP,  // mapVirtMethods
-                            ListMap.EMPTY,          // mapChildren
-                            TypeInfo.Progress.Incomplete
-                            );
-        }
-
-    /**
+     * Merge the specified TypeInfos.
+     *
+     * Note, that either of the two TypeInfos can be null, in which case we need to return an
+     * incomplete TypeInfo.
+     *
      * @return merged TypeInfo
      */
     protected TypeInfo mergeTypeInfo(TypeInfo info1, TypeInfo info2, int cInvals, ErrorListener errs)
@@ -545,17 +513,47 @@ public abstract class RelationalTypeConstant
                             Collections.EMPTY_MAP,  // mapVirtProps
                             Collections.EMPTY_MAP,  // mapVirtMethods
                             ListMap.EMPTY,          // mapChildren
-                            info1.getProgress().worstOf(info2.getProgress())
+                            info1 == null || info2 == null
+                                    ? TypeInfo.Progress.Incomplete
+                                    : info1.getProgress().worstOf(info2.getProgress())
                             );
         }
 
 
+    /**
+     * Produce a map of TypeParams for for a merge of the specified TypeInfos.
+     *
+     * Note, that either of the two TypeInfos can be null.
+     *
+     * @return a merged map
+     */
     abstract protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
+    /**
+     * Produce an array of Annotations for for a merge of the specified TypeInfos.
+     *
+     * Note, that either of the two TypeInfos can be null.
+     *
+     * @return a merged array
+     */
     abstract protected Annotation[] mergeAnnotations(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
+    /**
+     * Produce a map of properties for for a merge of the specified TypeInfos.
+     *
+     * Note, that either of the two TypeInfos can be null.
+     *
+     * @return a merged map
+     */
     abstract protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
+    /**
+     * Produce a map of methods for for a merge of the specified TypeInfos.
+     *
+     * Note, that either of the two TypeInfos can be null.
+     *
+     * @return a merged map
+     */
     abstract protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
 

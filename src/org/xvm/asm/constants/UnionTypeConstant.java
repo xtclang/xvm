@@ -313,6 +313,16 @@ public class UnionTypeConstant
     @Override
     protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
+        if (info1 == null)
+            {
+            return info2.getTypeParams();
+            }
+
+        if (info2 == null)
+            {
+            return info1.getTypeParams();
+            }
+
         Map<Object, ParamInfo> map1 = info1.getTypeParams();
         Map<Object, ParamInfo> map2 = info2.getTypeParams();
         Map<Object, ParamInfo> map  = new HashMap<>(map1);
@@ -382,6 +392,16 @@ public class UnionTypeConstant
     @Override
     protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
+        if (info1 == null)
+            {
+            return info2.getProperties();
+            }
+
+        if (info2 == null)
+            {
+            return info1.getProperties();
+            }
+
         Map<PropertyConstant, PropertyInfo> map = new HashMap<>();
 
         // take only non-nested properties
@@ -428,6 +448,16 @@ public class UnionTypeConstant
     @Override
     protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
+        if (info1 == null)
+            {
+            return info2.getMethods();
+            }
+
+        if (info2 == null)
+            {
+            return info1.getMethods();
+            }
+
         Map<MethodConstant, MethodInfo> map = new HashMap<>();
 
         // take only non-nested methods

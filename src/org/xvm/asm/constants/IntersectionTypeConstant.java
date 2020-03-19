@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -381,6 +382,11 @@ public class IntersectionTypeConstant
     @Override
     protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
+        if (info1 == null || info2 == null)
+            {
+            return Collections.EMPTY_MAP;
+            }
+
         ConstantPool           pool = getConstantPool();
         Map<Object, ParamInfo> map1 = info1.getTypeParams();
         Map<Object, ParamInfo> map2 = info2.getTypeParams();
@@ -438,6 +444,11 @@ public class IntersectionTypeConstant
     @Override
     protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
+        if (info1 == null || info2 == null)
+            {
+            return Collections.EMPTY_MAP;
+            }
+
         Map<PropertyConstant, PropertyInfo> map = new HashMap<>();
 
         NextEntry:
@@ -501,6 +512,11 @@ public class IntersectionTypeConstant
     @Override
     protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
+        if (info1 == null || info2 == null)
+            {
+            return Collections.EMPTY_MAP;
+            }
+
         Map<MethodConstant, MethodInfo> map = new HashMap<>();
 
         NextEntry:
@@ -540,8 +556,8 @@ public class IntersectionTypeConstant
                         }
                     }
 
-                // there is no common identity; at least one must be an interfaces, the allow it
-                // to be called as it was duck-typeable
+                // there is no common identity; at least one must be an interface to allow it
+                // to be called as it were duck-typeable
                 boolean f1 = info1.getFormat() == Component.Format.INTERFACE;
                 boolean f2 = info2.getFormat() == Component.Format.INTERFACE;
                 if (f1 || f2)
