@@ -1646,8 +1646,7 @@ public abstract class TypeConstant
     private TypeInfo buildStructInfo(ErrorListener errs)
         {
         // this is a helper method that only supports being called on AccessTypeConstant of STRUCT
-        assert getAccess() == Access.STRUCT;
-        assert this instanceof AccessTypeConstant;
+        assert this instanceof AccessTypeConstant && getAccess() == Access.STRUCT;
 
         // start by copying all the fields and functions from the private type of this
         Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
@@ -4460,7 +4459,7 @@ public abstract class TypeConstant
                     entry.getKey(), entry.getValue(), errs);
             }
 
-        List<Contribution> listProcess = infoMixin.getContributionList();
+        List<Contribution> listProcess = infoSource.getContributionList();
         if (fAddProcess)
             {
             listProcess = new ArrayList<>(listProcess);
@@ -4470,8 +4469,8 @@ public abstract class TypeConstant
 
         // TODO handle mapChildren
         return new TypeInfo(typeTarget, cInvalidations, structBase, 0, false, mapMixinParams, aAnnoClass,
-                infoMixin.getExtends(), infoMixin.getRebases(), infoMixin.getInto(),
-                listProcess, infoMixin.getClassChain(), infoMixin.getDefaultChain(),
+                infoSource.getExtends(), infoSource.getRebases(), infoSource.getInto(),
+                listProcess, infoSource.getClassChain(), infoSource.getDefaultChain(),
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 Progress.Complete);
         }

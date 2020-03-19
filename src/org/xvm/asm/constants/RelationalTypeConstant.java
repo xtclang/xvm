@@ -477,9 +477,49 @@ public abstract class RelationalTypeConstant
         TypeInfo  info1   = m_constType1.ensureTypeInfoInternal(errs);
         TypeInfo  info2   = m_constType2.ensureTypeInfoInternal(errs);
 
-        return info1 == null || info2 == null
-                ? null
-                : mergeTypeInfo(info1, info2, cInvals, errs);
+        if (info1 == null && info2 == null)
+            {
+            return null;
+            }
+
+        if (info1 == null)
+            {
+            return copyIncomplete(info2, cInvals);
+            }
+
+        if (info2 == null)
+            {
+            return copyIncomplete(info1, cInvals);
+            }
+
+        return mergeTypeInfo(info1, info2, cInvals, errs);
+        }
+
+    /**
+     * @return an incomplete TypeInfo based on the passed in info
+     */
+    protected TypeInfo copyIncomplete(TypeInfo info, int cInvals)
+        {
+        return new TypeInfo(this,
+                            cInvals,
+                            null,                   // struct
+                            0,                      // depth
+                            false,                  // synthetic
+                            info.getTypeParams(),
+                            info.getClassAnnotations(),
+                            null,                   // typeExtends
+                            null,                   // typeRebase
+                            null,                   // typeInto
+                            Collections.EMPTY_LIST, // listProcess,
+                            ListMap.EMPTY,          // listmapClassChain
+                            ListMap.EMPTY,          // listmapDefaultChain
+                            info.getProperties(),
+                            info.getMethods(),
+                            Collections.EMPTY_MAP,  // mapVirtProps
+                            Collections.EMPTY_MAP,  // mapVirtMethods
+                            ListMap.EMPTY,          // mapChildren
+                            TypeInfo.Progress.Incomplete
+                            );
         }
 
     /**

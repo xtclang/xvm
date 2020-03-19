@@ -2,98 +2,71 @@ module TestSimple.xqiz.it
     {
     @Inject ecstasy.io.Console console;
 
-    void run( )
+    void run()
         {
         new Container().test();
+        }
+
+    interface Iface
+        {
+        void f();
         }
 
     class Container
         {
         void test()
             {
-            console.println("\nM12:");
-            new TestA12().f();
-
-            console.println("\nM21:");
-            new TestB21().f();
-
-            console.println("\n@M1 @M2 A:");
-            new @M1 @M2 TestA().f();
-
-            console.println("\n@M2 @M1 B:");
-            new @M2 @M1 TestB().f();
+            TestA test = new TestDerivedA();
+            test.f();
+            console.println();
+            test.other();
             }
 
         class TestBase
+                implements Iface
             {
-            public void f()
+            @Override
+            void f()
                 {
-                console.println("TestA:f");
+                console.println("TestBase:f");
                 }
             }
 
+        @M
         class TestA
                 extends TestBase
             {
             @Override
-            public void f()
+            void f()
                 {
                 console.println("TestA:f");
+                super();
                 }
-            }
 
-        class TestB
-                extends TestBase
-            {
-            @Override
-            public void f()
+            void other()
                 {
-                console.println("TestB:f");
+                f();
                 }
             }
 
-        @M1 @M2
-        class TestA12
+        class TestDerivedA
                 extends TestA
             {
             @Override
-            public void f()
+            void f()
                 {
-                console.println("TestA12:f");
+                console.println("TestDA:f");
                 super();
                 }
             }
 
-        @M2 @M1
-        class TestB21
-                extends TestB
+        mixin M
+            into TestA
             {
             @Override
-            public void f()
+            void f()
                 {
-                console.println("TestB21:f");
-                super();
-                }
-            }
-
-        mixin M1
-            into (TestA | TestB)
-            {
-            @Override
-            public void f()
-                {
-                console.println("M1:f");
-                super();
-                }
-            }
-
-        mixin M2
-            into (TestA | TestB)
-            {
-            @Override
-            public void f()
-                {
-                console.println("M2:f");
+                console.println("M:f");
                 super();
                 }
             }

@@ -262,8 +262,8 @@ public class AnnotatedTypeConstant
         ConstantPool     pool           = getConstantPool();
         int              cInvals        = pool.getInvalidationCount();
         List<Annotation> listClassAnnos = new ArrayList<>();
-        List<Annotation> listAnnos      = new ArrayList<>();
-        TypeConstant     typeBase       = extractAnnotation(listClassAnnos, listAnnos, errs);
+        List<Annotation> listMixinAnnos = new ArrayList<>();
+        TypeConstant     typeBase       = extractAnnotation(listClassAnnos, listMixinAnnos, errs);
 
         if (typeBase == null)
             {
@@ -274,7 +274,7 @@ public class AnnotatedTypeConstant
         Annotation[] aAnnoClass      = listClassAnnos.toArray(Annotation.NO_ANNOTATIONS);
         TypeConstant typePrivateBase = pool.ensureAccessTypeConstant(typeBase, Access.PRIVATE);
 
-        if (listAnnos.isEmpty())
+        if (listMixinAnnos.isEmpty())
             {
             // there are no other annotations except the "into Class" tags
             assert aAnnoClass.length > 0;
@@ -292,7 +292,7 @@ public class AnnotatedTypeConstant
             }
 
         TypeConstant typeTarget = pool.ensureAccessTypeConstant(this, Access.PRIVATE);
-        Annotation[] aAnnoMixin = listAnnos.toArray(Annotation.NO_ANNOTATIONS);
+        Annotation[] aAnnoMixin = listMixinAnnos.toArray(Annotation.NO_ANNOTATIONS);
 
         return typeTarget.layerOnAnnotations(idBase, struct, infoBase, aAnnoMixin, aAnnoClass, cInvals, errs);
         }
@@ -309,7 +309,7 @@ public class AnnotatedTypeConstant
      * @return the first underlying type that follows extracted annotations
      */
     private TypeConstant extractAnnotation(List<Annotation> listClassAnnos,
-                                           List<Annotation> listAnnos,
+                                           List<Annotation> listMixinAnnos,
                                            ErrorListener    errs)
         {
         List<Constant> listAnnoClz = new ArrayList<>();
@@ -374,7 +374,7 @@ public class AnnotatedTypeConstant
                                 typeMixin.getValueString(),
                                 typeInto.getValueString());
                             }
-                        listAnnos.add(annotation);
+                        listMixinAnnos.add(annotation);
                         }
 
                     listAnnoClz.add(typeAnno.getAnnotation().getAnnotationClass());
