@@ -5,8 +5,15 @@ import fs.FileStore;
 import fs.Path;
 
 /**
-* The Container service.
-*/
+ * The Container service.
+ *
+ * Notes:
+ * 1. Secure container (no shared singleton services)
+ * 2. Lightweight container (all modules from the parent container are shared)
+ *    - e.g. load some additional trusted code that you generated on the fly, Excel formula
+ * 3. Debugger as a parent container
+ *
+ */
 service Container
     {
     // ----- constructors --------------------------------------------------------------------------
