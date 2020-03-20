@@ -517,7 +517,8 @@ public class IntersectionTypeConstant
             return Collections.EMPTY_MAP;
             }
 
-        Map<MethodConstant, MethodInfo> map = new HashMap<>();
+        Map<MethodConstant, MethodInfo> mapMerged = new HashMap<>();
+        Map<MethodConstant, MethodInfo> mapCapped = new HashMap<>();
 
         NextEntry:
         for (Map.Entry<SignatureConstant, MethodInfo> entry : info1.ensureMethodsBySignature().entrySet())
@@ -534,7 +535,12 @@ public class IntersectionTypeConstant
                 if (method1.equals(method2))
                     {
                     // trivial "equality" scenario
-                    map.put(method1.getIdentity(), method1);
+                    mapMerged.put(method1.getIdentity(), method1);
+
+                    if (method1.isCapped())
+                        {
+                        mapCapped.put(method1.getIdentity(), info1.getNarrowingMethod(method1));
+                        }
                     continue;
                     }
 
@@ -550,7 +556,14 @@ public class IntersectionTypeConstant
                         {
                         if (body2.getIdentity().equals(id1))
                             {
-                            map.put(id1, new MethodInfo(Arrays.copyOfRange(abody1, i1, c1)));
+                            MethodInfo methodBase = new MethodInfo(Arrays.copyOfRange(abody1, i1, c1));
+                            mapMerged.put(id1, methodBase);
+                            if (methodBase.isCapped())
+                                {
+                                mapCapped.put(methodBase.getIdentity(),
+                                        info1.getNarrowingMethod(methodBase));
+                                }
+
                             continue NextEntry;
                             }
                         }
@@ -564,16 +577,41 @@ public class IntersectionTypeConstant
                     {
                     if (f1)
                         {
-                        map.put(method1.getIdentity(), method1);
+                        mapMerged.put(method1.getIdentity(), method1);
+                        if (method1.isCapped())
+                            {
+                            mapCapped.put(method1.getIdentity(), info1.getNarrowingMethod(method1));
+                            }
                         }
                     else
                         {
-                        map.put(method2.getIdentity(), method2);
+                        mapMerged.put(method2.getIdentity(), method2);
+                        if (method2.isCapped())
+                            {
+                            mapCapped.put(method2.getIdentity(), info2.getNarrowingMethod(method2));
+                            }
                         }
                     }
                 }
             }
-        return map;
+
+        if (!mapCapped.isEmpty())
+            {
+            // make sure that for all capped method, the corresponding narrowing methods
+            // made it; otherwise remove the capped one
+            for (Map.Entry<MethodConstant, MethodInfo> entry : mapCapped.entrySet())
+                {
+                MethodConstant idCapped        = entry.getKey();
+                MethodInfo     methodNarrowing = entry.getValue();
+                MethodConstant idNarrowing     = methodNarrowing.getIdentity();
+
+                if (!mapMerged.containsKey(idNarrowing))
+                    {
+                    mapMerged.remove(idCapped);
+                    }
+                }
+            }
+        return mapMerged;
         }
 
 

@@ -551,6 +551,7 @@ class ObjectInputStream(Schema schema, Parser parser)
      * The ElementInputStream is an implementation of [ElementInput] that represents the reading
      * of a single value (which in turn may be an array or object).
      */
+    @PeekAhead
     class ElementInputStream<ParentInput extends AnyStream?>
             extends DocInputStream<ParentInput>
             implements ElementInput<ParentInput>
@@ -697,6 +698,7 @@ class ObjectInputStream(Schema schema, Parser parser)
      * a sequence of values into a JSON array (each of which may in turn be a single JSON value, or
      * an array, or an object).
      */
+    @PeekAhead
     class ArrayInputStream<ParentInput extends AnyStream?>
             extends DocInputStream<ParentInput>
             implements ElementInput<ParentInput>
@@ -839,7 +841,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         /**
          * A singleton used to indicate that there is no peek-ahead undo marker.
          */
-        enum FakeMark {NotPeeking} // TODO GG - I want to make this private
+        private enum FakeMark {NotPeeking}
 
         /**
          * This is the parser mark to undo any impact that this stream has, if this stream is used
@@ -1160,53 +1162,59 @@ class ObjectInputStream(Schema schema, Parser parser)
 
     /**
      * Adds peek-ahead support for metadata to the ElementInput implementations.
-     * TODO GG - waiting on fixes
      */
     mixin PeekAhead
             into (ElementInputStream | ArrayInputStream)
         {
-//        @Override
-//        FieldInputStream<PeekAhead> openObject(Boolean peekAhead=False)
-//            {
-//            DocInputStream<>? current = this.ObjectInputStream.current;
-//            if (current.is(FieldInputStream)
-//                    && current.peekingAhead
-//                    && &this == current.&parent)
-//                {
-//                if (!peekAhead)
-//                    {
-//                    current.peekingAhead = False;
-//                    }
-//
-//                return current.as(FieldInputStream<PeekAhead>);
-//                }
-//
-//            return super();
-//            }
-//
-//        @Override
-//        Doc metadataFor(String attribute, Boolean peekAhead=False)
-//            {
-//            DocInputStream<>? current = this.ObjectInputStream.current;
-//            if (schema.enableMetadata)
-//                {
-//                if (&current == &this)
-//                    {
-//                    if (parser.peek().id == ObjectEnter)
-//                        {
-//                        return openObject(peekAhead=True).metadataFor(attribute);
-//                        }
-//                    }
-//                else if (current.is(FieldInputStream)
-//                        && current.peekingAhead
-//                        && &this == current.&parent)
-//                    {
-//                    return current.metadataFor(attribute);
-//                    }
-//                }
-//
-//            return super(attribute, peekAhead);
-//            }
+        @Override
+        FieldInputStream<ElementInput<ParentInput>> openObject(Boolean peekAhead=False)
+            {
+            @Inject Console console;
+            console.println($"PeekAhead: openObject; peekAhead={peekAhead}");
+            DocInputStream<>? current = this.ObjectInputStream.current;
+            if (current.is(FieldInputStream)
+                    && current.peekingAhead
+                    && &this == current.&parent)
+                {
+                if (!peekAhead)
+                    {
+                    current.peekingAhead = False;
+                    }
+
+                return current.as(FieldInputStream<ElementInput<ParentInput>>);
+                }
+            return super(peekAhead);
+            }
+
+        @Override
+        Doc metadataFor(String attribute, Boolean peekAhead=False)
+            {
+            @Inject Console console;
+            console.println($"PeekAhead: metadataFor; peekAhead={peekAhead}");
+            DocInputStream<>? current = this.ObjectInputStream.current;
+            if (schema.enableMetadata)
+                {
+                if (&current == &this)
+                    {
+                    if (parser.peek().id == ObjectEnter)
+                        {
+                        // TODO GG: how to make the inference for the "else"?
+                        // TODO GG: openObject() on "this" is not called
+                        return this.is(ElementInputStream)
+                                ? this.as(ElementInputStream).openObject(peekAhead=True).metadataFor(attribute)
+                                : this.as(ArrayInputStream  ).openObject(peekAhead=True).metadataFor(attribute);
+                        }
+                    }
+                else if (current.is(FieldInputStream)
+                        && current.peekingAhead
+                        && &this == current.&parent)
+                    {
+                    return current.metadataFor(attribute);
+                    }
+                }
+
+            return super(attribute, peekAhead);
+            }
         }
 
 
