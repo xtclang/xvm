@@ -1384,7 +1384,10 @@ public class TerminalTypeConstant
                     {
                     typeConstraint = typeConstraint.resolveAutoNarrowingBase();
                     }
-                return new TypeInfo(this, typeConstraint.ensureTypeInfoInternal(errs), cInvalidations);
+                TypeInfo infoConstraint = typeConstraint.ensureTypeInfoInternal(errs);
+                return isComplete(infoConstraint)
+                        ? new TypeInfo(this, infoConstraint, cInvalidations)
+                        : null;
                 }
 
             case ThisClass:

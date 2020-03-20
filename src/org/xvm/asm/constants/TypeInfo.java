@@ -1953,7 +1953,7 @@ public class TypeInfo
         for (int i = 0; i < 32; i++)
             {
             methodCapped = getMethodByNestedId(nidNarrowing);
-            if (!methodCapped.isCapped())
+            if (methodCapped == null || !methodCapped.isCapped())
                 {
                 break;
                 }
@@ -2336,7 +2336,7 @@ public class TypeInfo
 
         public Progress worstOf(Progress that)
             {
-            return this.ordinal() < that.ordinal() ? that : this;
+            return this.ordinal() > that.ordinal() ? that : this;
             }
         }
 

@@ -1393,7 +1393,7 @@ public abstract class TypeConstant
      *
      * @return true iff the passed TypeInfo is non-null, not the place-holder, and not incomplete
      */
-    private static boolean isComplete(TypeInfo info)
+    public static boolean isComplete(TypeInfo info)
         {
         return rankTypeInfo(info) == 3;
         }
@@ -1619,9 +1619,9 @@ public abstract class TypeConstant
 
             if (infoMixin == null)
                 {
-                // we are always called with an incomplete info when building an annotated class
+                // we are always called with an incomplete infoBase when building an annotated class
                 // (e.g. @M1 @M2 class TestM {}), rather than a run-time annotated type
-                // (e.g. new @M1 @M2 Test()), so it's permissible to return if the mixin info
+                // (e.g. new @M1 @M2 Test()), so it's permissible to return it if the mixin info
                 // cannot yet be calculated at this time
                 return isComplete(infoBase) ? null : infoBase;
                 }
@@ -1657,7 +1657,7 @@ public abstract class TypeConstant
         int          cInvals = pool.getInvalidationCount();
         TypeInfo     infoPri = pool.ensureAccessTypeConstant(getUnderlyingType(), Access.PRIVATE)
                                .ensureTypeInfoInternal(errs);
-        if (infoPri == null)
+        if (!isComplete(infoPri))
             {
             return null;
             }
@@ -2453,7 +2453,7 @@ public abstract class TypeConstant
                     TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved
                     TypeInfo     infoContrib = typeContrib.ensureTypeInfoInternal(errs);
 
-                    if (infoContrib == null)
+                    if (!isComplete(infoContrib))
                         {
                         // skip this one (it has been deferred); an "into" represents a "right to
                         // left" resolution (from mixin to class), which presents a potential
@@ -2461,7 +2461,10 @@ public abstract class TypeConstant
                         // deferred (requiring a retry) iff the resolution is moving left to right
                         fIncomplete = compContrib != Composition.Into;
                         errs        = ErrorListener.BLACKHOLE;
-                        break;
+                        if (infoContrib == null)
+                            {
+                            break;
+                            }
                         }
 
                     if (compContrib != Composition.Into)
@@ -2649,11 +2652,15 @@ public abstract class TypeConstant
             else
                 {
                 TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
-                if (infoContrib == null)
+                if (!isComplete(infoContrib))
                     {
-                    fIncomplete = true;
-                    errs        = ErrorListener.BLACKHOLE;
-                    continue;
+                    errs = ErrorListener.BLACKHOLE;
+                    if (infoContrib == null)
+                        {
+                        fIncomplete = true;
+                        continue;
+                        }
+                    fIncomplete = composition != Composition.Into;
                     }
 
                 switch (composition)
