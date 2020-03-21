@@ -2180,13 +2180,16 @@ public class TypeCompositionStatement
                 Map<String, Expression> mapNamedExpr = extractNamedArgs(listArgs, errs);
                 if (mapNamedExpr == null)
                     {
-                    fValid = false;
+                    return;
                     }
-                else
-                    {
-                    MethodStructure constructorSuper = (MethodStructure) idSuper.getComponent();
 
-                    listArgs = rearrangeNamedArgs(constructorSuper, listArgs, mapNamedExpr);
+                MethodStructure constructorSuper = (MethodStructure) idSuper.getComponent();
+
+                listArgs = rearrangeNamedArgs(constructorSuper, listArgs, mapNamedExpr, errs);
+                if (listArgs == null)
+                    {
+                    // invalid names encountered
+                    return;
                     }
                 }
 

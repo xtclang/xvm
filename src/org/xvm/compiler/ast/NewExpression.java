@@ -666,7 +666,11 @@ public class NewExpression
                         else
                             {
                             args = listArgs =
-                                    rearrangeNamedArgs(constructor, listArgs, mapNamedExpr);
+                                    rearrangeNamedArgs(constructor, listArgs, mapNamedExpr, errs);
+                            if (listArgs == null)
+                                {
+                                fValid = false;
+                                }
                             }
                         }
 

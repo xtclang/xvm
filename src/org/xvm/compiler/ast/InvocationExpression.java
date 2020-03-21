@@ -700,7 +700,12 @@ public class InvocationExpression
                     }
 
                 assert argMethod instanceof MethodConstant;
-                args = rearrangeNamedArgs(m_method, args, mapNamedExpr);
+                args = rearrangeNamedArgs(m_method, args, mapNamedExpr, errs);
+                if (args == null)
+                    {
+                    // invalid names encountered
+                    break Validate;
+                    }
                 }
 
             // when the expression is a name, and it is NOT a ".name", then we have to

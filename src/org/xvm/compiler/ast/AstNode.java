@@ -1243,8 +1243,14 @@ public abstract class AstNode
             if (cNamed > 0)
                 {
                 // insert the named expressions to the list of expressions in the correct position
-                listExprArgs = rearrangeNamedArgs(method, listExprArgs, mapNamedExpr);
-                cArgs        = listExprArgs.size();
+                listExprArgs = rearrangeNamedArgs(method, listExprArgs, mapNamedExpr, errsTemp);
+                if (listExprArgs == null)
+                    {
+                    // invalid name encountered
+                    errsKeep = errsTemp;
+                    continue;
+                    }
+                cArgs = listExprArgs.size();
 
                 if (fCall)
                     {
@@ -1439,11 +1445,13 @@ public abstract class AstNode
      * a {@link NonBindingExpression}s.
      *
      * @return a rearranged list of expression that matches the method's parameters
+     *         or null if an error has been reported
      */
     protected List<Expression> rearrangeNamedArgs(
             MethodStructure         method,
             List<Expression>        listExprArgs,
-            Map<String, Expression> mapNamedExpr)
+            Map<String, Expression> mapNamedExpr,
+            ErrorListener           errs)
         {
         int cParams  = method.getVisibleParamCount();
         int cArgs    = listExprArgs.size();
@@ -1460,12 +1468,17 @@ public abstract class AstNode
 
         for (String sName : mapNamedExpr.keySet())
             {
-            Expression exprArg = mapNamedExpr.get(sName);
-            int        iParam  = method.getParam(sName).getIndex();
+            org.xvm.asm.Parameter param = method.getParam(sName);
+            if (param == null)
+                {
+                log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+                return null;
+                }
+            int iParam = param.getIndex();
 
             // if a named arg overrides an unnamed (required), we'll null it out to generate
             // an error later
-            aexpr[iParam] = iParam >= cUnnamed ? exprArg : null;
+            aexpr[iParam] = iParam >= cUnnamed ? mapNamedExpr.get(sName) : null;
             }
 
         // replace non-specified "holes" with NonBindingExpressions

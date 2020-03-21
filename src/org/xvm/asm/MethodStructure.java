@@ -436,7 +436,7 @@ public class MethodStructure
     public Parameter getParam(String sName)
         {
         Parameter[] aParam = m_aParams;
-        for (int i= 0, c = aParam.length; i < c; i++)
+        for (int i = 0, c = aParam.length; i < c; i++)
             {
             Parameter param = aParam[i];
             if (param.getName().equals(sName))
