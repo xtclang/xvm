@@ -286,9 +286,9 @@ public class AnnotatedTypeConstant
 
         TypeInfo infoBase = typePrivateBase.buildBaseTypeInfoImpl(
                     idBase, struct, Annotation.NO_ANNOTATIONS, cInvals, true, errs);
-        if (infoBase == null)
+        if (!isComplete(infoBase))
             {
-            return null;
+            return infoBase;
             }
 
         TypeConstant typeTarget = pool.ensureAccessTypeConstant(this, Access.PRIVATE);

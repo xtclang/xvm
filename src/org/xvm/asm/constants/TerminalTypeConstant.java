@@ -1387,7 +1387,7 @@ public class TerminalTypeConstant
                 TypeInfo infoConstraint = typeConstraint.ensureTypeInfoInternal(errs);
                 return isComplete(infoConstraint)
                         ? new TypeInfo(this, infoConstraint, cInvalidations)
-                        : null;
+                        : infoConstraint;
                 }
 
             case ThisClass:

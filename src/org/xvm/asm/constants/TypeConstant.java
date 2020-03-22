@@ -1193,59 +1193,75 @@ public abstract class TypeConstant
             {
             // build the TypeInfo for this type
             info = buildTypeInfo(errs);
+
+            // info here can't be null, because we should be at the "zero level"; in other words, anyone
+            // who calls ensureTypeInfo() should get a usable result, because nothing is already on the
+            // stack blocking it from finishing correctly (which is why we can't use ensureTypeInfo()
+            // ourselves within this process of creating type infos)
+            if (info == null)
+                {
+                throw new IllegalStateException("Failure to produce a TypeInfo for "
+                        + this + "; deferred types=" + takeDeferredTypeInfo());
+                }
+
+            setTypeInfo(info);
+
+            for (int cDeferredPrev = 0, iTry = 0; hasDeferredTypeInfo(); iTry++)
+                {
+                // any downstream TypeInfo that could not be completed during the building of
+                // this TypeInfo is considered to be "deferred", but now that we've built
+                // something (even if it isn't complete), we should be able to complete the
+                // deferred TypeInfo building in a couple of iterations
+                List<TypeConstant> listDeferred = takeDeferredTypeInfo();
+                int                cDeferred    = listDeferred.size();
+                if (iTry > 2 && cDeferred >= cDeferredPrev)
+                    {
+                    throw new IllegalStateException("Failure to make progress on a TypeInfo for "
+                            + this + "; deferred types=" + listDeferred);
+                    }
+                cDeferredPrev = cDeferred;
+
+                for (TypeConstant typeDeferred : listDeferred)
+                    {
+                    if (typeDeferred != this)
+                        {
+                        // if there's something wrong with this logic, we'll end up with infinite
+                        // recursion, so be very careful about what can allow a TypeInfo to be built
+                        // "incomplete" (it needs to be impossible to rebuild a TypeInfo and have it
+                        // be incomplete for the second time)
+                        if (++m_cRecursiveDepth > 2)
+                            {
+                            // an infinite loop
+                            throw new IllegalStateException("Infinite loop while producing a TypeInfo for "
+                                    + this + "; deferred type=" + typeDeferred);
+                            }
+                        if (typeDeferred.getConstantPool() != pool)
+                            {
+                            typeDeferred = (TypeConstant) pool.register(typeDeferred);
+                            }
+
+                        TypeInfo infoDeferred = typeDeferred.buildTypeInfo(errs);
+                        if (isComplete(infoDeferred) && !errs.hasSeriousErrors())
+                            {
+                            typeDeferred.setTypeInfo(infoDeferred);
+                            }
+                        --m_cRecursiveDepth;
+                        }
+                    }
+
+                // now that all deferred types are done building, rebuild this if necessary
+                if (!isComplete(info))
+                    {
+                    info = buildTypeInfo(errs);
+                    setTypeInfo(info);
+                    }
+                }
             }
         catch (Exception | Error e)
             {
             // clean up the deferred types
             takeDeferredTypeInfo();
             throw e;
-            }
-
-        // info here can't be null, because we should be at the "zero level"; in other words, anyone
-        // who calls ensureTypeInfo() should get a usable result, because nothing is already on the
-        // stack blocking it from finishing correctly (which is why we can't use ensureTypeInfo()
-        // ourselves within this process of creating type infos)
-        if (info == null)
-            {
-            throw new IllegalStateException("Failure to produce a TypeInfo for "
-                    + this + "; deferred types=" + takeDeferredTypeInfo());
-            }
-
-        setTypeInfo(info);
-
-        if (hasDeferredTypeInfo())
-            {
-            // any downstream TypeInfo that could not be completed during the building of
-            // this TypeInfo is considered to be "deferred", but now that we've built
-            // something (even if it isn't complete), we should be able to complete the
-            // deferred TypeInfo building
-            for (TypeConstant typeDeferred : takeDeferredTypeInfo())
-                {
-                if (typeDeferred != this)
-                    {
-                    // if there's something wrong with this logic, we'll end up with infinite
-                    // recursion, so be very careful about what can allow a TypeInfo to be built
-                    // "incomplete" (it needs to be impossible to rebuild a TypeInfo and have it
-                    // be incomplete for the second time)
-                    if (++m_cRecursiveDepth > 2)
-                        {
-                        // an infinite loop
-                        throw new IllegalStateException("Infinite loop while producing a TypeInfo for "
-                                + this + "; deferred type=" + typeDeferred);
-                        }
-                    TypeInfo infoDeferred = typeDeferred.ensureTypeInfo(errs);
-                    --m_cRecursiveDepth;
-                    assert infoDeferred.getProgress() == Progress.Complete;
-                    }
-                }
-            }
-
-        // now that all those other deferred types are done building, rebuild this if necessary
-        if (!isComplete(info))
-            {
-            info = buildTypeInfo(errs);
-            assert isComplete(info);
-            setTypeInfo(info);
             }
 
         if (errs.hasSeriousErrors())
@@ -1280,7 +1296,7 @@ public abstract class TypeConstant
             return null;
             }
 
-        if (info == null || !isUpToDate(info))
+        if (!isComplete(info) || !isUpToDate(info))
             {
             setTypeInfo(getConstantPool().infoPlaceholder());
             info = buildTypeInfo(errs);
@@ -1577,7 +1593,8 @@ public abstract class TypeConstant
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren, errs);
 
         // validate the type parameters against the properties
-        checkTypeParameterProperties(mapTypeParams, mapVirtProps, errs);
+        checkTypeParameterProperties(mapTypeParams, mapVirtProps,
+            fComplete ? errs : ErrorListener.BLACKHOLE);
 
         TypeInfo info = new TypeInfo(this, cInvalidations, struct, 0, false, mapTypeParams,
             aAnnoClass, typeExtends, typeRebase, typeInto,
@@ -1626,6 +1643,10 @@ public abstract class TypeConstant
                 return isComplete(infoBase) ? null : infoBase;
                 }
 
+            // even if infoMixin is incomplete, it's only incomplete because it lacks information
+            // about the "into" type (which is probably this type), so the assumption is that
+            // it has enough information about itself to be used for layering logic
+
             infoNext = typeNext.mergeMixinTypeInfo(this, cInvalidations, constId,
                     struct, infoNext, infoMixin,
                     i == 0 ? aAnnoClass : Annotation.NO_ANNOTATIONS, /*fAddProcess*/ true, errs);
@@ -1659,7 +1680,7 @@ public abstract class TypeConstant
                                .ensureTypeInfoInternal(errs);
         if (!isComplete(infoPri))
             {
-            return null;
+            return infoPri;
             }
 
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoPri.getProperties().entrySet())
@@ -1715,11 +1736,7 @@ public abstract class TypeConstant
                         }
 
                     TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
-                    if (infoContrib == null)
-                        {
-                        fIncomplete = true;
-                        }
-                    else
+                    if (isComplete(infoContrib))
                         {
                         for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getProperties().entrySet())
                             {
@@ -1751,8 +1768,12 @@ public abstract class TypeConstant
                             mapMethods.putIfAbsent(entry.getKey(), method);
                             }
                         }
-                    }
+                    else
+                        {
+                        fIncomplete = true;
+                        }
                     break;
+                    }
                 }
             }
 
@@ -2455,16 +2476,9 @@ public abstract class TypeConstant
 
                     if (!isComplete(infoContrib))
                         {
-                        // skip this one (it has been deferred); an "into" represents a "right to
-                        // left" resolution (from mixin to class), which presents a potential
-                        // infinite cycle if we consider it to be incomplete; only consider it
-                        // deferred (requiring a retry) iff the resolution is moving left to right
-                        fIncomplete = compContrib != Composition.Into;
+                        fIncomplete = true;
                         errs        = ErrorListener.BLACKHOLE;
-                        if (infoContrib == null)
-                            {
-                            break;
-                            }
+                        break;
                         }
 
                     if (compContrib != Composition.Into)
@@ -2654,13 +2668,9 @@ public abstract class TypeConstant
                 TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
                 if (!isComplete(infoContrib))
                     {
-                    errs = ErrorListener.BLACKHOLE;
-                    if (infoContrib == null)
-                        {
-                        fIncomplete = true;
-                        continue;
-                        }
-                    fIncomplete = composition != Composition.Into;
+                    fIncomplete = true;
+                    errs        = ErrorListener.BLACKHOLE;
+                    continue;
                     }
 
                 switch (composition)
@@ -2898,14 +2908,14 @@ public abstract class TypeConstant
             infoInto = typeInto.ensureTypeInfoInternal(errs);
             }
 
-        if (infoInto == null)
-            {
-            fComplete = false;
-            }
-        else
+        if (isComplete(infoInto))
             {
             nestAndLayerOn(constId, idProp, mapProps, mapVirtProps, mapMethods,
                 mapVirtMethods, typeInto, infoInto, errs);
+            }
+        else
+            {
+            fComplete = false;
             }
 
         // layer on any annotations, if any
