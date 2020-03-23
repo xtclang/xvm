@@ -382,7 +382,7 @@ const Schema
 
 
         // ----- properties ------------------------------------------------------------------------
-        
+
         /**
          * A lookup cache from Ecstasy type to JSON Mapping.
          */

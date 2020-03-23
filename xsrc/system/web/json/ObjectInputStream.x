@@ -116,7 +116,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         }
 
 
-    // ----- ObjectInput implementation -----------------------------------------------------------
+    // ----- ObjectInput implementation ------------------------------------------------------------
 
     @Override
     <ObjectType> ObjectType read<ObjectType>()
@@ -134,13 +134,13 @@ class ObjectInputStream(Schema schema, Parser parser)
         }
 
 
-    // ----- DocInputStream -----------------------------------------------------------------------
+    // ----- DocInputStream ------------------------------------------------------------------------
 
     /**
      * The ObjectInputStream uses three specific JSON stream implementations internally to dissect
      * a stream of JSON tokens into the desired corresponding Ecstasy types, values, and structures.
      */
-    typedef ElementInputStream | ArrayInputStream | FieldInputStream AnyStream;
+    typedef PeekableElementInput | FieldInputStream AnyStream;
 
     /**
      * Base virtual child implementation for the various DocInput / ElementInput / FieldInput
@@ -545,7 +545,27 @@ class ObjectInputStream(Schema schema, Parser parser)
         }
 
 
-    // ----- ElementInputStream -------------------------------------------------------------------
+    // ----- PeekableElementInput ------------------------------------------------------------------
+
+    /**
+     * The PeekableElementInput is an abstract base class for [ElementInput] that supports efficient
+     * peek-ahead for metadata.
+     */
+    class PeekableElementInput<ParentInput extends AnyStream?>
+            extends DocInputStream<ParentInput>
+            implements ElementInput<ParentInput>
+        {
+        construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
+            {
+            construct DocInputStream(parent, id, tokens);
+            }
+
+        @Override
+        FieldInputStream<PeekableElementInput> openObject(Boolean peekAhead=False);
+        }
+
+
+    // ----- ElementInputStream --------------------------------------------------------------------
 
     /**
      * The ElementInputStream is an implementation of [ElementInput] that represents the reading
@@ -553,12 +573,12 @@ class ObjectInputStream(Schema schema, Parser parser)
      */
     @PeekAhead
     class ElementInputStream<ParentInput extends AnyStream?>
-            extends DocInputStream<ParentInput>
+            extends PeekableElementInput<ParentInput>
             implements ElementInput<ParentInput>
         {
         construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
             {
-            construct DocInputStream(parent, id, tokens);
+            construct PeekableElementInput(parent, id, tokens);
             }
 
         @Override
@@ -580,46 +600,9 @@ class ObjectInputStream(Schema schema, Parser parser)
         @Override
         FieldInputStream<ElementInputStream> openObject(Boolean peekAhead=False)
             {
-            DocInputStream<>? current = this.ObjectInputStream.current;
-            if (current.is(FieldInputStream)
-                    && current.peekingAhead
-                    && &this == current.&parent)
-                {
-                if (!peekAhead)
-                    {
-                    current.peekingAhead = False;
-                    }
-
-                return current.as(FieldInputStream<ElementInputStream>);
-                }
-
             prepareRead();
             canRead = False;
             return new @CloseCap FieldInputStream(this, peekingAhead=peekAhead);
-            }
-
-        @Override
-        Doc metadataFor(String attribute, Boolean peekAhead=False)
-            {
-            DocInputStream<>? current = this.ObjectInputStream.current;
-            if (peekAhead && schema.enableMetadata)
-                {
-                if (&current == &this)
-                    {
-                    if (parser.peek().id == ObjectEnter)
-                        {
-                        return openObject(peekAhead=True).metadataFor(attribute);
-                        }
-                    }
-                else if (current.is(FieldInputStream)
-                        && current.peekingAhead
-                        && &this == current.&parent)
-                    {
-                    return current.metadataFor(attribute);
-                    }
-                }
-
-            return super(attribute, peekAhead);
             }
 
         @Override
@@ -691,7 +674,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         }
 
 
-    // ----- ArrayInputStream ---------------------------------------------------------------------
+    // ----- ArrayInputStream ----------------------------------------------------------------------
 
     /**
      * The ArrayInputStream is an implementation of [ElementInput] that represents the reading of
@@ -700,12 +683,12 @@ class ObjectInputStream(Schema schema, Parser parser)
      */
     @PeekAhead
     class ArrayInputStream<ParentInput extends AnyStream?>
-            extends DocInputStream<ParentInput>
+            extends PeekableElementInput<ParentInput>
             implements ElementInput<ParentInput>
         {
         construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
             {
-            construct DocInputStream(parent, id, tokens);
+            construct PeekableElementInput(parent, id, tokens);
             parser.expect(ArrayEnter);
             }
 
@@ -732,45 +715,8 @@ class ObjectInputStream(Schema schema, Parser parser)
         @Override
         FieldInputStream<ArrayInputStream> openObject(Boolean peekAhead=False)
             {
-            DocInputStream<>? current = this.ObjectInputStream.current;
-            if (current.is(FieldInputStream)
-                    && current.peekingAhead
-                    && &this == current.&parent)
-                {
-                if (!peekAhead)
-                    {
-                    current.peekingAhead = False;
-                    }
-
-                return current.as(FieldInputStream<ArrayInputStream>);
-                }
-
             prepareRead();
             return new @CloseCap FieldInputStream(this, count, peekingAhead=peekAhead);
-            }
-
-        @Override
-        Doc metadataFor(String attribute, Boolean peekAhead=False)
-            {
-            DocInputStream<>? current = this.ObjectInputStream.current;
-            if (peekAhead && schema.enableMetadata)
-                {
-                if (&current == &this)
-                    {
-                    if (parser.peek().id == ObjectEnter)
-                        {
-                        return openObject(peekAhead=True).metadataFor(attribute);
-                        }
-                    }
-                else if (current.is(FieldInputStream)
-                        && current.peekingAhead
-                        && &this == current.&parent)
-                    {
-                    return current.metadataFor(attribute);
-                    }
-                }
-
-            return super(attribute, peekAhead);
             }
 
         @Override
@@ -815,7 +761,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         }
 
 
-    // ----- FieldInputStream ---------------------------------------------------------------------
+    // ----- FieldInputStream ----------------------------------------------------------------------
 
     /**
      * The FieldInputStream is an implementation of [FieldInput] that represents the reading of
@@ -1163,14 +1109,12 @@ class ObjectInputStream(Schema schema, Parser parser)
     /**
      * Adds peek-ahead support for metadata to the ElementInput implementations.
      */
-    mixin PeekAhead
-            into (ElementInputStream | ArrayInputStream)
+    mixin PeekAhead<ParentInput extends AnyStream?> // TODO GG remove parameters
+            into PeekableElementInput<ParentInput>
         {
         @Override
-        FieldInputStream<ElementInput<ParentInput>> openObject(Boolean peekAhead=False)
+        FieldInputStream<PeekAhead<ParentInput>> openObject(Boolean peekAhead=False)        // TODO GG get rid of <ParentInput>
             {
-            @Inject Console console;
-            console.println($"PeekAhead: openObject; peekAhead={peekAhead}");
             DocInputStream<>? current = this.ObjectInputStream.current;
             if (current.is(FieldInputStream)
                     && current.peekingAhead
@@ -1181,28 +1125,23 @@ class ObjectInputStream(Schema schema, Parser parser)
                     current.peekingAhead = False;
                     }
 
-                return current.as(FieldInputStream<ElementInput<ParentInput>>);
+                return current.as(FieldInputStream<PeekAhead>);
                 }
+
             return super(peekAhead);
             }
 
         @Override
         Doc metadataFor(String attribute, Boolean peekAhead=False)
             {
-            @Inject Console console;
-            console.println($"PeekAhead: metadataFor; peekAhead={peekAhead}");
             DocInputStream<>? current = this.ObjectInputStream.current;
-            if (schema.enableMetadata)
+            if (peekAhead && schema.enableMetadata)
                 {
                 if (&current == &this)
                     {
                     if (parser.peek().id == ObjectEnter)
                         {
-                        // TODO GG: how to make the inference for the "else"?
-                        // TODO GG: openObject() on "this" is not called
-                        return this.is(ElementInputStream)
-                                ? this.as(ElementInputStream).openObject(peekAhead=True).metadataFor(attribute)
-                                : this.as(ArrayInputStream  ).openObject(peekAhead=True).metadataFor(attribute);
+                        return openObject(peekAhead=True).metadataFor(attribute);
                         }
                     }
                 else if (current.is(FieldInputStream)
@@ -1224,8 +1163,9 @@ class ObjectInputStream(Schema schema, Parser parser)
      * Adds pointer-peeking and de-referencing to the object-read operations on the [ElementInput]
      * implementations.
      */
-    mixin PointerAware
-            into (ElementInputStream | ArrayInputStream)
+    mixin PointerAware<ParentInput extends AnyStream?> // TODO GG remove parameters
+//            into (ElementInputStream | ArrayInputStream)
+            into PeekableElementInput<ParentInput>
         {
         /**
          * To avoid multiple peek-aheads for a pointer on a single read, this flag is used to track
