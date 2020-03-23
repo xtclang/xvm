@@ -274,6 +274,12 @@ public class AnnotatedTypeConstant
         Annotation[] aAnnoClass      = listClassAnnos.toArray(Annotation.NO_ANNOTATIONS);
         TypeConstant typePrivateBase = pool.ensureAccessTypeConstant(typeBase, Access.PRIVATE);
 
+        TypeInfo infoBase = typePrivateBase.ensureTypeInfoInternal(errs);
+        if (!isComplete(infoBase))
+            {
+            return infoBase;
+            }
+
         if (listMixinAnnos.isEmpty())
             {
             // there are no other annotations except the "into Class" tags
@@ -281,14 +287,15 @@ public class AnnotatedTypeConstant
 
             TypeConstant typeTarget = pool.ensureAccessTypeConstant(this, Access.PRIVATE);
 
-            return typeTarget.buildBaseTypeInfoImpl(idBase, struct, aAnnoClass, cInvals, true, errs);
-            }
-
-        TypeInfo infoBase = typePrivateBase.buildBaseTypeInfoImpl(
-                    idBase, struct, Annotation.NO_ANNOTATIONS, cInvals, true, errs);
-        if (!isComplete(infoBase))
-            {
-            return infoBase;
+            return new TypeInfo(typeTarget, cInvals, struct, 0, false,
+                    infoBase.getTypeParams(),
+                    aAnnoClass,
+                    infoBase.getExtends(), infoBase.getRebases(), infoBase.getInto(),
+                    infoBase.getContributionList(), infoBase.getClassChain(), infoBase.getDefaultChain(),
+                    infoBase.getProperties(), infoBase.getMethods(),
+                    infoBase.getVirtProperties(), infoBase.getVirtMethods(),
+                    infoBase.getChildInfosByName(),
+                    TypeInfo.Progress.Complete);
             }
 
         TypeConstant typeTarget = pool.ensureAccessTypeConstant(this, Access.PRIVATE);

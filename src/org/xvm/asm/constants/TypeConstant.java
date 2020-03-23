@@ -1547,7 +1547,7 @@ public abstract class TypeConstant
      *
      * @return the resulting TypeInfo
      */
-    TypeInfo buildBaseTypeInfoImpl(IdentityConstant constId, ClassStructure struct,
+    private TypeInfo buildBaseTypeInfoImpl(IdentityConstant constId, ClassStructure struct,
                                    Annotation[] aAnnoClass, int cInvalidations,
                                    boolean fComplete, ErrorListener errs)
         {
