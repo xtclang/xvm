@@ -694,7 +694,29 @@ public class NamedTypeExpression
                 }
             else
                 {
-                type = pool.ensureParameterizedTypeConstant(type, atypeParams);
+                // this is a duplicate of the check in calculateDefaultType() in case we got
+                // to this point bypassing that logic
+                if (type.isExplicitClassIdentity(true))
+                    {
+                    ClassStructure clzTarget = (ClassStructure)
+                            type.getSingleUnderlyingClass(true).getComponent();
+
+                    fValid = clzTarget.isTuple() ||
+                             atypeParams.length <= clzTarget.getTypeParamCount();
+                    }
+                else
+                    {
+                    fValid = false;
+                    }
+
+                if (fValid)
+                    {
+                    type = pool.ensureParameterizedTypeConstant(type, atypeParams);
+                    }
+                else
+                    {
+                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                    }
                 }
             }
         Access access = getExplicitAccess();
