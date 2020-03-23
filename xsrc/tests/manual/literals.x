@@ -90,14 +90,35 @@ module TestLiterals.xqiz.it
         {
         console.println("\n** testPaths()");
 
-        Path path = Path:./resources/;
-        console.println($"Path ./resources/={path}");
+        Path path1 = Path:./resources/;
+        console.println($"Path ./resources/={path1}");
 
-        path = Path:./resources/more/;
-        console.println($"Path ./resources/more/={path}");
+        Path path2 = Path:./resources/more/;
+        console.println($"Path ./resources/more/={path2}");
 
-        path = Path:./resources/more/msgs_EN.txt;
-        console.println($"Path ./resources/more/msgs_EN.txt={path}");
+        Path path3 = Path:./resources/more/msgs_EN.txt;
+        console.println($"Path ./resources/more/msgs_EN.txt={path3}");
+
+        assert path3.startsWith(path3);
+        assert path3.startsWith(path2);
+        assert path3.startsWith(path1);
+        assert path2.startsWith(path1);
+        assert path2.startsWith(path2);
+        assert path1.startsWith(path1);
+        assert !path1.startsWith(path2);
+        assert !path1.startsWith(path3);
+
+//        Path path4 = Path:msgs_EN.txt;
+        Path path4 = new Path("msgs_EN.txt");
+        console.println($"Path ./resources/more/msgs_EN.txt={path4}");
+
+        assert path4.endsWith(path4);
+        assert path3.endsWith(path4);
+        assert path3.endsWith(path3);
+        assert path2.endsWith(path2);
+        assert !path2.endsWith(path4);
+        assert path1.endsWith(path1);
+        assert !path1.endsWith(path4);
 
         File file = ./resources/more/msgs_EN.txt;
         console.println($"File ./resources/more/msgs_EN.txt={file}");

@@ -181,12 +181,21 @@ const Path
      * @return true iff this path begins with the same sequence of path elements as contained in the
      *         specified path
      */
-    Boolean startsWith(Path that)
+    @Override
+    Boolean startsWith(Path! that)
         {
         Int tailSize = this.size - that.size;
         if (tailSize < 0 || this.absolute != that.absolute)
             {
             return false;
+            }
+
+        // handle trailing '/'
+        if (that.form == Name && that.name.size == 0)
+            {
+            assert that.size > 0;
+            that = that.parent? : assert;
+            ++tailSize;
             }
 
         Path parent = this;
@@ -207,7 +216,8 @@ const Path
      * @return true iff this path ends with the same sequence of path elements as contained in the
      *         specified path
      */
-    Boolean endsWith(Path that)
+    @Override
+    Boolean endsWith(Path! that)
         {
         switch (this.size <=> that.size)
             {

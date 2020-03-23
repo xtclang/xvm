@@ -38,12 +38,12 @@ interface Sequence<Element>
      * @param value    the value to search for
      * @param startAt  the first index to search from (optional)
      *
-     * @return a conditional return of the location of the index of the specified value, or
-     *         False if the value could not be found
+     * @return True iff this sequence contains the `value`, at or after the `startAt` index
+     * @return (conditional) the index at which the specified value was found
      */
     conditional Int indexOf(Element value, Int startAt = 0)
         {
-        for (Int i = startAt.maxOf(0), Int last = size - 1; i < last; ++i)
+        for (Int i = startAt.maxOf(0), Int last = size - 1; i <= last; ++i)
             {
             if (this[i] == value)
                 {
@@ -54,13 +54,13 @@ interface Sequence<Element>
         }
 
     /**
-     * Look for the specified `value` starting at the specified index.
+     * Look for the specified `value` starting at the specified index and searching backwards.
      *
      * @param value    the value to search for
-     * @param startAt  the first index to search from (optional)
+     * @param startAt  the index to start searching backwards from (optional)
      *
-     * @return a conditional return of the location of the index of the specified value, or
-     *         False if the value could not be found
+     * @return True iff this sequence contains the `value`, at or before the `startAt` index
+     * @return (conditional) the index at which the specified value was found
      */
     conditional Int lastIndexOf(Element value, Int startAt = Int.maxvalue)
         {
@@ -89,8 +89,8 @@ interface Sequence<Element>
      * @param value     the value to search for
      * @param interval  the interval (inclusive) of the sequence to search within
      *
-     * @return a conditional return of the location of the index of the specified value, or
-     *         False if the value could not be found
+     * @return True iff this sequence contains the `value` inside the specified interval of indexes
+     * @return (conditional) the index at which the specified value was found
      */
     conditional Int indexOf(Element value, Interval<Int> interval)
         {
@@ -127,6 +127,82 @@ interface Sequence<Element>
         }
 
     /**
+     * Determine if `this` sequence _contains_ `that` sequence, and at what index `that` sequence
+     * first occurs.
+     *
+     * @param that     a sequence to look for within this sequence
+     * @param startAt  (optional) the first index to search from
+     *
+     * @return True iff this sequence contains that sequence, at or after the `startAt` index
+     * @return (conditional) the index at which the specified sequence of values was found
+     */
+    conditional Int indexOf(Sequence! that, Int startAt = 0)
+        {
+        Int count = that.size;
+        startAt = startAt.maxOf(0);
+        if (count == 0)
+            {
+            return startAt > size ? False : (True, startAt);
+            }
+
+        Element first = that[0];
+        Next: for (Int i = startAt, Int last = this.size - count; i <= last; ++i)
+            {
+            if (this[i] == first)
+                {
+                for (Int i2 = i + 1, Int last2 = i + count - 1; i2 <= last2; ++i2)
+                    {
+                    if (this[i2] != that[i2])
+                        {
+                        continue Next;
+                        }
+                    }
+                return True, i;
+                }
+            }
+
+        return False;
+        }
+
+    /**
+     * Determine if `this` sequence _contains_ `that` sequence, and at what index `that` sequence
+     * last occurs.
+     *
+     * @param that     a sequence to look for within this sequence
+     * @param startAt  (optional) the index to start searching backwards from
+     *
+     * @return True iff this sequence contains that sequence, at or before the `startAt` index
+     * @return (conditional) the index at which the specified sequence of values was found
+     */
+    conditional Int lastIndexOf(Sequence! that, Int startAt = Int.maxvalue)
+        {
+        Int count = that.size;
+        startAt = startAt.minOf(this.size-count);
+        if (count == 0)
+            {
+            return startAt < 0 ? False : (True, startAt);
+            }
+
+        Element first = that[0];
+        Next: for (Int i = startAt; i >= 0; --i)
+            {
+            if (this[i] == first)
+                {
+                for (Int i2 = i + 1, Int last2 = i + count - 1; i2 <= last2; ++i2)
+                    {
+                    if (this[i2] != that[i2])
+                        {
+                        continue Next;
+                        }
+                    }
+                return True, i;
+                }
+            }
+
+        return False;
+        }
+
+    /**
      * Obtain the contents of the Sequence as an Array.
      *
      * @param mutability  the requested Mutability of the resulting array
@@ -156,6 +232,93 @@ interface Sequence<Element>
      */
     @Op("[..]")
     Sequence slice(Interval<Int> interval);
+
+    /**
+     * Returns a sub-sequence of this Sequence. The new Sequence will likely be backed by this
+     * Sequence, which means that if this Sequence is mutable, changes made to this Sequence may be
+     * visible through the new Sequence, and vice versa; if that behavior is not desired, [reify]
+     * the value returned from this method.
+     *
+     * @param firstInclusive  the index of the first element from this sequence that will be
+     *                        included in the resulting sub-sequence
+     * @param lastExclusive   the index of the first element from this sequence that will NOT be
+     *                        included in the resulting sub-sequence
+     *
+     * @return a slice of this sequence corresponding to the specified range of indexes
+     *
+     * @throws OutOfBounds  if the specified range exceeds either the lower or upper bounds of
+     *                      this sequence
+     */
+    // TODO CP Sequence slice(Int firstInclusive, Int lastExclusive);
+
+    /**
+     * Determine if `this` sequence _starts-with_ `that` sequence. A sequence `this` of at least `n`
+     * elements "starts-with" another sequence `that` of exactly `n` elements iff, for each index
+     * `[0..n)`, the element at the index in `this` sequence is equal to the element at the same
+     * index in `that` sequence.
+     *
+     * @param that  a sequence to look for at the beginning of this sequence
+     *
+     * @return True iff this sequence starts-with that sequence
+     */
+    Boolean startsWith(Sequence that) // TODO GG allow "Sequence!"
+        {
+        Int count = that.size;
+        if (count == 0)
+            {
+            return True;
+            }
+
+        if (this.size < count)
+            {
+            return False;
+            }
+
+        for (Int i = 0; i < count; ++i)
+            {
+            if (this[i] != that[i])
+                {
+                return False;
+                }
+            }
+
+        return True;
+        }
+
+    /**
+     * Determine if `this` sequence _ends-with_ `that` sequence. A sequence `this` of `m` elements
+     * "ends-with" another sequence `that` of `n` elements iff `n <= m` and, for each index `i`
+     * in the range `[0..n)`, the element at the index `m-n+i` in `this` sequence is equal to the
+     * element at index `i` in `that` sequence.
+     *
+     * @param that  a sequence to look for at the end of this sequence
+     *
+     * @return True iff this sequence end-with that sequence
+     */
+    Boolean endsWith(Sequence that) // TODO GG allow "Sequence!"
+        {
+        Int count = that.size;
+        if (count == 0)
+            {
+            return True;
+            }
+
+        Int offset = this.size - count;
+        if (offset < 0)
+            {
+            return False;
+            }
+
+        for (Int i = 0; i < count; ++i)
+            {
+            if (this[offset+i] != that[i])
+                {
+                return False;
+                }
+            }
+
+        return True;
+        }
 
     /**
      * Obtain a Sequence that represents the revers order of this Sequence. This is likely to create
