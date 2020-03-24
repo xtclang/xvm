@@ -1225,27 +1225,32 @@ public abstract class TypeConstant
                     {
                     if (typeDeferred != this)
                         {
-                        // if there's something wrong with this logic, we'll end up with infinite
-                        // recursion, so be very careful about what can allow a TypeInfo to be built
-                        // "incomplete" (it needs to be impossible to rebuild a TypeInfo and have it
-                        // be incomplete for the second time)
-                        if (++m_cRecursiveDepth > 2)
-                            {
-                            // an infinite loop
-                            throw new IllegalStateException("Infinite loop while producing a TypeInfo for "
-                                    + this + "; deferred type=" + typeDeferred);
-                            }
                         if (typeDeferred.getConstantPool() != pool)
                             {
                             typeDeferred = (TypeConstant) pool.register(typeDeferred);
                             }
 
-                        TypeInfo infoDeferred = typeDeferred.buildTypeInfo(errs);
-                        if (isComplete(infoDeferred) && !errs.hasSeriousErrors())
+                        TypeInfo infoDeferred = typeDeferred.getTypeInfo();
+                        if (!isComplete(infoDeferred))
                             {
-                            typeDeferred.setTypeInfo(infoDeferred);
+                            // if there's something wrong with this logic, we'll end up with infinite
+                            // recursion, so be very careful about what can allow a TypeInfo to be built
+                            // "incomplete" (it needs to be impossible to rebuild a TypeInfo and have it
+                            // be incomplete for the second time)
+                            if (++m_cRecursiveDepth > 2)
+                                {
+                                // an infinite loop
+                                throw new IllegalStateException("Infinite loop while producing a TypeInfo for "
+                                        + this + "; deferred type=" + typeDeferred);
+                                }
+                            infoDeferred = typeDeferred.buildTypeInfo(errs);
+                            --m_cRecursiveDepth;
+
+                            if (isComplete(infoDeferred) && !errs.hasSeriousErrors())
+                                {
+                                typeDeferred.setTypeInfo(infoDeferred);
+                                }
                             }
-                        --m_cRecursiveDepth;
                         }
                     }
 
