@@ -1656,6 +1656,7 @@ public class TypeCompositionStatement
             }
 
         mgr.processChildren();
+
         Map<String, Component> mapChildren  = component.ensureChildByNameMap();
         MultiMethodStructure   constructors = (MultiMethodStructure) mapChildren.get("construct");
         if (constructorParams != null && !constructorParams.isEmpty())
@@ -1842,8 +1843,11 @@ public class TypeCompositionStatement
                 }
             }
 
-        if (!component.isParameterized())
+        if (format == Format.MIXIN && !component.isParameterized())
             {
+            // mixins naturally imply formal type parameters from their contributions (most likely
+            // the "into"s); there is logic in NameTypeExpression that defers the name resolution
+            // until the implicit type parameters are added by this call (if any)
             addImplicitTypeParameters(component, errs);
             }
 
@@ -1855,7 +1859,7 @@ public class TypeCompositionStatement
 
     /**
      * If there are any undeclared formal parameters for the "extend", "implement" or "into"
-     * contributions, add them to the component's formal parameter list.
+     * contributions of a mixin, add them to the component's formal parameter list.
      *
      * @param component  the ClassStructure we're creating
      * @param errs       the error listener

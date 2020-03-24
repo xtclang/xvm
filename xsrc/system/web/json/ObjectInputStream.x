@@ -1109,11 +1109,11 @@ class ObjectInputStream(Schema schema, Parser parser)
     /**
      * Adds peek-ahead support for metadata to the ElementInput implementations.
      */
-    mixin PeekAhead<ParentInput extends AnyStream?> // TODO GG remove parameters
-            into PeekableElementInput<ParentInput>
+    mixin PeekAhead
+            into PeekableElementInput
         {
         @Override
-        FieldInputStream<PeekAhead<ParentInput>> openObject(Boolean peekAhead=False)        // TODO GG get rid of <ParentInput>
+        FieldInputStream<PeekAhead> openObject(Boolean peekAhead=False)
             {
             DocInputStream<>? current = this.ObjectInputStream.current;
             if (current.is(FieldInputStream)
@@ -1163,9 +1163,9 @@ class ObjectInputStream(Schema schema, Parser parser)
      * Adds pointer-peeking and de-referencing to the object-read operations on the [ElementInput]
      * implementations.
      */
-    mixin PointerAware<ParentInput extends AnyStream?> // TODO GG remove parameters
-//            into (ElementInputStream | ArrayInputStream)
-            into PeekableElementInput<ParentInput>
+    mixin PointerAware
+            // into (ElementInputStream | ArrayInputStream) // TODO GG: can we avoid PeekableElementInput?
+            into PeekableElementInput
         {
         /**
          * To avoid multiple peek-aheads for a pointer on a single read, this flag is used to track

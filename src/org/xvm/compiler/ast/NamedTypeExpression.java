@@ -441,6 +441,42 @@ public class NamedTypeExpression
                     return;
                     }
                 }
+
+            while (parent != null)
+                {
+                if (parent instanceof TypeCompositionStatement)
+                    {
+                    TypeCompositionStatement stmt = (TypeCompositionStatement) parent;
+                    ClassStructure           clz  = (ClassStructure) stmt.getComponent();
+                    if (stmt.getName().equals(getName()))
+                        {
+                        if (!stmt.alreadyReached(Stage.Resolved))
+                            {
+                            // mixins naturally imply formal type parameters from their contributions
+                            // (most likely the "into"s); there is logic in TypeCompositionStatement that
+                            // adds implicit type parameters and we need to defer the resolution util
+                            // then - see TypeCompositionStatement.addImplicitTypeParameters()
+                            if (clz != null && clz.getFormat() == Component.Format.MIXIN &&
+                                    !clz.isParameterized())
+                                {
+                                mgr.requestRevisit();
+                                return;
+                                }
+                            }
+                        // once we found the name we're looking for, we're done
+                        break;
+                        }
+
+                    if (clz != null && clz.isTopLevel())
+                        {
+                        // the only reason we're in the loop in the first place is to look for an
+                        // enclosing mixin of the same name; at this point, we've proven that it is
+                        // not the case
+                        break;
+                        }
+                    }
+                parent = parent.getParent();
+                }
             }
         else
             {
