@@ -387,7 +387,7 @@ public class ArrayAccessExpression
         // some sub-class of Sequence (such as Array, List, etc.), and we can test for that
         boolean        fValid       = true;
         TypeConstant[] aIndexTypes  = null;
-        TypeConstant   typeElement  = null;
+        TypeConstant   typeResult   = null;
         boolean        fSlice       = false;
         Expression     exprArrayNew = exprArray.validate(ctx, typeArrayReq, errs);
         if (exprArrayNew == null)
@@ -419,8 +419,10 @@ public class ArrayAccessExpression
 
                 SignatureConstant sigGet = infoGet.getSignature();
                 aIndexTypes = sigGet.getRawParams();
-                typeElement = sigGet.getRawReturns()[0].resolveAutoNarrowing(pool, true, null);
                 m_idGet     = infoGet.getIdentity();
+                typeResult  = fSlice
+                        ? typeArray // TODO GG: resolveAutoNarrowing() should produce the same
+                        : sigGet.getRawReturns()[0].resolveAutoNarrowing(pool, true, typeArray);
                 }
             }
 
@@ -443,11 +445,11 @@ public class ArrayAccessExpression
         // bail out if the sub-expressions failed to validate and fit together correctly
         if (!fValid)
             {
-            if (typeElement == null)
+            if (typeResult == null)
                 {
-                typeElement = typeRequired == null ? pool().typeObject() : typeRequired;
+                typeResult = typeRequired == null ? pool().typeObject() : typeRequired;
                 }
-            return finishValidation(typeRequired, typeElement, TypeFit.NoFit, null, errs);
+            return finishValidation(typeRequired, typeResult, TypeFit.NoFit, null, errs);
             }
 
         if (!fSlice)
@@ -469,7 +471,7 @@ public class ArrayAccessExpression
             TypeConstant typeField = determineTupleResultType(typeArray);
             if (typeField != null)
                 {
-                typeElement = typeField;
+                typeResult = typeField;
                 }
             }
 
@@ -484,7 +486,7 @@ public class ArrayAccessExpression
                 if (fSlice)
                     {
                     constVal = evalConst((ArrayConstant) exprArray.toConstant(),
-                            (RangeConstant) aexprIndexes[0].toConstant(), typeElement, errs);
+                            (RangeConstant) aexprIndexes[0].toConstant(), typeResult, errs);
                     }
                 else
                     {
@@ -515,7 +517,7 @@ public class ArrayAccessExpression
                 }
             }
 
-        return finishValidation(typeRequired, typeElement, TypeFit.Fit, constVal, errs);
+        return finishValidation(typeRequired, typeResult, TypeFit.Fit, constVal, errs);
         }
 
     @Override

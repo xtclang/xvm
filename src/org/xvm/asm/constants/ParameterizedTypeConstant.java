@@ -441,9 +441,18 @@ public class ParameterizedTypeConstant
 
         if (fRetainParams)
             {
-            return constOriginal == constResolved
-                    ? this
-                    : pool.ensureParameterizedTypeConstant(constResolved, m_atypeParams);
+            if (constOriginal == constResolved)
+                {
+                return this;
+                }
+
+            if (constResolved.isParamsSpecified())
+                {
+                // scenario 3b; see below
+                return constResolved;
+                }
+
+            return pool.ensureParameterizedTypeConstant(constResolved, m_atypeParams);
             }
 
         if (constOriginal == constResolved)
