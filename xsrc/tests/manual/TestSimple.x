@@ -2,21 +2,21 @@ module TestSimple.xqiz.it
     {
     @Inject ecstasy.io.Console console;
 
-    void run(   )
+    void run()
         {
-        new Container().test();
+        new Parent().test();
         }
 
     interface Iface
         {
-        void f();
+        Iface f();
         }
 
-    class Container
+    class Parent
         {
         void test()
             {
-            TestA test = new TestDerivedA();
+            TestDerivedA test = new TestDerivedA();
             test.f();
             console.println();
             test.other();
@@ -27,10 +27,10 @@ module TestSimple.xqiz.it
                 implements Iface
             {
             @Override
-            void f(Boolean flag = false)
+            TestA f(Boolean flag = false)
                 {
                 console.println($"TestA:f {flag}");
-                super(); // this should not compile
+                return this;
                 }
 
             void other()
@@ -39,25 +39,44 @@ module TestSimple.xqiz.it
                 }
             }
 
+        @M
+        class TestB
+                implements Iface
+            {
+            @Override
+            TestB f(Boolean flag = false)
+                {
+                console.println($"TestB:f {flag}");
+                return this;
+                }
+            }
+
         class TestDerivedA
                 extends TestA
             {
             @Override
-            void f(Boolean flag=false)
+            TestDerivedA f(Boolean flag=false)
                 {
                 console.println($"TestDA:f {flag}");
-                super(flag);
+                return super(flag);
                 }
             }
 
         mixin M
-            into TestA
+            into (TestA | TestB)
             {
             @Override
-            void f(Boolean flag=false)
+            M f(Boolean flag=false)
                 {
                 console.println($"M:f {flag}");
-                super(flag);
+                return super(flag);
+                }
+
+            // TODO GG: this shouldn't compile - needs a @Override
+            void other()
+                {
+                console.println($"M:other");
+                super();
                 }
             }
         }

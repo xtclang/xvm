@@ -338,7 +338,7 @@ public class PropertyClassTypeConstant
                 MethodConstant idReplace = pool.ensureMethodConstant(constId, idContrib.getSignature());
                 mapContrib.put(idReplace, entry.getValue());
                 }
-            layerOnMethods(constId, true, null, mapMethods, mapVirtMethods, this, mapContrib, errs);
+            layerOnMethods(constId, true, false, null, mapMethods, mapVirtMethods, this, mapContrib, errs);
             }
 
         if (!mapContribChildren.isEmpty())

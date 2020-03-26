@@ -2800,7 +2800,7 @@ public abstract class TypeConstant
             // process methods
             if (!mapContribMethods.isEmpty())
                 {
-                layerOnMethods(constId, fSelf, idDelegate, mapMethods, mapVirtMethods,
+                layerOnMethods(constId, fSelf, false, idDelegate, mapMethods, mapVirtMethods,
                         typeContrib, mapContribMethods, errs);
                 }
 
@@ -3015,7 +3015,7 @@ public abstract class TypeConstant
             MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(pool, nidContrib);
             mapContribMethods.put(idContrib, entry.getValue());
             }
-        layerOnMethods(constId, false, null, mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
+        layerOnMethods(constId, false, false, null, mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
         }
 
     /**
@@ -3132,6 +3132,7 @@ public abstract class TypeConstant
      * @param constId            identity of the class
      * @param fSelf              true if the layer being added represents the "Equals" contribution of
      *                           the type
+     * @param fAnnoMixin         true if the contribution represents an annotation mixin
      * @param idDelegate         the property constant that provides the reference to delegate to
      * @param mapMethods         methods of the class
      * @param mapVirtMethods     the virtual methods of the type, keyed by nested id
@@ -3142,6 +3143,7 @@ public abstract class TypeConstant
     protected void layerOnMethods(
             IdentityConstant                constId,
             boolean                         fSelf,
+            boolean                         fAnnoMixin,
             PropertyConstant                idDelegate,
             Map<MethodConstant, MethodInfo> mapMethods,
             Map<Object, MethodInfo>         mapVirtMethods,
@@ -3259,18 +3261,34 @@ public abstract class TypeConstant
                                         ? idContrib.resolveNestedIdentity(pool, this)
                                         : idContrib.getNestedIdentity();
 
+            if (fAnnoMixin)
+                {
+                if (methodContrib.getHead().getImplementation() == Implementation.Implicit)
+                    {
+                    // this was added synthetically by "asInto" processing; ignore
+                    continue;
+                    }
+                if (methodContrib.isCapped())
+                    {
+                    // the cap was introduced by the mixin itself; keep it as is
+                    mapVirtMods.put(nidContrib, methodContrib);
+                    continue;
+                    }
+                }
+
             List<Object> listMatches = collectPotentialSuperMethods(
                     methodContrib.getHead().getMethodStructure(),
                     nidContrib, sigContrib, mapVirtMethods);
 
-            if (methodContrib.getTail().isOverride())
+            if (methodContrib.getTail().isOverride() ||
+                    fAnnoMixin && methodContrib.getHead().isOverride())
                 {
                 // the @Override tag gives us permission to look for a method with a
                 // different signature that can be narrowed to the signature of the
                 // contribution (because @Override means there MUST be a super method)
                 if (listMatches.isEmpty())
                     {
-                    if (methodContrib.getTail().isNative())
+                    if (fAnnoMixin || methodContrib.getTail().isNative())
                         {
                         // take it as is
                         mapVirtMods.put(nidContrib, methodResult);
@@ -3292,14 +3310,27 @@ public abstract class TypeConstant
                         methodBase   = mapVirtMethods.get(nidBase);
                         if (methodBase.isCapped())
                             {
-                            // the "super" method we found is capped, but the cap itself apparently
-                            // didn't match; this means that the attempted override is illegal
-                            MethodConstant id = methodBase.getIdentity();
-                            id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
-                                    idContrib.getNamespace().getValueString(),
-                                    id.getSignature().getValueString(),
-                                    id.getNamespace().getValueString());
-                            nidBase = null;
+                            if (fAnnoMixin)
+                                {
+                                // the "super" method we found is capped, but the cap itself apparently
+                                // didn't match; this can happen for "into (A | B)" mixins;
+                                // replace the capped method with the narrowing one
+                                nidBase = methodBase.getNarrowingMethod(mapVirtMethods);
+
+                                assert nidBase != null;
+                                methodResult = mapVirtMethods.get(nidBase);
+                                }
+                            else
+                                {
+                                // the "super" method we found is capped, but the cap itself apparently
+                                // didn't match; this means that the attempted override is illegal
+                                MethodConstant id = methodBase.getIdentity();
+                                id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
+                                        idContrib.getNamespace().getValueString(),
+                                        id.getSignature().getValueString(),
+                                        id.getNamespace().getValueString());
+                                nidBase = null;
+                                }
                             }
                         else
                             {
@@ -3335,17 +3366,10 @@ public abstract class TypeConstant
                             if (methodBase.isCapped())
                                 {
                                 // replace the capped method with the narrowing (non-capped)
-                                nidBase = methodBase.getHead().getNarrowingNestedIdentity();
-                                while (true)
-                                    {
-                                    methodBase = mapVirtMethods.get(nidBase);
-                                    if (!methodBase.isCapped())
-                                        {
-                                        break;
-                                        }
-                                    nidBase = methodBase.getHead().getNarrowingNestedIdentity();
-                                    }
+                                nidBase    = methodBase.getNarrowingMethod(mapVirtMethods);
+                                methodBase = mapVirtMethods.get(nidBase);
 
+                                assert nidBase != null;
                                 listMatches.remove(sigBest);
                                 cMatches--;
                                 }
@@ -3383,10 +3407,11 @@ public abstract class TypeConstant
                             // below may produce different results
                             nidContrib = nidBase;
                             }
-                        else
+                        else if (!mapVirtMods.containsKey(nidBase))
                             {
-                            // there exists a method that this method will narrow, so add this
-                            // method to the set of methods that are narrowing the super method
+                            // there exists a method that this method will narrow that did *not*
+                            // receive a contribution of its own, so add this method to the set of
+                            // methods that are narrowing the super method
                             if (mapNarrowedNids == null)
                                 {
                                 mapNarrowedNids = new HashMap<>();
@@ -4433,15 +4458,15 @@ public abstract class TypeConstant
      * For this type representing a base for an annotated type or a conditional incorporation,
      * merge the "source" TypeInfo with the TypeInfo of a mixin.
      *
-     * @param typeTarget      the type to build the TypeInfo for
-     * @param cInvalidations  the count of TypeInfo invalidations before staring building the info
-     * @param idBase          the identity constant of the class that this type is based on
-     * @param structBase      the ClassStructure for the base type
-     * @param infoSource      the TypeInfo containing all previous incorporates
-     * @param infoMixin       the TypeInfo for the mixin to be merged with the source TypeInfo
-     * @param aAnnoClass      an array of annotations for the type that mix into "Class"
-     * @param fAddProcess     if true, the mixin annotation needs to be added to the process list
-     * @param errs            the error listener to log into
+     * @param typeTarget     the type to build the TypeInfo for
+     * @param cInvalidations the count of TypeInfo invalidations before staring building the info
+     * @param idBase         the identity constant of the class that this type is based on
+     * @param structBase     the ClassStructure for the base type
+     * @param infoSource     the TypeInfo containing all previous incorporates
+     * @param infoMixin      the TypeInfo for the mixin to be merged with the source TypeInfo
+     * @param aAnnoClass     an array of annotations for the type that mix into "Class"
+     * @param fAnnoMixin     if true, the mixin represents an annotation; otherwise an incorporation
+     * @param errs           the error listener to log into
      *
      * @return the resulting TypeInfo
      */
@@ -4453,7 +4478,7 @@ public abstract class TypeConstant
             TypeInfo         infoSource,
             TypeInfo         infoMixin,
             Annotation[]     aAnnoClass,
-            boolean          fAddProcess,
+            boolean fAnnoMixin,
             ErrorListener    errs)
         {
         ConstantPool pool = getConstantPool();
@@ -4469,20 +4494,18 @@ public abstract class TypeConstant
         Map<Object          , MethodInfo  > mapVirtMethods = new HashMap<>(infoSource.getVirtMethods());
         ListMap<String      , ChildInfo   > mapChildren    = new ListMap<>(infoSource.getChildInfosByName());
 
+        // TODO GG: replace with a call to layerOnProps
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapMixinProps.entrySet())
             {
             layerOnMixinProp(pool, infoSource, idBase, mapProps, mapVirtProps,
                     entry.getKey(), entry.getValue(), errs);
             }
 
-        for (Map.Entry<MethodConstant, MethodInfo> entry : mapMixinMethods.entrySet())
-            {
-            layerOnMixinMethod(pool, typeTarget, infoSource, idBase, mapMethods, mapVirtMethods,
-                    entry.getKey(), entry.getValue(), errs);
-            }
+        typeTarget.layerOnMethods(idBase, false, fAnnoMixin, null, mapMethods, mapVirtMethods,
+                infoMixin.getType(), mapMixinMethods, errs);
 
         List<Contribution> listProcess = infoSource.getContributionList();
-        if (fAddProcess)
+        if (fAnnoMixin)
             {
             listProcess = new ArrayList<>(listProcess);
             listProcess.add(new Contribution(Composition.Annotation,
@@ -4546,149 +4569,6 @@ public abstract class TypeConstant
 
         mapProps.put(idResult, propResult);
         mapVirtProps.put(nidContrib, propResult);
-        }
-
-    /**
-     * Layer on the passed mixin method contributions onto the base methods.
-     *
-     * @param pool            the constant pool to use
-     * @param typeTarget      the type to build the TypeInfo for
-     * @param infoBase        the TypeInfo for the type that is being mixed into
-     * @param idBaseClass     the identity of the class (etc) that is being mixed into
-     * @param mapMethods      methods already collected from the base
-     * @param mapVirtMethods  virtual methods already collected from the base
-     * @param idMixinMethod   the identity of the method at the mixin
-     * @param methodMixin     the method info from the mixin
-     * @param errs            the error listener
-     */
-    private void layerOnMixinMethod(
-            ConstantPool                    pool,
-            TypeConstant                    typeTarget,
-            TypeInfo                        infoBase,
-            IdentityConstant                idBaseClass,
-            Map<MethodConstant, MethodInfo> mapMethods,
-            Map<Object, MethodInfo>         mapVirtMethods,
-            MethodConstant                  idMixinMethod,
-            MethodInfo                      methodMixin,
-            ErrorListener                   errs)
-        {
-        if (!methodMixin.isVirtual() && !methodMixin.isPotentialPropertyOverlay())
-            {
-            // skip the mixin's constructors and nested functions
-            if (!methodMixin.isConstructor() && idMixinMethod.getNestedDepth() == 2)
-                {
-                List<MethodConstant> listMatches =
-                        collectCoveredFunctions(idMixinMethod.getSignature(), mapMethods);
-                for (MethodConstant idMethod : listMatches)
-                    {
-                    methodMixin = methodMixin.subsumeFunction(mapMethods.remove(idMethod));
-                    }
-
-                mapMethods.put(idMixinMethod, methodMixin);
-                }
-
-            if (methodMixin.isValidator())
-                {
-                MethodConstant idValidator = (MethodConstant)
-                    idBaseClass.appendNestedIdentity(pool, idMixinMethod.getSignature());
-
-                MethodInfo methodBase   = infoBase.getMethodById(idValidator);
-                MethodInfo methodResult = methodBase == null
-                        ? methodMixin
-                        : methodBase.layerOnValidator(methodMixin);
-                mapMethods.put(idValidator, methodResult);
-                }
-            return;
-            }
-
-        Object     nidContrib = idMixinMethod.getNestedIdentity(); // resolved
-        MethodInfo methodBase = infoBase.getMethodByNestedId(nidContrib);
-        if (methodBase == null && !methodMixin.isCapped())
-            {
-            Map<Object, MethodInfo> mapBaseMethods = infoBase.getVirtMethods();
-
-            // the following logic is similar to the "layerOnMethods()" algorithm, except it isn't
-            // concerned with an @Override and capping, assuming that all those issues have already
-            // been dealt with;
-            // another important difference is that it uses "typeTarget" as a narrowing context,
-            // allowing to "align" co-variant returns of the mixin's methods
-            List<Object> listMatches = typeTarget.collectPotentialSuperMethods(
-                    methodMixin.getHead().getMethodStructure(),
-                    nidContrib, methodMixin.getSignature(), mapBaseMethods);
-           if (!listMatches.isEmpty())
-                {
-                int cMatches = listMatches.size();
-                if (cMatches == 1)
-                    {
-                    methodBase = mapBaseMethods.get(listMatches.get(0));
-                    }
-                else
-                    {
-                    // now we need find a method that would be the unambiguously best choice;
-                    // collect the signatures into an array and a lookup map (sig->nid)
-                    SignatureConstant[]            aSig     = new SignatureConstant[cMatches];
-                    Map<SignatureConstant, Object> mapNids  = new HashMap<>(cMatches);
-                    for (int i = 0; i < cMatches; i++)
-                        {
-                        Object            nid = listMatches.get(i);
-                        SignatureConstant sig = mapBaseMethods.get(nid).getSignature();
-
-                        aSig[i] = sig;
-                        mapNids.put(sig, nid);
-                        }
-
-                    SignatureConstant sigBest = selectBest(aSig);
-                    if (sigBest == null)
-                        {
-                        log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS,
-                                methodMixin.getIdentity().getPathString());
-                        }
-                    else
-                        {
-                        methodBase = mapBaseMethods.get(mapNids.get(sigBest));
-                        }
-                    }
-                }
-            }
-
-        if (methodBase != null && methodBase.getIdentity().equals(methodMixin.getIdentity()))
-            {
-            // keep whatever the base has got
-            return;
-            }
-
-        MethodInfo methodResult;
-        if (methodBase == null || methodMixin.isCapped())
-            {
-            methodResult = methodMixin;
-            }
-        else
-            {
-            if (methodBase.isCapped())
-                {
-                methodBase = infoBase.getNarrowingMethod(methodBase);
-                assert methodBase != null;
-                }
-
-            // it's possible that the base has a narrower method signature then the mixin,
-            // in which case, the mixin's info should be ignored/replaced
-            SignatureConstant sigBase  = methodBase.getSignature();
-            SignatureConstant sigMixin = methodMixin.getSignature();
-            if (sigBase.isSubstitutableFor(sigMixin, this) &&
-                    !sigMixin.isSubstitutableFor(sigBase, this))
-                {
-                methodResult = methodBase;
-                }
-            else
-                {
-                methodResult = methodBase.layerOn(methodMixin, false, errs);
-                }
-            }
-
-        MethodConstant idResult = (MethodConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
-
-        mapMethods.put(idResult, methodResult);
-        mapVirtMethods.put(idResult.getNestedIdentity(), methodResult);
         }
 
 

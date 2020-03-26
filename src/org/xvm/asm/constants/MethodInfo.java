@@ -507,6 +507,33 @@ public class MethodInfo
         }
 
     /**
+     * Get an id of the method that this capped method is narrowed by.
+     *
+     * Note: this method if very similar to {@link TypeInfo#getNarrowingMethod}, except it only
+     *       chooses the narrowing methods from the specified map.
+     *
+     * @param mapVirtMethods  a map of methods keyed by their nids
+     *
+     * @return the id of the narrowing method or null if it cannot be found
+     */
+    public Object getNarrowingMethod(Map<Object, MethodInfo> mapVirtMethods)
+        {
+        assert isCapped();
+
+        Object nidNarrowing = getHead().getNarrowingNestedIdentity();
+        for (int i = 0; i < 32; i++)
+            {
+            MethodInfo methodCapped = mapVirtMethods.get(nidNarrowing);
+            if (methodCapped == null || !methodCapped.isCapped())
+                {
+                break;
+                }
+            nidNarrowing = methodCapped.getHead().getNarrowingNestedIdentity();
+            }
+        return nidNarrowing;
+        }
+
+    /**
      * @return the first MethodBody in the call chain
      */
     public MethodBody getHead()

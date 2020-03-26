@@ -140,7 +140,7 @@ class ObjectInputStream(Schema schema, Parser parser)
      * The ObjectInputStream uses three specific JSON stream implementations internally to dissect
      * a stream of JSON tokens into the desired corresponding Ecstasy types, values, and structures.
      */
-    typedef PeekableElementInput | FieldInputStream AnyStream;
+    typedef (ElementInputStream | ArrayInputStream | FieldInputStream) AnyStream;
 
     /**
      * Base virtual child implementation for the various DocInput / ElementInput / FieldInput
@@ -545,26 +545,6 @@ class ObjectInputStream(Schema schema, Parser parser)
         }
 
 
-    // ----- PeekableElementInput ------------------------------------------------------------------
-
-    /**
-     * The PeekableElementInput is an abstract base class for [ElementInput] that supports efficient
-     * peek-ahead for metadata.
-     */
-    class PeekableElementInput<ParentInput extends AnyStream?>
-            extends DocInputStream<ParentInput>
-            implements ElementInput<ParentInput>
-        {
-        construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
-            {
-            construct DocInputStream(parent, id, tokens);
-            }
-
-        @Override
-        FieldInputStream<PeekableElementInput> openObject(Boolean peekAhead=False);
-        }
-
-
     // ----- ElementInputStream --------------------------------------------------------------------
 
     /**
@@ -573,12 +553,12 @@ class ObjectInputStream(Schema schema, Parser parser)
      */
     @PeekAhead
     class ElementInputStream<ParentInput extends AnyStream?>
-            extends PeekableElementInput<ParentInput>
+            extends DocInputStream<ParentInput>
             implements ElementInput<ParentInput>
         {
         construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
             {
-            construct PeekableElementInput(parent, id, tokens);
+            construct DocInputStream(parent, id, tokens);
             }
 
         @Override
@@ -683,12 +663,12 @@ class ObjectInputStream(Schema schema, Parser parser)
      */
     @PeekAhead
     class ArrayInputStream<ParentInput extends AnyStream?>
-            extends PeekableElementInput<ParentInput>
+            extends DocInputStream<ParentInput>
             implements ElementInput<ParentInput>
         {
         construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
             {
-            construct PeekableElementInput(parent, id, tokens);
+            construct DocInputStream(parent, id, tokens);
             parser.expect(ArrayEnter);
             }
 
@@ -1110,7 +1090,7 @@ class ObjectInputStream(Schema schema, Parser parser)
      * Adds peek-ahead support for metadata to the ElementInput implementations.
      */
     mixin PeekAhead
-            into PeekableElementInput
+            into (ElementInputStream | ArrayInputStream)
         {
         @Override
         FieldInputStream<PeekAhead> openObject(Boolean peekAhead=False)
@@ -1164,8 +1144,7 @@ class ObjectInputStream(Schema schema, Parser parser)
      * implementations.
      */
     mixin PointerAware
-            // into (ElementInputStream | ArrayInputStream) // TODO GG: can we avoid PeekableElementInput?
-            into PeekableElementInput
+            into (ElementInputStream | ArrayInputStream)
         {
         /**
          * To avoid multiple peek-aheads for a pointer on a single read, this flag is used to track
