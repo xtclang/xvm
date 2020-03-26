@@ -1032,7 +1032,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                 return True, tokens;
                 }
 
-            // if skpping ahead is allowed, then proceed until the name is found or the end reached
+            // if skipping ahead is allowed, then proceed until the name is found or the end reached
             if (skip)
                 {
                 Boolean collect = schema.randomAccess;
