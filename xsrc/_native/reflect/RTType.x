@@ -1,3 +1,5 @@
+import ecstasy.TypeSystem;
+
 import ecstasy.reflect.Access;
 import ecstasy.reflect.Annotation;
 import ecstasy.reflect.MultiMethod;
@@ -19,6 +21,7 @@ const RTType<DataType, OuterType>
     @Override @RO Property<DataType>[] properties                 .get() { TODO("native"); }
     @Override @RO Boolean              recursive                  .get() { TODO("native"); }
     @Override @RO TypeTemplate         template                   .get() { TODO("native"); }
+    @Override @RO TypeSystem           typeSystem                 .get() { TODO("native"); }
     @Override @RO Type[]               underlyingTypes            .get() { TODO("native"); }
 
     @Override conditional Class fromClass()                              { TODO("native"); }

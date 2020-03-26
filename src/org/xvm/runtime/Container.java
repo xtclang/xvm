@@ -25,7 +25,7 @@ public abstract class Container
         implements LinkerContext
     {
     protected Container(Runtime runtime, String sAppName,
-                     TemplateRegistry templates, ObjectHeap heapGlobal)
+                        TemplateRegistry templates, ObjectHeap heapGlobal)
         {
         f_runtime    = runtime;
         f_templates  = templates;
@@ -201,6 +201,13 @@ public abstract class Container
 
     // the service context for the container itself
     protected ServiceContext m_contextMain;
+
+    /**
+     * Cached TypeSystem handle.
+     *
+     * TODO GG: temporary, until the container API is finalized.
+     */
+    public ObjectHandle m_hTypeSystem;
 
     /**
      * A counter tracking both the number of services which have pending invocations to process

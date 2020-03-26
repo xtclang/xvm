@@ -80,7 +80,7 @@ const Schema
         this.enableReflection = enableReflection;
         this.retainNulls      = retainNulls;
         this.storeRemainders  = storeRemainders;
-// TODO GG this.typeSystem       = typeSystem ?: &this.actualType.typeSystem;
+        this.typeSystem       = typeSystem ?: &this.actualType.typeSystem;
 
         // build indexes for the provided mappings
         ListMap<Type, Mapping> mappingByType = new ListMap();
@@ -199,7 +199,6 @@ const Schema
     /**
      * The TypeSystem that the reflection-based capabilities will use.
      */
-    @Unassigned // TODO GG remove
     TypeSystem typeSystem;
 
     /**
@@ -210,7 +209,7 @@ const Schema
 
     /**
      * An option to collect and store any metadata and unread properties together as a means of
-     * supporting interop across loosely compatible systems, and to support forward version
+     * supporting inter-op across loosely compatible systems, and to support forward version
      * compatibility.
      *
      * By enabling remainder collection and storage, JSON serialization and deserialization will

@@ -2,14 +2,18 @@ package org.xvm.runtime.template._native.reflect;
 
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.PackageStructure;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.ChildInfo;
@@ -19,6 +23,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.StringConstant;
@@ -89,6 +94,7 @@ public class xRTType
         markNativeProperty("properties");
         markNativeProperty("recursive");
         markNativeProperty("template");
+        markNativeProperty("typeSystem");
         markNativeProperty("underlyingTypes");
 
         markNativeMethod("accessSpecified", null, null);
@@ -187,6 +193,9 @@ public class xRTType
 
             case "template":
                 return getPropertyTemplate(frame, hType, iReturn);
+
+            case "typeSystem":
+                return getPropertyTypeSystem(frame, hType, iReturn);
 
             case "underlyingTypes":
                 return getPropertyUnderlyingTypes(frame, hType, iReturn);
@@ -832,6 +841,66 @@ public class xRTType
     public int getPropertyTemplate(Frame frame, TypeHandle hType, int iReturn)
         {
         return frame.assignValue(iReturn, xRTTypeTemplate.makeHandle(hType.getDataType()));
+        }
+
+    /**
+     * Implements property: typeSystem.get()
+     */
+    public int getPropertyTypeSystem(Frame frame, TypeHandle hType, int iReturn)
+        {
+        ObjectHandle hTS = frame.f_context.f_container.m_hTypeSystem;
+        if (hTS == null)
+            {
+            // TODO GG: replace this temporary solution when the "container" API is finalized
+            ConstantPool       pool        = frame.poolContext();
+            ModuleStructure    module      = pool.getFileStructure().getModule();
+            List<ObjectHandle> listHandles = new ArrayList<>();
+
+            ObjectHandle hModule = frame.getConstHandle(module.getIdentityConstant());
+            listHandles.add(hModule);
+
+            boolean fDeferred = Op.isDeferred(hModule);
+
+            for (Component child : module.children())
+                {
+                if (child instanceof PackageStructure)
+                    {
+                    PackageStructure pkg = (PackageStructure) child;
+                    if (pkg.isModuleImport())
+                        {
+                        ModuleConstant idImport = pkg.getImportedModule().getIdentityConstant();
+                        ObjectHandle   hImport  = frame.getConstHandle(idImport);
+
+                        fDeferred |= Op.isDeferred(hImport);
+                        listHandles.add(hImport);
+                        }
+                    }
+                }
+
+            ObjectHandle[]   ahModules   = listHandles.toArray(Utils.OBJECTS_NONE);
+            ClassTemplate    templateTS  = f_templates.getTemplate("TypeSystem");
+            ClassComposition clzTS       = templateTS.getCanonicalClass();
+            TypeConstant     typeArray   = pool.ensureParameterizedTypeConstant(
+                                                pool.typeArray(), pool.typeModule());
+            ClassComposition clzArray    = f_templates.resolveClass(typeArray);
+            MethodStructure  constructor = templateTS.f_struct.findMethod("construct", 2);
+            ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
+
+            if (fDeferred)
+                {
+                Frame.Continuation stepNext = frameCaller ->
+                    {
+                    ahArg[0] = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahModules);
+                    return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
+                    };
+
+                return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
+                }
+
+            ahArg[0] = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahModules);
+            return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
+            }
+        return frame.assignValue(iReturn, hTS);
         }
 
     /**
