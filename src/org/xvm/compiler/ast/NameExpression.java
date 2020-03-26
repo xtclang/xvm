@@ -2163,9 +2163,7 @@ public class NameExpression
                         TypeConstant typeLeft = left == null
                                 ? ctx.getThisType()
                                 : left.getImplicitType(ctx);
-                        // we know the method is accessible; use the private view just in case
-                        TypeInfo infoLeft = pool.ensureAccessTypeConstant(typeLeft, Access.PRIVATE).
-                                ensureTypeInfo(errs);
+                        TypeInfo   infoLeft   = getTypeInfo(ctx, typeLeft, errs);
                         MethodInfo infoMethod = infoLeft.getMethodBySignature(idMethod.getSignature());
                         method   = infoMethod.getTopmostMethodStructure(infoLeft);
                         assert method != null;
