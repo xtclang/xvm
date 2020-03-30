@@ -707,6 +707,16 @@ public class NameExpression
                             constVal = pool.ensurePropertyClassTypeConstant(typeParent, id);
                             }
                         break;
+
+                    case Method:
+                        {
+                        MethodConstant idMethod = (MethodConstant) argRaw;
+                        if (m_plan == Plan.None && m_mapTypeParams == null)
+                            {
+                            constVal = idMethod;
+                            }
+                        break;
+                        }
                     }
                 }
             }
@@ -761,7 +771,7 @@ public class NameExpression
                 }
             }
 
-         return finishValidation(typeRequired, type, fit, constVal, errs);
+        return finishValidation(typeRequired, type, fit, constVal, errs);
         }
 
     @Override

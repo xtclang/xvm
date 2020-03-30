@@ -764,7 +764,19 @@ public abstract class Utils
 
             return frame.call1(methodInit, null, ahVar, Op.A_STACK);
             }
+
         hValue = frame.getConstHandle(constVal);
+        if (Op.isDeferred(hValue))
+            {
+            ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
+            Frame.Continuation stepNext = frameCaller ->
+                {
+                frame.pushStack(ahValue[0]);
+                return Op.R_NEXT;
+                };
+            return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+            }
+
         frame.pushStack(hValue);
         return Op.R_NEXT;
         }
