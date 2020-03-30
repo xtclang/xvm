@@ -2004,7 +2004,7 @@ public abstract class ClassTemplate
             this.ahVar       = ahVar;
             this.iReturn     = iReturn;
 
-            ixStep = fInitStruct ? 0 : 1;
+            ixStep = fInitStruct ? 0 : 2;
             }
 
         @Override
@@ -2018,13 +2018,28 @@ public abstract class ClassTemplate
             //
             // -> indicates a call via continuation
             // => indicates a call via Construct op-code
+            //
+            // the only exception of that flow is an anonymous class wrapper constructor that assigns
+            // captured values to the anonymous class properties and needs to be called prior to
+            // the class initializer; it also calls the default initializer internally
 
             while (true)
                 {
                 int iResult;
                 switch (ixStep++)
                     {
-                    case 0: // call auto-generated initializer
+                    case 0: // call an anonymous class "wrapper" constructor first
+                        if (constructor != null && constructor.isAnonymousClassWrapperConstructor())
+                            {
+                            // wrapper constructor calls the initializer itself; skip next two steps
+                            ixStep  = 2;
+                            iResult = frameCaller.call1(constructor, hStruct, ahVar, Op.A_IGNORE);
+                            break;
+                            }
+                        ixStep++;
+                        // fall through
+
+                    case 1: // call auto-generated default initializer
                         {
                         MethodStructure methodAI = hStruct.getComposition().ensureAutoInitializer();
                         if (methodAI != null)
@@ -2036,13 +2051,8 @@ public abstract class ClassTemplate
                         // fall through
                         }
 
-                    case 1: // call the constructor
-                        if (constructor == null)
-                            {
-                            ixStep++;
-                            // fall through
-                            }
-                        else
+                    case 2: // call the constructor
+                        if (constructor != null)
                             {
                             Frame frameCD = frameCaller.createFrame1(
                                     constructor, hStruct, ahVar, Op.A_IGNORE);
@@ -2062,12 +2072,14 @@ public abstract class ClassTemplate
                             iResult = frameCaller.callInitialized(frameCD);
                             break;
                             }
+                        ixStep++;
+                        // fall through
 
-                    case 2: // validation
+                    case 3: // validation
                         iResult = callValidator(frameCaller, hStruct);
                         break;
 
-                    case 3: // check unassigned
+                    case 4: // check unassigned
                         {
                         List<String> listUnassigned;
                         if ((listUnassigned = hStruct.validateFields()) != null)
@@ -2079,11 +2091,11 @@ public abstract class ClassTemplate
                         // fall through
                         }
 
-                    case 4: // native post-construction validation
+                    case 5: // native post-construction validation
                         iResult = postValidate(frameCaller, hStruct);
                         break;
 
-                    case 5:
+                    case 6:
                         {
                         ObjectHandle hPublic = hStruct.ensureAccess(Access.PUBLIC);
                         return hfnFinally == null

@@ -43,6 +43,7 @@ import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.op.Construct_0;
 import org.xvm.asm.op.Construct_1;
 import org.xvm.asm.op.Construct_N;
+import org.xvm.asm.op.SynInit;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Return_0;
 
@@ -272,6 +273,21 @@ public class TypeCompositionStatement
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ---- AstNode methods ------------------------------------------------------------------------
+
+    @Override
+    protected void discard(boolean fRecurse)
+        {
+        super.discard(fRecurse);
+
+        Component component = getComponent();
+        if (component != null)
+            {
+            pool().invalidateTypeInfos(component.getIdentityConstant());
+            }
         }
 
 
@@ -2280,6 +2296,12 @@ public class TypeCompositionStatement
                     assert constructSuper.getParam(i).hasDefaultValue();
                     aSuperArgs[i] = Register.DEFAULT;
                     }
+                }
+
+            if (constructor.isAnonymousClassWrapperConstructor())
+                {
+                 // call the default initializer
+                code.add(new SynInit());
                 }
 
             switch (cSuperArgs)

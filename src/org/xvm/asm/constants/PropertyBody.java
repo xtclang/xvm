@@ -68,8 +68,9 @@ public class PropertyBody
         if (constInitVal != null && constInitFunc != null)
             {
             // this can happen when the initial value is a constant function (lambda)
-            assert constInitVal instanceof  MethodConstant &&
-                ((MethodConstant) constInitVal).getNamespace().equals(constInitFunc);
+            // or any other constant that refers to the initializer (see
+            // PropertyDeclarationStatement,validateContent);
+            // in that case we simply disregard the initializer
             constInitFunc = null;
             }
         else if (fConstant && constInitVal == null && constInitFunc == null)

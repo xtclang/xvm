@@ -234,14 +234,6 @@ public class TypeParameterConstant
         }
 
     @Override
-    protected Object getLocator()
-        {
-        return m_iReg == 0
-                ? getMethod()
-                : null;
-        }
-
-    @Override
     protected int compareDetails(Constant that)
         {
         if (!(that instanceof TypeParameterConstant))

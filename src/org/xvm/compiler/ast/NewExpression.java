@@ -172,6 +172,34 @@ public class NewExpression
         }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    public AstNode clone()
+        {
+        NewExpression exprClone = (NewExpression) super.clone();
+        // the "body" is not a child and has to be handled manually
+        if (body != null)
+            {
+            exprClone.body = (anon == null)
+                    ? (StatementBlock) body.clone()
+                    : exprClone.anon.body;
+            }
+        return exprClone;
+        }
+
+    @Override
+    protected void discard(boolean fRecurse)
+        {
+        super.discard(fRecurse);
+
+        if (fRecurse && body != null)
+            {
+            body.discard(fRecurse);
+            }
+        }
+
+
     // ----- Code Container methods ----------------------------------------------------------------
 
     @Override
@@ -1196,6 +1224,11 @@ public class NewExpression
         constrThis.setSynthetic(true);
 
         Code code = constrThis.createCode();
+
+        // call the default initializer
+        assert constrThis.isAnonymousClassWrapperConstructor();
+        code.add(new SynInit());
+
         if (cParams == 1)
             {
             code.add(new Construct_1(idSuper, new Register(aParams[0].getType(), 0)));
@@ -1303,11 +1336,16 @@ public class NewExpression
             // create the property as a private synthetic
             PropertyStructure prop = clzAnon.createProperty(
                     false, Access.PRIVATE, Access.PRIVATE, type, sName);   // TODO @Final
+            // mark the property as unassigned to prevent default initialization
+            prop.addAnnotation(pool.clzUnassigned());
             prop.setSynthetic(true);
 
             // store the constructor parameter into the property
             codeConstr.add(new L_Set(prop.getIdentityConstant(), reg));
             }
+
+        // call the default initializer
+        codeConstr.add(new SynInit());
 
         // call the previous constructor
         MethodConstant idOld = constrOld.getIdentityConstant();
@@ -1316,9 +1354,11 @@ public class NewExpression
             case 0:
                 codeConstr.add(new Construct_0(idOld));
                 break;
+
             case 1:
                 codeConstr.add(new Construct_1(idOld, new Register(aNewParams[0].getType(), 0)));
                 break;
+
             default:
                 Register[] aArgs = new Register[cOldParams];
                 for (int i = 0; i < cOldParams; ++i)

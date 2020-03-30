@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -15,13 +16,11 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -395,63 +394,100 @@ public class PropertyDeclarationStatement
                         return;
                         }
 
+                    // create a clone of ourselves
+                    PropertyDeclarationStatement stmtClone = (PropertyDeclarationStatement) clone();
+
                     // create an initializer function
-                    MethodStructure methodInit = prop.createMethod(isStatic(), Access.PRIVATE,
-                            org.xvm.asm.Annotation.NO_ANNOTATIONS,
-                            new Parameter[] {new Parameter(pool(), type, null, null, true, 0, false)},
-                            "=", Parameter.NO_PARAMS, true, false);
+                    MethodStructure            methodInit = stmtClone.createInitializer();
+                    MethodDeclarationStatement stmtInit   = stmtClone.createAstNodeFor(methodInit);
 
-                    // wrap it with a pretend function in the AST tree
-                    MethodDeclarationStatement stmtInit = adopt(
-                            new MethodDeclarationStatement(methodInit, value));
-
-                    // we're going to compile the initializer now, so that we can determine if it could
-                    // be discarded and replaced with a constant
+                    // we're going to compile the (cloned) initializer now, so that we can determine
+                    // if it could be discarded and replaced with a constant
                     // IMPORTANT NOTE: this goes forward BEYOND validation, so the caller's context
                     // must be ready to resolve the corresponding names (e.g. see NewExpression)
                     if (!(new StageMgr(stmtInit, Stage.Emitted, errs).fastForward(10)))
                         {
+                        stmtClone.discardInitializer(methodInit);
+                        stmtInit.discard(true);
                         mgr.requestRevisit();
                         return;
                         }
 
-                    // if in the process of compiling the initializer, it became obvious that the result
-                    // was a constant value, then just take that constant value and discard the
-                    // initializer
-                    Expression valueNew = stmtInit.getInitializerExpression();
-                    if (valueNew != null && valueNew.isConstant()) // REVIEW CP !valueNew.isCompletable() && valueNew.isRuntimeConstant())
+                    // if in the process of compiling the initializer, it became obvious that the
+                    // result was a constant value, then just take that constant value and discard
+                    // the initializer
+                    // REVIEW CP !valueTest.isCompletable() && valueTest.isRuntimeConstant())
+                    Expression valueTest       = stmtInit.getInitializerExpression();
+                    boolean    fConstant       = valueTest != null && valueTest.isConstant();
+                    boolean    fMethodRequired = !fConstant;
+
+                    // if we have proven, by testing a fast-forward compile of a temp copy of the
+                    // property initializer, that the initial property value is a constant, then
+                    // get that constant value, and store it as the initial value for the property
+                    if (fConstant)
                         {
-                        value = adopt(valueNew);
-
-                        Constant constValue = valueNew.toConstant();
+                        Constant constValue = valueTest.toConstant();
                         assert !constValue.containsUnresolved() && !constValue.getType().containsUnresolved();
-                        prop.setInitialValue(valueNew.validateAndConvertConstant(constValue, type, errs));
+                        prop.setInitialValue(valueTest.validateAndConvertConstant(constValue, type, errs));
 
-                        boolean fDiscard = true;
-                        if (constValue instanceof IdentityConstant)
+                        // despite having a constant initial value, the property may still require
+                        // an initializer; the simplest example being a property whose value is a
+                        // function, e.g. "function Int(Int) prop = n -> n;" and a more complicated
+                        // scenario being a MapConstant that contains such a function
+                        Set<MethodConstant> setMethods = new HashSet<>();
+                        if (constValue instanceof MethodConstant)
                             {
-                            // if the constant points to the initializer's content - keep it
-                            IdentityConstant idValue = (IdentityConstant) constValue;
-                            if (idValue.getNamespace().equals(methodInit.getIdentityConstant()))
+                            setMethods.add((MethodConstant) constValue);
+                            }
+                        else
+                            {
+                            constValue.forEachUnderlying(c ->
                                 {
-                                fDiscard = false;
-                                }
+                                if (c instanceof MethodConstant)
+                                    {
+                                    setMethods.add((MethodConstant) c);
+                                    }
+                                });
                             }
 
-                        if (fDiscard)
+                        // if any of the constants point to the initializer's class - keep it
+                        if (!setMethods.isEmpty())
                             {
-                            // discard the initializer by removing the entire MultiMethodStructure
-                            MultiMethodStructure mms = (MultiMethodStructure) methodInit.getParent();
-                            mms.getParent().removeChild(mms);
+                            for (MethodConstant idMethod : setMethods)
+                                {
+                                if (idMethod.getNamespace().equals(methodInit.getIdentityConstant()))
+                                    {
+                                    fMethodRequired = true;
+                                    break;
+                                    }
+                                }
                             }
                         }
                     else
                         {
-                        // the initializer statement takes the place of the initial value
-                        initializer = stmtInit;
-
-                        // clear the "has initial value" setting
                         prop.setInitialValue(null);
+                        }
+
+                    // at this point, we are done with the "test clone"
+                    stmtClone.discardInitializer(methodInit);
+                    stmtInit.discard(true);
+
+                    if (fMethodRequired)
+                        {
+                        // create a real method and the initializer statement
+                        methodInit  = this.createInitializer();
+                        initializer = this.createAstNodeFor(methodInit);
+
+                        // since the initializer is created around the "value" expression, the
+                        // initializer now "owns" the value expression
+                        assert value.getParent() != this;
+                        value = null;
+
+                        // "catch up" the newly created initializer to our stage
+                        if (!new StageMgr(initializer, Stage.Validated, errs).fastForward(10))
+                            {
+                            assert false;
+                            }
                         }
                     }
                 }
@@ -544,6 +580,39 @@ public class PropertyDeclarationStatement
 
         return fCompletes;
         }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * @return a newly created property initializer method
+     */
+    private MethodStructure createInitializer()
+        {
+        PropertyStructure prop = (PropertyStructure) getComponent();
+        return prop.createMethod(isStatic(), Access.PRIVATE,
+                org.xvm.asm.Annotation.NO_ANNOTATIONS,
+                new Parameter[] {new Parameter(pool(), prop.getType(), null, null, true, 0, false)},
+                "=", Parameter.NO_PARAMS, true, false);
+        }
+
+    /**
+     * @return a synthetic {@link MethodDeclarationStatement} for the property initializer
+     */
+    private MethodDeclarationStatement createAstNodeFor(MethodStructure methodInit)
+        {
+        return adopt(new MethodDeclarationStatement(methodInit, value));
+        }
+
+    /**
+     * Discard an unused initializer.
+     */
+    private void discardInitializer(MethodStructure methodInit)
+        {
+        PropertyStructure prop = (PropertyStructure) getComponent();
+        prop.removeChild(methodInit.getParent());
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

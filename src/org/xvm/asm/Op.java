@@ -1375,6 +1375,7 @@ public abstract class Op
             case OP_CONSTR_1:    return new Construct_1 (in, aconst);
             case OP_CONSTR_N:    return new Construct_N (in, aconst);
             case OP_CONSTR_T:    return new Construct_T (in, aconst);
+            case OP_SYN_INIT:    return new SynInit     ();
 
             default:
                 throw new IllegalStateException("op=" + byteToHexString(nOp));
@@ -1583,6 +1584,7 @@ public abstract class Op
             case OP_CONSTR_1:    return "CONSTR_1";
             case OP_CONSTR_N:    return "CONSTR_N";
             case OP_CONSTR_T:    return "CONSTR_T";
+            case OP_SYN_INIT:    return "SYN_INIT";
 
             default:
                 throw new IllegalStateException("op=" + byteToHexString(nOp));
@@ -1885,6 +1887,7 @@ public abstract class Op
     public static final int OP_CONSTR_1     = 0xEA;
     public static final int OP_CONSTR_N     = 0xEB;
     public static final int OP_CONSTR_T     = 0xEC;
+    public static final int OP_SYN_INIT     = 0xED;
 
 
     // ----- pre-defined arguments -----------------------------------------------------------------

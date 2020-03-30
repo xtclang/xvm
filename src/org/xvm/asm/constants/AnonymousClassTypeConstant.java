@@ -149,6 +149,12 @@ public class AnonymousClassTypeConstant
         }
 
     @Override
+    public boolean isComposedOfAny(Set<IdentityConstant> setIds)
+        {
+        return setIds.contains(m_idAnon);
+        }
+
+    @Override
     public Constant getDefiningConstant()
         {
         return getSingleUnderlyingClass(true);

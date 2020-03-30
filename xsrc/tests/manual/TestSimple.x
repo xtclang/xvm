@@ -1,83 +1,59 @@
 module TestSimple.xqiz.it
     {
+    import ecstasy.web.json.IntNumberMapping;
+
     @Inject ecstasy.io.Console console;
 
     void run()
         {
-        new Parent().test();
+        Test<Int> t = new Test(5);
+        t.iterator();
+
+
+//        Map<Type, function IntNumber(IntLiteral)> map = IntNumberMapping.CONVERSION;
+//        if (function IntNumber(IntLiteral) f := map.get(Int))
+//            {
+//            console.println(f(17));
+//            }
+
+        // map[type](17); TODO GG: doesn't compile
+        String? s = NAMES.getOrNull(1);
+        function Int(Int)? fn = FUNCTIONS.getOrNull(1);
+
+        console.println(s);
+        console.println(fn?(2));
         }
 
-    interface Iface
+    static Map<Int, String> NAMES = Map:[1="one", 2="two"];
+    static Map<Int, function Int(Int)> FUNCTIONS =
+        Map:[1 = (n) -> n + 1, 2 = (n) -> n + 1];
+
+    static Int foo(Int n)
         {
-        Iface f();
+        return 5;
         }
 
-    class Parent
+    class Test<Element>(Element lo)
         {
-        void test()
+        function Int(Int) fn = n -> n + 1;
+        Element lower;
+
+        Iterator iterator()
             {
-            TestDerivedA test = new TestDerivedA();
-            test.f();
-            console.println();
-            test.other();
-            }
+            Element lo = lower;
 
-        @M
-        class TestA
-                implements Iface
-            {
-            @Override
-            TestA f(Boolean flag = false)
-                {
-                console.println($"TestA:f {flag}");
-                return this;
-                }
+            console.println(fn);
 
-            void other()
+            return new Iterator()
                 {
-                f(true);
-                }
-            }
+                private Element lastValue = lo;
 
-        @M
-        class TestB
-                implements Iface
-            {
-            @Override
-            TestB f(Boolean flag = false)
-                {
-                console.println($"TestB:f {flag}");
-                return this;
-                }
-            }
-
-        class TestDerivedA
-                extends TestA
-            {
-            @Override
-            TestDerivedA f(Boolean flag=false)
-                {
-                console.println($"TestDA:f {flag}");
-                return super(flag);
-                }
-            }
-
-        mixin M
-            into (TestA | TestB)
-            {
-            @Override
-            M f(Boolean flag=false)
-                {
-                console.println($"M:f {flag}");
-                return super(flag);
-                }
-
-            // TODO GG: this shouldn't compile - needs a @Override
-            void other()
-                {
-                console.println($"M:other");
-                super();
-                }
+                @Override
+                conditional Element next()
+                    {
+                    return false;
+                    }
+                };
             }
         }
     }

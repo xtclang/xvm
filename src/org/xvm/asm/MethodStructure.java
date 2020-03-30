@@ -150,6 +150,14 @@ public class MethodStructure
         }
 
     /**
+     * @return true iff this is an auto-generated "wrapper" constructor of an anonymous class
+     */
+    public boolean isAnonymousClassWrapperConstructor()
+        {
+        return isConstructor() && isSynthetic() && getParent().getParent().isSynthetic();
+        }
+
+    /**
      * @return true iff this is a validator
      */
     public boolean isValidator()
