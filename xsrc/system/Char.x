@@ -60,7 +60,7 @@ const Char
                     }
                 codepoint &= 0b11111 >>> 5 - bits;
 
-                for (Int i : 1..length-1)
+                for (Int i : [1..length))
                     {
                     Byte b = utf8[i];
                     if (b & 0b11000000 != 0b10000000)

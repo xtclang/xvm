@@ -215,20 +215,6 @@ const Number
         return (this / n, this % n);
         }
 
-    /**
-     * Obtain a range beginning with this number and proceeding to the specified number.
-     *
-     * @param n  the number representing the `last` value in the range
-     *
-     * @return the resulting Range
-     */
-    @Override
-    @Op("..")
-    Range<Number> through(Number n)
-        {
-        return new Range<Number>(this, n);
-        }
-
 
     // ----- other operations ----------------------------------------------------------------------
 

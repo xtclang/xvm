@@ -1573,7 +1573,13 @@ public abstract class ClassTemplate
     @Override
     public int invokeDotDot(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "through", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "to", hArg).invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeDotDotEx(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain(hTarget, "toExcluding", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override

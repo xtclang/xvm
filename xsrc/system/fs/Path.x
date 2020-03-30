@@ -318,11 +318,12 @@ const Path
         {
         if (index < 0)
             {
-            throw new OutOfBounds(index.toString() + " < 0");
+            throw new OutOfBounds($"{index.toString()} < 0");
             }
+
         if (index >= size)
             {
-            throw new OutOfBounds(index.toString() + " >= " + size);
+            throw new OutOfBounds($"{index.toString()} >= {size}");
             }
 
         Path path  = this;
@@ -335,24 +336,26 @@ const Path
         }
 
     @Override
-    @Op("[..]")
-    Path slice(Interval<Int> interval)
+    @Op("[..]") Path slice(Range<Int> indexes)
         {
-        Int lower = interval.lowerBound;
-        Int upper = interval.upperBound;
+        Int lower = indexes.effectiveLowerBound;
+        Int upper = indexes.effectiveUpperBound;
         if (lower < 0)
             {
-            throw new OutOfBounds(lower.toString() + " < 0");
+            throw new OutOfBounds($"{lower.toString()} < 0");
             }
-        if (upper >= size)
+        if (upper > size)
             {
-            throw new OutOfBounds(upper.toString() + " >= " + size);
+            throw new OutOfBounds($"{upper.toString()} > {size}");
             }
-        assert lower <= upper;
+        if (lower == upper)
+            {
+            throw new OutOfBounds($"minimum path size is one segment (indexes={indexes})");
+            }
 
         if (lower == 0)
             {
-            if (interval.reversed)
+            if (indexes.reversed)
                 {
                 assert relative;
                 }
@@ -363,7 +366,7 @@ const Path
             }
 
         Path? slice = null;
-        for (Int index : interval)
+        for (Int index : indexes)
             {
             Path part = this[index];
             slice = new Path(slice, part.form, part.name);

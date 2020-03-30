@@ -192,7 +192,7 @@ const Int128
             return this;
             }
 
-        return new Int128(bits.fill(0, 0..bitLength-count-1));
+        return new Int128(bits.fill(0, [0..bitLength-count)));
         }
 
     @Override
@@ -208,7 +208,7 @@ const Int128
             return this;
             }
 
-        return new Int128(bits.fill(0, count..bitLength-1));
+        return new Int128(bits.fill(0, [count..bitLength)));
         }
 
     @Override
@@ -298,28 +298,28 @@ const Int128
     @Auto Int8 toInt8()
         {
         assert:bounds this >= Int8.minvalue && this <= Int8.maxvalue;
-        return new Int8(bits[bitLength-8..bitLength-1]);
+        return new Int8(bits[bitLength-8..bitLength));
         }
 
     @Override
     @Auto Int16 toInt16()
         {
         assert:bounds this >= Int16.minvalue && this <= Int16.maxvalue;
-        return new Int16(bits[bitLength-16..bitLength-1]);
+        return new Int16(bits[bitLength-16..bitLength));
         }
 
     @Override
     @Auto Int32 toInt32()
         {
         assert:bounds this >= Int32.minvalue && this <= Int32.maxvalue;
-        return new Int32(bits[bitLength-32..bitLength-1]);
+        return new Int32(bits[bitLength-32..bitLength));
         }
 
     @Override
     @Auto Int64 toInt()
         {
         assert:bounds this >= Int64.minvalue && this <= Int64.maxvalue;
-        return new Int64(bits[bitLength-64..bitLength-1]);
+        return new Int64(bits[bitLength-64..bitLength));
         }
 
     @Override
@@ -332,28 +332,28 @@ const Int128
     @Auto UInt8 toByte()
         {
         assert:bounds this >= UInt8.minvalue && this <= UInt8.maxvalue;
-        return new UInt8(bits[bitLength-8..bitLength-1]);
+        return new UInt8(bits[bitLength-8..bitLength));
         }
 
     @Override
     @Auto UInt16 toUInt16()
         {
         assert:bounds this >= UInt16.minvalue && this <= UInt16.maxvalue;
-        return new UInt16(bits[bitLength-16..bitLength-1]);
+        return new UInt16(bits[bitLength-16..bitLength));
         }
 
     @Override
     @Auto UInt32 toUInt32()
         {
         assert:bounds this >= UInt32.minvalue && this <= UInt32.maxvalue;
-        return new UInt32(bits[bitLength-32..bitLength-1]);
+        return new UInt32(bits[bitLength-32..bitLength));
         }
 
     @Override
     @Auto UInt64 toUInt()
         {
         assert:bounds this >= UInt64.minvalue && this <= UInt64.maxvalue;
-        return new UInt64(bits[bitLength-64..bitLength-1]);
+        return new UInt64(bits[bitLength-64..bitLength));
         }
 
     @Override

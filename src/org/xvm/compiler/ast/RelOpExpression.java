@@ -27,6 +27,7 @@ import org.xvm.asm.op.GP_And;
 import org.xvm.asm.op.GP_Div;
 import org.xvm.asm.op.GP_DivMod;
 import org.xvm.asm.op.GP_DotDot;
+import org.xvm.asm.op.GP_DotDotEx;
 import org.xvm.asm.op.GP_Mod;
 import org.xvm.asm.op.GP_Mul;
 import org.xvm.asm.op.GP_Or;
@@ -70,7 +71,26 @@ public class RelOpExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
+    /**
+     * Construct a RelOpExpression.
+     *
+     * @param expr1     the expression to the left of the operator
+     * @param operator  the operator
+     * @param expr2     the expression to the right of the operator
+     */
     public RelOpExpression(Expression expr1, Token operator, Expression expr2)
+        {
+        this(null, expr1, operator, expr2, null);
+        }
+
+    /**
+     * Construct a RelOpExpression.
+     *
+     * @param expr1     the expression to the left of the operator
+     * @param operator  the operator
+     * @param expr2     the expression to the right of the operator
+     */
+    public RelOpExpression(Token tokBefore, Expression expr1, Token operator, Expression expr2, Token tokAfter)
         {
         super(expr1, operator, expr2);
 
@@ -95,10 +115,25 @@ public class RelOpExpression
             default:
                 throw new IllegalArgumentException("operator: " + operator);
             }
+
+        m_tokBefore = tokBefore;
+        m_tokAfter  = tokAfter;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public long getStartPosition()
+        {
+        return m_tokBefore == null ? super.getStartPosition() : m_tokBefore.getStartPosition();
+        }
+
+    @Override
+    public long getEndPosition()
+        {
+        return m_tokAfter == null ? super.getEndPosition() : m_tokAfter.getEndPosition();
+        }
 
     @Override
     public TypeExpression toTypeExpression()
@@ -388,7 +423,6 @@ public class RelOpExpression
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         TypeFit fit = TypeFit.Fit;
-
         // figure out the best types to use to validate the two sub-expressions
         TypeConstant typeRequired = atypeRequired != null && atypeRequired.length >= 1
                 ? atypeRequired[0]
@@ -516,8 +550,6 @@ public class RelOpExpression
             return finishValidations(atypeRequired, atypeFake, TypeFit.NoFit, null, errs);
             }
 
-        m_idOp = idOp;
-
         // determine if the result of this expression is itself constant
         Constant[] aconstResult = null;
         if (expr1New.isConstant() && expr2New.isConstant())
@@ -525,7 +557,8 @@ public class RelOpExpression
             // delegate the operation to the constants
             try
                 {
-                Constant constResult = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
+                Token.Id op          = isExcluding() ? Id.DOTDOTEX : operator.getId();
+                Constant constResult = expr1New.toConstant().apply(op, expr2New.toConstant());
                 aconstResult = fMulti
                         ? ((ArrayConstant) constResult).getValue() // divmod result is in a tuple
                         : new Constant[] {constResult};
@@ -867,7 +900,9 @@ public class RelOpExpression
                 return;
 
             case DOTDOT:
-                code.add(new GP_DotDot(arg1, arg2, argLVal));
+                code.add(isExcluding()
+                        ? new GP_DotDotEx(arg1, arg2, argLVal)
+                        : new GP_DotDot  (arg1, arg2, argLVal));
                 return;
 
             case SHL:
@@ -953,6 +988,17 @@ public class RelOpExpression
 
     // ----- helpers -------------------------------------------------------------------------------
 
+    /**
+     * @return true iff the operator is the "excluding" dot-dot operator
+     */
+    boolean isExcluding()
+        {
+        return operator.getId() == Id.DOTDOT && m_tokAfter != null && m_tokAfter.getId() == Id.R_PAREN;
+        }
+
+    /**
+     * @return the default name for the operator method
+     */
     public String getDefaultMethodName()
         {
         switch (operator.getId())
@@ -968,7 +1014,7 @@ public class RelOpExpression
                 return "xor";
 
             case DOTDOT:
-                return "through";
+                return isExcluding() ? "toExcluding" : "to";
 
             case SHL:
                 return "shiftLeft";
@@ -1002,13 +1048,37 @@ public class RelOpExpression
             }
         }
 
+    /**
+     * @return the operator string
+     */
     public String getOperatorString()
         {
-        return operator.getId().TEXT;
+        return isExcluding()
+                ? Id.DOTDOTEX.TEXT
+                : operator.getId().TEXT;
+        }
+
+
+    // ----- debugging assistance ------------------------------------------------------------------
+
+    @Override
+    public String toString()
+        {
+        return m_tokBefore == null || m_tokAfter == null
+                ? super.toString()
+                : m_tokBefore.getId().TEXT + super.toString() + m_tokAfter.getId().TEXT;
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private transient MethodConstant m_idOp;
+    /**
+     * An optional "opening" token, used for "[x..y)" style expressions.
+     */
+    private Token m_tokBefore;
+
+    /**
+     * An optional "closing" token, used for "[x..y)" style expressions.
+     */
+    private Token m_tokAfter;
     }

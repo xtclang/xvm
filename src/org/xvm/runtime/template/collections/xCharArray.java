@@ -14,6 +14,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
@@ -236,28 +237,49 @@ public class xCharArray
         }
 
     @Override
-    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, boolean fReverse, int iReturn)
+    protected int slice(Frame        frame,
+                        ObjectHandle hTarget,
+                        long         ixLower,
+                        boolean      fExLower,
+                        long         ixUpper,
+                        boolean      fExUpper,
+                        boolean      fReverse,
+                        int          iReturn)
         {
         CharArrayHandle hArray = (CharArrayHandle) hTarget;
+
+        // calculate inclusive lower
+        if (fExLower)
+            {
+            ++ixLower;
+            }
+
+        // calculate exclusive upper
+        if (!fExUpper)
+            {
+            ++ixUpper;
+            }
 
         char[] achValue = hArray.m_achValue;
         try
             {
             char[] achNew;
-
-            if (fReverse)
+            if (ixLower >= ixUpper)
                 {
-                int cNew = (int) (ixTo - ixFrom + 1);
-
+                achNew = new char[0];
+                }
+            else if (fReverse)
+                {
+                int cNew = (int) (ixUpper - ixLower);
                 achNew = new char[cNew];
                 for (int i = 0; i < cNew; i++)
                     {
-                    achNew[i] = achNew[(int) ixTo - i];
+                    achNew[i] = achValue[(int) ixUpper - i - 1];
                     }
                 }
             else
                 {
-                achNew = Arrays.copyOfRange(achValue, (int) ixFrom, (int) ixTo + 1);
+                achNew = Arrays.copyOfRange(achValue, (int) ixLower, (int) ixUpper);
                 }
 
             CharArrayHandle  hArrayNew = new CharArrayHandle(
@@ -269,7 +291,7 @@ public class xCharArray
             {
             long c = achValue.length;
             return frame.raiseException(
-                xException.outOfBounds(frame, ixFrom < 0 || ixFrom >= c ? ixFrom : ixTo, c));
+                xException.outOfBounds(frame, ixLower < 0 || ixLower >= c ? ixLower : ixUpper, c));
             }
         }
 

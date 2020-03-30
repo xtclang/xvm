@@ -16,6 +16,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xBoolean;
@@ -27,7 +28,6 @@ import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.collections.BitBasedArray;
 import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
-import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
 
 import org.xvm.util.PackedInteger;

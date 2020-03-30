@@ -17,18 +17,87 @@ mixin Interval<Element extends immutable Sequential>
         }
 
     /**
-     * The size of an Interval is defined as the number of Sequential elements represented by the
-     * interval.
+     * Determine the first value that could exist in the range. Note that the value may not actually
+     * exist in the range, because the lower and upper bound may preclude it, as would occur in an
+     * integer range of `(0, 1)`, for example.
+     *
+     * @return the first value that would exist in the range, assuming at least one value exists in
+     *         the range
+     */
+    Element effectiveFirst.get()
+        {
+        return reversed ? effectiveUpperBound : effectiveLowerBound;
+        }
+
+    /**
+     * Determine the last value that could exist in the range. Note that the value may not actually
+     * exist in the range, because the lower and upper bound may preclude it, as would occur in an
+     * integer range of `(0, 1)`, for example.
+     *
+     * @return the last value that would exist in the range, assuming at least one value exists in
+     *         the range
+     */
+    Element effectiveLast.get()
+        {
+        return reversed ? effectiveLowerBound : effectiveUpperBound;
+        }
+
+    /**
+     * Determine the lowest value that could exist in the range. Note that the value may not
+     * actually exist in the range, because the upper bound may preclude it, as would occur in an
+     * integer range of `(0, 1)`, for example.
+     *
+     * @return the lowest value that could exist in the range
+     */
+    Element effectiveLowerBound.get()
+        {
+        return lowerExclusive ? lowerBound.nextValue() : lowerBound;
+        }
+
+    /**
+     * Determine the highest value that could exist in the range. Note that the value may not
+     * actually exist in the range, because the lower bound may preclude it, as would occur in an
+     * integer range of `(0, 1)`, for example.
+     *
+     * @return the highest value that could exist in the range
+     */
+    Element effectiveUpperBound.get()
+        {
+        return upperExclusive ? upperBound.prevValue() : upperBound;
+        }
+
+    /**
+     * The size of an Interval is defined as the number of steps from the lower bound of the
+     * interval to the higher bound of the interval.
      *
      * Consider these examples:
      * * The size of ['a'..'a'] is 1
+     * * The size of ['a'..'a') is 0
+     * * The size of ['a'..'b'] is 2
+     * * The size of ['a'..'b') is 1
      * * The size of ['a'..'z'] is 26
+     * * The size of ['a'..'z') is 25
      * * The size of ['z'..'a'] is 26
+     * * The size of ['z'..'a') is 25
      */
     @Override
     Int size.get()
         {
-        return lowerBound.stepsTo(upperBound) + 1;
+        try
+            {
+            Element lo = effectiveLowerBound;
+            Element hi = effectiveUpperBound;
+            return switch (lo <=> hi)
+                {
+                case Lesser : lo.stepsTo(hi) + 1;
+                case Equal  : 1;
+                case Greater: 0;
+                };
+            }
+        catch (OutOfBounds e)
+            {
+            return 0;
+            }
         }
 
     /**
@@ -39,14 +108,40 @@ mixin Interval<Element extends immutable Sequential>
     @Override
     IntervalIterator iterator()
         {
+        Element lo;
+        Element hi;
+        try
+            {
+            lo = effectiveLowerBound;
+            hi = effectiveUpperBound;
+            }
+        catch (OutOfBounds e)
+            {
+            return new IntervalIterator()
+                {
+                @Override
+                public Boolean hasNext.get()
+                    {
+                    return False;
+                    }
+
+                @Override
+                conditional Element next()
+                    {
+                    return False;
+                    }
+                };
+            }
+
         if (reversed)
             {
             return new IntervalIterator()
                 {
-                private Element nextValue = upperBound;
+                private Element nextValue = hi;
+                private Element lastValue = lo;
 
                 @Override
-                public/private Boolean hasNext = true;
+                public/private Boolean hasNext = nextValue >= lastValue;
 
                 @Override
                 conditional Element next()
@@ -54,7 +149,7 @@ mixin Interval<Element extends immutable Sequential>
                     if (hasNext)
                         {
                         Element value = nextValue;
-                        if (value == lowerBound)
+                        if (value == lastValue)
                             {
                             hasNext = false;
                             }
@@ -75,10 +170,11 @@ mixin Interval<Element extends immutable Sequential>
             {
             return new IntervalIterator()
                 {
-                private Element nextValue = lowerBound;
+                private Element nextValue = lo;
+                private Element lastValue = hi;
 
                 @Override
-                public/private Boolean hasNext = true;
+                public/private Boolean hasNext = nextValue <= lastValue;
 
                 @Override
                 conditional Element next()
@@ -86,7 +182,7 @@ mixin Interval<Element extends immutable Sequential>
                     if (hasNext)
                         {
                         Element value = nextValue;
-                        if (value == upperBound)
+                        if (value == lastValue)
                             {
                             hasNext = false;
                             }
@@ -112,91 +208,25 @@ mixin Interval<Element extends immutable Sequential>
      */
     void forEach(function void(Element) process)
         {
-        if (reversed)
-            {
-            Element value = upperBound;
-            do
-                {
-                process(value);
-                value = value.prevValue();
-                }
-            while (value >= lowerBound);
-            }
-        else
-            {
-            Element value = lowerBound;
-            do
-                {
-                process(value);
-                value = value.nextValue();
-                }
-            while (value <= upperBound);
-            }
-        }
-
-    /**
-     * This is the same as the {@link forEach} method, except that the last value in the Interval is
-     * considered to be exclusive of the interval. This means that a hypothetical interval of `0..0`
-     * would not have any values processed by this method.
-     *
-     * @param process  the function to call with each value from the interval
-     */
-    void forEachExclusive(function void(Element) process)
-        {
-        if (reversed)
-            {
-            Element value = upperBound;
-            while (value > lowerBound)
-                {
-                process(value);
-                value = value.prevValue();
-                }
-            }
-        else
-            {
-            Element value = lowerBound;
-            while (value < upperBound)
-                {
-                process(value);
-                value = value.nextValue();
-                }
-            }
+        iterator().forEach(process);
         }
 
     /**
      * Two intervals adjoin iff the union of all of the values from both intervals forms a single
      * contiguous Interval.
      */
+    @Override
     Boolean adjoins(Interval that)
         {
-        if (this.upperBound < that.lowerBound)
+        return switch (that.lowerBound <=> this.upperBound, that.upperBound <=> this.lowerBound)
             {
-            // this interval precedes that interval
-            return this.upperBound.nextValue() == that.lowerBound;
-            }
-        else if (this.lowerBound > that.upperBound)
-            {
-            // this interval follows that interval
-            return this.lowerBound.prevValue() == that.upperBound;
-            }
-        else
-            {
-            return true;
-            }
-        }
-
-    /**
-     * Two intervals that are contiguous or overlap can be joined together to form a larger
-     * interval.
-     */
-    @Override
-    conditional Interval union(Interval that)
-        {
-        if (!this.adjoins(that))
-            {
-            return false;
-            }
-
-        return true, this.lowerBound.minOf(that.lowerBound) .. this.upperBound.maxOf(that.upperBound);
+            case (Greater, _      ): that.effectiveLowerBound.prevValue() <= this.effectiveUpperBound; // TODO handle OutOfBounds
+            case (_      , Lesser ): that.effectiveUpperBound.nextValue() >= this.effectiveLowerBound; // TODO handle OutOfBounds
+            case (Lesser , Greater): True;                                       // between bounds
+            case (Lesser , Equal  ): !this.lowerExclusive | !that.upperExclusive;// at lower bound
+            case (Equal  , Greater): !this.upperExclusive | !that.lowerExclusive;// at upper bound
+            case (Equal  , Equal  ): True;                                       // zero length!
+            default: assert; // TODO GG this should not be needed
+            };
         }
     }

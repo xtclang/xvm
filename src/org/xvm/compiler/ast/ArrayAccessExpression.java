@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -27,6 +28,7 @@ import org.xvm.asm.op.I_Get;
 import org.xvm.asm.op.Invoke_11;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.PackedInteger;
@@ -44,11 +46,11 @@ public class ArrayAccessExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ArrayAccessExpression(Expression expr, List<Expression> indexes, long lEndPos)
+    public ArrayAccessExpression(Expression expr, List<Expression> indexes, Token tokClose)
         {
-        this.expr    = expr;
-        this.indexes = indexes;
-        this.lEndPos = lEndPos;
+        this.expr     = expr;
+        this.indexes  = indexes;
+        this.tokClose = tokClose;
         }
 
 
@@ -57,7 +59,8 @@ public class ArrayAccessExpression
     @Override
     public TypeExpression toTypeExpression()
         {
-        return new ArrayTypeExpression(expr.toTypeExpression(), indexes, lEndPos);
+        assert tokClose.getId() == Id.R_SQUARE;
+        return new ArrayTypeExpression(expr.toTypeExpression(), indexes, tokClose.getEndPosition());
         }
 
     @Override
@@ -69,7 +72,7 @@ public class ArrayAccessExpression
     @Override
     public long getEndPosition()
         {
-        return lEndPos;
+        return tokClose.getEndPosition();
         }
 
     @Override
@@ -78,18 +81,53 @@ public class ArrayAccessExpression
         return CHILD_FIELDS;
         }
 
+    /**
+     * @return true iff the array access is in the form of explicit "dot dot" range access (a slice)
+     *         with an inclusive upper bound
+     */
+    public boolean isInclusiveSlice()
+        {
+        return tokClose.getId() == Id.R_SQUARE && isDotDotIndexes();
+        }
+
+    /**
+     * @return true iff the array access is in the form of explicit "dot dot" range access (a slice)
+     *         with an exclusive upper bound
+     */
+    public boolean isExclusiveSlice()
+        {
+        return tokClose.getId() == Id.R_PAREN && isDotDotIndexes();
+        }
+
+    /**
+     * @return true iff all of the indexes are "dot dot" range expressions
+     */
+    public boolean isDotDotIndexes()
+        {
+        for (Expression expr : indexes)
+            {
+            if (!(expr instanceof RelOpExpression && ((RelOpExpression) expr).getOperator().getId() == Id.DOTDOT))
+                {
+                return false;
+                }
+            }
+
+        return true;
+        }
+
 
     // ----- LValue methods ------------------------------------------------------------------------
 
     @Override
     public boolean isLValueSyntax()
         {
-        return true;
+        return !isExclusiveSlice();
         }
 
     @Override
     public Expression getLValueExpression()
         {
+        assert isLValueSyntax();
         return this;
         }
 
@@ -109,8 +147,8 @@ public class ArrayAccessExpression
             return getType();
             }
 
-        TypeConstant typeArray = expr.isValidated() ? expr.getType() : expr.getImplicitType(ctx);
-        if (typeArray == null)
+        TypeConstant typeTarget = expr.isValidated() ? expr.getType() : expr.getImplicitType(ctx);
+        if (typeTarget == null)
             {
             // while we could test the expression to find out if it could be UniformIndexed, or
             // Array, or whatever, the information that we truly need is not the form (Array, Tuple,
@@ -123,32 +161,27 @@ public class ArrayAccessExpression
         // of the resulting field IFF the tuple type specifies its field types AND the index into
         // the tuple is a constant value. however, since we haven't yet validated the expression,
         // the value of the index might not yet be determinable
-        if (typeArray.isTuple())
+        if (typeTarget.isTuple())
             {
-            return typeArray.isParamsSpecified() || typeArray.isFormalTypeSequence()
-                    ? determineTupleResultType(typeArray)
+            return typeTarget.isParamsSpecified() || typeTarget.isFormalTypeSequence()
+                    ? determineTupleResultType(typeTarget)
                     : null;
             }
 
-        // look for an operator that supports [x] indexing
-        TypeInfo            infoArray  = typeArray.ensureTypeInfo();
-        int                 cIndexes   = indexes.size();
-        Set<MethodConstant> setMethods = infoArray.findOpMethods("getElement", "[]", cIndexes);
+        // otherwise, the type comes from the return value from the op that is likely to be used to
+        // access the "array" target
+        TypeInfo            infoTarget  = typeTarget.ensureTypeInfo();
+        int                 cIndexes    = indexes.size();
+        Set<MethodConstant> setMethods  = findPotentialOps(infoTarget, cIndexes);
         for (MethodConstant idMethod : setMethods)
             {
-            if (indexesFit(ctx, idMethod))
+            if (setMethods.size() == 1 || indexesFit(ctx, idMethod))
                 {
-                return idMethod.getRawReturns()[0];
-                }
-            }
-
-        // we couldn't find a simple [x] form, but there could be an [x..y] form
-        setMethods = infoArray.findOpMethods("slice", "[..]", cIndexes);
-        for (MethodConstant idMethod : setMethods)
-            {
-            if (indexesFit(ctx, idMethod))
-                {
-                return idMethod.getRawReturns()[0];
+                TypeConstant[] atypeReturns = idMethod.getRawReturns();
+                if (atypeReturns.length >= 1)
+                    {
+                    return idMethod.getRawReturns()[0];
+                    }
                 }
             }
 
@@ -158,105 +191,175 @@ public class ArrayAccessExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        // check if we can figure out the answer on our own
-        TypeConstant typeImplicit = getImplicitType(ctx);
-        if (typeImplicit != null)
+        TypeFit fit = super.testFit(ctx, typeRequired, errs);
+        if (fit.isFit())
             {
-            if (typeImplicit.isA(typeRequired))
-                {
-                return TypeFit.Fit;
-                }
+            return fit;
+            }
 
-            if (typeImplicit.getConverterTo(typeRequired) != null)
+        // check the implicit type of the "array" expression to see if it has any operators that
+        // could fulfill the desired type
+        ConstantPool pool       = pool();
+        int          cIndexes   = indexes.size();
+        TypeConstant typeTarget = expr.getImplicitType(ctx);
+        if (typeTarget != null)
+            {
+            TypeInfo            infoTarget = typeTarget.ensureTypeInfo();
+            Set<MethodConstant> setMethods = findPotentialOps(infoTarget, cIndexes);
+            for (MethodConstant idMethod : setMethods)
                 {
-                return TypeFit.Conv;
+                TypeConstant[] atypeReturns = idMethod.getRawReturns();
+                if (atypeReturns.length >= 1 && indexesFit(ctx, idMethod))
+                    {
+                    fit = calcFit(ctx, atypeReturns[0], typeRequired);
+                    if (fit.isFit())
+                        {
+                        return fit;
+                        }
+                    }
                 }
             }
 
-        // test to see if the "array" expression is a tuple; this is easy to test for, just by
-        // asking for a "naked" Tuple, but ignore anything that needs packing/unpacking/conversion
-        ConstantPool pool      = pool();
-        int          cIndexes  = indexes.size();
-        TypeConstant typeArray = expr.getImplicitType(ctx);
-        if (typeArray != null && typeArray.isTuple()
-                || typeArray == null && expr.testFit(ctx, pool.typeTuple(), null) == TypeFit.Fit)
+        // at this point, either the "array" expression has no idea what type it will result in, or
+        // its best guess doesn't have an array operator that results in the required type; "probe"
+        // for some likely types that the array access operators are known to exist on
+        switch (cIndexes)
             {
-            TypeConstant typeTest = determineTupleTestType(typeRequired);
-            return typeTest == null
-                    // the only thing that we can say for sure at this point is that the return
-                    // value is an object
-                    ? pool.typeObject().isA(typeRequired) ? TypeFit.Fit : TypeFit.NoFit
-                    : expr.testFit(ctx, typeTest, errs);
-            }
-        // test for Sequence<T> (aka T...) and Array<T> (aka T[]) etc.
-        else if (testType(ctx, expr, typeArray, pool.typeSequence()) && cIndexes == 1)
-            {
-            // array[index]
-            if (indexes.get(0).testFit(ctx, pool.typeInt(), null).isFit())
-                {
-                return expr.testFit(ctx, pool.ensureParameterizedTypeConstant(
-                        pool.typeSequence(), typeRequired), errs);
-                }
+            default:
+            case 0:
+                break;
 
-            // array[index..index]
-            if (typeRequired.isA(pool.typeSequence()) && indexes.get(0).testFit(ctx,
-                    pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt()), null).isFit())
-                {
-                // REVIEW this might not be quite right .. assemble the type and then find the result of the [..] and see if that isA(typeRequired)
-                TypeConstant typeElement = typeRequired.resolveGenericType("Element");
-                return typeElement == null
-                        ? TypeFit.Fit
-                        : expr.testFit(ctx, pool.ensureParameterizedTypeConstant(
-                                pool.typeSequence(), typeElement), errs);
-                }
-            }
-        // test for UniformIndexed
-        else if (testType(ctx, expr, typeArray, pool.typeIndexed()) && cIndexes == 1)
-            {
-            // figure out the index type
-            TypeConstant typeIndex = typeArray == null
-                    ? null
-                    : typeArray.resolveGenericType("Index");
-            if (typeIndex == null || !indexes.get(0).testFit(ctx, typeIndex, null).isFit())
-                {
-                typeIndex = indexes.get(0).getImplicitType(ctx);
-                }
+            case 1:
+                // tuple is a special case, because its elements each have their own type, so
+                // determining the type of an "array style access" against a tuple is a function of
+                // being able to determine both the types of the tuple fields, and the index values
+                // (which must be determinable at compile time in order to know which tuple elements
+                // are being accessed)
+                if (typeTarget != null && typeTarget.isTuple()
+                        || expr.testFit(ctx, pool.typeTuple(), null) == TypeFit.Fit)
+                    {
+                    TypeConstant typeTest = determineTupleTestType(typeRequired);
+                    return typeTest == null
+                        // the only thing that we can say for sure at this point is that the return
+                        // value is an object
+                        ? pool.typeObject().isA(typeRequired) ? TypeFit.Fit : TypeFit.NoFit
+                        : expr.testFit(ctx, typeTest, errs);
+                    }
 
-            if (typeIndex != null)
-                {
-                return expr.testFit(ctx, pool.ensureParameterizedTypeConstant(
-                        pool.typeIndexed(), typeIndex, typeRequired), errs);
-                }
-            }
-        // test for Matrix<T>
-        else if (testType(ctx, expr, typeArray, pool.typeMatrix()) && cIndexes == 2)
-            {
-            Expression exprCol = indexes.get(0);
-            Expression exprRow = indexes.get(1);
+                // test for Sequence<T>, Array<T> (aka T[]), etc.
+                Expression exprTarget = expr;
+                Expression exprIndex  = indexes.get(0);
+                if (testType(ctx, exprTarget, typeTarget, pool.typeSequence()))
+                    {
+                    // Sequence (Array, ...)   - if target is a Sequence (no conv)
+                    //     Int -> Element      - if index could be an Int, then test if target
+                    //                           could be a Sequence<Int, typeRequired>
+                    //
+                    //     Range<Int> -> El... -  if target could be typeRequired (slice returns
+                    //                            this:type) and index could be a Range<Int>
 
-            // matrix[index,index]
-            if (exprCol.testFit(ctx, pool.typeInt(), null).isFit() &&
-                exprRow.testFit(ctx, pool.typeInt(), null).isFit())
-                {
-                return expr.testFit(ctx, pool.ensureParameterizedTypeConstant(
-                        pool.typeMatrix(), typeRequired), errs);
-                }
+                    // array[index]
+                    if (!isExclusiveSlice() && exprIndex.testFit(ctx, pool.typeInt(), null).isFit())
+                        {
+                        return exprTarget.testFit(ctx, pool.ensureParameterizedTypeConstant(
+                                pool.typeSequence(), typeRequired), errs);
+                        }
 
-            // matrix[index..index,index..index]
-            TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt());
-            if (typeRequired.isA(pool.typeMatrix()) && exprCol.testFit(ctx, typeInterval, null).isFit()
-                                                    && exprRow.testFit(ctx, typeInterval, null).isFit())
-                {
-                // REVIEW same issue as array above
-                TypeConstant typeElement = typeRequired.resolveGenericType("Element");
-                return typeElement == null
-                        ? TypeFit.Fit
-                        : expr.testFit(ctx, pool.ensureParameterizedTypeConstant(
-                                pool.typeMatrix(), typeElement), errs);
-                }
+                    // array[index..index] or array[index..index)
+                    // REVIEW what if it is a Range<IntLiteral> or Range<UInt> ???
+                    if (exprTarget.testFit(ctx, typeRequired, errs) == TypeFit.Fit
+                            && exprIndex.testFit(ctx, pool.ensureParameterizedTypeConstant(
+                            pool.typeRange(), pool.typeInt()), null).isFit())
+                        {
+                        return TypeFit.Fit;
+                        }
+                    }
+                else // not a Sequence, but might still be UniformIndexed and/or Sliceable
+                    {
+                    // test for UniformIndexed
+                    //  UniformIndexed       - test if target could be
+                    //                         UniformIndexed<indexes[0], typeRequired>
+                    //      Index -> Element - indexes[0] must have an implicit type
+                    if (!isExclusiveSlice() && testType(ctx, exprTarget, typeTarget, pool.typeIndexed()))
+                        {
+                        // figure out the index type
+                        TypeConstant typeIndex = estimateIndexType(ctx, typeTarget, "Index", exprIndex);
+                        if (typeIndex != null)
+                            {
+                            fit = exprTarget.testFit(ctx, pool.ensureParameterizedTypeConstant(
+                                    pool.typeIndexed(), typeIndex, typeRequired), errs);
+                            if (fit.isFit())
+                                {
+                                return fit;
+                                }
+                            }
+                        }
 
-            // test for Matrix[_,?] or Matrix[?,_]
-            // TODO
+                    // test for Sliceable
+                    //  Sliceable             - test if target could be Sliceable without conv, and
+                    //                          index could be a Range
+                    //      Index -> Element  - probably does not matter what indexes are, since
+                    //                          Sliceable ops return this:type
+                    if (testType(ctx, exprTarget, typeTarget, pool.typeSliceable())
+                            && exprIndex.testFit(ctx, pool.typeRange(), null).isFit())
+                        {
+                        fit = exprTarget.testFit(ctx, typeRequired, errs);
+                        if (fit.isFit())
+                            {
+                            return fit;
+                            }
+                        }
+                    }
+
+                // test for Map
+                //  Map               - test if target is Map without conv, and could be a
+                //                      Map<indexes[0], typeRequired>
+                //      Key -> Value  - indexes[0] must have an implicit type, or typeTarget has to
+                //                      have a known Value type parameter
+                if (typeTarget != null && !isExclusiveSlice()
+                        && testType(ctx, exprTarget, typeTarget, pool.typeMap()))
+                    {
+                    TypeConstant typeValue = typeTarget.resolveGenericType("Value");
+                    fit = calcFit(ctx, typeValue, typeRequired);
+                    if (fit.isFit() && typeRequired.isA(pool.typeNullable()))
+                        {
+                        return fit;
+                        }
+                    }
+                break;
+
+            case 2:
+                // test for Matrix<T>
+                if (testType(ctx, expr, typeTarget, pool.typeMatrix()))
+                    {
+                    Expression exprCol = indexes.get(0);
+                    Expression exprRow = indexes.get(1);
+
+                    // matrix[index,index]
+                    if (exprCol.testFit(ctx, pool.typeInt(), null).isFit() &&
+                        exprRow.testFit(ctx, pool.typeInt(), null).isFit())
+                        {
+                        return expr.testFit(ctx, pool.ensureParameterizedTypeConstant(
+                            pool.typeMatrix(), typeRequired), errs);
+                        }
+
+                    // matrix[index..index,index..index]
+                    TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt());
+                    if (typeRequired.isA(pool.typeMatrix()) && exprCol.testFit(ctx, typeInterval, null).isFit()
+                        && exprRow.testFit(ctx, typeInterval, null).isFit())
+                        {
+                        // REVIEW same issue as array above
+                        TypeConstant typeElement = typeRequired.resolveGenericType("Element");
+                        return typeElement == null
+                            ? TypeFit.Fit
+                            : expr.testFit(ctx, pool.ensureParameterizedTypeConstant(
+                            pool.typeMatrix(), typeElement), errs);
+                        }
+
+                    // test for Matrix[_,?] or Matrix[?,_]
+                    // TODO
+                    }
+                break;
             }
 
         return TypeFit.NoFit;
@@ -288,11 +391,11 @@ public class ArrayAccessExpression
                 {
                 // array[index]
                 TypeConstant typeElement = null;
-                if (aexprIndexes[0].testFit(ctx, pool.typeInt(), null).isFit())
+                if (!isExclusiveSlice() && aexprIndexes[0].testFit(ctx, pool.typeInt(), null).isFit())
                     {
                     typeElement = typeRequired;
                     }
-                // array[index..index]
+                // array[index..index] or array[index..index)
                 else if (typeRequired.isA(pool.typeSequence()) && aexprIndexes[0].testFit(ctx,
                         pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt()), null).isFit())
                     {
@@ -629,6 +732,17 @@ public class ArrayAccessExpression
 
     // ----- compilation helpers -------------------------------------------------------------------
 
+    /**
+     * Search through the target type for an accessor that matches the form and type of an array
+     * access operator with the arguments that are available.
+     *
+     * @param ctx         the compiler context
+     * @param typeTarget  the array type
+     * @param aexprArgs   the arguments
+     * @param typeReturn  the (optional) desired result type
+     *
+     * @return the selected method to use as the array accessor
+     */
     private MethodInfo findArrayAccessor(
             Context       ctx,
             TypeConstant  typeTarget,
@@ -647,19 +761,12 @@ public class ArrayAccessExpression
 
         TypeInfo         infoTarget = typeTarget.ensureTypeInfo();
         boolean          fTuple     = typeTarget.isTuple();
-        Set<MethodInfo>  setAll     = infoTarget.getOpMethodInfos();
         List<MethodInfo> listMatch  = new ArrayList<>();
-        NextOp: for (MethodInfo info : setAll)
-            {
-            if ( !(    info.isOp("getElement", "[]",   cArgs)
-                    || info.isOp("slice",      "[..]", cArgs)
-                    // TODO column and row accessors for matrix
-                    ))
-                {
-                continue NextOp;
-                }
 
-            SignatureConstant sig = info.getSignature();
+        Set<MethodConstant> setAll = findPotentialOps(infoTarget, cArgs);
+        NextOp: for (MethodConstant idMethod : setAll)
+            {
+            SignatureConstant sig = idMethod.getSignature().resolveAutoNarrowing(pool(), typeTarget);
             if (!fTuple && typeReturn != null && (sig.getRawReturns().length < 1
                     || !sig.getRawReturns()[0].isAssignableTo(typeReturn)))
                 {
@@ -675,6 +782,7 @@ public class ArrayAccessExpression
                 }
 
             // verify that any additional parameters have a default value
+            MethodInfo info = infoTarget.getMethodById(idMethod);
             if (cParams > cArgs && (cParams - cArgs) <
                     info.getTopmostMethodStructure(infoTarget).getDefaultParamCount())
                 {
@@ -735,6 +843,45 @@ public class ArrayAccessExpression
         return infoBest;
         }
 
+    private Set<MethodConstant> findPotentialOps(TypeInfo infoTarget, int cArgs)
+        {
+        if (isInclusiveSlice())
+            {
+            // it is possible that the interval is the index type of the array
+            Set<MethodConstant> setGet = infoTarget.findOpMethods("getElement", "[]", cArgs);
+            Set<MethodConstant> setSlice = infoTarget.findOpMethods("sliceInclusive", "[[..]]", cArgs);
+            return combineSets(setGet, setSlice);
+            }
+        else if (isExclusiveSlice())
+            {
+            return infoTarget.findOpMethods("sliceExclusive", "[[..)]", cArgs);
+            }
+        else
+            {
+            Set<MethodConstant> setGet = infoTarget.findOpMethods("getElement", "[]", cArgs);
+            Set<MethodConstant> setSlice = infoTarget.findOpMethods("slice", "[..]", cArgs);
+            return combineSets(setGet, setSlice);
+            }
+        }
+
+    private Set<MethodConstant> combineSets(Set<MethodConstant> set1, Set<MethodConstant> set2)
+        {
+        if (set1.isEmpty())
+            {
+            return set2;
+            }
+
+        if (set2.isEmpty())
+            {
+            return set1;
+            }
+
+        HashSet<MethodConstant> setUnion = new HashSet<>();
+        setUnion.addAll(set1);
+        setUnion.addAll(set2);
+        return setUnion;
+        }
+
     /**
      * Helper to find an op method.
      *
@@ -749,7 +896,7 @@ public class ArrayAccessExpression
      * @return the MethodConstant for the desired op, or null if an exact match was not found,
      *         in which case an error is reported
      */
-    protected MethodConstant findOpMethod(
+    private MethodConstant findOpMethod(
             Context       ctx,
             TypeConstant  typeTarget,
             String        sMethodName,
@@ -936,6 +1083,7 @@ public class ArrayAccessExpression
         int nHi;
         try
             {
+// TODO CP
             RangeConstant range = (RangeConstant) constIndex.convertTo(pool.typeInterval());
             nLo = range.getFirst().convertTo(pool.typeInt()).getIntValue().getInt();
             nHi = range.getLast().convertTo(pool.typeInt()).getIntValue().getInt();
@@ -982,26 +1130,38 @@ public class ArrayAccessExpression
         ConstantPool pool = pool();
 
         int nLo, nHi;
-        boolean fSlice;
+        boolean fSlice, fReverse;
         try
             {
             nLo = nHi = index.convertTo(pool.typeInt()).getIntValue().getInt();
             fSlice    = false;
+            fReverse  = false;
             }
         catch (RuntimeException e)
             {
             // type of "tup[lo..hi]" is a tuple
+            RangeConstant interval;
             try
                 {
-                RangeConstant interval = (RangeConstant) index.convertTo(pool.typeInterval());
-                nLo    = interval.getFirst().convertTo(pool.typeInt()).getIntValue().getInt();
-                nHi    = interval.getLast().convertTo(pool.typeInt()).getIntValue().getInt();
-                fSlice = true;
+                interval = (RangeConstant) index.convertTo(pool.typeInterval());
+                nLo      = interval.getEffectiveFirst().convertTo(pool.typeInt()).getIntValue().getInt();
+                nHi      = interval.getEffectiveLast().convertTo(pool.typeInt()).getIntValue().getInt();
+                fSlice   = true;
+                fReverse = interval.isReverse();
                 }
             catch (RuntimeException e2)
                 {
                 return null;
                 }
+
+            if (fReverse)
+                {
+                int nTemp = nLo;
+                nLo = nHi;
+                nHi = nTemp;
+                }
+
+            assert nLo <= nHi;
             }
 
         // note: 0xFF used as an *arbitrary* limit on tuple size here, just to avoid stupidity
@@ -1012,7 +1172,7 @@ public class ArrayAccessExpression
 
         // create a nominally-sized array of field types that are all "Object", since Tuple<T1, Tn>
         // is by definition a Tuple<Object, Object>, which is in turn a Tuple<Object>
-        int            cTestFields = Math.max(nLo, nHi) + 1;
+        int            cTestFields = nHi + 1;
         TypeConstant[] atypeFields = new TypeConstant[cTestFields];
         TypeConstant   typeObject  = pool.typeObject();
         for (int i = 0; i < cTestFields; ++i)
@@ -1022,15 +1182,21 @@ public class ArrayAccessExpression
 
         if (fSlice)
             {
-            TypeConstant[] atypeReq = typeRequired.getParamTypesArray();
-            int            cReq     = atypeReq.length;
-            if (cReq > (Math.abs(nHi - nLo) + 1))
+            int cElements = nHi - nLo + 1;
+            if (cElements <= 0)
                 {
                 return null;
                 }
 
-            int cStep = nHi >= nLo ? +1 : -1;
-            for (int iSrc = 0, iDest = nLo; iSrc < cReq; ++iSrc, iDest += cStep)
+            TypeConstant[] atypeReq = typeRequired.getParamTypesArray();
+            int            cReq     = atypeReq.length;
+            if (cReq > cElements)
+                {
+                return null;
+                }
+
+            for (int iSrc = 0, iDest = fReverse ? nHi : nLo, cStep = fReverse ? -1 : +1;
+                    iSrc < cReq; ++iSrc, iDest += cStep)
                 {
                 atypeFields[iDest] = atypeReq[iSrc];
                 }
@@ -1062,25 +1228,22 @@ public class ArrayAccessExpression
                                       pool.typeRange(), pool.typeInt()))
                     : constIndex;
             }
-        else
+        else if (exprIndex instanceof LiteralExpression)
             {
-            if (exprIndex instanceof LiteralExpression)
+            return fromLiteral(exprIndex);
+            }
+        else if (exprIndex instanceof RelOpExpression)
+            {
+            RelOpExpression exprInterval = (RelOpExpression) exprIndex;
+            if (exprInterval.getOperator().getId() == Id.DOTDOT)
                 {
-                return fromLiteral(exprIndex);
-                }
-            else if (exprIndex instanceof RelOpExpression)
-                {
-                RelOpExpression exprInterval = (RelOpExpression) exprIndex;
-                if (exprInterval.getOperator().getId() == Id.DOTDOT)
+                // need both the left & right expressions, and they must both be
+                // constant or of the LiteralExpression form
+                Constant constLo = fromLiteral(exprInterval.getExpression1());
+                Constant constHi = fromLiteral(exprInterval.getExpression2());
+                if (constLo != null && constHi != null)
                     {
-                    // need both the left & right expressions, and they must both be
-                    // constant or of the LiteralExpression form
-                    Constant constLo = fromLiteral(exprInterval.getExpression1());
-                    Constant constHi = fromLiteral(exprInterval.getExpression2());
-                    if (constLo != null && constHi != null)
-                        {
-                        return pool().ensureIntervalConstant(constLo, constHi);
-                        }
+                    return pool().ensureIntervalConstant(constLo, constHi);   // TODO CP
                     }
                 }
             }
@@ -1111,17 +1274,41 @@ public class ArrayAccessExpression
         }
 
     /**
-     * TODO
+     * Estimate what the index type must be for a given indexed type.
      *
-     * @param ctx
-     * @param exprArray
-     * @param typeArray
-     * @param aexprIndexes
-     * @param typeIndex
+     * @param ctx          the compiler context
+     * @param typeTarget   the array-like indexed expression
+     * @param sIndexParam  the name of the target's type parameter that specifies the index type
+     * @param exprIndex    the index expression
      *
-     * @return
+     * @return the estimated index type, or null
      */
-    private TypeConstant determineIndexType(Context ctx, Expression exprArray, TypeConstant typeArray, Expression[] aexprIndexes, TypeConstant typeIndex)
+    TypeConstant estimateIndexType(Context ctx, TypeConstant typeTarget, String sIndexParam, Expression exprIndex)
+        {
+        TypeConstant typeIndex = typeTarget == null
+                ? null
+                : typeTarget.resolveGenericType(sIndexParam);
+        if (typeIndex == null || !exprIndex.testFit(ctx, typeIndex, null).isFit())
+            {
+            typeIndex = exprIndex.getImplicitType(ctx);
+            }
+        return typeIndex;
+        }
+
+    /**
+     * For a UniformIndexed type, determine the type of the index.
+     *
+     * @param ctx           the compiler context
+     * @param exprArray     the array expression
+     * @param typeArray     the implicit type of the array expression
+     * @param aexprIndexes  the index expression(s)
+     * @param typeIndex     the type of the array's "Index" type parameter, or null if the type
+     *                      parameter's type could not be determined
+     *
+     * @return the type to use for the index of the array
+     */
+    private TypeConstant determineIndexType(Context ctx, Expression exprArray,
+            TypeConstant typeArray, Expression[] aexprIndexes, TypeConstant typeIndex)
         {
         ConstantPool pool = pool();
         if (typeIndex == null)
@@ -1218,20 +1405,24 @@ public class ArrayAccessExpression
      */
     private Constant evalConst(ArrayConstant constArray, RangeConstant constIndex, TypeConstant typeResult, ErrorListener errs)
         {
+     // TODO
         Constant[]    aOldVals = constArray.getValue();
         int           cOldVals = aOldVals.length;
-        PackedInteger piIndex1 = constIndex.getFirst().getIntValue();
-        PackedInteger piIndex2 = constIndex.getLast() .getIntValue();
+        PackedInteger piIndex1 = constIndex.getEffectiveFirst().getIntValue();
+        PackedInteger piIndex2 = constIndex.getEffectiveLast() .getIntValue();
         if (piIndex1.checkRange(0, cOldVals - 1) && piIndex2.checkRange(0, cOldVals-1))
             {
-            int        nFirst   = piIndex1.getInt();
-            int        nLast    = piIndex2.getInt();
-            int        nStep    = nFirst <= nLast ? 1 : -1;
-            int        cNewVals = Math.abs(nLast - nFirst) + 1;
+            int        cNewVals = (int) constIndex.size();
             Constant[] aNewVals = new Constant[cNewVals];
-            for (int iNew = 0, iOld = nFirst; iNew < cNewVals; ++iNew, iOld += nStep)
+            if (cNewVals > 0)
                 {
-                aNewVals[iNew] = aOldVals[iOld];
+                int nFirst = piIndex1.getInt();
+                int nLast  = piIndex2.getInt();
+                int nStep  = nFirst <= nLast ? 1 : -1;
+                for (int iNew = 0, iOld = nFirst; iNew < cNewVals; ++iNew, iOld += nStep)
+                    {
+                    aNewVals[iNew] = aOldVals[iOld];
+                    }
                 }
             ConstantPool pool = pool();
             return typeResult.isTuple()
@@ -1271,7 +1462,7 @@ public class ArrayAccessExpression
             sb.append(index);
             }
 
-          sb.append(']');
+        sb.append(tokClose.getId().TEXT);
 
         return sb.toString();
         }
@@ -1287,7 +1478,7 @@ public class ArrayAccessExpression
 
     protected Expression       expr;
     protected List<Expression> indexes;
-    protected long             lEndPos;
+    protected Token            tokClose;
 
     private transient MethodConstant m_idGet;
     private transient MethodConstant m_idSet;

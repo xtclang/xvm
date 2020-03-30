@@ -277,10 +277,17 @@ const IntLiteral(String text)
     /**
      * Obtain a range beginning with this number and proceeding to the specified number.
      */
-    @Op("..")
-    Range<Int> through(Int n)
+    @Op("..") Range<Int> to(Int n)
         {
         return new Range<Int>(this.toInt(), n);
+        }
+
+    /**
+     * Obtain a range beginning with this number and proceeding to the specified number.
+     */
+    @Op("..<") Range<Int> toExcluding(Int n)
+        {
+        return new Range<Int>(this.toInt(), n, lastExclusive=True);
         }
 
 

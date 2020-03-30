@@ -227,7 +227,7 @@ public class ForEachStatement
                 return true;
 
             case "last":
-                return m_plan == Plan.INTERVAL || m_plan == Plan.SEQUENCE;
+                return m_plan == Plan.RANGE || m_plan == Plan.SEQUENCE;
 
             case "entry":
             case "Key":
@@ -317,7 +317,7 @@ public class ForEachStatement
         // a measure of syntactic sugar; in order of precedence, the condition can be:
         //
         //   1) iterator   :  L: for (T value          : container.as(Iterator<T>)) {...}
-        //   2) interval   :  L: for (T value          : container.as(Interval<T>   )) {...}
+        //   2) range      :  L: for (T value          : container.as(Range<T>   )) {...}
         //   3) sequence   :  L: for (T value          : container.as(Sequence<T>)) {...}
         //   4) map keys   :  L: for (K key            : container.as(Map<K,T>   )) {...}
         //   5) map entries:  L: for ((K key, T value) : container.as(Map<K,T>   )) {...}
@@ -380,12 +380,12 @@ public class ForEachStatement
             switch (plan)
                 {
                 case ITERATOR: typeRVal = pool.typeIterator(); break;
-                case INTERVAL: typeRVal = pool.typeInterval(); break;
+                case RANGE   : typeRVal = pool.typeRange()   ; break;
                 case SEQUENCE: typeRVal = pool.typeSequence(); break;
-                case MAP     : typeRVal = pool.typeMap();      break;
+                case MAP     : typeRVal = pool.typeMap()     ; break;
                 case ITERABLE: typeRVal = pool.typeIterable(); break;
-                default:
-                    throw new IllegalStateException();
+
+                default: throw new IllegalStateException();
                 }
 
             if (exprRVal.testFit(ctx, typeRVal, null).isFit())
@@ -432,7 +432,7 @@ public class ForEachStatement
                     {
                     default:
                     case ITERATOR:
-                    case INTERVAL:
+                    case RANGE:
                     case SEQUENCE:
                     case ITERABLE:
                         aTypeLVals = new TypeConstant[] { getElementType() };
@@ -535,7 +535,7 @@ public class ForEachStatement
         switch (m_plan)
             {
             case ITERATOR: fCompletes = emitIterator(ctx, fCompletes, code, errs); break;
-            case INTERVAL: fCompletes = emitInterval(ctx, fCompletes, code, errs); break;
+            case RANGE   : fCompletes = emitRange   (ctx, fCompletes, code, errs); break;
             case SEQUENCE: fCompletes = emitSequence(ctx, fCompletes, code, errs); break;
             case MAP     : fCompletes = emitMap     (ctx, fCompletes, code, errs); break;
             case ITERABLE: fCompletes = emitIterable(ctx, fCompletes, code, errs); break;
@@ -633,9 +633,9 @@ public class ForEachStatement
         }
 
     /**
-     * Handle code generation for the Interval type.
+     * Handle code generation for the Range (Interval) type.
      */
-    private boolean emitInterval(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    private boolean emitRange(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         // code simplification for intrinsic sequential types
         if (m_exprRValue.isConstant())
@@ -657,20 +657,20 @@ public class ForEachStatement
                 case "numbers.UInt64":
                 case "numbers.UInt128":
                 case "numbers.VarUInt":
-                    return emitConstantInterval(ctx, fReachable, code, errs);
+                    return emitConstantRange(ctx, fReachable, code, errs);
                 }
             }
 
         ConstantPool pool         = pool();
         TypeConstant typeElement  = getElementType();
-        TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(pool.typeInterval(), typeElement);
-        TypeConstant typeIter     = pool.ensureVirtualChildTypeConstant(typeInterval, "IntervalIterator");
+        TypeConstant typeRange    = pool.ensureParameterizedTypeConstant(pool.typeRange(), typeElement);
+        TypeConstant typeIter     = pool.ensureVirtualChildTypeConstant(typeRange, "IntervalIterator");
 
         code.add(new Var(typeIter));
         Register regIter = code.lastRegister();
 
         Argument       argAble  = m_exprRValue.generateArgument(ctx, code, true, true, errs);
-        TypeInfo       infoAble = typeInterval.ensureTypeInfo(errs);
+        TypeInfo       infoAble = typeRange.ensureTypeInfo(errs);
         MethodConstant idIter   = findWellKnownMethod(infoAble, "iterator", errs);
         if (idIter == null)
             {
@@ -682,15 +682,21 @@ public class ForEachStatement
         }
 
     /**
-     * Handle optimized code generation for the Interval type when the interval is a constant value.
+     * Handle optimized code generation for the Range/Interval type when the range is a constant
+     * value.
      */
-    private boolean emitConstantInterval(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    private boolean emitConstantRange(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         ConstantPool  pool     = pool();
         TypeConstant  typeSeq  = getElementType();
-        RangeConstant interval = (RangeConstant) m_exprRValue.toConstant();
+        RangeConstant range    = (RangeConstant) m_exprRValue.toConstant();
 
-        // VAR_I "cur"  T _start_           ; initialize the current value to the Interval "start"
+        if (range.size() < 1)
+            {
+            return fReachable;
+            }
+
+        // VAR_I "cur"  T _start_           ; initialize the current value to the Range "start"
         // VAR   "last" Boolean             ; (optional) if no label.last exists, create a temp for it
         // Repeat:
         // IS_EQ cur _end_ -> last          ; compare current value to last value
@@ -705,7 +711,7 @@ public class ForEachStatement
         // Exit:
 
         Assignable LVal = m_exprLValue.generateAssignable(ctx, code, errs);
-        code.add(new Var_I(typeSeq, interval.getFirst()));
+        code.add(new Var_I(typeSeq, range.getEffectiveFirst()));
         Register regVal = code.lastRegister();
 
         Register regLast = m_regLast;
@@ -717,7 +723,7 @@ public class ForEachStatement
 
         Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
         code.add(lblRepeat);
-        code.add(new IsEq(regVal, interval.getLast(), regLast, regVal.getType()));
+        code.add(new IsEq(regVal, range.getEffectiveLast(), regLast, regVal.getType()));
         LVal.assign(regVal, code, errs);
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
@@ -726,7 +732,7 @@ public class ForEachStatement
 
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
-        code.add(interval.isReverse() ? new IP_Dec(regVal) : new IP_Inc(regVal));
+        code.add(range.isReverse() ? new IP_Dec(regVal) : new IP_Inc(regVal));
         if (m_regFirst != null)
             {
             code.add(new Move(pool.valFalse(), m_regFirst));
@@ -1065,7 +1071,7 @@ public class ForEachStatement
      */
     enum Plan
         {
-        ITERATOR, INTERVAL, SEQUENCE, MAP, ITERABLE;
+        ITERATOR, RANGE, SEQUENCE, MAP, ITERABLE;
 
         /**
          * Look up a Plan enum by its ordinal.

@@ -117,23 +117,36 @@ interface Reader
     /**
      * Returns a portion of this Reader, as a String.
      *
-     * @param interval  specifies a starting and stopping position for the slice
+     * @param indexes  specifies a starting and stopping position for the slice
      *
-     * @return a slice of this Reader as a String, corresponding to the specified interval of
+     * @return a slice of this Reader as a String, corresponding to the specified range of
      *         positions
      *
      * @throws IOException  represents the general category of input/output exceptions
+     * @throws OutOfBounds  if the range indicates a slice that would contains illegal indexes
      */
-    @Op("[..]")
-    String slice(Range<TextPosition> interval)
+    @Op("[..]") String slice(Range<TextPosition> indexes)
         {
-        String result;
+        Int count = indexes.upperBound.offset
+                  - indexes.lowerBound.offset
+                  + (indexes.upperExclusive ? 0 : 1)
+                  - (indexes.lowerExclusive ? 1 : 0);
+        if (count <= 0)
+            {
+            return "";
+            }
 
+        String result;
         try (TextPosition current = position)
             {
-            position = interval.lowerBound;
-            result   = nextString(interval.upperBound.offset - offset + 1);
-            if (interval.reversed)
+            position = indexes.lowerBound;
+            if (indexes.lowerExclusive)
+                {
+                nextChar();
+                }
+
+            result = nextString(count);
+            if (indexes.reversed)
                 {
                 result = result.reverse();
                 }
@@ -144,6 +157,43 @@ interface Reader
             }
 
         return result;
+        }
+
+    /**
+     * Returns a portion of this Reader, as a String.
+     *
+     * @param indexes  the range of indexes of this Reader to obtain a slice for, with both the
+     *                  `lowerBound` and the 'upperBound' of the range assumed to be inclusive;
+     *                  note that the `lowerExclusive` and `upperExclusive` properties of the
+     *                  range are ignored
+     *
+     * @return a slice of this Reader corresponding to the specified range of indexes
+     *
+     * @throws IOException  represents the general category of input/output exceptions
+     * @throws OutOfBounds  if the range indicates a slice that would contains illegal indexes
+     */
+    // TODO GG this will break due to assumption in ArrayAccessExpression that assumes return type is same as this target type
+    @Op("[[..]]") String sliceInclusive(Range<TextPosition> indexes)
+        {
+        return slice(indexes.ensureInclusive());
+        }
+
+    /**
+     * Returns a portion of this Reader, as a String.
+     *
+     * @param indexes  the range of indexes of this Reader to obtain a slice for, with the
+     *                  `lowerBound` of the range assumed to be inclusive, and the 'upperBound'
+     *                  of the range assumed to be exclusive; note that the `lowerExclusive` and
+     *                  `upperExclusive` properties of the range are ignored
+     *
+     * @return a slice of this Reader corresponding to the specified range of indexes
+     *
+     * @throws IOException  represents the general category of input/output exceptions
+     * @throws OutOfBounds  if the range indicates a slice that would contains illegal indexes
+     */
+    @Op("[[..)]") String sliceExclusive(Range<TextPosition> indexes)
+        {
+        return slice(indexes.ensureExclusive());
         }
 
 

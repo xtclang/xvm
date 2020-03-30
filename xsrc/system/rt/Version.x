@@ -159,7 +159,7 @@ const Version
                         throw new IllegalArgument("version (" + version
                                 + ") must not begin with a version delimiter (" + ch + ")");
                         }
-                    parent = new Version(version[0..of-1]);
+                    parent = new Version(version[0..of));
                     start  = of+1;
                     break scan;
 
@@ -480,11 +480,10 @@ const Version
         }
 
     @Override
-    @Op("[..]")
-    Version slice(Interval<Int> interval)
+    @Op("[..]") Version slice(Range<Int> indexes)
         {
-        Int lower = interval.lowerBound;
-        Int upper = interval.upperBound;
+        Int lower = indexes.effectiveLowerBound;
+        Int upper = indexes.effectiveUpperBound;
         if (lower < 0)
             {
             throw new OutOfBounds(lower.toString() + " < 0");
@@ -493,8 +492,8 @@ const Version
             {
             throw new OutOfBounds(upper.toString() + " >= " + size);
             }
-        assert lower <= upper;
-        assert !interval.reversed;
+        assert:bounds lower <= upper;
+        assert !indexes.reversed;
 
         if (lower == 0)
             {
@@ -502,7 +501,7 @@ const Version
             }
 
         Version? slice = null;
-        for (Int index : interval)
+        for (Int index : indexes)
             {
             Version part = this[index];
             slice = new Version(slice, part.form, part.number, part.build);

@@ -12,9 +12,9 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.util.Handy;

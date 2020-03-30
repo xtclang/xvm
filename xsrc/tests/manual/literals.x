@@ -205,10 +205,10 @@ module TestLiterals.xqiz.it
         bytes = #|0123456789aBcDeF 0123456789aBcDeF 0123456789aBcDeF 0123456789aBcDeF
                  |0123456789aBcDeF_0123456789aBcDeF_0123456789aBcDeF_0123456789aBcDeF
                  ;
-        console.println($"bytes={bytes[0..10]}...{bytes[bytes.size-10..bytes.size-1]}");
+        console.println($"bytes={bytes[0..10]}...{bytes[bytes.size-10..bytes.size)}");
 
         bytes = #/literals.x;
-        console.println($"bytes={bytes[0..10]}...{bytes[bytes.size-10..bytes.size-1]}");
+        console.println($"bytes={bytes[0..10]}...{bytes[bytes.size-10..bytes.size)}");
         }
 
     void testDirs()

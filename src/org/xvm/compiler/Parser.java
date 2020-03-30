@@ -3113,8 +3113,12 @@ public class Parser
                         {
                         // "someArray[3]"
                         List<Expression> indexes = parseExpressionList();
-                        expect(Id.R_SQUARE);
-                        expr = new ArrayAccessExpression(expr, indexes, prev().getEndPosition());
+                        Token tokClose = match(Id.R_PAREN);
+                        if (tokClose == null)
+                            {
+                            tokClose = expect(Id.R_SQUARE);
+                            }
+                        expr = new ArrayAccessExpression(expr, indexes, tokClose);
                         }
                     else
                         {
@@ -3898,7 +3902,11 @@ public class Parser
     Expression parseComplexLiteral(TypeExpression type)
         {
         String sType;
-        if (type == null || type instanceof ArrayTypeExpression)
+        if (type == null)
+            {
+            sType = "";
+            }
+        else if (type instanceof ArrayTypeExpression)
             {
             sType = "Array";
             }
@@ -3918,6 +3926,9 @@ public class Parser
 
         switch (sType)
             {
+            case "":
+                // this could be either an array or a range
+                // (fall through)
             case "Array":
             case "Sequence":
             case "List":
@@ -3928,14 +3939,59 @@ public class Parser
                 List<Expression> exprs = new ArrayList<>();
                 while (match(Id.R_SQUARE) == null)
                     {
-                    exprs.add(parseExpression());
+                    Expression expr = parseExpression();
+                    exprs.add(expr);
                     if (match(Id.COMMA) == null)
                         {
+                        // special handling for the possibility that this is a range, not an array
+                        if (sType.equals("") && exprs.size() == 1 && expr instanceof RelOpExpression
+                                && ((RelOpExpression) expr).getOperator().getId() == Id.DOTDOT)
+                            {
+                            // it's a range, not an array, so it could have either a closing right
+                            // paren or right square bracket
+                            Token tokClose = match(Id.R_PAREN);
+                            if (tokClose == null)
+                                {
+                                tokClose = expect(Id.R_SQUARE);
+                                }
+
+                            RelOpExpression exprRange = (RelOpExpression) expr;
+                            return new RelOpExpression(tokOpen, exprRange.getExpression1(),
+                                    exprRange.getOperator(), exprRange.getExpression2(), tokClose);
+                            }
+
                         expect(Id.R_SQUARE);
                         break;
                         }
                     }
                 return new ListExpression(type, exprs, lStartPos, prev().getEndPosition());
+                }
+
+            case "Range":
+            case "Interval":
+                {
+                Token tokOpen = match(Id.L_SQUARE);
+                if (tokOpen == null)
+                    {
+                    tokOpen = match(Id.L_PAREN);
+                    }
+
+                // parseRangeExpression() logic
+                Expression expr1     = parseBitwiseExpression();
+                Token      tokDotDot = expect(Id.DOTDOT);
+                Expression expr2     = parseBitwiseExpression();
+
+                Token tokClose = null;
+                if (tokOpen != null)
+                    {
+                    tokClose = match(Id.R_PAREN);
+                    if (tokClose == null)
+                        {
+                        tokClose = expect(Id.R_SQUARE);
+                        }
+                    }
+
+                return new RelOpExpression(tokOpen, expr1, tokDotDot, expr2, tokClose);
                 }
 
             case "Map":

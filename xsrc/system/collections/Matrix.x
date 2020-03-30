@@ -76,8 +76,7 @@ interface Matrix<Element>
      * @throws OutOfBounds  if the specified ranges exceed either the lower or upper bounds of
      *                      the dimensions of this Matrix
      */
-    @Op("[..]")
-    Matrix slice(Interval<Int> colRange, Interval<Int> rowRange);
+    @Op("[..]") Matrix slice(Range<Int> colRange, Range<Int> rowRange);
 
     /**
      * Obtain a Matrix of the same dimensions and that contains the same values as this Matrix, but

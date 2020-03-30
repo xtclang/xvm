@@ -93,7 +93,7 @@ class Array<Element>
 
             if (size > 1)
                 {
-                for (Int i : 1..size-1)
+                for (Int i : [1..size))
                     {
                     ElementImpl next = new ElementImpl(valueFor(i));
                     cur.next = next;
@@ -145,7 +145,7 @@ class Array<Element>
      * @param array    the array that this slice delegates to (which could itself be a slice)
      * @param section  the interval that defines the section of the array that the slice represents
      */
-    construct(Array<Element> array, Interval<Int> section)
+    construct(Array<Element> array, Interval<Int> section)  // TODO CP add support for inclusive/exclusive
         {
         ArrayDelegate<Element> delegate = new ArrayDelegate<Element>()
             {
@@ -192,8 +192,8 @@ class Array<Element>
                 {
                 assert:bounds index >= 0 && index < section.size;
                 return section.reversed
-                        ? section.upperBound - index
-                        : section.lowerBound + index;
+                        ? section.effectiveUpperBound - index
+                        : section.effectiveLowerBound + index;
                 }
             };
 
@@ -292,7 +292,7 @@ class Array<Element>
                 {
                 return this;
                 }
-            interval = 0..size-1;
+            interval = [0..size);
             }
 
         if (mutability.persistent)
@@ -514,15 +514,14 @@ class Array<Element>
         }
 
     @Override
-    @Op("[..]")
-    Array slice(Interval<Int> interval)
+    @Op("[..]") Array slice(Range<Int> indexes)
         {
-        if (interval.lowerBound == 0 && interval.upperBound == size-1 && !interval.reversed)
+        if (indexes.effectiveFirst == 0 && indexes.size == this.size)
             {
             return this;
             }
 
-        Array<Element> result = new Array(this, interval);
+        Array<Element> result = new Array(this, indexes);
 
         // a slice of an immutable array is also immutable
         return this.is(immutable Object)
@@ -1858,7 +1857,7 @@ class Array<Element>
                         {
                         assert:bounds byte == expect;
                         }
-                    return this[size-n .. size-1];
+                    return this[size-n .. size);
                 }
             }
 
@@ -1894,7 +1893,7 @@ class Array<Element>
                         {
                         assert:bounds byte == 0;
                         }
-                    return this[size-n .. size-1];
+                    return this[size-n .. size);
                 }
             }
         }

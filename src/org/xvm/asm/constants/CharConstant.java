@@ -150,6 +150,20 @@ public class CharConstant
                 return getConstantPool().ensureStringConstant(new String(ach));
                 }
 
+            // these are "fake" i.e. compile-time only in order to support calculations resulting
+            // from the use of Range in ForEachStatement
+            case "+IntLiteral":
+            case "-IntLiteral":
+                {
+                int delta = ((LiteralConstant) that).toIntConstant(Format.Int32).getIntValue().getInt();
+                if (op == Id.SUB)
+                    {
+                    delta = -delta;
+                    }
+
+                return getConstantPool().ensureCharConstant(m_chVal + delta);
+                }
+
             case "==Char":
                 return getConstantPool().valOf(this.m_chVal == ((CharConstant) that).m_chVal);
             case "!=Char":

@@ -6,13 +6,23 @@ interface Orderable
         extends Comparable
     {
     /**
-     * Create a Range that represents the values between _this_ (inclusive) to _that_
+     * Create a Range that represents the values from _this_ (inclusive) **to** _that_
      * (inclusive).
      */
-    @Op Range<Orderable> through(Orderable that)
+    @Op("..") Range<Orderable> to(Orderable that)
         {
         assert this.is(immutable Object) && that.is(immutable Object);
         return new Range<immutable Orderable>(this, that);
+        }
+
+    /**
+     * Create a Range that represents the values from _this_ (inclusive) **to** _that_
+     * (**exclusive**).
+     */
+    @Op("..<") Range<Orderable> toExcluding(Orderable that)
+        {
+        assert this.is(immutable Object) && that.is(immutable Object);
+        return new Range<immutable Orderable>(this, that, lastExclusive=True);
         }
 
     /**

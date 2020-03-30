@@ -19,11 +19,14 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xString;
 
@@ -39,6 +42,7 @@ public class xTuple
     public static xTuple INSTANCE;
     public static ClassConstant INCEPTION_CLASS;
     public static xTuple.TupleHandle H_VOID;
+    public static xEnum MUTABILITY;
 
     public xTuple(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -50,13 +54,28 @@ public class xTuple
             INCEPTION_CLASS = new NativeRebaseConstant(
                 (ClassConstant) structure.getIdentityConstant());
             H_VOID = makeImmutableHandle(getCanonicalType(), Utils.OBJECTS_NONE);
+
+            // cache Mutability template
+            MUTABILITY = (xEnum) templates.getTemplate("collections.VariablyMutable.Mutability");
             }
         }
 
     @Override
     public void initDeclared()
         {
+        markNativeProperty("mutability");
         markNativeProperty("size");
+
+        markNativeMethod("add", null, null);
+        markNativeMethod("elementAt", INT, null);
+        markNativeMethod("ensureFixedSize", BOOLEAN, null);
+        markNativeMethod("ensureImmutable", BOOLEAN, null);
+        markNativeMethod("ensurePersistent", BOOLEAN, null);
+        markNativeMethod("getElement", INT, null);
+        markNativeMethod("remove", new String[] {"numbers.Int64"}, null);
+        markNativeMethod("remove", new String[] {"Range<numbers.Int64>"}, null);
+        markNativeMethod("setElement", null, VOID);
+        markNativeMethod("slice", new String[] {"Range<numbers.Int64>"}, null);
         }
 
     @Override
@@ -148,11 +167,79 @@ public class xTuple
 
         switch (sPropName)
             {
+            case "mutability":
+                return Utils.assignInitializedEnum(frame,
+                    MUTABILITY.getEnumByOrdinal(hTuple.m_mutability.ordinal()), iReturn);
+
             case "size":
                 return frame.assignValue(iReturn, xInt64.makeHandle(hTuple.m_ahValue.length));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeNative1(Frame frame, MethodStructure method,
+                             ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "add":
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case "elementAt":
+                return makeRef(frame, hTarget, ((ObjectHandle.JavaLong) hArg).getValue(), false, iReturn);
+
+            case "ensureFixedSize": // Tuple ensureFixedSize(Boolean inPlace = false);
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case "ensureImmutable": // immutable Tuple ensureImmutable(Boolean inPlace = False)
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case "ensurePersistent": // Tuple ensurePersistent(Boolean inPlace = False)
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case "getElement":
+                return extractArrayValue(frame, hTarget, ((ObjectHandle.JavaLong) hArg).getValue(), iReturn);
+
+            case "remove":
+                // TODO - note that there are two remove() methods that each take one parameter
+                throw new UnsupportedOperationException();
+
+            case "slice":
+                {
+                ObjectHandle.GenericHandle hInterval = (ObjectHandle.GenericHandle) hArg;
+                long    ixFrom   = ((ObjectHandle.JavaLong) hInterval.getField("lowerBound")).getValue();
+                long    ixTo     = ((ObjectHandle.JavaLong) hInterval.getField("upperBound")).getValue();
+                boolean fExLower = ((xBoolean.BooleanHandle) hInterval.getField("lowerExclusive")).get();
+                boolean fExUpper = ((xBoolean.BooleanHandle) hInterval.getField("upperExclusive")).get();
+                boolean fReverse = ((xBoolean.BooleanHandle) hInterval.getField("reversed")).get();
+                return slice(frame, (TupleHandle) hTarget, ixFrom, fExLower, ixTo, fExUpper, fReverse, iReturn);
+                }
+            }
+
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "replace":
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case "setElement":
+                return assignArrayValue(frame, hTarget, ((ObjectHandle.JavaLong) ahArg[0]).getValue(), ahArg[1]);
+
+            default:
+                return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+            }
         }
 
     @Override
@@ -191,6 +278,64 @@ public class xTuple
                 }
             }
         return true;
+        }
+
+    /**
+     * slice(Interval<Int>) implementation
+     */
+    protected int slice(Frame        frame,
+                        TupleHandle  hTuple,
+                        long         ixLower,
+                        boolean      fExLower,
+                        long         ixUpper,
+                        boolean      fExUpper,
+                        boolean      fReverse,
+                        int          iReturn)
+        {
+        // calculate inclusive lower
+        if (fExLower)
+            {
+            ++ixLower;
+            }
+
+        // calculate exclusive upper
+        if (!fExUpper)
+            {
+            ++ixUpper;
+            }
+
+        ObjectHandle[] ahValue = hTuple.m_ahValue;
+        try
+            {
+            ObjectHandle[] ahNew;
+            if (ixLower >= ixUpper)
+                {
+                ahNew = new ObjectHandle[0];
+                }
+            else if (fReverse)
+                {
+                int cNew = (int) (ixUpper - ixLower);
+                ahNew = new ObjectHandle[cNew];
+                for (int i = 0; i < cNew; i++)
+                    {
+                    ahNew[i] = ahValue[(int) ixUpper - i - 1];
+                    }
+                }
+            else
+                {
+                ahNew = Arrays.copyOfRange(ahValue, (int) ixLower, (int) ixUpper);
+                }
+
+            TupleHandle hTupleNew = new TupleHandle(/*TODO GG need composition*/ null, ahNew, hTuple.m_mutability);
+
+            return frame.assignValue(iReturn, hTupleNew);
+            }
+        catch (ArrayIndexOutOfBoundsException e)
+            {
+            long c = ahValue.length;
+            return frame.raiseException(
+                xException.outOfBounds(frame, ixLower < 0 || ixLower >= c ? ixLower : ixUpper, c));
+            }
         }
 
 
@@ -327,15 +472,20 @@ public class xTuple
         {
         public TypeConstant[] m_aType;
         public ObjectHandle[] m_ahValue;
-        public boolean m_fFixedSize;
-        public boolean m_fPersistent;
+        public Mutability     m_mutability;
 
         protected TupleHandle(TypeComposition clazz, ObjectHandle[] ahValue)
             {
+            this(clazz, ahValue, null);   // TODO GG mutability?
+            }
+
+        protected TupleHandle(TypeComposition clazz, ObjectHandle[] ahValue, Mutability mutability)
+            {
             super(clazz);
 
-            m_fMutable = true;
-            m_ahValue = ahValue;
+            m_fMutable   = true;
+            m_ahValue    = ahValue;
+            m_mutability = mutability;
             }
 
         @Override

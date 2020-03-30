@@ -24,16 +24,17 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
-import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xBitArray;
 
 import org.xvm.runtime.template.numbers.xInt64;
@@ -79,7 +80,7 @@ public class xConst
 
             // Range support
             RANGE_CONSTRUCT = f_templates.getClassStructure("Range").
-                findMethod("construct", 2);
+                findMethod("construct", 4);
 
             // Nibble support
             TypeConstant typeBitArray = pool.ensureParameterizedTypeConstant(
@@ -114,8 +115,10 @@ public class xConst
             {
             RangeConstant constRange = (RangeConstant) constant;
 
-            ObjectHandle h1 = frame.getConstHandle(constRange.getFirst());
-            ObjectHandle h2 = frame.getConstHandle(constRange.getLast());
+            ObjectHandle  h1 = frame.getConstHandle(constRange.getFirst());
+            ObjectHandle  h2 = frame.getConstHandle(constRange.getLast());
+            BooleanHandle f1 = xBoolean.makeHandle(constRange.isFirstExcluded());
+            BooleanHandle f2 = xBoolean.makeHandle(constRange.isLastExcluded());
 
             TypeConstant     typeRange   = constRange.getType();
             ClassComposition clzRange    = f_templates.resolveClass(typeRange);
@@ -124,6 +127,8 @@ public class xConst
             ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
             ahArg[0] = h1;
             ahArg[1] = h2;
+            ahArg[2] = f1;
+            ahArg[3] = f2;
 
             if (Op.anyDeferred(ahArg))
                 {

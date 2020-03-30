@@ -192,7 +192,7 @@ const Int16
             return this;
             }
 
-        return new Int16(bits.fill(0, 0..bitLength-count-1));
+        return new Int16(bits.fill(0, [0..bitLength-count)));
         }
 
     @Override
@@ -208,7 +208,7 @@ const Int16
             return this;
             }
 
-        return new Int16(bits.fill(0, count..bitLength-1));
+        return new Int16(bits.fill(0, [count..bitLength)));
         }
 
     @Override
@@ -298,7 +298,7 @@ const Int16
     @Auto Int8 toInt8()
         {
         assert:bounds this >= Int8.minvalue && this <= Int8.maxvalue;
-        return new Int8(bits[bitLength-8..bitLength-1]);
+        return new Int8(bits[bitLength-8..bitLength));
         }
 
     @Override
@@ -329,7 +329,7 @@ const Int16
     @Auto UInt8 toByte()
         {
         assert:bounds this >= UInt8.minvalue && this <= UInt8.maxvalue;
-        return new UInt8(bits[bitLength-8..bitLength-1]);
+        return new UInt8(bits[bitLength-8..bitLength));
         }
 
     @Override

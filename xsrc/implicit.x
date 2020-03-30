@@ -41,6 +41,7 @@ import ecstasy.ReadOnly;
 import ecstasy.Ref;
 import ecstasy.Sequential;
 import ecstasy.Service;
+import ecstasy.Sliceable;
 import ecstasy.String;
 import ecstasy.Stringable;
 import ecstasy.StringBuffer;
@@ -102,6 +103,7 @@ import ecstasy.annotations.WeakVar as Weak;
 import ecstasy.annotations.UncheckedInt as Unchecked;
 
 import ecstasy.io.Console;
+import ecstasy.io.Reader;
 
 import ecstasy.fs.Directory;
 import ecstasy.fs.File;

@@ -64,7 +64,7 @@ module TestTuples.xqiz.it
         {
         console.println("\n** testConstSlice()");
 
-        Tuple<Int, String> blind = (3, "blind", "mice", "!") [0..1];
+        Tuple<Int, String> blind = (3, "blind", "mice", "!") [0..1];   //
         console.println("tuple[0..1]=" + blind);
 
         Tuple<String, Int> blind2 = (3, "blind", "mice", "!") [1..0];

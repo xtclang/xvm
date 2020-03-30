@@ -168,6 +168,7 @@ public class UInt8Constant
             case "UInt8|IntLiteral":
             case "UInt8^IntLiteral":
             case "UInt8..IntLiteral":
+            case "UInt8..<IntLiteral":
             case "UInt8==IntLiteral":
             case "UInt8!=IntLiteral":
             case "UInt8<IntLiteral":
@@ -202,6 +203,8 @@ public class UInt8Constant
                 return validate(this.m_nVal ^ ((UInt8Constant) that).m_nVal);
             case "UInt8..UInt8":
                 return ConstantPool.getCurrentPool().ensureIntervalConstant(this, that);
+            case "UInt8..<UInt8":
+                return ConstantPool.getCurrentPool().ensureIntervalConstant(this, false, that, true);
 
 
             case "UInt8<<Int64":
@@ -225,6 +228,24 @@ public class UInt8Constant
 
             case "UInt8<=>UInt8":
                 return getConstantPool().valOrd(this.m_nVal - ((UInt8Constant) that).m_nVal);
+
+            // these are "fake" i.e. compile-time only in order to support calculations resulting
+            // from the use of Range in ForEachStatement
+            case "Bit+IntLiteral":
+            case "Bit-IntLiteral":
+            case "Nibble+IntLiteral":
+            case "Nibble-IntLiteral":
+                {
+                int delta = ((LiteralConstant) that).toIntConstant(Format.Int32).getIntValue().getInt();
+                if (op == Token.Id.SUB)
+                    {
+                    delta = -delta;
+                    }
+
+                return m_format == Format.Bit
+                        ? getConstantPool().ensureBitConstant(m_nVal + delta)
+                        : getConstantPool().ensureNibbleConstant(m_nVal + delta);
+                }
             }
 
         return super.apply(op, that);

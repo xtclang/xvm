@@ -21,6 +21,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
@@ -48,7 +49,6 @@ public class xArray
     {
     public static xArray   INSTANCE;
     public static xEnum    MUTABILITY;
-    public enum Mutability {Mutable, FixedSize, Persistent, Constant}
 
     public xArray(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -137,7 +137,7 @@ public class xArray
         markNativeMethod("add", ELEMENT_TYPE, ARRAY);
         markNativeMethod("addAll", new String[] {"Iterable<Element>"}, ARRAY);
         markNativeMethod("delete", new String[] {"numbers.Int64"}, null);
-        markNativeMethod("slice", new String[] {"Interval<numbers.Int64>"}, ARRAY);
+        markNativeMethod("slice", new String[] {"Range<numbers.Int64>"}, ARRAY);
         markNativeMethod("ensureImmutable", BOOLEAN, null);
         markNativeMethod("ensurePersistent", BOOLEAN, null);
 
@@ -336,14 +336,15 @@ public class xArray
                 GenericHandle hInterval = (GenericHandle) ahVar[1];
                 JavaLong      hLower    = (JavaLong) hInterval.getField("lowerBound");
                 JavaLong      hUpper    = (JavaLong) hInterval.getField("upperBound");
+                boolean       fExLower  = ((BooleanHandle) hInterval.getField("lowerExclusive")).get();
+                boolean       fExUpper  = ((BooleanHandle) hInterval.getField("upperExclusive")).get();
                 boolean       fReverse  = ((BooleanHandle) hInterval.getField("reversed")).get();
 
                 long lLower = hLower.getValue();
                 long lUpper = hUpper.getValue();
 
-                return lLower <= lUpper
-                    ? slice(frame, hArray, lLower, lUpper, fReverse, iReturn)
-                    : slice(frame, hArray, lUpper, lLower, fReverse, iReturn);
+                assert lLower <= lUpper;
+                return slice(frame, hArray, lLower, fExLower, lUpper, fExUpper, fReverse, iReturn);
                 }
 
             default:
@@ -472,9 +473,11 @@ public class xArray
                 GenericHandle hInterval = (GenericHandle) hArg;
                 long    ixFrom   = ((JavaLong) hInterval.getField("lowerBound")).getValue();
                 long    ixTo     = ((JavaLong) hInterval.getField("upperBound")).getValue();
+                boolean fExLower = ((BooleanHandle) hInterval.getField("lowerExclusive")).get();
+                boolean fExUpper = ((BooleanHandle) hInterval.getField("upperExclusive")).get();
                 boolean fReverse = ((BooleanHandle) hInterval.getField("reversed")).get();
 
-                return slice(frame, hTarget, ixFrom, ixTo, fReverse, iReturn);
+                return slice(frame, hTarget, ixFrom, fExLower, ixTo, fExUpper, fReverse, iReturn);
                 }
 
             case "ensureImmutable": // immutable Array ensureImmutable(Boolean inPlace = False)
@@ -590,7 +593,7 @@ public class xArray
     protected int addElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
         ArrayHandle hArray     = (ArrayHandle) hTarget;
-        Mutability  mutability = null;
+        Mutability mutability = null;
 
         switch (hArray.m_mutability)
             {
@@ -642,7 +645,7 @@ public class xArray
     protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
         ArrayHandle hArray     = (ArrayHandle) hTarget;
-        Mutability  mutability = null;
+        Mutability mutability = null;
 
         switch (hArray.m_mutability)
             {
@@ -706,7 +709,7 @@ public class xArray
             return frame.raiseException(xException.outOfBounds(frame, lIndex, hArray.m_cSize));
             }
 
-        Mutability  mutability = null;
+        Mutability mutability = null;
         switch (hArray.m_mutability)
             {
             case FixedSize:
@@ -732,27 +735,49 @@ public class xArray
     /**
      * slice(Interval<Int>) implementation
      */
-    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, boolean fReverse, int iReturn)
+    protected int slice(Frame        frame,
+                        ObjectHandle hTarget,
+                        long         ixLower,
+                        boolean      fExLower,
+                        long         ixUpper,
+                        boolean      fExUpper,
+                        boolean      fReverse,
+                        int          iReturn)
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
+
+        // calculate inclusive lower
+        if (fExLower)
+            {
+            ++ixLower;
+            }
+
+        // calculate exclusive upper
+        if (!fExUpper)
+            {
+            ++ixUpper;
+            }
 
         ObjectHandle[] ahValue = hArray.m_ahValue;
         try
             {
             ObjectHandle[] ahNew;
-            if (fReverse)
+            if (ixLower >= ixUpper)
                 {
-                int cNew = (int) (ixTo - ixFrom + 1);
-
+                ahNew = new ObjectHandle[0];
+                }
+            else if (fReverse)
+                {
+                int cNew = (int) (ixUpper - ixLower);
                 ahNew = new ObjectHandle[cNew];
                 for (int i = 0; i < cNew; i++)
                     {
-                    ahNew[i] = ahValue[(int) ixTo - i];
+                    ahNew[i] = ahValue[(int) ixUpper - i - 1];
                     }
                 }
             else
                 {
-                ahNew = Arrays.copyOfRange(ahValue, (int) ixFrom, (int) ixTo + 1);
+                ahNew = Arrays.copyOfRange(ahValue, (int) ixLower, (int) ixUpper);
                 }
 
             ArrayHandle hArrayNew = new GenericArrayHandle(
@@ -764,7 +789,7 @@ public class xArray
             {
             long c = ahValue.length;
             return frame.raiseException(
-                xException.outOfBounds(frame, ixFrom < 0 || ixFrom >= c ? ixFrom : ixTo, c));
+                xException.outOfBounds(frame, ixLower < 0 || ixLower >= c ? ixLower : ixUpper, c));
             }
         }
 

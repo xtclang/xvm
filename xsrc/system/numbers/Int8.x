@@ -192,7 +192,7 @@ const Int8
             return this;
             }
 
-        return new Int8(bits.fill(0, 0..bitLength-count-1));
+        return new Int8(bits.fill(0, [0..bitLength-count)));
         }
 
     @Override
@@ -208,7 +208,7 @@ const Int8
             return this;
             }
 
-        return new Int8(bits.fill(0, count..bitLength-1));
+        return new Int8(bits.fill(0, [count..bitLength)));
         }
 
     @Override

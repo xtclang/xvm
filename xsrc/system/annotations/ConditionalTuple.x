@@ -6,21 +6,21 @@ mixin ConditionalTuple
         into Tuple<Boolean>
     {
     @Override
-    @Op Object getElement(Int index)
+    @Op("[]") Object getElement(Int index)
         {
         assert index == 0 || super(0) == true;
         return super(index);
         }
 
     @Override
-    @Op void setElement(Int index, Object newValue)
+    @Op("[]=") void setElement(Int index, Object newValue)
         {
         assert this[0];
         super(index, newValue);
         }
 
     @Override
-    @Op Tuple add(Tuple!<> that)
+    @Op("+") Tuple add(Tuple!<> that)
         {
         assert this[0];
         return super(that);
@@ -34,9 +34,9 @@ mixin ConditionalTuple
         }
 
     @Override
-    @Op Tuple slice(Interval<Int> interval)
+    @Op("[..]") Tuple slice(Interval<Int> interval)
         {
-        assert interval.upperBound == 0 || this[0] == true;
+        assert interval.effectiveUpperBound == 0 || this[0] == true;
         return super(interval);
         }
 

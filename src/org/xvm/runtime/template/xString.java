@@ -16,11 +16,11 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xCharArray;
 import org.xvm.runtime.template.collections.xCharArray.CharArrayHandle;
 
@@ -135,7 +135,7 @@ public class xString
 
             case "chars":
                 return frame.assignValue(iReturn,
-                        xCharArray.makeHandle(hThis.m_achValue, xArray.Mutability.Constant));
+                        xCharArray.makeHandle(hThis.m_achValue, Mutability.Constant));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

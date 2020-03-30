@@ -122,11 +122,10 @@ class StringBuffer
         }
 
     @Override
-    @Op("[..]")
-    StringBuffer! slice(Interval<Int> interval)
+    @Op("[..]") StringBuffer slice(Range<Int> indexes)
         {
-        StringBuffer that = new StringBuffer(interval.size);
-        that.add(chars[interval]);
+        StringBuffer that = new StringBuffer(indexes.size);
+        that.add(chars[indexes]);
         return that;
         }
 

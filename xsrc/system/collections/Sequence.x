@@ -5,6 +5,7 @@
  */
 interface Sequence<Element>
         extends UniformIndexed<Int, Element>
+        extends Sliceable<Int>
         extends Iterable<Element>
         extends Stringable
     {
@@ -216,42 +217,6 @@ interface Sequence<Element>
         }
 
     /**
-     * Returns a sub-sequence of this Sequence. The new Sequence will likely be backed by this
-     * Sequence, which means that if this Sequence is mutable, changes made to this Sequence may be
-     * visible through the new Sequence, and vice versa; if that behavior is not desired, [reify]
-     * the value returned from this method.
-     *
-     * @param interval  the range of indexes of this sequence to obtain a slice for; note that
-     *                  the top end of the interval is _inclusive_, such that the interval
-     *                  `0..size-1` represents the entirety of the Sequence
-     *
-     * @return a slice of this sequence corresponding to the specified range of indexes
-     *
-     * @throws OutOfBounds  if the specified range exceeds either the lower or upper bounds of
-     *                      this sequence
-     */
-    @Op("[..]")
-    Sequence slice(Interval<Int> interval);
-
-    /**
-     * Returns a sub-sequence of this Sequence. The new Sequence will likely be backed by this
-     * Sequence, which means that if this Sequence is mutable, changes made to this Sequence may be
-     * visible through the new Sequence, and vice versa; if that behavior is not desired, [reify]
-     * the value returned from this method.
-     *
-     * @param firstInclusive  the index of the first element from this sequence that will be
-     *                        included in the resulting sub-sequence
-     * @param lastExclusive   the index of the first element from this sequence that will NOT be
-     *                        included in the resulting sub-sequence
-     *
-     * @return a slice of this sequence corresponding to the specified range of indexes
-     *
-     * @throws OutOfBounds  if the specified range exceeds either the lower or upper bounds of
-     *                      this sequence
-     */
-    // TODO CP Sequence slice(Int firstInclusive, Int lastExclusive);
-
-    /**
      * Determine if `this` sequence _starts-with_ `that` sequence. A sequence `this` of at least `n`
      * elements "starts-with" another sequence `that` of exactly `n` elements iff, for each index
      * `[0..n)`, the element at the index in `this` sequence is equal to the element at the same
@@ -330,28 +295,6 @@ interface Sequence<Element>
         {
         Int count = size;
         return count <= 1 ? this : slice(count-1..0);
-        }
-
-    /**
-     * Obtain a Sequence of the same length and that contains the same values as this Sequence, but
-     * which has two additional attributes:
-     *
-     * * First, if this Sequence is a portion of a larger Sequence, then the returned Sequence will
-     *   no longer be dependent on the larger Sequence for its storage;
-     * * Second, if this Sequence is a portion of a larger Sequence, then changes to the returned
-     *   Sequence will not be visible in the larger Sequence, and changes to the larger Sequence
-     *   will not be visible in the returned Sequence.
-     *
-     * The contract is designed to allow for the use of copy-on-write and other lazy semantics to
-     * achieve efficiency for both time and space.
-     *
-     * @return a reified sequence
-     */
-    Sequence reify()
-        {
-        // this must be overridden by any implementation that can represent a slice of another
-        // sequence
-        return this;
         }
 
 

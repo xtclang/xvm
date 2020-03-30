@@ -56,8 +56,8 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
                     tzOffset = dt.size;
                     }
 
-                Date date = new Date(dt[0..timeOffset-1]);
-                Time time = new Time(dt[timeOffset+1..tzOffset-1]);
+                Date date = new Date(dt[0..timeOffset));
+                Time time = new Time(dt[timeOffset+1..tzOffset));
                 construct DateTime(date, time, zone);
                 return;
                 }

@@ -217,8 +217,7 @@ class CircularArray<Element>
     // ----- Sequence interface --------------------------------------------------------------------
 
     @Override
-    @Op("[..]")
-    CircularArray slice(Interval<Int> interval)
+    @Op("[..]") CircularArray slice(Range<Int> indexes)
         {
         TODO
         }

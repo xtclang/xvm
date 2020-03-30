@@ -53,7 +53,7 @@ const IntNumber
      */
     Int leadingZeroCount.get()
         {
-        for (Int count : 0..bitLength-1)
+        for (Int count : [0..bitLength))
             {
             if (bits[count] == 1)
                 {
@@ -71,7 +71,7 @@ const IntNumber
      */
     Int trailingZeroCount.get()
         {
-        for (Int count : 0..bitLength-1)
+        for (Int count : [0..bitLength))
             {
             if (bits[bitLength - count - 1] == 1)
                 {

@@ -814,6 +814,8 @@ public abstract class Constant
         MapEntry,
         Map,
         Range,
+        RangeInclusive,
+        RangeExclusive,
         Any,
         Path,
         FileStore,

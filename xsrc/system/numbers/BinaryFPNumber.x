@@ -87,7 +87,7 @@ const BinaryFPNumber
     private Boolean significandOnly0s.get()
         {
         Bit[] bitsL2R = toBitArray();
-        for (Bit bit : bitsL2R[bitsL2R.size-significandBitLength..bitsL2R.size-1])
+        for (Bit bit : bitsL2R[bitsL2R.size-significandBitLength..bitsL2R.size))
             {
             if (bit == 1)
                 {

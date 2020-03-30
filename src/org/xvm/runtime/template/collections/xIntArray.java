@@ -14,6 +14,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
@@ -219,28 +220,50 @@ public class xIntArray
         }
 
     @Override
-    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, boolean fReverse, int iReturn)
+    protected int slice(Frame        frame,
+                        ObjectHandle hTarget,
+                        long         ixLower,
+                        boolean      fExLower,
+                        long         ixUpper,
+                        boolean      fExUpper,
+                        boolean      fReverse,
+                        int          iReturn)
         {
         IntArrayHandle hArray = (IntArrayHandle) hTarget;
+
+        // calculate inclusive lower
+        if (fExLower)
+            {
+            ++ixLower;
+            }
+
+        // calculate exclusive upper
+        if (!fExUpper)
+            {
+            ++ixUpper;
+            }
 
         long[] alValue = hArray.m_alValue;
         try
             {
             long[] alNew;
 
-            if (fReverse)
+            if (ixLower >= ixUpper)
                 {
-                int cNew = (int) (ixTo - ixFrom + 1);
-
+                alNew = new long[0];
+                }
+            else if (fReverse)
+                {
+                int cNew = (int) (ixUpper - ixLower);
                 alNew = new long[cNew];
                 for (int i = 0; i < cNew; i++)
                     {
-                    alNew[i] = alNew[(int) ixTo - i];
+                    alNew[i] = alValue[(int) ixUpper - i - 1];
                     }
                 }
             else
                 {
-                alNew = Arrays.copyOfRange(alValue, (int) ixFrom, (int) ixTo + 1);
+                alNew = Arrays.copyOfRange(alValue, (int) ixLower, (int) ixUpper);
                 }
 
             IntArrayHandle hArrayNew = new IntArrayHandle(
@@ -252,7 +275,7 @@ public class xIntArray
             {
             long c = alValue.length;
             return frame.raiseException(
-                xException.outOfBounds(frame, ixFrom < 0 || ixFrom >= c ? ixFrom : ixTo, c));
+                xException.outOfBounds(frame, ixLower < 0 || ixLower >= c ? ixLower : ixUpper, c));
             }
         }
 

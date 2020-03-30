@@ -38,8 +38,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * value, then the compile-time type of the returned value is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    @Op("[]")
-    Object getElement(Int index);
+    @Op("[]") Object getElement(Int index);
 
     /**
      * Modify the value in the specified element in the tuple.
@@ -50,8 +49,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      *
      * This operation will throw an exception if the tuple is either persistent or `const`.
      */
-    @Op("[]=")
-    void setElement(Int index, Object newValue);
+    @Op("[]=") void setElement(Int index, Object newValue);
 
     /**
      * Obtain the Ref for the specified element.
@@ -74,8 +72,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * compile-time type of the returned tuple is known; otherwise, an explicit cast to a
      * compile-time type is required to regain the compile-time type.
      */
-    @Op("+")
-    Tuple!<> add(Tuple!<> that);
+    @Op("+") Tuple!<> add(Tuple!<> that);
 
     /**
      * Modify the value of the specified element in the tuple, returning the resultant tuple.
@@ -90,7 +87,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
     Tuple!<> replace(Int index, Object value);
 
     /**
-     * Obtain a portion of the tuple as a tuple.
+     * Obtain a portion of the tuple as a tuple, with the portion specified as a [Range].
      *
      * The returned tuple is fixed size, persistent, or const based on whether this tuple is fixed
      * size, persistent, or const; in all cases, changes to the returned tuple will not affect this
@@ -100,8 +97,42 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
      * to a compile-time type is required to regain the compile-time type.
      */
-    @Op("[..]")
-    Tuple!<> slice(Interval<Int> interval);
+    @Op("[..]") Tuple!<> slice(Range<Int> interval);
+
+    /**
+     * Obtain a portion of the tuple as a tuple, using a range that will be treated as inclusive,
+     * in other words as `[..]`.
+     *
+     * The returned tuple is fixed size, persistent, or const based on whether this tuple is fixed
+     * size, persistent, or const; in all cases, changes to the returned tuple will not affect this
+     * tuple.
+     *
+     * If the compile-time type of this tuple is known, and if the interval is a compile-time constant
+     * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
+     * to a compile-time type is required to regain the compile-time type.
+     */
+    @Op("[[..]]") Tuple!<> sliceInclusive(Range<Int> indexes)
+        {
+        return slice(indexes.ensureInclusive());
+        }
+
+    /**
+     * Obtain a portion of the tuple as a tuple, using a range that will be treated as inclusive
+     * first value to exclusive last value, in other words as `[..)`.
+     * Obtain a portion of the tuple as a tuple, using a range that will be treated as "[..)".
+     *
+     * The returned tuple is fixed size, persistent, or const based on whether this tuple is fixed
+     * size, persistent, or const; in all cases, changes to the returned tuple will not affect this
+     * tuple.
+     *
+     * If the compile-time type of this tuple is known, and if the interval is a compile-time constant
+     * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
+     * to a compile-time type is required to regain the compile-time type.
+     */
+    @Op("[[..)]") Tuple!<> sliceExclusive(Range<Int> indexes)
+        {
+        return slice(indexes.ensureExclusive());
+        }
 
     /**
      * Creates and returns a new tuple that is a copy of this tuple, except with the specified

@@ -708,8 +708,23 @@ public class ConstantPool
      */
     public RangeConstant ensureIntervalConstant(Constant const1, Constant const2)
         {
+        return ensureIntervalConstant(const1, false, const2, false);
+        }
+
+    /**
+     * Create a Range constant, which is also an Interval constant for Sequential types.
+     *
+     * @param const1     the start value for the Range
+     * @param fExclude1  true indicates that the start value is excluded from the Range
+     * @param const2     the end value for the Range
+     * @param fExclude2  true indicates that the end value is excluded from the Range
+     *
+     * @return the RangeConstant representing the range or interval
+     */
+    public RangeConstant ensureIntervalConstant(Constant const1, boolean fExclude1, Constant const2, boolean fExclude2)
+        {
         // TODO validations
-        return new RangeConstant(this, const1, const2);
+        return new RangeConstant(this, const1, fExclude1, const2,  fExclude2);
         }
 
     /**
@@ -1931,6 +1946,7 @@ public class ConstantPool
     public ClassConstant     clzMatrix()        {ClassConstant     c = m_clzMatrix;       if (c == null) {m_clzMatrix       = c = (ClassConstant) getImplicitlyImportedIdentity("Matrix"     );} return c;}
     public ClassConstant     clzMap()           {ClassConstant     c = m_clzMap;          if (c == null) {m_clzMap          = c = (ClassConstant) getImplicitlyImportedIdentity("Map"        );} return c;}
     public ClassConstant     clzSequence()      {ClassConstant     c = m_clzSequence;     if (c == null) {m_clzSequence     = c = (ClassConstant) getImplicitlyImportedIdentity("Sequence"   );} return c;}
+    public ClassConstant     clzSliceable()     {ClassConstant     c = m_clzSliceable;    if (c == null) {m_clzSliceable    = c = (ClassConstant) getImplicitlyImportedIdentity("Sliceable"  );} return c;}
     public ClassConstant     clzOrderable()     {ClassConstant     c = m_clzOrderable;    if (c == null) {m_clzOrderable    = c = (ClassConstant) getImplicitlyImportedIdentity("Orderable"  );} return c;}
     public ClassConstant     clzTuple()         {ClassConstant     c = m_clzTuple;        if (c == null) {m_clzTuple        = c = (ClassConstant) getImplicitlyImportedIdentity("Tuple"      );} return c;}
     public ClassConstant     clzAuto()          {ClassConstant     c = m_clzAuto;         if (c == null) {m_clzAuto         = c = (ClassConstant) getImplicitlyImportedIdentity("Auto"       );} return c;}
@@ -1993,6 +2009,7 @@ public class ConstantPool
     public TypeConstant      typeList()         {TypeConstant      c = m_typeList;        if (c == null) {m_typeList        = c = ensureTerminalTypeConstant(clzList()                       );} return c;}
     public TypeConstant      typeMap()          {TypeConstant      c = m_typeMap;         if (c == null) {m_typeMap         = c = ensureTerminalTypeConstant(clzMap()                        );} return c;}
     public TypeConstant      typeSequence()     {TypeConstant      c = m_typeSequence;    if (c == null) {m_typeSequence    = c = ensureTerminalTypeConstant(clzSequence()                   );} return c;}
+    public TypeConstant      typeSliceable()    {TypeConstant      c = m_typeSliceable;   if (c == null) {m_typeSliceable   = c = ensureTerminalTypeConstant(clzSliceable()                  );} return c;}
     public TypeConstant      typeOrderable()    {TypeConstant      c = m_typeOrderable;   if (c == null) {m_typeOrderable   = c = ensureTerminalTypeConstant(clzOrderable()                  );} return c;}
     public TypeConstant      typeSequential()   {TypeConstant      c = m_typeSequential;  if (c == null) {m_typeSequential  = c = ensureTerminalTypeConstant(clzSequential()                 );} return c;}
     public TypeConstant      typeNumber()       {TypeConstant      c = m_typeNumber;      if (c == null) {m_typeNumber      = c = ensureTerminalTypeConstant(clzNumber()                     );} return c;}
@@ -2340,6 +2357,8 @@ public class ConstantPool
                     break;
 
                 case Range:
+                case RangeInclusive:
+                case RangeExclusive:
                     constant = new RangeConstant(this, format, in);
                     break;
 
@@ -2841,6 +2860,7 @@ public class ConstantPool
         m_typeList        = null;
         m_typeMap         = null;
         m_typeSequence    = null;
+        m_typeSliceable   = null;
         m_typeOrderable   = null;
         m_typeSequential  = null;
         m_typeNumber      = null;
@@ -3552,6 +3572,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzMatrix;
     private transient ClassConstant     m_clzMap;
     private transient ClassConstant     m_clzSequence;
+    private transient ClassConstant     m_clzSliceable;
     private transient ClassConstant     m_clzOrderable;
     private transient ClassConstant     m_clzTuple;
     private transient ClassConstant     m_clzAuto;
@@ -3618,6 +3639,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeList;
     private transient TypeConstant      m_typeMap;
     private transient TypeConstant      m_typeSequence;
+    private transient TypeConstant      m_typeSliceable;
     private transient TypeConstant      m_typeOrderable;
     private transient TypeConstant      m_typeSequential;
     private transient TypeConstant      m_typeNumber;

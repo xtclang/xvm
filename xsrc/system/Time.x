@@ -71,7 +71,7 @@ const Time(Int picos)
                     mins  = time[2..3];
                     if (len > 4)
                         {
-                        secs = time[4..len-1];
+                        secs = time[4..len);
                         }
                     break;
                     }
@@ -92,13 +92,13 @@ const Time(Int picos)
                 {
                 if (dot > 0)
                     {
-                    sec = new IntLiteral(secs[0..dot-1]).toInt();
+                    sec = new IntLiteral(secs[0..dot)).toInt();
                     }
 
                 Int len = secs.size;
                 if (dot < len-1)
                     {
-                    String picos = secs[dot+1..len-1];
+                    String picos = secs[dot+1..len);
                     if (picos.size > 12)
                         {
                         picos = picos[0..11];

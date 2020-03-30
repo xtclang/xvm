@@ -11,6 +11,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
@@ -220,33 +221,62 @@ public abstract class BitBasedArray
         }
 
     @Override
-    protected int slice(Frame frame, ObjectHandle hTarget, long ixFrom, long ixTo, boolean fReverse, int iReturn)
+    protected int slice(Frame        frame,
+                        ObjectHandle hTarget,
+                        long         ixLower,
+                        boolean      fExLower,
+                        long         ixUpper,
+                        boolean      fExUpper,
+                        boolean      fReverse,
+                        int          iReturn)
         {
         BitArrayHandle hArray = (BitArrayHandle) hTarget;
+
+        // calculate inclusive lower
+        if (fExLower)
+            {
+            ++ixLower;
+            }
+
+        // calculate exclusive upper
+        if (!fExUpper)
+            {
+            ++ixUpper;
+            }
 
         byte[] abValue = hArray.m_abValue;
         try
             {
-            int    cBits = (int) (ixTo - ixFrom + 1);
-            byte[] abNew = new byte[storage(cBits)];
-
-            if (fReverse)
+            byte[] abNew;
+            int    cBits;
+            if (ixLower >= ixUpper)
                 {
-                for (int iBit = 0; iBit <= cBits; iBit++)
-                    {
-                    setBit(abNew, iBit, getBit(abValue, (int) ixTo - iBit));
-                    }
+                cBits = 0;
+                abNew = new byte[0];
                 }
             else
                 {
-                for (int iBit = 0; iBit <= cBits; iBit++)
+                cBits = (int) (ixUpper - ixLower);
+                abNew = new byte[storage(cBits)];
+                if (fReverse)
                     {
-                    setBit(abNew, iBit, getBit(abValue, (int) ixFrom + iBit));
+                    abNew = new byte[storage(cBits)];
+                    for (int iBit = 0; iBit < cBits; iBit++)
+                        {
+                        setBit(abNew, iBit, getBit(abValue, (int) ixUpper - iBit - 1));
+                        }
+                    }
+                else
+                    {
+                    for (int iBit = 0; iBit < cBits; iBit++)
+                        {
+                        setBit(abNew, iBit, getBit(abValue, (int) ixLower + iBit));
+                        }
                     }
                 }
 
             BitArrayHandle hArrayNew = new BitArrayHandle(hTarget.getComposition(),
-                abNew, cBits, Mutability.Mutable);
+                abNew, cBits, ObjectHandle.Mutability.Mutable);
 
             return frame.assignValue(iReturn, hArrayNew);
             }
@@ -254,7 +284,7 @@ public abstract class BitBasedArray
             {
             long c = abValue.length;
             return frame.raiseException(
-                xException.outOfBounds(frame, ixFrom < 0 || ixFrom >= c ? ixFrom : ixTo, c));
+                xException.outOfBounds(frame, ixLower < 0 || ixLower >= c ? ixLower : ixUpper, c));
             }
         }
 

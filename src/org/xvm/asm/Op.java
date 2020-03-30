@@ -1268,6 +1268,7 @@ public abstract class Op
             case OP_GP_XOR:      return new GP_Xor      (in, aconst);
             case OP_GP_DIVMOD:   return new GP_DivMod   (in, aconst);
             case OP_GP_DOTDOT:   return new GP_DotDot   (in, aconst);
+            case OP_GP_DOTDOTEX: return new GP_DotDotEx (in, aconst);
             case OP_GP_NEG:      return new GP_Neg      (in, aconst);
             case OP_GP_COMPL:    return new GP_Compl    (in, aconst);
 
@@ -1487,6 +1488,7 @@ public abstract class Op
             case OP_GP_XOR:      return "GP_XOR";
             case OP_GP_DIVMOD:   return "GP_DIVMOD";
             case OP_GP_DOTDOT:   return "GP_DOTDOT";
+            case OP_GP_DOTDOTEX: return "GP_DOTDOTEX";
             case OP_GP_NEG:      return "GP_NEG";
             case OP_GP_COMPL:    return "GP_COMPL";
             case OP_L_GET:       return "L_GET";
@@ -1742,8 +1744,9 @@ public abstract class Op
     public static final int OP_GP_XOR       = 0x60;
     public static final int OP_GP_DIVMOD    = 0x61;
     public static final int OP_GP_DOTDOT    = 0x62;
-    public static final int OP_GP_NEG       = 0x63;
-    public static final int OP_GP_COMPL     = 0x64;
+    public static final int OP_GP_DOTDOTEX  = 0x63;
+    public static final int OP_GP_NEG       = 0x64;
+    public static final int OP_GP_COMPL     = 0x65;
 
     public static final int OP_L_GET        = 0x67;
     public static final int OP_L_SET        = 0x68;

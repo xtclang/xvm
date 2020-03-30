@@ -173,7 +173,7 @@ class MarkedIterator<Element>(Iterator<Element> that)
                 {
                 if (position > 0)
                     {
-                    result = buffer[position..buffer.size-1].addAll(additional);
+                    result = buffer[position..buffer.size).addAll(additional);
                     buffer.clear();
                     position = 0;
                     }

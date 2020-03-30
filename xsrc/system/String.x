@@ -83,7 +83,7 @@ const String
         return switch()
             {
             case startAt <= 0:   this;
-            case startAt < size: this[startAt..size-1];
+            case startAt < size: this[startAt..size);
             default: "";
             };
         }
@@ -140,7 +140,7 @@ const String
         Int start = 0;
         while (Int next := indexOf(separator, start))
             {
-            results += start == next ? "" : this[start..next-1];
+            results += start == next ? "" : this[start..next);
             start    = next + 1;
             }
 
@@ -303,10 +303,10 @@ const String
         }
 
     @Override
-    @Op("[..]")
-    String! slice(Interval<Int> interval)
+    @Op("[..]") String slice(Range<Int> indexes)
         {
-        return new String(chars[interval]);
+//        return new String(chars[first..last));    // TODO GG this blows (it's the wrong code anyhow, but ...)
+        return new String(chars[indexes]);
         }
 
     @Override

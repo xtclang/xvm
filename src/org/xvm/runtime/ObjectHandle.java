@@ -15,7 +15,6 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xRef.RefHandle;
 
@@ -241,6 +240,8 @@ public abstract class ObjectHandle
         {
         return "(" + m_clazz + ") ";
         }
+
+    public enum Mutability {Mutable, FixedSize, Persistent, Constant}
 
     public static class GenericHandle
             extends ObjectHandle

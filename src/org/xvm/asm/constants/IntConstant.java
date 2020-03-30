@@ -437,6 +437,7 @@ public class IntConstant
             case "Int16|IntLiteral":
             case "Int16^IntLiteral":
             case "Int16..IntLiteral":
+            case "Int16..<IntLiteral":
             case "Int16==IntLiteral":
             case "Int16!=IntLiteral":
             case "Int16<IntLiteral":
@@ -453,6 +454,7 @@ public class IntConstant
             case "Int32|IntLiteral":
             case "Int32^IntLiteral":
             case "Int32..IntLiteral":
+            case "Int32..<IntLiteral":
             case "Int32==IntLiteral":
             case "Int32!=IntLiteral":
             case "Int32<IntLiteral":
@@ -469,6 +471,7 @@ public class IntConstant
             case "Int64|IntLiteral":
             case "Int64^IntLiteral":
             case "Int64..IntLiteral":
+            case "Int64..<IntLiteral":
             case "Int64==IntLiteral":
             case "Int64!=IntLiteral":
             case "Int64<IntLiteral":
@@ -485,6 +488,7 @@ public class IntConstant
             case "Int128|IntLiteral":
             case "Int128^IntLiteral":
             case "Int128..IntLiteral":
+            case "Int128..<IntLiteral":
             case "Int128==IntLiteral":
             case "Int128!=IntLiteral":
             case "Int128<IntLiteral":
@@ -501,6 +505,7 @@ public class IntConstant
             case "VarInt|IntLiteral":
             case "VarInt^IntLiteral":
             case "VarInt..IntLiteral":
+            case "VarInt..<IntLiteral":
             case "VarInt==IntLiteral":
             case "VarInt!=IntLiteral":
             case "VarInt<IntLiteral":
@@ -517,6 +522,7 @@ public class IntConstant
             case "UInt16|IntLiteral":
             case "UInt16^IntLiteral":
             case "UInt16..IntLiteral":
+            case "UInt16..<IntLiteral":
             case "UInt16==IntLiteral":
             case "UInt16!=IntLiteral":
             case "UInt16<IntLiteral":
@@ -533,6 +539,7 @@ public class IntConstant
             case "UInt32|IntLiteral":
             case "UInt32^IntLiteral":
             case "UInt32..IntLiteral":
+            case "UInt32..<IntLiteral":
             case "UInt32==IntLiteral":
             case "UInt32!=IntLiteral":
             case "UInt32<IntLiteral":
@@ -549,6 +556,7 @@ public class IntConstant
             case "UInt64|IntLiteral":
             case "UInt64^IntLiteral":
             case "UInt64..IntLiteral":
+            case "UInt64..<IntLiteral":
             case "UInt64==IntLiteral":
             case "UInt64!=IntLiteral":
             case "UInt64<IntLiteral":
@@ -565,6 +573,7 @@ public class IntConstant
             case "UInt128|IntLiteral":
             case "UInt128^IntLiteral":
             case "UInt128..IntLiteral":
+            case "UInt128..<IntLiteral":
             case "UInt128==IntLiteral":
             case "UInt128!=IntLiteral":
             case "UInt128<IntLiteral":
@@ -581,6 +590,7 @@ public class IntConstant
             case "VarUInt|IntLiteral":
             case "VarUInt^IntLiteral":
             case "VarUInt..IntLiteral":
+            case "VarUInt..<IntLiteral":
             case "VarUInt==IntLiteral":
             case "VarUInt!=IntLiteral":
             case "VarUInt<IntLiteral":
@@ -729,6 +739,18 @@ public class IntConstant
             case "UInt128..UInt128":
             case "VarUInt..VarUInt":
                 return ConstantPool.getCurrentPool().ensureIntervalConstant(this, that);
+
+            case "Int16..>Int16":
+            case "Int32..>Int32":
+            case "Int64..>Int64":
+            case "Int128..>Int128":
+            case "VarInt..>VarInt":
+            case "UInt16..>UInt16":
+            case "UInt32..>UInt32":
+            case "UInt64..>UInt64":
+            case "UInt128..>UInt128":
+            case "VarUInt..>VarUInt":
+                return ConstantPool.getCurrentPool().ensureIntervalConstant(this, false, that, true);
 
             case "Int16<<Int64":
             case "Int32<<Int64":
