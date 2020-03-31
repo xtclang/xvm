@@ -259,8 +259,18 @@ class ObjectOutputStream(Schema schema, Writer writer)
          */
         protected StringBuffer buildPointer(Int length)
             {
-            Stringable? token  = id;
-            Boolean     escape = False;
+            Stringable? token = id;
+            (Int add, Boolean escape) = calculatePointerSegmentLength(token);
+            length += add;
+
+            StringBuffer buf = parent?.buildPointer(length) : new StringBuffer(length);
+            return appendPointerSegment(buf, token, escape);
+            }
+
+        protected (Int length, Boolean escape) calculatePointerSegmentLength(Stringable? token)
+            {
+            Int     length = 0;
+            Boolean escape = False;
             if (token != Null)
                 {
                 length += 1 + token.estimateStringLength();
@@ -276,12 +286,15 @@ class ObjectOutputStream(Schema schema, Writer writer)
                         }
                     }
                 }
+            return length, escape;
+            }
 
-            StringBuffer buf = parent?.buildPointer(length) : new StringBuffer(length);
+        protected StringBuffer appendPointerSegment(StringBuffer buf, Stringable? token, Boolean checkEscapes)
+            {
             if (token != Null)
                 {
                 buf.add('/');
-                if (escape)
+                if (checkEscapes)
                     {
                     // "~" and "/" need to be converted to "~0" and "~1" respectively
                     for (Char ch : token.as(String))
@@ -628,9 +641,10 @@ class ObjectOutputStream(Schema schema, Writer writer)
          *
          * @return this
          */
-        protected PointerAwareDocOutput writePointerOrValue(Object value,
+        protected PointerAwareDocOutput writePointerOrValue((String | Int)?       id,
+                                                            Object                value,
                                                             function void(String) writePointer,
-                                                            function void() writeValue)
+                                                            function void()       writeValue)
             {
             Boolean alreadyInside = inside;
             if (alreadyInside || value.is(Primitive))
@@ -643,14 +657,22 @@ class ObjectOutputStream(Schema schema, Writer writer)
                 {
                 inside = True;
 
-                if (String pointer := pointers.get(&value.identity))
+                if (String pointer := findPointer(value))
                     {
                     writePointer(pointer);
                     }
                 else
                     {
-                    registerPointer(value);
                     writeValue();
+                    if (!value.is(Primitive))
+                        {
+                        (Int length, Boolean escape) = calculatePointerSegmentLength(id);
+                        pointer = appendPointerSegment(buildPointer(length), id, escape).toString();
+                        if (pointer.size > 0)
+                            {
+                            pointers.putIfAbsent(&value.identity, pointer);
+                            }
+                        }
                     }
                 }
             finally
@@ -659,18 +681,6 @@ class ObjectOutputStream(Schema schema, Writer writer)
                 }
 
             return this;
-            }
-
-        /**
-         * Given a value that will be added to this DocOutput, associate the value with the pointer
-         * to this DocOutput.
-         */
-        protected void registerPointer(Object value)
-            {
-            if (!value.is(Primitive))
-                {
-                pointers.putIfAbsent(&value.identity, pointer);
-                }
             }
         }
 
@@ -689,40 +699,45 @@ class ObjectOutputStream(Schema schema, Writer writer)
                 }
             }
 
+        Int? nextId.get()
+            {
+            return this.is(ArrayOutputStream) ? this.as(ArrayOutputStream).count : Null;   // TODO GG cast should be unnecessary
+            }
+
         @Override
         PointerAwareElementOutput add(Doc value)
             {
-            return writePointerOrValue(value, &addPointerReference(_), &super(value));
+            return writePointerOrValue(nextId, value, &addPointerReference(_), &super(value));
             }
 
         @Override
         <Serializable> PointerAwareElementOutput addObject(Serializable value)
             {
-            return writePointerOrValue(value, &addPointerReference(_), &super(value));
+            return writePointerOrValue(nextId, value, &addPointerReference(_), &super(value));
             }
 
         @Override
         PointerAwareElementOutput addArray(Iterable<Doc> values)
             {
-            return writePointerOrValue(values, &addPointerReference(_), &super(values));
+            return writePointerOrValue(nextId, values, &addPointerReference(_), &super(values));
             }
 
         @Override
         PointerAwareElementOutput addArray(Iterable<IntNumber> values)
             {
-            return writePointerOrValue(values, &addPointerReference(_), &super(values));
+            return writePointerOrValue(nextId, values, &addPointerReference(_), &super(values));
             }
 
         @Override
         PointerAwareElementOutput addArray(Iterable<FPNumber> values)
             {
-            return writePointerOrValue(values, &addPointerReference(_), &super(values));
+            return writePointerOrValue(nextId, values, &addPointerReference(_), &super(values));
             }
 
         @Override
         <Serializable> PointerAwareElementOutput addObjectArray(Iterable<Serializable> values)
             {
-            return writePointerOrValue(values, &addPointerReference(_), &super(values));
+            return writePointerOrValue(nextId, values, &addPointerReference(_), &super(values));
             }
         }
 
@@ -744,37 +759,37 @@ class ObjectOutputStream(Schema schema, Writer writer)
         @Override
         PointerAwareFieldOutput add(String name, Doc value)
             {
-            return writePointerOrValue(value, &addPointerReference(name, _), &super(name, value));
+            return writePointerOrValue(name, value, &addPointerReference(name, _), &super(name, value));
             }
 
         @Override
         <Serializable> PointerAwareFieldOutput addObject(String name, Serializable value)
             {
-            return writePointerOrValue(value, &addPointerReference(name, _), &super(name, value));
+            return writePointerOrValue(name, value, &addPointerReference(name, _), &super(name, value));
             }
 
         @Override
         PointerAwareFieldOutput addArray(String name, Iterable<Doc> values)
             {
-            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values));
+            return writePointerOrValue(name, values, &addPointerReference(name, _), &super(name, values));
             }
 
         @Override
         PointerAwareFieldOutput addArray(String name, Iterable<IntNumber> values)
             {
-            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values));
+            return writePointerOrValue(name, values, &addPointerReference(name, _), &super(name, values));
             }
 
         @Override
         PointerAwareFieldOutput addArray(String name, Iterable<FPNumber> values)
             {
-            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values));
+            return writePointerOrValue(name, values, &addPointerReference(name, _), &super(name, values));
             }
 
         @Override
         <Serializable> PointerAwareFieldOutput addObjectArray(String name, Iterable<Serializable> values)
             {
-            return writePointerOrValue(values, &addPointerReference(name, _), &super(name, values));
+            return writePointerOrValue(name, values, &addPointerReference(name, _), &super(name, values));
             }
         }
     }
