@@ -1328,7 +1328,8 @@ public class TerminalTypeConstant
         Constant constId = ensureResolvedConstant();
         return constId.getFormat() == Format.Typedef
                 ? ((TypedefConstant) constId).getReferredToType().isTypeOfType()
-                : this.isA(getConstantPool().typeType());
+                : this.isExplicitClassIdentity(true) &&
+                  this.getDefiningConstant().equals(getConstantPool().clzType());
         }
 
     @Override

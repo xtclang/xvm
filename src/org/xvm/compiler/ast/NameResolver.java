@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
@@ -293,7 +294,32 @@ public class NameResolver
                         return getResult();
                         }
 
-                    if (structure instanceof Component)
+                    if (structure instanceof PropertyStructure)
+                        {
+                        PropertyStructure prop = (PropertyStructure) structure;
+                        assert prop.isGenericTypeParameter();
+
+                        Result result = resolveFormalDotName(prop.getType(), errs);
+                        if (result != Result.RESOLVED)
+                            {
+                            return result;
+                            }
+                        }
+                    else if (structure instanceof Parameter)
+                        {
+                        Parameter parameter = (Parameter) structure;
+                        assert parameter.isTypeParameter();
+
+                        TypeConstant typeParam = parameter.getType();
+                        assert typeParam.isTypeOfType();
+
+                        Result result = resolveFormalDotName(typeParam.getParamType(0), errs);
+                        if (result != Result.RESOLVED)
+                            {
+                            return result;
+                            }
+                        }
+                    else
                         {
                         Component component = (Component) structure;
                         switch (component.resolveName(m_sName, Access.PRIVATE, this))
@@ -321,52 +347,6 @@ public class NameResolver
                             default:
                                 throw new IllegalStateException();
                             }
-                        }
-                    else
-                        {
-                        Parameter parameter = (Parameter) structure;
-                        assert parameter.isTypeParameter();
-
-                        TypeConstant typeParam = parameter.getType();
-                        assert typeParam.isTypeOfType();
-
-                        TypeConstant typeConstraint = typeParam.getParamType(0);
-                        if (typeConstraint.isSingleDefiningConstant())
-                            {
-                            Constant  id        = typeConstraint.getDefiningConstant();
-                            Component component = id instanceof IdentityConstant
-                                    ? ((IdentityConstant) id).getComponent()
-                                    : id instanceof PseudoConstant
-                                            ? ((PseudoConstant) id).getDeclarationLevelClass().getComponent()
-                                            : null;
-                            ResolutionResult result = component == null
-                                    ? ResolutionResult.UNKNOWN
-                                    : component.resolveName(m_sName, Access.PRIVATE, this);
-                            switch (result)
-                                {
-                                case UNKNOWN:
-                                    // the component didn't know the name
-                                    m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
-                                    // break through
-                                case POSSIBLE:
-                                    // should not be possible
-                                case ERROR:
-                                    m_stage = Stage.ERROR;
-                                    return Result.ERROR;
-
-                                case RESOLVED:
-                                    // the component resolved the name; advance to the next one
-                                    m_sName = m_iter.hasNext() ? m_iter.next() : null;
-                                    break;
-
-                                case DEFERRED:
-                                    return Result.DEFERRED;
-
-                                default:
-                                    throw new IllegalStateException();
-                                }
-                            }
-                        break;
                         }
                     }
 
@@ -440,30 +420,32 @@ public class NameResolver
                 case Property:
                     if (component instanceof PropertyStructure)
                         {
-                        type = ((PropertyStructure) component).getType();
+                        return component;
                         }
-                    else if (component instanceof CompositeComponent)
+
+                    if (component instanceof CompositeComponent)
                         {
-                        List<Component> listProps = ((CompositeComponent) component).components();
-                        type = ((PropertyStructure) listProps.get(0)).getType();
+                        List<Component>   listProps = ((CompositeComponent) component).components();
+                        PropertyStructure prop0     = (PropertyStructure) listProps.get(0);
+                        TypeConstant      type0     = prop0.getType();
                         for (int i = 1, c = listProps.size(); i < c; ++i)
                             {
-                            TypeConstant constTypeN = ((PropertyStructure) listProps.get(i)).getType();
-                            if (!type.equals(constTypeN))
+                            TypeConstant typeN = ((PropertyStructure) listProps.get(i)).getType();
+                            if (!type0.equals(typeN))
                                 {
                                 // eventual To-Do: we need to handle cases where composite
                                 // components differ in substantial ways, such as type, but for
                                 // now this is just an assertion that the type does not vary
                                 throw new UnsupportedOperationException("non-uniform composite property type: "
-                                        + id + "; 0=" + type + ", " + i + "=" + constTypeN);
+                                        + id + "; 0=" + type0 + ", " + i + "=" + typeN);
                                 }
                             }
+                        return prop0;
                         }
                     else
                         {
                         throw new IllegalStateException("id=" + id + ", prop=" + component);
                         }
-                    break;
 
                 case Typedef:
                     if (component instanceof TypedefStructure)
@@ -512,7 +494,7 @@ public class NameResolver
                     throw new IllegalStateException("illegal type param constant id: " + id);
                 }
 
-            if (!type.isA(getPool().typeType()))
+            if (!type.isTypeOfType())
                 {
                 m_errs.log(Severity.ERROR, Compiler.NOT_CLASS_TYPE,
                         new Object[] {id.getValueString()}, component);
@@ -530,6 +512,61 @@ public class NameResolver
                 {
                 throw new IllegalStateException("not a single defining constant: " + typeParam);
                 }
+            }
+        }
+
+    /**
+     * Resolve the next name for a formal partially resolved component that represents either
+     * a generic type (Property) or a formal type parameter (Parameter).
+     *
+     * @param typeConstraint  the constraint type of the formal type
+     * @param errs            the error list to log any errors to
+     *
+     * @return the resolution result
+     */
+    private Result resolveFormalDotName(TypeConstant typeConstraint, ErrorListener errs)
+        {
+        // since the formal type is a Type, first try the Type's children;
+        // if that fails, try to use the constraint type
+        ClassStructure   clzType = (ClassStructure) getPool().clzType().getComponent();
+        ResolutionResult result  = clzType.resolveName(m_sName, Access.PUBLIC, this);
+
+        if (result != ResolutionResult.RESOLVED &&
+                typeConstraint.isSingleDefiningConstant())
+            {
+            Constant id         = typeConstraint.getDefiningConstant();
+            Component component = id instanceof IdentityConstant
+                    ? ((IdentityConstant) id).getComponent()
+                    : id instanceof PseudoConstant
+                        ? ((PseudoConstant) id).getDeclarationLevelClass().getComponent()
+                        : null;
+            result = component == null
+                    ? ResolutionResult.UNKNOWN
+                    : component.resolveName(m_sName, Access.PRIVATE, this);
+            }
+
+        switch (result)
+            {
+            case UNKNOWN:
+                // the component didn't know the name
+                m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
+                // break through
+            case POSSIBLE:
+                // should not be possible
+            case ERROR:
+                m_stage = Stage.ERROR;
+                return Result.ERROR;
+
+            case RESOLVED:
+                // the component resolved the name; advance to the next one
+                m_sName = m_iter.hasNext() ? m_iter.next() : null;
+                return Result.RESOLVED;
+
+            case DEFERRED:
+                return Result.DEFERRED;
+
+            default:
+                throw new IllegalStateException();
             }
         }
 
