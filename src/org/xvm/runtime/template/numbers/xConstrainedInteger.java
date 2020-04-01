@@ -79,6 +79,10 @@ public abstract class xConstrainedInteger
         markNativeMethod("toUInt32", VOID, sName.equals("numbers.UInt32") ? THIS : new String[]{"numbers.UInt32"});
         markNativeMethod("toUInt"  , VOID, sName.equals("numbers.UInt64") ? THIS : new String[]{"numbers.UInt64"});
 
+        markNativeMethod("toFloat16"     , VOID, new String[]{"numbers.Float16"});
+        markNativeMethod("toFloat32"     , VOID, new String[]{"numbers.Float32"});
+        markNativeMethod("toFloat64"     , VOID, new String[]{"numbers.Float64"});
+
         markNativeMethod("toInt128"      , VOID, new String[]{"numbers.Int128"});
         markNativeMethod("toUInt128"     , VOID, new String[]{"numbers.UInt128"});
         markNativeMethod("toVarInt"      , VOID, new String[]{"numbers.VarInt"});
@@ -343,6 +347,9 @@ public abstract class xConstrainedInteger
             case "toUInt32":
             case "toUInt":
             case "toUInt128":
+            case "toFloat16":
+            case "toFloat32":
+            case "toFloat64":
             case "toVarInt":
             case "toVarUInt":
             case "toVarFloat":
@@ -369,6 +376,14 @@ public abstract class xConstrainedInteger
                         {
                         return templateTo.overflow(frame);
                         }
+
+                    return templateTo.convertLong(frame, lValue, iReturn);
+                    }
+
+                if (template instanceof BaseBinaryFP)
+                    {
+                    BaseBinaryFP templateTo = (BaseBinaryFP) template;
+                    long         lValue     = ((JavaLong) hTarget).getValue();
 
                     return templateTo.convertLong(frame, lValue, iReturn);
                     }

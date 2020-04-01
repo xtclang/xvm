@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
@@ -131,6 +132,12 @@ abstract public class BaseBinaryFP
                 return frame.assignValue(iReturn,
                     xBitArray.makeHandle(abValue, f_cBits, Mutability.Constant));
                 }
+
+            case "toInt":
+                // TODO: overflow check
+                return Double.isInfinite(d)
+                    ? overflow(frame)
+                    : frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong((long) d));
 
             case "toDec64":
                 return Double.isInfinite(d)
@@ -333,6 +340,16 @@ abstract public class BaseBinaryFP
 
         return frame.assignValue(iReturn,
             xOrdered.makeHandle(Double.compare(h1.getValue(), h2.getValue())));
+        }
+
+    /**
+     * Convert a long value into a handle for the type represented by this template.
+     *
+     * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
+     */
+    public int convertLong(Frame frame, long lValue, int iReturn)
+        {
+        return frame.assignValue(iReturn, makeHandle((double) lValue));
         }
 
 

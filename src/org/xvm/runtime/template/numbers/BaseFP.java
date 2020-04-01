@@ -82,6 +82,7 @@ abstract public class BaseFP
 
         // conversions
         markNativeMethod("toBitArray" , VOID, null);
+        markNativeMethod("toInt"      , VOID, INT);
         markNativeMethod("toDec64"    , VOID, DEC64);
         markNativeMethod("toFloat64"  , VOID, FLOAT64);
         markNativeMethod("toVarInt"   , VOID, VAR_INT);
