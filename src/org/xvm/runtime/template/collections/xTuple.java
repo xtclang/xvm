@@ -5,6 +5,7 @@ import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.Op;
@@ -18,6 +19,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TypeComposition;
@@ -26,8 +28,10 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.numbers.xInt64;
@@ -41,7 +45,7 @@ public class xTuple
     {
     public static xTuple INSTANCE;
     public static ClassConstant INCEPTION_CLASS;
-    public static xTuple.TupleHandle H_VOID;
+    public static TupleHandle H_VOID;
     public static xEnum MUTABILITY;
 
     public xTuple(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
@@ -53,7 +57,7 @@ public class xTuple
             INSTANCE = this;
             INCEPTION_CLASS = new NativeRebaseConstant(
                 (ClassConstant) structure.getIdentityConstant());
-            H_VOID = makeImmutableHandle(getCanonicalType(), Utils.OBJECTS_NONE);
+            H_VOID = new TupleHandle(getCanonicalClass(), Utils.OBJECTS_NONE, Mutability.Constant);
 
             // cache Mutability template
             MUTABILITY = (xEnum) templates.getTemplate("collections.VariablyMutable.Mutability");
@@ -63,8 +67,7 @@ public class xTuple
     @Override
     public void initDeclared()
         {
-        markNativeProperty("mutability");
-        markNativeProperty("size");
+        // Note: all interface properties are implicitly native due to "NativeRebase"
 
         markNativeMethod("add", null, null);
         markNativeMethod("elementAt", INT, null);
@@ -122,18 +125,19 @@ public class xTuple
             ahValue[i] = hValue;
             }
 
+        ClassComposition clzTuple = ensureClass(typeTuple);
         if (fDeferred)
             {
             Frame.Continuation stepNext = frameCaller ->
                 {
-                frameCaller.pushStack(makeImmutableHandle(typeTuple, ahValue));
+                frameCaller.pushStack(makeImmutableHandle(clzTuple, ahValue));
                 return Op.R_NEXT;
                 };
 
             return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
             }
 
-        frame.pushStack(makeImmutableHandle(typeTuple, ahValue));
+        frame.pushStack(makeImmutableHandle(clzTuple, ahValue));
         return Op.R_NEXT;
         }
 
@@ -142,22 +146,19 @@ public class xTuple
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         ObjectHandle hSequence = ahVar[0];
-        IndexSupport support = (IndexSupport) hSequence.getOpSupport();
-
-        ObjectHandle[] ahValue;
+        IndexSupport support   = (IndexSupport) hSequence.getOpSupport();
 
         try
             {
-            ahValue = support.toArray(frame, hSequence);
+            ObjectHandle[] ahValue = support.toArray(frame, hSequence);
+
+            return frame.assignValue(iReturn,
+                    new TupleHandle(clazz, ahValue, Mutability.FixedSize));
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
-
-        TupleHandle hTuple = new TupleHandle(clazz, ahValue);
-
-        return frame.assignValue(iReturn, hTuple);
         }
 
     @Override
@@ -184,27 +185,41 @@ public class xTuple
         {
         switch (method.getName())
             {
-            case "add":
-                // TODO
-                throw new UnsupportedOperationException();
+            case "add":             // Tuple!<> add(Tuple!<> that);
+                {
+                TupleHandle hTuple = (TupleHandle) hTarget;
+                TupleHandle hThat  = (TupleHandle) hArg;
+
+                return add(frame, hTuple, hThat, iReturn);
+                }
 
             case "elementAt":
-                return makeRef(frame, hTarget, ((ObjectHandle.JavaLong) hArg).getValue(), false, iReturn);
-
-            case "ensureFixedSize": // Tuple ensureFixedSize(Boolean inPlace = false);
-                // TODO
-                throw new UnsupportedOperationException();
+                return makeRef(frame, hTarget, ((JavaLong) hArg).getValue(), false, iReturn);
 
             case "ensureImmutable": // immutable Tuple ensureImmutable(Boolean inPlace = False)
-                // TODO
-                throw new UnsupportedOperationException();
+                {
+                TupleHandle hTuple   = (TupleHandle) hTarget;
+                boolean     fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
+                return ensureImmutable(frame, hTuple, fInPlace, iReturn);
+                }
+
+            case "ensureFixedSize": // Tuple ensureFixedSize(Boolean inPlace = false);
+                {
+                TupleHandle hTuple   = (TupleHandle) hTarget;
+                boolean     fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
+                return ensureFixedSize(frame, hTuple, fInPlace, iReturn);
+                }
 
             case "ensurePersistent": // Tuple ensurePersistent(Boolean inPlace = False)
-                // TODO
-                throw new UnsupportedOperationException();
+                {
+                TupleHandle hTuple   = (TupleHandle) hTarget;
+                boolean     fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
+
+                return ensurePersistent(frame, hTuple, fInPlace, iReturn);
+                }
 
             case "getElement":
-                return extractArrayValue(frame, hTarget, ((ObjectHandle.JavaLong) hArg).getValue(), iReturn);
+                return extractArrayValue(frame, hTarget, ((JavaLong) hArg).getValue(), iReturn);
 
             case "remove":
                 // TODO - note that there are two remove() methods that each take one parameter
@@ -213,11 +228,11 @@ public class xTuple
             case "slice":
                 {
                 ObjectHandle.GenericHandle hInterval = (ObjectHandle.GenericHandle) hArg;
-                long    ixFrom   = ((ObjectHandle.JavaLong) hInterval.getField("lowerBound")).getValue();
-                long    ixTo     = ((ObjectHandle.JavaLong) hInterval.getField("upperBound")).getValue();
-                boolean fExLower = ((xBoolean.BooleanHandle) hInterval.getField("lowerExclusive")).get();
-                boolean fExUpper = ((xBoolean.BooleanHandle) hInterval.getField("upperExclusive")).get();
-                boolean fReverse = ((xBoolean.BooleanHandle) hInterval.getField("reversed")).get();
+                long    ixFrom   = ((JavaLong) hInterval.getField("lowerBound")).getValue();
+                long    ixTo     = ((JavaLong) hInterval.getField("upperBound")).getValue();
+                boolean fExLower = ((BooleanHandle) hInterval.getField("lowerExclusive")).get();
+                boolean fExUpper = ((BooleanHandle) hInterval.getField("upperExclusive")).get();
+                boolean fReverse = ((BooleanHandle) hInterval.getField("reversed")).get();
                 return slice(frame, (TupleHandle) hTarget, ixFrom, fExLower, ixTo, fExUpper, fReverse, iReturn);
                 }
             }
@@ -235,7 +250,7 @@ public class xTuple
                 throw new UnsupportedOperationException();
 
             case "setElement":
-                return assignArrayValue(frame, hTarget, ((ObjectHandle.JavaLong) ahArg[0]).getValue(), ahArg[1]);
+                return assignArrayValue(frame, hTarget, ((JavaLong) ahArg[0]).getValue(), ahArg[1]);
 
             default:
                 return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -281,16 +296,164 @@ public class xTuple
         }
 
     /**
+     * add(Tuple! that) implementation
+     */
+    protected int add(Frame frame, TupleHandle hThis, TupleHandle hThat, int iReturn)
+        {
+        ObjectHandle[] ahValue = hThis.m_ahValue;
+        int            cValues = ahValue.length;
+        if (cValues == 0)
+            {
+            return frame.assignValue(iReturn, hThat);
+            }
+
+        ObjectHandle[] ahValueAdd = hThat.m_ahValue;
+        int            cValuesAdd = ahValueAdd.length;
+        if (cValuesAdd == 0)
+            {
+            return frame.assignValue(iReturn, hThis);
+            }
+
+        TypeConstant[] atype     = hThis.getType().getParamTypesArray();
+        int            cTypes    = atype.length;
+        TypeConstant[] atypeAdd  = hThat.getType().getParamTypesArray();
+        int            cTypesAdd = atypeAdd.length;
+        int            cNew      = cValues + cValuesAdd;
+
+        ObjectHandle[] ahNew = new ObjectHandle[cNew];
+        System.arraycopy(ahValue, 0, ahNew, 0, cValues);
+        System.arraycopy(ahValueAdd, 0, ahNew, cValues, cValuesAdd);
+
+        TypeConstant[] atypeNew;
+        if (cTypes != cValues || cTypesAdd != cValuesAdd)
+            {
+            // it shouldn't happen, but not a place to report an error;
+            // simply ignore the types
+            atypeNew = TypeConstant.NO_TYPES;
+            }
+        else
+            {
+            atypeNew = new TypeConstant[cNew];
+            System.arraycopy(atype, 0, atypeNew, 0, cTypes);
+            System.arraycopy(atypeAdd, 0, atypeNew, cTypes, cTypesAdd);
+            }
+
+        ConstantPool     pool = pool();
+        TypeConstant     typeTupleNew = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
+        ClassComposition clzTupleNew  = ensureClass(typeTupleNew);
+        TupleHandle      hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hThis.m_mutability);
+
+        return frame.assignValue(iReturn, hTupleNew);
+        }
+
+    /**
+     * immutable Tuple ensureImmutable(Boolean inPlace = False) implementation
+     */
+    protected int ensureImmutable(Frame frame, TupleHandle hTuple, boolean fInPlace, int iReturn)
+        {
+        switch (hTuple.m_mutability)
+            {
+            case Constant:
+                return frame.assignValue(iReturn, hTuple);
+
+            case FixedSize:
+                // TODO: ensure all elements are immutable or ImmutableAble
+                if (fInPlace)
+                    {
+                    hTuple.makeImmutable();
+                    return frame.assignValue(iReturn, hTuple);
+                    }
+                return frame.assignValue(iReturn,
+                    new TupleHandle(hTuple.getComposition(),
+                        hTuple.m_ahValue.clone(), Mutability.Constant));
+
+            case Persistent:
+                if (fInPlace)
+                    {
+                    hTuple.m_mutability = Mutability.FixedSize;
+                    return frame.assignValue(iReturn, hTuple);
+                    }
+                return frame.assignValue(iReturn,
+                    new TupleHandle(hTuple.getComposition(),
+                        hTuple.m_ahValue.clone(), Mutability.FixedSize));
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * ensureFixedSize(Boolean inPlace = false) implementation
+     */
+    protected int ensureFixedSize(Frame frame, TupleHandle hTuple, boolean fInPlace, int iReturn)
+        {
+        switch (hTuple.m_mutability)
+            {
+            case Constant:
+                return fInPlace
+                    ? frame.raiseException(xException.immutableObject(frame))
+                    : frame.assignValue(iReturn,
+                        new TupleHandle(hTuple.getComposition(),
+                            hTuple.m_ahValue.clone(), Mutability.FixedSize));
+
+            case FixedSize:
+                return frame.assignValue(iReturn, hTuple);
+
+            case Persistent:
+                if (fInPlace)
+                    {
+                    hTuple.m_mutability = Mutability.FixedSize;
+                    return frame.assignValue(iReturn, hTuple);
+                    }
+                return frame.assignValue(iReturn,
+                        new TupleHandle(hTuple.getComposition(),
+                            hTuple.m_ahValue.clone(), Mutability.FixedSize));
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * Tuple ensurePersistent(Boolean inPlace = False) implementation
+     */
+    protected int ensurePersistent(Frame frame, TupleHandle hTuple, boolean fInPlace, int iReturn)
+        {
+        switch (hTuple.m_mutability)
+            {
+            case Constant:
+                return fInPlace
+                    ? frame.raiseException(xException.immutableObject(frame))
+                    : frame.assignValue(iReturn,
+                        new TupleHandle(hTuple.getComposition(),
+                            hTuple.m_ahValue.clone(), Mutability.Persistent));
+
+            case FixedSize:
+                if (fInPlace)
+                    {
+                    hTuple.m_mutability = Mutability.FixedSize;
+                    return frame.assignValue(iReturn, hTuple);
+                    }
+                return frame.assignValue(iReturn,
+                        new TupleHandle(hTuple.getComposition(),
+                            hTuple.m_ahValue.clone(), Mutability.Persistent));
+
+            case Persistent:
+                return frame.assignValue(iReturn, hTuple);
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
      * slice(Interval<Int>) implementation
      */
-    protected int slice(Frame        frame,
-                        TupleHandle  hTuple,
-                        long         ixLower,
-                        boolean      fExLower,
-                        long         ixUpper,
-                        boolean      fExUpper,
-                        boolean      fReverse,
-                        int          iReturn)
+    protected int slice(Frame   frame,    TupleHandle hTuple,
+                        long    ixLower,  boolean     fExLower,
+                        long    ixUpper,  boolean     fExUpper,
+                        boolean fReverse,
+                        int     iReturn)
         {
         // calculate inclusive lower
         if (fExLower)
@@ -305,28 +468,48 @@ public class xTuple
             }
 
         ObjectHandle[] ahValue = hTuple.m_ahValue;
+        TypeConstant[] atype   = hTuple.getType().getParamTypesArray();
+        int            cTypes  = atype.length;
+
+        if (cTypes > 0 && cTypes < ahValue.length)
+            {
+            // it shouldn't happen, but not a place to report an error;
+            // simply ignore the types
+            atype  = TypeConstant.NO_TYPES;
+            }
+
         try
             {
             ObjectHandle[] ahNew;
+            TypeConstant[] atypeNew;
             if (ixLower >= ixUpper)
                 {
-                ahNew = new ObjectHandle[0];
+                ahNew    = new ObjectHandle[0];
+                atypeNew = TypeConstant.NO_TYPES;
                 }
             else if (fReverse)
                 {
                 int cNew = (int) (ixUpper - ixLower);
-                ahNew = new ObjectHandle[cNew];
+                ahNew    = new ObjectHandle[cNew];
+                atypeNew = new TypeConstant[cNew];
                 for (int i = 0; i < cNew; i++)
                     {
-                    ahNew[i] = ahValue[(int) ixUpper - i - 1];
+                    int iOrig = (int) ixUpper - i - 1;
+
+                    ahNew[i]    = ahValue[iOrig];
+                    atypeNew[i] = atype  [iOrig];
                     }
                 }
             else
                 {
-                ahNew = Arrays.copyOfRange(ahValue, (int) ixLower, (int) ixUpper);
+                ahNew    = Arrays.copyOfRange(ahValue, (int) ixLower, (int) ixUpper);
+                atypeNew = Arrays.copyOfRange(atype,   (int) ixLower, (int) ixUpper);
                 }
 
-            TupleHandle hTupleNew = new TupleHandle(/*TODO GG need composition*/ null, ahNew, hTuple.m_mutability);
+            ConstantPool     pool         = pool();
+            TypeConstant     typeTupleNew = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
+            ClassComposition clzTupleNew  = ensureClass(typeTupleNew);
+            TupleHandle      hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hTuple.m_mutability);
 
             return frame.assignValue(iReturn, hTupleNew);
             }
@@ -390,7 +573,7 @@ public class xTuple
             throw xException.outOfBounds(frame, lIndex, cElements).getException();
             }
 
-        return hTuple.m_aType[(int) lIndex];
+        return hTuple.getType().getParamType((int) lIndex);
         }
 
     @Override
@@ -406,13 +589,11 @@ public class xTuple
         {
         TupleHandle hTuple = (TupleHandle) hTarget;
 
-        StringBuilder sb = new StringBuilder()
-          .append(hTuple.getComposition().toString())
-          .append('(');
-
         ObjectHandle[] ahValue = hTuple.m_ahValue;
         if (ahValue.length > 0)
             {
+            StringBuilder sb = new StringBuilder("(");
+
             Frame.Continuation stepNext = frameCaller ->
                 frameCaller.assignValue(iReturn, xString.makeHandle(sb.toString()));
 
@@ -420,42 +601,133 @@ public class xTuple
             }
         else
             {
-            sb.append(')');
-            return frame.assignValue(iReturn, xString.makeHandle(sb.toString()));
+            return frame.assignValue(iReturn, xString.makeHandle("()"));
             }
         }
 
-    // ----- ObjectHandle helpers -----
+    @Override
+    public int callEquals(Frame frame, ClassComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        TupleHandle hTuple1 = (TupleHandle) hValue1;
+        TupleHandle hTuple2 = (TupleHandle) hValue2;
+
+        ObjectHandle[] ah1 = hTuple1.m_ahValue;
+        ObjectHandle[] ah2 = hTuple2.m_ahValue;
+
+        // compare the array dimensions first
+        int cElements = ah1.length;
+        if (cElements != ah2.length)
+            {
+            return frame.assignValue(iReturn, xBoolean.FALSE);
+            }
+
+        int[] holder = new int[] {0}; // the index holder
+        return new Equals(hTuple1, hTuple2, cElements,
+            clazz.getType().getParamTypesArray(), holder, iReturn).doNext(frame);
+
+        }
 
     /**
-     * Make a mutable canonical Tuple handle.
+     * Helper class for equals() implementation.
+     */
+    protected static class Equals
+            implements Frame.Continuation
+        {
+        final private TupleHandle    h1;
+        final private TupleHandle    h2;
+        final private int            cElements;
+        final private TypeConstant[] atype;
+        final private int[]          holder;
+        final private int            iReturn;
+
+        public Equals(TupleHandle h1, TupleHandle h2, int cElements, TypeConstant[] aType,
+                      int[] holder, int iReturn)
+            {
+            this.h1        = h1;
+            this.h2        = h2;
+            this.cElements = cElements;
+            this.atype     = aType;
+            this.holder    = holder;
+            this.iReturn   = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            ObjectHandle hResult = frameCaller.popStack();
+            if (hResult == xBoolean.FALSE)
+                {
+                return frameCaller.assignValue(iReturn, hResult);
+                }
+            return doNext(frameCaller);
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            int cTypes = atype.length;
+            int ix;
+            while ((ix = holder[0]++) < cElements)
+                {
+                int iResult = ix < cTypes
+                    ? atype[ix].callEquals(frameCaller, h1.m_ahValue[ix], h2.m_ahValue[ix], Op.A_STACK)
+                    : xObject.INSTANCE.callEquals(
+                            frameCaller, xObject.CLASS, h1.m_ahValue[ix], h2.m_ahValue[ix], Op.A_STACK);
+
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        ObjectHandle hResult = frameCaller.popStack();
+                        if (hResult == xBoolean.FALSE)
+                            {
+                            return frameCaller.assignValue(iReturn, hResult);
+                            }
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.addContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+            return frameCaller.assignValue(iReturn, xBoolean.TRUE);
+            }
+        }
+
+
+    // ----- ObjectHandle helpers ------------------------------------------------------------------
+
+    /**
+     * Make an immutable canonical Tuple handle.
      *
      * @param ahValue  the values
      *
      * @return the handle
      */
-    public static TupleHandle makeHandle(ObjectHandle... ahValue)
+    public static TupleHandle makeCanonicalHandle(ObjectHandle... ahValue)
         {
-        return new TupleHandle(INSTANCE.getCanonicalClass(), ahValue);
+        return new TupleHandle(INSTANCE.getCanonicalClass(), ahValue, Mutability.Constant);
         }
 
     /**
      * Make an immutable Tuple handle.
      *
-     * @param typeTuple  the tuple type
+     * @param clazz     the tuple class composition
      * @param ahValue    the values
      *
      * @return the handle
      */
-    public static TupleHandle makeImmutableHandle(TypeConstant typeTuple, ObjectHandle... ahValue)
+    public static TupleHandle makeImmutableHandle(TypeComposition clazz, ObjectHandle... ahValue)
         {
-        TupleHandle hTuple = new TupleHandle(INSTANCE.ensureClass(typeTuple), ahValue);
-        hTuple.makeImmutable();
-        return hTuple;
+        return new TupleHandle(clazz, ahValue, Mutability.Constant);
         }
 
     /**
-     * Make a mutable Tuple handle.
+     * Make a mutable (fixed size) Tuple handle.
      *
      * @param clazz    the tuple class composition
      * @param ahValue  the values
@@ -464,28 +736,30 @@ public class xTuple
      */
     public static TupleHandle makeHandle(TypeComposition clazz, ObjectHandle... ahValue)
         {
-        return new TupleHandle(clazz, ahValue);
+        return new TupleHandle(clazz, ahValue, Mutability.FixedSize);
         }
 
     public static class TupleHandle
             extends ObjectHandle
         {
-        public TypeConstant[] m_aType;
         public ObjectHandle[] m_ahValue;
         public Mutability     m_mutability;
-
-        protected TupleHandle(TypeComposition clazz, ObjectHandle[] ahValue)
-            {
-            this(clazz, ahValue, null);   // TODO GG mutability?
-            }
 
         protected TupleHandle(TypeComposition clazz, ObjectHandle[] ahValue, Mutability mutability)
             {
             super(clazz);
 
-            m_fMutable   = true;
+            m_fMutable   = mutability != Mutability.Constant;
             m_ahValue    = ahValue;
             m_mutability = mutability;
+            }
+
+        @Override
+        public void makeImmutable()
+            {
+            super.makeImmutable();
+
+            m_mutability = Mutability.Constant;
             }
 
         @Override

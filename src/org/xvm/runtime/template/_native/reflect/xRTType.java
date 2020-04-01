@@ -667,12 +667,13 @@ public class xRTType
             switch (iResult)
                 {
                 case Op.R_NEXT:
-                    return frame.assignValue(iReturn, xTuple.makeHandle(clzTuple, frame.popStack()));
+                    return frame.assignValue(iReturn,
+                        xTuple.makeImmutableHandle(clzTuple, frame.popStack()));
 
                 case Op.R_CALL:
                     frame.m_frameNext.addContinuation(frameCaller ->
                         frameCaller.assignValue(iReturn,
-                            xTuple.makeHandle(clzTuple, frameCaller.popStack())));
+                            xTuple.makeImmutableHandle(clzTuple, frameCaller.popStack())));
                     // fall through
                 default:
                     return iResult;

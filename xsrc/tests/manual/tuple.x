@@ -11,6 +11,7 @@ module TestTuples.xqiz.it
         testConstElement();
         testConstSlice();
         testMultiAssign();
+        testMutability();
         }
 
     void testSimple()
@@ -64,7 +65,7 @@ module TestTuples.xqiz.it
         {
         console.println("\n** testConstSlice()");
 
-        Tuple<Int, String> blind = (3, "blind", "mice", "!") [0..1];   //
+        Tuple<Int, String> blind = (3, "blind", "mice", "!") [0..1];
         console.println("tuple[0..1]=" + blind);
 
         Tuple<String, Int> blind2 = (3, "blind", "mice", "!") [1..0];
@@ -76,5 +77,27 @@ module TestTuples.xqiz.it
         console.println("\n** testMultiAssign()");
         (String s, Int i) = ("hello", 3);
         console.println("s=" + s + ", i=" + i);
+        }
+
+    void testMutability()
+        {
+        console.println("\n** testMutability()");
+
+        Tuple<Int, String, Char> t1 = (1, "big", '?');
+        console.println($"{t1} - {t1.mutability}");
+
+        Tuple<Int, String, Char> t2 = t1.ensureFixedSize();
+        t2[1] = "small";
+        console.println($"{t2} - {t2.mutability}");
+
+        Tuple<String, Char> t3 = t2[1..2];
+        console.println($"{t3}  - {t3.mutability}");
+
+        Tuple t4 = t2.slice([1..2]); // "small", ?
+        assert t4 == t3;
+
+        Tuple<Int> tq = Tuple:(1);
+        Tuple t5 = tq.add(t4);
+        assert t5 == t2;
         }
     }

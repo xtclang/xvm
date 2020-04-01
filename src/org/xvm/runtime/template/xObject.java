@@ -3,7 +3,7 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
 
@@ -15,7 +15,7 @@ public class xObject
         extends ClassTemplate
     {
     public static xObject INSTANCE;
-    public static TypeComposition CLASS;
+    public static ClassComposition CLASS;
 
     public xObject(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {

@@ -977,6 +977,13 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean isFormalTypeSequence()
+        {
+        return isGenericType() &&
+            ((FormalConstant) getDefiningConstant()).getConstraintType().isFormalTypeSequence();
+        }
+
+    @Override
     public Category getCategory()
         {
         if (!isSingleDefiningConstant())

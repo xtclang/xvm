@@ -482,11 +482,11 @@ public class xArray
 
             case "ensureImmutable": // immutable Array ensureImmutable(Boolean inPlace = False)
                 {
-                ArrayHandle   hArray   = (ArrayHandle) hTarget;
-                BooleanHandle hInPlace = hArg == ObjectHandle.DEFAULT
-                        ? xBoolean.FALSE
-                        : (BooleanHandle) hArg;
-                if (hInPlace.get())
+                ArrayHandle hArray  = (ArrayHandle) hTarget;
+                boolean    fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
+
+                // TODO: ensure all elements are immutable or ImmutableAble
+                if (fInPlace)
                     {
                     hArray.makeImmutable();
                     }
@@ -499,11 +499,9 @@ public class xArray
 
             case "ensurePersistent": // Array ensurePersistent(Boolean inPlace = False)
                 {
-                ArrayHandle   hArray   = (ArrayHandle) hTarget;
-                BooleanHandle hInPlace = hArg == ObjectHandle.DEFAULT
-                        ? xBoolean.FALSE
-                        : (BooleanHandle) hArg;
-                if (hInPlace.get())
+                ArrayHandle hArray   = (ArrayHandle) hTarget;
+                boolean     fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
+                if (fInPlace)
                     {
                     hArray.m_mutability = Mutability.Persistent;
                     }

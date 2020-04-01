@@ -277,11 +277,20 @@ public class ParameterizedTypeConstant
             TypeConstant constParamResolved = constParamOriginal.resolveGenerics(pool, resolver);
             if (constParamOriginal != constParamResolved)
                 {
-                if (aconstResolved == aconstOriginal)
+                if (constOriginal.isTuple() && constParamOriginal.isFormalTypeSequence())
                     {
-                    aconstResolved = aconstOriginal.clone();
+                    // "ElementTypes" -> Tuple<T1, T2, T3>
+                    assert c == 1 && constParamResolved.isTuple();
+                    aconstResolved = constParamResolved.getParamTypesArray();
                     }
-                aconstResolved[i] = constParamResolved;
+                else
+                    {
+                    if (aconstResolved == aconstOriginal)
+                        {
+                        aconstResolved = aconstOriginal.clone();
+                        }
+                    aconstResolved[i] = constParamResolved;
+                    }
                 fDiff = true;
                 }
             }
@@ -617,17 +626,6 @@ public class ParameterizedTypeConstant
             }
 
         return result;
-        }
-
-    @Override
-    protected TypeInfo buildTypeInfo(ErrorListener errs)
-        {
-        if (m_constType.isTuple())
-            {
-            // for the TypeInfo purposes the content of the type parameters is irrelevant
-            return m_constType.ensureTypeInfoInternal(errs);
-            }
-        return super.buildTypeInfo(errs);
         }
 
 

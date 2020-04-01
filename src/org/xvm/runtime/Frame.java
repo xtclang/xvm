@@ -855,7 +855,7 @@ public class Frame
                             case Op.R_CALL:
                                 framePrev.m_frameNext.addContinuation(frameCaller ->
                                     frameCaller.assignValue(iReturn,
-                                        xTuple.makeHandle(frameCaller.popStack())));
+                                        xTuple.makeCanonicalHandle(frameCaller.popStack())));
                                 if (m_continuation != null)
                                     {
                                     // transfer the continuation
@@ -871,7 +871,7 @@ public class Frame
                             }
                         }
                     }
-                return returnValue(iReturn, xTuple.makeHandle(hValue), false);
+                return returnValue(iReturn, xTuple.makeCanonicalHandle(hValue), false);
 
             default:
                 return returnValue(f_iReturn, hValue, fDynamic);

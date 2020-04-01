@@ -1017,6 +1017,21 @@ public abstract class TypeConstant
             return true;
             }
 
+        if (this.isTuple() && that.isTuple())
+            {
+            // tuples can be comparable if the types are not explicitly specified
+            TypeConstant[] atypeThis = this.getParamTypesArray();
+            TypeConstant[] atypeThat = that.getParamTypesArray();
+            for (int i = 0, c = Math.min(atypeThis.length, atypeThat.length); i < c; i++)
+                {
+                if (!atypeThis[i].supportsEquals(atypeThat[i], false))
+                    {
+                    return false;
+                    }
+                }
+            return true;
+            }
+
         // we also allow a comparison of a nullable type to the base type; for example:
         // String? s1 = ...
         // String  s2 = ...
