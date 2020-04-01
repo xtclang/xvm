@@ -191,4 +191,35 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      */
     @Override
     immutable Tuple ensureImmutable(Boolean inPlace = false);
+
+
+    // ----- Comparable ----------------------------------------------------------------------------
+
+    /**
+     * Tuples are equal if their types are comparable and the contents are equal.
+     */
+    static <CompileType extends Tuple> Boolean equals(CompileType value1, CompileType value2)
+        {
+        Int c = value1.size;
+        if (c != value2.size)
+            {
+            return False;
+            }
+
+        for (Int i : [0..c))
+            {
+            Type t1 = value1.elementAt(i).actualType;
+            Type t2 = value2.elementAt(i).actualType;
+            if (t1 != t2)
+                {
+                return False;
+                }
+
+            if (!t1.DataType.equals(value1[i], value2[i])) // TODO GG: this is not currently compiling correctly
+                {
+                return False;
+                }
+            }
+        return True;
+        }
     }
