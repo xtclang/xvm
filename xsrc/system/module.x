@@ -162,6 +162,14 @@ module Ecstasy.xtclang.org
          * True iff the module contains at least one singleton service.
          */
         @RO Boolean containsSingletonServices;
+
+        /**
+         * Given the qualified name of a class nested within this module, obtain the [Class].
+         *
+         * @return True iff the name identified a class
+         * @return (conditional) the specified [Class]
+         */
+        conditional Class classForName(String name);
         }
 
     /**
@@ -186,6 +194,9 @@ module Ecstasy.xtclang.org
 
         /**
          * Test to see if this package represents a module import and if so, return it.
+         *
+         * @return True iff this package imports a module
+         * @return (conditional) the [Module] that this package imports
          */
         conditional Module isModuleImport();
         }
