@@ -57,6 +57,16 @@
 
 - optimize out Object.construct() calls
 
+- When we resolve CompileType.Key (where CompileType is known to be Map), we produce
+    FormalTypeChildConstant based on the CompileType formal property.
+  When we resolve PublicType.OuterType formal type, we produce that same FormalTypeChildConstant even
+  though it now applies to the Type of the formal type.
+  To figure it out, FormalTypeChildConstant tries both paths to resolve itself.
+  In the second scenario we should produce TypeOfConstant(), which could be an IdentityConstant
+  based on a FormalConstant or a Register (for dynamic types);
+  it would return pool.clzType().getComponent() from getComponent() method, and resolve the
+  type according to the content as Type<X>.
+
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
