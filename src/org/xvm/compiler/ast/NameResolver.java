@@ -526,23 +526,31 @@ public class NameResolver
      */
     private Result resolveFormalDotName(TypeConstant typeConstraint, ErrorListener errs)
         {
-        // since the formal type is a Type, first try the Type's children;
-        // if that fails, try to use the constraint type
-        ClassStructure   clzType = (ClassStructure) getPool().clzType().getComponent();
-        ResolutionResult result  = clzType.resolveName(m_sName, Access.PUBLIC, this);
-
-        if (result != ResolutionResult.RESOLVED &&
-                typeConstraint.isSingleDefiningConstant())
+        ResolutionResult result = ResolutionResult.UNKNOWN;
+        if (typeConstraint.isSingleDefiningConstant())
             {
+            // try to use the constraint type
+            // (e.g. CompileType.Key where CompileType is known to be a Map)
             Constant id         = typeConstraint.getDefiningConstant();
             Component component = id instanceof IdentityConstant
                     ? ((IdentityConstant) id).getComponent()
                     : id instanceof PseudoConstant
                         ? ((PseudoConstant) id).getDeclarationLevelClass().getComponent()
                         : null;
-            result = component == null
-                    ? ResolutionResult.UNKNOWN
-                    : component.resolveName(m_sName, Access.PRIVATE, this);
+            if (component != null)
+                {
+                result = component.resolveName(m_sName, Access.PRIVATE, this);
+                }
+            }
+
+        if (result == ResolutionResult.UNKNOWN)
+            {
+            // since the formal type is a Type, now try the Type's children;
+            // (e.g. CompileType.OuterType )
+            //
+            // REVIEW: we should strongly consider creating a dedicated constant for this,
+            //         so there is no ambiguity at compile- or run-time resolution
+            result = getPool().clzType().getComponent().resolveName(m_sName, Access.PUBLIC, this);
             }
 
         switch (result)

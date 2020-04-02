@@ -117,12 +117,22 @@ public class FormalTypeChildConstant
     @Override
     public TypeConstant resolve(GenericTypeResolver resolver)
         {
-        FormalConstant idParent     = (FormalConstant) getParentConstant();
-        TypeConstant   typeResolved = idParent.resolve(resolver);
+        FormalConstant idParent   = (FormalConstant) getParentConstant();
+        TypeConstant   typeParent = idParent.resolve(resolver);
 
-        return typeResolved == null
-                ? null
-                : typeResolved.resolveFormalType(this);
+        if (typeParent == null)
+            {
+            return null;
+            }
+
+        TypeConstant typeResolved = typeParent.resolveFormalType(this);
+        if (typeResolved == null)
+            {
+            // the formal parent can also be treated as a Type
+            // (see NameResolver.resolveFormalDotName())
+            typeResolved = typeParent.getType().resolveFormalType(this);
+            }
+        return typeResolved;
         }
 
 

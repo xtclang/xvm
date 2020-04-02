@@ -1477,7 +1477,7 @@ public class NameExpression
                         PackageStructure pkg = (PackageStructure) ((IdentityConstant) constant).getComponent();
                         if (pkg.isModuleImport())
                             {
-                            arg = constant = pkg.getImportedModule().getIdentityConstant();
+                            arg = pkg.getImportedModule().getIdentityConstant();
                             }
                     case Module:
                     case Class:
