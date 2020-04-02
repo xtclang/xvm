@@ -26,7 +26,7 @@ import reflect.TypeTemplate;
  * can be performed?" The identity answers the question of: "To what thing are those questions being
  * directed?"
  *
- * (To explain these two terms in a manner that a C++ programmer can understand, an Ecstasy
+ * (To explain these two terms in a manner that a C++ programmer would understand, an Ecstasy
  * reference is _conceptually_ composed of (i) a v-table pointer **and** (ii) a `struct` pointer. An
  * Ecstasy type is therefore analogous to a v-table, but one that is fully self-describing as if it
  * included its own RTTI. Furthermore, because the v-table pointer is part of the reference, and not
@@ -34,7 +34,7 @@ import reflect.TypeTemplate;
  * runtime, such as separate `public`, `protected`, and `private` types, as well as any number of
  * pure virtual class or other super-types. Since the object is represented by the reference, and
  * not directly by the `struct`, it is even possible that a single `struct` can be used to represent
- * more than one object; for example, the same structure -- the same location in memory -- that
+ * more than one "object"; for example, the same structure -- the same location in memory -- that
  * represents an "Int" value could potentially be used with the type "public Int", the type "Int[]",
  * and the type "Tuple<Int>", such that the same structural value can represent itself, an array of
  * itself, and a tuple of itself.)
@@ -51,11 +51,12 @@ import reflect.TypeTemplate;
  * as (i) from a class, (ii) as a union of two types, (iii) as an explicitly immutable form of
  * another type, and so so. In each case, the form implies additional information, such as (i) what
  * class the type represents, (ii) what the two types were that formed the union, and (iii) what the
- * other type was for which the explicitly-immutable form of the type was created.
+ * underlying type was for which the explicitly-immutable form of the type was created.
  *
- * Additionally, the type may provide _constants_ (represented as properties) and functions that
- * are associated with (visible on) the type at compile-time, even though for purposes of type
- * compatibility, these are not defining members of a type.
+ * For convenience purposes, the type provides additional information that is associated with the
+ * type, but is not technically part of the type itself. For example, the type provides _constants_
+ * (represented as properties) and functions that are associated with and visible on the type at
+ * compile-time.
  *
  * @param DataType   this type
  * @param OuterType  the type of the enclosing class, if this is a virtual child type
