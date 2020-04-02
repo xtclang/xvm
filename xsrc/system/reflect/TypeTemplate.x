@@ -15,7 +15,7 @@ import reflect.Property;
 
 /**
  * The TypeTemplate interface represents information about an Ecstasy data type. Unlike [Type],
- * TypeTemplate can be used both with "life" runtime types (for reflection purposes) **and** with
+ * TypeTemplate can be used both with "live" runtime types (for reflection purposes) **and** with
  * "dead" type information that exists at compile-, load-, and link-time.
  *
  * Despite its name, TypeTemplate may not always be immutable.
