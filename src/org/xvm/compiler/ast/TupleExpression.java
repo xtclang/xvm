@@ -296,24 +296,26 @@ public class TupleExpression
                 }
             }
 
-        if (atypeRequired == null || atypeRequired.length == 1)
+        if (atypeRequired == null || atypeRequired.length == 0)
             {
-            typeRequired = atypeRequired == null ? null : atypeRequired[0];
-            if (typeRequired != null)
+            typeRequired  = pool.typeTuple();
+            fMultiplexing = true;
+            }
+        else if (atypeRequired.length == 1)
+            {
+            typeRequired = atypeRequired[0];
+            if (typeRequired.isTuple())
                 {
-                if (typeRequired.isTuple())
-                    {
-                    // the required type must be a tuple, or a tuple must be assignable to the required
-                    // type, but most of that will be checked during finishValidation(); for now, just
-                    // get the required field types to use while validating sub-expressions
-                    aReqTypes = typeRequired.getParamTypesArray();
-                    cReqTypes = aReqTypes.length;
-                    }
-                else
-                    {
-                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE, pool.typeTuple(), typeRequired);
-                    fValid = false;
-                    }
+                // the required type must be a tuple, or a tuple must be assignable to the required
+                // type, but most of that will be checked during finishValidation(); for now, just
+                // get the required field types to use while validating sub-expressions
+                aReqTypes = typeRequired.getParamTypesArray();
+                cReqTypes = aReqTypes.length;
+                }
+            else
+                {
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, pool.typeTuple(), typeRequired);
+                fValid = false;
                 }
             fMultiplexing = true;
             }
@@ -321,8 +323,8 @@ public class TupleExpression
             {
             aReqTypes     = atypeRequired;
             cReqTypes     = aReqTypes.length;
-            fMultiplexing = false;
             typeRequired  = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aReqTypes);
+            fMultiplexing = false;
             }
 
         // can't have more field types required than we have fields

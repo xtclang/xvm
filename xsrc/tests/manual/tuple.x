@@ -96,8 +96,7 @@ module TestTuples.xqiz.it
         Tuple t4 = t2.slice([1..2]); // "small", ?
         assert t4 == t3;
 
-        Tuple<Int> tq = Tuple:(1);
-        Tuple t5 = tq.add(t4);
+        Tuple t5 = Tuple:(1.toInt()).add(t4); // 1, "small", ?
         assert t5 == t2;
         }
     }

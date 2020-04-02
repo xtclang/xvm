@@ -4,22 +4,9 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        Parent       p = new Parent();
-        Parent.Child c = p.new Child();
+        Tuple<String, Char> t1 = ("big", '?');
 
-        console.println(&c.actualType.OuterType);
-        foo(c, p);
-        }
-
-    <TargetType> void foo(TargetType target, TargetType.OuterType outer)
-        {
-        console.println(outer);
-        }
-
-    class Parent
-        {
-        class Child
-            {
-            }
+        val t2 = Tuple:(1).add(t1);
+        console.println(t2);
         }
     }

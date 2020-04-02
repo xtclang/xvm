@@ -614,17 +614,43 @@ public class xTuple
         ObjectHandle[] ah1 = hTuple1.m_ahValue;
         ObjectHandle[] ah2 = hTuple2.m_ahValue;
 
-        // compare the array dimensions first
+        // compare the tuple sizes first
         int cElements = ah1.length;
         if (cElements != ah2.length)
             {
             return frame.assignValue(iReturn, xBoolean.FALSE);
             }
 
-        int[] holder = new int[] {0}; // the index holder
-        return new Equals(hTuple1, hTuple2, cElements,
-            clazz.getType().getParamTypesArray(), holder, iReturn).doNext(frame);
+        TypeConstant[] atypeCommon = clazz.getType().getParamTypesArray();
+        int            cCommon     = atypeCommon.length;
 
+        if (cCommon < cElements)
+            {
+            TypeConstant[] atype1 = hTuple1.getType().getParamTypesArray();
+            TypeConstant[] atype2 = hTuple2.getType().getParamTypesArray();
+
+            if (cCommon == 0)
+                {
+                atypeCommon = atype1;
+                }
+            else
+                {
+                TypeConstant[] atypeC = atype1.clone();
+                System.arraycopy(atypeCommon, 0, atypeC, 0, cCommon);
+                atypeCommon = atypeC;
+                }
+
+            // for the types that were not explicitly specified do a strict check
+            for (int i = cCommon; i < cElements; i++)
+                {
+                if (!atype1[i].equals(atype2[i]))
+                    {
+                    return frame.assignValue(iReturn, xBoolean.FALSE);
+                    }
+                }
+            }
+
+        return new Equals(hTuple1, hTuple2, cElements, atypeCommon, iReturn).doNext(frame);
         }
 
     /**
@@ -633,21 +659,21 @@ public class xTuple
     protected static class Equals
             implements Frame.Continuation
         {
-        final private TupleHandle    h1;
-        final private TupleHandle    h2;
+        final private TupleHandle    hTuple1;
+        final private TupleHandle    hTuple2;
         final private int            cElements;
         final private TypeConstant[] atype;
-        final private int[]          holder;
         final private int            iReturn;
 
+        private int index = -1;
+
         public Equals(TupleHandle h1, TupleHandle h2, int cElements, TypeConstant[] aType,
-                      int[] holder, int iReturn)
+                      int iReturn)
             {
-            this.h1        = h1;
-            this.h2        = h2;
+            this.hTuple1   = h1;
+            this.hTuple2   = h2;
             this.cElements = cElements;
             this.atype     = aType;
-            this.holder    = holder;
             this.iReturn   = iReturn;
             }
 
@@ -665,14 +691,14 @@ public class xTuple
         public int doNext(Frame frameCaller)
             {
             int cTypes = atype.length;
-            int ix;
-            while ((ix = holder[0]++) < cElements)
+            while (++index < cElements)
                 {
-                int iResult = ix < cTypes
-                    ? atype[ix].callEquals(frameCaller, h1.m_ahValue[ix], h2.m_ahValue[ix], Op.A_STACK)
-                    : xObject.INSTANCE.callEquals(
-                            frameCaller, xObject.CLASS, h1.m_ahValue[ix], h2.m_ahValue[ix], Op.A_STACK);
+                ObjectHandle h1 = hTuple1.m_ahValue[index];
+                ObjectHandle h2 = hTuple2.m_ahValue[index];
 
+                int iResult = index < cTypes
+                    ? atype[index].callEquals(frameCaller, h1, h2, Op.A_STACK)
+                    : xObject.INSTANCE.callEquals(frameCaller, xObject.CLASS, h1, h2, Op.A_STACK);
                 switch (iResult)
                     {
                     case Op.R_NEXT:
