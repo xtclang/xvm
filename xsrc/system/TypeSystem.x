@@ -1,5 +1,7 @@
 import collections.ListMap;
 import collections.HashSet;
+import reflect.ClassTemplate;
+
 
 /**
  * A TypeSystem is the result of linking a set of one or more modules together.
@@ -85,6 +87,40 @@ const TypeSystem
      * the precedence of which module is represented in this data structure.
      */
     ListMap<String, Module> moduleBySimpleName;
+
+    /**
+     * Obtain a [ClassTemplate] that is loaded within this `TypeSystem`, based on its qualified
+     * name.
+     *
+     * @return True iff the name identifies a `ClassTemplate`
+     * @return (conditional) the specified `ClassTemplate`
+     */
+    conditional ClassTemplate templateForName(String name)
+        {
+        TODO
+        }
+
+    /**
+     * Obtain a [Class] that exists within this `TypeSystem`, based on its class string.
+     *
+     * @return True iff the name identifies a `Class` that exists in this `TypeSystem`
+     * @return (conditional) the specified `Class`
+     */
+    conditional Class classForName(String name)
+        {
+        TODO
+        }
+
+    /**
+     * Obtain a [Type] that exists within this `TypeSystem`, based on its type string.
+     *
+     * @return True iff the name identifies a `Type` that exists in this `TypeSystem`
+     * @return (conditional) the specified `Type`
+     */
+    conditional Type typeForName(String name)
+        {
+        TODO
+        }
 
     /**
      * The modules in this type system that are shared with the type system of the parent container.
