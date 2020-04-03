@@ -24,7 +24,6 @@ public class xObject
         if (fInstance)
             {
             INSTANCE = this;
-            CLASS = getCanonicalClass();
             }
         }
 
@@ -33,6 +32,8 @@ public class xObject
         {
         if (this == INSTANCE)
             {
+            CLASS = getCanonicalClass();
+
             markNativeMethod("toString", VOID, STRING);
             markNativeMethod("equals", null, BOOLEAN);
             markNativeMethod("makeImmutable", VOID, null);

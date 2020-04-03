@@ -43,10 +43,6 @@ public class xString
         if (fInstance)
             {
             INSTANCE = this;
-            EMPTY_STRING = new StringHandle(INSTANCE.getCanonicalClass(), new char[0]);
-            EMPTY_ARRAY  = makeHandle(new char[] {'[', ']'});
-            ZERO         = makeHandle(new char[] {'0'});
-            ONE          = makeHandle(new char[] {'1'});
             }
         }
 
@@ -58,6 +54,10 @@ public class xString
                 pool.ensureEcstasyClassConstant("Appender"), null,
                 pool.typeChar());
 
+        EMPTY_STRING     = new StringHandle(getCanonicalClass(), new char[0]);
+        EMPTY_ARRAY      = makeHandle(new char[] {'[', ']'});
+        ZERO             = makeHandle(new char[] {'0'});
+        ONE              = makeHandle(new char[] {'1'});
         METHOD_APPEND_TO = f_struct.findMethod("appendTo", 1, typeArg);
 
         markNativeProperty("size");

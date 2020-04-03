@@ -9,7 +9,8 @@ import org.xvm.runtime.TemplateRegistry;
 /**
  * Native unchecked Int32 support.
  */
-public class xUncheckedInt32 extends xUncheckedConstrainedInt
+public class xUncheckedInt32
+        extends xUncheckedConstrainedInt
     {
     public static xUncheckedInt32 INSTANCE;
 

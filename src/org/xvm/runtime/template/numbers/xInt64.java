@@ -27,16 +27,23 @@ public class xInt64
             {
             INSTANCE = this;
 
-            if (cache[0] == null)
-                {
-                ClassComposition clz = getCanonicalClass();
-                for (int i = 0; i < cache.length; ++i)
-                    {
-                    cache[i] = new JavaLong(clz, i);
-                    }
-                }
             // create unchecked template
             new xUncheckedInt64(templates, structure, true);
+            }
+        }
+
+    @Override
+    public void initDeclared()
+        {
+        super.initDeclared();
+
+        if (cache[0] == null)
+            {
+            ClassComposition clz = getCanonicalClass();
+            for (int i = 0; i < cache.length; ++i)
+                {
+                cache[i] = new JavaLong(clz, i);
+                }
             }
         }
 

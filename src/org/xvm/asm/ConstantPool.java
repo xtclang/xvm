@@ -150,7 +150,7 @@ public class ConstantPool
             if (oLocator != null)
                 {
                 Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
-                if (constOld != null)
+                if (constOld != null && constantOld != constant)
                     {
                     throw new IllegalStateException("locator collision: old=" + constOld + ", new=" + constant);
                     }

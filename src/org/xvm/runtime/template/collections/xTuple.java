@@ -57,16 +57,17 @@ public class xTuple
             INSTANCE = this;
             INCEPTION_CLASS = new NativeRebaseConstant(
                 (ClassConstant) structure.getIdentityConstant());
-            H_VOID = new TupleHandle(getCanonicalClass(), Utils.OBJECTS_NONE, Mutability.Constant);
-
-            // cache Mutability template
-            MUTABILITY = (xEnum) templates.getTemplate("collections.VariablyMutable.Mutability");
             }
         }
 
     @Override
     public void initDeclared()
         {
+        H_VOID = new TupleHandle(getCanonicalClass(), Utils.OBJECTS_NONE, Mutability.Constant);
+
+        // cache Mutability template
+        MUTABILITY = (xEnum) f_templates.getTemplate("collections.VariablyMutable.Mutability");
+
         // Note: all interface properties are implicitly native due to "NativeRebase"
 
         markNativeMethod("add", null, null);
@@ -79,6 +80,8 @@ public class xTuple
         markNativeMethod("remove", new String[] {"Range<numbers.Int64>"}, null);
         markNativeMethod("setElement", null, VOID);
         markNativeMethod("slice", new String[] {"Range<numbers.Int64>"}, null);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override
