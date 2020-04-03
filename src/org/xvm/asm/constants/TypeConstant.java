@@ -1208,18 +1208,10 @@ public abstract class TypeConstant
             {
             // build the TypeInfo for this type
             info = buildTypeInfo(errs);
-
-            // info here can't be null, because we should be at the "zero level"; in other words, anyone
-            // who calls ensureTypeInfo() should get a usable result, because nothing is already on the
-            // stack blocking it from finishing correctly (which is why we can't use ensureTypeInfo()
-            // ourselves within this process of creating type infos)
-            if (info == null)
+            if (info != null)
                 {
-                throw new IllegalStateException("Failure to produce a TypeInfo for "
-                        + this + "; deferred types=" + takeDeferredTypeInfo());
+                setTypeInfo(info);
                 }
-
-            setTypeInfo(info);
 
             for (int cDeferredPrev = 0, iTry = 0; hasDeferredTypeInfo(); iTry++)
                 {
@@ -1273,7 +1265,10 @@ public abstract class TypeConstant
                 if (!isComplete(info))
                     {
                     info = buildTypeInfo(errs);
-                    setTypeInfo(info);
+                    if (info != null)
+                        {
+                        setTypeInfo(info);
+                        }
                     }
                 }
             }
@@ -1482,7 +1477,7 @@ public abstract class TypeConstant
     /**
      * Actual buildTypeInfo implementation.
      */
-    private TypeInfo buildTypeInfoImpl(ErrorListener errs)
+    private synchronized TypeInfo buildTypeInfoImpl(ErrorListener errs)
         {
         // the raw type-info has to be built as either ":private" or ":struct", so delegate the
         // building for ":public" to ":private", and then strip out the non-accessible members
