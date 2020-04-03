@@ -2,7 +2,7 @@
  * A range is composed of a "first" and a "last" element. The Range determines which is the lower
  * bound and which is the upper bound, and if the lower bound is the "last" element, then the range
  * is [reversed]. Each bound can be _inclusive_, which means that the value at the bound is included
- * in the range, or _excusive_, which means that the value at the bound is excluded from the range.
+ * in the range, or _exclusive_, which means that the value at the bound is excluded from the range.
  */
 const Range<Element extends Orderable>
         incorporates conditional Interval<Element extends Sequential>
