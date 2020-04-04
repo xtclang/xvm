@@ -461,11 +461,6 @@ public class MultipleLValueStatement
             for (Expression expr : ensureExpressions())
                 {
                 expr.markAssignment(ctx, fCond, errs);
-
-                if (fCond)
-                    {
-                    break;
-                    }
                 }
             }
 

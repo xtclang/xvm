@@ -933,22 +933,13 @@ public class Context
     /**
      * Mark the specified variable as being written to within this context.
      *
-     * @param sName  the variable name
-     */
-    public final void markVarWrite(String sName)
-        {
-        markVarWrite(sName, null, null);
-        }
-
-    /**
-     * Mark the specified variable as being written to within this context.
-     *
      * @param tokName  the variable name as a token from the source code
+     * @param fCond    true if the variable is conditionally assigned
      * @param errs     the error list to log to (optional)
      */
-    public final void markVarWrite(Token tokName, ErrorListener errs)
+    public final void markVarWrite(Token tokName, boolean fCond, ErrorListener errs)
         {
-        markVarWrite(tokName.getValueText(), tokName, errs);
+        markVarWrite(tokName.getValueText(), tokName, fCond, errs);
         }
 
     /**
@@ -965,11 +956,12 @@ public class Context
     /**
      * Mark the specified variable as being written to within this context.
      *
-     * @param sName       the variable name
-     * @param tokName     the variable name as a token from the source code (optional)
-     * @param errs        the error list to log to (optional)
+     * @param sName    the variable name
+     * @param tokName  the variable name as a token from the source code (optional)
+     * @param fCond    true if the variable is conditionally assigned
+     * @param errs     the error list to log to (optional)
      */
-    protected void markVarWrite(String sName, Token tokName, ErrorListener errs)
+    protected void markVarWrite(String sName, Token tokName, boolean fCond, ErrorListener errs)
         {
         if (getVar(sName) == null)
             {
@@ -1729,6 +1721,29 @@ public class Context
                 m_ctxWhenFalse = ctx;
                 }
             return ctx;
+            }
+
+        @Override
+        protected void markVarWrite(String sName, Token tokName, boolean fCond, ErrorListener errs)
+            {
+            if (getVar(sName) != null && isVarWritable(sName))
+                {
+                Assignment asn = getVarAssignment(sName);
+                if (fCond)
+                    {
+                    Assignment asnTrue = asn.whenTrue().applyAssignment();
+                    asn = asnTrue.join(asn, false);
+                    }
+                else
+                    {
+                    asn = asn.applyAssignment();
+                    }
+                setVarAssignment(sName, asn);
+                }
+            else
+                {
+                super.markVarWrite(sName, tokName, fCond, errs);
+                }
             }
 
         @Override

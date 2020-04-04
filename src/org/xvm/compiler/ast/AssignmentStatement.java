@@ -585,7 +585,7 @@ public class AssignmentStatement
                     if (exprRightNew != null)
                         {
                         exprLeft.markAssignment(ctx,
-                            !fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
+                            fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
 
                         if (fConditional)
                             {

@@ -182,7 +182,7 @@ public class VariableDeclarationStatement
 
             if (exprAnnoType.isInjected())
                 {
-                ctx.markVarWrite(name, errs);
+                ctx.markVarWrite(name, false, errs);
                 m_reg.markEffectivelyFinal();
                 }
 

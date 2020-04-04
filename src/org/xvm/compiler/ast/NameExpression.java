@@ -880,7 +880,7 @@ public class NameExpression
                     {
                     case Reserved:
                     case Variable:
-                        ctx.markVarWrite(getNameToken(), errs);
+                        ctx.markVarWrite(getNameToken(), fCond, errs);
                         break;
 
                     case Property:
