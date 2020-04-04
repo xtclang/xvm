@@ -39,6 +39,14 @@ public class xUInt64
         }
 
     @Override
+    public void initDeclared()
+        {
+        super.initDeclared();
+
+        xUncheckedUInt64.INSTANCE.initDeclared();
+        }
+
+    @Override
     protected xConstrainedInteger getComplimentaryTemplate()
         {
         return xInt64.INSTANCE;

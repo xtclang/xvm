@@ -1776,7 +1776,7 @@ public class Context
             if (branch == Branch.WhenTrue)
                 {
                 TypeConstant typeTrue  = typeNarrowed;
-                TypeConstant typeFalse = getGenericTypeMap(Branch.WhenFalse).get(sName);;
+                TypeConstant typeFalse = getGenericTypeMap(Branch.WhenFalse).get(sName);
                 if (typeFalse != null)
                     {
                     Context      ctxOuter = getOuterContext();

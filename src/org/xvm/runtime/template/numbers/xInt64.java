@@ -37,6 +37,8 @@ public class xInt64
         {
         super.initDeclared();
 
+        xUncheckedInt64.INSTANCE.initDeclared();
+
         if (cache[0] == null)
             {
             ClassComposition clz = getCanonicalClass();

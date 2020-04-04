@@ -21,10 +21,17 @@ public abstract class xUncheckedConstrainedInt
         {
         super(templates, structure, cMinValue, cMaxValue, cNumBits, fUnsigned, false);
 
-        f_typeCanonical = pool().ensureAnnotatedTypeConstant(
-            pool().clzUnchecked(), null, structure.getCanonicalType());
         f_nMask = cMaxValue - cMinValue;
         f_nSign = cMaxValue + 1; // used only for signed
+        }
+
+    @Override
+    public void initDeclared()
+        {
+        m_typeCanonical = pool().ensureAnnotatedTypeConstant(
+            pool().clzUnchecked(), null, f_struct.getCanonicalType());
+
+        super.initDeclared();
         }
 
     @Override
@@ -36,7 +43,7 @@ public abstract class xUncheckedConstrainedInt
     @Override
     public TypeConstant getCanonicalType()
         {
-        return f_typeCanonical;
+        return m_typeCanonical;
         }
 
     @Override
@@ -113,7 +120,8 @@ public abstract class xUncheckedConstrainedInt
         return super.makeJavaLong(lValue);
         }
 
-    private final TypeConstant f_typeCanonical;
-    private final long         f_nMask;
-    private final long         f_nSign;
+    private final long f_nMask;
+    private final long f_nSign;
+
+    private TypeConstant m_typeCanonical;
     }

@@ -32,6 +32,14 @@ public class xInt8
         }
 
     @Override
+    public void initDeclared()
+        {
+        super.initDeclared();
+
+        xUncheckedInt8.INSTANCE.initDeclared();
+        }
+
+    @Override
     protected xConstrainedInteger getComplimentaryTemplate()
         {
         return xUInt8.INSTANCE;

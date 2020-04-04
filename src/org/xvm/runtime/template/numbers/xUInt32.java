@@ -28,6 +28,14 @@ public class xUInt32
         }
 
     @Override
+    public void initDeclared()
+        {
+        super.initDeclared();
+
+        xUncheckedUInt32.INSTANCE.initDeclared();
+        }
+
+    @Override
     protected xConstrainedInteger getComplimentaryTemplate()
         {
         return xInt32.INSTANCE;

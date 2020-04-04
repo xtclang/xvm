@@ -40,6 +40,8 @@ public class xUInt8
         {
         super.initDeclared();
 
+        xUncheckedUInt8.INSTANCE.initDeclared();
+
         ClassComposition clz = getCanonicalClass();
         for (int i = 0; i < cache.length; ++i)
             {
