@@ -559,7 +559,9 @@ TypeDefStatement
 
 #   Operator        Description             Level   Associativity
 #   --------------  ----------------------  -----   -------------
-#   ++              post-increment            1     left to right
+#   &               reference-of              1
+#
+#   ++              post-increment            2     left to right
 #   --              post-decrement
 #   ()              invoke a method
 #   []              access array element
@@ -569,47 +571,46 @@ TypeDefStatement
 #   .as             postfix type assertion
 #   .is             postfix type comparison
 #
-#   ++              pre-increment             2     right to left
+#   ++              pre-increment             3     right to left
 #   --              pre-decrement
 #   +               unary plus
 #   -               unary minus
 #   !               logical NOT
 #   ~               bitwise NOT
-#   &               reference-of
 #
-#   ?:              conditional elvis         3     right to left
+#   ?:              conditional elvis         4     right to left
 #
-#   *               multiplicative            4     left to right
+#   *               multiplicative            5     left to right
 #   /
 #   %
 #   /%
 #
-#   +               additive                  5     left to right
+#   +               additive                  6     left to right
 #   -
 #
-#   << >>           bitwise                   6     left to right
+#   << >>           bitwise                   7     left to right
 #   >>>
 #   &
 #   ^
 #   |
 #
-#   ..              range/interval            7     left to right
+#   ..              range/interval            8     left to right
 #
-#   <  <=           relational                8     left to right
+#   <  <=           relational                9     left to right
 #   >  >=
 #   <=>             order ("star-trek")
 #
-#   ==              equality                  9     left to right
+#   ==              equality                 10     left to right
 #   !=
 #
-#   &&              conditional AND          10     left to right
+#   &&              conditional AND          11     left to right
 #
-#   ^^              conditional XOR          11     left to right
+#   ^^              conditional XOR          12     left to right
 #   ||              conditional OR
 #
-#   ? :             conditional ternary      12     right to left
+#   ? :             conditional ternary      13     right to left
 #
-#   :               conditional ELSE         13     right to left
+#   :               conditional ELSE         14     right to left
 
 Expression
     TernaryExpression
@@ -621,12 +622,9 @@ TernaryExpression
     OrExpression Whitespace "?" OrExpression ":" TernaryExpression
 
 OrExpression
-    XorExpression
-    OrExpression || XorExpression
-
-XorExpression
     AndExpression
-    XorExpression ^^ AndExpression
+    OrExpression || AndExpression
+    OrExpression ^^ AndExpression
 
 AndExpression
     EqualityExpression

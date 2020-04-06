@@ -2649,45 +2649,36 @@ public class Parser
         }
 
     /**
-     * Parse a logical "or" expression.
+     * Parse a logical "or"/"xor" expression.
      *
      * <p/><code><pre>
      * OrExpression
-     *     XorExpression
-     *     OrExpression || XorExpression
+     *     AndExpression
+     *     OrExpression || AndExpression
+     *     OrExpression ^^ AndExpression
      * </pre></code>
      *
      * @return an expression
      */
     Expression parseOrExpression()
         {
-        Expression expr = parseXorExpression();
-        while (peek().getId() == Id.COND_OR)
-            {
-            expr = new CondOpExpression(expr, current(), parseXorExpression());
-            }
-        return expr;
-        }
-
-    /**
-     * Parse a logical "xor" expression.
-     *
-     * <p/><code><pre>
-     * XorExpression
-     *     AndExpression
-     *     XorExpression ^^ AndExpression
-     * </pre></code>
-     *
-     * @return an expression
-     */
-    Expression parseXorExpression()
-        {
         Expression expr = parseAndExpression();
-        while (peek().getId() == Id.COND_XOR)
+        while (true)
             {
-            expr = new RelOpExpression(expr, current(), parseAndExpression());
+            switch (peek().getId())
+                {
+                case COND_OR:
+                    expr = new CondOpExpression(expr, current(), parseAndExpression());
+                    break;
+
+                case COND_XOR:
+                    expr = new RelOpExpression(expr, current(), parseAndExpression());
+                    break;
+
+                default:
+                    return expr;
+                }
             }
-        return expr;
         }
 
     /**
@@ -3226,7 +3217,7 @@ public class Parser
             case ASSERT_ONCE:
             case ASSERT_TEST:
             case ASSERT_DBG:
-                return new ThrowExpression(current(), null);
+                return new ThrowExpression(current(), null); // REVIEW (does not parse RND(...) or look for expression)
 
             case TODO:
                 return parseTodoExpression();
