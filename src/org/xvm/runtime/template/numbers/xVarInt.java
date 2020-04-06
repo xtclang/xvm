@@ -25,7 +25,7 @@ public class xVarInt
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeMethod("abs", VOID, THIS);
 

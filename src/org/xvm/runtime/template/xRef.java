@@ -59,16 +59,21 @@ public class xRef
         }
 
     @Override
-    public void initDeclared()
+    public void registerNativeTemplates()
         {
-        // register the native identity template
-        ClassStructure structId   = (ClassStructure) f_struct.getChild("Identity");
-        Identity       templateId = new Identity(f_templates, structId, true);
-        templateId.initDeclared();
+        if (this == INSTANCE)
+            {
+            // register the native "Identity" template
+            ClassStructure structId = (ClassStructure) f_struct.getChild("Identity");
 
-        f_templates.registerNativeTemplate(structId.getCanonicalType(), templateId);
+            registerNativeTemplate(new Identity(f_templates, structId, true));
+            }
+        }
 
-        s_sigGet = f_struct.findMethod("get", 0).getIdentityConstant().getSignature();
+    @Override
+    public void initNative()
+        {
+        s_sigGet = getStructure().findMethod("get", 0).getIdentityConstant().getSignature();
 
         markNativeMethod("equals", null, BOOLEAN);
 

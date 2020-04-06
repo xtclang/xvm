@@ -42,7 +42,7 @@ public class xModule
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeProperty("simpleName");
         markNativeProperty("qualifiedName");

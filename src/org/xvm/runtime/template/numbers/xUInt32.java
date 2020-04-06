@@ -21,18 +21,14 @@ public class xUInt32
         if (fInstance)
             {
             INSTANCE = this;
-
-            // create unchecked template
-            new xUncheckedUInt32(templates, structure, true);
             }
         }
 
     @Override
-    public void initDeclared()
+    public void registerNativeTemplates()
         {
-        super.initDeclared();
-
-        xUncheckedUInt32.INSTANCE.initDeclared();
+        // create unchecked template
+        registerNativeTemplate(new xUncheckedUInt32(f_templates, f_struct, true));
         }
 
     @Override

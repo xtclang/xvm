@@ -47,8 +47,8 @@ public class xArray
         extends ClassTemplate
         implements IndexSupport
     {
-    public static xArray   INSTANCE;
-    public static xEnum    MUTABILITY;
+    public static xArray INSTANCE;
+    public static xEnum  MUTABILITY;
 
     public xArray(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -61,29 +61,34 @@ public class xArray
         }
 
     @Override
-    public void initDeclared()
+    public void registerNativeTemplates()
+        {
+        if (this == INSTANCE)
+            {
+            registerNativeTemplate(new xIntArray    (f_templates, f_struct, true));
+            registerNativeTemplate(new xCharArray   (f_templates, f_struct, true));
+            registerNativeTemplate(new xBooleanArray(f_templates, f_struct, true));
+            registerNativeTemplate(new xBitArray    (f_templates, f_struct, true));
+            registerNativeTemplate(new xByteArray   (f_templates, f_struct, true));
+            }
+        }
+
+    @Override
+    public void initNative()
         {
         // register array specializations
         ConstantPool              pool         = pool();
-        Map<TypeConstant, xArray> mapTemplates = new HashMap<>();
+        Map<TypeConstant, xArray> mapTemplates = ARRAY_TEMPLATES = new HashMap<>();
 
-        registerNative(new xIntArray(f_templates, f_struct, true));
-        registerNative(new xCharArray(f_templates, f_struct, true));
-        registerNative(new xBooleanArray(f_templates, f_struct, true));
-        registerNative(new xBitArray(f_templates, f_struct, true));
-        registerNative(new xByteArray(f_templates, f_struct, true));
-
-        mapTemplates.put(pool.typeInt(), xIntArray.INSTANCE);
-        mapTemplates.put(pool.typeByte(), xByteArray.INSTANCE);
-        mapTemplates.put(pool.typeChar(), xCharArray.INSTANCE);
+        mapTemplates.put(pool.typeInt(),     xIntArray.INSTANCE);
+        mapTemplates.put(pool.typeChar(),    xCharArray.INSTANCE);
         mapTemplates.put(pool.typeBoolean(), xBooleanArray.INSTANCE);
-        mapTemplates.put(pool.ensureEcstasyTypeConstant("numbers.Bit"), xBitArray.INSTANCE);
-
-        ARRAY_TEMPLATES = mapTemplates;
+        mapTemplates.put(pool.typeBit(),     xBitArray.INSTANCE);
+        mapTemplates.put(pool.typeByte(),    xByteArray.INSTANCE);
 
         // cache the constructors
         for (MethodStructure method :
-                ((MultiMethodStructure) f_struct.getChild("construct")).methods())
+                ((MultiMethodStructure) getStructure().getChild("construct")).methods())
             {
             TypeConstant typeParam0 = method.getParam(0).getType();
 
@@ -142,12 +147,6 @@ public class xArray
         markNativeMethod("ensurePersistent", BOOLEAN, null);
 
         getCanonicalType().invalidateTypeInfo();
-        }
-
-    private void registerNative(xArray template)
-        {
-        template.initDeclared();
-        f_templates.registerNativeTemplate(template.getCanonicalType(), template);
         }
 
     @Override

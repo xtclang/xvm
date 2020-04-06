@@ -42,7 +42,7 @@ public class xPackage
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeProperty("simpleName");
         markNativeProperty("qualifiedName");
@@ -134,7 +134,7 @@ public class xPackage
     protected int createPackageHandle(Frame frame, ClassComposition clazz)
         {
         PackageHandle   hStruct     = new PackageHandle(clazz.ensureAccess(Access.STRUCT));
-        MethodStructure constructor = clazz.getTemplate().f_struct.findMethod("construct", 0);
+        MethodStructure constructor = clazz.getTemplate().getStructure().findMethod("construct", 0);
 
         return proceedConstruction(frame, constructor, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK);
         }

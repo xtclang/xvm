@@ -47,7 +47,7 @@ public class xNanosTimer
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         s_clzDuration = f_templates.getTemplate("Duration").getCanonicalClass();
 

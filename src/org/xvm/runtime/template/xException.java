@@ -33,26 +33,29 @@ public class xException
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
-        // cache all the well-known exception classes
-        s_clzException            = INSTANCE.getCanonicalClass();
-        s_clzIllegalArgument      = f_templates.getTemplate("IllegalArgument").getCanonicalClass();
-        s_clzIllegalState         = f_templates.getTemplate("IllegalState").getCanonicalClass();
-        s_clzOutOfBounds          = f_templates.getTemplate("OutOfBounds").getCanonicalClass();
-        s_clzReadOnly             = f_templates.getTemplate("ReadOnly").getCanonicalClass();
-        s_clzTimedOut             = f_templates.getTemplate("TimedOut").getCanonicalClass();
-        s_clzTypeMismatch         = f_templates.getTemplate("TypeMismatch").getCanonicalClass();
-        s_clzUnsupportedOperation = f_templates.getTemplate("UnsupportedOperation").getCanonicalClass();
-        s_clzDivisionByZero       = f_templates.getTemplate("numbers.Number.DivisionByZero").getCanonicalClass();
-        s_clzPathException        = f_templates.getTemplate("fs.PathException").getCanonicalClass();
-        s_clzIOException          = f_templates.getTemplate("io.IOException").getCanonicalClass();
+        if (this == INSTANCE)
+            {
+            // cache all the well-known exception classes
+            s_clzException            = INSTANCE.getCanonicalClass();
+            s_clzIllegalArgument      = f_templates.getTemplate("IllegalArgument").getCanonicalClass();
+            s_clzIllegalState         = f_templates.getTemplate("IllegalState").getCanonicalClass();
+            s_clzOutOfBounds          = f_templates.getTemplate("OutOfBounds").getCanonicalClass();
+            s_clzReadOnly             = f_templates.getTemplate("ReadOnly").getCanonicalClass();
+            s_clzTimedOut             = f_templates.getTemplate("TimedOut").getCanonicalClass();
+            s_clzTypeMismatch         = f_templates.getTemplate("TypeMismatch").getCanonicalClass();
+            s_clzUnsupportedOperation = f_templates.getTemplate("UnsupportedOperation").getCanonicalClass();
+            s_clzDivisionByZero       = f_templates.getTemplate("numbers.Number.DivisionByZero").getCanonicalClass();
+            s_clzPathException        = f_templates.getTemplate("fs.PathException").getCanonicalClass();
+            s_clzIOException          = f_templates.getTemplate("io.IOException").getCanonicalClass();
 
-        METHOD_FORMAT_EXCEPTION = f_struct.findMethod("formatExceptionString", 2);
+            METHOD_FORMAT_EXCEPTION = getStructure().findMethod("formatExceptionString", 2);
 
-        markNativeMethod("toString", VOID, STRING);
+            markNativeMethod("toString", VOID, STRING);
 
-        getCanonicalType().invalidateTypeInfo();
+            getCanonicalType().invalidateTypeInfo();
+            }
         }
 
     @Override
@@ -69,7 +72,7 @@ public class xException
         // String formatExceptionString(String exceptionName, String stackTrace)
 
         ObjectHandle[] ahVars = new ObjectHandle[METHOD_FORMAT_EXCEPTION.getMaxVars()];
-        ahVars[0] = xString.makeHandle(f_struct.getIdentityConstant().getValueString()); // appender
+        ahVars[0] = xString.makeHandle(getClassConstant().getValueString()); // appender
         ahVars[1] = hException.getField("stackTrace");
 
         return frame.call1(METHOD_FORMAT_EXCEPTION, hException, ahVars, iReturn);

@@ -223,7 +223,7 @@ public class CoreContainer
             {
             ClassTemplate    templateStorage = f_templates.getTemplate("_native.fs.OSStorage");
             ClassComposition clzStorage      = templateStorage.getCanonicalClass();
-            MethodStructure  constructor     = templateStorage.f_struct.findConstructor();
+            MethodStructure  constructor     = templateStorage.getStructure().findConstructor();
 
             switch (templateStorage.construct(frame, constructor, clzStorage,
                                               null, Utils.OBJECTS_NONE, Op.A_STACK))

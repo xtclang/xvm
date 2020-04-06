@@ -48,7 +48,7 @@ public class xTerminalConsole
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeMethod("print"   , OBJECT , VOID   );
         markNativeMethod("println" , OBJECT , VOID   );

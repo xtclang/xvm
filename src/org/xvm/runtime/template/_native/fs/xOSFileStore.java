@@ -32,7 +32,7 @@ public class xOSFileStore
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeProperty("capacity");
         markNativeProperty("bytesFree");

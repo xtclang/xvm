@@ -26,18 +26,20 @@ public class xInt64
         if (fInstance)
             {
             INSTANCE = this;
-
-            // create unchecked template
-            new xUncheckedInt64(templates, structure, true);
             }
         }
 
     @Override
-    public void initDeclared()
+    public void registerNativeTemplates()
         {
-        super.initDeclared();
+        // create unchecked template
+        registerNativeTemplate(new xUncheckedInt64(f_templates, f_struct, true));
+        }
 
-        xUncheckedInt64.INSTANCE.initDeclared();
+    @Override
+    public void initNative()
+        {
+        super.initNative();
 
         if (cache[0] == null)
             {

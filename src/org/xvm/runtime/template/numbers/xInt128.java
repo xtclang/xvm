@@ -1,11 +1,13 @@
 package org.xvm.runtime.template.numbers;
 
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+
 
 public class xInt128
         extends BaseInt128
@@ -20,12 +22,6 @@ public class xInt128
             {
             INSTANCE = this;
             }
-        }
-
-    @Override
-    public void initDeclared()
-        {
-        super.initDeclared();
         }
 
     /**

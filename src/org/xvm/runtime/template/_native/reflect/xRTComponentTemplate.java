@@ -45,7 +45,7 @@ public class xRTComponentTemplate
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeProperty("access");
         markNativeProperty("doc");

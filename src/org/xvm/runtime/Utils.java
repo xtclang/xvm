@@ -690,8 +690,7 @@ public abstract class Utils
                     assert clz.isSingleton();
 
                     ClassTemplate template = ctxCurr.f_templates.getTemplate(idClz);
-                    Format        format   = template.f_struct.getFormat();
-                    if (format == Format.ENUMVALUE)
+                    if (template.getStructure().getFormat() == Format.ENUMVALUE)
                         {
                         // this can happen if the constant's handle was not initialized or
                         // assigned on a different constant pool

@@ -19,7 +19,7 @@ public class xNumber
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         }
     }

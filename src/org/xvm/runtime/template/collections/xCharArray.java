@@ -43,7 +43,7 @@ public class xCharArray
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         }
 

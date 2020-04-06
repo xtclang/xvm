@@ -43,7 +43,7 @@ public class xFPLiteral
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeMethod("construct", STRING, VOID);
 

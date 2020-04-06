@@ -46,7 +46,7 @@ public class xByteArray
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         }
 

@@ -31,13 +31,13 @@ public class InterfaceProxy
 
     public InterfaceProxy(TemplateRegistry templates)
         {
-        super(templates, xObject.INSTANCE.f_struct, false);
+        super(templates, xObject.INSTANCE.getStructure(), false);
 
         INSTANCE = this;
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         }
 

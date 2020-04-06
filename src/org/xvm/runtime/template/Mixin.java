@@ -39,7 +39,7 @@ public class Mixin
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         }
 
@@ -121,7 +121,7 @@ public class Mixin
                         Annotation            anno       = typeAnno.getAnnotation();
                         Constant[]            aconstArgs = anno.getParams();
 
-                        MethodStructure constructAnno = mixin.f_struct.findMethod("construct", aconstArgs.length);
+                        MethodStructure constructAnno = mixin.getStructure().findMethod("construct", aconstArgs.length);
                         ObjectHandle[]  ahArgs        = new ObjectHandle[constructAnno.getMaxVars()];
                         for (int i = 0, c = aconstArgs.length; i < c; i++)
                             {

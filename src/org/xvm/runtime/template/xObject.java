@@ -28,7 +28,7 @@ public class xObject
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         if (this == INSTANCE)
             {

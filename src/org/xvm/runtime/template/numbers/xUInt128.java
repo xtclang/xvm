@@ -22,12 +22,6 @@ public class xUInt128
             }
         }
 
-    @Override
-    public void initDeclared()
-        {
-        super.initDeclared();
-        }
-
     /**
      * Converts an object of "this" integer type to the type represented by the template.
      *

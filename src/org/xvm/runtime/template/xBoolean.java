@@ -25,11 +25,11 @@ public class xBoolean
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
-        if (f_struct.getFormat() == Format.ENUM)
+        if (getStructure().getFormat() == Format.ENUM)
             {
-            super.initDeclared();
+            super.initNative();
 
             FALSE = (BooleanHandle) getEnumByOrdinal(0);
             TRUE  = (BooleanHandle) getEnumByOrdinal(1);

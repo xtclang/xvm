@@ -53,7 +53,7 @@ public class xRTSignature
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeProperty("name");
         markNativeProperty("params");
@@ -572,7 +572,7 @@ public class xRTSignature
             this.template   = fRetVals ? ensureRTReturnTemplate() : ensureRTParamTemplate();
             this.cElements  = fRetVals ? hMethod.getReturnCount() : hMethod.getParamCount();
             this.ahElement  = new ObjectHandle[cElements];
-            this.construct  = template.f_struct.findMethod("construct", fRetVals ? 2 : 5);
+            this.construct  = template.getStructure().findMethod("construct", fRetVals ? 2 : 5);
             this.ahParams   = new ObjectHandle[fRetVals ? 2 : 5];
             this.index      = -1;
             this.iReturn    = iReturn;

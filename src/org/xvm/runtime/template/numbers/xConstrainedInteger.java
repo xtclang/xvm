@@ -57,9 +57,9 @@ public abstract class xConstrainedInteger
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
-        String sName = f_struct.getName();
+        String sName = f_sName;
 
         markNativeProperty("magnitude");
         markNativeProperty("bitCount");

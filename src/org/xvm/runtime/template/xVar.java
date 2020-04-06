@@ -44,9 +44,9 @@ public class xVar
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
-        s_sigSet = f_struct.findMethod("set", 1).getIdentityConstant().getSignature();
+        s_sigSet = getStructure().findMethod("set", 1).getIdentityConstant().getSignature();
         }
 
     @Override

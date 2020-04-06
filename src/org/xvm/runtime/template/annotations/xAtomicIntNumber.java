@@ -38,7 +38,7 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         // TODO: do we need to mark the VarOps as native?
         // TODO: how to implement checked/unchecked optimally?

@@ -29,18 +29,20 @@ public class xUInt8
         if (fInstance)
             {
             INSTANCE = this;
-
-            // create unchecked template
-            new xUncheckedUInt8(templates, structure, true);
             }
         }
 
     @Override
-    public void initDeclared()
+    public void registerNativeTemplates()
         {
-        super.initDeclared();
+        // create unchecked template
+        registerNativeTemplate(new xUncheckedUInt8(f_templates, f_struct, true));
+        }
 
-        xUncheckedUInt8.INSTANCE.initDeclared();
+    @Override
+    public void initNative()
+        {
+        super.initNative();
 
         ClassComposition clz = getCanonicalClass();
         for (int i = 0; i < cache.length; ++i)

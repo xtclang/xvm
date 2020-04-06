@@ -101,7 +101,7 @@ public class ClassComposition
      */
     public boolean isInstanceChild()
         {
-        return f_template.f_struct.isInstanceChild();
+        return f_template.getStructure().isInstanceChild();
         }
 
     /**
@@ -248,7 +248,8 @@ public class ClassComposition
         MethodStructure method = m_methodInit;
         if (method == null)
             {
-            m_methodInit = method = f_template.f_struct.createInitializer(f_typeStructure, m_mapFields);
+            m_methodInit = method =
+                f_template.getStructure().createInitializer(f_typeStructure, m_mapFields);
             }
         return method.isAbstract() ? null : method;
         }

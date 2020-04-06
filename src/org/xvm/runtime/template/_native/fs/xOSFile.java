@@ -32,9 +32,9 @@ public class xOSFile
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
-        super.initDeclared();
+        super.initNative();
 
         markNativeProperty("contents");
 

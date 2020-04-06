@@ -24,11 +24,11 @@ public class xOrdered
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
-        if (f_struct.getFormat() == Format.ENUM)
+        if (getStructure().getFormat() == Format.ENUM)
             {
-            super.initDeclared();
+            super.initNative();
 
             LESSER  = getEnumByOrdinal(0);
             EQUAL   = getEnumByOrdinal(1);

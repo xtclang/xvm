@@ -20,9 +20,9 @@ public class xOSDirectory
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
-        super.initDeclared();
+        super.initNative();
         }
 
     @Override

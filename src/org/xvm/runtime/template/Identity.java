@@ -38,7 +38,7 @@ public class Identity
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeMethod("equals",   null, BOOLEAN);
         markNativeMethod("hashCode", null, INT);

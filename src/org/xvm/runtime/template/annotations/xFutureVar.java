@@ -50,7 +50,7 @@ public class xFutureVar
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         TYPE       = getCanonicalType();
         COMPLETION = (xEnum) f_templates.getTemplate("annotations.FutureVar.Completion");

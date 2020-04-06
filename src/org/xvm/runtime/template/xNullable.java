@@ -22,11 +22,11 @@ public class xNullable
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
-        if (f_struct.getFormat() == Format.ENUM)
+        if (getStructure().getFormat() == Format.ENUM)
             {
-            super.initDeclared();
+            super.initNative();
 
             NULL = getEnumByOrdinal(0);
             }

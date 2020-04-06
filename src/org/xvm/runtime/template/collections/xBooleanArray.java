@@ -32,7 +32,7 @@ public class xBooleanArray
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         }
 

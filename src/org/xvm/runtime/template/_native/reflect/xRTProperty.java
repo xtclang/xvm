@@ -50,7 +50,7 @@ public class xRTProperty
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeProperty("abstract");
         markNativeProperty("atomic");

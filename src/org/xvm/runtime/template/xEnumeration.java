@@ -28,7 +28,7 @@ public class xEnumeration
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         }
     }

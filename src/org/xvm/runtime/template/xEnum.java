@@ -54,15 +54,15 @@ public class xEnum
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         if (this == INSTANCE)
             {
             // all the methods are marked as native due to a "rebase"
             }
-        else if (f_struct.getFormat() == Format.ENUM)
+        else if (getStructure().getFormat() == Format.ENUM)
             {
-            Collection<? extends Component> listAll = f_struct.children();
+            Collection<? extends Component> listAll = getStructure().children();
             List<String>     listNames = new ArrayList<>(listAll.size());
             List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
 
@@ -101,7 +101,7 @@ public class xEnum
 
             if (hValue == null)
                 {
-                assert f_struct.getFormat() == Format.ENUMVALUE;
+                assert getStructure().getFormat() == Format.ENUMVALUE;
 
                 xEnum templateEnum = (xEnum) getSuper();
 
@@ -110,7 +110,7 @@ public class xEnum
 
                 if (hValue.isStruct())
                     {
-                    MethodStructure ctor  = f_struct.findConstructor(TypeConstant.NO_TYPES);
+                    MethodStructure ctor  = getStructure().findConstructor(TypeConstant.NO_TYPES);
                     ObjectHandle[]  ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, ctor.getMaxVars());
 
                     return proceedConstruction(frame, ctor, true, hValue, ahVar, Op.A_STACK);
@@ -219,7 +219,7 @@ public class xEnum
      */
     public EnumHandle getEnumByConstant(IdentityConstant id)
         {
-        ClassStructure clzThis = f_struct;
+        ClassStructure clzThis = getStructure();
 
         assert clzThis.getFormat() == Format.ENUM;
 

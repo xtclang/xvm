@@ -42,7 +42,7 @@ public abstract class OSFileNode
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         ClassTemplate templateDir    = f_templates.getTemplate("fs.Directory");
         ClassTemplate templateFile   = f_templates.getTemplate("fs.File");
@@ -55,8 +55,8 @@ public abstract class OSFileNode
         s_clzOSDirStruct  = s_clzOSDir.ensureAccess(Access.STRUCT);
         s_clzOSFileStruct = s_clzOSFile.ensureAccess(Access.STRUCT);
 
-        s_constructorDir  = s_clzOSDir.getTemplate().f_struct.findConstructor();
-        s_constructorFile = s_clzOSFile.getTemplate().f_struct.findConstructor();
+        s_constructorDir  = s_clzOSDir.getTemplate().getStructure().findConstructor();
+        s_constructorFile = s_clzOSFile.getTemplate().getStructure().findConstructor();
 
         markNativeProperty("store");
         markNativeProperty("pathString");

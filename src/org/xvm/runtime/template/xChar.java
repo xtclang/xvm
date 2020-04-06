@@ -37,9 +37,9 @@ public class xChar
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
-        super.initDeclared();
+        super.initNative();
 
         markNativeProperty("codepoint");
 

@@ -38,7 +38,7 @@ public class xInjectedRef
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         }
 

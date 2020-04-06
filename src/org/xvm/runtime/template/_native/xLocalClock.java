@@ -47,7 +47,7 @@ public class xLocalClock
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeProperty("now");
         markNativeProperty("timezone");

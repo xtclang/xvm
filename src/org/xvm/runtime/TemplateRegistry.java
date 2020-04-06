@@ -85,7 +85,7 @@ public class TemplateRegistry
                 {
                 // this is a native class for a composite type;
                 // it will be declared by the corresponding "primitive"
-                // (see xArray.initDeclared() for an example)
+                // (see xArray.initNative() for an example)
                 continue;
                 }
 
@@ -119,7 +119,12 @@ public class TemplateRegistry
 
         for (ClassTemplate template : setTemplates)
             {
-            template.initDeclared();
+            template.registerNativeTemplates();
+            }
+
+        for (ClassTemplate template : f_mapTemplatesByType.values())
+            {
+            template.initNative();
             }
         ConstantPool.setCurrentPool(null);
         }
@@ -260,7 +265,7 @@ public class TemplateRegistry
                 case ENUMVALUE:
                 case ENUM:
                     template = new xEnum(this, structClass, false);
-                    template.initDeclared();
+                    template.initNative();
                     break;
 
                 case MIXIN:

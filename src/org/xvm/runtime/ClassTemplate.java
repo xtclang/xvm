@@ -40,6 +40,7 @@ import org.xvm.runtime.Utils.InPlacePropertyUnary;
 import org.xvm.runtime.Utils.UnaryAction;
 
 import org.xvm.runtime.template.InterfaceProxy;
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
@@ -87,10 +88,36 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Initialize properties, methods and functions declared at the "top" layer.
+     * Add any native templates that may supplement the functionality of this template.
      */
-    public void initDeclared()
+    public void registerNativeTemplates()
         {
+        }
+
+    /**
+     * Register the specified native template with the registry. Note, that this method can only
+     * be called from {@link #registerNativeTemplates()} method.
+     *
+     * @param template  the new template
+     */
+    protected void registerNativeTemplate(ClassTemplate template)
+        {
+        f_templates.registerNativeTemplate(template.getCanonicalType(), template);
+        }
+
+    /**
+     * Initialize native properties, methods and functions.
+     */
+    public void initNative()
+        {
+        }
+
+    /**
+     * Obtain the ClassStructure for this template.
+     */
+    public ClassStructure getStructure()
+        {
+        return f_struct;
         }
 
     /**
@@ -244,7 +271,7 @@ public abstract class ClassTemplate
         {
         // we cannot use the TypeInfo here, since the TypeInfo will be build based on the information
         // provided by this method's caller; however, we can assume a simple class hierarchy
-        ClassStructure struct = f_struct;
+        ClassStructure struct = getStructure();
         do
             {
             PropertyStructure prop = (PropertyStructure) struct.getChild(sPropName);
@@ -359,11 +386,7 @@ public abstract class ClassTemplate
      */
     public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
         {
-        assert clazz.getTemplate() == this &&
-               (f_struct.getFormat() == Format.CLASS ||
-                f_struct.getFormat() == Format.CONST ||
-                f_struct.getFormat() == Format.MIXIN ||
-                f_struct.getFormat() == Format.ENUMVALUE);
+        assert clazz.getTemplate() == this;
 
         return new GenericHandle(clazz.ensureAccess(Access.STRUCT));
         }
@@ -1793,7 +1816,7 @@ public abstract class ClassTemplate
      */
     public int overflow(Frame frame)
         {
-        return frame.raiseException(xException.outOfBounds(frame, f_struct.getName() + " overflow"));
+        return frame.raiseException(xException.outOfBounds(frame, f_sName + " overflow"));
         }
 
 
@@ -1821,7 +1844,7 @@ public abstract class ClassTemplate
      */
     public ConstantPool pool()
         {
-        return f_struct.getConstantPool();
+        return ConstantPool.getCurrentPool();
         }
 
     // =========== TEMPORARY ========
@@ -1834,7 +1857,7 @@ public abstract class ClassTemplate
         TypeConstant[] atypeArg = getTypeConstants(this, asParamType);
         TypeConstant[] atypeRet = getTypeConstants(this, asRetType);
 
-        MethodStructure method = f_struct.findMethod(sName, atypeArg, atypeRet);
+        MethodStructure method = getStructure().findMethod(sName, atypeArg, atypeRet);
         if (method == null)
             {
             System.err.println("Missing method " + f_sName + "." + sName +
@@ -1915,14 +1938,15 @@ public abstract class ClassTemplate
             if (sName.equals("this"))
                 {
                 IdentityConstant constId = template == null ?
-                    pool.clzObject() : template.f_struct.getIdentityConstant();
+                    pool.clzObject() : template.getClassConstant();
                 return pool.ensureThisTypeConstant(constId, null);
                 }
 
-            if (template != null && template.f_struct.indexOfGenericParameter(sName) >= 0)
+            ClassStructure struct = template.getStructure();
+            if (template != null && struct.indexOfGenericParameter(sName) >= 0)
                 {
                 // generic type property
-                PropertyStructure prop = (PropertyStructure) template.f_struct.getChild(sName);
+                PropertyStructure prop = (PropertyStructure) struct.getChild(sName);
                 return pool.ensureTerminalTypeConstant(prop.getIdentityConstant());
                 }
 
@@ -2156,7 +2180,7 @@ public abstract class ClassTemplate
     /**
      * The underlying ClassStructure.
      */
-    public final ClassStructure f_struct;
+    protected final ClassStructure f_struct;
 
     /**
      * The ClassStructure of the super class.

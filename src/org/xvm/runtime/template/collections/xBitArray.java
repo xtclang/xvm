@@ -40,7 +40,7 @@ public class xBitArray
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         ClassStructure mixin = f_templates.getClassStructure("collections.Array.BitArray");
 
@@ -54,8 +54,7 @@ public class xBitArray
     public TypeConstant getCanonicalType()
         {
         ConstantPool pool = pool();
-        return pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                pool.ensureEcstasyTypeConstant("numbers.Bit"));
+        return pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeBit());
         }
 
     @Override

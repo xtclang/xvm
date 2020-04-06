@@ -60,16 +60,16 @@ public class xConst
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         if (this == INSTANCE)
             {
             ConstantPool pool = pool();
 
             // equals and Comparable support
-            f_struct.findMethod("equals",   3).markNative();
-            f_struct.findMethod("compare",  3).markNative();
-            f_struct.findMethod("hashCode", 2).markNative();
+            getStructure().findMethod("equals",   3).markNative();
+            getStructure().findMethod("compare",  3).markNative();
+            getStructure().findMethod("hashCode", 2).markNative();
 
             // Stringable support
             ClassStructure clzHelper = f_templates.getClassStructure("_native.ConstHelper");
@@ -84,7 +84,7 @@ public class xConst
 
             // Nibble support
             TypeConstant typeBitArray = pool.ensureParameterizedTypeConstant(
-                pool.typeArray(), pool.ensureEcstasyTypeConstant("numbers.Bit"));
+                pool.typeArray(), pool.typeBit());
             NIBBLE_CONSTRUCT = f_templates.getClassStructure("numbers.Nibble").
                 findMethod("construct", 1, typeBitArray);
 

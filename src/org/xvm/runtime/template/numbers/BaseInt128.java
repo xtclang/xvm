@@ -40,9 +40,9 @@ public abstract class BaseInt128
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
-        String sName = f_struct.getName();
+        String sName = f_sName;
 
         markNativeProperty("magnitude");
 

@@ -35,7 +35,7 @@ public class xRTClassTemplate
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeProperty("classes");
         markNativeProperty("contribs");
@@ -54,7 +54,7 @@ public class xRTClassTemplate
 
         // this native implementation explicitly incorporates the native implementation of
         // RTComponentTemplate
-        super.initDeclared();
+        super.initNative();
         }
 
     @Override

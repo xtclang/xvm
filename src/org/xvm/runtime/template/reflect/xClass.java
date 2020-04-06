@@ -44,7 +44,7 @@ public class xClass
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeMethod("allocate", VOID, null);
 
@@ -71,7 +71,7 @@ public class xClass
             ClassComposition clz      = ensureClass(typeClz);
             ClassTemplate    template = clz.getTemplate();
 
-            MethodStructure constructor = f_struct.findMethod("construct", 3);
+            MethodStructure constructor = getStructure().findMethod("construct", 3);
             ObjectHandle[]  ahVar       = new ObjectHandle[constructor.getMaxVars()];
 
             // constructor parameters:
@@ -134,7 +134,7 @@ public class xClass
 
                 ClassTemplate template = f_templates.getTemplate(typePublic);
 
-                switch (template.f_struct.getFormat())
+                switch (template.getStructure().getFormat())
                     {
                     case CLASS:
                     case CONST:

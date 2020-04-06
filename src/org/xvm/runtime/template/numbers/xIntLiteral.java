@@ -46,7 +46,7 @@ public class xIntLiteral
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeMethod("construct", STRING, VOID);
 

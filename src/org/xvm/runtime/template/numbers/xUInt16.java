@@ -21,18 +21,14 @@ public class xUInt16
         if (fInstance)
             {
             INSTANCE = this;
-
-            // create unchecked template
-            new xUncheckedUInt16(templates, structure, true);
             }
         }
 
     @Override
-    public void initDeclared()
+    public void registerNativeTemplates()
         {
-        super.initDeclared();
-
-        xUncheckedUInt16.INSTANCE.initDeclared();
+        // create unchecked template
+        registerNativeTemplate(new xUncheckedUInt16(f_templates, f_struct, true));
         }
 
     @Override

@@ -33,7 +33,7 @@ public abstract class BitBasedArray
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         }
 

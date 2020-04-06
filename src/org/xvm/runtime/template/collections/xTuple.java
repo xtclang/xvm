@@ -61,7 +61,7 @@ public class xTuple
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         H_VOID = new TupleHandle(getCanonicalClass(), Utils.OBJECTS_NONE, Mutability.Constant);
 

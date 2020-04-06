@@ -34,7 +34,7 @@ abstract public class BaseFP
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         // properties
         markNativeProperty("infinity");

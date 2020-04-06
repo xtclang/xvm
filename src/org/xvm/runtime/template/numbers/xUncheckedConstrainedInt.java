@@ -26,15 +26,6 @@ public abstract class xUncheckedConstrainedInt
         }
 
     @Override
-    public void initDeclared()
-        {
-        m_typeCanonical = pool().ensureAnnotatedTypeConstant(
-            pool().clzUnchecked(), null, f_struct.getCanonicalType());
-
-        super.initDeclared();
-        }
-
-    @Override
     protected xUncheckedConstrainedInt getUncheckedTemplate()
         {
         return this;
@@ -43,7 +34,8 @@ public abstract class xUncheckedConstrainedInt
     @Override
     public TypeConstant getCanonicalType()
         {
-        return m_typeCanonical;
+        return pool().ensureAnnotatedTypeConstant(
+            pool().clzUnchecked(), null, getStructure().getCanonicalType());
         }
 
     @Override
@@ -122,6 +114,4 @@ public abstract class xUncheckedConstrainedInt
 
     private final long f_nMask;
     private final long f_nSign;
-
-    private TypeConstant m_typeCanonical;
     }

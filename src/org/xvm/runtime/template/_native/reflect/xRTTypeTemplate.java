@@ -52,7 +52,7 @@ public class xRTTypeTemplate
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeProperty("desc");
         markNativeProperty("explicitlyImmutable");

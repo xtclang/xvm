@@ -43,11 +43,11 @@ public class xCPFileStore
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         s_clz         = ensureClass(getCanonicalType(), pool().typeFileStore());
         s_clzStruct   = s_clz.ensureAccess(Access.STRUCT);
-        s_constructor = f_struct.findConstructor(pool().typeString(), pool().typeObject());
+        s_constructor = getStructure().findConstructor(pool().typeString(), pool().typeObject());
 
         markNativeMethod("loadNode"     , null, null);
         markNativeMethod("loadDirectory", null, null);

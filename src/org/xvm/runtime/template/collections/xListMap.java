@@ -40,9 +40,9 @@ public class xListMap
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
-        CONSTRUCTOR = f_struct.findMethod("construct", 2);
+        CONSTRUCTOR = getStructure().findMethod("construct", 2);
         }
 
     @Override
@@ -81,7 +81,7 @@ public class xListMap
             ClassComposition clzKeyArray = f_templates.resolveClass(typeKeyArray);
             ClassComposition clzValArray = f_templates.resolveClass(typeValArray);
             ClassComposition clzMap      = ensureClass(
-                pool.ensureParameterizedTypeConstant(f_struct.getIdentityConstant().getType(), typeKey, typeVal));
+                pool.ensureParameterizedTypeConstant(getClassConstant().getType(), typeKey, typeVal));
 
             ObjectHandle     haKeys = fDeferredKey
                     ? new DeferredArrayHandle(clzKeyArray, ahKey)

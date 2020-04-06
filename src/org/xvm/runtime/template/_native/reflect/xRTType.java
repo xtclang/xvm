@@ -82,7 +82,7 @@ public class xRTType
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeProperty("childTypes");
         markNativeProperty("constants");
@@ -884,7 +884,7 @@ public class xRTType
             TypeConstant     typeArray   = pool.ensureParameterizedTypeConstant(
                                                 pool.typeArray(), pool.typeModule());
             ClassComposition clzArray    = f_templates.resolveClass(typeArray);
-            MethodStructure  constructor = templateTS.f_struct.findMethod("construct", 2);
+            MethodStructure  constructor = templateTS.getStructure().findMethod("construct", 2);
             ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
 
             if (fDeferred)

@@ -47,7 +47,7 @@ public class xString
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         ConstantPool   pool      = pool();
         TypeConstant   typeArg   = pool.ensureClassTypeConstant(
@@ -58,7 +58,7 @@ public class xString
         EMPTY_ARRAY      = makeHandle(new char[] {'[', ']'});
         ZERO             = makeHandle(new char[] {'0'});
         ONE              = makeHandle(new char[] {'1'});
-        METHOD_APPEND_TO = f_struct.findMethod("appendTo", 1, typeArg);
+        METHOD_APPEND_TO = getStructure().findMethod("appendTo", 1, typeArg);
 
         markNativeProperty("size");
         markNativeProperty("chars");

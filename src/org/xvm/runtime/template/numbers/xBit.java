@@ -36,7 +36,7 @@ public class xBit
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         ZERO = new JavaLong(getCanonicalClass(), 0);
         ONE  = new JavaLong(getCanonicalClass(), 1);

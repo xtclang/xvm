@@ -47,7 +47,7 @@ public class xRTMethod
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         markNativeProperty("access");
 
@@ -56,7 +56,7 @@ public class xRTMethod
         markNativeMethod("bindTarget"       , null, null);
         markNativeMethod("invoke"           , null, null);
 
-        super.initDeclared();
+        super.initNative();
         }
 
     @Override

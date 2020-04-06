@@ -19,7 +19,7 @@ public class  xStruct
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         }
     }

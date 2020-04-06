@@ -31,7 +31,7 @@ public abstract class xUnconstrainedInteger
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         // @Op methods
         markNativeMethod("add", THIS, THIS);

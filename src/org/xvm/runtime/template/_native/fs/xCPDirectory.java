@@ -34,13 +34,13 @@ public class xCPDirectory
         }
 
     @Override
-    public void initDeclared()
+    public void initNative()
         {
         ConstantPool pool = pool();
 
         s_clz         = ensureClass(getCanonicalType(), pool.typeDirectory());
         s_clzStruct   = s_clz.ensureAccess(Access.STRUCT);
-        s_constructor = f_struct.findConstructor(pool.typeObject());
+        s_constructor = getStructure().findConstructor(pool.typeObject());
         }
 
     @Override

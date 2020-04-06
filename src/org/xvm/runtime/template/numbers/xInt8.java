@@ -25,18 +25,14 @@ public class xInt8
         if (fInstance)
             {
             INSTANCE = this;
-
-            // create unchecked template
-            new xUncheckedInt8(templates, structure, true);
             }
         }
 
     @Override
-    public void initDeclared()
+    public void registerNativeTemplates()
         {
-        super.initDeclared();
-
-        xUncheckedInt8.INSTANCE.initDeclared();
+        // create unchecked template
+        registerNativeTemplate(new xUncheckedInt8(f_templates, f_struct, true));
         }
 
     @Override
