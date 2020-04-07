@@ -1361,7 +1361,9 @@ public class MethodStructure
             Parameter[] aReturns = new Parameter[cReturns];
             for (int i = 0; i < cReturns; i++)
                 {
-                aReturns[i] = this.m_aReturns[i].cloneBody();
+                Parameter param = this.m_aReturns[i].cloneBody();
+                param.setContaining(this);
+                aReturns[i] = param;
                 }
             that.m_aReturns = aReturns;
             }
@@ -1372,15 +1374,21 @@ public class MethodStructure
             Parameter[] aParams = new Parameter[cParams];
             for (int i = 0; i < cParams; i++)
                 {
-                aParams[i] = this.m_aParams[i].cloneBody();
+                Parameter param = this.m_aParams[i].cloneBody();
+                param.setContaining(this);
+                aParams[i] = param;
                 }
             that.m_aParams = aParams;
             }
 
-        // m_code is a mutable object, and tied back to the MethodStructure, so explicitly clone it
-        if (this.m_code != null)
+        if (this.m_abOps == null && this.m_code != null)
             {
+            // m_code is a mutable object, and tied back to the MethodStructure, so explicitly clone it
             that.m_code = this.m_code.cloneOnto(that);
+            }
+        else
+            {
+            that.m_code = null;
             }
 
         if (this.m_aconstLocal != null)
