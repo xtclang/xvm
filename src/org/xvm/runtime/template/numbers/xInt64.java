@@ -41,7 +41,7 @@ public class xInt64
         {
         super.initNative();
 
-        if (cache[0] == null)
+        if (this == INSTANCE)
             {
             ClassComposition clz = getCanonicalClass();
             for (int i = 0; i < cache.length; ++i)
@@ -107,7 +107,7 @@ public class xInt64
         if (lValue == (lValue & 0x7F))
             {
             // TODO: cache some negative values as well
-            return cache[(int)lValue];
+            return INSTANCE.cache[(int) lValue];
             }
         return super.makeJavaLong(lValue);
         }
@@ -117,5 +117,5 @@ public class xInt64
         return INSTANCE.makeJavaLong(lValue);
         }
 
-    private static final JavaLong[] cache = new JavaLong[128];
+    private final JavaLong[] cache = new JavaLong[128];
     }
