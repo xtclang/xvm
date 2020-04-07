@@ -1383,6 +1383,11 @@ public class MethodStructure
             that.m_code = this.m_code.cloneOnto(that);
             }
 
+        if (this.m_aconstLocal != null)
+            {
+            that.m_aconstLocal = this.m_aconstLocal.clone();
+            }
+
         // force the reload of the m_structFinally
         that.m_structFinally = null;
 
