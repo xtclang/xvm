@@ -87,15 +87,11 @@ public class MoveRef
                 case A_TARGET:
                 case A_STRUCT:
                     {
-                    ConstantPool     pool         = frame.poolContext();
-                    ObjectHandle     hReferent    = frame.getThis();
-                    TypeConstant     typeReferent = hReferent.getType();
-                    TypeConstant     typeRef      = pool.ensureParameterizedTypeConstant(
-                                                        pool.typeRef(), typeReferent);
-                    ClassComposition clzRef       = frame.f_context.f_templates.resolveClass(typeRef);
+                    ConstantPool pool      = frame.poolContext();
+                    ObjectHandle hReferent = frame.getThis();
 
-                    hRef    = new RefHandle(clzRef, null, hReferent);
-                    typeReg = clzRef.getType();
+                    typeReg = pool.ensureParameterizedTypeConstant(pool.typeRef(), hReferent.getType());
+                    hRef    = new RefHandle(frame.ensureClass(typeReg), null, hReferent);
                     break;
                     }
 
