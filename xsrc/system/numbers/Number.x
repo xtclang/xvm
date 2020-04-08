@@ -175,7 +175,7 @@ const Number
     /**
      * Division: Divide this number by another number, and return the result.
      *
-     * @param n  the number to divide this number by
+     * @param n  the divisor to divide this number by
      *
      * @return the resulting quotient
      *
@@ -187,10 +187,12 @@ const Number
 
     /**
      * Modulo: Return the modulo that would result from dividing this number by another number.
+     * Note that the result is the modulo, and not the remainder.
      *
-     * @param n  the number to divide this number by
+     * @param n  the divisor to divide this number by
      *
-     * @return the resulting modulo
+     * @return the resulting modulo, in the range `[0..n)` for a positive divisor, and in the range
+     *         `(n..0]` for a negative divisor
      *
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      */
@@ -198,21 +200,23 @@ const Number
     Number mod(Number n);
 
     /**
-     * Division and Modulo: Divide this number by another number, and return both the
-     * quotient and the modulo.
+     * Division and Remainder: Divide this number by another number, and return both the
+     * quotient and the remainder (not the modulo).
      *
-     * @param n  the number to divide this number by
+     * @param n  the divisor to divide this number by
      *
-     * @return quotient  the resulting quotient
-     * @return modulo    the resulting modulo
+     * @return quotient   the resulting quotient
+     * @return remainder  the resulting remainder
      *
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      * @throws OutOfBounds  if the resulting value is out of range for this type
      */
     @Op("/%")
-    (Number quotient, Number modulo) divmod(Number n)
+    (Number quotient, Number remainder) divrem(Number n)
         {
-        return (this / n, this % n);
+        Number quotient  = this / n;
+        Number remainder = this - (n * quotient);
+        return quotient, remainder;
         }
 
 

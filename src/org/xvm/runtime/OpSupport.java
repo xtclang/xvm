@@ -156,7 +156,7 @@ public interface OpSupport
     int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
     /**
-     * Perform a "divmod" operation.
+     * Perform a "divrem" operation.
      *
      * @param frame    the current frame
      * @param hTarget  the target handle
@@ -165,7 +165,7 @@ public interface OpSupport
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn);
+    int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn);
 
     /**
      * Perform a "range" / "interval" operation (inclusive end).

@@ -25,7 +25,7 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.op.GP_Add;
 import org.xvm.asm.op.GP_And;
 import org.xvm.asm.op.GP_Div;
-import org.xvm.asm.op.GP_DivMod;
+import org.xvm.asm.op.GP_DivRem;
 import org.xvm.asm.op.GP_DotDot;
 import org.xvm.asm.op.GP_DotDotEx;
 import org.xvm.asm.op.GP_Mod;
@@ -63,7 +63,7 @@ import org.xvm.util.Severity;
  * <li><tt>MUL:        "*"</tt> - </li>
  * <li><tt>DIV:        "/"</tt> - </li>
  * <li><tt>MOD:        "%"</tt> - </li>
- * <li><tt>DIVMOD:     "/%"</tt> - </li>
+ * <li><tt>DIVREM:     "/%"</tt> - </li>
  * </ul>
  */
 public class RelOpExpression
@@ -109,7 +109,7 @@ public class RelOpExpression
             case MUL:
             case DIV:
             case MOD:
-            case DIVMOD:
+            case DIVREM:
                 break;
 
             default:
@@ -200,7 +200,7 @@ public class RelOpExpression
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
-        if (operator.getId() == Id.DIVMOD)
+        if (operator.getId() == Id.DIVREM)
             {
             MethodConstant method = getImplicitMethod(ctx);
             return method == null
@@ -361,7 +361,7 @@ public class RelOpExpression
     @Override
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
-        if (operator.getId() != Id.DIVMOD || atypeRequired.length < 2)
+        if (operator.getId() != Id.DIVREM || atypeRequired.length < 2)
             {
             return super.testFitMulti(ctx, atypeRequired, errs);
             }
@@ -470,7 +470,7 @@ public class RelOpExpression
             return finishValidations(atypeRequired, null, TypeFit.NoFit, null, errs);
             }
 
-        boolean        fMulti       = operator.getId() == Id.DIVMOD;
+        boolean        fMulti       = operator.getId() == Id.DIVREM;
         int            cExpected    = fMulti ? 2 : 1;
         int            cResults     = cExpected;
         TypeConstant[] atypeResults = null;
@@ -560,7 +560,7 @@ public class RelOpExpression
                 Token.Id op          = isExcluding() ? Id.DOTDOTEX : operator.getId();
                 Constant constResult = expr1New.toConstant().apply(op, expr2New.toConstant());
                 aconstResult = fMulti
-                        ? ((ArrayConstant) constResult).getValue() // divmod result is in a tuple
+                        ? ((ArrayConstant) constResult).getValue() // divrem result is in a tuple
                         : new Constant[] {constResult};
                 }
             catch (RuntimeException e) {}
@@ -591,7 +591,7 @@ public class RelOpExpression
         //       the required type is String and the operator is ADD, then the type implies "String"
         //
         //       * in most cases, the implied type is the same as the required type, with the
-        //         possible exceptions being the DOTDOT (uses first type parameter) and DIVMOD
+        //         possible exceptions being the DOTDOT (uses first type parameter) and DIVREM
         //         (uses type of first value)
         //
         //       * the algorithm is simple: first test the expression to see if it can produce the
@@ -929,9 +929,9 @@ public class RelOpExpression
                 code.add(new GP_Mul(arg1, arg2, argLVal));
                 return;
 
-            case DIVMOD:
+            case DIVREM:
                 // "/%" with a single return needs a black hole for the second one
-                code.add(new GP_DivMod(arg1, arg2,
+                code.add(new GP_DivRem(arg1, arg2,
                         new Argument[]{argLVal, generateBlackHole(null)}));
                 return;
 
@@ -957,7 +957,7 @@ public class RelOpExpression
                 throw new IllegalStateException();
 
             case 2:
-                if (operator.getId() != Id.DIVMOD)
+                if (operator.getId() != Id.DIVREM)
                     {
                     throw new IllegalStateException();
                     }
@@ -966,7 +966,7 @@ public class RelOpExpression
                     {
                     Argument arg1 = expr1.generateArgument(ctx, code, true, true, errs);
                     Argument arg2 = expr2.generateArgument(ctx, code, true, true, errs);
-                    code.add(new GP_DivMod(arg1, arg2, new Argument[]
+                    code.add(new GP_DivRem(arg1, arg2, new Argument[]
                             {aLVal[0].getLocalArgument(), aLVal[1].getLocalArgument()}));
                     }
                 else
@@ -1040,8 +1040,8 @@ public class RelOpExpression
             case MOD:
                 return "mod";
 
-            case DIVMOD:
-                return "divmod";
+            case DIVREM:
+                return "divrem";
 
             default:
                 throw new IllegalStateException();

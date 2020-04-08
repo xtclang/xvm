@@ -356,29 +356,28 @@ public abstract class BaseInt128
         }
 
     @Override
-    public int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+    public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
         {
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         LongLong ll2 = ((LongLongHandle) hArg).getValue();
 
-        LongLong llDiv;
-        LongLong llMod;
+        LongLong[] allQuoRem;
         if (f_fSigned)
             {
-            llDiv = ll1.div(ll2);
-            llMod = ll1.mod(ll2);
+            allQuoRem = ll1.divrem(ll2);
             }
         else
             {
-            llDiv = ll1.divUnsigned(ll2);
-            llMod = ll1.modUnsigned(ll2);
+            allQuoRem = ll1.divremUnsigned(ll2);
             }
 
+        LongLong llDiv = allQuoRem[0];
+        LongLong llRem = allQuoRem[1];
         if (llDiv == LongLong.OVERFLOW)
             {
             return overflow(frame);
             }
-        return frame.assignValues(aiReturn, makeLongLong(llDiv), makeLongLong(llMod));
+        return frame.assignValues(aiReturn, makeLongLong(llDiv), makeLongLong(llRem));
         }
 
     @Override

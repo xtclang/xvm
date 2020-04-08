@@ -217,7 +217,7 @@ public class LongLong
             {
             if (l1H == -1 && l1L < 0)
                 {
-                return new LongLong(l1H/l);
+                return new LongLong(l1L/l);
                 }
             }
 
@@ -279,6 +279,124 @@ public class LongLong
         BigInteger bir = bi1.divide(bi2);
 
         return fromBigInteger(bir);
+        }
+
+    public LongLong[] divrem(LongLong ll)
+        {
+        long l2L = ll.m_lLow;
+        long l2H = ll.m_lHigh;
+
+        if (l2H == 0)
+            {
+            if (l2L == 0)
+                {
+                return OVERFLOWx2;
+                }
+
+            if (l2L > 0)
+                {
+                return divrem(l2L);
+                }
+            }
+        else
+            {
+            if (l2H == -1 && l2L < 0)
+                {
+                return divrem(l2L);
+                }
+            }
+
+        // the divisor doesn't fit into a long; use the BigInteger for now
+        BigInteger   bi1  = toBigInteger();
+        BigInteger   bi2  = ll.toBigInteger();
+        BigInteger[] abir = bi1.divideAndRemainder(bi2);
+
+        return fromBigIntegers(abir);
+        }
+
+    public LongLong[] divrem(long l)
+        {
+        long l1L = m_lLow;
+        long l1H = m_lHigh;
+
+        if (l1H == 0)
+            {
+            if (l1L == 0)
+                {
+                return ZEROx2;
+                }
+
+            if (l1L > 0)
+                {
+                return new LongLong[] {new LongLong(l1L/l), new LongLong(l1L%l)};
+                }
+            }
+        else
+            {
+            if (l1H == -1 && l1L < 0)
+                {
+                return new LongLong[] {new LongLong(l1L/l), new LongLong(l1H%l)};
+                }
+            }
+
+        // the dividend doesn't fit into a long; use the BigInteger for now
+        BigInteger   bi1  = toBigInteger();
+        BigInteger   bi2  = BigInteger.valueOf(l);
+        BigInteger[] abir = bi1.divideAndRemainder(bi2);
+
+        return fromBigIntegers(abir);
+        }
+
+    public LongLong[] divremUnsigned(LongLong ll)
+        {
+        long l2L = ll.m_lLow;
+        long l2H = ll.m_lHigh;
+
+        if (l2H == 0)
+            {
+            if (l2L == 0)
+                {
+                return OVERFLOWx2;
+                }
+
+            if (l2L > 0)
+                {
+                return divremUnsigned(l2L);
+                }
+            }
+
+        // the divisor doesn't fit into a long; use the BigInteger for now
+        BigInteger   bi1  = toUnsignedBigInteger();
+        BigInteger   bi2  = ll.toUnsignedBigInteger();
+        BigInteger[] abir = bi1.divideAndRemainder(bi2);
+
+        return fromBigIntegers(abir);
+        }
+
+    public LongLong[] divremUnsigned(long l)
+        {
+        long l1L = m_lLow;
+        long l1H = m_lHigh;
+
+        if (l1H == 0)
+            {
+            if (l1L == 0)
+                {
+                return ZEROx2;
+                }
+
+            if (l1L > 0)
+                {
+                return new LongLong[] {new LongLong(l1L/l), new LongLong(l1L%l)};
+                }
+            }
+
+        // the dividend doesn't fit into a long; use the BigInteger for now
+        BigInteger   bi1  = toUnsignedBigInteger();
+        BigInteger   bi2  = toUnsignedBigInteger(l);
+        BigInteger[] abir = bi1.divideAndRemainder(bi2);
+
+        return fromBigIntegers(abir);
         }
 
     public LongLong mod(LongLong ll)
@@ -530,6 +648,12 @@ public class LongLong
         return new LongLong(biLow.longValue(), biHigh.longValue());
         }
 
+    public static LongLong[] fromBigIntegers(BigInteger[] abi)
+        {
+        assert abi.length == 2;
+        return new LongLong[] {fromBigInteger(abi[0]), fromBigInteger(abi[1])};
+        }
+
     @Override
     public String toString()
         {
@@ -537,12 +661,14 @@ public class LongLong
         }
 
     public static final LongLong ZERO = new LongLong(0, 0);
+    public static final LongLong[] ZEROx2 = new LongLong[] {ZERO, ZERO};
     public static final LongLong ONE = new LongLong(1, 0);
     public static final LongLong NEG_ONE = new LongLong(-1, -1);
     public static final LongLong MAX_VALUE = new LongLong(-1, Long.MAX_VALUE);
     public static final LongLong MIN_VALUE = new LongLong(0, Long.MIN_VALUE);
     public static final LongLong MAX_VALUE_UNSIGNED = new LongLong(-1, -1);
     public static final LongLong OVERFLOW = new Overflow();
+    public static final LongLong[] OVERFLOWx2 = new LongLong[] {OVERFLOW, OVERFLOW};
 
     protected static final BigInteger BIG_MASK64 = new BigInteger("FFFFFFFFFFFFFFFF", 16);
 

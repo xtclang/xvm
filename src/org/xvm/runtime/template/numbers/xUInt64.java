@@ -115,6 +115,18 @@ public class xUInt64
         }
 
     @Override
+    public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+        {
+        long l1 = ((ObjectHandle.JavaLong) hTarget).getValue();
+        long l2 = ((ObjectHandle.JavaLong) hArg).getValue();
+
+        long lQuo = divUnassigned(l1, l2);
+        long lRem = modUnassigned(l1, l2);
+
+        return frame.assignValues(aiReturn, makeJavaLong(lQuo), makeJavaLong(lRem));
+        }
+
+    @Override
     public int convertLong(Frame frame, PackedInteger piValue, int iReturn)
         {
         if (piValue.isBig())

@@ -2865,7 +2865,7 @@ public class Parser
                 case MUL:
                 case DIV:
                 case MOD:
-                case DIVMOD:
+                case DIVREM:
                     expr = new RelOpExpression(expr, current(), parseElvisExpression());
                     break;
 

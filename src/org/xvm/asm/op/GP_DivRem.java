@@ -20,19 +20,19 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * GP_DIVMOD rvalue1, rvalue2, lvalue1, lvalue2 ; T /% T -> T, T
+ * GP_DIVREM rvalue1, rvalue2, lvalue1-quotient, lvalue2-remainder ; T /% T -> T, T
  */
-public class GP_DivMod
+public class GP_DivRem
         extends Op
     {
     /**
-     * Construct a GP_DIVMOD op for the passed arguments.
+     * Construct a GP_DIVREM op for the passed arguments.
      *
      * @param argTarget   the target Argument
      * @param argValue    the second value Argument
      * @param aargReturn  the two Arguments to store the results into
      */
-    public GP_DivMod(Argument argTarget, Argument argValue, Argument[] aargReturn)
+    public GP_DivRem(Argument argTarget, Argument argValue, Argument[] aargReturn)
         {
         m_argTarget  = argTarget;
         m_argValue   = argValue;
@@ -45,7 +45,7 @@ public class GP_DivMod
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public GP_DivMod(DataInput in, Constant[] aconst)
+    public GP_DivRem(DataInput in, Constant[] aconst)
             throws IOException
         {
         m_nTarget    = readPackedInt(in);
@@ -56,7 +56,7 @@ public class GP_DivMod
     @Override
     public int getOpCode()
         {
-        return OP_GP_DIVMOD;
+        return OP_GP_DIVREM;
         }
 
     @Override
@@ -116,7 +116,7 @@ public class GP_DivMod
 
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        return hTarget.getOpSupport().invokeDivMod(frame, hTarget, hArg, m_anRetValue);
+        return hTarget.getOpSupport().invokeDivRem(frame, hTarget, hArg, m_anRetValue);
         }
 
     @Override

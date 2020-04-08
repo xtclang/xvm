@@ -584,9 +584,10 @@ public abstract class xConstrainedInteger
             }
 
         long lMod = l1 % l2;
-        if (lMod < 0)
+        if (f_fSigned && lMod != 0 && (lMod < 0) != (l2 < 0))
             {
-            lMod += (l2 < 0 ? -l2 : l2);
+            lMod += l2;
+            assert (lMod < 0) == (l2 < 0);
             }
 
         return frame.assignValue(iReturn, makeJavaLong(lMod));
@@ -647,18 +648,12 @@ public abstract class xConstrainedInteger
         }
 
     @Override
-    public int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+    public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
         {
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        long lMod = l1 % l2;
-        if (lMod < 0)
-            {
-            lMod += (l2 < 0 ? -l2 : l2);
-            }
-
-        return frame.assignValues(aiReturn, makeJavaLong(l1 / l2), makeJavaLong(lMod));
+        return frame.assignValues(aiReturn, makeJavaLong(l1 / l2), makeJavaLong(l1 % l2));
         }
 
     @Override

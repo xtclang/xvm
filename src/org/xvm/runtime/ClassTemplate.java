@@ -1588,9 +1588,9 @@ public abstract class ClassTemplate
         }
 
     @Override
-    public int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+    public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
         {
-        return getOpChain(hTarget, "divmod", hArg).invoke(frame, hTarget, hArg, aiReturn);
+        return getOpChain(hTarget, "divrem", hArg).invoke(frame, hTarget, hArg, aiReturn);
         }
 
     @Override

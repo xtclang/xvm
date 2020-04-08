@@ -408,6 +408,23 @@ public class PackedInteger
         }
 
     /**
+     * Divide the value of this PackedInteger by the specified PackedInteger, resulting in a new
+     * PackedInteger quotient and a new PackedInteger remainder.
+     *
+     * @param that  a second PackedInteger to divide this by
+     *
+     * @return an array of the resulting PackedInteger quotient and remainder
+     */
+    public PackedInteger[] divrem(PackedInteger that)
+        {
+        BigInteger   [] aBigInt = this.getBigInteger().divideAndRemainder(that.getBigInteger());
+        PackedInteger[] aPacked = new PackedInteger[2];
+        aPacked[0] = new PackedInteger(aBigInt[0]);
+        aPacked[1] = new PackedInteger(aBigInt[1]);
+        return aPacked;
+        }
+
+    /**
      * Calculate the bit-and of the value of this PackedInteger and the value of a specified
      * PackedInteger, resulting in a new PackedInteger.
      *

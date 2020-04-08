@@ -582,8 +582,8 @@ TypeDefStatement
 #
 #   *               multiplicative            5     left to right
 #   /
-#   %
-#   /%
+#   %               (modulo)
+#   /%              (divide with remainder)
 #
 #   +               additive                  6     left to right
 #   -

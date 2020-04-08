@@ -399,7 +399,7 @@ public class Lexer
                             return new Token(lInitPos, source.getPosition(), Id.DIV_ASN);
 
                         case '%':
-                            return new Token(lInitPos, source.getPosition(), Id.DIVMOD);
+                            return new Token(lInitPos, source.getPosition(), Id.DIVREM);
                         }
                     source.rewind();
                     }

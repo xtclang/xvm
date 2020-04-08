@@ -229,18 +229,13 @@ public abstract class xUnconstrainedInteger
         }
 
     @Override
-    public int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+    public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
         {
         PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
         PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
 
-        PackedInteger piMod = pi1.mod(pi2);
-        if (piMod.compareTo(PackedInteger.ZERO) < 0)
-            {
-            piMod = piMod.add(pi2.compareTo(PackedInteger.ZERO) < 0 ? pi2.negate() : pi2);
-            }
-
-        return frame.assignValues(aiReturn, makeInt(pi1.div(pi2)), makeInt(piMod));
+        PackedInteger[] aQuoRem = pi1.divrem(pi2);
+        return frame.assignValues(aiReturn, makeInt(aQuoRem[0]), makeInt(aQuoRem[1]));
         }
 
     @Override

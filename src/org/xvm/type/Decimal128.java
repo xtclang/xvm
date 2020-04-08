@@ -403,8 +403,8 @@ public class Decimal128
         long nLBits = 0;
         for (int i = 0; i < 11 && bint.signum() > 0; ++i)
             {
-            BigInteger[] abintDivMod = bint.divideAndRemainder(BIGINT_THOUSAND);
-            BigInteger   bintTriad   = abintDivMod[1];
+            BigInteger[] abintDivRem = bint.divideAndRemainder(BIGINT_THOUSAND);
+            BigInteger   bintTriad   = abintDivRem[1];
 
             int nDeclet = intToDeclet(bintTriad.intValue());
             if (i < 6)
@@ -423,7 +423,7 @@ public class Decimal128
                 nHBits |= ((long) nDeclet) << ((i-7) * 10 + 6);
                 }
 
-            bint = abintDivMod[0];
+            bint = abintDivRem[0];
             }
 
         // store the least significant 12 bits of the exponent into the combo field starting at G5

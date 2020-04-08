@@ -36,7 +36,7 @@ import org.xvm.compiler.Token;
  * <li><tt>MUL:        "*"</tt> - </li>
  * <li><tt>DIV:        "/"</tt> - </li>
  * <li><tt>MOD:        "%"</tt> - </li>
- * <li><tt>DIVMOD:     "/%"</tt> - </li>
+ * <li><tt>DIVREM:     "/%"</tt> - </li>
  * </ul>
  */
 public abstract class BiExpression

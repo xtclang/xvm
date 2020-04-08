@@ -456,7 +456,7 @@ public class Token
         MUL          ("*"              ),
         DIV          ("/"              ),
         MOD          ("%"              ),
-        DIVMOD       ("/%"             ),
+        DIVREM       ("/%"             ),
         SHL          ("<<"             ),
         SHR          (">>"             ),
         USHR         (">>>"            ),
