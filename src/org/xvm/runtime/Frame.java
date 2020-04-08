@@ -1632,10 +1632,9 @@ public class Frame
             case Property:
                 {
                 String sFormalName = constFormal.getName();
-                if (method.getIdentityConstant().isLambda())
+                if (method.getIdentityConstant().isLambda() && method.isStatic())
                     {
-                    // generic types are passed to lambdas as type parameters
-                    // (see
+                    // generic types are passed to "static" lambdas as type parameters
                     for (int i = 0, c = method.getTypeParamCount(); i < c; i++)
                         {
                         Parameter param = method.getParam(i);
