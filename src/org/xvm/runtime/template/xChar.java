@@ -45,10 +45,13 @@ public class xChar
 
         getCanonicalType().invalidateTypeInfo();
 
-        ClassComposition clz = getCanonicalClass();
-        for (int i = 0; i < cache.length; ++i)
+        if (this == INSTANCE)
             {
-            cache[i] = new JavaLong(clz, i);
+            ClassComposition clz = getCanonicalClass();
+            for (int i = 0; i < cache.length; ++i)
+                {
+                cache[i] = new JavaLong(clz, i);
+                }
             }
         }
 
@@ -163,10 +166,10 @@ public class xChar
         assert chValue >= 0 & chValue <= 0x10FFFF;
         if (chValue < 128)
             {
-            return cache[(int)chValue];
+            return INSTANCE.cache[(int)chValue];
             }
         return new JavaLong(INSTANCE.getCanonicalClass(), chValue);
         }
 
-    private static final JavaLong[] cache = new JavaLong[128];
+    private final JavaLong[] cache = new JavaLong[128];
     }

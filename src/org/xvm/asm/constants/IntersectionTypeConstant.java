@@ -517,8 +517,10 @@ public class IntersectionTypeConstant
             return Collections.EMPTY_MAP;
             }
 
+        // calling info.getNarrowingMethod() can change the content of "MethodBySignature", causing
+        // a CME, so we defer this call util later, collecting the source info
+        Map<MethodInfo,     TypeInfo>   mapCapped = new HashMap<>();
         Map<MethodConstant, MethodInfo> mapMerged = new HashMap<>();
-        Map<MethodConstant, MethodInfo> mapCapped = new HashMap<>();
 
         NextEntry:
         for (Map.Entry<SignatureConstant, MethodInfo> entry : info1.ensureMethodsBySignature().entrySet())
@@ -539,7 +541,7 @@ public class IntersectionTypeConstant
 
                     if (method1.isCapped())
                         {
-                        mapCapped.put(method1.getIdentity(), info1.getNarrowingMethod(method1));
+                        mapCapped.put(method1, info1);
                         }
                     continue;
                     }
@@ -560,8 +562,7 @@ public class IntersectionTypeConstant
                             mapMerged.put(id1, methodBase);
                             if (methodBase.isCapped())
                                 {
-                                mapCapped.put(methodBase.getIdentity(),
-                                        info1.getNarrowingMethod(methodBase));
+                                mapCapped.put(methodBase, info1);
                                 }
 
                             continue NextEntry;
@@ -580,7 +581,7 @@ public class IntersectionTypeConstant
                         mapMerged.put(method1.getIdentity(), method1);
                         if (method1.isCapped())
                             {
-                            mapCapped.put(method1.getIdentity(), info1.getNarrowingMethod(method1));
+                            mapCapped.put(method1, info1);
                             }
                         }
                     else
@@ -588,7 +589,7 @@ public class IntersectionTypeConstant
                         mapMerged.put(method2.getIdentity(), method2);
                         if (method2.isCapped())
                             {
-                            mapCapped.put(method2.getIdentity(), info2.getNarrowingMethod(method2));
+                            mapCapped.put(method2, info2);
                             }
                         }
                     }
@@ -599,10 +600,12 @@ public class IntersectionTypeConstant
             {
             // make sure that for all capped method, the corresponding narrowing methods
             // made it; otherwise remove the capped one
-            for (Map.Entry<MethodConstant, MethodInfo> entry : mapCapped.entrySet())
+            for (Map.Entry<MethodInfo, TypeInfo> entry : mapCapped.entrySet())
                 {
-                MethodConstant idCapped        = entry.getKey();
-                MethodInfo     methodNarrowing = entry.getValue();
+                MethodInfo     methodCapped    = entry.getKey();
+                TypeInfo       info            = entry.getValue();
+                MethodConstant idCapped        = methodCapped.getIdentity();
+                MethodInfo     methodNarrowing = info.getNarrowingMethod(methodCapped);
                 MethodConstant idNarrowing     = methodNarrowing.getIdentity();
 
                 if (!mapMerged.containsKey(idNarrowing))

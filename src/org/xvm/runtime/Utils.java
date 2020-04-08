@@ -179,7 +179,7 @@ public abstract class Utils
             // turn the Enum struct into a "public" value
             IdentityConstant idValue = (IdentityConstant) hEnum.getType().getDefiningConstant();
             return frame.getConstHandle(
-                idValue.getConstantPool().ensureSingletonConstConstant(idValue));
+                    frame.poolContext().ensureSingletonConstConstant(idValue));
             }
         return hEnum;
         }

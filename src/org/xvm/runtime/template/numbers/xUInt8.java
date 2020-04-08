@@ -44,10 +44,13 @@ public class xUInt8
         {
         super.initNative();
 
-        ClassComposition clz = getCanonicalClass();
-        for (int i = 0; i < cache.length; ++i)
+        if (this == INSTANCE)
             {
-            cache[i] = new JavaLong(clz, i);
+            ClassComposition clz = getCanonicalClass();
+            for (int i = 0; i < cache.length; ++i)
+                {
+                cache[i] = new JavaLong(clz, i);
+                }
             }
         }
 
@@ -85,8 +88,8 @@ public class xUInt8
     public static JavaLong makeHandle(long lValue)
         {
         assert lValue >= 0 & lValue <= 255;
-        return cache[(int) lValue];
+        return INSTANCE.cache[(int) lValue];
         }
 
-    private static final JavaLong[] cache = new JavaLong[256];
+    private final JavaLong[] cache = new JavaLong[256];
     }

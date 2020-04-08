@@ -24,6 +24,7 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public class Parameter
         extends XvmStructure
+        implements Cloneable
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -251,6 +252,28 @@ public class Parameter
             }
 
         return m_regDeref;
+        }
+
+    /**
+     * Clone this Parameter.
+     *
+     * @return a clone of this Parameter
+     */
+    protected Parameter cloneBody()
+        {
+        Parameter that;
+        try
+            {
+            that = (Parameter) super.clone();
+            }
+        catch (CloneNotSupportedException e)
+            {
+            throw new IllegalStateException(e);
+            }
+
+        m_fImplicitDeref = false;
+        m_regDeref       = null;
+        return that;
         }
 
 

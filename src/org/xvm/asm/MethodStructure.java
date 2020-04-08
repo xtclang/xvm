@@ -1355,16 +1355,45 @@ public class MethodStructure
         {
         MethodStructure that = (MethodStructure) super.cloneBody();
 
-        // the m_aReturns array can have its contents altered by the annotation resolution logic
-        if (this.m_aReturns != null && this.m_aReturns.length > 0)
+        int cReturns = getReturnCount();
+        if (cReturns > 0)
             {
-            that.m_aReturns = this.m_aReturns.clone();
+            Parameter[] aReturns = new Parameter[cReturns];
+            for (int i = 0; i < cReturns; i++)
+                {
+                Parameter param = this.m_aReturns[i].cloneBody();
+                param.setContaining(this);
+                aReturns[i] = param;
+                }
+            that.m_aReturns = aReturns;
             }
 
-        // m_code is a mutable object, and tied back to the MethodStructure, so explicitly clone it
-        if (this.m_code != null)
+        int cParams = getParamCount();
+        if (cParams > 0)
             {
+            Parameter[] aParams = new Parameter[cParams];
+            for (int i = 0; i < cParams; i++)
+                {
+                Parameter param = this.m_aParams[i].cloneBody();
+                param.setContaining(this);
+                aParams[i] = param;
+                }
+            that.m_aParams = aParams;
+            }
+
+        if (this.m_abOps == null && this.m_code != null)
+            {
+            // m_code is a mutable object, and tied back to the MethodStructure, so explicitly clone it
             that.m_code = this.m_code.cloneOnto(that);
+            }
+        else
+            {
+            that.m_code = null;
+            }
+
+        if (this.m_aconstLocal != null)
+            {
+            that.m_aconstLocal = this.m_aconstLocal.clone();
             }
 
         // force the reload of the m_structFinally
