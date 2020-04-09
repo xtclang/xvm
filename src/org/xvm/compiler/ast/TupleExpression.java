@@ -312,7 +312,7 @@ public class TupleExpression
                 aReqTypes = typeRequired.getParamTypesArray();
                 cReqTypes = aReqTypes.length;
                 }
-            else
+            else if (!typeRequired.equals(pool.typeObject()))
                 {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE, pool.typeTuple(), typeRequired);
                 fValid = false;
