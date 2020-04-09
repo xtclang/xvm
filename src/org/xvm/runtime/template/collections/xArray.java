@@ -13,6 +13,8 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -97,7 +99,7 @@ public class xArray
                 if (typeParam0.equals(pool.typeInt()))
                     {
                     // 0) construct(Int capacity = 0)
-                    CONSTRUCTORS[0] = method;
+                    CONSTRUCTORS[0] = method.getIdentityConstant();
                     }
                 else
                     {
@@ -112,15 +114,15 @@ public class xArray
                 // 3) construct(Array<Element> array, Interval<Int> section)
                 if (typeParam0.equals(pool.typeInt()))
                     {
-                    CONSTRUCTORS[1] = method;
+                    CONSTRUCTORS[1] = method.getIdentityConstant();
                     }
                 else if (typeParam0.isA(pool.typeArray()))
                     {
-                    CONSTRUCTORS[3] = method;
+                    CONSTRUCTORS[3] = method.getIdentityConstant();
                     }
                 else
                     {
-                    CONSTRUCTORS[2] = method;
+                    CONSTRUCTORS[2] = method.getIdentityConstant();
                     }
                 }
             }
@@ -251,10 +253,11 @@ public class xArray
     public int construct(Frame frame, MethodStructure constructor, ClassComposition clzArray,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
-        int nScenario;
+        IdentityConstant idConstruct = constructor.getIdentityConstant();
+        int              nScenario;
         for (nScenario = 0; nScenario < 4; nScenario++)
             {
-            if (CONSTRUCTORS[nScenario] == constructor)
+            if (CONSTRUCTORS[nScenario].equals(idConstruct))
                 {
                 break;
                 }
@@ -1119,7 +1122,7 @@ public class xArray
         }
 
     // array of constructors
-    private static MethodStructure[] CONSTRUCTORS = new MethodStructure[4];
+    private static MethodConstant[] CONSTRUCTORS = new MethodConstant[4];
     private static MethodStructure ITERABLE_TO_ARRAY;
 
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};
