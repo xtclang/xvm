@@ -1989,7 +1989,7 @@ public class MethodStructure
             @Override
             public Register lastRegister()
                 {
-                return f_wrappee.lastRegister();
+                return new Register(getMethodStructure().getConstantPool().typeObject());
                 }
 
             @Override

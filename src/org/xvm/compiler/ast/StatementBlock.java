@@ -403,15 +403,24 @@ public class StatementBlock
                     // this statement is the first statement that cannot be reached;
                     // the only thing that is allowed is an inner class definition
                     fReachable = false;
-                    // TODO && !wasAToDoExpressionThatCausedIt()
+
                     if (!(stmt instanceof TypeCompositionStatement ||
                           stmt instanceof MethodDeclarationStatement))
                         {
                         stmt.log(errs, Severity.ERROR, Compiler.NOT_REACHABLE);
+                        break;
                         }
                     }
 
                 fCompletable &= stmt.completes(ctx, fReachable, code, errs);
+
+                if (fReachable && !fCompletable
+                        && stmt instanceof ExpressionStatement
+                        && ((ExpressionStatement) stmt).expr instanceof TodoExpression)
+                    {
+                    // T0D0 expression is allowed to have stuff that follows it that is unreachable
+                    break;
+                    }
                 }
 
             if (!fSuppressScope)

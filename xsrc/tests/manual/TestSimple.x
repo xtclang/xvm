@@ -4,6 +4,16 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        console.println(Tuple:());
+        if (foo())
+            {
+            TODO
+            console.println(Tuple:());
+            }
+        console.println("hello");
+        }
+
+    Boolean foo()
+        {
+        return False;
         }
     }
