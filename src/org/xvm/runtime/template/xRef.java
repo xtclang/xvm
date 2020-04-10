@@ -126,13 +126,6 @@ public class xRef
                     h -> frame.assignValue(iReturn,
                         xBoolean.makeHandle(!h.isMutable())));
 
-            case "refName":
-                {
-                String sName = hRef.getName();
-                return frame.assignValue(iReturn, sName == null ? xNullable.NULL
-                                                                : xString.makeHandle(sName));
-                }
-
             case "byteLength":
                 return frame.assignValue(iReturn, xInt64.makeHandle(8)); // TODO
 
@@ -192,6 +185,14 @@ public class xRef
 
         switch (method.getName())
             {
+            case "hasName":
+                {
+                String sName = hRef.getName();
+                return sName == null
+                        ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+                        : frame.assignValues(aiReturn, xBoolean.TRUE, xString.makeHandle(sName));
+                }
+
             case "peek":
                 return hRef.isAssigned()
                     ? actOnReferent(frame, hRef,

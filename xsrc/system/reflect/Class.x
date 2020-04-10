@@ -1,3 +1,4 @@
+import collections.ListMap;
 import reflect.ClassTemplate.Composition;
 
 /**
@@ -86,15 +87,21 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @param composition
      * @param formalTypes
-     * @param obtainSingleton
+     * @param allocateStruct
      */
-    construct(Composition?           composition     = Null,
-              Map<String, Type>?     formalTypes     = Null,
-              function PublicType()? obtainSingleton = Null)
+    construct(Composition            composition,
+              Map<String, Type>      formalTypes    = Map:[],
+              function StructType()? allocateStruct = Null)
         {
-        this.formalTypes     = formalTypes;
-        this.composition     = composition;
-        this.obtainSingleton = obtainSingleton;
+        if (!formalTypes.is(ListMap))
+            {
+            formalTypes = new ListMap(formalTypes.keys.toArray(), formalTypes.values.toArray());
+            }
+
+        this.composition    = composition;
+        this.formalTypes    = formalTypes.ensureImmutable()
+                                .as(ListMap<String, Type>); // TODO GG - should not require this
+        this.allocateStruct = allocateStruct;
         }
 
 
@@ -105,49 +112,51 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     @RO String name.get()
         {
-        return composition?.template.name : "?";
+        return composition.template.name;
         }
+
+    /**
+     * The composition of the class.
+     */
+    Composition composition;
 
     /**
      * The values for each of the formal types required by the class. The order of the entries in
      * the map is significant.
      */
-    Map<String, Type>? formalTypes;
+    ListMap<String, Type> formalTypes;
 
     /**
-     * The composition of the class.
+     * The factory for structure instances, if the class is not abstract in this [TypeSystem].
      */
-    Composition? composition;
+    protected function StructType()? allocateStruct;
 
     /**
-     * The provider of the singleton instance, if the class represents a singleton.
+     * The singleton instance, which is either an `immutable Const` or a `Service`.
      */
-    private function PublicType()? obtainSingleton;
-
-    /**
-     * Determine if the class is an virtual child class, which must be instantiated virtually.
-     */
-    Boolean virtualChild.get()
+    private @Lazy PublicType singletonInstance.calc()
         {
-        return composition?.template.virtualChild : False;
+        function StructType()? alloc = allocateStruct;
+        assert composition.template.singleton && alloc != Null;
+        PublicType instance = instantiate(alloc());
+        assert &instance.isConst || &instance.isService;
+        return instance;
         }
 
     /**
-     * Determine if the class defines a singleton, and if so, obtain that singleton. If a class is
-     * a singleton class, that means that only one instance of that class can be instantiated, and
-     * that instance is assumed to be instantiated by the first time that it is requested).
-     *
-     * @throws IllegalState if the class is not part of the caller's type system, or a type system
-     *         of a container nested under the caller's container
-     * @throws Exception if an exception occurred instantiating the singleton, it is thrown when an
-     *         attempt is made to access the singleton instance
+     * True iff the class is abstract.
      */
-    conditional PublicType isSingleton()
+    @RO Boolean abstract.get()
         {
-        function PublicType()? obtain = obtainSingleton;
-        return obtain == Null
-                ? False
-                : (True, obtain());
+        return composition.template.isAbstract; // TODO the composition itself should have abstract as a property
+        }
+
+    /**
+     * Determine if the class is a virtual child class, which must be instantiated virtually.
+     */
+    Boolean virtualChild.get()
+        {
+        return composition.template.virtualChild;
         }
 
     /**
@@ -160,12 +169,12 @@ const Class<PublicType, ProtectedType extends PublicType,
     Boolean extends(Class!<> clz)
         {
         // one can only "extend" a class (or a mixin extend a mixin)
-        if (clz.composition?.template.format == Interface)
+        if (clz.composition.template.format == Interface)
             {
             return False;
             }
 
-        return this.PublicType.isA(clz.PublicType) && this.composition?.extends(clz.composition?) : False;
+        return this.PublicType.isA(clz.PublicType) && this.composition.extends(clz.composition);
         }
 
     /**
@@ -178,12 +187,12 @@ const Class<PublicType, ProtectedType extends PublicType,
     Boolean incorporates(Class!<> clz)
         {
         // one can only "incorporate" a mixin
-        if (clz.composition?.template.format != Mixin)
+        if (clz.composition.template.format != Mixin)
             {
             return False;
             }
 
-        return this.PublicType.isA(clz.PublicType) && this.composition?.incorporates(clz.composition?) : False;
+        return this.PublicType.isA(clz.PublicType) && this.composition.incorporates(clz.composition);
         }
 
     /**
@@ -204,12 +213,12 @@ const Class<PublicType, ProtectedType extends PublicType,
     Boolean implements(Class!<> clz)
         {
         // one can only "implement" an interface
-        if (clz.composition?.template.format != Interface)
+        if (clz.composition.template.format != Interface)
             {
             return False;
             }
 
-        return this.PublicType.isA(clz.PublicType) && this.composition?.implements(clz.composition?) : False;
+        return this.PublicType.isA(clz.PublicType) && this.composition.implements(clz.composition);
         }
 
     /**
@@ -230,9 +239,38 @@ const Class<PublicType, ProtectedType extends PublicType,
     // ----- construction --------------------------------------------------------------------------
 
     /**
+     * TODO
+     */
+//    Class childForName(String name, Type... paramType);
+
+    /**
+     * Determine if the class defines a singleton, and if so, obtain that singleton. If a class is
+     * a singleton class, that means that only one instance of that class can be instantiated, and
+     * that instance is assumed to be instantiated by the first time that it is requested).
+     *
+     * @throws IllegalState if the class is not part of the caller's type system, or a type system
+     *         of a container nested under the caller's container
+     * @throws Exception if an exception occurred instantiating the singleton, it is thrown when an
+     *         attempt is made to access the singleton instance
+     */
+    conditional PublicType isSingleton()
+        {
+        return composition.template.singleton && allocateStruct != Null
+                ? (True, singletonInstance)
+                : False;
+        }
+
+    /**
      * Allocate an empty structure for this class.
      */
-    conditional StructType allocate();
+    conditional StructType allocate()
+        {
+        ClassTemplate template = composition.template;
+        function StructType()? alloc = allocateStruct;
+        return template.isAbstract || composition.template.singleton || alloc == Null
+                ? False
+                : (True, alloc());
+        }
 
     /**
      * - if a corresponding constructor exists, it will be called before the automatic structure
@@ -240,9 +278,9 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @throws IllegalState if the structure is illegal in any way
      */
-    PublicType instantiate(StructType structure)
+    PublicType instantiate(StructType structure, PublicType.OuterType? outer = Null)
         {
-        assert function PublicType (StructType) constructor := PublicType.structConstructor();
+        assert function PublicType (StructType) constructor := PublicType.structConstructor(outer);
         return constructor(structure);
         }
 
@@ -251,6 +289,10 @@ const Class<PublicType, ProtectedType extends PublicType,
 
     /**
      * Obtain the default (public) [Type] for this Class instance.
+     *
+     * This method exists so that the compiler can obtain a type based on a class name, such as:
+     *
+     *      Type t = String;    // String as a literal is a Class, but it can also be used as a Type
      *
      * @return the PublicType
      */

@@ -98,15 +98,15 @@ public class xRTType
         markNativeProperty("underlyingTypes");
 
         markNativeMethod("accessSpecified", null, null);
-        markNativeMethod("annotated", null, null);
-        markNativeMethod("contained", null, null);
-        markNativeMethod("fromClass", null, null);
-        markNativeMethod("fromProperty", null, null);
-        markNativeMethod("modifying", null, null);
-        markNativeMethod("named", null, null);
-        markNativeMethod("purify", null, null);
-        markNativeMethod("parameterized", null, null);
-        markNativeMethod("relational", null, null);
+        markNativeMethod("annotated"      , null, null);
+        markNativeMethod("contained"      , null, null);
+        markNativeMethod("fromClass"      , null, null);
+        markNativeMethod("fromProperty"   , null, null);
+        markNativeMethod("modifying"      , null, null);
+        markNativeMethod("named"          , null, null);
+        markNativeMethod("purify"         , null, null);
+        markNativeMethod("parameterized"  , null, null);
+        markNativeMethod("relational"     , null, null);
 
         // TODO ops: add x3, or, and, sub x3
 
@@ -1006,7 +1006,7 @@ public class xRTType
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hClass};
                 Frame.Continuation stepNext = frameCaller ->
-                    frame.assignValues(aiReturn, xBoolean.TRUE, ahValue[0]);
+                    frameCaller.assignValues(aiReturn, xBoolean.TRUE, ahValue[0]);
 
                 return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }

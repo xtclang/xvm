@@ -119,13 +119,8 @@ mixin Enumeration<EnumType extends Enum>
         // Map keyed by name
         ListMap<String, EnumType> map = new ListMap();
 
-// TODO for ((String name, Type type) : PublicType.childTypes)
-        for (val entry : PublicType.childTypes.entries)
+        for ((String name, Type type) : PublicType.childTypes)
             {
-            String name = entry.key;
-            Type   type = entry.value;
-// TODO end
-
             if (type.is(Type<PublicType>))
                 {
                 assert Class<> clz := type.fromClass();

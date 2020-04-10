@@ -271,7 +271,7 @@ public class ClassComposition
     @Override
     public boolean isAllowedUnassigned(Object nid)
         {
-        return f_typeInception.ensureTypeInfo().findPropertyByNid(nid).isSimpleUnassigned();
+        return f_typeStructure.ensureTypeInfo().findPropertyByNid(nid).isSimpleUnassigned();
         }
 
     @Override

@@ -198,10 +198,11 @@ public class ObjectHeap
                 throw new UnsupportedOperationException("TODO: " + constValue);
 
             case Class:
-                return constValue.getConstantPool().typeClass();
+                sComponent = "_native.reflect.RTClass";
+                break;
 
             case PropertyClassType:
-                sComponent = "reflect.RTProperty";
+                sComponent = "_native.reflect.RTProperty";
                 break;
 
             case Method:

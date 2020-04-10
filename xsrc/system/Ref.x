@@ -129,15 +129,57 @@ interface Ref<Referent>
      * by the members defined by the object's class. The requested type may be a superset of the
      * referent's {@link actualType}.
      *
-     * For a reference to an object from the same module as the caller, this method will return a
-     * reference that contains the members in the specified type. For a reference to an object from
-     * a different module, this method cannot produce an original reference, and will result in the
-     * conditional false.
+     * For a reference to an object instantiated within the `Current` or `Inner` [zone], this method
+     * will return a reference of the requested type, iff the underlying object is actually of that
+     * specified type. For a reference of an `Outer` zone, this method will return `False`.
+     *
+     * @param revealType  the type to reveal the contents of this reference as
+     *
+     * @return True iff the desired type is implemented by the underlying object, and the [zone] of
+     *         this reference is [Zone.Current] or [Zone.Inner]
+     * @return (conditional) a reference of the desired type
      */
     <Unmasked> conditional Unmasked revealAs(Type<Unmasked> revealType);
 
     /**
-     * Determine if the referent is an instance of the specified type.
+     * Each object exists within a container, and a `Zone` describes the relationship between the
+     * referent object's container (the container within which it executes any of its operations)
+     * and the current container:
+     *
+     * * Current - the referent exists inside of the current container;
+     * * Inner   - the referent exists within a container created within the current container;
+     * * Outer   - the referent exists within a container that created the current container, but
+     *             **not** within the current container;
+     *
+     * Each `Zone` implies a variation in _trust_. For the purpose of security, a container must not
+     * trust references from `Inner` containers.
+     *
+     * Object references from an `Outer` container are necessarily opaque to code executing in the
+     * `Current` container; it is not possible to use [revealAs] against `Outer` references.
+     */
+    enum Zone {Current, Inner, Outer}
+
+    /**
+     * The [Zone] of the referent in relation to the `Current` container.
+     */
+    @RO Zone zone;
+
+    /**
+     * Specifies whether the referent is local to [this:service].
+     *
+     * Determine if the referent will execute its operations _locally_ within the realm of the
+     * current [Service], [this:service]. If operations against the reference must be executed by
+     * another service (i.e. either by proxying the execution request, or by some other means of a
+     * service context change), then the value of this property will be `False`.
+     */
+    @RO Boolean local;
+
+    /**
+     * Determine if the referent is an "instance of" the specified type.
+     *
+     * @param type  the type to test for
+     *
+     * @return True iff the referent is of the specified type
      */
     Boolean instanceOf(Type type)
         {
@@ -150,7 +192,7 @@ interface Ref<Referent>
         }
 
     /**
-     * Determine if the referent is a service.
+     * Determine if the referent is a `service`.
      */
     @RO Boolean isService.get()
         {
@@ -158,7 +200,7 @@ interface Ref<Referent>
         }
 
     /**
-     * Determine if the referent is an immutable const.
+     * Determine if the referent is an `immutable const`.
      */
     @RO Boolean isConst.get()
         {
@@ -166,7 +208,7 @@ interface Ref<Referent>
         }
 
     /**
-     * Determine if the referent is immutable.
+     * Determine if the referent is `immutable`.
      */
     @RO Boolean isImmutable.get()
         {
@@ -179,8 +221,11 @@ interface Ref<Referent>
      * tuples, and many other purposes; in some of these uses, it is common for a reference to be
      * named. For example, arguments, local variables, struct fields, and properties are almost
      * always named, but tuple elements are often not named, and array elements are never named.
+     *
+     * @return True iff the reference has a name
+     * @return (conditional) the name associated with the reference
      */
-    @RO String? refName; // REVIEW why not just "name"? or "conditional String hasName()"?
+    conditional String hasName();
 
     /**
      * The reference uses a number of bytes for its own storage; while the size of the reference is

@@ -73,6 +73,22 @@ const TypeSystem
     Module[] modules;
 
     /**
+     * The primary module is the module that is assumed to have defined the set of modules in the
+     * type system, based on its module dependencies.
+     *
+     * Generally, all modules within the TypeSystem are imported as packages within the primary
+     * module (or imported within modules that in turn are imported into the primary module), such
+     * that they are within the namespace of the primary module. (The recursion of module importing
+     * can be arbitrarily deep, and there is no particular limit on the complexity of the module
+     * graph, or even on the number of times that any given module is imported into any other given
+     * module.)
+     */
+    Module primaryModule.get()
+        {
+        return modules[0];
+        }
+
+    /**
      * A look-up of modules in the type system, by their qualified names, in the same order that
      * they appear in the [modules] array.
      */

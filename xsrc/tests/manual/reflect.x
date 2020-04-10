@@ -454,7 +454,7 @@ module TestReflection.xqiz.it
                 val ref = prop.of(o);
                 console.println($|assigned={ref.assigned}, peek()={ref.peek()}, actualType={ref.actualType}
                                  |     isService={ref.isService}, isConst={ref.isConst}
-                                 |     isImmutable={ref.isImmutable}, refName={ref.refName}, var={ref.is(Var)}
+                                 |     isImmutable={ref.isImmutable}, hasName={{String name = "n/a"; name := ref.hasName(); return name;}}, var={ref.is(Var)}
                                );
                 }
 
