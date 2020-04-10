@@ -152,6 +152,12 @@ public class Var_SN
         registerArguments(m_aArgValue, registry);
         }
 
+    @Override
+    public String getName(Constant[] aconst)
+        {
+        return Argument.toIdString(m_constName, m_nNameId, aconst);
+        }
+
     private int   m_nNameId;
     private int[] m_anArgValue;
 

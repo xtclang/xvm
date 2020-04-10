@@ -6,7 +6,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
@@ -151,9 +150,9 @@ public class CatchStart
         }
 
     @Override
-    protected String getName()
+    public String getName(Constant[] aconst)
         {
-        return Argument.toIdString(m_constName, m_nNameId);
+        return Argument.toIdString(m_constName, m_nNameId, aconst);
         }
 
     private int m_nNameId;

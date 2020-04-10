@@ -68,9 +68,11 @@ public abstract class OpVar
         }
 
     /**
+     * @param aconst  (optional) an array of constants to retrieve constants by index from
+     *
      * @return the variable name, iff the variable has a name (otherwise null)
      */
-    protected String getName()
+    protected String getName(Constant[] aconst)
         {
         return null;
         }
@@ -131,7 +133,7 @@ public abstract class OpVar
         {
         StringBuilder sb = new StringBuilder(super.toString());
 
-        String sName = getName();
+        String sName = getName(null);
         if (sName != null)
             {
             sb.append(' ')

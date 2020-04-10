@@ -40,6 +40,20 @@ public interface Argument
      */
     static String toIdString(Argument arg, int nArg)
         {
+        return toIdString(arg, nArg, null);
+        }
+
+    /**
+     * For debugging purposes, format the optional "arg" and arg index.
+     *
+     * @param arg     an optional Argument (could be null)
+     * @param nArg    an argument index
+     * @param aconst  (optional) an array of constants to retrieve constants by index from
+     *
+     * @return a String useful for debugging purposes
+     */
+    static String toIdString(Argument arg, int nArg, Constant[] aconst)
+        {
         if (arg instanceof Constant)
             {
             return ((Constant) arg).getValueString();
@@ -54,11 +68,16 @@ public interface Argument
             {
             if (nArg <= Op.CONSTANT_OFFSET)
                 {
+                int ix = Op.CONSTANT_OFFSET - nArg;
+                if (aconst != null)
+                    {
+                    return aconst[ix].getValueString();
+                    }
+
                 ServiceContext context = ServiceContext.getCurrentContext();
                 if (context != null)
                     {
-                    return context.getCurrentFrame().
-                        localConstants()[Op.CONSTANT_OFFSET - nArg].getValueString();
+                    return context.getCurrentFrame().localConstants()[ix].getValueString();
                     }
                 }
             }

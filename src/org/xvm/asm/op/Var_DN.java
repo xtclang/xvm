@@ -118,10 +118,9 @@ public class Var_DN
         }
 
     @Override
-    public String toString()
+    public String getName(Constant[] aconst)
         {
-        return super.toString()
-                + ' ' + Argument.toIdString(m_constName, m_nNameId);
+        return Argument.toIdString(m_constName, m_nNameId, null);
         }
 
     private int m_nNameId;

@@ -141,10 +141,15 @@ public class Var_TN
         }
 
     @Override
+    public String getName(Constant[] aconst)
+        {
+        return Argument.toIdString(m_constName, m_nNameId, aconst);
+        }
+
+    @Override
     public String toString()
         {
-        return super.toString()
-                + ' ' + Argument.toIdString(m_constName, m_nNameId);
+        return super.toString();
         // TODO arguments
         }
 

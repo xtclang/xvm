@@ -148,9 +148,9 @@ public class Var_IN
         }
 
     @Override
-    protected String getName()
+    public String getName(Constant[] aconst)
         {
-        return Argument.toIdString(m_constName, m_nNameId);
+        return Argument.toIdString(m_constName, m_nNameId, aconst);
         }
 
     private int m_nNameId;
