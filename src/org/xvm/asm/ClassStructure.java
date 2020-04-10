@@ -439,13 +439,53 @@ public class ClassStructure
         {
         switch (getFormat())
             {
+            case MODULE:
             case PACKAGE:
             case CONST:
             case ENUM:
             case ENUMVALUE:
-            case MODULE:
                 return true;
 
+            default:
+                return false;
+            }
+        }
+
+    /**
+     * @return true iff this class implements an "immutable X" interface
+     */
+    public boolean isImmutable()
+        {
+        switch (getFormat())
+            {
+            case MODULE:
+            case PACKAGE:
+            case CONST:
+            case ENUM:
+            case ENUMVALUE:
+                return true;
+
+            case MIXIN:
+                if (getTypeInto().isImmutable())
+                    {
+                    return true;
+                    }
+                // fall through
+            case CLASS:
+            case INTERFACE:
+                for (Contribution contrib : getContributionsAsList())
+                    {
+                    if (contrib.getComposition() == Composition.Implements)
+                        {
+                        if (!contrib.containsUnresolved() && contrib.getTypeConstant().isImmutable())
+                            {
+                            return true;
+                            }
+                        }
+                    }
+                return false;
+
+            case SERVICE: // service is always assumed to be NOT immutable
             default:
                 return false;
             }

@@ -186,27 +186,7 @@ public class TerminalTypeConstant
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             }
 
-        switch (idClass.getComponent().getFormat())
-            {
-            case MODULE:
-            case PACKAGE:
-            case CONST:
-            case ENUM:
-            case ENUMVALUE:
-                return true;
-
-            case INTERFACE:     // interfaces cannot specify mutability
-            case CLASS:         // classes default to mutable
-            case SERVICE:       // service is always assumed to be NOT immutable
-                return false;
-
-            case MIXIN:
-                // a mixin is immutable iff its "into" is immutable
-                return idClass.getType().getExplicitClassInto().isImmutable();
-
-            default:
-                throw new IllegalStateException("unexpected class constant: " + idClass);
-            }
+        return ((ClassStructure) idClass.getComponent()).isImmutable();
         }
 
     @Override

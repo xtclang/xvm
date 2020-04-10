@@ -1,19 +1,28 @@
 module TestSimple.xqiz.it
     {
-    @Inject ecstasy.io.Console console;
+    @Inject Console console;
+
+    const Metadata<N extends Number>(String name);
 
     void run()
         {
-        if (foo())
-            {
-            TODO
-            console.println(Tuple:());
-            }
-        console.println("hello");
-        }
+        Metadata<Int> m = new Metadata("foo");
+        Type t = m.N;
 
-    Boolean foo()
-        {
-        return False;
+        console.println($"Type = {t}");
+
+        switch (t)
+            {
+            case Int:
+                console.println("Int case");
+                break;
+            case Dec:
+                console.println("Dec case");
+                break;
+            default:
+                throw new IllegalArgument($"Unsupported type {m.N}");
+            }
+
+        console.println("\n** done");
         }
     }

@@ -62,7 +62,7 @@ import reflect.TypeTemplate;
  * @param OuterType  the type of the enclosing class, if this is a virtual child type
  */
 interface Type<DataType, OuterType>
-        extends Const
+        extends immutable Const
     {
     // ----- inner classes -------------------------------------------------------------------------
 
