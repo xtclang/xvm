@@ -485,7 +485,7 @@ public class xRef
                 return action.applyAsInt(frame.popStack());
 
             case Op.R_CALL:
-                frame.addContinuation(frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     action.applyAsInt(frameCaller.popStack()));
                 return Op.R_CALL;
 

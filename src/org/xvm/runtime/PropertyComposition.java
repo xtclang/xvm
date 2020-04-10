@@ -196,7 +196,7 @@ public class PropertyComposition
                 PropertyInfo infoProp = f_infoParent.findProperty(idNested);
                 return infoProp == null
                     ? f_clzRef.getPropertyGetterChain(id)
-                    : new CallChain(infoProp.ensureOptimizedGetChain(f_infoParent));
+                    : new CallChain(infoProp.ensureOptimizedGetChain(f_infoParent, idNested));
                 });
         }
 
@@ -213,7 +213,7 @@ public class PropertyComposition
                 PropertyInfo infoProp = f_infoParent.findProperty(idNested);
                 return infoProp == null
                     ? f_clzRef.getPropertySetterChain(id)
-                    : new CallChain(infoProp.ensureOptimizedSetChain(f_infoParent));
+                    : new CallChain(infoProp.ensureOptimizedSetChain(f_infoParent, idNested));
                 });
         }
 

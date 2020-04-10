@@ -296,11 +296,14 @@ public abstract class ObjectHandle
         @Override
         public ObjectHandle cloneAs(TypeComposition clazz)
             {
-            boolean fCloneFields = isStruct();
+            // when we clone a struct into a non-struct, we need to update the inflated
+            // RefHandles to point to a non-struct parent handle;
+            // when we clone a non-struct to a struct, we need to do the opposite
+            boolean fUpdateOuter = isStruct() || clazz.isStruct();
 
             GenericHandle hClone = (GenericHandle) super.cloneAs(clazz);
 
-            if (fCloneFields && m_mapFields != null)
+            if (fUpdateOuter && m_mapFields != null)
                 {
                 for (Map.Entry<Object, ObjectHandle> entry : m_mapFields.entrySet())
                     {
@@ -310,7 +313,6 @@ public abstract class ObjectHandle
                         ObjectHandle hOuter = hValue.getField(OUTER);
                         if (hOuter != null)
                             {
-                            assert hOuter == this;
                             hValue.setField(OUTER, hClone);
                             }
                         }

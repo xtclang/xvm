@@ -385,7 +385,7 @@ public class xRTType
         // default initializer, so we need to do it by hand
         TypeHandle    hType  = new TypeHandle(clzType);
         GenericHandle hMulti = (GenericHandle) hType.getField("multimethods");
-        hMulti.setField("$outer",     hType);
+        hMulti.setField(GenericHandle.OUTER, hType);
         hMulti.setField("calculate",  xNullable.NULL);
         hMulti.setField("assignable", xBoolean.FALSE);
         return hType;

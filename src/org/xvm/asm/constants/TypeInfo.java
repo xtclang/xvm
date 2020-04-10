@@ -1466,7 +1466,7 @@ public class TypeInfo
         PropertyInfo prop = findProperty(id);
         return prop == null
                 ? null
-                : prop.ensureOptimizedGetChain(this);
+                : prop.ensureOptimizedGetChain(this, null);
         }
 
     /**
@@ -1481,7 +1481,7 @@ public class TypeInfo
         PropertyInfo prop = findProperty(id);
         return prop == null
                 ? null
-                : prop.ensureOptimizedSetChain(this);
+                : prop.ensureOptimizedSetChain(this, null);
         }
 
     /**

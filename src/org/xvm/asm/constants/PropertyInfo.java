@@ -1091,15 +1091,20 @@ public class PropertyInfo
      * Obtain the method chain for the property getter represented by this property info.
      *
      * @param infoType  the enclosing TypeInfo
+     * @param idNested  the nested id of this property info (null for "top level" properties)
      *
      * @return the method chain iff the property exists; otherwise null
      */
-    public MethodBody[] ensureOptimizedGetChain(TypeInfo infoType)
+    public MethodBody[] ensureOptimizedGetChain(TypeInfo infoType, PropertyConstant idNested)
         {
         MethodBody[] chain = m_chainGet;
         if (chain == null)
             {
             MethodConstant idGet = getGetterId();
+            if (idNested != null)
+                {
+                idGet = (MethodConstant) idNested.appendNestedIdentity(pool(), idGet.getSignature());
+                }
             m_chainGet = chain =
                 augmentPropertyChain(infoType.getOptimizedMethodChain(idGet), infoType, idGet);
             }
@@ -1123,15 +1128,20 @@ public class PropertyInfo
      * Obtain the method chain for the property getter represented by this property info.
      *
      * @param infoType  the enclosing TypeInfo
+     * @param idNested  the nested id of this property info (null for "top level" properties)
      *
      * @return the method chain iff the property exists; otherwise null
      */
-    public MethodBody[] ensureOptimizedSetChain(TypeInfo infoType)
+    public MethodBody[] ensureOptimizedSetChain(TypeInfo infoType, PropertyConstant idNested)
         {
         MethodBody[] chain = m_chainSet;
         if (chain == null)
             {
             MethodConstant idSet = getSetterId();
+            if (idNested != null)
+                {
+                idSet = (MethodConstant) idNested.appendNestedIdentity(pool(), idSet.getSignature());
+                }
             m_chainSet = chain =
                 augmentPropertyChain(infoType.getOptimizedMethodChain(idSet), infoType, idSet);
             }

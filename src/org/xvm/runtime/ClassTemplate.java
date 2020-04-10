@@ -1379,7 +1379,8 @@ public abstract class ClassTemplate
         {
         GenericHandle hThis = (GenericHandle) hTarget;
 
-        if (!hThis.containsField(idProp))
+        if (!hThis.containsField(idProp) &&
+                !hTarget.getComposition().getPropertyGetterChain(idProp).isNative())
             {
             throw new IllegalStateException("Unknown property: (" + f_sName + ")." + idProp);
             }
