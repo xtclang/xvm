@@ -4,6 +4,7 @@ package org.xvm.runtime.template._native.reflect;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -15,7 +16,9 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
@@ -76,6 +79,12 @@ public class xRTClass
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
+        {
+        return new ClassHandle(clazz.ensureAccess(Constants.Access.STRUCT));
         }
 
     @Override
@@ -269,5 +278,47 @@ public class xRTClass
     protected TypeConstant getClassType(ObjectHandle hTarget)
         {
         return hTarget.getComposition().getType().getParamType(0).getUnderlyingType();
+        }
+
+
+    // ----- ObjectHandle --------------------------------------------------------------------------
+
+    /**
+     * ClassHandle is a trivial extension of GenericHandle that supports native equality
+     * (used by JumpVal ops).
+     */
+    protected static class ClassHandle
+            extends GenericHandle
+        {
+        public ClassHandle(TypeComposition clazz)
+            {
+            super(clazz);
+            }
+
+        @Override
+        public boolean isNativeEqual()
+            {
+            return true;
+            }
+
+        @Override
+        public int hashCode()
+            {
+            return getType().getParamType(0).getUnderlyingType().hashCode();
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            if (obj instanceof ClassHandle)
+                {
+                ClassHandle that = (ClassHandle) obj;
+
+                TypeConstant typeThis = this.getType().getParamType(0).getUnderlyingType();
+                TypeConstant typeThat = that.getType().getParamType(0).getUnderlyingType();
+                return typeThis.equals(typeThat);
+                }
+            return false;
+            }
         }
     }

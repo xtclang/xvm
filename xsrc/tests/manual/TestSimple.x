@@ -9,8 +9,6 @@ module TestSimple.xqiz.it
         Metadata<Int> m = new Metadata("foo");
         Type t = m.N;
 
-        console.println($"Type = {t}");
-
         switch (t)
             {
             case Int:
@@ -20,7 +18,20 @@ module TestSimple.xqiz.it
                 console.println("Dec case");
                 break;
             default:
-                throw new IllegalArgument($"Unsupported type {m.N}");
+                throw new IllegalArgument($"Unsupported type {t}");
+            }
+
+        assert Class c := t.fromClass();
+        switch (c)
+            {
+            case Int:
+                console.println("Int case");
+                break;
+            case Dec:
+                console.println("Dec case");
+                break;
+            default:
+                throw new IllegalArgument($"Unsupported class {c}");
             }
 
         console.println("\n** done");
