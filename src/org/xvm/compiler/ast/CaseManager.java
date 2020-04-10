@@ -303,6 +303,12 @@ public class CaseManager<CookieType>
                     {
                     for (TypeConstant type : atype)
                         {
+                        // allow switching on formal types as soon as constraints are satisfied
+                        if (type.isTypeOfType() && type.containsFormalType(true))
+                            {
+                            type = type.resolveConstraints();
+                            }
+
                         listTypes.add(type);
                         }
                     }
