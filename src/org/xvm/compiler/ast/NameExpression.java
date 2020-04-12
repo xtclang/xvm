@@ -1939,10 +1939,18 @@ public class NameExpression
             case Module:
             case Package:
             case Class:
-                // handle the SingletonConstant use cases
-                if (!isIdentityMode(ctx, false) && (typeDesired == null || constant.getType().isA(typeDesired)))
+                // if the name could be a singleton, then that is the default, with the other two
+                // choices being a type or a class; the presence of type parameters indicates a
+                // type or a class
+                boolean fCouldBeSingleton = !isIdentityMode(ctx, false);
+                boolean fSingletonDesired = typeDesired != null && constant.getType().isA(typeDesired);
+                boolean fClassDesired     = typeDesired != null && typeDesired.isA(pool.typeClass());
+                boolean fTypeDesired      = typeDesired != null && typeDesired.isA(pool.typeType());
+                boolean fHasTypeParams    = aTypeParams != null;
+                if (fCouldBeSingleton && (fSingletonDesired
+                        || (!fClassDesired && !fTypeDesired && !fHasTypeParams)))
                     {
-                    if (aTypeParams != null)
+                    if (fHasTypeParams)
                         {
                         log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                         }
