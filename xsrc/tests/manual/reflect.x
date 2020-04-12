@@ -448,10 +448,9 @@ module TestReflection.xqiz.it
         Map<Int, String> map = new ecstasy.collections.ListMap();
         analyzeStructure(map);
 
-// TODO
-//        Boolean f = True;
-//        Class   c = True;
-//        Type    t = True;
+        Boolean f = True;
+        Class   c = True;
+        Type    t = True;
         }
 
     void analyzeClass(Class clz)

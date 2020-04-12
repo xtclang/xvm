@@ -4,7 +4,13 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        Class c = Map<String, Int>;
+        Boolean f = True;
+        console.println(f);
+
+        Class   c = True;
         console.println(c);
+
+        Type    t = True;
+        console.println(t);
         }
     }

@@ -1940,7 +1940,7 @@ public class NameExpression
             case Package:
             case Class:
                 // handle the SingletonConstant use cases
-                if (!isIdentityMode(ctx, false))
+                if (!isIdentityMode(ctx, false) && (typeDesired == null || constant.getType().isA(typeDesired)))
                     {
                     if (aTypeParams != null)
                         {
