@@ -66,7 +66,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
         throw new IllegalArgument($"invalid ISO-8601 datetime: \"{dt}\"");
         }
 
-    static DateTime EPOCH = new DateTime(0, TimeZone.UTC);
+    static DateTime EPOCH = new DateTime(0, UTC);
 
     // ----- accessors -----------------------------------------------------------------------------
 

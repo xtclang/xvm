@@ -198,6 +198,7 @@ public class ObjectHeap
                 throw new UnsupportedOperationException("TODO: " + constValue);
 
             case Class:
+            case DecoratedClass:
                 sComponent = "_native.reflect.RTClass";
                 break;
 

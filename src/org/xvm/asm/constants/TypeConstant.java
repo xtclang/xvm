@@ -427,6 +427,24 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this type is the type of a decorated class constant
+     */
+    public boolean isDecoratedClass()
+        {
+        if (!isExplicitClassIdentity(true))
+            {
+            return false;
+            }
+
+        if (isAnnotated() || getParamsCount() > 0)
+            {
+            return true;
+            }
+
+        return (isVirtualChild() || isAnonymousClass()) && getParentType().isDecoratedClass();
+        }
+
+    /**
      * @return return the virtual child type's or anonymous class type's parent type
      */
     public TypeConstant getParentType()

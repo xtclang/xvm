@@ -846,6 +846,7 @@ public abstract class Constant
         TypeParameter,
         FormalTypeChild,
         Signature,
+        DecoratedClass,
         NativeClass,
 
         /*
@@ -911,6 +912,7 @@ public abstract class Constant
                 case ThisClass:
                 case ParentClass:
                 case ChildClass:
+                case DecoratedClass:
                 case NativeClass:
                 case UnresolvedName:
                     return true;

@@ -111,7 +111,7 @@ const IntLiteral(String text)
      * If the literal begins with an explicit "+" or "-" sign, this property indicates
      * that sign.
      */
-    Signum explicitSign = Signum.Zero;
+    Signum explicitSign = Zero;
 
     /**
      * This is the radix of the integer literal, one of 2, 8, 10, or 16.

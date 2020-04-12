@@ -1019,6 +1019,49 @@ public class ConstantPool
         }
 
     /**
+     * Given the specified class type, obtain a ClassConstant that represents it.
+     *
+     * @param type  the class type
+     *
+     * @return the specified class constant
+     */
+    public ClassConstant ensureClassConstant(TypeConstant type)
+        {
+        // check the pre-existing constants first
+        ClassConstant constant = (DecoratedClassConstant) ensureLocatorLookup(
+                Format.DecoratedClass).get(type);
+        if (constant == null)
+            {
+            if (!type.isExplicitClassIdentity(true))
+                {
+                throw new IllegalArgumentException("type must have an explicit class identity: " + type);
+                }
+
+            // try to avoid using the more complicated "decorated" form of the class constant
+            boolean      fUseType = false;
+            TypeConstant typeCur = type;
+            do
+                {
+                if (typeCur.getParamsCount() > 0 || typeCur.isAnnotated())
+                    {
+                    fUseType = true;
+                    break;
+                    }
+
+                typeCur = typeCur.isVirtualChild()
+                        ? typeCur.getParentType()
+                        : null;
+                }
+            while (typeCur != null);
+
+            constant = fUseType
+                    ? (DecoratedClassConstant) register(new DecoratedClassConstant(this, type))
+                    : (ClassConstant) type.getDefiningConstant();
+            }
+        return constant;
+        }
+
+    /**
      * Given an IdentityConstant for a singleton const class, obtain a constant that represents the
      * singleton instance of that class.
      *
@@ -2443,6 +2486,10 @@ public class ConstantPool
 
                 case Signature:
                     constant = new SignatureConstant(this, format, in);
+                    break;
+
+                case DecoratedClass:
+                    constant = new DecoratedClassConstant(this, format, in);
                     break;
 
                 case NativeClass:

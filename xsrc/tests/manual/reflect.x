@@ -20,6 +20,7 @@ module TestReflection.xqiz.it
         testTypeTemplate();
         testEnum();
         testStruct();
+        testClass();
         }
 
     Function<<Int, String>, <Int>> foo()
@@ -425,6 +426,40 @@ module TestReflection.xqiz.it
             }
         }
 
+    void testClass()
+        {
+        console.println("\n** testClass");
+
+        Class c1 = Map;
+        analyzeClass(c1);
+
+        Class c2 = ecstasy.collections.ListMap;
+        analyzeClass(c2);
+
+        Class c3 = Map<Int, String>;
+        analyzeClass(c3);
+
+        Class c4 = ecstasy.collections.ListMap<Date, Time>;
+        analyzeClass(c4);
+
+        Class c7 = ecstasy.collections.ListMap<Date, Time>.Entries;
+        analyzeClass(c7);
+
+        Map<Int, String> map = new ecstasy.collections.ListMap();
+        analyzeStructure(map);
+
+// TODO
+//        Boolean f = True;
+//        Class   c = True;
+//        Type    t = True;
+        }
+
+    void analyzeClass(Class clz)
+        {
+        console.println($"Analyzing: {clz}");
+        }
+
+
     void analyzeStructure(Object o)
         {
         console.println($"Analyzing: {o}");
@@ -437,6 +472,7 @@ module TestReflection.xqiz.it
             console.println($"Class={c}");
             console.println($"PublicType={c.PublicType}");
             console.println($"StructType={c.StructType}");
+            console.println($"formalTypes={c.formalTypes}");
 
             Type ts = c.StructType;
             for (val prop : ts.properties)
@@ -478,15 +514,14 @@ module TestReflection.xqiz.it
                 break;
 
             case Class:
-// TODO CP assert Class clz := type.fromClass();
-
+                assert Class clz := type.fromClass();
 //                Class.Composition cmp = clz.composition;
 //                while ((Annotation annotation, cmp) := cmp.deannotate())
 //                    {
 //                    // print out annotation
 //                    }
 //                cmp.template.name;
-                break;
+                return clz.name;
 
             case Property:
             case Child:

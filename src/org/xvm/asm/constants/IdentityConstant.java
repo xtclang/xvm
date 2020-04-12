@@ -616,6 +616,7 @@ public abstract class IdentityConstant
             {
             case Module:
             case Package:
+            case DecoratedClass:
                 type = getType();
                 break;
 

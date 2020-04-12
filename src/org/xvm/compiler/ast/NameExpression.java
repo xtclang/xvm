@@ -632,6 +632,7 @@ public class NameExpression
         // translate the raw argument into the appropriate contextual meaning
         TypeFit      fit      = TypeFit.NoFit;
         TypeConstant type     = planCodeGen(ctx, argRaw, atypeParams, typeRequired, errs);
+                     argRaw   = m_arg; // may have been modified by planCodeGen()
         Constant     constVal = null;
         if (type != null)
             {
@@ -1408,7 +1409,10 @@ public class NameExpression
                     {
                     break;
                     }
-                listTypes.add(typeParam);
+
+                // the typeParam comes back as "Type<String, Object>" instead of "String"; unwrap
+                assert typeParam.isTypeOfType() && typeParam.isParamsSpecified();
+                listTypes.add(typeParam.getParamType(0));
                 }
             return listTypes.toArray(new TypeConstant[cParams]);
             }
@@ -1999,8 +2003,18 @@ public class NameExpression
                             }
                         }
 
-                    m_plan = Plan.TypeOfClass;
-                    return type.getType();
+                    if (typeDesired != null && typeDesired.isA(pool.typeType()))
+                        {
+                        m_plan = Plan.TypeOfClass;
+                        return type.getType();
+                        }
+                    else
+                        {
+                        ClassConstant clz = pool.ensureClassConstant(type);
+                        m_plan = Plan.None;
+                        m_arg  = clz;
+                        return clz.getValueType(type);
+                        }
                     }
                 else
                     {
@@ -2259,6 +2273,7 @@ public class NameExpression
                     return Meaning.Class;
 
                 case Class:
+                case DecoratedClass:
                     return m_plan == Plan.TypeOfClass
                             ? Meaning.Type
                             : Meaning.Class;
