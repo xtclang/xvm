@@ -984,11 +984,9 @@ public class xRTFunction
         @Override
         public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
-            // hTarget is the service handle that is of no use for us now
-
             if (frame.f_context == f_ctx)
                 {
-                return super.call1(frame, null, ahVar, iReturn);
+                return super.call1(frame, hTarget, ahVar, iReturn);
                 }
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))
@@ -999,7 +997,7 @@ public class xRTFunction
             int cReturns = iReturn == Op.A_IGNORE ? 0 : 1;
 
             CompletableFuture<ObjectHandle> cfResult = f_ctx.sendInvoke1Request(
-                frame, this, null, ahVar, cReturns);
+                frame, this, hTarget, ahVar, cReturns);
 
             // in the case of zero returns - fire and forget
             return cReturns == 0 ? Op.R_NEXT : frame.assignFutureResult(iReturn, cfResult);
@@ -1008,11 +1006,9 @@ public class xRTFunction
         @Override
         public int callT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
-            // hTarget is the service handle that is of no use for us now
-
             if (frame.f_context == f_ctx)
                 {
-                return super.callT(frame, null, ahVar, iReturn);
+                return super.callT(frame, hTarget, ahVar, iReturn);
                 }
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))
@@ -1027,7 +1023,7 @@ public class xRTFunction
                 }
 
             CompletableFuture<ObjectHandle> cfResult = f_ctx.sendInvoke1Request(
-                    frame, this, null, ahVar, 1);
+                    frame, this, hTarget, ahVar, 1);
 
             return frame.assignFutureResult(iReturn, cfResult);
             }
@@ -1035,11 +1031,9 @@ public class xRTFunction
         @Override
         public int callN(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
             {
-            // hTarget is the service handle that is of no use for us now
-
             if (frame.f_context == f_ctx)
                 {
-                return super.callN(frame, null, ahVar, aiReturn);
+                return super.callN(frame, hTarget, ahVar, aiReturn);
                 }
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))
@@ -1050,7 +1044,7 @@ public class xRTFunction
             int cReturns = aiReturn.length;
 
             CompletableFuture<ObjectHandle[]> cfResult = f_ctx.sendInvokeNRequest(
-                frame, this, null, ahVar, cReturns);
+                frame, this, hTarget, ahVar, cReturns);
 
             if (cReturns == 0)
                 {

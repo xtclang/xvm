@@ -605,11 +605,11 @@ public class ServiceContext
      * @param cReturns 1, 0 or -1  for one, zero or tuple return
      */
     public CompletableFuture<ObjectHandle> sendInvoke1Request(Frame frameCaller,
-                FunctionHandle hFunction, ServiceHandle hService, ObjectHandle[] ahArg, int cReturns)
+            FunctionHandle hFunction, ObjectHandle hTarget, ObjectHandle[] ahArg, int cReturns)
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        addRequest(new Invoke1Request(frameCaller, hFunction, hService, ahArg, cReturns, future));
+        addRequest(new Invoke1Request(frameCaller, hFunction, hTarget, ahArg, cReturns, future));
 
         if (cReturns == 0)
             {
@@ -621,11 +621,11 @@ public class ServiceContext
 
     // send and asynchronous "invoke" message with multiple return values
     public CompletableFuture<ObjectHandle[]> sendInvokeNRequest(Frame frameCaller,
-                FunctionHandle hFunction, ServiceHandle hService, ObjectHandle[] ahArg, int cReturns)
+                FunctionHandle hFunction, ObjectHandle hTarget, ObjectHandle[] ahArg, int cReturns)
         {
         CompletableFuture<ObjectHandle[]> future = new CompletableFuture<>();
 
-        addRequest(new InvokeNRequest(frameCaller, hFunction, hService, ahArg, cReturns, future));
+        addRequest(new InvokeNRequest(frameCaller, hFunction, hTarget, ahArg, cReturns, future));
 
         if (cReturns == 0)
             {
@@ -957,19 +957,19 @@ public class ServiceContext
             extends Message
         {
         private final FunctionHandle                  f_hFunction;
-        private final ServiceHandle                   f_hService;
+        private final ObjectHandle                    f_hTarget;
         private final ObjectHandle[]                  f_ahArg;
         private final int                             f_cReturns;
         private final CompletableFuture<ObjectHandle> f_future;
 
         public Invoke1Request(Frame frameCaller, FunctionHandle hFunction,
-                              ServiceHandle hService, ObjectHandle[] ahArg, int cReturns,
+                              ObjectHandle hTarget, ObjectHandle[] ahArg, int cReturns,
                               CompletableFuture<ObjectHandle> future)
             {
             super(frameCaller);
 
             f_hFunction = hFunction;
-            f_hService  = hService;
+            f_hTarget   = hTarget;
             f_ahArg     = ahArg;
             f_cReturns  = cReturns;
             f_future    = future;
@@ -982,18 +982,16 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    ServiceHandle hService = f_hService == null ? context.getService() : f_hService;
-
                     switch (f_cReturns)
                         {
                         case -1:
-                            return f_hFunction.callT(frame, hService, f_ahArg, 0);
+                            return f_hFunction.callT(frame, f_hTarget, f_ahArg, 0);
 
                         case 0:
-                            return f_hFunction.call1(frame, hService, f_ahArg, A_IGNORE);
+                            return f_hFunction.call1(frame, f_hTarget, f_ahArg, A_IGNORE);
 
                         case 1:
-                            return f_hFunction.call1(frame, hService, f_ahArg, 0);
+                            return f_hFunction.call1(frame, f_hTarget, f_ahArg, 0);
 
                         default:
                             throw new IllegalStateException();
@@ -1023,19 +1021,19 @@ public class ServiceContext
             extends Message
         {
         private final FunctionHandle                    f_hFunction;
-        private final ObjectHandle                      f_hService;
+        private final ObjectHandle                      f_hTarget;
         private final ObjectHandle[]                    f_ahArg;
         private final int                               f_cReturns;
         private final CompletableFuture<ObjectHandle[]> f_future;
 
         public InvokeNRequest(Frame frameCaller, FunctionHandle hFunction,
-                              ServiceHandle hService, ObjectHandle[] ahArg, int cReturns,
+                              ObjectHandle hTarget, ObjectHandle[] ahArg, int cReturns,
                               CompletableFuture<ObjectHandle[]> future)
             {
             super(frameCaller);
 
             f_hFunction = hFunction;
-            f_hService  = hService;
+            f_hTarget   = hTarget;
             f_ahArg     = ahArg;
             f_cReturns  = cReturns;
             f_future    = future;
@@ -1055,9 +1053,7 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    return f_hFunction.callN(frame,
-                        f_hService == null ? context.getService() : f_hService,
-                        f_ahArg, aiReturn);
+                    return f_hFunction.callN(frame, f_hTarget, f_ahArg, aiReturn);
                     }
 
                 public String toString()
