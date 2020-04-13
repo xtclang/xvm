@@ -1,4 +1,4 @@
-module TestInnerOuter.xqiz.it
+module TestInnerOuter
     {
     @Inject ecstasy.io.Console console;
 

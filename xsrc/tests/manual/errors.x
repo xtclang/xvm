@@ -1,4 +1,4 @@
-module TestCompilerErrors.xqiz.it
+module TestCompilerErrors
     {
     // arrays
     void testAOOB1()

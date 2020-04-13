@@ -1,4 +1,4 @@
-module TestGenerics.xqiz.it
+module TestGenerics
     {
     @Inject ecstasy.io.Console console;
 

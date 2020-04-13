@@ -1,4 +1,4 @@
-module TestDefAsn.xqiz.it
+module TestDefAsn
     {
     @Inject ecstasy.io.Console console;
 

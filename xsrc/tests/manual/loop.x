@@ -1,4 +1,4 @@
-module TestLoops.xqiz.it
+module TestLoops
     {
     @Inject ecstasy.io.Console console;
 

@@ -1,4 +1,4 @@
-module TestArray.xqiz.it
+module TestArray
     {
     @Inject ecstasy.io.Console console;
 

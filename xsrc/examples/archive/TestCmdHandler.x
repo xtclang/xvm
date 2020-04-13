@@ -1,4 +1,4 @@
-@CmdLine module TestCmdHandler.xqiz.it
+@CmdLine module TestCmdHandler
     {
     @Handler
     static service CmdHandler

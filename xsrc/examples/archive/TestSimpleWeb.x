@@ -1,4 +1,4 @@
-module TestSimpleWeb.xqiz.it
+module TestSimpleWeb
         incorporates WebApp
     {
     @Path("/")

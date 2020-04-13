@@ -1,4 +1,4 @@
-module TestMaps.xqiz.it
+module TestMaps
     {
     import ecstasy.collections.HashMap;
     import ecstasy.collections.ListMap;

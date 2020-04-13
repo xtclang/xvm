@@ -1,4 +1,4 @@
-module TestSimple.xqiz.it
+module TestSimple
     {
     @Inject Console console;
 

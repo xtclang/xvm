@@ -1,4 +1,4 @@
-module TestQueues.xqiz.it
+module TestQueues
     {
     import ecstasy.collections.ArrayDeque;
     import ecstasy.collections.CircularArray;

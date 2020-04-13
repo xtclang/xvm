@@ -1,4 +1,4 @@
-module TestTry.xqiz.it
+module TestTry
     {
     @Inject ecstasy.io.Console console;
 

@@ -1,4 +1,4 @@
-module TestAnnotations.xqiz.it
+module TestAnnotations
     {
     @Inject ecstasy.io.Console console;
 

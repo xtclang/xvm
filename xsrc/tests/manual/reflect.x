@@ -1,4 +1,4 @@
-module TestReflection.xqiz.it
+module TestReflection
     {
     import ecstasy.reflect.TypeTemplate;
 

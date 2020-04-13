@@ -1,4 +1,4 @@
-module TestProps.xqiz.it
+module TestProps
     {
     @Inject Console console;
     @Inject Clock   clock;

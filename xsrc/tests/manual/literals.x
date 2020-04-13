@@ -1,4 +1,4 @@
-module TestLiterals.xqiz.it
+module TestLiterals
     {
     import ecstasy.rt.Version;
 

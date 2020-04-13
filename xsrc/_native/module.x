@@ -1,3 +1,3 @@
-module _native.xqiz.it
+module _native
     {
     }

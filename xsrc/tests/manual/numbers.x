@@ -1,4 +1,4 @@
-module TestNumbers.xqiz.it
+module TestNumbers
     {
     import ecstasy.numbers.Int8;
     import ecstasy.numbers.Int128;

@@ -1,7 +1,7 @@
 /**
  * This is an entire module in a file.
  */
-module MyApp.xqiz.it
+module MyApp
     {
     package ecstasy import Ecstasy.xtclang.org v:"1.2.3";
 //          avoid v:"1.0.3"

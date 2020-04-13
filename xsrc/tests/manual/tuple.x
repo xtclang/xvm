@@ -1,4 +1,4 @@
-module TestTuples.xqiz.it
+module TestTuples
     {
     @Inject ecstasy.io.Console console;
 

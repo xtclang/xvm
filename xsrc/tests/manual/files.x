@@ -1,4 +1,4 @@
-module TestFiles.xqiz.it
+module TestFiles
     {
     import ecstasy.fs.Directory;
     import ecstasy.fs.File;
