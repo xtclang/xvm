@@ -18,6 +18,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.LinkedIterator;
 
@@ -179,7 +180,11 @@ public class FileStructure
         moduleClone.registerConstants(pool);
         moduleClone.registerChildrenConstants(pool);
 
-        pool.setNakedRefType(module.getConstantPool().getNakedRefType());
+        TypeConstant typeNakedRef = module.getConstantPool().getNakedRefType();
+        if (typeNakedRef != null)
+            {
+            pool.setNakedRefType(typeNakedRef);
+            }
         }
 
 
