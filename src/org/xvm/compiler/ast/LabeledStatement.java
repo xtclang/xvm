@@ -99,6 +99,8 @@ public class LabeledStatement
             stmt = stmtNew;
             }
 
+        ctx.unregisterVar(label);
+
         return this;
         }
 

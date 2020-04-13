@@ -418,12 +418,12 @@ class Array<Element>
 
         if (convert)
             {
-            loop2: for (Element element : this) // TODO CP - loop not loop2
+            loop: for (Element element : this)
                 {
                 if (!element.is(immutable Object))
                     {
                     assert element.is(ImmutableAble);
-                    this[loop2.count] = element.ensureImmutable(True);
+                    this[loop.count] = element.ensureImmutable(True);
                     }
                 }
             }

@@ -654,6 +654,13 @@ public class StatementBlock
             }
 
         @Override
+        public void unregisterVar(Token tokName)
+            {
+            checkValidating();
+            throw new IllegalStateException();
+            }
+
+        @Override
         public boolean isVarDeclaredInThisScope(String sName)
             {
             Argument arg = getNameMap().get(sName);

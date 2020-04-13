@@ -90,27 +90,26 @@ module TestMaps.xqiz.it
             {
             console.println($"[{loop.count}]:{key}={map[key]}");
             }
-        // TODO CP "loop" should cease to exist in the context at this point
 
         // same thing, but using "$" syntax
         console.println($"keys:{{L: for (val v : map.keys) {$.add($"\n[{L.count}]={v}");} return;}}");
 
         console.println("values:");
-        loop2: for (String value : map.values)
+        loop: for (String value : map.values)
             {
-            console.println($"[{loop2.count}]:{value}");
+            console.println($"[{loop.count}]:{value}");
             }
 
         console.println("entries:");
-        loop3: for (Map<String,String>.Entry entry : map.entries)
+        loop: for (Map<String,String>.Entry entry : map.entries)
             {
-            console.println($"[{loop3.count}]:{entry.key}={entry.value}");
+            console.println($"[{loop.count}]:{entry.key}={entry.value}");
             }
 
         console.println("key-entries:");
-        loop4: for (Map<String, String>.Entry entry : new KeyEntries<String, String>(map))
+        loop: for (Map<String, String>.Entry entry : new KeyEntries<String, String>(map))
             {
-            console.println($"[{loop4.count}]:{entry}");
+            console.println($"[{loop.count}]:{entry}");
             }
         }
 

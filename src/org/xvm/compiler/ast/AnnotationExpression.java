@@ -499,6 +499,12 @@ public class AnnotationExpression
             }
 
         @Override
+        public void unregisterVar(Token tokName)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
         public boolean isVarDeclaredInThisScope(String sName)
             {
             return false;

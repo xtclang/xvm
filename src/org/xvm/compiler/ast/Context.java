@@ -641,6 +641,13 @@ public class Context
                                                                   : Assignment.Unassigned);
         }
 
+    public void unregisterVar(Token tokName)
+        {
+        String sName = tokName.getValueText();
+        ensureNameMap().remove(sName);
+        ensureDefiniteAssignments().remove(sName);
+        }
+
     /**
      * See if the specified name declares an argument within this context.
      *
@@ -2413,6 +2420,12 @@ public class Context
         public void registerVar(Token tokName, Register reg, ErrorListener errs)
             {
             getOuterContext().registerVar(tokName, reg, errs);
+            }
+
+        @Override
+        public void unregisterVar(Token tokName)
+            {
+            getOuterContext().unregisterVar(tokName);
             }
 
         @Override
