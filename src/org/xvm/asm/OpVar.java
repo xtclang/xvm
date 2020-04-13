@@ -5,7 +5,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.ServiceContext;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -75,6 +78,51 @@ public abstract class OpVar
     protected String getName(Constant[] aconst)
         {
         return null;
+        }
+
+    /**
+     * @return the variable name based on any of the present information
+     */
+    protected String getName(Constant[] aconst, StringConstant constName, int nNameId)
+        {
+        if (constName != null)
+            {
+            return constName.getValue();
+            }
+
+        if (aconst != null)
+            {
+            return ((StringConstant) aconst[convertId(nNameId)]).getValue();
+            }
+
+        // we cannot use Argument.toIdString(), since it returns a quoted string
+        try
+            {
+            if (nNameId <= Op.CONSTANT_OFFSET)
+                {
+                ServiceContext context = ServiceContext.getCurrentContext();
+                if (context != null)
+                    {
+                    return ((StringConstant) context.getCurrentFrame().
+                            localConstants()[convertId(nNameId)]).getValue();
+                    }
+                }
+            }
+        catch (Throwable e) {}
+
+        return "?";
+        }
+
+    /**
+     * @param aconst  (optional) an array of constants to retrieve constants by index from
+     *
+     * @return the variable type
+     */
+    protected TypeConstant getType(Constant[] aconst)
+        {
+        return m_reg == null
+                ? (TypeConstant) aconst[convertId(m_nType)]
+                : m_reg.getType();
         }
 
     /**

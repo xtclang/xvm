@@ -95,10 +95,13 @@ public class Var_DN
 
             iRet = ((VarSupport) clz.getSupport()).introduceRef(frame, clz, sName, m_nVar);
 
-            if (iRet == Op.R_NEXT && frame.f_ahVar[m_nVar] instanceof InjectedHandle)
+            if (iRet == Op.R_NEXT)
                 {
-                m_ref = hRef;
-                iRet  = iPC + 1;
+                if (frame.f_ahVar[m_nVar] instanceof InjectedHandle)
+                    {
+                    m_ref = (InjectedHandle) frame.f_ahVar[m_nVar];
+                    }
+                iRet = iPC + 1;
                 }
             }
         else
@@ -120,7 +123,7 @@ public class Var_DN
     @Override
     public String getName(Constant[] aconst)
         {
-        return Argument.toIdString(m_constName, m_nNameId, null);
+        return getName(aconst, m_constName, m_nNameId);
         }
 
     private int m_nNameId;
