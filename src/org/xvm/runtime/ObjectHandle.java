@@ -37,6 +37,12 @@ public abstract class ObjectHandle
     public static final ObjectHandle DEFAULT = new ObjectHandle(null)
         {
         @Override
+        public TypeConstant getType()
+            {
+            return null;
+            }
+
+        @Override
         public String toString()
             {
             return "<default>";
