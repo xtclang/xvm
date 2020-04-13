@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
@@ -24,12 +25,13 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.SingletonConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.Op.Prefix;
-
 import org.xvm.asm.op.Nop;
+import org.xvm.asm.op.Var_DN;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Utils;
@@ -1400,6 +1402,53 @@ public class MethodStructure
         that.m_structFinally = null;
 
         return that;
+        }
+
+    @Override
+    public void collectInjections(Set<InjectionKey> setInjections)
+        {
+        Constant[] aconst = m_aconstLocal;
+        if (aconst == null)
+            {
+            return;
+            }
+
+        for (Constant constant : aconst)
+            {
+            if (constant instanceof AnnotatedTypeConstant)
+                {
+                AnnotatedTypeConstant typeAnno = (AnnotatedTypeConstant) constant;
+                IdentityConstant      idAnno   = typeAnno.getAnnotationClass();
+
+                if (idAnno.equals(idAnno.getConstantPool().clzInject()))
+                    {
+                    Constant[] aconstParam = typeAnno.getAnnotationParams();
+                    if (aconstParam.length > 0)
+                        {
+                        StringConstant constName = (StringConstant) aconstParam[0];
+                        setInjections.add(new InjectionKey(constName.getValueString(), typeAnno));
+                        }
+                    else if (hasCode())
+                        {
+                        for (Op op : ensureCode().getAssembledOps())
+                            {
+                            if (op instanceof Var_DN)
+                                {
+                                Var_DN opVar = (Var_DN) op;
+
+                                TypeConstant typeVar = opVar.getType(aconst);
+                                if (typeVar.equals(typeAnno))
+                                    {
+                                    String sName = opVar.getName(aconst);
+                                    setInjections.add(new InjectionKey(sName, typeAnno.getParamType(0)));
+                                    break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
 

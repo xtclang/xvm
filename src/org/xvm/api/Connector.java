@@ -7,8 +7,12 @@ import java.util.List;
 
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.FileRepository;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
+import org.xvm.asm.ModuleStructure;
+
+import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.runtime.CoreContainer;
 import org.xvm.runtime.ObjectHandle;
@@ -88,7 +92,17 @@ public class Connector
             throw new IllegalStateException("Connector is already activated");
             }
 
-        m_container = new CoreContainer(f_runtime, sAppName, m_repository, f_templates, f_heapGlobal);
+        ModuleStructure moduleApp = m_repository.loadModule(sAppName);
+        if (moduleApp == null)
+            {
+            throw new IllegalStateException("Unable to load module \"" + sAppName + "\"");
+            }
+
+        FileStructure  structApp = f_templates.createFileStructure(moduleApp);
+        ModuleConstant idApp     = (ModuleConstant) structApp.
+                getChild(moduleApp.getName()).getIdentityConstant();
+
+        m_container = new CoreContainer(f_runtime, f_templates, f_heapGlobal, idApp);
         }
 
     /**

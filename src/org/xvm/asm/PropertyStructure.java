@@ -10,12 +10,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.util.Handy.readIndex;
@@ -622,6 +624,28 @@ public class PropertyStructure
                 ? Collections.emptyIterator()
                 : list.iterator();
         }
+
+    @Override
+    public void collectInjections(Set<InjectionKey> setInjections)
+        {
+        TypeConstant type = getType();
+        if (isRefAnnotated())
+            {
+            Annotation[] annos  = getRefAnnotations();
+            Constant     idAnno = annos[0].getAnnotationClass();
+            if (idAnno.equals(getConstantPool().clzInject()))
+                {
+                String     sName       = getName();
+                Constant[] aconstParam = annos[0].getParams();
+                if (aconstParam.length > 0)
+                    {
+                    sName = ((StringConstant) aconstParam[0]).getValue();
+                    }
+                setInjections.add(new InjectionKey(sName, type));
+                }
+            }
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

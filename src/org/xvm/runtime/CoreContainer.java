@@ -5,28 +5,25 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.FileStructure;
+import org.xvm.asm.InjectionKey;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.ModuleRepository;
-import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
+import org.xvm.runtime.template._native.mgmt.xLinker;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
+
 import org.xvm.runtime.template._native.xLocalClock;
 import org.xvm.runtime.template._native.xNanosTimer;
 import org.xvm.runtime.template._native.xTerminalConsole;
-
-import org.xvm.runtime.template.xService;
 
 
 /**
@@ -35,21 +32,10 @@ import org.xvm.runtime.template.xService;
 public class CoreContainer
         extends Container
     {
-    public CoreContainer(Runtime runtime, String sAppName, ModuleRepository repository,
-                         TemplateRegistry templates, ObjectHeap heapGlobal)
+    public CoreContainer(Runtime runtime, TemplateRegistry templates, ObjectHeap heapGlobal,
+                         ModuleConstant idModule)
         {
-        super(runtime, sAppName, templates, heapGlobal);
-
-        ModuleStructure moduleApp = repository.loadModule(sAppName);
-        if (moduleApp == null)
-            {
-            throw new IllegalStateException("Unable to load module \"" + sAppName + "\"");
-            }
-
-        FileStructure container = templates.getFileStructure();
-        container.merge(moduleApp);
-
-        m_idModule = (ModuleConstant) container.getChild(moduleApp.getName()).getIdentityConstant();
+        super(runtime, templates, heapGlobal, idModule);
         }
 
     public void start()
@@ -59,46 +45,20 @@ public class CoreContainer
             throw new IllegalStateException("Already started");
             }
 
+        ensureServiceContext();
+
         ConstantPool pool = m_idModule.getConstantPool();
-        ConstantPool.setCurrentPool(pool);
-
-        m_contextMain = createServiceContext(m_idModule.getName(), pool);
-        xService.INSTANCE.createServiceHandle(m_contextMain,
-            xService.INSTANCE.getCanonicalClass(),
-            xService.INSTANCE.getCanonicalType());
-
-        initResources();
-
-        ConstantPool.setCurrentPool(null);
+        try (var x = ConstantPool.withPool(pool))
+            {
+            initResources(pool);
+            }
         }
 
     public void invoke0(String sMethodName, ObjectHandle... ahArg)
         {
-        ConstantPool poolPrev = ConstantPool.getCurrentPool();
-        ConstantPool.setCurrentPool(m_idModule.getConstantPool());
-
-        try
+        try (var x = ConstantPool.withPool(m_idModule.getConstantPool()))
             {
-            TypeInfo infoApp = m_idModule.getType().ensureTypeInfo();
-            int cArgs = ahArg == null ? 0 : ahArg.length;
-
-            TypeConstant[] atypeArg;
-            if (cArgs == 0)
-                {
-                atypeArg = TypeConstant.NO_TYPES;
-                }
-            else
-                {
-                atypeArg = new TypeConstant[cArgs];
-                for (int i = 0; i < cArgs; i++)
-                    {
-                    atypeArg[i] = ahArg[i].getType();
-                    }
-                }
-
-            MethodConstant idMethod = infoApp.findCallable(sMethodName, true, false,
-                TypeConstant.NO_TYPES, atypeArg, null);
-
+            MethodConstant idMethod = findModuleMethod(sMethodName, ahArg);
             if (idMethod == null)
                 {
                 System.err.println("Missing: " +  sMethodName + " method for " + m_idModule.getValueString());
@@ -133,16 +93,12 @@ public class CoreContainer
             {
             throw new RuntimeException("failed to run: " + m_idModule, e);
             }
-        finally
-            {
-            ConstantPool.setCurrentPool(poolPrev);
-            }
         }
 
-    protected void initResources()
+    protected void initResources(ConstantPool pool)
         {
         // +++ LocalClock
-        TypeConstant typeClock = f_templates.getTemplate("Clock").getCanonicalType();
+        TypeConstant typeClock = pool.ensureEcstasyTypeConstant("Clock");
 
         f_mapResources.put(new InjectionKey("clock"     , typeClock), this::ensureDefaultClock);
         f_mapResources.put(new InjectionKey("localClock", typeClock), this::ensureLocalClock);
@@ -152,11 +108,11 @@ public class CoreContainer
         xNanosTimer templateRTTimer = (xNanosTimer) f_templates.getTemplate("_native.NanosTimer");
         if (templateRTTimer != null)
             {
-            TypeConstant typeTimer = f_templates.getTemplate("Timer").getCanonicalType();
+            TypeConstant typeTimer = pool.ensureEcstasyTypeConstant("Timer");
 
             Function<Frame, ObjectHandle> supplierTimer = (frame) ->
                 templateRTTimer.createServiceHandle(
-                    createServiceContext("Timer", m_idModule.getConstantPool()),
+                    createServiceContext("Timer"),
                     templateRTTimer.getCanonicalClass(), typeTimer);
             f_mapResources.put(new InjectionKey("timer", typeTimer), supplierTimer);
             }
@@ -165,25 +121,29 @@ public class CoreContainer
         xTerminalConsole templateRTConsole = (xTerminalConsole) f_templates.getTemplate("_native.TerminalConsole");
         if (templateRTConsole != null)
             {
-            TypeConstant typeConsole = f_templates.getTemplate("io.Console").getCanonicalType();
+            TypeConstant typeConsole = pool.ensureEcstasyTypeConstant("io.Console");
 
             Function<Frame, ObjectHandle> supplierConsole = (frame) ->
                 templateRTConsole.createServiceHandle(
-                    createServiceContext("Console", m_idModule.getConstantPool()),
+                    createServiceContext("Console"),
                     templateRTConsole.getCanonicalClass(), typeConsole);
 
             f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
             }
 
         // +++ OSFileStore etc.
-        TypeConstant typeFileStore = f_templates.getTemplate("fs.FileStore").getCanonicalType();
-        TypeConstant typeDirectory = f_templates.getTemplate("fs.Directory").getCanonicalType();
+        TypeConstant typeFileStore = pool.ensureEcstasyTypeConstant("fs.FileStore");
+        TypeConstant typeDirectory = pool.ensureEcstasyTypeConstant("fs.Directory");
 
         f_mapResources.put(new InjectionKey("storage", typeFileStore), this::ensureFileStore);
         f_mapResources.put(new InjectionKey("rootDir", typeDirectory), this::ensureRootDir);
         f_mapResources.put(new InjectionKey("homeDir", typeDirectory), this::ensureHomeDir);
         f_mapResources.put(new InjectionKey("curDir" , typeDirectory), this::ensureCurDir);
         f_mapResources.put(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
+
+        // +++ Linker
+        TypeConstant typeLinker = pool.ensureEcstasyTypeConstant("mgmt.Container.Linker");
+        f_mapResources.put(new InjectionKey("linker" , typeLinker), this::ensureLinker);
         }
 
     protected ObjectHandle ensureDefaultClock(Frame frame)
@@ -200,9 +160,9 @@ public class CoreContainer
             xLocalClock templateRTClock = (xLocalClock) f_templates.getTemplate("_native.LocalClock");
             if (templateRTClock != null)
                 {
-                TypeConstant typeClock = f_templates.getTemplate("Clock").getCanonicalType();
+                TypeConstant typeClock = frame.poolContext().ensureEcstasyTypeConstant("Clock");
                 m_hLocalClock = hClock = templateRTClock.createServiceHandle(
-                    createServiceContext("LocalClock", m_idModule.getConstantPool()),
+                    createServiceContext("LocalClock"),
                     templateRTClock.getCanonicalClass(), typeClock);
                 }
             }
@@ -350,6 +310,24 @@ public class CoreContainer
         return hDir;
         }
 
+    protected ObjectHandle ensureLinker(Frame frame)
+        {
+        ObjectHandle hLinker = m_hLinker;
+        if (hLinker == null)
+            {
+            xLinker templateRTLinker = (xLinker) f_templates.getTemplate("_native.mgmt.Linker");
+            if (templateRTLinker != null)
+                {
+                TypeConstant typeLinker = frame.poolContext().ensureEcstasyTypeConstant("mgmt.Container.Linker");
+                m_hLinker = hLinker = templateRTLinker.createServiceHandle(
+                    createServiceContext("Linker"),
+                    templateRTLinker.getCanonicalClass(), typeLinker);
+                }
+            }
+
+        return hLinker;
+        }
+
     /**
      * Helper method to get a property on the specified target.
      */
@@ -418,4 +396,5 @@ public class CoreContainer
     private ObjectHandle m_hHomeDir;
     private ObjectHandle m_hCurDir;
     private ObjectHandle m_hTmpDir;
+    private ObjectHandle m_hLinker;
     }

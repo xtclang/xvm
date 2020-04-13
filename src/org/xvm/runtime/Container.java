@@ -3,19 +3,23 @@ package org.xvm.runtime;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 import java.util.concurrent.atomic.AtomicLong;
 
 import java.util.function.Function;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.InjectionKey;
 import org.xvm.asm.LinkerContext;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
+
+import org.xvm.runtime.template.xService;
 
 
 /**
@@ -24,12 +28,45 @@ import org.xvm.asm.constants.VersionConstant;
 public abstract class Container
         implements LinkerContext
     {
-    protected Container(Runtime runtime, String sAppName,
-                        TemplateRegistry templates, ObjectHeap heapGlobal)
+    protected Container(Runtime runtime, TemplateRegistry templates, ObjectHeap heapGlobal,
+                        ModuleConstant idModule)
         {
         f_runtime    = runtime;
         f_templates  = templates;
         f_heapGlobal = heapGlobal;
+        m_idModule   = idModule;
+        }
+
+    /**
+     * Ensure the existence of the "main" service context for this Container.
+     */
+    public void ensureServiceContext()
+        {
+        if (m_contextMain == null)
+            {
+            ConstantPool pool = m_idModule.getConstantPool();
+
+            try (var x = ConstantPool.withPool(pool))
+                {
+                m_contextMain = createServiceContext(m_idModule.getName());
+                xService.INSTANCE.createServiceHandle(m_contextMain,
+                    xService.INSTANCE.getCanonicalClass(),
+                    xService.INSTANCE.getCanonicalType());
+                }
+            }
+        }
+
+    /**
+     * Create a new service context for this Container.
+     *
+     * @param sName  the service name
+     *
+     * @return the new service context
+     */
+    public ServiceContext createServiceContext(String sName)
+        {
+        return new ServiceContext(this, m_idModule.getConstantPool(),
+                sName, f_runtime.f_idProducer.getAndIncrement());
         }
 
     /**
@@ -59,10 +96,35 @@ public abstract class Container
             });
         }
 
-    public ServiceContext createServiceContext(String sName, ConstantPool pool)
+    /**
+     * Find a module method to call.
+     *
+     * @param sMethod  the name
+     * @param ahArg    the arguments to pass to the method
+     *
+     * @return the method constant or null if not found
+     */
+    public MethodConstant findModuleMethod(String sMethod, ObjectHandle[] ahArg)
         {
-        return new ServiceContext(this, pool, sName,
-            f_runtime.f_idProducer.getAndIncrement());
+        TypeInfo infoModule = getModule().getType().ensureTypeInfo();
+
+        TypeConstant[] atypeArg;
+        if (ahArg.length == 0)
+            {
+            atypeArg = TypeConstant.NO_TYPES;
+            }
+        else
+            {
+            int cArgs = ahArg.length;
+
+            atypeArg = new TypeConstant[cArgs];
+            for (int i = 0; i < cArgs; i++)
+                {
+                atypeArg[i] = ahArg[i].getType(); // could be null for DEFAULT values
+                }
+            }
+
+        return infoModule.findCallable(sMethod, true, false, TypeConstant.NO_TYPES, atypeArg, null);
         }
 
     /**
@@ -82,6 +144,11 @@ public abstract class Container
             f_mapResources.get(new InjectionKey(sName, type));
 
         return fnResource == null ? null : fnResource.apply(frame);
+        }
+
+    public ModuleConstant getModule()
+        {
+        return m_idModule;
         }
 
     public ServiceContext getMainContext()
@@ -142,52 +209,6 @@ public abstract class Container
         {
         // TODO
         return true;
-        }
-
-
-    // ----- inner class: InjectionKey -------------------------------------------------------------
-
-    public static class InjectionKey
-        {
-        public final TypeConstant f_type;
-        public final String       f_sName;
-
-        public InjectionKey(String sName, TypeConstant type)
-            {
-            f_sName = sName;
-            f_type = type;
-            }
-
-        @Override
-        public boolean equals(Object o)
-            {
-            if (this == o)
-                {
-                return true;
-                }
-
-            if (!(o instanceof InjectionKey))
-                {
-                return false;
-                }
-
-            InjectionKey that = (InjectionKey) o;
-
-            return Objects.equals(this.f_sName, that.f_sName) &&
-                   Objects.equals(this.f_type,  that.f_type);
-            }
-
-        @Override
-        public int hashCode()
-            {
-            return f_sName.hashCode() + f_type.hashCode();
-            }
-
-        @Override
-        public String toString()
-            {
-            return "Key: " + f_sName + ", " + f_type.getValueString();
-            }
         }
 
 

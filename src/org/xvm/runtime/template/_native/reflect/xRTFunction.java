@@ -875,6 +875,21 @@ public class xRTFunction
             assert method.isNative();
             }
 
+        /**
+         * Obtain a target handle to invoke this function for when the control is passed to the
+         * service context.
+         *
+         * @param frame     the current frame
+         * @param hService  the service for which the initial async method call was created for
+         *
+         * @return an ObjectHandle for the target (may be deferred)
+         */
+        protected ObjectHandle getContextTarget(Frame frame, ServiceHandle hService)
+            {
+            return hService;
+            }
+
+
         // ----- FunctionHandle interface ----------------------------------------------------------
 
         @Override
@@ -890,6 +905,14 @@ public class xRTFunction
 
             if (frame.f_context == hService.f_context)
                 {
+                hTarget = getContextTarget(frame, hService);
+                if (Op.isDeferred(hTarget))
+                    {
+                    ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
+                        Frame.Continuation stepNext = frameCaller ->
+                            super.call1Impl(frame, ahTarget[0], ahVar, iReturn);
+                        return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
+                    }
                 return super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
 
@@ -914,6 +937,14 @@ public class xRTFunction
 
             if (frame.f_context == hService.f_context)
                 {
+                hTarget = getContextTarget(frame, hService);
+                if (Op.isDeferred(hTarget))
+                    {
+                    ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
+                        Frame.Continuation stepNext = frameCaller ->
+                            super.callTImpl(frame, ahTarget[0], ahVar, iReturn);
+                        return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
+                    }
                 return super.callTImpl(frame, hTarget, ahVar, iReturn);
                 }
 
@@ -935,6 +966,14 @@ public class xRTFunction
 
             if (frame.f_context == hService.f_context)
                 {
+                hTarget = getContextTarget(frame, hService);
+                if (Op.isDeferred(hTarget))
+                    {
+                    ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
+                        Frame.Continuation stepNext = frameCaller ->
+                            super.callNImpl(frame, ahTarget[0], ahVar, aiReturn);
+                        return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
+                    }
                 return super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
 

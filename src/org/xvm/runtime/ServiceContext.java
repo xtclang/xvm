@@ -212,7 +212,7 @@ public class ServiceContext
 
     public ServiceContext createContext(String sName)
         {
-        return f_container.createServiceContext(sName, f_pool);
+        return f_container.createServiceContext(sName);
         }
 
     public ServiceHandle getService()
@@ -743,21 +743,29 @@ public class ServiceContext
                 if (hException == null)
                     {
                     hTuple = (TupleHandle) ahReturn[0];
-
-                    ahReturn = hTuple.m_ahValue;
-                    for (int i = 0, c = ahReturn.length; i < c; i++)
+                    if (hTuple == null)
                         {
-                        ObjectHandle hReturn = ahReturn[i];
-                        if (hReturn.isMutable() && !hReturn.isService())
+                        // indicates a "void" return
+                        hTuple = xTuple.H_VOID;
+                        }
+                    else
+                        {
+                        ahReturn = hTuple.m_ahValue;
+                        for (int i = 0, c = ahReturn.length; i < c; i++)
                             {
-                            hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
-                            if (hReturn == null)
+                            ObjectHandle hReturn = ahReturn[i];
+                            if (hReturn.isMutable() && !hReturn.isService())
                                 {
-                                hException = xException.mutableObject(frame);
-                                hTuple     = null;
-                                break;
+                                hReturn = hReturn.getTemplate().
+                                        createProxyHandle(frame.f_context, hReturn, null);
+                                if (hReturn == null)
+                                    {
+                                    hException = xException.mutableObject(frame);
+                                    hTuple     = null;
+                                    break;
+                                    }
+                                ahReturn[i] = hReturn;
                                 }
-                            ahReturn[i] = hReturn;
                             }
                         }
                     }

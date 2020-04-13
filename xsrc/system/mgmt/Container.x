@@ -1,8 +1,4 @@
-import collections.HashSet;
-import collections.Set;
-
-import fs.FileStore;
-import fs.Path;
+import reflect.ModuleTemplate;
 
 /**
  * The Container service.
@@ -12,47 +8,41 @@ import fs.Path;
  * 2. Lightweight container (all modules from the parent container are shared)
  *    - e.g. load some additional trusted code that you generated on the fly, Excel formula
  * 3. Debugger as a parent container
- *
  */
 service Container
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    /**
-     * Construct a container based on the specified repository.
-     */
-    construct(ModuleRepository repository)
+    construct(String moduleName, ModuleRepository repository,
+              ResourceProvider injector, Module[] sharedModules = [])
         {
-        this.repository = repository;
+        // validate the modules
+        // TODO
+
+        // make sure that the shared modules whatever ...
+        // TODO
+
+        // load and link the modules
+
+        @Inject Linker linker;
+        (TypeSystem typeSystem, ApplicationControl appControl) =
+                linker.loadAndLink(moduleName, repository, injector);
+
+        // store off the results
+        this.moduleName    = moduleName;
+        this.repository    = repository;
+        this.sharedModules = sharedModules;
+        this.typeSystem    = typeSystem;
+        this.appControl    = appControl;
         }
 
-    /**
-     * Construct a single module container.
-     */
-    construct(String moduleName, immutable Byte[] moduleBytes)
-        {
-        ModuleRepository simpleRepo = new ModuleRepository()
-            {
-            construct()
-                {
-                Set<String> names = new HashSet();
-                names.add(moduleName);
-                moduleNames = names.makeImmutable();
-                }
-
-            @Override
-            immutable Byte[] getModule(String name)
-                {
-                assert(name == moduleName);
-
-                return moduleBytes;
-                }
-            };
-
-        construct Container(simpleRepo);
-        }
 
     // ----- Container API -------------------------------------------------------------------------
+
+    /**
+     * The name of the underlying module.
+     */
+    public/private String moduleName;
 
     /**
      * The repository.
@@ -60,53 +50,66 @@ service Container
     public/private ModuleRepository repository;
 
     /**
-     * The resource provider.
+     * The shared modules.
      */
-    ResourceProvider provider;
+    public/private Module[] sharedModules;
 
     /**
-     * Load and verify the specified module.
+     * The TypeSystem for the underlying module.
      */
-    ApplicationControl loadModule(String name)
-        {
-        TODO - native
-        }
-
-    // ----- interfaces ----------------------------------------------------------------------------
+    public/private TypeSystem typeSystem;
 
     /**
-     * Represents the source of compiled module structures.
+     * The AppControl for the underlying module.
      */
-    interface ModuleRepository()
-        {
-        /**
-         * Set of domain names that are known by this repository.
-         */
-        @RO immutable Set<String> moduleNames;
-
-        /**
-         * Obtain a binary image of the specified module.
-         */
-        immutable Byte[] getModule(String name);
-        }
+    public/private ApplicationControl appControl;
 
     /**
-     * Represents the source of injected resources.
+     * The linker.
      */
-    interface ResourceProvider
+    static interface Linker
         {
         /**
-         * Obtain a resource for specified type and name. Most commonly, failure
-         * a provider to return a resource (throwing an exception) will fail to load or
-         * terminate the requesting container.
+         * Validate the content of the provided XTC structure and return the name of the primary
+         * module.
+         *
+         * REVIEW: this method will probably go away
+         * @throws an Exception if the bytes don't represent a valid module
          */
-        <Resource> Resource getResource(Type<Resource> type, String name);
+        String validate(Byte[] bytes);
+
+        /**
+         * Load and verify the specified module.
+         *
+         * @throws an Exception if the module cannot be loaded for any reason
+         */
+        (TypeSystem typeSystem, ApplicationControl) loadAndLink(String moduleName,
+                ModuleRepository repository, ResourceProvider injector, Module[] sharedModules = [])
+            {
+            return resolveAndLink(repository.getModule(moduleName), repository, injector, sharedModules);
+            }
+
+        /**
+         * Load and verify the specified module.
+         *
+         * @throws an Exception if the module cannot be loaded for any reason
+         */
+        (TypeSystem typeSystem, ApplicationControl) resolveAndLink(immutable Byte[] bytes,
+                ModuleRepository repository, ResourceProvider injector, Module[] sharedModules = []);
+
+        /**
+         * Link the provided modules together to form a type system.
+         *
+         * @throws an Exception if an error occurs attempting to link the provided modules together
+         */
+        (TypeSystem typeSystem, ApplicationControl) link(
+                (ModuleTemplate | Module)[] modules, ResourceProvider injector);
         }
 
     /**
      * Represents the container control facility.
      */
-    interface ApplicationControl
+    static interface ApplicationControl
         {
         /**
          * Add a constraint for the specified name. The names are conventionally well known, for
@@ -116,7 +119,7 @@ service Container
         void addConstraint(String name, Interval<Int> interval);
 
         /**
-         * Invoke the method with a given name and arguments.
+         * Invoke a module method with a given name and arguments.
          */
         Tuple invoke(String methodName, Tuple args);
 

@@ -177,11 +177,22 @@ public class TemplateRegistry
         f_mapTemplatesByType.putIfAbsent(type, template);
         }
 
+
     // ----- templates and structures --------------------------------------------------------------
 
-    public FileStructure getFileStructure()
+    /**
+     * Create a new FileStructure for the specified module built on top of the system modules.
+     *
+     * @param moduleApp  the module to build a FileStructure for
+     *
+     * @return a new FileStructure
+     */
+    public FileStructure createFileStructure(ModuleStructure moduleApp)
         {
-        return m_moduleSystem.getFileStructure();
+        FileStructure structApp = new FileStructure(m_moduleSystem);
+        structApp.merge(m_moduleNative);
+        structApp.merge(moduleApp);
+        return structApp;
         }
 
     // used only by the native templates

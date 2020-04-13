@@ -2174,6 +2174,16 @@ public abstract class Component
         return childThis;
         }
 
+    /**
+     * Collect all injections necessary for this component.
+     *
+     * @param setInjections  a set to add injection keys to
+     */
+    public void collectInjections(Set<InjectionKey> setInjections)
+        {
+        visitChildren(component -> component.collectInjections(setInjections), false, true);
+        }
+
 
     // ----- Documentable methods ------------------------------------------------------------------
 
