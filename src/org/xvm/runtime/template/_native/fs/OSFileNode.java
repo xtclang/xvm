@@ -49,14 +49,14 @@ public abstract class OSFileNode
         ClassTemplate templateOSDir  = f_templates.getTemplate("_native.fs.OSDirectory");
         ClassTemplate templateOSFile = f_templates.getTemplate("_native.fs.OSFile");
 
-        s_clzOSDir  = ensureClass(templateOSDir.getCanonicalType(),  templateDir.getCanonicalType());
-        s_clzOSFile = ensureClass(templateOSFile.getCanonicalType(), templateFile.getCanonicalType());
+        s_clzOSDir  = templateOSDir.ensureClass(templateDir.getCanonicalType());
+        s_clzOSFile = templateOSFile.ensureClass(templateFile.getCanonicalType());
 
         s_clzOSDirStruct  = s_clzOSDir.ensureAccess(Access.STRUCT);
         s_clzOSFileStruct = s_clzOSFile.ensureAccess(Access.STRUCT);
 
-        s_constructorDir  = s_clzOSDir.getTemplate().getStructure().findConstructor();
-        s_constructorFile = s_clzOSFile.getTemplate().getStructure().findConstructor();
+        s_constructorDir  = templateOSDir.getStructure().findConstructor();
+        s_constructorFile = templateOSFile.getStructure().findConstructor();
 
         markNativeProperty("store");
         markNativeProperty("pathString");
