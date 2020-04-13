@@ -308,7 +308,7 @@ public class TemplateRegistry
         return getTemplate(typeActual).ensureClass(typeActual.normalizeParameters());
         }
 
-    public static final String NATIVE_MODULE = "_native";
+    public static final String NATIVE_MODULE = "_native.xtclang.org";
     public static final String PREF_NATIVE   = "_native.";
     public static final int    PREF_LENGTH   = PREF_NATIVE.length();
 

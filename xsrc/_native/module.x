@@ -1,3 +1,3 @@
-module _native
+module _native.xtclang.org
     {
     }
