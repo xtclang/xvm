@@ -111,11 +111,6 @@ public class xRef
                 return actOnReferent(frame, hRef,
                     h -> frame.assignValue(iReturn, Identity.ensureIdentity(h)));
 
-            case "isService":
-                return actOnReferent(frame, hRef,
-                    h -> frame.assignValue(iReturn,
-                        xBoolean.makeHandle(h.getTemplate().isService())));
-
             case "isConst":
                 return actOnReferent(frame, hRef,
                     h -> frame.assignValue(iReturn,
