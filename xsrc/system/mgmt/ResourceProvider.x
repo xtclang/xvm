@@ -8,7 +8,7 @@ interface ResourceProvider
      * a provider to return a resource (throwing an exception) will fail to load or
      * terminate the requesting container.
      */
-    <Resource> Resource getResource(Type<Resource> type, String name);
+    Object getResource(Type type, String name);
 
     // --- alternative: split between static and dynamic resources ---
 

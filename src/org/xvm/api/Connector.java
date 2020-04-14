@@ -5,6 +5,7 @@ import java.io.IOException;
 
 import java.util.List;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.FileStructure;
@@ -103,6 +104,14 @@ public class Connector
                 getChild(moduleApp.getName()).getIdentityConstant();
 
         m_container = new CoreContainer(f_runtime, f_templates, f_heapGlobal, idApp);
+        }
+
+    /**
+     * Obtain the ConstantPool for the container associated with this Connector.
+     */
+    public ConstantPool getConstantPool()
+        {
+        return m_container.getModule().getConstantPool();
         }
 
     /**

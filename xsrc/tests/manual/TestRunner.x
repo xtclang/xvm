@@ -7,51 +7,62 @@ module TestRunner.xtclang.org
     import ecstasy.mgmt.InstantRepository;
     import ecstasy.mgmt.ResourceProvider;
 
-    @Inject Clock clock;
-    @Inject Console console;
+    @Inject Clock     clock;
+    @Inject Console   console;
+    @Inject Directory curDir;
+    @Inject Directory tmpDir;
 
-    void run()
+    void run(String[] modules=[])
         {
-        @Inject Directory curDir;
-
-        console.println($"Current directory is {curDir}");
-
-        while (true)
+        if (modules.empty)
             {
-            // console.print("Module path: ");
-            // String path = console.readLine(); // e.g. "tests/manual/TestSimple.xtc"
-            String path = "tests/manual/TestSimple.xtc";
-            if (path.size == 0)
+            console.println($"Current directory is {curDir}");
+            while (true)
                 {
-                break;
-                }
+                console.print("\nEnter module path: ");
 
-            if (File|Directory node := curDir.find(path))
-                {
-                if (node.is(File))
+                String path = console.readLine(); // e.g. "tests/manual/TestSimple.xtc"
+                if (path.size == 0)
                     {
-                    loadAndRun(node);
+                    break;
                     }
-                else
-                    {
-                    console.println($"'{path}' - not a file");
-                    }
+                loadAndRun(path);
                 }
-            else
+            }
+        else
+            {
+            for (Int i : [0..modules.size))
                 {
-                console.println($"'{path}' - not found");
+                loadAndRun(modules[i]);
                 }
-            break;
             }
         }
 
-    void loadAndRun(File fileXtc)
+    void loadAndRun(String path)
         {
+        File fileXtc;
+        if (File|Directory node := curDir.find(path))
+            {
+            if (node.is(File))
+                {
+                fileXtc = node;
+                }
+            else
+                {
+                console.println($"'{path}' - not a file");
+                return;
+                }
+            }
+        else
+            {
+            console.println($"'{path}' - not found");
+            return;
+            }
+
         immutable Byte[] bytes;
         try
             {
             bytes = fileXtc.contents;
-            console.println($"module={fileXtc}; size={bytes.size}");
             }
         catch (IOException e)
             {
@@ -59,10 +70,11 @@ module TestRunner.xtclang.org
             return;
             }
 
-        InstantRepository repo      = new InstantRepository(bytes);
-        Container         container = new Container(repo.moduleName, repo, new Injector());
+        InstantRepository repo = new InstantRepository(bytes);
 
-        console.println($"Invoking {repo.moduleName}.run()\n");
+        console.println($"\n++++++ Loading module: {repo.moduleName} +++++++\n");
+
+        Container container = new Container(repo.moduleName, repo, new Injector());
         container.appControl.invoke("run", Tuple:());
         }
 
@@ -70,16 +82,16 @@ module TestRunner.xtclang.org
             implements ResourceProvider
         {
         @Override
-        <Resource> Resource getResource(Type<Resource> type, String name)
+        Object getResource(Type type, String name)
             {
             Boolean wrongName = False;
 
-            switch (Resource)
+            switch (type)
                 {
                 case Console:
                     if (name == "console")
                         {
-                        return console.as(Resource);
+                        return console;
                         }
                     wrongName = True;
                     break;
@@ -87,9 +99,24 @@ module TestRunner.xtclang.org
                 case Clock:
                     if (name == "clock")
                         {
-                        return clock.as(Resource);
+                        return clock;
                         }
                     wrongName = True;
+                    break;
+
+                case Directory:
+                    switch (name)
+                        {
+                        case "tmpDir":
+                            return tmpDir;
+
+                        case "curDir":
+                            return curDir;
+
+                        default:
+                            wrongName = True;
+                            break;
+                        }
                     break;
                 }
 

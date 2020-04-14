@@ -56,7 +56,7 @@ public class xLinker
         {
         ClassStructure clz = (ClassStructure)
                 pool().ensureEcstasyClassConstant("mgmt.ResourceProvider").getComponent();
-        GET_RESOURCE = clz.findMethod("getResource", 3).getIdentityConstant().getSignature();
+        GET_RESOURCE = clz.findMethod("getResource", 2).getIdentityConstant().getSignature();
 
         markNativeMethod("validate", null, null);
         markNativeMethod("resolveAndLink", null, null);
@@ -165,8 +165,7 @@ public class xLinker
 
                 ObjectHandle[] ahArg = new ObjectHandle[3];
                 ahArg[0] = hType;
-                ahArg[1] = hType;
-                ahArg[2] = hName;
+                ahArg[1] = hName;
 
                 CallChain chain   = hProvider.getComposition().getMethodCallChain(GET_RESOURCE);
                 int       iResult = hProvider.getTemplate().invoke1(
