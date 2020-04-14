@@ -62,7 +62,7 @@ interface Collection<Element>
      */
     @RO Boolean empty.get()
         {
-        return size > 0;
+        return size == 0;
         }
 
     /**
