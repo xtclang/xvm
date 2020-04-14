@@ -63,6 +63,12 @@ public class TemplateRegistry
         ConstantPool pool = containerRoot.getConstantPool();
         ConstantPool.setCurrentPool(pool);
 
+        if (pool.getNakedRefType() == null)
+            {
+            ClassStructure clzNakedRef = (ClassStructure) m_moduleNative.getChild("NakedRef");
+            pool.setNakedRefType(clzNakedRef.getFormalType());
+            }
+
         Class clzObject = xObject.class;
         URL    url      = clzObject.getProtectionDomain().getCodeSource().getLocation();
         String sRoot    = url.getFile();

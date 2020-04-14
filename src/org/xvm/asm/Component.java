@@ -842,7 +842,7 @@ public abstract class Component
      * @param fSiblings   true to visit all siblings; false to visit only the eldest sibling
      * @param fRecursive  true to recursively visit the children of the children, and so on
      */
-    protected void visitChildren(Consumer<Component> visitor, boolean fSiblings, boolean fRecursive)
+    public void visitChildren(Consumer<Component> visitor, boolean fSiblings, boolean fRecursive)
         {
         for (Component component : children())
             {

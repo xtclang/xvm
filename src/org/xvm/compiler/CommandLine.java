@@ -135,13 +135,16 @@ public class CommandLine
         checkTerminalFailure();
         modules = mapSysModules;
 
-        boolean fRebuild = buildModules(mapSysModules, true, false);
+        boolean fRebuild = buildModules(mapSysModules, false);
 
-        Map<File, Node> mapModules = selectTargets(sources);
-        checkTerminalFailure();
-        modules.putAll(mapModules);
+        if (!sources.isEmpty())
+            {
+            Map<File, Node> mapModules = selectTargets(sources);
+            checkTerminalFailure();
+            modules.putAll(mapModules);
 
-        buildModules(mapModules, false, fRebuild);
+            buildModules(mapModules, fRebuild);
+            }
 
         return repoBuild;
         }
@@ -151,7 +154,7 @@ public class CommandLine
      *
      * @return true iff any of the modules were re-compiled
      */
-    protected boolean buildModules(Map<File, Node> mapModules, boolean fFromNative, boolean fRebuild)
+    protected boolean buildModules(Map<File, Node> mapModules, boolean fRebuild)
         {
         // parse the modules
         parseSource(mapModules);
