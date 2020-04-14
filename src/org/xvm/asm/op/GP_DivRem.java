@@ -142,11 +142,16 @@ public class GP_DivRem
     @Override
     public String toString()
         {
+        Argument argRet0 = m_aargReturn == null ? null : m_aargReturn[0];
+        Argument argRet1 = m_aargReturn == null ? null : m_aargReturn[1];
+        int      nRet0   = m_anRetValue == null ? 0    : m_anRetValue[0];
+        int      nRet1   = m_anRetValue == null ? 0    : m_anRetValue[1];
+
         return super.toString()
-                + ' '  + Argument.toIdString(m_argTarget    , m_nTarget)
-                + ", " + Argument.toIdString(m_argValue     , m_nArgValue)
-                + ", " + Argument.toIdString(m_aargReturn[0], m_anRetValue == null ? 0 : m_anRetValue[0])
-                + ", " + Argument.toIdString(m_aargReturn[1], m_anRetValue == null ? 0 : m_anRetValue[1]);
+                + ' '  + Argument.toIdString(m_argTarget, m_nTarget)
+                + ", " + Argument.toIdString(m_argValue , m_nArgValue)
+                + ", " + Argument.toIdString(argRet0    , nRet0)
+                + ", " + Argument.toIdString(argRet1    , nRet1);
         }
 
     protected int   m_nTarget;
