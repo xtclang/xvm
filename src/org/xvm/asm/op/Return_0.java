@@ -43,7 +43,7 @@ public class Return_0
         {
         return m_fCallFinally
             ? frame.processAllGuard(new Return0Action(m_ixAllGuard))
-            : R_RETURN;
+            : frame.returnVoid();
         }
 
     protected static class Return0Action
@@ -57,7 +57,7 @@ public class Return_0
         @Override
         public int complete(Frame frame)
             {
-            return R_RETURN;
+            return frame.returnVoid();
             }
         }
 

@@ -809,6 +809,26 @@ public class Frame
         }
 
     /**
+     * Process a void return.
+     *
+     * @return R_RETURN or R_RETURN_EXCEPTION
+     */
+    public int returnVoid()
+        {
+        switch (f_iReturn)
+            {
+            case Op.A_IGNORE:
+                return Op.R_RETURN;
+
+            case Op.A_TUPLE:
+                return returnValue(f_aiReturn[0], xTuple.H_VOID, false);
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
      * Assign the return register on the caller's frame.
      *
      * @param hValue    the value to assign
