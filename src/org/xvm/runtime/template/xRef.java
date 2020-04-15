@@ -510,7 +510,7 @@ public class xRef
         if (hTarget instanceof GenericHandle)
             {
             ObjectHandle hMasked =
-                ((GenericHandle) hTarget).maskAs(frame, hType.getDataType());
+                ((GenericHandle) hTarget).maskAs(frame.f_context.f_container, hType.getDataType());
 
             return hMasked == null
                 ? frame.raiseException(xException.illegalCast(frame, hType.getDataType().getValueString()))

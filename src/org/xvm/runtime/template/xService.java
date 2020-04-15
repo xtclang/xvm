@@ -407,6 +407,7 @@ public class xService
             super(clazz);
 
             f_context = context;
+            m_owner   = context.f_container;
             }
 
         /**

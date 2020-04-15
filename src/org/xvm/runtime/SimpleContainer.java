@@ -12,7 +12,7 @@ import org.xvm.asm.constants.ModuleConstant;
 
 
 /**
- * A prototype of the non-core container.
+ * A non-core container ( > 0).
  */
 public class SimpleContainer
         extends Container

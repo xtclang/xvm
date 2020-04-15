@@ -105,11 +105,14 @@ module TestReflection
             console.println($"expected - {e.text}");
             }
 
-        assert Stringable str := &tmpDir.revealAs(Stringable);
-        console.println($"str.length={str.estimateStringLength()}");
+        if (Stringable str := &tmpDir.revealAs(Stringable))
+            {
+            assert;
+            }
+        console.println($"cannot be revealed: {&tmpDir.actualType}");
 
-        Point p = new Point(1, 1);
-        str = &p.maskAs<Stringable>();
+        Point      p   = new Point(1, 1);
+        Stringable str = &p.maskAs<Stringable>();
 
         assert !&str.instanceOf(Point);
         try

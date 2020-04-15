@@ -211,6 +211,28 @@ public abstract class ObjectHandle
         }
 
     /**
+     * Mask this handle to the specified type on behalf of the specified container.
+     *
+     * @return a new handle for this object masked to the specified type or null if the
+     *         request cannot be fulfilled
+     */
+    public ObjectHandle maskAs(Container owner, TypeConstant typeAs)
+        {
+        return this;
+        }
+
+    /**
+     * Reveal this handle as the specified type on the context of the specified frame.
+     *
+     * @return a new handle for this object revealed as the specified type or null if the
+     *         request cannot be fulfilled
+     */
+    public ObjectHandle revealAs(Frame frame, TypeConstant typeAs)
+        {
+        return this;
+        }
+
+    /**
      * @return the result of comparison (only for isNativeEqual() handles)
      */
     public int compareTo(ObjectHandle that)
@@ -361,26 +383,25 @@ public abstract class ObjectHandle
             return false;
             }
 
-        /**
-         * @return a new GenericHandle for this object masked to the specified type or null if the
-         *         request cannot be fulfilled
-         */
-        public GenericHandle maskAs(Frame frame, TypeConstant typeAs)
+        @Override
+        public GenericHandle maskAs(Container owner, TypeConstant typeAs)
             {
             TypeComposition clzAs = getComposition().maskAs(typeAs);
             if (clzAs != null)
                 {
+                if (owner == m_owner)
+                    {
+                    return this;
+                    }
+
                 GenericHandle hClone = (GenericHandle) cloneAs(clzAs);
-                hClone.m_owner = frame.f_context.f_container;
+                hClone.m_owner = owner;
                 return hClone;
                 }
             return null;
             }
 
-        /**
-         * @return a new GenericHandle for this object revealed as the specified type or null if the
-         *         request cannot be fulfilled
-         */
+        @Override
         public GenericHandle revealAs(Frame frame, TypeConstant typeAs)
             {
             if (m_owner != null && m_owner != frame.f_context.f_container)
@@ -442,8 +463,8 @@ public abstract class ObjectHandle
         // keyed by the property name or a NestedIdentity
         private Map<Object, ObjectHandle> m_mapFields;
 
-        // not null only if this object was explicitly "masked as"
-        private Container m_owner;
+        // not null only if this object was injected or explicitly "masked as"
+        protected Container m_owner;
 
         /**
          * Synthetic property holding a reference to a parent instance.

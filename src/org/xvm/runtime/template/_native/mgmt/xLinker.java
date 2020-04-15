@@ -117,7 +117,7 @@ public class xLinker
 
                     SimpleContainer container = new SimpleContainer(context, idModule);
 
-                    return new GetResources(container, hInjector, aiReturn).doNext(frame);
+                    return new CollectResources(container, hInjector, aiReturn).doNext(frame);
                     }
                 catch (IOException e)
                     {
@@ -129,10 +129,10 @@ public class xLinker
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
-    public static class GetResources
+    public static class CollectResources
                 implements Frame.Continuation
         {
-        public GetResources(SimpleContainer container, ObjectHandle hProvider, int[] aiReturn)
+        public CollectResources(SimpleContainer container, ObjectHandle hProvider, int[] aiReturn)
             {
             this.container = container;
             this.aKeys     = container.collectInjections().toArray(new InjectionKey[0]);
@@ -151,8 +151,13 @@ public class xLinker
         protected void updateResult(Frame frameCaller)
             {
             // the resource for the current key is on the frame's stack
+            InjectionKey key       = aKeys[index];
             ObjectHandle hResource = frameCaller.popStack();
-            container.addStaticResource(aKeys[index], hResource);
+
+            // mask the injection type (and ensure the ownership)
+            hResource = hResource.maskAs(frameCaller.f_context.f_container, key.f_type);
+
+            container.addStaticResource(key, hResource);
             }
 
         public int doNext(Frame frameCaller)

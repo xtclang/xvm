@@ -129,6 +129,9 @@ public class xAppControl
             m_container = container;
             }
 
+        /**
+         * The container this AppControl instance is responsible for managing.
+         */
         protected Container m_container;
         }
 

@@ -27,7 +27,7 @@ import org.xvm.runtime.template._native.xTerminalConsole;
 
 
 /**
- * The core container (-1).
+ * The core container (0).
  */
 public class CoreContainer
         extends Container
@@ -334,6 +334,7 @@ public class CoreContainer
     private ObjectHandle getProperty(Frame frame, ObjectHandle hTarget, PropertyConstant idProp,
                                      Consumer<ObjectHandle> consumer)
         {
+        TypeConstant typeRevealed = idProp.getType();
         if (hTarget instanceof DeferredCallHandle)
             {
             ((DeferredCallHandle) hTarget).addContinuation(frameCaller ->
@@ -344,13 +345,21 @@ public class CoreContainer
                 switch (iResult)
                     {
                     case Op.R_NEXT:
-                        consumer.accept(frameCaller.peekStack());
+                        {
+                        ObjectHandle h = frameCaller.popStack().
+                                maskAs(NATIVE_CONTAINER, typeRevealed);
+                        frameCaller.pushStack(h);
+                        consumer.accept(h);
                         break;
+                        }
 
                     case Op.R_CALL:
                         frameCaller.m_frameNext.addContinuation(frameCaller1 ->
                             {
-                            consumer.accept(frameCaller1.peekStack());
+                            ObjectHandle h = frameCaller1.popStack().
+                                    maskAs(NATIVE_CONTAINER, typeRevealed);
+                            frameCaller1.pushStack(h);
+                            consumer.accept(h);
                             return Op.R_NEXT;
                             });
                         break;
@@ -365,7 +374,7 @@ public class CoreContainer
             {
             case Op.R_NEXT:
                 {
-                ObjectHandle h = frame.popStack();
+                ObjectHandle h = frame.popStack().maskAs(NATIVE_CONTAINER, typeRevealed);
                 consumer.accept(h);
                 return h;
                 }
@@ -374,7 +383,9 @@ public class CoreContainer
                 Frame frameNext = frame.m_frameNext;
                 frameNext.addContinuation(frameCaller ->
                     {
-                    consumer.accept(frameCaller.peekStack());
+                    ObjectHandle h = frameCaller.popStack().maskAs(NATIVE_CONTAINER, typeRevealed);
+                    frameCaller.pushStack(h);
+                    consumer.accept(h);
                     return Op.R_NEXT;
                     });
                 return new DeferredCallHandle(frameNext);
@@ -386,6 +397,19 @@ public class CoreContainer
                 throw new IllegalStateException();
             }
         }
+
+    /**
+     * Fictional container (-1), whose only purpose is to serve as an owner of native injections.
+     */
+    static Container NATIVE_CONTAINER = new Container(null, null, null, null)
+        {
+        @Override
+        public String toString()
+            {
+            return "Primordial container";
+            }
+        };
+
 
     // ----- data fields ---------------------------------------------------------------------------
 
