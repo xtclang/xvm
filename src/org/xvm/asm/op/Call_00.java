@@ -63,7 +63,7 @@ public class Call_00
                 throw new IllegalStateException();
                 }
 
-            return chain.callSuperNN(frame, Utils.OBJECTS_NONE, Utils.ARGS_NONE);
+            return chain.callSuper01(frame, A_IGNORE);
             }
 
         if (m_nFunctionId <= CONSTANT_OFFSET)

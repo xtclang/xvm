@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.runtime.CallChain;
@@ -106,7 +107,7 @@ public class Call_T0
 
                     return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                     }
-                return chain.callSuperNN(frame, ((TupleHandle) hArg).m_ahValue, Utils.ARGS_NONE);
+                return chain.callSuperN1(frame, ((TupleHandle) hArg).m_ahValue, Op.A_IGNORE, false);
                 }
 
             if (m_nFunctionId <= CONSTANT_OFFSET)
