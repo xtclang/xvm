@@ -1426,7 +1426,8 @@ public class MethodStructure
                     if (aconstParam.length > 0)
                         {
                         StringConstant constName = (StringConstant) aconstParam[0];
-                        setInjections.add(new InjectionKey(constName.getValueString(), typeAnno));
+                        setInjections.add(
+                            new InjectionKey(constName.getValue(), typeAnno.getParamType(0)));
                         }
                     else if (hasCode())
                         {
@@ -1440,7 +1441,8 @@ public class MethodStructure
                                 if (typeVar.equals(typeAnno))
                                     {
                                     String sName = opVar.getName(aconst);
-                                    setInjections.add(new InjectionKey(sName, typeAnno.getParamType(0)));
+                                    setInjections.add(
+                                        new InjectionKey(sName, typeAnno.getParamType(0)));
                                     break;
                                     }
                                 }
