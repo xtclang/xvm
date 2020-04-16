@@ -46,3 +46,13 @@ Details:
 
 (The `../prototype` directory exists for testing the build result; it contains a fake xvm.jar with
 a "main class" that echos the input.)
+
+The Gradle build makes a number of copies (one for each command line tool) of the native launchers
+in the appropriate location(s) of the XDK build images.
+
+To override the default behavior of a launcher named `xtc`, for example, create a file in the same
+directory named `xtc.cfg`, which contains up to three key/value pairs, which default to these values:
+
+    exec = java
+    opts = -Xms256m -Xmx1024m -ea
+    jar  = ../prototype/xvm.jar
