@@ -339,7 +339,7 @@ public class CoreContainer
             {
             ((DeferredCallHandle) hTarget).addContinuation(frameCaller ->
                 {
-                ObjectHandle hTargetReal = frameCaller.peekStack();
+                ObjectHandle hTargetReal = frameCaller.popStack();
                 int          iResult     = hTargetReal.getTemplate().getPropertyValue(
                                                 frameCaller, hTargetReal, idProp, Op.A_STACK);
                 switch (iResult)
