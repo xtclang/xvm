@@ -290,7 +290,8 @@ public class xRef
         }
 
     /**
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION};
+     *         if the target represents a dynamic future, this can also return {@link Op#R_BLOCK}
      */
     protected int getReferentImpl(Frame frame, RefHandle hRef, boolean fNative, int iReturn)
         {
@@ -299,15 +300,9 @@ public class xRef
             {
             case RefHandle.REF_REFERENT:
                 {
-                if (fNative)
-                    {
-                    hValue = hRef.getReferent();
-                    }
-                else
-                    {
-                    return invokeGetReferent(frame, hRef, iReturn);
-                    }
-                break;
+                return fNative
+                    ? invokeNativeGet(frame, hRef, iReturn)
+                    : invokeGetReferent(frame, hRef, iReturn);
                 }
 
             case RefHandle.REF_REF:
@@ -339,10 +334,20 @@ public class xRef
                 assert frameRef != null && nVar >= 0;
 
                 hValue = frameRef.f_ahVar[nVar];
-                break;
+                return hValue == null
+                        ? frame.raiseException(xException.unassignedReference(frame))
+                        : frame.assignValue(iReturn, hValue);
                 }
             }
+        }
 
+    /**
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_EXCEPTION} or (if the target represents a
+     *         dynamic future) {@link Op#R_BLOCK}{@link Op#R_BLOCK}
+     */
+    protected int invokeNativeGet(Frame frame, RefHandle hRef, int iReturn)
+        {
+        ObjectHandle hValue = hRef.getReferent();
         return hValue == null
                 ? frame.raiseException(xException.unassignedReference(frame))
                 : frame.assignValue(iReturn, hValue);

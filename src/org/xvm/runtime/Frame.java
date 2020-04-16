@@ -575,8 +575,16 @@ public class Frame
             //        {
             //        return bar();
             //        }
-            assert nVar >= 0;
-            f_ahVar[nVar] = null;
+
+            if (nVar >= 0)
+                {
+                f_ahVar[nVar] = null;
+                }
+            else
+                {
+                assert nVar == Op.A_IGNORE;
+                }
+
             return Op.R_NEXT;
             }
 

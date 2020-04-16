@@ -161,6 +161,19 @@ public class InterfaceProxy
         throw new IllegalStateException("Invalid context");
         }
 
+    @Override
+    public int createPropertyRef(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, boolean fRO, int iReturn)
+        {
+        InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+        if (frame.f_context == hProxy.f_context)
+            {
+            hTarget = hProxy.m_hTarget;
+            return hTarget.getTemplate().createPropertyRef(frame, hTarget, idProp, fRO, iReturn);
+            }
+
+        throw new IllegalStateException("Invalid context");
+        }
+
     public static ObjectHandle makeHandle(ProxyComposition clzProxy, ServiceContext ctx,
                                           ObjectHandle hTarget)
         {
