@@ -81,10 +81,6 @@ public class MoveCast
         try
             {
             ObjectHandle hValue = frame.getArgument(m_nFromValue);
-            if (hValue == null)
-                {
-                return R_REPEAT;
-                }
 
             if (isDeferred(hValue))
                 {

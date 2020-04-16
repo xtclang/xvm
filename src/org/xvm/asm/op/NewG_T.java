@@ -92,10 +92,6 @@ public class NewG_T
         try
             {
             ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
-            if (hArg == null)
-                {
-                return R_REPEAT;
-                }
 
             if (isDeferred(hArg))
                 {

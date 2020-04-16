@@ -85,10 +85,6 @@ public class NewC_0
         try
             {
             ObjectHandle hParent = frame.getArgument(m_nParentValue);
-            if (hParent == null)
-                {
-                return R_REPEAT;
-                }
 
             MethodStructure constructor = getVirtualConstructor(frame, hParent);
             if (constructor == null)

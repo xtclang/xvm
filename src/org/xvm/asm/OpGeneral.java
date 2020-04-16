@@ -113,10 +113,6 @@ public abstract class OpGeneral
         try
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            if (hTarget == null)
-                {
-                return R_REPEAT;
-                }
 
             if (frame.isNextRegister(m_nRetValue))
                 {
@@ -150,10 +146,6 @@ public abstract class OpGeneral
         try
             {
             ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nArgValue}, 2);
-            if (ahArg == null)
-                {
-                return R_REPEAT;
-                }
 
             if (frame.isNextRegister(m_nRetValue))
                 {

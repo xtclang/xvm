@@ -112,10 +112,6 @@ public abstract class OpIndex
         try
             {
             ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nIndex}, 2);
-            if (ahArg == null)
-                {
-                return R_REPEAT;
-                }
 
             if (anyDeferred(ahArg))
                 {

@@ -31,8 +31,6 @@ import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
-import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
-
 import org.xvm.runtime.template.numbers.xInt64;
 
 
@@ -290,8 +288,7 @@ public class xRef
         }
 
     /**
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION};
-     *         if the target represents a dynamic future, this can also return {@link Op#R_BLOCK}
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     protected int getReferentImpl(Frame frame, RefHandle hRef, boolean fNative, int iReturn)
         {
@@ -301,7 +298,7 @@ public class xRef
             case RefHandle.REF_REFERENT:
                 {
                 return fNative
-                    ? invokeNativeGet(frame, hRef, iReturn)
+                    ? invokeNativeGetReferent(frame, hRef, iReturn)
                     : invokeGetReferent(frame, hRef, iReturn);
                 }
 
@@ -342,10 +339,9 @@ public class xRef
         }
 
     /**
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_EXCEPTION} or (if the target represents a
-     *         dynamic future) {@link Op#R_BLOCK}{@link Op#R_BLOCK}
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    protected int invokeNativeGet(Frame frame, RefHandle hRef, int iReturn)
+    protected int invokeNativeGetReferent(Frame frame, RefHandle hRef, int iReturn)
         {
         ObjectHandle hValue = hRef.getReferent();
         return hValue == null
@@ -488,9 +484,6 @@ public class xRef
                 frame.m_frameNext.addContinuation(frameCaller ->
                     action.applyAsInt(frameCaller.popStack()));
                 return Op.R_CALL;
-
-            case Op.R_BLOCK:
-                return frame.raiseException(xException.unassignedReference(frame));
 
             case Op.R_EXCEPTION:
                 return Op.R_EXCEPTION;
@@ -908,10 +901,6 @@ public class xRef
 
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
-
-                    case Op.R_BLOCK:
-                        return ((FutureHandle) hRef).makeDeferredHandle(frameCaller).
-                            proceed(frameCaller, this);
 
                     default:
                         throw new IllegalStateException();

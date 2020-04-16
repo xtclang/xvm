@@ -90,10 +90,6 @@ public class Assert
         try
             {
             ObjectHandle hValue = frame.getArgument(m_nTest);
-            if (hValue == null)
-                {
-                return R_REPEAT;
-                }
 
             if (isDeferred(hValue))
                 {

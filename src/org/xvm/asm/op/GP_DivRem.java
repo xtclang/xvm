@@ -83,10 +83,6 @@ public class GP_DivRem
         try
             {
             ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nArgValue}, 2);
-            if (ahArg == null)
-                {
-                return R_REPEAT;
-                }
 
             if (frame.isNextRegister(m_anRetValue[0]))
                 {

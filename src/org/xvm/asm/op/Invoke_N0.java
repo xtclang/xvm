@@ -78,28 +78,18 @@ public class Invoke_N0
         try
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            if (hTarget == null)
-                {
-                return R_REPEAT;
-                }
 
             if (isDeferred(hTarget))
                 {
                 // we won't know the number of method vars until later,
                 // will have to resize the arg array then
-                ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, 0);
-                if (ahArg == null)
-                    {
-                    return R_REPEAT;
-                    }
-
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepNext = frameCaller -> resolveArgs(frameCaller, ahTarget[0], ahArg);
+                Frame.Continuation stepNext = frameCaller -> resolveArgs(frameCaller, ahTarget[0]);
 
                 return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
                 }
 
-            return resolveArgs(frame, hTarget, null);
+            return resolveArgs(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -107,42 +97,26 @@ public class Invoke_N0
             }
         }
 
-    protected int resolveArgs(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
+    protected int resolveArgs(Frame frame, ObjectHandle hTarget)
         {
         CallChain chain = getCallChain(frame, hTarget);
 
-        ObjectHandle[] ahVar;
-        if (ahArg == null)
+        try
             {
-            try
-                {
-                ahVar = frame.getArguments(m_anArgValue, chain.getMaxVars());
-                if (ahVar == null)
-                    {
-                    if (m_nTarget == A_STACK)
-                        {
-                        frame.pushStack(hTarget);
-                        }
-                    return R_REPEAT;
-                    }
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                return frame.raiseException(e);
-                }
-            }
-        else
-            {
-            ahVar = ahArg;
-            }
+            ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, chain.getMaxVars());
 
-        if (anyDeferred(ahVar))
-            {
-            Frame.Continuation stepNext = frameCaller ->
-                chain.invoke(frameCaller, hTarget, ahVar, A_IGNORE);
-            return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
+            if (anyDeferred(ahArg))
+                {
+                Frame.Continuation stepNext = frameCaller ->
+                    chain.invoke(frameCaller, hTarget, ahArg, A_IGNORE);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+                }
+            return chain.invoke(frame, hTarget, ahArg, A_IGNORE);
             }
-        return chain.invoke(frame, hTarget, ahVar, A_IGNORE);
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
         }
 
     @Override

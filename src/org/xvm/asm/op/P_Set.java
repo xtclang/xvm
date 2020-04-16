@@ -85,10 +85,6 @@ public class P_Set
         try
             {
             ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nValue}, 2);
-            if (ahArg == null)
-                {
-                return R_REPEAT;
-                }
 
             PropertyConstant idProp = (PropertyConstant) frame.getConstant(m_nPropId);
 

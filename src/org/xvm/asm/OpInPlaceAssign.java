@@ -70,12 +70,6 @@ public abstract class OpInPlaceAssign
         {
         try
             {
-            ObjectHandle hValue = frame.getArgument(m_nArgValue);
-            if (hValue == null)
-                {
-                return R_REPEAT;
-                }
-
             int nTarget = m_nTarget;
             if (nTarget >= 0)
                 {
@@ -87,6 +81,8 @@ public abstract class OpInPlaceAssign
                         {
                         return R_REPEAT;
                         }
+
+                    ObjectHandle hValue = frame.getArgument(m_nArgValue);
 
                     if (isDeferred(hValue))
                         {
@@ -101,8 +97,9 @@ public abstract class OpInPlaceAssign
                 else
                     {
                     ObjectHandle hTarget = frame.getArgument(nTarget);
+                    ObjectHandle hValue  = frame.getArgument(m_nArgValue);
 
-                    assert hTarget != null;
+                    assert !isDeferred(hTarget);
 
                     if (isDeferred(hValue))
                         {
@@ -120,6 +117,7 @@ public abstract class OpInPlaceAssign
                 PropertyConstant idProp = (PropertyConstant) frame.getConstant(nTarget);
 
                 ObjectHandle hTarget = frame.getThis();
+                ObjectHandle hValue  = frame.getArgument(m_nArgValue);
 
                 if (isDeferred(hValue))
                     {

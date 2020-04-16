@@ -10,7 +10,9 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -73,11 +75,13 @@ public class Throw
         {
         try
             {
-            // there are no "const" exceptions
             ExceptionHandle hException = (ExceptionHandle) frame.getArgument(m_nArgValue);
-            if (hException == null)
+            if (isDeferred(hException))
                 {
-                return R_REPEAT;
+                ExceptionHandle[] ahVar = new ExceptionHandle[] {hException};
+                Frame.Continuation stepNext = frameCaller -> frame.raiseException(ahVar[0]);
+
+                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
 
             return frame.raiseException(hException);

@@ -96,10 +96,6 @@ public class Call_N1
                 checkReturnRegister(frame, chain.getSuper(frame));
 
                 ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, chain.getSuper(frame).getMaxVars());
-                if (ahVar == null)
-                    {
-                    return R_REPEAT;
-                    }
 
                 if (anyDeferred(ahVar))
                     {
@@ -121,10 +117,6 @@ public class Call_N1
                     }
 
                 ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, function.getMaxVars());
-                if (ahVar == null)
-                    {
-                    return R_REPEAT;
-                    }
 
                 checkReturnRegister(frame, function);
 
@@ -146,18 +138,12 @@ public class Call_N1
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
-            if (hFunction == null)
-                {
-                return R_REPEAT;
-                }
+
+            assert !isDeferred(hFunction); // TODO GG
 
             checkReturnRegister(frame, hFunction.getMethod());
 
             ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, hFunction.getVarCount());
-            if (ahVar == null)
-                {
-                return R_REPEAT;
-                }
 
             if (anyDeferred(ahVar))
                 {

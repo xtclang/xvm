@@ -10,6 +10,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xRef.RefHandle;
 
@@ -128,14 +129,19 @@ public abstract class OpInPlace
                 else
                     {
                     ObjectHandle hTarget = frame.getArgument(nTarget);
-                    if (hTarget == null)
-                        {
-                        return R_REPEAT;
-                        }
 
                     if (isAssignOp() && frame.isNextRegister(m_nRetValue))
                         {
                         frame.introduceVarCopy(m_nRetValue, nTarget);
+                        }
+
+                    if (isDeferred(hTarget))
+                        {
+                        ObjectHandle[] ahArg = new ObjectHandle[] {hTarget};
+                        Frame.Continuation stepNext = frameCaller ->
+                            completeWithRegister(frame, ahArg[0]);
+
+                        return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                         }
 
                     return completeWithRegister(frame, hTarget);

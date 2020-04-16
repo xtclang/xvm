@@ -87,8 +87,6 @@ public class Frame
 
     public static final int VAR_STANDARD         = 0;
     public static final int VAR_DYNAMIC_REF      = 1;
-    public static final int VAR_STANDARD_WAITING = 2;
-    public static final int VAR_DYNAMIC_WAITING  = 3;
 
     /**
      * Construct a frame.
@@ -605,9 +603,6 @@ public class Frame
                     return hVar.getVarSupport().setReferent(this, hVar, hValue);
                     }
 
-                case VAR_STANDARD_WAITING:
-                case VAR_DYNAMIC_WAITING:
-                    // we cannot get here while waiting
                 default:
                     throw new IllegalStateException();
                 }
@@ -776,7 +771,7 @@ public class Frame
      * @param nVar     the register id
      * @param ahValue  the handles to make up a TupleHandle out of
      *
-     * @return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK
+     * @return one of R_NEXT, R_CALL or R_EXCEPTION values
      */
     public int assignTuple(int nVar, ObjectHandle... ahValue)
         {
@@ -804,7 +799,7 @@ public class Frame
             catch (Throwable e)
                 {
                 assert false; // must not happen
-                };
+                }
             }
 
         if (isDynamicVar(iReturn))
@@ -1085,51 +1080,6 @@ public class Frame
         return localConstants()[Op.CONSTANT_OFFSET - iArg];
         }
 
-    /**
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION} or
-     *         or {@link Op#R_BLOCK} values
-     */
-    public int checkWaitingRegisters()
-        {
-        VarInfo[] aInfo = f_aInfo;
-        for (int i = 0, c = aInfo.length; i < c; i++)
-            {
-            VarInfo info = aInfo[i];
-
-            if (info != null && info.isWaiting())
-                {
-                FutureHandle hFuture = (FutureHandle) f_ahVar[i];
-                if (hFuture.isAssigned())
-                    {
-                    info.stopWaiting();
-
-                    // only standard vars needs to be replaced on the spot;
-                    // the dynamic vars will "get" the value naturally on-demand
-                    if (info.isStandard())
-                        {
-                        switch (hFuture.getVarSupport().getReferent(this, hFuture, i))
-                            {
-                            case Op.R_NEXT:
-                                break;
-
-                            case Op.R_EXCEPTION:
-                                return Op.R_EXCEPTION;
-
-                            default: // the "standard" future is completely native
-                                throw new IllegalStateException();
-                            }
-                        }
-                    }
-                else
-                    {
-                    return Op.R_BLOCK;
-                    }
-                }
-            }
-
-        return Op.R_NEXT;
-        }
-
     // return a string value of the specified StringConstant
     public String getString(int iArg)
         {
@@ -1190,7 +1140,6 @@ public class Frame
             }
 
         // Ref<Referent> -> Referent
-        assert !info.isWaiting();
         return info.getType().getParamType(0);
         }
 
@@ -1233,7 +1182,7 @@ public class Frame
         }
 
     /**
-     * @return an ObjectHandle (could be DeferredCallHandle), or null if the value is "pending future"
+     * @return an ObjectHandle (could be a DeferredCallHandle)
      *
      * @throw ExceptionHandle.WrapperException if the value cannot be retrieved
      */
@@ -1284,12 +1233,6 @@ public class Frame
                             case Op.R_CALL:
                                 return new DeferredCallHandle(m_frameNext);
 
-                            case Op.R_BLOCK:
-                                // mark the register as "waiting for a result"
-                                info.markWaiting();
-                                restoreStack(iArg, hValue);
-                                return null;
-
                             case Op.R_EXCEPTION:
                                 throw m_hException.getException();
 
@@ -1298,9 +1241,6 @@ public class Frame
                             }
                         }
 
-                    case VAR_STANDARD_WAITING:
-                    case VAR_DYNAMIC_WAITING:
-                        // we cannot get unblocked until the standard var is assigned
                     default:
                         throw new IllegalStateException();
                     }
@@ -1358,7 +1298,7 @@ public class Frame
      * {@link org.xvm.compiler.ast.InvocationExpression}, {@link org.xvm.compiler.ast.NewExpression}
      * and {@link org.xvm.compiler.ast.RelOpExpression} to use stack collecting the arguments.
      *
-     * @return the array of handles or null if at least on value is a "pending future"
+     * @return the array of handles (can contain DeferredHandle objects)
      *
      * @throws ExceptionHandle.WrapperException if the async assignment has failed
      */
@@ -1367,24 +1307,11 @@ public class Frame
         {
         int cArgs = aiArg.length;
 
-        cVars = Math.max(cArgs, cVars);
-
-        ObjectHandle[] ahArg = new ObjectHandle[cVars];
+        ObjectHandle[] ahArg = new ObjectHandle[Math.max(cArgs, cVars)];
 
         for (int i = cArgs - 1; i >= 0; --i)
             {
-            ObjectHandle hArg = getArgument(aiArg[i]);
-            if (hArg == null)
-                {
-                // the i-th element has already been restored
-                for (int j = i + 1; j < cArgs; j++)
-                    {
-                    restoreStack(aiArg[j], ahArg[j]);
-                    }
-                return null;
-                }
-
-            ahArg[i] = hArg;
+            ahArg[i] = getArgument(aiArg[i]);
             }
 
         return ahArg;
@@ -2051,32 +1978,7 @@ public class Frame
 
         public boolean isDynamic()
             {
-            return m_nStyle == VAR_DYNAMIC_REF || m_nStyle == VAR_DYNAMIC_WAITING;
-            }
-
-        public boolean isWaiting()
-            {
-            return m_nStyle >= VAR_STANDARD_WAITING;
-            }
-
-        public void markWaiting()
-            {
-            if (m_nStyle < VAR_STANDARD_WAITING)
-                {
-                // VAR_STANDARD -> VAR_STANDARD_WAITING;
-                // VAR_DYNAMIC_REF -> VAR_DYNAMIC_WAITING;
-                m_nStyle += 2;
-                }
-            }
-
-        public void stopWaiting()
-            {
-            if (m_nStyle >= VAR_STANDARD_WAITING)
-                {
-                // VAR_STANDARD_WAITING -> VAR_STANDARD;
-                // VAR_DYNAMIC_WAITING -> VAR_DYNAMIC_REF;
-                m_nStyle -= 2;
-                }
+            return m_nStyle == VAR_DYNAMIC_REF;
             }
 
         public RefHandle getRef()
@@ -2106,10 +2008,6 @@ public class Frame
                     return "";
                 case VAR_DYNAMIC_REF:
                     return "<dynamic> ";
-                case VAR_STANDARD_WAITING:
-                    return "<waiting> ";
-                case VAR_DYNAMIC_WAITING:
-                    return "<dynamic waiting> ";
                 default:
                     return "unknown ";
                 }

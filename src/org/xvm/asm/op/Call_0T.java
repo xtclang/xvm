@@ -129,13 +129,17 @@ public class Call_0T
         try
             {
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
-            if (hFunction == null)
-                {
-                return R_REPEAT;
-                }
 
             checkReturnTupleRegister(frame, hFunction.getMethod());
 
+            if (isDeferred(hFunction))
+                {
+                FunctionHandle[] ahArg = new FunctionHandle[] {hFunction};
+                Frame.Continuation stepNext = frameCaller ->
+                    ahArg[0].callT(frame, null, Utils.OBJECTS_NONE, m_nRetValue);
+
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+                }
             return hFunction.callT(frame, null, Utils.OBJECTS_NONE, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)

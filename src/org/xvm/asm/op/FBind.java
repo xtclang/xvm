@@ -133,10 +133,7 @@ public class FBind
             else
                 {
                 hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
-                if (hFunction == null)
-                    {
-                    return R_REPEAT;
-                    }
+                assert !isDeferred(hFunction); // TODO GG
                 }
 
             int cParams = m_anParamIx.length;
@@ -146,10 +143,6 @@ public class FBind
             for (int i = 0; i < cParams; i++)
                 {
                 ObjectHandle hParam = frame.getArgument(m_anParamValue[i]);
-                if (hParam == null)
-                    {
-                    return R_REPEAT;
-                    }
                 ahParam[i] = hParam;
                 fAnyProperty |= isDeferred(hParam);
                 }

@@ -96,10 +96,6 @@ public class Call_NT
                 checkReturnTupleRegister(frame, chain.getSuper(frame));
 
                 ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, chain.getSuper(frame).getMaxVars());
-                if (ahVar == null)
-                    {
-                    return R_REPEAT;
-                    }
 
                 if (anyDeferred(ahVar))
                     {
@@ -121,10 +117,6 @@ public class Call_NT
                     }
 
                 ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, function.getMaxVars());
-                if (ahVar == null)
-                    {
-                    return R_REPEAT;
-                    }
 
                 checkReturnTupleRegister(frame, function);
 
@@ -146,16 +138,10 @@ public class Call_NT
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
-            if (hFunction == null)
-                {
-                return R_REPEAT;
-                }
+
+            assert !isDeferred(hFunction); // TODO GG
 
             ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, hFunction.getVarCount());
-            if (ahVar == null)
-                {
-                return R_REPEAT;
-                }
 
             checkReturnTupleRegister(frame, hFunction.getMethod());
 

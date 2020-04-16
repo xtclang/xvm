@@ -83,10 +83,6 @@ public class Construct_N
                 }
 
             ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
-            if (ahVar == null)
-                {
-                return R_REPEAT;
-                }
 
             if (anyDeferred(ahVar))
                 {

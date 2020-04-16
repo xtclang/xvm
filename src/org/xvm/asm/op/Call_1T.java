@@ -89,10 +89,6 @@ public class Call_1T
         try
             {
             ObjectHandle hArg = frame.getArgument(m_nArgValue);
-            if (hArg == null)
-                {
-                return R_REPEAT;
-                }
 
             if (m_nFunctionId == A_SUPER)
                 {
@@ -139,10 +135,8 @@ public class Call_1T
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
-            if (hFunction == null)
-                {
-                return R_REPEAT;
-                }
+
+            assert !isDeferred(hFunction); // TODO GG
 
             checkReturnTupleRegister(frame, hFunction.getMethod());
 

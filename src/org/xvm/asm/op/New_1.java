@@ -95,10 +95,6 @@ public class New_1
             {
             ObjectHandle[] ahVar = frame.getArguments(
                     new int[]{m_nArgValue}, constructor.getMaxVars());
-            if (ahVar == null)
-                {
-                return R_REPEAT;
-                }
 
             IdentityConstant constClz  = constructor.getParent().getParent().getIdentityConstant();
             ClassTemplate    template  = frame.ensureTemplate(constClz);

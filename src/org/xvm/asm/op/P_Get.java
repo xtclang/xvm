@@ -87,10 +87,6 @@ public class P_Get
         try
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            if (hTarget == null)
-                {
-                return R_REPEAT;
-                }
 
             PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
 

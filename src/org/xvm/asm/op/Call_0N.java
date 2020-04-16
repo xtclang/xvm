@@ -117,13 +117,17 @@ public class Call_0N
         try
             {
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
-            if (hFunction == null)
-                {
-                return R_REPEAT;
-                }
 
             checkReturnRegisters(frame, hFunction.getMethod());
 
+            if (isDeferred(hFunction))
+                {
+                FunctionHandle[] ahArg = new FunctionHandle[] {hFunction};
+                Frame.Continuation stepNext = frameCaller ->
+                    ahArg[0].callN(frame, null, Utils.OBJECTS_NONE, m_anRetValue);
+
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+                }
             return hFunction.callN(frame, null, Utils.OBJECTS_NONE, m_anRetValue);
             }
         catch (ExceptionHandle.WrapperException e)

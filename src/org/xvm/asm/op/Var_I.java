@@ -100,10 +100,6 @@ public class Var_I
         try
             {
             ObjectHandle hArg = frame.getArgument(m_nValueId);
-            if (hArg == null)
-                {
-                return R_REPEAT;
-                }
 
             if (isDeferred(hArg))
                 {

@@ -86,26 +86,16 @@ public class Invoke_NT
         try
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            if (hTarget == null)
-                {
-                return R_REPEAT;
-                }
 
             if (isDeferred(hTarget))
                 {
-                ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
-                if (ahArg == null)
-                    {
-                    return R_REPEAT;
-                    }
-
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepNext = frameCaller -> resolveArgs(frameCaller, ahTarget[0], ahArg);
+                Frame.Continuation stepNext = frameCaller -> resolveArgs(frameCaller, ahTarget[0]);
 
                 return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
                 }
 
-            return resolveArgs(frame, hTarget, null);
+            return resolveArgs(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -113,44 +103,28 @@ public class Invoke_NT
             }
         }
 
-    protected int resolveArgs(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
+    protected int resolveArgs(Frame frame, ObjectHandle hTarget)
         {
         checkReturnTupleRegister(frame, hTarget);
 
         CallChain chain = getCallChain(frame, hTarget);
 
-        ObjectHandle[] ahVar;
-        if (ahArg == null)
+        try
             {
-            try
-                {
-                ahVar = frame.getArguments(m_anArgValue, chain.getMaxVars());
-                if (ahVar == null)
-                    {
-                    if (m_nTarget == A_STACK)
-                        {
-                        frame.pushStack(hTarget);
-                        }
-                    return R_REPEAT;
-                    }
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                return frame.raiseException(e);
-                }
-            }
-        else
-            {
-            ahVar = Utils.ensureSize(ahArg, chain.getMaxVars());
-            }
+            ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, chain.getMaxVars());
 
-        if (anyDeferred(ahVar))
-            {
-            Frame.Continuation stepNext = frameCaller ->
-                chain.invokeT(frameCaller, hTarget, ahVar, m_nRetValue);
-            return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
+            if (anyDeferred(ahArg))
+                {
+                Frame.Continuation stepNext = frameCaller ->
+                    chain.invokeT(frameCaller, hTarget, ahArg, m_nRetValue);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+                }
+            return chain.invokeT(frame, hTarget, ahArg, m_nRetValue);
             }
-        return chain.invokeT(frame, hTarget, ahVar, m_nRetValue);
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
         }
 
     @Override

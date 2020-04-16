@@ -75,10 +75,6 @@ public abstract class OpIndexInPlace
         try
             {
             ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nIndex, m_nValue}, 3);
-            if (ahArg == null)
-                {
-                return R_REPEAT;
-                }
 
             if (anyDeferred(ahArg))
                 {

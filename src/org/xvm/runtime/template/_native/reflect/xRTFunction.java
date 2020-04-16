@@ -333,7 +333,7 @@ public class xRTFunction
         // ----- FunctionHandle interface -----
 
         // call with one return value to be placed into the specified slot
-        // return either R_CALL, R_NEXT or R_BLOCK
+        // return either R_CALL, R_NEXT or R_EXCEPTION
         public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
             {
             ObjectHandle[] ahVar = prepareVars(ahArg);

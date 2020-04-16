@@ -103,10 +103,8 @@ public class Var_S
         try
             {
             ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
-            if (ahArg == null)
-                {
-                return R_REPEAT;
-                }
+
+            assert !anyDeferred(ahArg); // TODO GG
 
             TypeConstant     typeSequence = frame.resolveType(m_nType);
             ClassComposition clzArray     = m_clzArray;

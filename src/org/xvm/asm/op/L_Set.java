@@ -78,12 +78,7 @@ public class L_Set
         {
         try
             {
-            ObjectHandle hValue = frame.getArgument(m_nValue);
-            if (hValue == null)
-                {
-                return R_REPEAT;
-                }
-
+            ObjectHandle hValue  = frame.getArgument(m_nValue);
             ObjectHandle hTarget = frame.getThis();
 
             PropertyConstant idProp = (PropertyConstant) frame.getConstant(m_nPropId);

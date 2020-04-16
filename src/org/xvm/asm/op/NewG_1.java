@@ -99,10 +99,6 @@ public class NewG_1
 
             ObjectHandle[] ahVar = frame.getArguments(
                                         new int[]{m_nArgValue}, constructor.getMaxVars());
-            if (ahVar == null)
-                {
-                return R_REPEAT;
-                }
 
             ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
             ClassTemplate    template  = clzTarget.getTemplate();

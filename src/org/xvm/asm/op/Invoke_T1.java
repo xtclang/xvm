@@ -87,20 +87,7 @@ public class Invoke_T1
         try
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            if (hTarget == null)
-                {
-                return R_REPEAT;
-                }
-
-            ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
-            if (hArg == null)
-                {
-                if (m_nTarget == A_STACK)
-                    {
-                    frame.pushStack(hTarget);
-                    }
-                return R_REPEAT;
-                }
+            ObjectHandle hArg    = frame.getArgument(m_nArgTupleValue);
 
             if (isDeferred(hTarget))
                 {

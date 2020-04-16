@@ -60,10 +60,6 @@ public class Move
             int nTo   = m_nToValue;
 
             ObjectHandle hValue = frame.getArgument(nFrom);
-            if (hValue == null)
-                {
-                return R_REPEAT;
-                }
 
             if (frame.isNextRegister(nTo))
                 {

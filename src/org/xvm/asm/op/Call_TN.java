@@ -96,10 +96,6 @@ public class Call_TN
             // while the argument could be a local property holding a Tuple,
             // the Tuple values cannot be local properties
             ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
-            if (hArg == null)
-                {
-                return R_REPEAT;
-                }
 
             if (m_nFunctionId == A_SUPER)
                 {
@@ -145,10 +141,8 @@ public class Call_TN
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
-            if (hFunction == null)
-                {
-                return R_REPEAT;
-                }
+
+            assert !isDeferred(hFunction); // TODO GG
 
             checkReturnRegisters(frame, hFunction.getMethod());
 

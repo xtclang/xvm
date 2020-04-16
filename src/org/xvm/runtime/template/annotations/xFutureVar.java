@@ -331,7 +331,7 @@ public class xFutureVar
         }
 
     @Override
-    protected int invokeNativeGet(Frame frame, RefHandle hRef, int iReturn)
+    protected int invokeNativeGetReferent(Frame frame, RefHandle hRef, int iReturn)
         {
         return invokeGetReferent(frame, hRef, iReturn);
         }
@@ -369,11 +369,7 @@ public class xFutureVar
             }
 
         // wait for the assignment/completion; the service is responsible for timing out
-        //
-        // TODO GG: as a result of returning R_BLOCK, some callers have no options but to throw
-        // naturally (e.g. xRef.actOnReferent()); an alternative approach is to create a new
-        // "waiting" frame and return R_CALL.
-        return Op.R_BLOCK;
+        return frame.call(Utils.createWaitFrame(frame, cf, iReturn));
         }
 
     @Override
@@ -455,15 +451,6 @@ public class xFutureVar
         public boolean isCompletedNormally()
             {
             return m_future != null && m_future.isDone() && !m_future.isCompletedExceptionally();
-            }
-
-        /**
-         * @return a DeferredCallHandle for the future represented by this handle
-         */
-        public DeferredCallHandle makeDeferredHandle(Frame frame)
-            {
-            assert m_future != null;
-            return new DeferredCallHandle(Utils.createWaitFrame(frame, m_future, Op.A_STACK));
             }
 
         /**

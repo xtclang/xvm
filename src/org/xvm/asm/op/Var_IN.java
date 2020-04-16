@@ -111,10 +111,6 @@ public class Var_IN
         try
             {
             ObjectHandle hArg = frame.getArgument(m_nValueId);
-            if (hArg == null)
-                {
-                return R_REPEAT;
-                }
 
             if (isDeferred(hArg))
                 {

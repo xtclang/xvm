@@ -135,11 +135,6 @@ public abstract class OpCondJump
         try
             {
             ObjectHandle hValue = frame.getArgument(m_nArg);
-            if (hValue == null)
-                {
-                return R_REPEAT;
-                }
-
             if (isDeferred(hValue))
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
@@ -161,13 +156,8 @@ public abstract class OpCondJump
         {
         try
             {
-            ObjectHandle[] ahArg = frame.getArguments(new int[]{m_nArg, m_nArg2}, 2);
-            if (ahArg == null)
-                {
-                return R_REPEAT;
-                }
-
-            TypeConstant typeCommon = calculateCommonType(frame);
+            ObjectHandle[] ahArg      = frame.getArguments(new int[]{m_nArg, m_nArg2}, 2);
+            TypeConstant   typeCommon = calculateCommonType(frame);
 
             if (anyDeferred(ahArg))
                 {

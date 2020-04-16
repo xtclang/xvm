@@ -133,10 +133,6 @@ public abstract class OpTest
         try
             {
             ObjectHandle hValue = frame.getArgument(m_nValue1);
-            if (hValue == null)
-                {
-                return R_REPEAT;
-                }
 
             if (isDeferred(hValue))
                 {
@@ -160,10 +156,6 @@ public abstract class OpTest
         try
             {
             ObjectHandle[] ahArg = frame.getArguments(new int[]{m_nValue1, m_nValue2}, 2);
-            if (ahArg == null)
-                {
-                return R_REPEAT;
-                }
 
             TypeConstant typeCommon = calculateCommonType(frame);
 

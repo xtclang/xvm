@@ -212,19 +212,11 @@ public class Fiber
             {
             iResult = frame.raiseException(xException.timedOut(frame, "The service has timed-out"));
             }
-        else if (m_status == FiberStatus.Waiting)
+        else if (getStatus() == FiberStatus.Waiting)
             {
             assert frame == m_frame;
 
-            iResult = frame.checkWaitingRegisters();
-            if (iResult == Op.R_BLOCK)
-                {
-                // there are still some "waiting" registers
-                m_fResponded = false;
-                return Op.R_BLOCK;
-                }
-
-            if (m_resume != null && iResult == Op.R_NEXT)
+            if (m_resume != null)
                 {
                 iResult = m_resume.proceed(frame);
                 if (iResult == Op.R_BLOCK)
@@ -235,7 +227,6 @@ public class Fiber
                     }
                 m_resume = null;
                 }
-
             }
 
         setStatus(FiberStatus.Running);
@@ -289,6 +280,9 @@ public class Fiber
         }
 
     /**
+     * Note: this API is the sole reason that {@link ClassTemplate#invokeNative1} is allowed to
+     * return R_BLOCK value.
+     *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION} or
      *         or {@link Op#R_BLOCK} values
      */
@@ -328,7 +322,7 @@ public class Fiber
     // Check if there are any pending futures associated with the specified AsyncSection
     private boolean isPending(ObjectHandle hSection)
         {
-        return m_mapPendingFutures != null &&  m_mapPendingFutures.values().contains(hSection);
+        return m_mapPendingFutures != null && m_mapPendingFutures.containsValue(hSection);
         }
 
     @Override
@@ -337,7 +331,7 @@ public class Fiber
         return "Fiber " + f_lId + " of " + f_context + ": " + m_status.name();
         }
 
-    protected class CallNotify
+    protected static class CallNotify
             implements Frame.Continuation
         {
         private final List<ExceptionHandle> listEx;

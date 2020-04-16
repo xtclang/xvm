@@ -104,10 +104,8 @@ public class Var_T
         try
             {
             ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
-            if (ahArg == null)
-                {
-                return R_REPEAT;
-                }
+
+            assert !anyDeferred(ahArg); // TODO GG
 
             TupleHandle hTuple = xTuple.makeHandle(clzTuple, ahArg);
 

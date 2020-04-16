@@ -97,10 +97,6 @@ public class New_N
         try
             {
             ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
-            if (ahVar == null)
-                {
-                return R_REPEAT;
-                }
 
             IdentityConstant constClz  = constructor.getParent().getParent().getIdentityConstant();
             ClassTemplate    template  = frame.ensureTemplate(constClz);

@@ -90,10 +90,6 @@ public class NewC_1
         try
             {
             ObjectHandle hParent = frame.getArgument(m_nParentValue);
-            if (hParent == null)
-                {
-                return R_REPEAT;
-                }
 
             MethodStructure constructor = getVirtualConstructor(frame, hParent);
             if (constructor == null)
@@ -103,14 +99,6 @@ public class NewC_1
 
             ObjectHandle[] ahVar = frame.getArguments(
                     new int[]{m_nArgValue}, constructor.getMaxVars());
-            if (ahVar == null)
-                {
-                if (m_nParentValue == A_STACK)
-                    {
-                    frame.pushStack(hParent);
-                    }
-                return R_REPEAT;
-                }
 
             if (isDeferred(hParent))
                 {

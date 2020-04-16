@@ -334,6 +334,10 @@ module TestReflection
         Tuple resultS = calc.invoke(Tuple:(Duration.ofMillis(10)));
         console.println(resultS[0]);
 
+        console.println("calling sync &Future.get()");
+        @Future Tuple resultS2 = calc.invoke(Tuple:(Duration.ofMillis(10)));
+        console.println(&resultS2.get());
+
         console.println("calling async");
         @Future Tuple resultA = calc.invoke(Tuple:(Duration.ofMillis(20)));
         &resultA.whenComplete((t, e) ->

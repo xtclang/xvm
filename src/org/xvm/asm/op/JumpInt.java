@@ -111,10 +111,6 @@ public class JumpInt
         try
             {
             ObjectHandle hValue = frame.getArgument(m_nArg);
-            if (hValue == null)
-                {
-                return R_REPEAT;
-                }
 
             if (isDeferred(hValue))
                 {

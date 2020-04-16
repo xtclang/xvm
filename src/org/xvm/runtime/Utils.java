@@ -849,7 +849,7 @@ public abstract class Utils
                         assert frame.f_aiReturn == null;
 
                         ObjectHandle hValue = frame.getArgument(0);
-                        if (hValue == null)
+                        if (isDeferred(hValue))
                             {
                             return R_REPEAT;
                             }
@@ -863,7 +863,7 @@ public abstract class Utils
                     for (int i = 0; i < cValues; i++)
                         {
                         ObjectHandle hValue = frame.getArgument(i);
-                        if (hValue == null)
+                        if (isDeferred(hValue))
                             {
                             return R_REPEAT;
                             }

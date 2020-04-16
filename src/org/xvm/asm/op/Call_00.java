@@ -87,9 +87,14 @@ public class Call_00
         try
             {
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
-            if (hFunction == null)
+
+            if (isDeferred(hFunction))
                 {
-                return R_REPEAT;
+                FunctionHandle[] ahArg = new FunctionHandle[] {hFunction};
+                Frame.Continuation stepNext = frameCaller ->
+                    ahArg[0].call1(frame, null, Utils.OBJECTS_NONE, A_IGNORE);
+
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
             return hFunction.call1(frame, null, Utils.OBJECTS_NONE, A_IGNORE);

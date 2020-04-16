@@ -2014,8 +2014,8 @@ public abstract class Op
     public static final int R_REPEAT = -7;
 
     /**
-     * Result from process() method: some assignments were deferred; yield and check the "waiting"
-     * registers before executing the next op-code.
+     * Result from process() method: at the moment used only by Service.registerAsyncSection() API;
+     * the execution must be blocked until Fiber.m_resume continuation allows it to proceed.
      */
     public static final int R_BLOCK = -8;
 

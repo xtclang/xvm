@@ -85,10 +85,6 @@ public class P_Var
         try
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            if (hTarget == null)
-                {
-                return R_REPEAT;
-                }
 
             if (isDeferred(hTarget))
                 {

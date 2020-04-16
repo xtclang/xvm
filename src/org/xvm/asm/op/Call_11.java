@@ -86,10 +86,6 @@ public class Call_11
         try
             {
             ObjectHandle hArg = frame.getArgument(m_nArgValue);
-            if (hArg == null)
-                {
-                return R_REPEAT;
-                }
 
             if (m_nFunctionId == A_SUPER)
                 {
@@ -136,10 +132,7 @@ public class Call_11
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
-            if (hFunction == null)
-                {
-                return R_REPEAT;
-                }
+            assert !isDeferred(hFunction); // TODO GG
 
             checkReturnRegister(frame, hFunction.getMethod());
 

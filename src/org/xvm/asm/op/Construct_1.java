@@ -80,10 +80,6 @@ public class Construct_1
         try
             {
             ObjectHandle hArg = frame.getArgument(m_nArgValue);
-            if (hArg == null)
-                {
-                return R_REPEAT;
-                }
 
             MethodStructure constructor = getMethodStructure(frame);
             if (constructor == null)

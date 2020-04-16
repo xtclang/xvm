@@ -80,10 +80,6 @@ public class Invoke_0T
         try
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
-            if (hTarget == null)
-                {
-                return R_REPEAT;
-                }
 
             if (isDeferred(hTarget))
                 {

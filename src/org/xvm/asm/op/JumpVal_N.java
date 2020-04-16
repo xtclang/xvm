@@ -108,10 +108,6 @@ public class JumpVal_N
         try
             {
             ObjectHandle[] ahValue = frame.getArguments(m_anArgCond, m_anArgCond.length);
-            if (ahValue == null)
-                {
-                return R_REPEAT;
-                }
 
             if (anyDeferred(ahValue))
                 {

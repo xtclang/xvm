@@ -46,8 +46,7 @@ public interface VarSupport
      * @param hTarget  the target Var or Ref handle
      * @param iReturn  the register id to place a result of the operation into
      *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION};
-     *         if the target represents a dynamic future, this can also return {@link Op#R_BLOCK}
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     int getReferent(Frame frame, RefHandle hTarget, int iReturn);
 
