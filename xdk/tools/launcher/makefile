@@ -13,9 +13,9 @@ ifneq ($(OS_NAME),windows)
 endif
 
 # windows resource linking
-RC_FILE  ?= resources/resources.rc
-RES_FILE ?= resources.res
 ifeq ($(OS_NAME),windows)
+    RC_FILE  ?= resources/resources.rc
+    RES_FILE ?= resources.o
 	RESOURCES_TARGET = resfile
 endif
 
@@ -27,9 +27,10 @@ all: compile
 
 compile: $(RESOURCES_TARGET)
 	$(CMP_EXEC) -g -Wall -std=gnu11 -D$(OS_NAME)Launcher $(CMP_OPTS) \
-		launcher.c \
+		launcher.c      \
 		os_$(OS_NAME).c \
-		$(SHARED_IMPL) \
+		$(SHARED_IMPL)  \
+		$(RES_FILE)     \
 		-o $(EXE_NAME)
 
 clean:

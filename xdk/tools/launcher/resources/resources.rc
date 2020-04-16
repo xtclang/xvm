@@ -1,0 +1,30 @@
+#include <winuser.h>
+
+// icon
+100 ICON "resources/icon.ico"
+// version info
+1 VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN
+            VALUE "CompanyName", "xtclang.org"
+            VALUE "FileDescription", "XDK Tool Launcher"
+            VALUE "FileVersion", "1.0"
+            VALUE "InternalName", "launcher"
+            VALUE "LegalCopyright", "(c) xtclang.org 2020"
+            VALUE "OriginalFilename", "windows_launcher.exe"
+            VALUE "ProductName", "XDK"
+            VALUE "ProductVersion", "1.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04E4
+    END
+END
+// manifest
+1 RT_MANIFEST "resources/windows_launcher.exe.manifest"

@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include <assert.h>
 #include <windows.h>
@@ -65,6 +66,7 @@ void execJava(const char* javaPath, const char* javaOpts,
     strcat(cmd, jarPath);
     for (int i = 0; i < argc; ++i)
         {
+        strcat(cmd, " ");
         strcat(cmd, argv[i]);
         }
 
@@ -81,7 +83,12 @@ void execJava(const char* javaPath, const char* javaOpts,
     memset(&pi, 0, sizeof(PROCESS_INFORMATION));
 
     // execute the command line
-    CreateProcess(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
+    if (!CreateProcess(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
+        {
+        abortLaunch(cmd);
+        }
+
+    WaitForSingleObject(pi.hProcess, INFINITE);
 
     // the handles need to be released; this isn't killing the process
     CloseHandle(pi.hProcess);
