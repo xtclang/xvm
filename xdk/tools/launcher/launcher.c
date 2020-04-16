@@ -56,6 +56,26 @@ static void init()
     memset(garbage, 0, MAX_GARBAGE * sizeof(void*));
     }
 
+void abortLaunch(const char* message)
+    {
+    freeAll();
+
+    if (errno)
+        {
+        perror(message);
+        }
+    else if (message == NULL)
+        {
+        printf("Unknown error; aborting.\n");
+        }
+    else
+        {
+        printf("Error: %s; aborting.\n", message);
+        }
+
+    exit(1);
+    }
+
 char* allocBuffer(int size)
     {
     char* buffer = (char*) malloc(size+1);
@@ -87,24 +107,65 @@ static void freeAll()
     memset(garbage, 0, MAX_GARBAGE * sizeof(void*));
     }
 
-void abortLaunch(const char* message)
+const char** toArgV(const char* cmd, int* argc)
     {
-    freeAll();
+    // deal with no command string, or empty command string; translate both of these to zero args
+    if (cmd == NULL || *(cmd = skipWhitespace(cmd)) == '\0')
+        {
+        const char** argv = malloc(sizeof(const char*));
+        argv[0] = NULL;
+        registerGarbage(argv);
 
-    if (errno)
-        {
-        perror(message);
-        }
-    else if (message == NULL)
-        {
-        printf("Unknown error; aborting.\n");
-        }
-    else
-        {
-        printf("Error: %s; aborting.\n", message);
+        if (argc != NULL)
+            {
+            *argc = 0;
+            }
+
+        return argv;
         }
 
-    exit(1);
+    int count = 0;
+    if (*cmd != '\0')
+        {
+        const char* cur = cmd;
+        const char* space;
+        while ((space = strchr(cur, ' ')) != NULL)
+            {
+            ++count;
+            cur = skipWhitespace(space);
+            }
+        ++count;
+        }
+
+    const char** argv = malloc((count+1) * sizeof(const char*));
+    argv[count] = NULL;
+    registerGarbage(argv);
+
+    const char* cur = cmd;
+    for (int i = 0; i < count; ++i)
+        {
+        const char* space = strchr(cur, ' ');
+        if (space == NULL)
+            {
+            assert(i == count-1);
+            argv[i] = cur;
+            }
+        else
+            {
+            int   len = space - cur;
+            char* arg = allocBuffer(len);
+            memcpy(arg, cur, len);
+            argv[i] = arg;
+            cur     = skipWhitespace(space);
+            }
+        }
+
+    if (argc != NULL)
+        {
+        *argc = count;
+        }
+
+    return argv;
     }
 
 /**
@@ -219,6 +280,54 @@ static const char* trimToEOL(const char* s)
         }
     }
 
+const char* extractFile(const char* path)
+    {
+    char* sep = strrchr(path, FILE_SEPERATOR);
+    return sep == NULL ? path : sep+1;
+    }
+
+const char* extractDir(const char* path)
+    {
+    char* sep = strrchr(path, FILE_SEPERATOR);
+    if (sep == NULL)
+        {
+        return NULL;
+        }
+
+    int   len    = sep - path + 1;
+    char* result = allocBuffer(len);
+    memcpy(result, path, len);
+    return result;
+    }
+
+const char* buildPath(const char* dir, const char* file)
+    {
+    if (dir == NULL)
+        {
+        return file;
+        }
+
+    int dirLen = strlen(dir);
+    if (dirLen <= 0)
+        {
+        return file;
+        }
+
+    if (dir[dirLen-1] == FILE_SEPERATOR)
+        {
+        --dirLen;
+        }
+
+    int   fileLen = strlen(file);
+    int   len     = dirLen + 1 + fileLen;
+    char* result  = allocBuffer(len);
+    memcpy(result, dir, dirLen);
+    result[dirLen] = FILE_SEPERATOR;
+    memcpy(result + dirLen + 1, file, fileLen);
+
+    return result;
+    }
+
 const char* removeExtension(const char* file)
     {
     char* dot = strchr(file, '.');
@@ -251,64 +360,33 @@ static const char* withExtension(const char* file, const char* ext)
     return result;
     }
 
-const char** toArgV(const char* cmd, int* argc)
+const char* readFile(const char* path)
     {
-    // deal with no command string, or empty command string; translate both of these to zero args
-    if (cmd == NULL || *(cmd = skipWhitespace(cmd)) == '\0')
+    FILE *f = fopen(path, "rb");
+    if (f == NULL)
         {
-        const char** argv = malloc(sizeof(const char*));
-        argv[0] = NULL;
-        registerGarbage(argv);
-
-        if (argc != NULL)
-            {
-            *argc = 0;
-            }
-
-        return argv;
+        return NULL;
         }
 
-    int count = 0;
-    if (*cmd != '\0')
+    // determine the size of the file
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    rewind(f);
+    if (size < 0 || size > 0x10000)
         {
-        const char* cur = cmd;
-        const char* space;
-        while ((space = strchr(cur, ' ')) != NULL)
-            {
-            ++count;
-            cur = skipWhitespace(space);
-            }
-        ++count;
+        fclose(f);
+        abortLaunch("file size out of range");
+        return NULL;
         }
 
-    const char** argv = malloc((count+1) * sizeof(const char*));
-    argv[count] = NULL;
-    registerGarbage(argv);
-
-    const char* cur = cmd;
-    for (int i = 0; i < count; ++i)
+    char*  result = allocBuffer(size);
+    size_t actual = fread(result, 1, size, f);
+    fclose(f);
+    if (actual != size)
         {
-        const char* space = strchr(cur, ' ');
-        if (space == NULL)
-            {
-            assert(i == count-1);
-            argv[i] = cur;
-            }
-        else
-            {
-            int   len = space - cur;
-            char* arg = allocBuffer(len);
-            memcpy(arg, cur, len);
-            argv[i] = arg;
-            cur     = skipWhitespace(space);
-            }
+        abortLaunch("error reading file");
+        return NULL;
         }
 
-    if (argc != NULL)
-        {
-        *argc = count;
-        }
-
-    return argv;
+    return result;
     }
-

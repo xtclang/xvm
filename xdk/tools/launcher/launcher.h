@@ -1,14 +1,5 @@
 #pragma once
 
-#define DEFAULT_EXEC "java"
-#define DEFAULT_OPTS "-Xms256m -Xmx1024m -ea"
-
-#ifdef windowsLauncher
-#define DEFAULT_JAR  "..\\prototype\\xvm.jar"
-#else
-#define DEFAULT_JAR  "../prototype/xvm.jar"
-#endif
-
 #define MAX_GARBAGE 64
 
 /**
@@ -34,13 +25,6 @@ extern char* allocBuffer(int size);
 extern void registerGarbage(void* buffer);
 
 /**
- * @param file  a file name
- *
- * @return the file name without an extension
- */
-extern const char* removeExtension(const char* file);
-
-/**
  * @param cmd   a string in the form that one would expect a command line statement to take
  * @param argc  a optional pointer to an "argc" value that will hold the number of arguments
  *              returned in "argv"
@@ -48,3 +32,49 @@ extern const char* removeExtension(const char* file);
  * @return an array in the "argv" format
  */
 extern const char** toArgV(const char* cmd, int* argc);
+
+/**
+ * Obtain the file name from the specified file path.
+ *
+ * @param path  the path to extract the file name from
+ *
+ * @return the name of the file
+ */
+extern const char* extractFile(const char* path);
+
+/**
+ * Obtain the directory portion from the specified file path.
+ *
+ * @param path  the path to extract the directory from
+ *
+ * @return the directory path
+ */
+extern const char* extractDir(const char* path);
+
+/**
+ * Combine the specified directory and file into a file path.
+ *
+ * @param dir   the directory path string
+ * @param file  the file name
+ *
+ * @return the path composed of the specified directory and file name
+ */
+extern const char* buildPath(const char* dir, const char* file);
+
+/**
+ * @param file  a file name
+ *
+ * @return the file name without an extension
+ */
+extern const char* removeExtension(const char* file);
+
+/**
+ * Read the file at the specified location.
+ *
+ * @param path  the path of the file to read
+ *
+ * @return the file contents as a string, with the caller being responsible to free() the returned
+ *         pointer
+ */
+extern const char* readFile(const char* path);
+

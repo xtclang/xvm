@@ -1,49 +1,22 @@
 #pragma once
 
+#define DEFAULT_EXEC "java"
+#define DEFAULT_OPTS "-Xms256m -Xmx1024m -ea"
+
+#ifdef windowsLauncher
+#define DEFAULT_JAR    "..\\prototype\\xvm.jar"
+#define FILE_SEPERATOR '\\'
+#else
+#define DEFAULT_JAR  "../prototype/xvm.jar"
+#define FILE_SEPERATOR '/'
+#endif
+
 /**
  * Determine the path of this executable.
  *
  * @return the path of the launcher
  */
 extern const char* findLauncherPath();
-
-/**
- * Obtain the file name from the specified file path.
- *
- * @param path  the path to extract the file name from
- *
- * @return the name of the file
- */
-extern const char* extractFile(const char* path);
-
-/**
- * Obtain the directory portion from the specified file path.
- *
- * @param path  the path to extract the directory from
- *
- * @return the directory path
- */
-extern const char* extractDir(const char* path);
-
-/**
- * Combine the specified directory and file into a file path.
- *
- * @param dir   the directory path string
- * @param file  the file name
- *
- * @return the path composed of the specified directory and file name
- */
-extern const char* buildPath(const char* dir, const char* file);
-
-/**
- * Read the file at the specified location.
- *
- * @param path  the path of the file to read
- *
- * @return the file contents as a string, with the caller being responsible to free() the returned
- *         pointer
- */
-extern const char* readFile(const char* path);
 
 /**
  * Execute the JVM against the specified JAR.

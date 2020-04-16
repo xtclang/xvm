@@ -7,8 +7,10 @@ OS_NAME ?= macos
 CMP_EXEC ?= gcc
 CMP_OPTS ?= -O0
 
-# result executable name
-EXE_NAME ?= $(OS_NAME)_launcher
+# extra source file for shared linux/unix code
+ifneq ($(OS_NAME),windows)
+    SHARED_IMPL = os_unux.c
+endif
 
 # windows resource linking
 RC_FILE  ?= resources/resources.rc
@@ -17,12 +19,17 @@ ifeq ($(OS_NAME),windows)
 	RESOURCES_TARGET = resfile
 endif
 
+# result executable name
+EXE_NAME ?= $(OS_NAME)_launcher
+
+
 all: compile
 
 compile: $(RESOURCES_TARGET)
 	$(CMP_EXEC) -g -Wall -std=gnu11 -D$(OS_NAME)Launcher $(CMP_OPTS) \
 		launcher.c \
 		os_$(OS_NAME).c \
+		$(SHARED_IMPL) \
 		-o $(EXE_NAME)
 
 clean:
