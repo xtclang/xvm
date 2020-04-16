@@ -11,7 +11,7 @@ utility in the prototype xvm.jar, along with all of the command line parameters.
 
 For example:
 
-   xtc HelloWorld.x
+    xtc HelloWorld.x
    
 Will generate an execution of the program "java" with the arguments:
 
