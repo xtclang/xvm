@@ -46,6 +46,7 @@ Thumbs.db
 # build directory #
 ###################
 classes/
+build/
 
 # user-specific project files #
 ###############################
@@ -55,3 +56,7 @@ prj/
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
+
+# Gradle-specific project files #
+#################################
+.gradle
