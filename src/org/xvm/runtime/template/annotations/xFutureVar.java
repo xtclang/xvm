@@ -331,9 +331,15 @@ public class xFutureVar
         }
 
     @Override
-    protected int invokeGetReferent(Frame frame, RefHandle hTarget, int iReturn)
+    protected int invokeNativeGet(Frame frame, RefHandle hRef, int iReturn)
         {
-        FutureHandle hFuture = (FutureHandle) hTarget;
+        return invokeGetReferent(frame, hRef, iReturn);
+        }
+
+    @Override
+    protected int invokeGetReferent(Frame frame, RefHandle hRef, int iReturn)
+        {
+        FutureHandle hFuture = (FutureHandle) hRef;
 
         CompletableFuture<ObjectHandle> cf = hFuture.m_future;
         if (cf == null)
