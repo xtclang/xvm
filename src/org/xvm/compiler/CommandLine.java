@@ -99,7 +99,7 @@ public class CommandLine
     protected Options               opts            = new Options();
     protected List<String>          deferred        = new ArrayList<>();
     protected boolean               error           = false;
-    protected Map<File, Node>       modules         = new ListMap<>();
+    protected Map<File, Node>       modulesByFile   = new ListMap<>();
     protected Map<String, Compiler> modulesByName   = new HashMap<>();
     protected BuildRepository       repoBuild       = new BuildRepository();
     protected ModuleRepository      repoPath;
@@ -125,37 +125,66 @@ public class CommandLine
         checkTerminalFailure();
         showCompilerOptions();
 
-        configureRepository();
+        boolean fRebuild = false;
 
-        List<File> listSysFiles = new ArrayList<>(2);
-        listSysFiles.add(new File("system"));
-        listSysFiles.add(new File("_native"));
+        // if the compilation is occurring in the core Ecstasy development environment, then the
+        // source code for both Ecstasy.xtclang.org and _native.xtclang.org will be present, and
+        // we will automatically compile them first if they are present and need compilation
+        File fileEcstasy = new File("system");
+        File fileNative  = new File("_native");
+        if (fileEcstasy.exists() && fileEcstasy.isDirectory() &&
+            fileNative .exists() && fileNative .isDirectory())
+            {
+            List<File> listSysFiles = new ArrayList<>(2);
+            listSysFiles.add(fileEcstasy);
+            listSysFiles.add(fileNative );
 
-        Map<File, Node> mapSysModules = selectTargets(listSysFiles);
-        checkTerminalFailure();
-        modules = mapSysModules;
+            Map<File, Node> mapModules = selectTargets(listSysFiles);
+            checkTerminalFailure();
 
-        boolean fRebuild = buildModules(mapSysModules, false);
+            if (mapModules.size() != 2)
+                {
+                throw new IllegalStateException("Error compiling system modules; "
+                        + mapModules.size() + " system module(s) found, but 2 modules required");
+                }
+
+            fRebuild = buildModules(mapModules, true, false);
+            }
+        else
+            {
+            // find and load/link the two system modules
+            }
 
         if (!sources.isEmpty())
             {
             Map<File, Node> mapModules = selectTargets(sources);
             checkTerminalFailure();
-            modules.putAll(mapModules);
 
-            buildModules(mapModules, fRebuild);
+            buildModules(mapModules, false, fRebuild);
             }
 
         return repoBuild;
         }
 
     /**
-     * @param fRebuild if true, the module should not be read from disk and must be re-compiled
+     * @param mapModules     the modules to build
+     * @param fSystem        if true, then this is an attempt to build the "Ecstasy" and "_native"
+     *                       modules
+     * @param fForceRebuild  if true, then the module should not be read from disk, and instead it
+     *                       must be re-compiled from the source code
      *
-     * @return true iff any of the modules were re-compiled
+     * @return true iff any of the modules required a re-compile
      */
-    protected boolean buildModules(Map<File, Node> mapModules, boolean fRebuild)
+    protected boolean buildModules(Map<File, Node> mapModules, boolean fSystem, boolean fForceRebuild)
         {
+        configureRepository(mapModules, fSystem);
+
+        if (!fSystem && !loadAndLinkSystem())
+            {
+            deferred.add("xtc: Failed to load and link core libraries");
+            error = true;
+            }
+
         // parse the modules
         parseSource(mapModules);
         checkTerminalFailure();
@@ -163,11 +192,7 @@ public class CommandLine
         // register names
         registerNames(mapModules);
 
-        if (!fRebuild)
-            {
-            fRebuild = !readModules(mapModules);
-            }
-
+        boolean fRebuild = fForceRebuild || !readModulesIntoBuildRepoAndVerifyUpToDate(mapModules);
         if (fRebuild)
             {
             // create the parse tree
@@ -205,6 +230,7 @@ public class CommandLine
             {
             processNativeDependencies();
             }
+
         return fRebuild;
         }
 
@@ -412,7 +438,7 @@ public class CommandLine
                 int i = 0;
                 for (File file : sources)
                     {
-                    out("   : [" + i++ + "]=" + file);
+                    out("   : [" + i++ + "]=" + file + " (" + file.getAbsolutePath() + ')');
                     }
                 out();
                 }
@@ -422,29 +448,51 @@ public class CommandLine
     /**
      * Configure the repositories to use to read and write module files.
      */
-    void configureRepository()
+    void configureRepository(Map<File, Node> mapModules, boolean fSystem)
         {
-        List<File> path = opts.modulePath;
-        if (path != null && !path.isEmpty())
+        // previously generated system modules may already be in the build repository
+
+        modulesByFile.putAll(mapModules);
+
+        if (repoPath == null)
             {
-            ModuleRepository[] repos = new ModuleRepository[path.size() + 1];
-            repos[0] = repoBuild;
-            for (int i = 0, c = path.size(); i < c; ++i)
+            List<File> path = opts.modulePath;
+            if (path != null && !path.isEmpty())
                 {
-                File file = path.get(i);
-                repos[i+1] = file.isDirectory() ? new DirRepository(file, true) : new FileRepository(file, true);
+                ModuleRepository[] repos = new ModuleRepository[path.size() + 1];
+                repos[0] = repoBuild;
+                for (int i = 0, c = path.size(); i < c; ++i)
+                    {
+                    File file = path.get(i);
+                    repos[i + 1] = file.isDirectory()
+                            ? new DirRepository(file, true)
+                            : new FileRepository(file, true);
+                    }
+                repoPath = new LinkedRepository(repos);
                 }
-            repoPath = new LinkedRepository(repos);
+            else
+                {
+                // if there is no repository path, then we cannot load the Ecstasy classes, so we
+                // had better be compiling the Ecstasy classes here!
+                assert fSystem;
+
+                repoPath = repoBuild;
+                }
+            }
+
+        if (fSystem)
+            {
+            repoResult = null;
             }
         else
             {
-            repoPath = repoBuild;
-            }
-
-        File file = opts.destination;
-        if (file != null)
-            {
-            repoResult = file.isDirectory() ? new DirRepository(file, false) : new FileRepository(file, false);
+            File file = opts.destination;
+            if (file != null)
+                {
+                repoResult = file.isDirectory()
+                        ? new DirRepository (file, false)
+                        : new FileRepository(file, false);
+                }
             }
         }
 
@@ -461,9 +509,9 @@ public class CommandLine
         for (File file : listSources)
             {
             File moduleFile = findModule(file);
-            if (moduleFile != null && !modules.containsKey(moduleFile))
+            if (moduleFile != null && !modulesByFile.containsKey(moduleFile))
                 {
-                mapModules.put(moduleFile, buildTree(moduleFile, 0));
+                mapModules.putIfAbsent(moduleFile, buildTree(moduleFile, 0));
                 }
             }
         if (mapModules.isEmpty())
@@ -780,7 +828,6 @@ public class CommandLine
     protected void processNativeDependencies()
         {
         ModuleStructure moduleNative = repoBuild.loadModule(TemplateRegistry.NATIVE_MODULE);
-
         try (var x = ConstantPool.withPool(moduleNative.getConstantPool()))
             {
             ClassStructure  clzNakedRef  = (ClassStructure) moduleNative.getChild("NakedRef");
@@ -916,14 +963,16 @@ public class CommandLine
     /**
      * Load modules from disk.
      *
+     * @param mapModules  the modules to attempt to load
+     *
      * @return true iff all the modules were loaded and saved into the build repository
      *         and don't require any re-compilation
      */
-    protected boolean readModules(Map<File, Node> mapModules)
+    protected boolean readModulesIntoBuildRepoAndVerifyUpToDate(Map<File, Node> mapModules)
         {
-        int                 cModules   = mapModules.size();
-        List<FileStructure> listFiles  = new ArrayList<>(cModules);
-        BuildRepository     repoTemp   = new BuildRepository();
+        int                 cModules    = mapModules.size();
+        List<FileStructure> listStructs = new ArrayList<>(cModules);
+        BuildRepository     repoTemp    = new BuildRepository();
 
         for (File fileSrc : mapModules.keySet())
             {
@@ -953,7 +1002,7 @@ public class CommandLine
                     FileStructure   structFile   = new FileStructure(file);
                     ModuleStructure structModule = structFile.getModule();
                     repoTemp.storeModule(structModule);
-                    listFiles.add(structFile);
+                    listStructs.add(structFile);
                     }
                 catch (Exception e)
                     {
@@ -971,11 +1020,60 @@ public class CommandLine
         repoBuild.storeAll(repoTemp);
 
         // link the modules
-        for (FileStructure structFile : listFiles)
+        for (FileStructure structFile : listStructs)
             {
-            structFile.linkModules(repoBuild);
+            structFile.linkModules(repoPath);
             }
+
         return true;
+        }
+
+    protected boolean loadAndLinkSystem()
+        {
+        FileStructure structEcstasy = null;
+        if (repoBuild.loadModule("Ecstasy.xtclang.org") == null)
+            {
+            ModuleStructure module = repoPath.loadModule("Ecstasy.xtclang.org");
+            if (module == null)
+                {
+                return false;
+                }
+            else
+                {
+                repoBuild.storeModule(module);
+                structEcstasy = module.getFileStructure();
+                }
+            }
+
+        FileStructure structNative = null;
+        if (repoBuild.loadModule("_native.xtclang.org") == null)
+            {
+            ModuleStructure module = repoPath.loadModule("_native.xtclang.org");
+            if (module == null)
+                {
+                return false;
+                }
+            else
+                {
+                repoBuild.storeModule(module);
+                structNative = module.getFileStructure();
+                }
+            }
+
+        // link the modules
+        String sMissingEcstasy = null;
+        if (structEcstasy != null)
+            {
+            structEcstasy.linkModules(repoPath);
+            }
+
+        String sMissingNative = null;
+        if (structNative != null)
+            {
+            structNative.linkModules(repoPath);
+            }
+
+        return sMissingEcstasy == null && sMissingNative == null;
         }
 
     /**
@@ -987,9 +1085,9 @@ public class CommandLine
         if (modulesByName.isEmpty())
             {
             out("xtc: dump modules:");
-            for (Map.Entry<File, Node> entry : modules.entrySet())
+            for (Map.Entry<File, Node> entry : modulesByFile.entrySet())
                 {
-                if (modules.size() > 1 && entry.getValue().name().equals(Constants.ECSTASY_MODULE))
+                if (modulesByFile.size() > 1 && entry.getValue().name().equals(Constants.ECSTASY_MODULE))
                     {
                     // skip the Ecstasy module if we're compiling multiple modules
                     continue;
@@ -1093,15 +1191,15 @@ public class CommandLine
      */
     interface Node
         {
-        File getFile();
-        long lastModified();
-        void parse();
-        void registerNames();
-        String name();
-        String descriptiveName();
+        File                     getFile();
+        long                     lastModified();
+        void                     parse();
+        void                     registerNames();
+        String                   name();
+        String                   descriptiveName();
         TypeCompositionStatement getType();
-        ErrorList getErrorList();
-        void checkErrors();
+        ErrorList                getErrorList();
+        void                     checkErrors();
         }
 
 

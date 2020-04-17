@@ -3,6 +3,7 @@ package org.xvm.compiler;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;
@@ -52,6 +53,41 @@ public class Source
         m_file      = file;
         m_cDirDepth = cDepth;
         setFileName(file.getPath());
+        }
+
+    /**
+     * Construct a Source from an input stream.
+     *
+     * @param stream  the InputStream
+     */
+    public Source(InputStream stream)
+        {
+        this(fromInputStream(stream));
+        }
+
+    /**
+     * Read a char[] from a stream. Inefficient, but predictable.
+     *
+     * @param stream  the stream to vacuum
+     *
+     * @return the contents of the stream, as a char[]
+     */
+    private static char[] fromInputStream(InputStream stream)
+        {
+        try
+            {
+            StringBuffer sb = new StringBuffer();
+            int n;
+            while ((n = stream.read()) >= 0)
+                {
+                sb.append((char) n);
+                }
+            return sb.toString().toCharArray();
+            }
+        catch (IOException e)
+            {
+            throw new RuntimeException(e);
+            }
         }
 
     /**

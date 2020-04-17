@@ -45,6 +45,11 @@ public class TestConnector
         CommandLine cmd = new CommandLine(asFile);
 
         ModuleRepository repository = cmd.build();
+        if (repository == null)
+            {
+            System.out.println("\nBuild failed; exiting.\n");
+            return;
+            }
 
         if (System.getProperties().containsKey("DEBUG"))
             {

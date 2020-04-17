@@ -155,7 +155,7 @@ public class DirRepository
             }
 
         Map<File, ModuleInfo> oldModulesByFile = modulesByFile;
-        Map<File, ModuleInfo>   newModulesByFile = new HashMap<>();
+        Map<File, ModuleInfo> newModulesByFile = new HashMap<>();
 
         modulesByFile = newModulesByFile;
         modulesByName.clear();
@@ -163,7 +163,7 @@ public class DirRepository
         File[] files = m_dir.listFiles(ModulesOnly);
         for (File file : files)
             {
-            ModuleInfo info = modulesByFile.get(file);
+            ModuleInfo info = oldModulesByFile.get(file);
             if (info == null || info.timestamp != file.lastModified() || info.size != file.length())
                 {
                 // build a new one to cache
@@ -304,7 +304,7 @@ public class DirRepository
     private final File    m_dir;
     private final boolean m_fRO;
 
-    private Map<File, ModuleInfo>   modulesByFile = new HashMap<>();
+    private Map<File  , ModuleInfo> modulesByFile = new HashMap<>();
     private Map<String, ModuleInfo> modulesByName = new TreeMap<>();
     private long lastScan;
     }

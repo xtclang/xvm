@@ -3731,7 +3731,22 @@ public class ConstantPool
         {
         try
             {
-            Source    src    = new Source(new File("implicit.x"), 0);
+            Source src;
+            File file = new File("implicit.x");
+            if (file.exists() && file.isFile() && file.canRead())
+                {
+                src = new Source(file, 0);
+                }
+            else
+                {
+                ClassLoader loader = ConstantPool.class.getClassLoader();
+                if (loader == null)
+                    {
+                    loader = ClassLoader.getSystemClassLoader();
+                    }
+                src = new Source(loader.getResourceAsStream("implicit.x"));
+                }
+
             ErrorList errs   = new ErrorList(1);
             Parser    parser = new Parser(src, errs);
             s_implicits = parser.parseImplicits();

@@ -14,6 +14,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -325,30 +326,67 @@ public class FileStructure
      * Link the modules in this FileStructure.
      *
      * @param repository  the module repository to load modules from
+     *
+     * @return null iff success, otherwise the name of the first module that could not be linked to
      */
-    public void linkModules(ModuleRepository repository)
+    public String linkModules(ModuleRepository repository)
         {
+        return linkModules(repository, new HashSet<>());
+        }
+
+    protected String linkModules(ModuleRepository repository, Set<FileStructure> setVisited)
+        {
+        String sMissing = null;
+
+        Set<FileStructure> setLinkLater = null;
         for (String sModule : moduleNames())
             {
             if (!sModule.equals(getModuleName()))
                 {
                 ModuleStructure structFingerprint = getModule(sModule);
                 assert structFingerprint.isFingerprint();
-                assert structFingerprint.getFingerprintOrigin() == null;
-
-                // load the module against which the compilation will occur
-                if (!repository.getModuleNames().contains(sModule))
+                if (structFingerprint.getFingerprintOrigin() == null)
                     {
-                    // no error is logged here; the package that imports the module will detect
-                    // the error when it is asked to resolve global names; see
-                    // TypeCompositionStatement
-                    continue;
-                    }
+                    // load the module against which the compilation will occur
+                    if (repository.getModuleNames().contains(sModule))
+                        {
+                        ModuleStructure structActual = repository.loadModule(sModule); // TODO versions etc.
+                        structFingerprint.setFingerprintOrigin(structActual);
 
-                ModuleStructure structActual = repository.loadModule(sModule); // TODO versions etc.
-                structFingerprint.setFingerprintOrigin(structActual);
+                        FileStructure structToLink = structActual.getFileStructure();
+                        if (setVisited.add(structToLink))
+                            {
+                            if (setLinkLater == null)
+                                {
+                                setLinkLater = new HashSet<>();
+                                }
+                            setLinkLater.add(structToLink);
+                            }
+                        }
+                    else if (sMissing == null)
+                        {
+                        // no error is logged here; the package that imports the module will detect
+                        // the error when it is asked to resolve global names; see
+                        // TypeCompositionStatement
+                        sMissing = sModule;
+                        }
+                    }
                 }
             }
+
+        if (setLinkLater != null)
+            {
+            for (FileStructure struct : setLinkLater)
+                {
+                String sMissingDownstream = struct.linkModules(repository, setVisited);
+                if (sMissingDownstream != null && sMissing == null)
+                    {
+                    sMissing = sMissingDownstream;
+                    }
+                }
+            }
+
+        return sMissing;
         }
 
     /**
