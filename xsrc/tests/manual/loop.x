@@ -27,7 +27,7 @@ module TestLoops
             console.println(i--);
             if (WhileLabel.first)
                 {
-                console.println("frist!");
+                console.println("first!");
                 }
             console.println("(count=" + WhileLabel.count + ")");
             }
@@ -57,7 +57,7 @@ module TestLoops
             console.println(i);
             if (L1.first)
                 {
-                console.println("frist!");
+                console.println("first!");
                 }
             console.println("(count=" + L1.count + ")");
             }
