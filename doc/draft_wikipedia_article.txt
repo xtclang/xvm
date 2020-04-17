@@ -1,3 +1,13 @@
+Note: 2 published articles were specified as a requirement:
+https://www.infoq.com/articles/xtc-lang/
+https://www.theserverside.com/news/252471233/Ecstasy-programming-language-targets-cloud-native-computing
+
+Also:
+https://news.ycombinator.com/item?id=21481958
+https://www.youtube.com/watch?v=cEd9gtLkPP4
+https://skillsmatter.com/skillscasts/14367-keynote-introducing-ecstasy-a-cloud-native-general-purpose-programming-language
+
+
 {{Infobox programming language
 | name                   = Ecstasy
 | logo                   =
