@@ -14,7 +14,7 @@ endif
 
 # windows resource linking
 ifeq ($(OS_NAME),windows)
-    RC_FILE  ?= resources/resources.rc
+    RC_FILE  ?= resources.rc
     RES_FILE ?= resources.o
 	RESOURCES_TARGET = resfile
 endif

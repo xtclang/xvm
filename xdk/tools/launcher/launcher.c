@@ -34,12 +34,13 @@ int main(int argc, const char* argv[])
     const char* execFile = removeExtension(extractFile(execPath));
     const char* cfgPath  = buildPath(execDir, withExtension(execFile, ".cfg"));
     const char* cfg      = readFile(cfgPath);
-    const char* javaPath = findValue(cfg, "exec", DEFAULT_EXEC);
-    const char* javaOpts = findValue(cfg, "opts", DEFAULT_OPTS);
-    const char* javaJar  = findValue(cfg, "jar" , DEFAULT_JAR );
+    const char* javaPath = findValue(cfg, "exec" , DEFAULT_EXEC);
+    const char* javaOpts = findValue(cfg, "opts" , DEFAULT_OPTS);
+    const char* jarPath  = findValue(cfg, "proto", PROTO_DIR   );
+    const char* libPath  = findValue(cfg, "lib"  , LIB_DIR     );
 
     // finally, launch the JVM
-    execJava(javaPath, javaOpts, javaJar, argc, argv);
+    execJava(javaPath, javaOpts, buildPath(execDir, jarPath), buildPath(execDir, libPath), argc, argv);
 
     freeAll();
     return 0;
