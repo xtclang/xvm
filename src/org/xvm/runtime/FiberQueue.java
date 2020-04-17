@@ -179,7 +179,7 @@ public class FiberQueue
         {
         if (cCapacity > m_aFrame.length)
             {
-            int cNewCapacity = cCapacity + cCapacity >> 2; // 1.25
+            int cNewCapacity = cCapacity + (cCapacity >> 2); // 1.25
 
             Frame[] aNew = new Frame[cNewCapacity];
 
