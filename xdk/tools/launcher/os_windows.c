@@ -23,11 +23,19 @@ const char* findLauncherPath()
     return result;
     }
 
-void execJava(const char* javaPath, const char* javaOpts,
-              const char* jarPath, int argc, const char * argv[])
+void execJava(const char* javaPath,
+              const char* javaOpts,
+              const char* jarPath,
+              const char* libPath,
+              int         argc,
+              const char* argv[])
     {
+    // this implementation does not fork()/setsid() because we're not attempting to detach
+    // from the terminal that executed the command
+
     #ifdef DEBUG
-    printf("javaPath=%s, javaOpts=%s, jarPath=%s, argc=%d, argv=\n", javaPath, javaOpts, jarPath, argc);
+    printf("javaPath=%s, javaOpts=%s, jarPath=%s, libPath=%s, argc=%d, argv=\n",
+            javaPath,    javaOpts,    jarPath,    libPath,    argc);
     for (int i = 0; i < argc; ++i)
         {
         printf("[%d] = \"%s\"\n", i, argv[i]);
@@ -36,24 +44,37 @@ void execJava(const char* javaPath, const char* javaOpts,
 
     assert(javaPath != NULL && *javaPath != '\0');
     assert(jarPath  != NULL && *jarPath  != '\0');
+    assert(libPath  != NULL && *libPath  != '\0');
     if (javaOpts == NULL)
         {
         javaOpts = "";
         }
 
+    // the native ecstasy library is located in the same location as the prototype JAR
+    const char* jarFile = buildPath(jarPath, PROTO_JAR);
+    const char* libFile = buildPath(jarPath, PROTO_LIB);
+
     // make the executable file name into the first arg without a path or extension
     assert(argc >= 1);
-    argv[0] = removeExtension(extractFile(argv[0]));
+    const char* tool = removeExtension(extractFile(argv[0]));
+    --argc;
+    ++argv;
 
     // collect all arguments into one giant string, starting with the call to java
     int len = strlen(javaPath)
-            + 1
+            + strlen(" ")
             + strlen(javaOpts)
             + strlen(" -jar ")
-            + strlen(jarPath);
+            + strlen(jarFile)
+            + strlen(" ")
+            + strlen(tool)
+            + strlen(" -M ")
+            + strlen(libPath)
+            + strlen(" -M ")
+            + strlen(libFile);
     for (int i = 0; i < argc; ++i)
         {
-        len += strlen(argv[i]);
+        len += 1 + strlen(argv[i]);
         }
 
     char* cmd = malloc(len);
@@ -63,7 +84,13 @@ void execJava(const char* javaPath, const char* javaOpts,
     strcat(cmd, " ");
     strcat(cmd, javaOpts);
     strcat(cmd, " -jar ");
-    strcat(cmd, jarPath);
+    strcat(cmd, jarFile);
+    strcat(cmd, " ");
+    strcat(cmd, tool);
+    strcat(cmd, " -M ");
+    strcat(cmd, libPath);
+    strcat(cmd, " -M ")
+    strcat(cmd, libFile);
     for (int i = 0; i < argc; ++i)
         {
         strcat(cmd, " ");

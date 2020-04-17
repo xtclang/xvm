@@ -1,7 +1,7 @@
 #include <winuser.h>
 
 // icon
-100 ICON "resources/icon.ico"
+100 ICON "x.ico"
 // version info
 1 VERSIONINFO
 FILEVERSION     1,0,0,0
@@ -27,4 +27,4 @@ BEGIN
     END
 END
 // manifest
-1 RT_MANIFEST "resources/windows_launcher.exe.manifest"
+1 RT_MANIFEST "windows.manifest"
