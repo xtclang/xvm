@@ -543,20 +543,6 @@ public class Frame
         }
 
     /**
-     * Push a value on the local stack if it was popped from the stack.
-     *
-     * @param iArg    the argument id
-     * @param hValue  a value to push back on stack
-     */
-    public void restoreStack(int iArg, ObjectHandle hValue)
-        {
-        if (iArg == Op.A_STACK)
-            {
-            pushStack(hValue);
-            }
-        }
-
-    /**
      * Assign a specified register on this frame.
      *
      * @param nVar    the register id
@@ -783,7 +769,7 @@ public class Frame
     /**
      * Assign a future result to the specified register on this frame.
      *
-     * @param iReturn   the result of the previous execution
+     * @param iReturn   the register id
      * @param cfResult  the future to assign
      *
      * @return one of R_NEXT, R_CALL or R_EXCEPTION values

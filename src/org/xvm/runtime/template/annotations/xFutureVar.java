@@ -349,23 +349,7 @@ public class xFutureVar
 
         if (cf.isDone())
             {
-            try
-                {
-                return frame.assignValue(iReturn, cf.get());
-                }
-            catch (InterruptedException e)
-                {
-                throw new UnsupportedOperationException("TODO");
-                }
-            catch (ExecutionException e)
-                {
-                Throwable eOrig = e.getCause();
-                if (eOrig instanceof WrapperException)
-                    {
-                    return frame.raiseException((WrapperException) eOrig);
-                    }
-                throw new UnsupportedOperationException("Unexpected exception", eOrig);
-                }
+            return assignDone(frame, cf, iReturn);
             }
 
         // wait for the assignment/completion; the service is responsible for timing out
@@ -409,6 +393,38 @@ public class xFutureVar
         return Op.R_NEXT;
         }
 
+    /**
+     * Helper method to assign a value of a completed future to a frame's register.
+     *
+     * @param frame    the current frame
+     * @param cf       a future
+     * @param iReturn  the register id to place the result to
+     *
+     * @return one of R_NEXT, R_CALL or R_EXCEPTION
+     */
+    public static int assignDone(Frame frame, CompletableFuture<ObjectHandle> cf, int iReturn)
+        {
+        assert cf.isDone();
+
+        try
+            {
+            return frame.assignValue(iReturn, cf.get());
+            }
+        catch (InterruptedException e)
+            {
+            throw new UnsupportedOperationException("TODO");
+            }
+        catch (ExecutionException e)
+            {
+            Throwable eOrig = e.getCause();
+            if (eOrig instanceof WrapperException)
+                {
+                return frame.raiseException((WrapperException) eOrig);
+                }
+            throw new UnsupportedOperationException("Unexpected exception", eOrig);
+            }
+        }
+
 
     // ----- the handle -----
 
@@ -433,16 +449,8 @@ public class xFutureVar
         @Override
         public ObjectHandle getReferent()
             {
-            // it's a responsibility of the caller to only use this when the future is known to have
-            // completed normally
-            try
-                {
-                return m_future.get();
-                }
-            catch (Throwable e)
-                {
-                return null;
-                }
+            // never called
+            throw new IllegalStateException();
             }
 
         /**
@@ -457,19 +465,12 @@ public class xFutureVar
          * Wait for the future completion and assign the specified register to the result.
          *
          * @param frame    the current frame
-         * @param iResult  the register id
+         * @param iReturn  the register id
          *
          * @return R_NEXT, R_CALL, R_EXCEPTION
          */
-        public int waitAndAssign(Frame frame, int iResult)
+        public int waitAndAssign(Frame frame, int iReturn)
             {
-            if (isAssigned())
-                {
-                return frame.assignValue(iResult, getReferent());
-                }
-
-            // add a notification and wait for the assignment/completion;
-            // the service is responsible for timing out
             CompletableFuture<ObjectHandle> cf = m_future;
             if (cf == null)
                 {
@@ -477,11 +478,18 @@ public class xFutureVar
                 // we can safely add a completable future now
                 cf = m_future = new CompletableFuture();
                 }
+            else if (cf.isDone())
+                {
+                return assignDone(frame, cf, iReturn);
+                }
+
+            // add a notification and wait for the assignment/completion;
+            // the service is responsible for timing out
             cf.whenComplete
                 (
                 (r, x) -> frame.f_fiber.m_fResponded = true
                 );
-            return frame.call(Utils.createWaitFrame(frame, cf, iResult));
+            return frame.call(Utils.createWaitFrame(frame, cf, iReturn));
             }
 
         @Override

@@ -4,6 +4,7 @@ package org.xvm.runtime;
 import java.sql.Timestamp;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
@@ -36,6 +37,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
+import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 
 /**
@@ -794,7 +796,7 @@ public abstract class Utils
         {
         ObjectHandle[] ahFuture = new ObjectHandle[]{xFutureVar.makeHandle(cfResult)};
 
-        Frame frameNext = frame.createNativeFrame(GET_AND_RETURN, ahFuture, iReturn, null);
+        Frame frameNext = frame.createNativeFrame(WAIT_AND_RETURN, ahFuture, iReturn, null);
 
         frameNext.f_aInfo[0] = frame.new VarInfo(xFutureVar.TYPE, Frame.VAR_DYNAMIC_REF);
 
@@ -815,7 +817,8 @@ public abstract class Utils
         {
         int            cReturns = aiReturn.length;
         ObjectHandle[] ahFuture = new ObjectHandle[cReturns];
-        Frame frameNext = frame.createNativeFrame(GET_AND_RETURN, ahFuture, Op.A_MULTI, aiReturn);
+
+        Frame frameNext = frame.createNativeFrame(WAIT_AND_RETURN, ahFuture, Op.A_MULTI, aiReturn);
 
         // create a pseudo frame to deal with the multiple waits
         for (int i = 0; i < cReturns; i++)
@@ -832,63 +835,52 @@ public abstract class Utils
         return frameNext;
         }
 
-    private static final Op[] GET_AND_RETURN = new Op[]
+    private static final Op[] WAIT_AND_RETURN = new Op[]
         {
         new Op()
             {
             public int process(Frame frame, int iPC)
                 {
-                try
+                int cValues = frame.f_ahVar.length;
+
+                assert cValues > 0;
+
+                if (cValues == 1)
                     {
-                    int cValues = frame.f_ahVar.length;
+                    assert frame.f_aiReturn == null;
 
-                    assert cValues > 0;
+                    FutureHandle hFuture = (FutureHandle) frame.f_ahVar[0];
 
-                    if (cValues == 1)
-                        {
-                        assert frame.f_aiReturn == null;
-
-                        ObjectHandle hValue = frame.getArgument(0);
-                        if (isDeferred(hValue))
-                            {
-                            return R_REPEAT;
-                            }
-                        // getArgument() call has already de-referenced the dynamic register
-                        return frame.returnValue(hValue, false);
-                        }
-
-                    assert frame.f_iReturn == A_MULTI;
-
-                    ObjectHandle[] ahValue = new ObjectHandle[cValues];
-                    for (int i = 0; i < cValues; i++)
-                        {
-                        ObjectHandle hValue = frame.getArgument(i);
-                        if (isDeferred(hValue))
-                            {
-                            return R_REPEAT;
-                            }
-
-                        // services may replace "null" elements of a negative conditional return
-                        // with the DEFAULT value (see ServiceContext.sendResponse)
-                        if (hValue == ObjectHandle.DEFAULT)
-                            {
-                            assert i > 0 && ahValue[0].equals(xBoolean.FALSE);
-                            hValue = null;
-                            }
-                        ahValue[i] = hValue;
-                        }
-
-                    return frame.returnValues(ahValue, null);
+                    return hFuture.isAssigned()
+                        ? frame.returnValue(hFuture, true)
+                        : R_REPEAT;
                     }
-                catch (ObjectHandle.ExceptionHandle.WrapperException e)
+
+                assert frame.f_iReturn == A_MULTI;
+
+                FutureHandle[] ahFuture = new FutureHandle[cValues];
+                for (int i = 0; i < cValues; i++)
                     {
-                    return frame.raiseException(e);
+                    FutureHandle hFuture = (FutureHandle) frame.f_ahVar[i];
+                    if (hFuture.isAssigned())
+                        {
+                        ahFuture[i] = hFuture;
+                        }
+                    else
+                        {
+                        return R_REPEAT;
+                        }
                     }
+
+                boolean[] afDynamic = new boolean[cValues];
+                Arrays.fill(afDynamic, true);
+
+                return frame.returnValues(ahFuture, afDynamic);
                 }
 
             public String toString()
                 {
-                return "GetAndReturn";
+                return "WaitAndReturn";
                 }
             }
         };
