@@ -385,7 +385,7 @@ public class MapConstant
             nHash = cEntries;
             for (int of = 0, cInc = Math.max(1, cEntries >>> 6); of < cEntries; of += cInc)
                 {
-                nHash *= 19 + aconstKey[of].hashCode() ^ aconstVal.hashCode();
+                nHash *= 19 + aconstKey[of].hashCode() ^ aconstVal[of].hashCode();
                 }
             m_nHash = nHash;
             }
@@ -568,8 +568,6 @@ public class MapConstant
 
 
     // ----- fields --------------------------------------------------------------------------------
-
-    private static final Constant[] NO_CONSTANTS = new Constant[0];
 
     /**
      * Holds the index of the key type during deserialization.
