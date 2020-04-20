@@ -38,22 +38,32 @@ public abstract class Container
         }
 
     /**
+     * Obtain the "main" service context for this Container.
+     */
+    public ServiceContext getServiceContext()
+        {
+        return m_contextMain;
+        }
+
+    /**
      * Ensure the existence of the "main" service context for this Container.
      */
-    public void ensureServiceContext()
+    public ServiceContext ensureServiceContext()
         {
-        if (m_contextMain == null)
+        ServiceContext ctx = m_contextMain;
+        if (ctx == null)
             {
             ConstantPool pool = m_idModule.getConstantPool();
 
             try (var x = ConstantPool.withPool(pool))
                 {
-                m_contextMain = createServiceContext(m_idModule.getName());
-                xService.INSTANCE.createServiceHandle(m_contextMain,
+                m_contextMain = ctx = createServiceContext(m_idModule.getName());
+                xService.INSTANCE.createServiceHandle(ctx,
                     xService.INSTANCE.getCanonicalClass(),
                     xService.INSTANCE.getCanonicalType());
                 }
             }
+        return ctx;
         }
 
     /**
@@ -63,7 +73,7 @@ public abstract class Container
      *
      * @return the new service context
      */
-    public ServiceContext createServiceContext(String sName)
+    protected ServiceContext createServiceContext(String sName)
         {
         return new ServiceContext(this, m_idModule.getConstantPool(),
                 sName, f_runtime.f_idProducer.getAndIncrement());
@@ -88,6 +98,12 @@ public abstract class Container
             try
                 {
                 service.run();
+                }
+            catch (Throwable e)
+                {
+                // must not happen
+                e.printStackTrace();
+                System.exit(-1);
                 }
             finally
                 {
