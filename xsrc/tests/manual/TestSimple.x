@@ -1,28 +1,37 @@
 module TestSimple
     {
-    @Inject ecstasy.io.Console console;
-
-    import ecstasy.collections.HashMap;
-
-    class Wrapper<Key, Value>
+    class Tree<Element  extends Orderable>
         {
-        Map<Key, Value> map = new HashMap();
+        Node? root = Null;
 
-        void put(Key key, Value value)
+        void add(Element e)
             {
-            map.put(key, value);
+            if (root.is(Node))
+                {
+                // ToDo:
+                }
+            else
+                {
+                root = new Node(e);
+                }
             }
 
-        conditional Value get(Key key)
+        class Node
             {
-            return map.get(key);
+            construct(Orderable data)
+                {
+                this.data  = data;
+                this.links = new Array<Node?>();
+                }
+
+            public/private Orderable data;
+            private Node?[] links;
             }
         }
 
     void run()
         {
-        Wrapper<Int, String> wrapper = new Wrapper();
-//        wrapper.put(1, "One");
-        wrapper.get(1);
+        Tree<Int> tree = new Tree();
+        tree.add(1);
         }
     }

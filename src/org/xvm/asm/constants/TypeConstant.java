@@ -3026,11 +3026,11 @@ public abstract class TypeConstant
         ConstantPool pool = getConstantPool();
 
         // basically, everything in infoContrib needs to be "indented" (nested) within the nested
-        // identity of the property
+        // identity of the property *without* resolving generic types (to avoid double-dipping)
         Map<PropertyConstant, PropertyInfo> mapContribProps = new HashMap<>();
         for (Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getProperties().entrySet())
             {
-            Object           nidContrib = entry.getKey().resolveNestedIdentity(pool, this);
+            Object           nidContrib = entry.getKey().resolveNestedIdentity(pool, null);
             PropertyConstant idContrib  = (PropertyConstant) idProp.appendNestedIdentity(pool, nidContrib);
             mapContribProps.put(idContrib, entry.getValue());
             }
@@ -3039,7 +3039,7 @@ public abstract class TypeConstant
         Map<MethodConstant, MethodInfo> mapContribMethods = new HashMap<>();
         for (Entry<MethodConstant, MethodInfo> entry : infoContrib.getMethods().entrySet())
             {
-            Object         nidContrib = entry.getKey().resolveNestedIdentity(pool, this);
+            Object         nidContrib = entry.getKey().resolveNestedIdentity(pool, null);
             MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(pool, nidContrib);
             mapContribMethods.put(idContrib, entry.getValue());
             }
