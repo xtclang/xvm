@@ -73,7 +73,7 @@ public abstract class Container
      *
      * @return the new service context
      */
-    protected ServiceContext createServiceContext(String sName)
+    public ServiceContext createServiceContext(String sName)
         {
         return new ServiceContext(this, m_idModule.getConstantPool(),
                 sName, f_runtime.f_idProducer.getAndIncrement());
