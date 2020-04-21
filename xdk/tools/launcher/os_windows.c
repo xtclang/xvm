@@ -68,9 +68,9 @@ void execJava(const char* javaPath,
             + strlen(jarFile)
             + strlen(" ")
             + strlen(tool)
-            + strlen(" -M ")
+            + strlen(" -L ")
             + strlen(libPath)
-            + strlen(" -M ")
+            + strlen(" -L ")
             + strlen(libFile);
     for (int i = 0; i < argc; ++i)
         {
@@ -87,9 +87,9 @@ void execJava(const char* javaPath,
     strcat(cmd, jarFile);
     strcat(cmd, " ");
     strcat(cmd, tool);
-    strcat(cmd, " -M ");
+    strcat(cmd, " -L ");
     strcat(cmd, libPath);
-    strcat(cmd, " -M ")
+    strcat(cmd, " -L ")
     strcat(cmd, libFile);
     for (int i = 0; i < argc; ++i)
         {

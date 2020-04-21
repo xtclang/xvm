@@ -54,7 +54,7 @@ void execJava(const char* javaPath,
     // collect all arguments into one giant list, starting with the call to java
     int allCount = 1          // javaPath
                  + optCount   // javaOpts
-                 + 7          // "-jar" jarFile tool "-M" libPath "-M" libFile
+                 + 7          // "-jar" jarFile tool "-L" libPath "-L" libFile
                  + argc;      // user arguments
 
     const char** allArgs = malloc((allCount+1) * sizeof(const char*));
@@ -66,9 +66,9 @@ void execJava(const char* javaPath,
     allArgs[i++] = "-jar";
     allArgs[i++] = jarFile;
     allArgs[i++] = tool;
-    allArgs[i++] = "-M";
+    allArgs[i++] = "-L";
     allArgs[i++] = libPath;
-    allArgs[i++] = "-M";
+    allArgs[i++] = "-L";
     allArgs[i++] = libFile;
     memcpy(allArgs+i, argv, argc * sizeof(const char*)); i += argc;
     allArgs[i  ] = NULL;
