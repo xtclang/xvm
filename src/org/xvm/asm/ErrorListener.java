@@ -120,7 +120,10 @@ public interface ErrorListener
      *
      * @return true iff this listener sits on top of the BlackHoleListener
      */
-    boolean isSilent();
+    default boolean isSilent()
+        {
+        return false;
+        }
 
 
     // ----- inner class: BlackholeErrorListener ---------------------------------------------------
