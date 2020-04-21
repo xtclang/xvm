@@ -17,7 +17,23 @@ public class LinkedRepository
     {
     // ----- constructors  -------------------------------------------------------------------------
 
+    /**
+     * Construct a LinkedRepository.
+     *
+     * @param repos  a sequence of repositories to use, in order, to search through
+     */
     public LinkedRepository(ModuleRepository... repos)
+        {
+        this(false, repos);
+        }
+
+    /**
+     * Construct a LinkedRepository.
+     *
+     * @param fReadThrough  pass true to store a copy of all read modules in the first repository
+     * @param repos         a sequence of repositories to use, in order, to search through
+     */
+    public LinkedRepository(boolean fReadThrough, ModuleRepository... repos)
         {
         assert repos != null && repos.length > 0;
         for (ModuleRepository repo : repos)
@@ -25,7 +41,8 @@ public class LinkedRepository
             assert repo != null;
             }
 
-        this.repos = repos.clone();
+        this.repos       = repos.clone();
+        this.readThrough = fReadThrough;
         }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -91,14 +108,21 @@ public class LinkedRepository
     @Override
     public ModuleStructure loadModule(String sModule)
         {
-        for (ModuleRepository repo : repos)
+        for (int i = 0, c = repos.length; i < c; ++i)
             {
-            ModuleStructure module = repo.loadModule(sModule);
+            ModuleRepository repo   = repos[i];
+            ModuleStructure  module = repo.loadModule(sModule);
             if (module != null)
                 {
                 // technically we could automatically merge this module with all the other versions
                 // found in all of the other repositories; the choice at this point is to defer
                 // that work
+
+                if (i > 0 && readThrough)
+                    {
+                    repos[0].storeModule(module);
+                    }
+
                 return module;
                 }
             }
@@ -108,11 +132,17 @@ public class LinkedRepository
     @Override
     public ModuleStructure loadModule(String sModule, Version version, boolean fExact)
         {
-        for (ModuleRepository repo : repos)
+        for (int i = 0, c = repos.length; i < c; ++i)
             {
-            ModuleStructure module = repo.loadModule(sModule, version, fExact);
+            ModuleRepository repo   = repos[i];
+            ModuleStructure  module = repo.loadModule(sModule, version, fExact);
             if (module != null)
                 {
+                if (i > 0 && readThrough)
+                    {
+                    repos[0].storeModule(module);
+                    }
+
                 return module;
                 }
             }
@@ -128,5 +158,14 @@ public class LinkedRepository
 
     // ----- fields --------------------------------------------------------------------------------
 
+    /**
+     * A sequence of repositories to use, in order, to search through. All writes occur to the first
+     * repository in the array.
+     */
     private final ModuleRepository[] repos;
+
+    /**
+     * A value of true stores a copy of all read modules in the first repository.
+     */
+    private final boolean            readThrough;
     }

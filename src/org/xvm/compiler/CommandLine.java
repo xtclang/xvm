@@ -153,6 +153,7 @@ public class CommandLine
         else
             {
             // find and load/link the two system modules
+            // TODO
             }
 
         if (!sources.isEmpty())
@@ -1028,12 +1029,15 @@ public class CommandLine
         return true;
         }
 
+    /**
+     * @return true iff the system (Ecstasy and _native) modules were loaded and linked successfully
+     */
     protected boolean loadAndLinkSystem()
         {
         FileStructure structEcstasy = null;
-        if (repoBuild.loadModule("Ecstasy.xtclang.org") == null)
+        if (repoBuild.loadModule(Constants.ECSTASY_MODULE) == null)
             {
-            ModuleStructure module = repoPath.loadModule("Ecstasy.xtclang.org");
+            ModuleStructure module = repoPath.loadModule(Constants.ECSTASY_MODULE);
             if (module == null)
                 {
                 return false;
@@ -1046,9 +1050,9 @@ public class CommandLine
             }
 
         FileStructure structNative = null;
-        if (repoBuild.loadModule("_native.xtclang.org") == null)
+        if (repoBuild.loadModule(Constants.PROTOTYPE_MODULE) == null)
             {
-            ModuleStructure module = repoPath.loadModule("_native.xtclang.org");
+            ModuleStructure module = repoPath.loadModule(Constants.PROTOTYPE_MODULE);
             if (module == null)
                 {
                 return false;
@@ -1064,13 +1068,13 @@ public class CommandLine
         String sMissingEcstasy = null;
         if (structEcstasy != null)
             {
-            structEcstasy.linkModules(repoPath);
+            sMissingEcstasy = structEcstasy.linkModules(repoPath);
             }
 
         String sMissingNative = null;
         if (structNative != null)
             {
-            structNative.linkModules(repoPath);
+            sMissingNative = structNative.linkModules(repoPath);
             }
 
         return sMissingEcstasy == null && sMissingNative == null;

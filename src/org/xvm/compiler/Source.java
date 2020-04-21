@@ -38,6 +38,17 @@ public class Source
         }
 
     /**
+     * Construct a Source directly from a String of XTC source code.
+     *
+     * @param sScript  the XTC source code, as a String
+     */
+    public Source(String sScript, int cDepth)
+        {
+        this(sScript.toCharArray());
+        m_cDirDepth = cDepth;
+        }
+
+    /**
      * Construct a Source by reading the XTC source code from a file.
      *
      * @param file  the File containing the XTC source code to load
