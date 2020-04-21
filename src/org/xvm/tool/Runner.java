@@ -31,6 +31,11 @@ import org.xvm.runtime.template.xString.StringHandle;
  */
 public class Runner
     {
+    /**
+     * Entry point from the OS.
+     *
+     * @param asArg  command line arguments
+     */
     public static void main(String[] asArg)
         {
         int cArgs = asArg.length;
