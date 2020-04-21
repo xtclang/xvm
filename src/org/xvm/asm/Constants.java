@@ -31,7 +31,8 @@ public interface Constants
 
     /**
      * The qualified name of the Ecstasy core module. This is the only module that has no external
-     * dependencies.
+     * dependencies (other than a conceptual dependency in the compiler on the prototype module,
+     * due to the "turtles" problem of Ref.x having properties which are themselves refs).
      */
     public static final String ECSTASY_MODULE = "Ecstasy.xtclang.org";
 
@@ -39,6 +40,11 @@ public interface Constants
      * The name of the package within every module that imports the Ecstasy core module.
      */
     public static final String X_PKG_IMPORT = "ecstasy";
+
+    /**
+     * The qualified name of the Java-based prototype runtime module.
+     */
+    public static final String PROTOTYPE_MODULE = "_native.xtclang.org";
 
 
     // ----- accessibility levels ------------------------------------------------------------------
