@@ -194,7 +194,8 @@ public class xLinker
                 }
 
             return frameCaller.assignValues(aiReturn,
-                xNullable.NULL, xAppControl.INSTANCE.makeHandle(container));
+                xNullable.NULL, // TODO GG
+                xAppControl.INSTANCE.makeHandle(frameCaller.f_context, container));
             }
 
         private final SimpleContainer container;

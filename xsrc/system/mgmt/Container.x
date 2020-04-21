@@ -124,6 +124,14 @@ service Container
         Tuple invoke(String methodName, Tuple args);
 
         /**
+         * Get the main service for the running application.
+         *
+         * @return True iff the application managed by the ApplicationControl is running
+         * @return (conditional) the application's main service
+         */
+        conditional Service mainService();
+
+        /**
          * Pause the application. This call will try a best effort attempt to stop the application
          * execution when it reaches a safe point (TODO: explain).
          */
