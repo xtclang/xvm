@@ -1,6 +1,10 @@
 package org.xvm.runtime;
 
 
+import org.xvm.runtime.Fiber.FiberStatus;
+import org.xvm.runtime.ServiceContext.Reentrancy;
+
+
 /**
  * {@link FiberQueue} represents a queue-like data structure holding all pending Fibers and
  * facilitating a quick selection algorithm for the scheduler.
@@ -83,11 +87,11 @@ public class FiberQueue
                 }
             }
 
-        int cCapacity = m_aFrame.length;
-        int iStart = m_ixHead;
-        for (int i = 0; i < cCapacity; i++)
+        int cFrames = m_aFrame.length;
+        int ixHead  = m_ixHead;
+        for (int i = 0; i < cFrames; i++)
             {
-            int ix = (i + iStart) % cCapacity;
+            int ix = (i + ixHead) % cFrames;
 
             int iPriority = checkPriority(ix);
             if (iPriority >= nPriority)
@@ -128,6 +132,18 @@ public class FiberQueue
                     }
 
             case InitialAssociated:
+                {
+                // in Exclusive mode only the front fiber is allowed to run
+                ServiceContext context = frame.f_fiber.f_context;
+                if (context.m_reentrancy == Reentrancy.Exclusive)
+                    {
+                    if (ix != getHeadIndex())
+                        {
+                        return -1;
+                        }
+                    }
+                // fall through
+                }
             case Yielded:
                 if (m_aixPriority[1] < 0)
                     {
@@ -136,12 +152,56 @@ public class FiberQueue
                 return 1;
 
             case InitialNew:
+                {
+                // we can only allow it to proceed:
+                //  a) in Exclusive mode - only if there are no other fibers in front
+                //  b) in Open or Prioritized mode - only if there are no other InitialNew fibers
+                //     associated with that same context in front of it
+                ServiceContext context = frame.f_fiber.f_context;
+                if (context.m_reentrancy == Reentrancy.Exclusive)
+                    {
+                    return ix == getHeadIndex() ? 0 : -1;
+                    }
+
+                Frame[] aFrame  = m_aFrame;
+                int     cFrames = aFrame.length;
+                int     ixHead  = m_ixHead;
+                for (int i = ixHead; i != ix; i = (i+1) % cFrames)
+                    {
+                    Frame frameOther = aFrame[i];
+                    if (frameOther != null)
+                        {
+                        Fiber fiberOther = frameOther.f_fiber;
+                        if (fiberOther.getStatus() == FiberStatus.InitialNew &&
+                            fiberOther.isAssociated(context))
+                            {
+                            return -1;
+                            }
+                        }
+                    }
                 if (m_aixPriority[0] < 0)
                     {
                     m_aixPriority[0] = ix;
                     }
                 return 0;
+                }
             }
+        }
+
+    private int getHeadIndex()
+        {
+        Frame[] aFrame  = m_aFrame;
+        int     cFrames = aFrame.length;
+        int     ixHead  = m_ixHead;
+        for (int i = 0; i < cFrames; i++)
+            {
+            int ix = (ixHead + i) % cFrames;
+            if (aFrame[ix] != null)
+                {
+                return ix;
+                }
+            }
+        return -1;
         }
 
     private Frame remove(int ix)
@@ -191,13 +251,13 @@ public class FiberQueue
     // move all the not-empty spaces toward the head
     private void compact()
         {
-        Frame[] aFrame = m_aFrame;
-        int cCapacity = m_aFrame.length;
+        Frame[] aFrame  = m_aFrame;
+        int     cFrames = m_aFrame.length;
 
         assert aFrame[m_ixHead] != null;
 
-        int iFrom = (m_ixHead + 1) % cCapacity;
-        int iTo = iFrom;
+        int iFrom = (m_ixHead + 1) % cFrames;
+        int iTo   = iFrom;
 
         for (int i = 1, c = aFrame.length; i < c; i++)
             {
@@ -210,13 +270,13 @@ public class FiberQueue
                     aFrame[iTo] = frame;
                     aFrame[iFrom] = null;
                     }
-                iTo = (iTo + 1) % cCapacity;
+                iTo = (iTo + 1) % cFrames;
                 }
-            iFrom = (iFrom + 1) % cCapacity;
+            iFrom = (iFrom + 1) % cFrames;
             }
 
+        assert aFrame[iTo] == null;
         m_ixTail = iTo;
-        assert aFrame[m_ixTail] == null;
 
         // reset the cached indexes
         m_aixPriority[0] = m_aixPriority[1] = m_aixPriority[2] = -1;

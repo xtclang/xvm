@@ -81,14 +81,14 @@ public class Fiber
 
     enum FiberStatus
         {
-        InitialNew, // a new fiber has not been scheduled for execution yet
+        InitialNew,        // a new fiber has not been scheduled for execution yet
         InitialAssociated, // a fiber that is associated with another existing fiber, but
                            // has not been scheduled for execution yet
-        Running, // normal execution
-        Paused,  // the execution was paused by the scheduler
-        Yielded, // the execution was explicitly yielded by the user code
-        Waiting, // execution is blocked until the "waiting" futures are completed
-        Terminated,
+        Running,           // normal execution
+        Paused,            // the execution was paused by the scheduler
+        Yielded,           // the execution was explicitly yielded by the user code
+        Waiting,           // execution is blocked until the "waiting" futures are completed
+        Terminated
         }
 
     public Fiber(ServiceContext context, ServiceContext.Message msgCall)
@@ -130,17 +130,20 @@ public class Fiber
 
             // check if the fiber chain points back to the same service
             // (clearly fiberCaller cannot belong to this service)
-            fiberCaller = fiberCaller.f_fiberCaller;
-            while (fiberCaller != null)
+            if (fiberCaller.isAssociated(context))
                 {
-                if (fiberCaller.f_context == context)
-                    {
-                    m_status = FiberStatus.InitialAssociated;
-                    break;
-                    }
-                fiberCaller = fiberCaller.f_fiberCaller;
+                m_status = FiberStatus.InitialAssociated;
                 }
             }
+        }
+
+    /**
+     * @return true iff the fiber chain points back to the specified service
+     */
+    public boolean isAssociated(ServiceContext context)
+        {
+        return f_context == context ||
+               f_fiberCaller != null && f_fiberCaller.isAssociated(context);
         }
 
     public long getId()

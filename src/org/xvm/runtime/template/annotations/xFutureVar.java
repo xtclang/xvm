@@ -408,7 +408,12 @@ public class xFutureVar
 
         try
             {
-            return frame.assignValue(iReturn, cf.get());
+            // services may replace "null" elements of a negative conditional return
+            // with the DEFAULT values (see ServiceContext.sendResponse)
+            ObjectHandle hValue = cf.get();
+            return hValue == ObjectHandle.DEFAULT
+                ? Op.R_NEXT
+                : frame.assignValue(iReturn, hValue);
             }
         catch (InterruptedException e)
             {

@@ -1253,7 +1253,7 @@ public class ServiceContext
     private FiberQueue f_queueSuspended = new FiberQueue(); // suspended fibers
 
     enum Reentrancy {Prioritized, Open, Exclusive, Forbidden}
-    volatile Reentrancy m_reentrancy = Reentrancy.Prioritized;
+    public volatile Reentrancy m_reentrancy = Reentrancy.Prioritized;
 
     /**
      * The context scheduling "lock", atomic operations are performed via {@link #SCHEDULING_LOCK_HANDLE}.
