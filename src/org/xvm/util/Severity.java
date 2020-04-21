@@ -4,4 +4,16 @@ package org.xvm.util;
 /**
  * Severity levels.
  */
-public enum Severity {NONE, INFO, WARNING, ERROR, FATAL};
+public enum Severity
+    {
+    NONE, INFO, WARNING, ERROR, FATAL;
+
+    public String desc()
+        {
+        String sName = name();
+        StringBuffer sb = new StringBuffer(sName.length());
+        sb.append(sName.charAt(0));
+        sb.append(sName.substring(1).toLowerCase());
+        return sb.toString();
+        }
+    }
