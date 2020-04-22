@@ -70,7 +70,10 @@ module TestFiles
                 {
                 if (node.is(File))
                     {
-                    console.println($"\tf {name}");
+                    if (!name.indexOf('.'))
+                        {
+                        console.println($"\tf {name}");
+                        }
                     }
                 else
                     {
