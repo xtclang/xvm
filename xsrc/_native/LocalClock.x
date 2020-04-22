@@ -1,7 +1,7 @@
 /**
  * Simple wall clock using Java's millisecond-resolution "System" clock.
  */
-class LocalClock
+service LocalClock
         implements Clock
     {
     @Override
