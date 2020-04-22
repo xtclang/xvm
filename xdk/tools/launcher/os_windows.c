@@ -89,7 +89,7 @@ void execJava(const char* javaPath,
     strcat(cmd, tool);
     strcat(cmd, " -L ");
     strcat(cmd, libPath);
-    strcat(cmd, " -L ")
+    strcat(cmd, " -L ");
     strcat(cmd, libFile);
     for (int i = 0; i < argc; ++i)
         {
