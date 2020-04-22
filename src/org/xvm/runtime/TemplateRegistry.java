@@ -2,6 +2,7 @@ package org.xvm.runtime;
 
 
 import java.io.File;
+import java.io.IOException;
 
 import java.net.URL;
 
@@ -11,6 +12,8 @@ import java.util.Map;
 import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
+
+import java.util.jar.JarFile;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -35,6 +38,8 @@ import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xPackage;
 import org.xvm.runtime.template.xService;
+
+import org.xvm.util.Handy;
 
 
 /**
@@ -72,10 +77,16 @@ public class TemplateRegistry
         Class clzObject = xObject.class;
         URL    url      = clzObject.getProtectionDomain().getCodeSource().getLocation();
         String sRoot    = url.getFile();
-
-        File dirTemplates = new File(sRoot, "org/xvm/runtime/template");
         Map<String, Class> mapTemplateClasses = new HashMap<>();
-        scanNativeDirectory(dirTemplates, "", mapTemplateClasses);
+        if (sRoot.endsWith(".jar"))
+            {
+            scanNativeJarDirectory(sRoot, "org/xvm/runtime/template", mapTemplateClasses);
+            }
+        else
+            {
+            File dirTemplates = new File(sRoot, "org/xvm/runtime/template");
+            scanNativeDirectory(dirTemplates, "", mapTemplateClasses);
+            }
 
         // we need a number of INSTANCE static variables to be set up right away
         // (they are used by the ClassTemplate constructor)
@@ -133,6 +144,62 @@ public class TemplateRegistry
             template.initNative();
             }
         ConstantPool.setCurrentPool(null);
+        }
+
+    private void scanNativeJarDirectory(String sJarFile, String sPackage, Map<String, Class> mapTemplateClasses)
+        {
+        JarFile jf;
+        try
+            {
+            jf = new JarFile(sJarFile);
+            }
+        catch (IOException e)
+            {
+            throw new RuntimeException(e);
+            }
+
+        jf.stream().filter(e -> isNativeClass(sPackage, e.getName()))
+                   .forEach(e -> mapTemplateClasses.put(componentName(e.getName()), classForName(e.getName())));
+        }
+
+    private static boolean isNativeClass(String sPackage, String sFile)
+        {
+        return sFile.startsWith(sPackage)
+            && sFile.endsWith(".class")
+            && sFile.indexOf('$') < 0
+            && sFile.charAt(sFile.lastIndexOf('/') + 1) == 'x';
+        }
+
+    private static String componentName(String sFile)
+        {
+        // input : org/xvm/runtime/template/numbers/xFloat64.class
+        // output: numbers.Float64
+        String[]      parts = Handy.parseDelimitedString(sFile, '/');
+        StringBuilder sb    = new StringBuilder();
+        for (int i = 4, c = parts.length - 1; i < c; ++i)
+            {
+            sb.append(parts[i])
+              .append('.');
+            }
+        String sClass = parts[parts.length-1];
+        assert sClass.charAt(0) == 'x';
+        assert sClass.endsWith(".class");
+        sb.append(sClass, 1, sClass.indexOf('.'));
+        return sb.toString();
+        }
+    
+    private static Class classForName(String sFile)
+        {
+        assert sFile.endsWith(".class");
+        String sClz = sFile.substring(0, sFile.length() - ".class".length()).replace('/', '.');
+        try
+            {
+            return Class.forName(sClz);
+            }
+        catch (ClassNotFoundException e)
+            {
+            throw new RuntimeException(e);
+            }
         }
 
     // sPackage is either empty or ends with a dot
