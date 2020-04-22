@@ -135,7 +135,7 @@ public abstract class Launcher
         }
 
     protected abstract void process();
-    
+
 
     // ----- text output and error handling --------------------------------------------------------
 
@@ -314,7 +314,7 @@ public abstract class Launcher
                 }
             return n;
             });
-        
+
         for (String sName : asName)
             {
             String sDisp = sName.equals(Trailing) ? sName : '-' + sName;
@@ -458,6 +458,14 @@ public abstract class Launcher
 
             var prev = options().put(sName, new Option(sName, form, fMulti, sDesc));
             assert prev == null;
+
+            assert sName.equals(ArgV) == (form == Form.AsIs);
+            if (form == Form.AsIs)
+                {
+                assert !m_fArgV;
+                assert fMulti;
+                m_fArgV = true;
+                }
             }
 
         /**
@@ -647,7 +655,7 @@ public abstract class Launcher
 
         /**
          * Parse the command line arguments into
-         * 
+         *
          * @param asArgs  the command line arguments to parse
          *
          * @return true iff help should be shown
@@ -771,16 +779,31 @@ public abstract class Launcher
                         }
                     else
                         {
-                        Form form = formOf(Trailing);
-                        if (form == null)
+                        Option optTrail = mapNames.get(Trailing);
+                        if (optTrail != null && (optTrail.isMulti() || !specified(Trailing)))
                             {
-                            log(Severity.ERROR,
-                                    "Unsupported argument: " + quotedString(sArg));
-                            fHelp = true;
+                            sPrev = Trailing;
                             }
                         else
                             {
-                            sPrev = Trailing;
+                            Option optArgV = mapNames.get(ArgV);
+                            if (optArgV != null)
+                                {
+                                // take EVERYTHING, and take it AS IS
+                                List<String> listArgs = new ArrayList<>(c - i);
+                                for (int iCopy = i; iCopy < c; ++iCopy)
+                                    {
+                                    listArgs.add(asArgs[iCopy]);
+                                    }
+                                store(ArgV, true, listArgs);
+                                break NextArg;
+                                }
+                            else
+                                {
+                                log(Severity.ERROR,
+                                        "Unsupported argument: " + quotedString(sArg));
+                                fHelp = true;
+                                }
                             }
                         }
                     }
@@ -1126,6 +1149,11 @@ public abstract class Launcher
          * The values of the various command line options.
          */
         private ListMap<String, Object> m_mapValues = new ListMap<>();
+
+        /**
+         * Set to true if an "AsIs" option is present.
+         */
+        private boolean m_fArgV;
         }
 
 
@@ -1915,7 +1943,7 @@ public abstract class Launcher
         }
 
     /**
-     * A DirNode represents a directory, which corresponds to  
+     * A DirNode represents a directory, which corresponds to a module or package.
      */
     public class DirNode
             extends Node
@@ -2482,12 +2510,15 @@ public abstract class Launcher
      *                              e.g. "{@code -suppressBeep=False}"
      * </li><li><tt>Int</tt>      - an integer valued option;
      *                              e.g. "{@code -limit=5}" or "{@code -limit 5}"
-     * </li><li><tt>String </tt>  - a String valued option (useful when no either form works);
+     * </li><li><tt>String</tt>   - a String valued option (useful when no either form works);
      *                              e.g. "{@code -name="Bob"}" or "{@code -name "Bob"}"
      * </li><li><tt>File</tt>     - a File valued option;
      *                              e.g. "{@code -src=./My.x}" or "{@code -src ./My.x}"
      * </li><li><tt>FileList</tt> - a colon-delimited search path valued option;
      *                              e.g. "{@code -L ~/lib:./lib:./}" or "{@code -L~/lib:./}"
+     * </li><li><tt>AsIs</tt>     - an AsIs valued option is a String that is not modified, useful
+     *                              when being passed on to a further "argv-aware" program
+     *                              e.g. "{@code xec MyApp.xtc -o=7 -X="hi"} -> {@code -o=7 -X="hi"}
      * </li></ul>
      */
     protected enum Form
@@ -2497,7 +2528,8 @@ public abstract class Launcher
         Int,
         String,
         File,
-        Repo('\"' + java.io.File.pathSeparator + "\"-delimited File list");
+        Repo('\"' + java.io.File.pathSeparator + "\"-delimited File list"),
+        AsIs;
 
         Form()
             {
@@ -2527,6 +2559,14 @@ public abstract class Launcher
      * {@link Form#File}, with {@code allowMultiple(Trailing)} returning {@code true}.
      */
     protected static final String Trailing = "...";
+
+    /**
+     * This is the name used for an option that represents "the remainder of the options".
+     * <p/>
+     * To use this option, the Launcher must support no "Trailing", or a single "Trailing", but not
+     * multiple "Trailing" values.
+     */
+    protected static final String ArgV = "[]";
 
     /**
      * Represents a single available command line option.
@@ -2572,7 +2612,7 @@ public abstract class Launcher
 
     enum Stage {Init, Parsed, Named, Linked}
 
-    
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**

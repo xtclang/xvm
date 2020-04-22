@@ -5,11 +5,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import org.xvm.api.Connector;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -17,13 +19,17 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.xString;
+import org.xvm.runtime.template.xString.StringHandle;
+
 import org.xvm.util.Severity;
 
 
 /**
  * The "execute" command:
  *
- *  java org.xvm.tool.Runner xtc_path [method_name [args]]
+ *  java org.xvm.tool.Runner [-L repo(s)] [-M method_name] app.xtc [argv]
  *
  * where the default method is "run" with no arguments.
  */
@@ -101,27 +107,23 @@ public class Runner
 
             connector.start();
 
-            String sMethod = "run";
-            // TODO GG
-            // if (cArgs > 1)
-            //     {
-            //     sMethod = asArg[1];
-            //     }
+            String   sMethod = options().getMethodName();
+            String[] asArg   = options().getMethodArgs();
 
             ObjectHandle[] ahArg = Utils.OBJECTS_NONE;
-            // TODO GG
-            //if (cArgs > 2)
-            //    {
-            //    try (var x = ConstantPool.withPool(connector.getConstantPool()))
-            //        {
-            //        StringHandle[] ahName = new StringHandle[cArgs - 2];
-            //        for (int i = 2; i < cArgs; i++)
-            //            {
-            //            ahName[i-2] = xString.makeHandle(asArg[i]);
-            //            }
-            //        ahArg = new ObjectHandle[]{xArray.makeStringArrayHandle(ahName)};
-            //        }
-            //    }
+            if (asArg != null)
+                {
+                try (var x = ConstantPool.withPool(connector.getConstantPool()))
+                    {
+                    int            cArgs  = asArg.length;
+                    StringHandle[] ahName = new StringHandle[cArgs];
+                    for (int i = 0; i < cArgs; i++)
+                        {
+                        ahName[i] = xString.makeHandle(asArg[i]);
+                        }
+                    ahArg = new ObjectHandle[]{xArray.makeStringArrayHandle(ahName)};
+                    }
+                }
             connector.invoke0(sMethod, ahArg);
 
             connector.join();
@@ -176,9 +178,11 @@ public class Runner
             {
             super();
 
-            addOption("L",      Form.Repo, true , "Module path; a \"" + File.pathSeparator
-                                                + "\"-delimited list of file and/or directory names");
-            addOption(Trailing, Form.File, false, ".xtc file name to execute");
+            addOption("L",      Form.Repo  , true , "Module path; a \"" + File.pathSeparator
+                                                  + "\"-delimited list of file and/or directory names");
+            addOption("M",      Form.String, false, "Method name; defaults to \"run\"");
+            addOption(Trailing, Form.File  , false, "Module file name (.xtc) to execute");
+            addOption(ArgV,     Form.AsIs  , true , "Arguments to pass to the method");
             }
 
         /**
@@ -186,10 +190,15 @@ public class Runner
          */
         public List<File> getModulePath()
             {
-            List<File> path = (List<File>) values().get("L");
-            return path == null
-                ? Collections.EMPTY_LIST
-                : path;
+            return (List<File>) values().getOrDefault("L", Collections.EMPTY_LIST);
+            }
+
+        /**
+         * @return the method name
+         */
+        public String getMethodName()
+            {
+            return (String) values().getOrDefault("M", "run");
             }
 
         /**
@@ -198,6 +207,17 @@ public class Runner
         public File getTarget()
             {
             return (File) values().get(Trailing);
+            }
+
+        /**
+         * @return the method arguments as an array of String, or null if none specified
+         */
+        public String[] getMethodArgs()
+            {
+            List<String> listArgs = (List<String>) values().get(ArgV);
+            return listArgs == null
+                    ? null
+                    : listArgs.toArray(new String[0]);
             }
 
         @Override
