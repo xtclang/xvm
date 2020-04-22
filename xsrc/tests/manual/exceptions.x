@@ -127,7 +127,7 @@ module TestTry
 
          try (ByeBye bye = new ByeBye())
             {
-            console.println(bye);
+            console.println(bye.toString());
             }
         finally
             {
