@@ -718,6 +718,33 @@ public class IntersectionTypeConstant
             && getUnderlyingType2().containsSubstitutableMethod(signature, access, fFunction, listParams);
         }
 
+    /**
+     * Find one side of this intersection type that is assignable to Tuple.
+     *
+     * Note: if both sides of the intersection are assignable to Tuple, null is returned to indicate
+     *       an ambiguous request (theoretically, this could be improved).
+     *
+     * @return the part of this intersection type that is assignable to a Tuple or null
+     */
+    public TypeConstant extractTuple()
+        {
+        TypeConstant typeTuple1 = extractTuple(getUnderlyingType());
+        TypeConstant typeTuple2 = extractTuple(getUnderlyingType2());
+
+        return typeTuple1 == null ? typeTuple2 :
+               typeTuple2 == null ? typeTuple1 :
+                                    null;
+        }
+
+    private static TypeConstant extractTuple(TypeConstant type)
+        {
+        return type.isTuple()
+                ? type
+                : type instanceof IntersectionTypeConstant
+                    ? ((IntersectionTypeConstant) type).extractTuple()
+                    : null;
+        }
+
 
     // ----- run-time support ----------------------------------------------------------------------
 

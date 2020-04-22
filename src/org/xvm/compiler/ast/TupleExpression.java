@@ -14,6 +14,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 
 import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Var_T;
@@ -304,18 +305,28 @@ public class TupleExpression
         else if (atypeRequired.length == 1)
             {
             typeRequired = atypeRequired[0];
+
+            // the required type must be assignable from a Tuple, but that will be checked during
+            // finishValidation(); for now, just try to get the required field types to use
+            // while validating sub-expressions
             if (typeRequired.isTuple())
                 {
-                // the required type must be a tuple, or a tuple must be assignable to the required
-                // type, but most of that will be checked during finishValidation(); for now, just
-                // get the required field types to use while validating sub-expressions
                 aReqTypes = typeRequired.getParamTypesArray();
                 cReqTypes = aReqTypes.length;
                 }
             else if (!typeRequired.equals(pool.typeObject()))
                 {
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, pool.typeTuple(), typeRequired);
-                fValid = false;
+                // required type could be an intersection type. e.g. (T1 | Tuple<T2>), in which case
+                // we could use an a very simple helper; otherwise use implicit types
+                if (typeRequired instanceof IntersectionTypeConstant)
+                    {
+                    TypeConstant typeTuple = ((IntersectionTypeConstant) typeRequired).extractTuple();
+                    if (typeTuple != null)
+                        {
+                        aReqTypes = typeTuple.getParamTypesArray();
+                        cReqTypes = aReqTypes.length;
+                        }
+                    }
                 }
             fMultiplexing = true;
             }
