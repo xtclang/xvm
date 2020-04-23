@@ -29,9 +29,9 @@ directory on macOS or Linux, and unzipped under the "Program Files"
 directory on Windows. If you chose a different location, adjust the
 command line accordingly.)
 
-(The shell or command file is designed to be run each time you open a
+The shell or command file is designed to be run each time you open a
 command or terminal window. To avoid this requirement, add the `xdk/bin`
-directory to your permanent path.)
+directory to your permanent path.
 
 ## Compiling
 
@@ -74,6 +74,9 @@ After compiling, disassemble the result:
 The disassembly information is printed to the screen.
 
 ## Miscellaneous command line information
+
+The command line tools rely on Java to be already installed and available.
+The required version is Java 11 (or later).
 
 Each of the above tools supports the `-help` and `-verbose` options.
 
