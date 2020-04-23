@@ -5,11 +5,18 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.xvm.asm.Component;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.ModuleRepository;
+
 import org.xvm.asm.constants.MethodConstant;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -18,32 +25,68 @@ import org.xvm.asm.constants.MethodConstant;
  *  java org.xvm.tool.Disassembler xtc_path
  */
 public class Disassembler
+        extends Launcher
     {
+    /**
+     * Entry point from the OS.
+     *
+     * @param asArg command line arguments
+     */
     public static void main(String[] asArg)
         {
-        if (asArg.length < 1)
+        new Disassembler(asArg).run();
+        }
+
+    /**
+     * Disassembler constructor.
+     *
+     * @param asArg command line arguments
+     */
+    public Disassembler(String[] asArg)
+        {
+        super(asArg);
+        }
+
+    @Override
+    protected void process()
+        {
+        File      fileModule = options().getTarget();
+        String    sModule    = fileModule.getName();
+        Component component  = null;
+        if (sModule.endsWith(".xtc"))
             {
-            System.err.println("File name is missing");
-            return;
+            // it's a file
+            log(Severity.INFO, "Loading module file: " + sModule);
+            try
+                {
+                try (FileInputStream in = new FileInputStream(fileModule))
+                    {
+                    component = new FileStructure(in);
+                    }
+                }
+            catch (IOException e)
+                {
+                log(Severity.ERROR, "I/O exception (" + e + ") reading module file: " + fileModule);
+                }
+            }
+        else
+            {
+            // it's a module; set up the repository
+            log(Severity.INFO, "Creating and pre-populating library and build repositories");
+            ModuleRepository repo = configureLibraryRepo(options().getModulePath());
+            checkErrors();
+
+            log(Severity.INFO, "Loading module: " + sModule);
+            component = repo.loadModule(sModule);
             }
 
-        File fileXtc = new File(asArg[0]);
-        if (!fileXtc.exists() || !fileXtc.isFile())
+        if (component == null)
             {
-            System.err.println("The .xtc file is missing: " + asArg[0]);
-            return;
+            log(Severity.ERROR, "Unable to load module: " + fileModule);
             }
+        checkErrors();
 
-        try
-            {
-            FileStructure struct = new FileStructure(new FileInputStream(fileXtc));
-
-            struct.visitChildren(Disassembler::dump, false, true);
-            }
-        catch (IOException e)
-            {
-            System.err.println("Invalid .xtc format: " + e.getMessage());
-            }
+        component.visitChildren(Disassembler::dump, false, true);
         }
 
     public static void dump(Component component)
@@ -51,7 +94,7 @@ public class Disassembler
         if (component instanceof MethodStructure)
             {
             MethodStructure method = (MethodStructure) component;
-            MethodConstant id     = method.getIdentityConstant();
+            MethodConstant  id     = method.getIdentityConstant();
 
             if (method.hasCode() && method.ensureCode() != null && !method.isNative())
                 {
@@ -67,9 +110,99 @@ public class Disassembler
             }
         }
 
-    public static void out(String s)
+
+    // ----- text output and error handling --------------------------------------------------------
+
+    @Override
+    public String desc()
         {
-        System.out.println(s);
+        return "Ecstasy disassembler:\n" +
+               '\n' +
+               "Examines a compiled Ecstasy module.\n" +
+               '\n' +
+               "Usage:\n" +
+               '\n' +
+               "    xam <options> <modulename>\n" +
+               "or:\n" +
+               "    xam <options> <filename>.xtc\n";
+        }
+
+
+    // ----- options -------------------------------------------------------------------------------
+
+    @Override
+    public Options options()
+        {
+        return (Options) super.options();
+        }
+
+    @Override
+    protected Options instantiateOptions()
+        {
+        return new Options();
+        }
+
+    /**
+     * Disassembler command-line options implementation.
+     */
+    public class Options
+        extends Launcher.Options
+        {
+        /**
+         * Construct the Disassembler Options.
+         */
+        public Options()
+            {
+            super();
+
+            addOption("L",      Form.Repo  , true , "Module path; a \"" + File.pathSeparator
+                                                  + "\"-delimited list of file and/or directory names");
+            addOption(Trailing, Form.File  , false, "Module file name (.xtc) to disassemble");
+            }
+
+        /**
+         * @return the list of files in the module path (empty list if none specified)
+         */
+        public List<File> getModulePath()
+            {
+            return (List<File>) values().getOrDefault("L", Collections.EMPTY_LIST);
+            }
+
+        /**
+         * @return the file to execute
+         */
+        public File getTarget()
+            {
+            return (File) values().get(Trailing);
+            }
+
+        @Override
+        public void validate()
+            {
+            super.validate();
+
+            // validate the trailing file (to execute)
+            File fileModule = getTarget();
+            if (fileModule.getName().endsWith(".xtc"))
+                {
+                if (fileModule == null || fileModule.length() == 0)
+                    {
+                    log(Severity.ERROR, "Module file required");
+                    }
+                else if (!fileModule.exists())
+                    {
+                    log(Severity.ERROR, "Specified module file does not exist");
+                    }
+                else if (!fileModule.isFile())
+                    {
+                    log(Severity.ERROR, "Specified module file is not a file");
+                    }
+                else if (!fileModule.canRead())
+                    {
+                    log(Severity.ERROR, "Specified module file cannot be read");
+                    }
+                }
+            }
         }
     }
 
