@@ -178,7 +178,7 @@ public abstract class Launcher
         {
         for (ErrorInfo err : errs.getErrors())
             {
-            log(err.getSeverity(), err.getMessage());
+            log(err.getSeverity(), err.toString());
             }
         }
 
@@ -1525,15 +1525,12 @@ public abstract class Launcher
      */
     protected boolean isModule(File file)
         {
-        suspendErrors();
-        try
+        if (!file.getName().endsWith(".x"))
             {
-            return getModuleName(file) != null;
+            return false;
             }
-        finally
-            {
-            resumeErrors();
-            }
+
+        return getModuleName(file) != null;
         }
 
     /**
@@ -1548,13 +1545,11 @@ public abstract class Launcher
         assert file.isFile() && file.canRead();
         log(Severity.INFO, "Parsing file: " + file);
 
-        Statement stmt    = null;
-        ErrorList errlist = new ErrorList(100);
         try
             {
             Source source  = new Source(file, 0);
-            Parser parser  = new Parser(source, errlist);
-            stmt = parser.parseSource();
+            Parser parser  = new Parser(source, ErrorListener.BLACKHOLE);
+            return parser.parseModuleNameIgnoreEverythingElse();
             }
         catch (CompilerException e)
             {
@@ -1563,27 +1558,6 @@ public abstract class Launcher
         catch (IOException e)
             {
             log(Severity.ERROR, "An exception occurred reading \"" + file + "\": " + e);
-            }
-        log(errlist);
-
-        if (stmt != null)
-            {
-            if (stmt instanceof StatementBlock)
-                {
-                List<Statement> list = ((StatementBlock) stmt).getStatements();
-                stmt = list.get(list.size() - 1);
-                }
-            if (stmt instanceof TypeCompositionStatement)
-                {
-                TypeCompositionStatement typeStmt = (TypeCompositionStatement) stmt;
-                Token category = typeStmt.getCategory();
-                log(Severity.INFO, "Contains " + category.getId().TEXT + " " + typeStmt.getName());
-                return category.getId() == Token.Id.MODULE
-                        ? typeStmt.getName()
-                        : null;
-                }
-
-            log(Severity.ERROR, "File \"" + file + "\" did not contain a type definition.");
             }
 
         return null;

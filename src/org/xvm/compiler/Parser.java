@@ -119,6 +119,11 @@ public class Parser
         return m_root;
         }
 
+    /**
+     * Parse the "implicits.x" file format.
+     *
+     * @return a Map from String import name to qualified name (as a String[])
+     */
     public Map<String, String[]> parseImplicits()
         {
         Map<String, String[]> imports = new HashMap<>();
@@ -141,6 +146,52 @@ public class Parser
             }
 
         return imports;
+        }
+
+    /**
+     * Quick-scan the file for the module name.
+     *
+     * @return the module name
+     */
+    public String parseModuleNameIgnoreEverythingElse()
+        {
+        ErrorListener errsPrev = m_errorListener;
+        try
+            {
+            m_errorListener = ErrorListener.BLACKHOLE;
+
+            while (!eof() && current().getId() != Id.MODULE)
+                {
+                }
+
+            if (!eof())
+                {
+                m_errorListener = new ErrorList(1);
+                List<Token> tokens = parseQualifiedName();
+                if (!m_errorListener.hasSeriousErrors())
+                    {
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0, c = tokens.size(); i < c; ++i)
+                        {
+                        if (i > 0)
+                            {
+                            sb.append('.');
+                            }
+                        sb.append(tokens.get(i).getValueText());
+                        }
+                    return sb.toString();
+                    }
+                }
+            }
+        catch (RuntimeException e)
+            {
+            }
+        finally
+            {
+            m_errorListener = errsPrev;
+            }
+
+        return null;
         }
 
     /**
@@ -5656,7 +5707,7 @@ public class Parser
     /**
      * The ErrorListener to report errors to.
      */
-    private final ErrorListener m_errorListener;
+    private ErrorListener m_errorListener;
 
     /**
      * The lexical analyzer.
