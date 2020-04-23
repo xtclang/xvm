@@ -8,3 +8,5 @@ command line tools:
   of functionality from the Java prototype into a running Ecstasy
   application. The source code is located at
   [https://github.com/xtclang/xvm/tree/master/xsrc/_native](https://github.com/xtclang/xvm/tree/master/xsrc/_native)
+
+Note: Requires Java 11 or later.
