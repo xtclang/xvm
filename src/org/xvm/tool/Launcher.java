@@ -2438,7 +2438,7 @@ public abstract class Launcher
             if (errs != null)
                 {
                 Launcher.this.log(errs);
-                m_errs = null;
+                m_errs.clear();
                 }
             }
 
