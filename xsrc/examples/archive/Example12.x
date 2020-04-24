@@ -1150,7 +1150,7 @@ Object  o1 = ..
 Object  o2 = ..
 if (o1 == o2) {..}      // ok because there is an equals() function on Object itself
 
-class C extends Object {}
+class C {}
 C c1 = ..
 C c2 = ..
 if (c1 == c2) {..}      // should this be allowed? (no equals() function on C, but one is on Object)

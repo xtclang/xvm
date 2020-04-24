@@ -315,7 +315,7 @@ public class Parser
         List<Parameter> constructorParams = parseParameterList(false);
 
         // sequence of compositions
-        List<Composition> compositions = new ArrayList<>();
+        List<CompositionNode> compositions = new ArrayList<>();
         parseConditionalComposition(null, compositions);
 
         // TypeCompositionBody
@@ -343,7 +343,7 @@ public class Parser
      * @param exprCondition  the condition (or null if none) that applies to any found compositions
      * @param compositions   a list of compositions to contribute to
      */
-    void parseConditionalComposition(Expression exprCondition, List<Composition> compositions)
+    void parseConditionalComposition(Expression exprCondition, List<CompositionNode> compositions)
         {
         boolean fAny;
         do
@@ -412,7 +412,7 @@ public class Parser
      *
      * @return true if at least one composition was parsed
      */
-    boolean parseComposition(Expression exprCondition, List<Composition> compositions)
+    boolean parseComposition(Expression exprCondition, List<CompositionNode> compositions)
         {
         boolean fAny = false;
         while (true)
@@ -424,14 +424,14 @@ public class Parser
                 {
                 TypeExpression   type = parseTypeExpression();
                 List<Expression> args = parseArgumentList(false, false, false);
-                compositions.add(new Composition.Extends(exprCondition, keyword, type, args));
+                compositions.add(new CompositionNode.Extends(exprCondition, keyword, type, args));
                 fAny = true;
                 }
             else if ((keyword = match(Id.IMPLEMENTS)) != null)
                 {
                 do
                     {
-                    compositions.add(new Composition.Implements(exprCondition, keyword, parseTypeExpression()));
+                    compositions.add(new CompositionNode.Implements(exprCondition, keyword, parseTypeExpression()));
                     }
                 while (match(Id.COMMA) != null);
                 fAny = true;
@@ -444,7 +444,7 @@ public class Parser
                     expect(Id.L_PAREN);
                     Token tokProp = expect(Id.IDENTIFIER);
                     Token tokEnd = expect(Id.R_PAREN);
-                    compositions.add(new Composition.Delegates(exprCondition, keyword, type,
+                    compositions.add(new CompositionNode.Delegates(exprCondition, keyword, type,
                             tokProp, tokEnd.getEndPosition()));
                     }
                 while (match(Id.COMMA) != null);
@@ -481,14 +481,14 @@ public class Parser
                         type = new NamedTypeExpression(null, names, null, null, paramnames, prev().getEndPosition());
                         }
                     List<Expression> args = parseArgumentList(false, false, false);
-                    compositions.add(new Composition.Incorporates(exprCondition, keyword, type, args, constraints));
+                    compositions.add(new CompositionNode.Incorporates(exprCondition, keyword, type, args, constraints));
                     }
                 while (match(Id.COMMA) != null);
                 fAny = true;
                 }
             else if ((keyword = match(Id.INTO)) != null)
                 {
-                compositions.add(new Composition.Into(exprCondition, keyword, parseTypeExpression()));
+                compositions.add(new CompositionNode.Into(exprCondition, keyword, parseTypeExpression()));
                 fAny = true;
                 }
             else // not context sensitive keywords
@@ -506,7 +506,7 @@ public class Parser
                         NamedTypeExpression   module   = new NamedTypeExpression(null, names, null,
                                 null, null, names.get(names.size()-1).getEndPosition());
                         List<VersionOverride> versions = parseVersionRequirement(false);
-                        compositions.add(new Composition.Import(exprCondition, keyword, module,
+                        compositions.add(new CompositionNode.Import(exprCondition, keyword, module,
                                 versions, prev().getEndPosition()));
                         fAny = true;
                         }
@@ -516,7 +516,7 @@ public class Parser
                         {
                         keyword = expect(Id.DEFAULT);
                         expect(Id.L_PAREN);
-                        compositions.add(new Composition.Default(exprCondition, keyword,
+                        compositions.add(new CompositionNode.Default(exprCondition, keyword,
                                 parseExpression(), expect(Id.R_PAREN).getEndPosition()));
                         fAny = true;
                         }

@@ -212,15 +212,7 @@ public class PropertyStructure
 
     private void buildAnnotationArrays()
         {
-        ConstantPool pool = getConstantPool();
-        if (getParent().getIdentityConstant().equals(pool.clzObject()))
-            {
-            // the only property on Object is "meta" and it's native no matter what the source says
-            m_aPropAnno = Annotation.NO_ANNOTATIONS;
-            m_aRefAnno  = Annotation.NO_ANNOTATIONS;
-            return;
-            }
-
+        ConstantPool     pool         = getConstantPool();
         List<Annotation> listPropAnno = null;
         List<Annotation> listRefAnno  = null;
         for (Contribution contrib : getContributionsAsList())

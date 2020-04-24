@@ -68,7 +68,6 @@ class FileObjectStream
 ObjectStreaming stream = new @ObjectStreaming FileStream();
 
 class FileObjectStream
-        extends Object
         implements Stream
         incorporates StreamFunctionality
         incorporates ObjectStreaming
@@ -161,7 +160,6 @@ class Object
     }
 
 class Base
-        extends Object
         incorporates BaseMixin
         implements InterfaceOne
     {

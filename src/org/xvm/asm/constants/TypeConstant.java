@@ -1969,42 +1969,34 @@ public abstract class TypeConstant
             case CONST:
             case SERVICE:
                 {
-                // next up, for any class type (other than Object itself), there MUST be an "extends"
+                // check for re-basing; this occurs when a class format changes and the system has
+                // to insert a layer of code between this class and the class being extended, such
+                // as when a service (which is a Service format) extends Object (which is a Class
+                // format)
+                typeRebase = (TypeConstant) pool.register(struct.getRebaseType());
+
+                // next up, for any class type (other than Object itself), there may be an "extends"
                 // contribution that specifies another class
                 Contribution contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
                 boolean fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
-                if (fExtends)
-                    {
-                    typeExtends = aContribType[iContrib];
-                    ++iContrib;
-                    }
 
-                // Object does not (and must not) extend anything
-                if (constId.equals(pool.clzObject()))
+                if (!fExtends)
                     {
-                    if (fExtends)
+                    if (struct.getFormat() == Component.Format.ENUMVALUE)
                         {
-                        log(errs, Severity.ERROR, VE_EXTENDS_UNEXPECTED,
-                                contrib.getTypeConstant().getValueString(),
-                                constId.getPathString());
+                        log(errs, Severity.ERROR, VE_EXTENDS_EXPECTED, constId.getPathString());
                         }
                     break;
                     }
 
-                // all other classes must extends something
-                if (!fExtends)
-                    {
-                    log(errs, Severity.ERROR, VE_EXTENDS_EXPECTED, constId.getPathString());
-                    typeExtends = pool.typeObject();
-                    break;
-                    }
+                typeExtends = aContribType[iContrib];
+                ++iContrib;
 
                 // the "extends" clause must specify a class identity
                 if (!typeExtends.isExplicitClassIdentity(true))
                     {
                     log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS, constId.getPathString(),
                             typeExtends.getValueString());
-                    typeExtends = pool.typeObject();
                     break;
                     }
 
@@ -2013,28 +2005,20 @@ public abstract class TypeConstant
                     // some sort of circular loop
                     log(errs, Severity.ERROR, VE_CYCLICAL_CONTRIBUTION, constId.getPathString(),
                             "extends");
-                    typeExtends = pool.typeObject();
                     break;
                     }
 
                 // the class structure will have to verify its "extends" clause in more detail, but
                 // for now perform a quick sanity check
-                IdentityConstant constExtends  = typeExtends.getSingleUnderlyingClass(false);
+                IdentityConstant constExtends  = typeExtends.getSingleUnderlyingClass(true);
                 ClassStructure   structExtends = (ClassStructure) constExtends.getComponent();
                 if (!struct.getFormat().isExtendsLegal(structExtends.getFormat()))
                     {
                     log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
                             constId.getPathString(), struct.getFormat(),
                             constExtends.getPathString(), structExtends.getFormat());
-                    typeExtends = pool.typeObject();
                     break;
                     }
-
-                // check for re-basing; this occurs when a class format changes and the system has
-                // to insert a layer of code between this class and the class being extended, such
-                // as when a service (which is a Service format) extends Object (which is a Class
-                // format)
-                typeRebase = (TypeConstant) pool.register(struct.getRebaseType());
                 }
                 break;
 
@@ -2099,7 +2083,7 @@ public abstract class TypeConstant
                 if (constId instanceof NativeRebaseConstant)
                     {
                     // for a native rebase, the interface becomes a class, and that class implements
-                    // the original interface
+                    // the original interface and Object
                     TypeConstant typeNatural = (TypeConstant) pool.register(
                             ((NativeRebaseConstant) constId).getClassConstant().getType());
                     if (isParamsSpecified())
@@ -2107,16 +2091,18 @@ public abstract class TypeConstant
                         typeNatural = pool.ensureParameterizedTypeConstant(typeNatural, getParamTypesArray());
                         }
                     listProcess.add(new Contribution(Composition.Implements, typeNatural));
-
-                    // since we're a class (not an interface), we need to extend Object somehow
-                    typeExtends = pool.typeObject();
+                    listProcess.add(new Contribution(Composition.Implements, pool.typeObject()));
                     }
                 else
                     {
-                    // an interface implies the set of methods present in Object
-                    // (use the "Into" composition to make the Object methods implicit-only, as
-                    // opposed to explicitly being present in this interface)
-                    typeInto = pool.typeObject();
+                    // Object does not (and must not) implement anything
+                    if (!constId.equals(pool.clzObject()))
+                        {
+                        // an interface implies the set of methods present in Object
+                        // (use the "Into" composition to make the Object methods implicit-only, as
+                        // opposed to explicitly being present in this interface)
+                        typeInto = pool.typeObject();
+                        }
                     }
                 break;
 
@@ -4286,15 +4272,6 @@ public abstract class TypeConstant
                 log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_ABSTRACT_ILLEGAL,
                         getValueString(), sName);
                 }
-            }
-        else if (constId.equals(pool.clzObject()))
-            {
-            // Object is special no matter what the source code says (its only property is "meta")
-            impl      = Implementation.Native;
-            fRO       = true;
-            fRW       = false;
-            fField    = false;
-            effectGet = Effect.BlocksSuper;
             }
         else
             {

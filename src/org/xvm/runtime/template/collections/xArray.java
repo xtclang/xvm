@@ -645,7 +645,7 @@ public class xArray
     protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
         ArrayHandle hArray     = (ArrayHandle) hTarget;
-        Mutability mutability = null;
+        Mutability  mutability = null;
 
         switch (hArray.m_mutability)
             {

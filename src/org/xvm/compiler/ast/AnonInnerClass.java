@@ -8,7 +8,6 @@ import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
@@ -20,9 +19,9 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
-import org.xvm.compiler.ast.Composition.Extends;
-import org.xvm.compiler.ast.Composition.Implements;
-import org.xvm.compiler.ast.Composition.Incorporates;
+import org.xvm.compiler.ast.CompositionNode.Extends;
+import org.xvm.compiler.ast.CompositionNode.Implements;
+import org.xvm.compiler.ast.CompositionNode.Incorporates;
 
 import org.xvm.util.Severity;
 
@@ -102,7 +101,7 @@ public class AnonInnerClass
     /**
      * @return the Contributions suggested for the anonymous inner class
      */
-    public List<Composition> getCompositions()
+    public List<CompositionNode> getCompositions()
         {
         return m_listCompositions == null ? Collections.EMPTY_LIST : m_listCompositions;
         }
@@ -362,7 +361,7 @@ public class AnonInnerClass
         IdentityConstant idSuper = type.getSingleUnderlyingClass(false);
         m_sName = idSuper.getName();
 
-        List<Composition> list = ensureCompositions();
+        List<CompositionNode> list = ensureCompositions();
         if (!list.isEmpty() && list.get(0) instanceof Extends)
             {
             getTypeExpression().log(getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_MULTI,
@@ -478,9 +477,9 @@ public class AnonInnerClass
     /**
      * @return a mutable non-null list of contributions
      */
-    private List<Composition> ensureCompositions()
+    private List<CompositionNode> ensureCompositions()
         {
-        List<Composition> list = m_listCompositions;
+        List<CompositionNode> list = m_listCompositions;
         if (list == null)
             {
             m_listCompositions = list = new ArrayList<>();
@@ -527,7 +526,7 @@ public class AnonInnerClass
             sb.append('>');
             }
 
-        for (Composition comp : getCompositions())
+        for (CompositionNode comp : getCompositions())
             {
             sb.append(' ')
               .append(comp);
@@ -568,7 +567,7 @@ public class AnonInnerClass
     /**
      * The contributions for the AnonInnerClass, starting with the Extends contribution, if any.
      */
-    private List<Composition> m_listCompositions;
+    private List<CompositionNode> m_listCompositions;
 
     /**
      * True if any errors were noticed during the data collection for the AnonInnerClass.

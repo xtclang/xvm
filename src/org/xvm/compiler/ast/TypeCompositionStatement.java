@@ -12,6 +12,7 @@ import java.util.Map;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ComponentBifurcator;
@@ -54,7 +55,11 @@ import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
-import org.xvm.compiler.ast.Composition.Default;
+import org.xvm.compiler.ast.CompositionNode.Default;
+import org.xvm.compiler.ast.CompositionNode.Delegates;
+import org.xvm.compiler.ast.CompositionNode.Extends;
+import org.xvm.compiler.ast.CompositionNode.Incorporates;
+import org.xvm.compiler.ast.CompositionNode.Import;
 import org.xvm.compiler.ast.StatementBlock.RootContext;
 
 import org.xvm.util.Handy;
@@ -69,6 +74,7 @@ import static org.xvm.compiler.Lexer.LF;
 import static org.xvm.compiler.Lexer.isLineTerminator;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 import static org.xvm.compiler.Lexer.isWhitespace;
+
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
 
@@ -93,7 +99,7 @@ public class TypeCompositionStatement
             List<Token>                qualified,
             List<Parameter>            typeParams,
             List<Parameter>            constructorParams,
-            List<Composition>          compositions,
+            List<CompositionNode>      compositions,
             StatementBlock             body,
             Token                      doc)
         {
@@ -146,7 +152,7 @@ public class TypeCompositionStatement
             Token                      category,
             Token                      name,
             List<Parameter>            typeParams,
-            List<Composition>          compositions,
+            List<CompositionNode>      compositions,
             List<Expression>           args,
             StatementBlock             body,
             long                       lStartPos,
@@ -202,7 +208,7 @@ public class TypeCompositionStatement
                 sb.append('.')
                   .append(suffix.getValue());
                 }
-            return sb.substring(1).toString();
+            return sb.substring(1);
             }
         else
             {
@@ -812,7 +818,7 @@ public class TypeCompositionStatement
                 {
                 AnnotationExpression annotation = annotations.get(i);
                 annotation.ensureAnnotation(pool);
-                compositions.add(new Composition.Incorporates(annotation));
+                compositions.add(new Incorporates(annotation));
                 }
             }
 
@@ -829,14 +835,13 @@ public class TypeCompositionStatement
         // enum-value       [5]     n           n           n
         // mixin        0/1 [6]     n           n           n                         0/1 [7]
         // interface    n   [8]     n [8]       n [9]
-        // REVIEW GG - note that I want to change the MIXIN to *NOT* "extends Object" (what was I thinking?!?)
         //
-        // [1] module/package/const/enum may explicitly extend a class or a const; otherwise extends
-        //     Object
+        // [1] module/package/const/enum may explicitly extend a class or a const; otherwise
+        //    implements Object
         // [2] package may import a module
-        // [3] class may explicitly extend a class; otherwise extends Object (the one exception is
-        //     Object itself, which does NOT extend itself)
-        // [4] service may explicitly extend a class or service; otherwise extends Object
+        // [3] class may explicitly extend a class; otherwise implements Object (the one exception is
+        //     Object itself, which does NOT implement itself)
+        // [4] service may explicitly extend a class or service; otherwise implements Object
         // [5] enum values always implicitly extend the enum to which they belong
         // [6] mixin may explicitly extend a mixin
         // [7] mixins may specify a type that they can be mixed into; otherwise implicitly Object
@@ -853,47 +858,37 @@ public class TypeCompositionStatement
         // 3. verify that no more than one "extends", "import*", or "into" clause is used (subject
         //    to the exception defined by rule #8 above)
         // 4. verify that a package with an import does not have a body
-        boolean       fAlreadyExtends   = false;
-        boolean       fAlreadyImports   = false;
-        boolean       fAlreadyIntos     = false;
-        ClassConstant constDefaultInto  = null;
-        ClassConstant constDefaultSuper;
-        if (m_fVirtChild)
+        boolean      fAlreadyExtends   = false;
+        boolean      fAlreadyImports   = false;
+        boolean      fAlreadyIntos     = false;
+        TypeConstant typeDefaultInto   = null;
+        TypeConstant typeDefaultImpl   = null;
+        TypeConstant typeDefaultSuper = null;
+
+        // virtual child super is analyzed/resolved by resolveNames()
+        if (!m_fVirtChild)
             {
-            // virtual child super is analyzed/resolved by resolveNames()
-            constDefaultSuper = null;
-            }
-        else
-            {
-            ClassConstant clzObject = pool.clzObject();
             switch (component.getFormat())
                 {
-                default:
-                    constDefaultSuper = clzObject;
-                    break;
-
-                case CLASS:
-                    // Object has no super
-                    constDefaultSuper = component.getIdentityConstant().equals(clzObject)
-                            ? null
-                            : clzObject;
-                    break;
-
                 case INTERFACE:
-                    // interface has no super
-                    constDefaultSuper = null;
+                    // interfaces don't implement anything
                     break;
 
                 case ENUMVALUE:
                     // enum values extend their abstract enum class
                     assert container != null && container.getFormat() == Format.ENUM;
-                    constDefaultSuper = (ClassConstant) container.getIdentityConstant();
+                    typeDefaultImpl  = null;
+                    typeDefaultSuper = container.getIdentityConstant().getType();
                     break;
 
                 case MIXIN:
                     // mixins apply to ("mix into") any Object by default
-                    constDefaultSuper = null;
-                    constDefaultInto  = clzObject;
+                    typeDefaultImpl = null;
+                    typeDefaultInto = pool.typeObject();
+                    break;
+
+                default:
+                    typeDefaultImpl = pool.typeObject();
                     break;
                 }
             }
@@ -912,7 +907,8 @@ public class TypeCompositionStatement
         // the one component that we just created and configured above may be split into multiple
         // "siblings" of itself based on any conditionals that are encountered in the processing of
         // the "Composition" objects)
-        for (Composition composition : compositions == null ? Collections.<Composition>emptyList() : compositions)
+        for (CompositionNode composition :
+                    compositions == null ? Collections.<CompositionNode>emptyList() : compositions)
             {
             // most compositions are allowed to be conditional; conditional compositions will
             // bifurcate the component
@@ -936,7 +932,7 @@ public class TypeCompositionStatement
                         for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                             {
                             // when an interface "extends" an interface, it is actually implementing
-                            struct.addContribution(ClassStructure.Composition.Implements, type);
+                            struct.addContribution(Composition.Implements, type);
                             }
                         }
                     else
@@ -961,10 +957,10 @@ public class TypeCompositionStatement
                             for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                                 {
                                 // register the class that the component extends
-                                struct.addContribution(ClassStructure.Composition.Extends, type);
+                                struct.addContribution(Composition.Extends, type);
                                 }
                             }
-                        m_listExtendArgs = ((Composition.Extends) composition).args;
+                        m_listExtendArgs = ((Extends) composition).args;
                         }
                     break;
 
@@ -1000,7 +996,7 @@ public class TypeCompositionStatement
                         }
 
                     // create the fingerprint for the imported module
-                    Composition.Import  compImport = (Composition.Import) composition;
+                    Import              compImport = (Import) composition;
                     NamedTypeExpression type       = (NamedTypeExpression) compImport.type;
                     String              sModule    = type.getName();
                     if (!type.isValidModuleName())
@@ -1138,7 +1134,7 @@ public class TypeCompositionStatement
                             // register the "into" clause
                             for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                                 {
-                                struct.addContribution(ClassStructure.Composition.Into,
+                                struct.addContribution(Composition.Into,
                                         composition.getType().ensureTypeConstant());
                                 }
                             }
@@ -1161,7 +1157,7 @@ public class TypeCompositionStatement
                         // register the "implements"
                         for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                             {
-                            struct.addContribution(ClassStructure.Composition.Implements,
+                            struct.addContribution(Composition.Implements,
                                     composition.getType().ensureTypeConstant());
                             }
                         }
@@ -1171,7 +1167,7 @@ public class TypeCompositionStatement
                     // these are all OK; other checks will be done after the types are resolvable
                     TypeConstant      constClass = composition.getType().ensureTypeConstant();
                     PropertyConstant  constProp  = pool.ensurePropertyConstant(component.getIdentityConstant(),
-                            ((Composition.Delegates) composition).getPropertyName()); // TODO change back from prop -> expr
+                            ((Delegates) composition).getPropertyName()); // TODO change back from prop -> expr
                     for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                         {
                         // register the class whose interface the component delegates, and the
@@ -1189,7 +1185,7 @@ public class TypeCompositionStatement
                     else
                         {
                         // these are all OK; other checks will be done after the types are resolvable
-                        Composition.Incorporates incorp = (Composition.Incorporates) composition;
+                        Incorporates incorp = (Incorporates) composition;
                         if (incorp.isAnnotation())
                             {
                             for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
@@ -1265,32 +1261,35 @@ public class TypeCompositionStatement
         componentList.clear();
         bifurcator.collectMatchingComponents(null, componentList);
 
-        // add default super ("extends")
-        if (!fAlreadyExtends && constDefaultSuper != null)
+        // add default "implement" and/or "extend"
+        if (!fAlreadyExtends && (typeDefaultImpl != null || typeDefaultSuper != null))
             {
             for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                 {
-                if (struct.getContributionsAsList().stream().noneMatch(contribution ->
-                        contribution.getComposition() == Component.Composition.Extends))
+                assert struct.getContributionsAsList().stream().noneMatch(contribution ->
+                        contribution.getComposition() == Composition.Extends);
+
+                if (typeDefaultSuper != null)
                     {
-                    struct.addContribution(ClassStructure.Composition.Extends,
-                            pool.ensureTerminalTypeConstant(constDefaultSuper));
+                    struct.addContribution(Composition.Extends, typeDefaultSuper);
+                    }
+                if (typeDefaultImpl != null)
+                    {
+                    struct.addContribution(Composition.Implements, typeDefaultImpl);
                     }
                 }
             }
 
         // add default applies-to ("into")
-        if (!fAlreadyIntos && constDefaultInto != null)
+        if (!fAlreadyIntos && typeDefaultInto != null)
             {
             for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                 {
-                if (struct.getContributionsAsList().stream().noneMatch(contribution ->
-                        contribution.getComposition() == Component.Composition.Into))
-                    {
-                    // TODO there is still an issue with this w.r.t. conditionals; verify there is no "into" on this struct
-                    struct.addContribution(ClassStructure.Composition.Into,
-                            pool.ensureTerminalTypeConstant(constDefaultInto));
-                    }
+                assert struct.getContributionsAsList().stream().noneMatch(contribution ->
+                        contribution.getComposition() == Composition.Into);
+
+                // TODO there is still an issue with this w.r.t. conditionals; verify there is no "into" on this struct
+                struct.addContribution(Composition.Into, typeDefaultInto);
                 }
             }
 
@@ -1392,7 +1391,7 @@ public class TypeCompositionStatement
         boolean fModuleImport = false;
         if (format == Format.PACKAGE && m_moduleImported == null)
             {
-            for (Composition composition : compositions)
+            for (CompositionNode composition : compositions)
                 {
                 Token.Id keyword = composition.getKeyword().getId();
                 switch (keyword)
@@ -1409,7 +1408,7 @@ public class TypeCompositionStatement
                             {
                             // this is obviously an error -- we can't compile without the module
                             // being available
-                            Composition.Import  imp     = (Composition.Import) composition;
+                            Import              imp     = (Import) composition;
                             NamedTypeExpression type    = (NamedTypeExpression) imp.type;
                             String              sModule = type.getName();
                             type.log(errs, Severity.ERROR, Compiler.MODULE_MISSING, sModule);
@@ -1455,7 +1454,7 @@ public class TypeCompositionStatement
                 case INTERFACE:
                     {
                     // check if there is a virtual child super class (!!) found for this interface
-                    if (setContrib.stream().anyMatch(contrib -> contrib.getComposition() == Component.Composition.Extends))
+                    if (setContrib.stream().anyMatch(contrib -> contrib.getComposition() == Composition.Extends))
                         {
                         // there exists a super virtual child, so it is illegal to define an
                         // interface of this name
@@ -1475,7 +1474,7 @@ public class TypeCompositionStatement
                         {
                         // verify that none of the virtual child super interfaces was implemented
                         // explicitly
-                        for (Composition composition : compositions)
+                        for (CompositionNode composition : compositions)
                             {
                             TypeConstant type = composition.getType().ensureTypeConstant();
                             if (composition.keyword.getId() == Id.EXTENDS && setContrib.stream().anyMatch(
@@ -1499,11 +1498,11 @@ public class TypeCompositionStatement
                 case CONST:
                 case SERVICE:
                     {
-                    Contribution contribExplicit = component.findContribution(Component.Composition.Extends);
+                    Contribution contribExplicit = component.findContribution(Composition.Extends);
                     Contribution contribImplicit = null;
                     for (Contribution contrib : setContrib)
                         {
-                        if (contrib.getComposition() == Component.Composition.Extends)
+                        if (contrib.getComposition() == Composition.Extends)
                             {
                             if (contribImplicit != null)
                                 {
@@ -1541,10 +1540,10 @@ public class TypeCompositionStatement
                         if (contribImplicit == null)
                             {
                             // there is no super virtual child, and the virtual child does not have
-                            // an "extends" clause, so add "extends Object" to the class
+                            // an "extends" clause, so add "implements Object" to the class
                             if (component.getFormat() != Format.MIXIN)
                                 {
-                                component.addContribution(Component.Composition.Extends, pool().typeObject());
+                                component.addContribution(Composition.Implements, pool().typeObject());
                                 }
 
                             // @Override should NOT exist
@@ -1584,7 +1583,7 @@ public class TypeCompositionStatement
                                     ClassStructure clzSuper = ((ClassStructure) idThis.getComponent()).getSuper();
                                     if (clzSuper.getIdentityConstant().equals(idSuper))
                                         {
-                                        for (Composition composition : compositions)
+                                        for (CompositionNode composition : compositions)
                                             {
                                             if (composition.keyword.getId() == Id.EXTENDS)
                                                 {
@@ -1607,7 +1606,7 @@ public class TypeCompositionStatement
                             // the "extends" was modified by resolving the virtual child super, so
                             // that means that the previous value was wrong, and there should have
                             // been an "@Override"
-                            for (Composition composition : compositions)
+                            for (CompositionNode composition : compositions)
                                 {
                                 if (composition.keyword.getId() == Id.EXTENDS)
                                     {
@@ -2034,11 +2033,11 @@ public class TypeCompositionStatement
             return;
             }
 
-        for (Composition composition : compositions)
+        for (CompositionNode composition : compositions)
             {
-            if (composition instanceof Composition.Delegates)
+            if (composition instanceof Delegates)
                 {
-                String sProp = ((Composition.Delegates) composition).getPropertyName();
+                String sProp = ((Delegates) composition).getPropertyName();
 
                 TypeConstant typePri = pool().ensureAccessTypeConstant(
                                             component.getFormalType(), Access.PRIVATE);
@@ -2170,7 +2169,7 @@ public class TypeCompositionStatement
             listArgs = args;
             }
 
-        if (listArgs != null)
+        if (listArgs != null && !listArgs.isEmpty())
             {
             assert clzSuper != null;
             }
@@ -2277,7 +2276,15 @@ public class TypeCompositionStatement
                 }
             }
 
-        if (idSuper != null)
+        if (idSuper == null)
+            {
+            if (constructor.isAnonymousClassWrapperConstructor())
+                {
+                 // call the default initializer
+                code.add(new SynInit());
+                }
+            }
+        else
             {
             MethodStructure constructSuper = (MethodStructure) idSuper.getComponent();
             int             cSuperArgs     = constructSuper.getParamCount();
@@ -2620,7 +2627,7 @@ public class TypeCompositionStatement
             }
         else
             {
-            for (Composition composition : this.compositions)
+            for (CompositionNode composition : this.compositions)
                 {
                 sb.append("\n        ")
                   .append(composition);
@@ -2716,7 +2723,7 @@ public class TypeCompositionStatement
     protected List<Parameter>            constructorParams;
     protected List<TypeExpression>       typeArgs;
     protected List<Expression>           args;
-    protected List<Composition>          compositions;
+    protected List<CompositionNode>      compositions;
     protected StatementBlock             body;
     protected Token                      doc;
     protected StatementBlock             enclosed;

@@ -162,7 +162,7 @@ module TestNesting
             }
         }
 
-    class BC /* implied extends Object */ implements DI1
+    class BC implements DI1
         {
         // implied class P
         //    {

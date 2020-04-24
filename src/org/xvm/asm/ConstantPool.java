@@ -3514,7 +3514,7 @@ public class ConstantPool
                 true,                   // synthetic
                 mapTypeParams,
                 Annotation.NO_ANNOTATIONS,
-                typeObject(),           // typeExtends
+                null,                   // typeExtends
                 null,                   // typeRebase
                 null,                   // typeInto
                 Collections.EMPTY_LIST, // listProcess,

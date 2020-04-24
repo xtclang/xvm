@@ -18,12 +18,12 @@ import org.xvm.compiler.Token;
 /**
  * A composition step. This defines one of the "building blocks" for a type composition.
  */
-public abstract class Composition
+public abstract class CompositionNode
         extends AstNode
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public Composition(Expression condition, Token keyword, TypeExpression type)
+    public CompositionNode(Expression condition, Token keyword, TypeExpression type)
         {
         this.condition = condition;
         this.keyword   = keyword;
@@ -124,7 +124,7 @@ public abstract class Composition
     // ----- inner class: Extends ------------------------------------------------------------------
 
     public static class Extends
-            extends Composition
+            extends CompositionNode
         {
         public Extends(Expression condition, Token keyword, TypeExpression type, List<Expression> args)
             {
@@ -186,7 +186,7 @@ public abstract class Composition
     // ----- inner class: Incorporates -------------------------------------------------------------
 
     public static class Incorporates
-            extends Composition
+            extends CompositionNode
         {
         public Incorporates(Expression condition, Token keyword, TypeExpression type, List<Expression> args, List<Parameter> constraints)
             {
@@ -332,7 +332,7 @@ public abstract class Composition
     // ----- inner class: Implements ---------------------------------------------------------------
 
     public static class Implements
-            extends Composition
+            extends CompositionNode
         {
         public Implements(Expression condition, Token keyword, TypeExpression type)
             {
@@ -344,7 +344,7 @@ public abstract class Composition
     // ----- inner class: Delegates ----------------------------------------------------------------
 
     public static class Delegates
-            extends Composition
+            extends CompositionNode
         {
         public Delegates(Expression condition, Token keyword, TypeExpression type, Token delegate, long lEndPos)
             {
@@ -381,7 +381,7 @@ public abstract class Composition
     // ----- inner class: Into ---------------------------------------------------------------------
 
     public static class Into
-            extends Composition
+            extends CompositionNode
         {
         public Into(Expression condition, Token keyword, TypeExpression type)
             {
@@ -393,7 +393,7 @@ public abstract class Composition
     // ----- inner class: Import -------------------------------------------------------------------
 
     public static class Import
-            extends Composition
+            extends CompositionNode
         {
         public Import(Expression condition, Token keyword, NamedTypeExpression type, List<VersionOverride> vers, long lEndPos)
             {
@@ -504,7 +504,7 @@ public abstract class Composition
     // ----- inner class: Default ------------------------------------------------------------------
 
     public static class Default
-            extends Composition
+            extends CompositionNode
         {
         public Default(Expression condition, Token keyword, Expression expr, long lEndPos)
             {
@@ -552,5 +552,5 @@ public abstract class Composition
     protected Token          keyword;
     protected TypeExpression type;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(Composition.class, "condition", "type");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(CompositionNode.class, "condition", "type");
     }

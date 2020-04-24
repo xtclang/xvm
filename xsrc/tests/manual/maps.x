@@ -34,7 +34,7 @@ module TestMaps
             {
             console.println(s);
             }
-        console.println(map.toString());
+        console.println(map);
         }
 
     void testEquals()

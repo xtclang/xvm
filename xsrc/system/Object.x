@@ -13,7 +13,7 @@
  * * The {@link Class} of the object, which is accessible via the Type, unless the type has been
  *   masked by {@link Ref.maskAs<AsType>()}.
  */
-class Object
+interface Object
     {
     /**
      * By default, comparing any two objects will only result in equality if they are the

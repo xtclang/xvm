@@ -946,12 +946,6 @@ public class ClassStructure
      */
     public boolean extendsClass(IdentityConstant idClass)
         {
-        if (idClass.equals(getConstantPool().clzObject()))
-            {
-            // everything is considered to extend Object (even interfaces)
-            return true;
-            }
-
         if (getFormat() == Format.INTERFACE)
             {
             // interfaces do not extend; they implement
@@ -1001,7 +995,7 @@ public class ClassStructure
         {
         if (idClass.equals(getConstantPool().clzObject()))
             {
-            // everything is considered to contain the Object (even interfaces)
+            // everything is considered to implement the Object interface
             return true;
             }
 
@@ -1121,7 +1115,8 @@ public class ClassStructure
             case CONST:
             case SERVICE:
                 // only if the format differs from the format of the super
-                if (format != getSuper().getFormat())
+                ClassStructure clzSuper = getSuper();
+                if (clzSuper == null || format != clzSuper.getFormat())
                     {
                     return format == Format.CONST ? pool.typeConstRB() : pool.typeServiceRB();
                     }
@@ -1959,6 +1954,12 @@ public class ClassStructure
                     // fall through
                 case Delegates:
                 case Implements:
+                    if (typeContrib.equals(pool.typeObject()))
+                        {
+                        // ignore trivial "implement Object" contribution
+                        continue;
+                        }
+
                     typeContrib = typeContrib.resolveGenerics(pool, typeRight.normalizeParameters());
                     if (typeContrib != null)
                         {
@@ -1979,12 +1980,6 @@ public class ClassStructure
 
                     ClassConstant constContrib = (ClassConstant)
                         typeContrib.getSingleUnderlyingClass(true);
-
-                    if (constContrib.equals(pool.clzObject()))
-                        {
-                        // ignore trivial "extends Object" contribution
-                        continue;
-                        }
 
                     TypeConstant typeResolved = contrib.resolveType(pool, this, typeRight.getParamTypes());
                     if (typeResolved != null)
@@ -2035,12 +2030,6 @@ public class ClassStructure
 
                     ClassConstant constContrib = (ClassConstant)
                         typeContrib.getSingleUnderlyingClass(true);
-
-                    if (constContrib.equals(pool.clzObject()))
-                        {
-                        // ignore trivial "extends Object" contribution
-                        continue;
-                        }
 
                     TypeConstant typeResolved = contrib.resolveType(pool, this, listRight);
 
