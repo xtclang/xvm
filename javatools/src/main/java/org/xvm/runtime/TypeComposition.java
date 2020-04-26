@@ -2,7 +2,7 @@ package org.xvm.runtime;
 
 
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -107,9 +107,42 @@ public interface TypeComposition
      * Create entries for all fields. Non-inflated fields will have null values; inflated
      * will contain non-initialized RefHandle objects.
      *
-     * @return a map containing object fields
+     * @return an array containing object fields
      */
-    Map<Object, ObjectHandle> initializeStructure();
+    ObjectHandle[] initializeStructure();
+
+    /**
+     * Return the specified field's {@link ObjectHandle} from the structure.
+     *
+     * @param nid the field nid
+     *
+     * @return the {@link ObjectHandle}
+     */
+    ObjectHandle getFieldFromStructure(ObjectHandle[] structure, Object nid);
+
+    /**
+     * Update the specified field's {@link ObjectHandle} value in the structure.
+     *
+     * @param structure the structure to store the value in
+     * @param nid the field nid
+     * @param hValue the updated value
+     */
+    void setFieldInStructure(ObjectHandle[] structure, Object nid, ObjectHandle hValue);
+
+    /**
+     * Make all the fields of the specified structure immutable.
+     *
+     * @param frame     the current frame
+     * @param structure the structure
+     *
+     * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
+     */
+    int makeStructureImmutable(Frame frame, ObjectHandle[] structure);
+
+    /**
+     * @return the set of field nids for instances of this type.
+     */
+    Set<Object> getFieldNids();
 
     /**
      * Check whether or not the property referred by the specified nid has a custom code or
@@ -226,6 +259,15 @@ public interface TypeComposition
         {
         return getTemplate().setFieldValue(frame, hTarget, idProp, hValue);
         }
+
+    /**
+     * Return {@code true} iff objects of this type contain a field for the specified property.
+     *
+     * @param idProp the property
+     *
+     * @return {@code true} iff objects of this type contain a field for the specified property
+     */
+    boolean containsField(PropertyConstant idProp);
 
     /**
      * @return a list of field names (excluding potentially unassigned and lazy)

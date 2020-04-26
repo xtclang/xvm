@@ -42,6 +42,7 @@ import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Constants;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
@@ -392,10 +393,19 @@ public class ClassStructure
      */
     public boolean hasOuter()
         {
-        // a class that is static can not have an outer
-        // a class that is NOT an inner class can not have an outer (i.e. MUST be an inner class)
-        if (isStatic() || !isInnerClass())
+        if (isStatic())
             {
+            // a class that is static can not have an outer
+            return false;
+            }
+        else if (getIdentityConstant() instanceof ClassConstant)
+            {
+            // TODO: MF is this check correct?
+            return true;
+            }
+        else if (!isInnerClass())
+            {
+            // a class that is NOT an inner class can not have an outer (i.e. MUST be an inner class)
             return false;
             }
 
@@ -2876,7 +2886,8 @@ public class ClassStructure
      *
      * @return the [synthetic] MethodStructure for the corresponding default constructor
      */
-    public MethodStructure createInitializer(TypeConstant typeStruct, Map<Object, TypeComposition> mapFields)
+    public MethodStructure createInitializer(TypeConstant typeStruct,
+                                             Map<Object, ClassComposition.FieldInfo> mapFields)
         {
         ConstantPool pool   = typeStruct.getConstantPool();
         int          nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS;
@@ -2893,10 +2904,10 @@ public class ClassStructure
         assert typeStruct.getAccess() == Access.STRUCT;
 
         TypeInfo infoType = typeStruct.ensureTypeInfo();
-        for (Map.Entry<Object, TypeComposition> entry : mapFields.entrySet())
+        for (Map.Entry<Object, ClassComposition.FieldInfo> entry : mapFields.entrySet())
             {
             Object          nid      = entry.getKey();
-            TypeComposition clzRef   = entry.getValue();
+            TypeComposition clzRef   = entry.getValue().getTypeComposition();
             PropertyInfo    infoProp = infoType.findPropertyByNid(nid);
 
             if (infoProp == null)

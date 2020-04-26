@@ -1,6 +1,7 @@
 package org.xvm.runtime.template.reflect;
 
 
+import java.util.Collections;
 import java.util.List;
 
 import java.util.function.ToIntFunction;
@@ -45,7 +46,6 @@ import org.xvm.runtime.template._native.reflect.xRTProperty;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
-
 /**
  * Native Ref implementation.
  */
@@ -58,7 +58,9 @@ public class xRef
 
     public xRef(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, Collections.singleton(
+            new PropertyConstant(structure.getConstantPool(),
+                structure.getIdentityConstant(), RefHandle.REFERENT)));
 
         if (fInstance)
             {
@@ -958,7 +960,7 @@ public class xRef
         /**
          * Synthetic property holding a referent.
          */
-        protected final static String REFERENT = "$value";
+        public final static String REFERENT = "$value";
         }
 
     /***

@@ -2,6 +2,7 @@ package org.xvm.runtime;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -155,9 +156,39 @@ public class PropertyComposition
         }
 
     @Override
-    public Map<Object, ObjectHandle> initializeStructure()
+    public ObjectHandle[] initializeStructure()
         {
         return f_clzRef.initializeStructure();
+        }
+
+    @Override
+    public ObjectHandle getFieldFromStructure(ObjectHandle[] structure, Object nid)
+        {
+        return f_clzRef.getFieldFromStructure(structure, nid);
+        }
+
+    @Override
+    public void setFieldInStructure(ObjectHandle[] structure, Object nid, ObjectHandle hValue)
+        {
+        f_clzRef.setFieldInStructure(structure, nid, hValue);
+        }
+
+    @Override
+    public int makeStructureImmutable(Frame frame, ObjectHandle[] structure)
+        {
+        return f_clzRef.makeStructureImmutable(frame, structure);
+        }
+
+    @Override
+    public Set<Object> getFieldNids()
+        {
+        return f_clzRef.getFieldNids();
+        }
+
+    @Override
+    public boolean containsField(PropertyConstant idProp)
+        {
+        return f_clzRef.containsField(idProp);
         }
 
     @Override

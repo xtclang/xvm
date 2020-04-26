@@ -2,6 +2,7 @@ package org.xvm.runtime.template;
 
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -12,6 +13,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -53,7 +55,9 @@ public class xConst
 
     public xConst(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, Collections.singleton(
+            new PropertyConstant(structure.getConstantPool(),
+                structure.getIdentityConstant(), PROP_HASH)));
 
         if (fInstance)
             {

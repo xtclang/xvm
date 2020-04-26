@@ -88,12 +88,6 @@ public class xFutureVar
         }
 
     @Override
-    public boolean isGenericHandle()
-        {
-        return false;
-        }
-
-    @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         FutureHandle      hThis = (FutureHandle) hTarget;

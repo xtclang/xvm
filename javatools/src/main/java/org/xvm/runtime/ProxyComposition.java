@@ -1,8 +1,6 @@
 package org.xvm.runtime;
 
 
-import java.util.Map;
-
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
@@ -110,7 +108,7 @@ public class ProxyComposition
         }
 
     @Override
-    public Map<Object, ObjectHandle> initializeStructure()
+    public ObjectHandle[] initializeStructure()
         {
         return null;
         }

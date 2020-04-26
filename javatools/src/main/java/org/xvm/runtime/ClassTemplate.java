@@ -3,6 +3,7 @@ package org.xvm.runtime;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -74,6 +75,12 @@ public abstract class ClassTemplate
     // construct the template
     public ClassTemplate(TemplateRegistry templates, ClassStructure structClass)
         {
+        this (templates, structClass, Collections.emptySet());
+        }
+
+    public ClassTemplate(TemplateRegistry templates, ClassStructure structClass,
+                         Set<PropertyConstant> setFieldsImplicit)
+        {
         f_templates = templates;
         f_struct    = structClass;
         f_sName     = structClass.getIdentityConstant().getPathString();
@@ -91,6 +98,18 @@ public abstract class ClassTemplate
             }
 
         f_structSuper = structSuper;
+
+        if (f_struct.getIdentityConstant() instanceof ClassConstant || structClass.hasOuter()) // TODO MF: WTF
+            {
+            // TODO MF: is there a more appropriate place for this?
+            IdentityConstant clazz = getClassConstant();
+            f_aFieldsImplicit = setFieldsImplicit.toArray(new PropertyConstant[setFieldsImplicit.size() + 1]);
+            f_aFieldsImplicit[f_aFieldsImplicit.length - 1] = new PropertyConstant(clazz.getConstantPool(), clazz, GenericHandle.OUTER);
+            }
+        else
+            {
+            f_aFieldsImplicit = setFieldsImplicit.toArray(EMPTY_PROP_CONST_ARRAY);
+            }
         }
 
     /**
@@ -332,6 +351,14 @@ public abstract class ClassTemplate
         }
 
     /**
+     * @return true iff this class is an inner class
+     */
+    public boolean isInnerClass()
+        {
+        return f_struct.isInnerClass();
+        }
+
+    /**
      * Create an object handle for the specified constant and push it on the frame's local stack.
      * <p/>
      * Note: the overriding method *should never* push DeferredCallHandles on the stack.
@@ -449,15 +476,16 @@ public abstract class ClassTemplate
         if (hTarget.isMutable())
             {
             hTarget.makeImmutable();
-
             if (hTarget instanceof GenericHandle)
                 {
-                TypeComposition           clz       = hTarget.getComposition();
-                Map<Object, ObjectHandle> mapFields = ((GenericHandle) hTarget).getFields();
-                for (Map.Entry<Object, ObjectHandle> entry : mapFields.entrySet())
+                TypeComposition clz      = hTarget.getComposition();
+                GenericHandle   hGeneric = (GenericHandle) hTarget;
+                for (Object nid : hGeneric.getComposition().getFieldNids())
                     {
-                    Object       nid    = entry.getKey();
-                    ObjectHandle hValue = entry.getValue();
+                    ObjectHandle hValue = nid instanceof String
+                        ? hGeneric.getField((String) nid)
+                        : hGeneric.getField((PropertyConstant) nid); // TODO MF: are these the only nid types?
+
                     if (hValue != null && hValue.isMutable() && !clz.isLazy(nid))
                         {
                         switch (hValue.getTemplate().makeImmutable(frame, hValue))
@@ -473,6 +501,9 @@ public abstract class ClassTemplate
                             }
                         }
                     }
+
+                return hTarget.getComposition()
+                    .makeStructureImmutable(frame, ((GenericHandle) hTarget).getFields());
                 }
             }
         return Op.R_NEXT;
@@ -770,6 +801,17 @@ public abstract class ClassTemplate
     // ----- property operations -------------------------------------------------------------------
 
     /**
+     * Return the implicit fields for this template. These are fields which are not declared but are
+     * required by the runtime.
+     *
+     * @return the implicit fields
+     */
+    public PropertyConstant[] getImplicitFields()
+        {
+        return f_aFieldsImplicit;
+        }
+
+    /**
      * Retrieve a property value.
      *
      * @param frame    the current frame
@@ -875,7 +917,7 @@ public abstract class ClassTemplate
             return waitForInjectedProperty(frame, hThis, idProp, iReturn);
             }
 
-        if (hTarget.isInflated(idProp))
+        if (hTarget.isInflated(idProp) && hValue instanceof RefHandle) // TODO MF: is this correct?
             {
             RefHandle hRef = (RefHandle) hValue;
             if (!(hRef instanceof FutureHandle))
@@ -2412,6 +2454,7 @@ public abstract class ClassTemplate
     public static String[] INT     = new String[] {"numbers.Int64"};
     public static String[] STRING  = new String[] {"text.String"};
     public static String[] BOOLEAN = new String[] {"Boolean"};
+    public static final PropertyConstant[] EMPTY_PROP_CONST_ARRAY = new PropertyConstant[0];
 
     /**
      * The TemplateRegistry.
@@ -2438,6 +2481,10 @@ public abstract class ClassTemplate
      */
     protected ClassTemplate m_templateSuper;
 
+    /**
+     * The implicit fields of this template.
+     */
+    protected final PropertyConstant[] f_aFieldsImplicit;
 
     // ----- caches ------
 

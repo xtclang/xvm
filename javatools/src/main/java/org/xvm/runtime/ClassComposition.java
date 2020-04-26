@@ -17,6 +17,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.Op;
 import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -97,6 +98,8 @@ public class ClassComposition
         f_mapSetters      = f_clzInception.f_mapSetters;
 
         m_mapFields       = f_clzInception.m_mapFields;
+        m_cFieldsImplicit = f_clzInception.m_cFieldsImplicit;
+        m_cFields         = f_clzInception.m_cFields;
         m_methodInit      = f_clzInception.m_methodInit;
         }
 
@@ -268,7 +271,8 @@ public class ClassComposition
     @Override
     public boolean isInflated(Object nid)
         {
-        return m_mapFields.get(nid) != null;
+        FieldInfo info = m_mapFields.get(nid);
+        return info != null && info.getTypeComposition() != null;
         }
 
     @Override
@@ -277,7 +281,7 @@ public class ClassComposition
         if (isInflated(nid))
             {
             ConstantPool    pool = f_typeInception.getConstantPool();
-            TypeComposition clz  = m_mapFields.get(nid);
+            TypeComposition clz = m_mapFields.get(nid).getTypeComposition();
 
             return clz instanceof PropertyComposition && ((PropertyComposition) clz).isLazy()
                 || clz.getType().containsAnnotation(pool.clzLazy());
@@ -288,7 +292,8 @@ public class ClassComposition
     @Override
     public boolean isAllowedUnassigned(Object nid)
         {
-        return f_typeStructure.ensureTypeInfo().findPropertyByNid(nid).isSimpleUnassigned();
+        return (m_mapFields.get(nid).getIndex() < m_cFieldsImplicit)
+            || f_typeStructure.ensureTypeInfo().findPropertyByNid(nid).isSimpleUnassigned();
         }
 
     @Override
@@ -353,8 +358,8 @@ public class ClassComposition
         List<String> listNames = m_listNames;
         if (listNames == null)
             {
-            Map<Object, TypeComposition> mapFields = m_mapFields;
-            if (mapFields.isEmpty())
+            Map<Object, FieldInfo> mapFields = m_mapFields;
+            if (mapFields == null)
                 {
                 listNames = Collections.EMPTY_LIST;
                 }
@@ -421,27 +426,82 @@ public class ClassComposition
         }
 
     @Override
-    public Map<Object, ObjectHandle> initializeStructure()
+    public boolean containsField(PropertyConstant idProp)
         {
-        Map<Object, TypeComposition> mapCached = m_mapFields;
-        if (mapCached.isEmpty())
+        return m_mapFields.containsKey(idProp.getNestedIdentity());
+        }
+
+    @Override
+    public ObjectHandle[] initializeStructure()
+        {
+        Map<Object, FieldInfo> mapCached = m_mapFields;
+        if (mapCached == null)
             {
             return null;
             }
 
-        Map<Object, ObjectHandle> mapFields = new ListMap<>();
-        for (Map.Entry<Object, TypeComposition> entry : mapCached.entrySet())
+        ObjectHandle[] aFields = new ObjectHandle[m_cFields];
+        for (Map.Entry<Object, FieldInfo> entry : mapCached.entrySet())
             {
             Object          nidProp = entry.getKey();
-            TypeComposition clzRef  = entry.getValue();
-            ObjectHandle    hValue  = null;
-            if (clzRef != null)
+            int             nIndex  = entry.getValue().getIndex();
+            TypeComposition clzRef  = entry.getValue().getTypeComposition();
+            if (nIndex >= 0 && clzRef != null)
                 {
-                hValue = ((VarSupport) clzRef.getSupport()).createRefHandle(null, clzRef, nidProp.toString());
+                aFields[nIndex] = ((VarSupport) clzRef.getSupport()).createRefHandle(null, clzRef, nidProp.toString());
                 }
-            mapFields.put(nidProp, hValue);
             }
-        return mapFields;
+
+        return aFields;
+        }
+
+    @Override
+    public ObjectHandle getFieldFromStructure(ObjectHandle[] structure, Object nid)
+        {
+        int nIndex = m_mapFields.get(nid).getIndex();
+        return nIndex < 0 ? null : structure[nIndex];
+        }
+
+    @Override
+    public void setFieldInStructure(ObjectHandle[] structure, Object nid, ObjectHandle hValue)
+        {
+        structure[m_mapFields.get(nid).getIndex()] = hValue;
+        }
+
+    @Override
+    public Set<Object> getFieldNids()
+        {
+        return m_mapFields.keySet();
+        }
+
+    @Override
+    public int makeStructureImmutable(Frame frame, ObjectHandle[] structure)
+        {
+        for (Map.Entry<Object, FieldInfo> entry : m_mapFields.entrySet())
+            {
+            Object nid = entry.getKey();
+            int nIndex = entry.getValue().getIndex();
+            if (nIndex >= 0)
+                {
+                ObjectHandle hValue = structure[nIndex];
+                if (hValue != null && hValue.isMutable() && !isLazy(nid))
+                    {
+                    switch (hValue.getTemplate().makeImmutable(frame, hValue))
+                        {
+                        case Op.R_NEXT:
+                            continue;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+                }
+            }
+
+        return Op.R_NEXT;
         }
 
 
@@ -506,7 +566,7 @@ public class ClassComposition
         TypeConstant typeStruct = pool.ensureAccessTypeConstant(typePublic, Access.STRUCT);
         TypeInfo     infoStruct = typeStruct.ensureTypeInfo();
 
-        Map<Object, TypeComposition> mapFields = new ListMap<>();
+        Map<Object, FieldInfo> mapFields = new ListMap<>();
 
         Map.Entry<PropertyConstant, PropertyInfo>[] aEntry =
                 infoStruct.getProperties().entrySet().toArray(new Map.Entry[0]);
@@ -515,6 +575,25 @@ public class ClassComposition
             {
             Arrays.sort(aEntry, RANKER);
             }
+
+        int nIndex = 0;
+
+        // create storage for implicits
+        for (PropertyConstant field : f_template.getImplicitFields())
+            {
+            mapFields.put(field.getNestedIdentity(), new FieldInfo(nIndex++, null));
+            }
+
+        // create storage for injections
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : f_typeInception.ensureTypeInfo().getProperties().entrySet())
+            {
+            if (entry.getValue().isInjected())
+                {
+                mapFields.put(entry.getKey().getNestedIdentity(), new FieldInfo(nIndex++, null));
+                }
+            }
+
+        m_cFieldsImplicit = nIndex;
 
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : aEntry)
             {
@@ -583,10 +662,13 @@ public class ClassComposition
 
             if (fField || clzRef != null)
                 {
-                mapFields.put(idProp.getNestedIdentity(), clzRef);
+                Object nid = idProp.getNestedIdentity();
+                mapFields.put(nid, new FieldInfo(infoStruct.findPropertyByNid(nid) == null
+                    ? -1 : nIndex++, clzRef));
                 }
             }
 
+        m_cFields = nIndex;
         m_mapFields = mapFields.isEmpty() ? Collections.EMPTY_MAP : mapFields;
         }
 
@@ -618,6 +700,50 @@ public class ClassComposition
         return f_typeRevealed.getValueString();
         }
 
+
+    /**
+     * Information regarding a field of this {@link ClassComposition}.
+     */
+    public static class FieldInfo
+        {
+        /**
+         * Construct a {@link FieldInfo}.
+         *
+         * @param nIndex the field's storage index, or {@code -1} for synthetic
+         * @param type the field's type
+         */
+        protected FieldInfo(int nIndex, TypeComposition type)
+            {
+            f_nIndex = nIndex;
+            f_type = type;
+            }
+
+        /**
+         * @return the field's type
+         */
+        public TypeComposition getTypeComposition()
+           {
+           return f_type;
+           }
+
+        /**
+         * @return the field's index
+         */
+        public int getIndex()
+            {
+            return f_nIndex;
+            }
+
+        /**
+         * The field's storage index within the object, or {@code -1} for synthetic.
+         */
+        protected final int f_nIndex;
+
+        /**
+         * The field's type, either nulls or TypeComposition for refs.
+         */
+        protected final TypeComposition f_type;
+        }
 
     // ----- data fields ---------------------------------------------------------------------------
 
@@ -655,9 +781,19 @@ public class ClassComposition
     private final TypeConstant f_typeRevealed;
 
     /**
-     * Template for class fields (values are either nulls or TypeComposition for refs).
+     * {@link FieldInfo}s for class fields.
      */
-    private Map<Object, TypeComposition> m_mapFields;
+    private Map<Object, FieldInfo> m_mapFields;
+
+    /**
+     * The number of implicit/injected fields.
+     */
+    private int m_cFieldsImplicit;
+
+    /**
+     * The number of non-synthetic fields.
+     */
+    private int m_cFields;
 
     /**
      * A cache of derivative TypeCompositions keyed by the "revealed type".
@@ -699,6 +835,6 @@ public class ClassComposition
     /**
      * Rank comparator for new Map.Entry<PropertyConstant, PropertyInfo> objects.
      */
-    public static Comparator<Map.Entry<PropertyConstant, PropertyInfo>> RANKER =
+    public static final Comparator<Map.Entry<PropertyConstant, PropertyInfo>> RANKER =
         Comparator.comparingInt(e -> e.getValue().getRank());
     }

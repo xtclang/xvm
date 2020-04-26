@@ -4,7 +4,7 @@ package org.xvm.runtime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
@@ -20,8 +20,6 @@ import org.xvm.runtime.template.xService.ServiceHandle;
 import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
-
-import org.xvm.util.ListMap;
 
 
 /**
@@ -301,57 +299,46 @@ public abstract class ObjectHandle
 
             m_fMutable = true;
 
-            m_mapFields = clazz.initializeStructure();
+            m_aFields = clazz.initializeStructure();
             }
 
-        public Map<Object, ObjectHandle> getFields()
+        public ObjectHandle[] getFields()
             {
-            return m_mapFields == null ? Collections.EMPTY_MAP : m_mapFields;
+            return m_aFields;
             }
 
         public boolean containsField(PropertyConstant idProp)
             {
-            return m_mapFields != null && m_mapFields.containsKey(idProp.getNestedIdentity());
+            return m_clazz.containsField(idProp);
             }
 
         public ObjectHandle getField(PropertyConstant idProp)
             {
-            return m_mapFields == null ? null : m_mapFields.get(idProp.getNestedIdentity());
+            return m_clazz.getFieldFromStructure(m_aFields, idProp.getNestedIdentity());
             }
 
         public ObjectHandle getField(String sProp)
             {
-            return m_mapFields == null ? null : m_mapFields.get(sProp);
+            return m_clazz.getFieldFromStructure(m_aFields, sProp);
             }
 
         public void setField(PropertyConstant idProp, ObjectHandle hValue)
             {
-            if (m_mapFields == null)
-                {
-                m_mapFields = new ListMap<>();
-                }
-            m_mapFields.put(idProp.getNestedIdentity(), hValue);
+            m_clazz.setFieldInStructure(m_aFields, idProp.getNestedIdentity(), hValue);
             }
 
         public void setField(String sProp, ObjectHandle hValue)
             {
-            if (m_mapFields == null)
-                {
-                m_mapFields = new ListMap<>();
-                }
-            m_mapFields.put(sProp, hValue);
+            m_clazz.setFieldInStructure(m_aFields, sProp, hValue);
             }
 
         public boolean containsMutableFields()
             {
-            if (m_mapFields != null)
+            for (ObjectHandle field : m_aFields)
                 {
-                for (ObjectHandle hValue : m_mapFields.values())
+                if (field != null && field.isMutable())
                     {
-                    if (hValue != null && hValue.isMutable())
-                        {
-                        return true;
-                        }
+                    return true;
                     }
                 }
             return false;
@@ -360,8 +347,13 @@ public abstract class ObjectHandle
         @Override
         public boolean isService()
             {
-            ObjectHandle hParent = getField(OUTER);
-            return hParent != null && hParent.isService();
+            if (m_clazz.getFieldNids().contains(OUTER))
+                {
+                ObjectHandle hParent = getField(OUTER);
+                return hParent != null && hParent.isService();
+                }
+
+            return false;
             }
 
         @Override
@@ -381,15 +373,16 @@ public abstract class ObjectHandle
             // when we clone a non-struct to a struct, we need to do the opposite
             boolean fUpdateOuter = isStruct() || clazz.isStruct();
 
-            GenericHandle hClone = (GenericHandle) super.cloneAs(clazz);
+            GenericHandle  hClone  = (GenericHandle) super.cloneAs(clazz);
+            ObjectHandle[] aFields = m_aFields;
 
-            if (fUpdateOuter && m_mapFields != null)
+            if (fUpdateOuter && aFields != null)
                 {
-                for (Map.Entry<Object, ObjectHandle> entry : m_mapFields.entrySet())
+                for (Object nid : clazz.getFieldNids())
                     {
-                    if (clazz.isInflated(entry.getKey()))
+                    if (clazz.isInflated(nid))
                         {
-                        RefHandle    hValue = (RefHandle) entry.getValue();
+                        RefHandle    hValue = (RefHandle) clazz.getFieldFromStructure(aFields, nid);
                         ObjectHandle hOuter = hValue.getField(OUTER);
                         if (hOuter != null)
                             {
@@ -405,15 +398,15 @@ public abstract class ObjectHandle
         public List<String> validateFields()
             {
             List<String> listUnassigned = null;
-            if (m_mapFields != null)
+            ObjectHandle[] aFields = m_aFields;
+            if (aFields != null)
                 {
-                for (Map.Entry<Object, ObjectHandle> entry : m_mapFields.entrySet())
+                TypeComposition clazz = m_clazz;
+                for (Object idProp : clazz.getFieldNids())
                     {
-                    ObjectHandle hValue = entry.getValue();
+                    ObjectHandle hValue = clazz.getFieldFromStructure(aFields, idProp);
                     if (hValue == null)
                         {
-                        Object idProp = entry.getKey();
-
                         if (!getComposition().isAllowedUnassigned(idProp))
                             {
                             if (listUnassigned == null)
@@ -483,23 +476,28 @@ public abstract class ObjectHandle
                 return false;
                 }
 
-            Map<Object, ObjectHandle> map1 = h1.m_mapFields;
-            Map<Object, ObjectHandle> map2 = h2.m_mapFields;
+            ObjectHandle[] aField1 = h1.getFields();
+            ObjectHandle[] aField2 = h2.getFields();
 
-            if (map1 == map2)
+            if (aField1 == aField2)
                 {
                 return true;
                 }
 
-            if (map1.size() != map2.size())
+            TypeComposition comp1 = h1.getComposition();
+            TypeComposition comp2 = h2.getComposition();
+            Set<Object> nids1 = comp1.getFieldNids();
+            Set<Object> nids2 = comp2.getFieldNids();
+
+            if (!nids1.equals(nids2))
                 {
                 return false;
                 }
 
-            for (Object idProp : map1.keySet())
+            for (Object nid : nids1)
                 {
-                ObjectHandle hV1 = map1.get(idProp);
-                ObjectHandle hV2 = map2.get(idProp);
+                ObjectHandle hV1 = comp1.getFieldFromStructure(aField1, nid);
+                ObjectHandle hV2 = comp2.getFieldFromStructure(aField2, nid);
 
                 // TODO: need to prevent a potential infinite loop
                 ClassTemplate template = hV1.getTemplate();
@@ -513,7 +511,7 @@ public abstract class ObjectHandle
             }
 
         // keyed by the property name or a NestedIdentity
-        private Map<Object, ObjectHandle> m_mapFields;
+        private final ObjectHandle[] m_aFields;
 
         // not null only if this object was injected or explicitly "masked as"
         protected Container m_owner;

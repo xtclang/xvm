@@ -2,7 +2,7 @@ package org.xvm.runtime;
 
 
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 import org.xvm.asm.MethodStructure;
 
@@ -121,11 +121,40 @@ abstract public class DelegatingComposition
         }
 
     @Override
-    public Map<Object, ObjectHandle> initializeStructure()
+    public ObjectHandle[] initializeStructure()
         {
         return f_clzOrigin.initializeStructure();
         }
 
+    @Override
+    public ObjectHandle getFieldFromStructure(ObjectHandle[] structure, Object nid)
+        {
+        return f_clzOrigin.getFieldFromStructure(structure, nid);
+        }
+
+    @Override
+    public void setFieldInStructure(ObjectHandle[] structure, Object nid, ObjectHandle hValue)
+        {
+        f_clzOrigin.setFieldInStructure(structure, nid, hValue);
+        }
+
+    @Override
+    public int makeStructureImmutable(Frame frame, ObjectHandle[] structure)
+        {
+        return f_clzOrigin.makeStructureImmutable(frame, structure);
+        }
+
+    @Override
+    public Set<Object> getFieldNids()
+        {
+        return f_clzOrigin.getFieldNids();
+        }
+
+    @Override
+    public boolean containsField(PropertyConstant idProp)
+        {
+        return f_clzOrigin.containsField(idProp);
+        }
 
     // ----- data fields ---------------------------------------------------------------------------
 
