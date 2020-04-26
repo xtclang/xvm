@@ -67,6 +67,19 @@ public class InterfaceProxy
         }
 
     @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+        if (frame.f_context == hProxy.f_context)
+            {
+            hTarget = hProxy.m_hTarget;
+            return hTarget.getTemplate().invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+            }
+        return xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
+        }
+
+    @Override
     public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;

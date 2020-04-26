@@ -1,7 +1,6 @@
 package org.xvm.runtime;
 
 
-import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.ServiceContext.Reentrancy;
 
 
@@ -17,12 +16,6 @@ public class FiberQueue
     private int m_ixHead = -1; // head
     private int m_ixTail = 0;  // past the tail - insertion point
     private int m_cSize = 0;
-
-    // cached indexes of the top fiber for a given priority
-    // [2] a waiting fiber that is marked as "ready"
-    // [1] initial associated or yielded
-    // [0] initial new
-    private int[] m_aixPriority = new int[] {-1, -1, -1};
 
     public void add(Frame frame)
         {
@@ -42,8 +35,6 @@ public class FiberQueue
             m_ixHead = iInsert;
             }
         m_ixTail = (iInsert + 1) % m_aFrame.length;
-
-        checkPriority(iInsert);
         }
 
     public boolean isEmpty()
@@ -77,16 +68,6 @@ public class FiberQueue
             return null;
             }
 
-        for (int i = 2; i >= nPriority; i--)
-            {
-            int ix = m_aixPriority[i];
-            if (ix >= 0)
-                {
-                m_aixPriority[i] = -1;
-                return remove(ix);
-                }
-            }
-
         int cFrames = m_aFrame.length;
         int ixHead  = m_ixHead;
         for (int i = 0; i < cFrames; i++)
@@ -96,20 +77,24 @@ public class FiberQueue
             int iPriority = checkPriority(ix);
             if (iPriority >= nPriority)
                 {
-                m_aixPriority[iPriority] = -1;
                 return remove(ix);
                 }
             }
         return null;
         }
 
-    // return the priority of the fiber at the specified index and update the cache indexes
+    // return the priority of the fiber at the specified index and update the cache indexes:
+    // [2]  a waiting fiber that is marked as "ready"
+    // [1]  initial associated or yielded
+    // [0]  initial new
+    // [-1] not ready
+    // [-2] empty
     private int checkPriority(int ix)
         {
         Frame frame = m_aFrame[ix];
         if (frame == null)
             {
-            return -2; // allow to differentiate empty from not-ready
+            return -2;
             }
 
         switch (frame.f_fiber.getStatus())
@@ -120,10 +105,6 @@ public class FiberQueue
             case Waiting:
                 if (frame.f_fiber.isReady())
                     {
-                    if (m_aixPriority[2] < 0)
-                        {
-                        m_aixPriority[2] = ix;
-                        }
                     return 2;
                     }
                 else
@@ -134,8 +115,7 @@ public class FiberQueue
             case InitialAssociated:
                 {
                 // in Exclusive mode only the front fiber is allowed to run
-                ServiceContext context = frame.f_fiber.f_context;
-                if (context.m_reentrancy == Reentrancy.Exclusive)
+                if (frame.f_context.m_reentrancy == Reentrancy.Exclusive)
                     {
                     if (ix != getHeadIndex())
                         {
@@ -145,43 +125,40 @@ public class FiberQueue
                 // fall through
                 }
             case Yielded:
-                if (m_aixPriority[1] < 0)
-                    {
-                    m_aixPriority[1] = ix;
-                    }
                 return 1;
 
             case InitialNew:
                 {
                 // we can only allow it to proceed:
-                //  a) in Exclusive mode - only if there are no other fibers in front
-                //  b) in Open or Prioritized mode - only if there are no other InitialNew fibers
+                //  a) in Exclusive mode - only if there are no other fibers in front of it;
+                //  b) in Open or Prioritized mode - only if there are no other fibers
                 //     associated with that same context in front of it
-                ServiceContext context = frame.f_fiber.f_context;
-                if (context.m_reentrancy == Reentrancy.Exclusive)
+                if (frame.f_context.m_reentrancy == Reentrancy.Exclusive)
                     {
                     return ix == getHeadIndex() ? 0 : -1;
                     }
 
-                Frame[] aFrame  = m_aFrame;
-                int     cFrames = aFrame.length;
-                int     ixHead  = m_ixHead;
-                for (int i = ixHead; i != ix; i = (i+1) % cFrames)
+                Fiber fiberCaller = frame.f_fiber.f_fiberCaller;
+                if (fiberCaller == null)
+                    {
+                    // independent fiber
+                    return 0;
+                    }
+
+                ServiceContext ctxCaller = fiberCaller.f_context;
+                Frame[]        aFrame    = m_aFrame;
+                int            cFrames   = aFrame.length;
+                for (int i = m_ixHead; i != ix; i = (i+1) % cFrames)
                     {
                     Frame frameOther = aFrame[i];
                     if (frameOther != null)
                         {
-                        Fiber fiberOther = frameOther.f_fiber;
-                        if (fiberOther.getStatus() == FiberStatus.InitialNew &&
-                            fiberOther.isAssociated(context))
+                        Fiber fiberOtherCaller = frameOther.f_fiber.f_fiberCaller;
+                        if (fiberOtherCaller != null && fiberOtherCaller.isAssociated(ctxCaller))
                             {
                             return -1;
                             }
                         }
-                    }
-                if (m_aixPriority[0] < 0)
-                    {
-                    m_aixPriority[0] = ix;
                     }
                 return 0;
                 }
@@ -277,9 +254,6 @@ public class FiberQueue
 
         assert aFrame[iTo] == null;
         m_ixTail = iTo;
-
-        // reset the cached indexes
-        m_aixPriority[0] = m_aixPriority[1] = m_aixPriority[2] = -1;
         }
 
     public String toString()
