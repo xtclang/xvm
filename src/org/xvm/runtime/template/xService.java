@@ -123,7 +123,7 @@ public class xService
     @Override
     public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return frame.f_context == ((ServiceHandle) hTarget).f_context || chain.isAtomic() ?
+        return frame.f_context == ((ServiceHandle) hTarget).f_context ?
             super.invoke1(frame, chain, hTarget, ahVar, iReturn) :
             xRTFunction.makeAsyncHandle(chain).call1(frame, hTarget, ahVar, iReturn);
         }
@@ -131,7 +131,7 @@ public class xService
     @Override
     public int invokeT(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return frame.f_context == ((ServiceHandle) hTarget).f_context || chain.isAtomic() ?
+        return frame.f_context == ((ServiceHandle) hTarget).f_context ?
             super.invokeT(frame, chain, hTarget, ahVar, iReturn) :
             xRTFunction.makeAsyncHandle(chain).callT(frame, hTarget, ahVar, iReturn);
         }
@@ -139,7 +139,7 @@ public class xService
     @Override
     public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        return frame.f_context == ((ServiceHandle) hTarget).f_context || chain.isAtomic() ?
+        return frame.f_context == ((ServiceHandle) hTarget).f_context ?
             super.invokeN(frame, chain, hTarget, ahVar, aiReturn) :
             xRTFunction.makeAsyncHandle(chain).callN(frame, hTarget, ahVar, aiReturn);
         }
