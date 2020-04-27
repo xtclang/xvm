@@ -3,7 +3,6 @@ module TestRunner.xtclang.org
     import ecstasy.io.IOException;
 
     import ecstasy.mgmt.Container;
-    import ecstasy.mgmt.Container.ApplicationControl;
     import ecstasy.mgmt.InstantRepository;
     import ecstasy.mgmt.ResourceProvider;
 
@@ -106,7 +105,7 @@ module TestRunner.xtclang.org
 
         buffer.println($"++++++ Loading module: {repo.moduleName} +++++++\n");
 
-        @Future Tuple result = container.appControl.invoke("run", Tuple:());
+        @Future Tuple result = container.invoke("run", Tuple:());
         return (&result, buffer);
         }
 

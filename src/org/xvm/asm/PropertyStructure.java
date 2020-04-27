@@ -196,6 +196,29 @@ public class PropertyStructure
         }
 
     /**
+     * @return true iff the property has an Atomic annotation
+     */
+    public boolean isAtomic()
+        {
+        return containsRefAnnotation(getConstantPool().clzAtomic());
+        }
+
+    /**
+     * @return true iff this property contains the specified annotation
+     */
+    public boolean containsRefAnnotation(IdentityConstant idAnno)
+        {
+        for (Annotation anno : getRefAnnotations())
+            {
+            if (anno.getAnnotationClass().equals(idAnno))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
      * @return an array of all annotations that are <i>not</i> property annotations
      */
     public Annotation[] getRefAnnotations()

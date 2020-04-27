@@ -8,6 +8,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
@@ -38,6 +39,26 @@ public class CallChain
     public int getDepth()
         {
         return f_aMethods.length;
+        }
+
+    /**
+     * @return true iff the top body of this chain is a delegating method for an atomic property
+     */
+    public boolean isAtomic()
+        {
+        if (m_FAtomic != null)
+            {
+            return m_FAtomic.booleanValue();
+            }
+
+        if (f_aMethods != null && f_aMethods[0].getImplementation() == Implementation.Delegating)
+            {
+            PropertyConstant  idDelegate   = f_aMethods[0].getPropertyConstant();
+            PropertyStructure propDelegate = (PropertyStructure) idDelegate.getComponent();
+            return m_FAtomic = propDelegate != null && propDelegate.isAtomic();
+            }
+
+        return m_FAtomic = Boolean.FALSE;
         }
 
     public MethodStructure getMethod(int nDepth)
@@ -418,4 +439,12 @@ public class CallChain
         {
         return "depth=" + getDepth();
         }
+
+
+    // ----- data fields ---------------------------------------------------------------------------
+
+    /**
+     * Cached response for "isAtomic()" API.
+     */
+    private Boolean m_FAtomic;
     }

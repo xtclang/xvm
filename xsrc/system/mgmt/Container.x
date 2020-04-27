@@ -10,6 +10,7 @@ import reflect.ModuleTemplate;
  * 3. Debugger as a parent container
  */
 service Container
+        delegates ApplicationControl(appControl)
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -62,7 +63,7 @@ service Container
     /**
      * The AppControl for the underlying module.
      */
-    public/private ApplicationControl appControl;
+    @Atomic public/private ApplicationControl appControl;
 
     /**
      * The linker.
