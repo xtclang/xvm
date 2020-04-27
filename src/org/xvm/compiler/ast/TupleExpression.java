@@ -489,7 +489,7 @@ public class TupleExpression
         Argument[] aArgs  = new Argument[cExprs];
         for (int i = 0; i < cExprs; ++i)
             {
-            aArgs[i] = exprs.get(i).generateArgument(ctx, code, false, false, errs);
+            aArgs[i] = exprs.get(i).generateArgument(ctx, code, true, false, errs);
             }
 
         // generate the tuple itself, and return it as an argument

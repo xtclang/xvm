@@ -15,9 +15,10 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.collections.xTuple;
-import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 
 /**
@@ -105,15 +106,23 @@ public class Var_T
             {
             ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
 
-            assert !anyDeferred(ahArg); // TODO GG
+            if (anyDeferred(ahArg))
+                {
+                Frame.Continuation stepNext = frameCaller ->
+                    {
+                    frameCaller.introduceVar(m_nVar, convertId(m_nType), 0,
+                        Frame.VAR_STANDARD, xTuple.makeImmutableHandle(clzTuple, ahArg));
+                    return iPC + 1;
+                    };
 
-            TupleHandle hTuple = xTuple.makeHandle(clzTuple, ahArg);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+                }
 
-            frame.introduceResolvedVar(m_nVar, clzTuple.getType(), null, Frame.VAR_STANDARD, hTuple);
-
+            frame.introduceVar(m_nVar, convertId(m_nType), 0,
+                Frame.VAR_STANDARD, xTuple.makeImmutableHandle(clzTuple, ahArg));
             return iPC + 1;
             }
-        catch (ObjectHandle.ExceptionHandle.WrapperException e)
+        catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }

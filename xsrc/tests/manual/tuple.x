@@ -32,6 +32,14 @@ module TestTuples
 
         Tuple<String, Map<Int, String>> t2 = ("goodbye", Map:[4="now"]);
         console.println($"fields: {t2[0]}, {t2[1]}");
+
+        Tuple<String, Map<Int, String>> t3 = Tuple:(BYE, Map:[4="now"]);
+        assert t3 == t2;
+
+        private @Lazy String BYE.calc()
+            {
+            return "goodbye";
+            }
         }
 
     void testConv()
