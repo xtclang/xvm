@@ -813,7 +813,7 @@ public class Frame
                 return returnValue(f_aiReturn[0], xTuple.H_VOID, false);
 
             default:
-                throw new IllegalStateException();
+                return returnValue(f_iReturn, xTuple.H_VOID, false);
             }
         }
 
@@ -844,12 +844,12 @@ public class Frame
                     {
                     if (framePrev.isDynamicVar(iReturn))
                         {
-                        // TODO: dynamic -> dynamic Tuple, e.g. @Future Tuple<T> t = f();
-                        throw new UnsupportedOperationException();
+                        // dynamic -> dynamic Tuple, e.g. @Future Tuple<T> t = f();
+                        return returnValue(iReturn, hValue, true);
                         }
                     else
                         {
-                        // dynamic -> regular
+                        // dynamic -> regular [singular] Tuple
                         RefHandle hRef    = (RefHandle) hValue;
                         int       iResult = hRef instanceof FutureHandle
                             ? ((FutureHandle) hRef).waitAndAssign(framePrev, Op.A_STACK)

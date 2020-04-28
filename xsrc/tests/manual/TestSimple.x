@@ -4,17 +4,61 @@ module TestSimple
 
     void run()
         {
-        console.println(calcTuple());
+        TestService ts = new TestService();
+
+        @Future Tuple t = ts.getVoid();
+        console.println(&t.completion);
+        console.println(t);
+
+        @Future Tuple t2 = ts.f.getVoid();
+        console.println(&t2.completion);
+        console.println(t2);
+
+        @Future Int i = ts.getInt();
+        console.println(&i.completion);
+        console.println(i);
+
+        @Future Int i2 = ts.f.getInt();
+        console.println(&i2.completion);
+        console.println(i2);
         }
 
-    Tuple<FutureVar, Int>? calcTuple()
+    interface Foo
         {
-        @Future Tuple r = testTuple();
-        return (&r, 1);
+        Int  getInt();
+        void getVoid();
         }
 
-    Tuple testTuple()
+    service TestService
+            delegates Foo(f)
         {
-        return Tuple:();
+        construct()
+            {
+            f = new FooImpl();
+            }
+
+        @Atomic Foo f;
+
+        static service FooImpl
+                implements Foo
+            {
+            @Override
+            Int getInt()
+                {
+                for (Int i : [0..1000))
+                    {
+                    }
+
+                return 42;
+                }
+
+            @Override
+            void getVoid()
+                {
+                for (Int i : [0..1000))
+                    {
+                    }
+                }
+            }
         }
     }

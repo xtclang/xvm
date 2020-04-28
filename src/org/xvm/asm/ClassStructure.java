@@ -35,21 +35,7 @@ import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
-import org.xvm.asm.op.Call_01;
-import org.xvm.asm.op.Invoke_00;
-import org.xvm.asm.op.Invoke_01;
-import org.xvm.asm.op.Invoke_0N;
-import org.xvm.asm.op.Invoke_10;
-import org.xvm.asm.op.Invoke_11;
-import org.xvm.asm.op.Invoke_1N;
-import org.xvm.asm.op.Invoke_N0;
-import org.xvm.asm.op.Invoke_N1;
-import org.xvm.asm.op.Invoke_NN;
-import org.xvm.asm.op.L_Get;
-import org.xvm.asm.op.L_Set;
-import org.xvm.asm.op.Return_0;
-import org.xvm.asm.op.Return_1;
-import org.xvm.asm.op.Return_N;
+import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Constants;
 
@@ -61,7 +47,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xRef.RefHandle;
 
 import org.xvm.util.ListMap;
-import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -2765,6 +2750,7 @@ public class ClassStructure
         MethodStructure   methodDelegate = findMethod(sig);
         if (methodDelegate == null)
             {
+            ConstantPool pool         = getConstantPool();
             TypeConstant typeFormal   = getFormalType();
             TypeConstant typePrivate  = getConstantPool().ensureAccessTypeConstant(typeFormal, Access.PRIVATE);
             TypeInfo     infoPrivate  = typePrivate.ensureTypeInfo();
@@ -2783,7 +2769,7 @@ public class ClassStructure
             int                  cParams      = method.getParamCount();
             int                  cReturns     = method.getReturnCount();
             Register[]           aregParam    = cParams  == 0 ? null : new Register[cParams];
-            Register[]           aregReturn   = cReturns == 0 ? null : new Register[cReturns];
+            boolean              fAtomic      = infoProp.isAtomic();
 
             for (int i = 0; i < cParams; i++)
                 {
@@ -2794,30 +2780,65 @@ public class ClassStructure
 
             code.add(new L_Get(infoProp.getIdentity(), regProp));
 
-            switch (aReturns.length)
+            switch (cReturns)
                 {
                 case 0:
-                    switch (aParams.length)
+                    if (fAtomic)
                         {
-                        case 0:
-                            code.add(new Invoke_00(regProp, idDelegate));
-                            break;
+                        code.add(new Var_D(pool.ensureFutureVar(pool.typeTuple())));
+                        Register regReturn = code.lastRegister();
 
-                        case 1:
-                            code.add(new Invoke_10(regProp, idDelegate, aregParam[0]));
-                            break;
+                        switch (cParams)
+                            {
+                            case 0:
+                                code.add(new Invoke_01(regProp, idDelegate, regReturn));
+                                break;
 
-                        default:
-                            code.add(new Invoke_N0(regProp, idDelegate, aregParam));
-                            break;
+                            case 1:
+                                code.add(new Invoke_11(regProp, idDelegate, aregParam[0], regReturn));
+                                break;
+
+                            default:
+                                code.add(new Invoke_N1(regProp, idDelegate, aregParam, regReturn));
+                                break;
+                            }
+                        code.add(new Return_1(regReturn));
                         }
-                    code.add(new Return_0());
+                    else
+                        {
+                        switch (cParams)
+                            {
+                            case 0:
+                                code.add(new Invoke_00(regProp, idDelegate));
+                                break;
+
+                            case 1:
+                                code.add(new Invoke_10(regProp, idDelegate, aregParam[0]));
+                                break;
+
+                            default:
+                                code.add(new Invoke_N0(regProp, idDelegate, aregParam));
+                                break;
+                            }
+                        code.add(new Return_0());
+                        }
                     break;
 
                 case 1:
                     {
-                    Register regReturn = new Register(aReturns[0].getType(), Op.A_STACK);
-                    switch (aParams.length)
+                    TypeConstant typeReturn = aReturns[0].getType();
+                    Register     regReturn;
+                    if (fAtomic)
+                        {
+                        code.add(new Var_D(pool.ensureFutureVar(typeReturn)));
+                        regReturn = code.lastRegister();
+                        }
+                    else
+                        {
+                        regReturn = new Register(typeReturn, Op.A_STACK);
+                        }
+
+                    switch (cParams)
                         {
                         case 0:
                             code.add(new Invoke_01(regProp, idDelegate, regReturn));
@@ -2837,12 +2858,23 @@ public class ClassStructure
 
                 default:
                     {
+                    Register[] aregReturn = new Register[cReturns];
+
                     for (int i = 0; i < cReturns; i++)
                         {
-                        aregReturn[i] = new Register(aReturns[i].getType());
+                        TypeConstant typeReturn = aReturns[i].getType();
+                        if (fAtomic)
+                            {
+                            code.add(new Var_D(pool.ensureFutureVar(typeReturn)));
+                            aregReturn[i] = code.lastRegister();
+                            }
+                        else
+                            {
+                            aregReturn[i] = new Register(typeReturn);
+                            }
                         }
 
-                    switch (aParams.length)
+                    switch (cParams)
                         {
                         case 0:
                             code.add(new Invoke_0N(regProp, idDelegate, aregReturn));
