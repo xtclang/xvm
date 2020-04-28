@@ -924,6 +924,20 @@ public class InvocationExpression
                                 break Validate;
                                 }
                             }
+                        else if (atypeReturn != null)
+                            {
+                            // check for Tuple conversion for the return value; we know that the
+                            // method should fit, so the only thing to figure out is whether
+                            // "packing" to a Tuple is necessary
+                            if (calculateReturnFit(typeLeft, sigMethod, fCall,
+                                    atypeReturn, ErrorListener.BLACKHOLE).isPacking())
+                                {
+                                TypeConstant typePacked = pool.ensureParameterizedTypeConstant(
+                                        pool.typeTuple(), atypeResult);
+                                atypeResult = new TypeConstant[]{typePacked};
+                                m_fPack     = true;
+                                }
+                            }
                         }
                     else
                         {
@@ -1122,6 +1136,8 @@ public class InvocationExpression
         int cLVals = aLVal.length;
         int cRVals = getValueCount();
 
+        assert !m_fPack || cLVals == 1; // pack must be into a single LValue
+
         Argument[] aargResult = new Argument[cRVals];
         for (int i = 0; i < cRVals; i++)
             {
@@ -1311,22 +1327,50 @@ public class InvocationExpression
                                     break;
 
                                 case _01:
-                                    code.add(new Invoke_01(argTarget, idMethod, aargResult[0]));
-                                    break;
-
-                                case _11:
-                                    if (m_fTupleArg)
+                                    if (m_fPack)
                                         {
-                                        code.add(new Invoke_T1(argTarget, idMethod, arg, aargResult[0]));
+                                        code.add(new Invoke_0T(argTarget, idMethod, aargResult[0]));
                                         }
                                     else
                                         {
-                                        code.add(new Invoke_11(argTarget, idMethod, arg, aargResult[0]));
+                                        code.add(new Invoke_01(argTarget, idMethod, aargResult[0]));
+                                        }
+                                    break;
+
+                                case _11:
+                                    if (m_fPack)
+                                        {
+                                        if (m_fTupleArg)
+                                            {
+                                            code.add(new Invoke_TT(argTarget, idMethod, arg, aargResult[0]));
+                                            }
+                                        else
+                                            {
+                                            code.add(new Invoke_1T(argTarget, idMethod, arg, aargResult[0]));
+                                            }
+                                        }
+                                    else
+                                        {
+                                        if (m_fTupleArg)
+                                            {
+                                            code.add(new Invoke_T1(argTarget, idMethod, arg, aargResult[0]));
+                                            }
+                                        else
+                                            {
+                                            code.add(new Invoke_11(argTarget, idMethod, arg, aargResult[0]));
+                                            }
                                         }
                                     break;
 
                                 case _N1:
-                                    code.add(new Invoke_N1(argTarget, idMethod, aArgs, aargResult[0]));
+                                    if (m_fPack)
+                                        {
+                                        code.add(new Invoke_NT(argTarget, idMethod, aArgs, aargResult[0]));
+                                        }
+                                    else
+                                        {
+                                        code.add(new Invoke_N1(argTarget, idMethod, aArgs, aargResult[0]));
+                                        }
                                     break;
 
                                 case _0N:
@@ -1506,7 +1550,14 @@ public class InvocationExpression
                     break;
 
                 case _10:
-                    code.add(new Call_10(argFn, arg));
+                    if (m_fTupleArg)
+                        {
+                        code.add(new Call_T0(argFn, arg));
+                        }
+                    else
+                        {
+                        code.add(new Call_10(argFn, arg));
+                        }
                     break;
 
                 case _N0:
@@ -1514,15 +1565,50 @@ public class InvocationExpression
                     break;
 
                 case _01:
-                    code.add(new Call_01(argFn, aargResult[0]));
+                    if (m_fPack)
+                        {
+                        code.add(new Call_0T(argFn, aargResult[0]));
+                        }
+                    else
+                        {
+                        code.add(new Call_01(argFn, aargResult[0]));
+                        }
                     break;
 
                 case _11:
-                    code.add(new Call_11(argFn, arg, aargResult[0]));
+                    if (m_fPack)
+                        {
+                        if (m_fTupleArg)
+                            {
+                            code.add(new Call_TT(argFn, arg, aargResult[0]));
+                            }
+                        else
+                            {
+                            code.add(new Call_1T(argFn, arg, aargResult[0]));
+                            }
+                        }
+                    else
+                        {
+                        if (m_fTupleArg)
+                            {
+                            code.add(new Call_T1(argFn, arg, aargResult[0]));
+                            }
+                        else
+                            {
+                            code.add(new Call_11(argFn, arg, aargResult[0]));
+                            }
+                        }
                     break;
 
                 case _N1:
-                    code.add(new Call_N1(argFn, aArgs, aargResult[0]));
+                    if (m_fPack)
+                        {
+                        code.add(new Call_NT(argFn, aArgs, aargResult[0]));
+                        }
+                    else
+                        {
+                        code.add(new Call_N1(argFn, aArgs, aargResult[0]));
+                        }
                     break;
 
                 case _0N:
@@ -1530,7 +1616,14 @@ public class InvocationExpression
                     break;
 
                 case _1N:
-                    code.add(new Call_1N(argFn, arg, aargResult));
+                    if (m_fTupleArg)
+                        {
+                        code.add(new Call_TN(argFn, arg, aargResult));
+                        }
+                    else
+                        {
+                        code.add(new Call_1N(argFn, arg, aargResult));
+                        }
                     break;
 
                 case _NN:
@@ -2643,6 +2736,8 @@ public class InvocationExpression
                                                          // produces a conditional result
     private transient boolean         m_fBjarne;         // indicates that the invocation expression
                                                          // was Bjarne-transformed from x.f() to X.f(x)
+    private transient boolean         m_fPack;           // indicates that invocation return(s) should
+                                                         // be "packed" into a Tuple
     private transient FormalConstant  m_idFormal;        // if not null, indicates that the invocation
                                                          // expression applies to a function on a formal
                                                          // type (e.g. Value.hashCode(value))

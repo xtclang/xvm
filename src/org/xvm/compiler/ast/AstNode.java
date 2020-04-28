@@ -1233,10 +1233,9 @@ public abstract class AstNode
             int cDefaults   = method.getDefaultParamCount();
             int cRequired   = cParams - cDefaults;
 
-            if (cArgs > cParams || sigMethod.getReturnCount() < cReturns ||
-                    fCall && cArgs < cRequired)
+            if (cArgs > cParams || fCall && cArgs < cRequired)
                 {
-                // invalid number of arguments or return values
+                // invalid number of arguments
                 continue;
                 }
 
@@ -1291,7 +1290,6 @@ public abstract class AstNode
                 }
 
             TypeConstant[] atypeParam = sigMethod.getRawParams();
-            boolean        fConvert   = false;
             TypeFit        fit        = TypeFit.Fit;
             for (int i = 0; i < cArgs; ++i)
                 {
@@ -1315,11 +1313,6 @@ public abstract class AstNode
                 fit = exprArg.testFit(ctx, typeParam, errsTemp);
                 if (fit.isFit())
                     {
-                    if (fit.isConverting())
-                        {
-                        fConvert = true;
-                        }
-
                     // the challenge is that the inferred expression could be more forgiving
                     // than its original implicit type would suggest (e.g. NewExpression);
                     // for the type parameter resolution below, lets pick the narrowest type
@@ -1375,30 +1368,7 @@ public abstract class AstNode
 
             if (fit.isFit() && cReturns > 0)
                 {
-                TypeConstant[] atypeMethodReturn = sigMethod.getRawReturns();
-
-                for (int i = 0; i < cReturns; i++)
-                    {
-                    TypeConstant typeReturn       = atypeReturn[i];
-                    TypeConstant typeMethodReturn = atypeMethodReturn[i];
-
-                    if (!typeMethodReturn.isCovariantReturn(typeReturn, typeTarget))
-                        {
-                        if (typeMethodReturn.getConverterTo(typeReturn) != null)
-                            {
-                            fConvert = true;
-                            }
-                        else
-                            {
-                            log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_TYPE,
-                                    sigMethod.getName(),
-                                    typeReturn.getValueString(),
-                                    typeMethodReturn.getValueString());
-                            fit = TypeFit.NoFit;
-                            break ;
-                            }
-                        }
-                    }
+                fit = calculateReturnFit(typeTarget, sigMethod, fCall, atypeReturn, errsTemp);
                 }
 
             if (!fit.isFit())
@@ -1421,7 +1391,7 @@ public abstract class AstNode
                 continue; // NextMethod
                 }
 
-            if (fConvert)
+            if (fit.isConverting())
                 {
                 setConvert.add(idMethod);
                 }
@@ -1548,6 +1518,93 @@ public abstract class AstNode
                 }
             }
         return idBest;
+        }
+
+
+    /**
+     * Calculate the fit for the method return values.
+     *
+     * @param typeTarget    the target type
+     * @param sigMethod     the method signature
+     * @param fCall         if true, the method will be called; otherwise it will be bound
+     * @param atypeReturn   the array of required return types
+     * @param errs          listener to log any errors to
+     *
+     * @return a TypeFit value
+     */
+    protected TypeFit calculateReturnFit(TypeConstant typeTarget, SignatureConstant sigMethod,
+                                         boolean fCall, TypeConstant[] atypeReturn,
+                                         ErrorListener errs)
+        {
+        TypeConstant[] atypeMethodReturn = sigMethod.getRawReturns();
+        int            cMethodReturns    = atypeMethodReturn.length;
+        int            cReturns          = atypeReturn.length;
+        TypeFit        fit               = TypeFit.Fit;
+
+        if (cMethodReturns < cReturns)
+            {
+            // we allow such an "asymmetrical" call in just one case:
+            // - a "void" method return is allowed to be assigned to an empty Tuple
+            //    void f() {...}
+            //    Tuple v = f();
+            if (fCall && cMethodReturns == 0 && cReturns == 1
+                    && atypeReturn[0].isTuple()
+                    && atypeReturn[0].getParamsCount() == 0)
+                {
+                return TypeFit.Pack;
+                }
+            else
+                {
+                log(errs, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_COUNT,
+                        sigMethod.getName(), String.valueOf(cReturns), String.valueOf(cMethodReturns));
+                return TypeFit.NoFit;
+                }
+            }
+
+        if (cMethodReturns > cReturns)
+            {
+            // we allow such an "asymmetrical" call in just one case:
+            // - a non-void method return into a matching Tuple:
+            //    (Int, String) f() {...}
+            //    Tuple<Int, String> t = f();
+            if (cReturns == 1 && atypeReturn[0].isTuple())
+                {
+                fit         = fit.addPack();
+                atypeReturn = atypeReturn[0].getParamTypesArray();
+                }
+            }
+
+        for (int i = 0; i < cReturns; i++)
+            {
+            TypeConstant typeReturn       = atypeReturn[i];
+            TypeConstant typeMethodReturn = atypeMethodReturn[i];
+
+            if (!typeMethodReturn.isCovariantReturn(typeReturn, typeTarget))
+                {
+                if (typeMethodReturn.getConverterTo(typeReturn) != null)
+                    {
+                    fit = fit.addConversion();
+                    }
+                else
+                    {
+                    // there is one more scenario, when types may not be assignable, but still fit:
+                    // - a single value return into a matching Tuple:
+                    //    Int f() {...}
+                    //    Tuple t = f();
+                    if (fCall && cReturns == 1 && cMethodReturns == 1
+                        && typeReturn.isTuple() && typeReturn.getParamsCount() <= 1 &&
+                        typeMethodReturn.isCovariantReturn(typeReturn.getParamType(0), typeTarget))
+                        {
+                        return TypeFit.Pack;
+                        }
+
+                    log(errs, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_TYPE,
+                            sigMethod.getName(), typeReturn.getValueString(), typeMethodReturn.getValueString());
+                    return TypeFit.NoFit;
+                    }
+                }
+            }
+        return fit;
         }
 
 

@@ -33,7 +33,7 @@ public class Invoke_0T
      * @param constMethod  the method constant
      * @param argReturn    the Argument to move the result into
      */
-    public Invoke_0T(Argument argTarget, MethodConstant constMethod, Argument[] aArgValue, Argument argReturn)
+    public Invoke_0T(Argument argTarget, MethodConstant constMethod, Argument argReturn)
         {
         super(argTarget, constMethod);
 

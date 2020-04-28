@@ -46,11 +46,34 @@ module TestTuples
         {
         console.println("\n** testConv()");
 
-        Tuple<String, IntLiteral> t1 = getTupleSI();
-        console.println("t1 = " + t1);
+        Tuple tv = getVoid();
+        console.println($"tv = {tv}");
+
+        Tuple<Int> ti = getInt();
+        console.println($"ti = {ti}");
+
+        Tuple<String, Int> tsi = getSI();
+        console.println($"tsi = {tsi}");
+
+        Tuple<String, IntLiteral> tsiT = getTupleSI();
+        console.println($"tsiT = {tsiT}");
 
         // TODO: should the following compile?
-        // Tuple<String, Int> t2 = getTupleSI();
+        // Tuple<String, Int> tsiT2 = getTupleSI();
+
+        private static void getVoid()
+            {
+            }
+
+        private static Int getInt()
+            {
+            return 4;
+            }
+
+        private static (String, Int) getSI()
+            {
+            return "Hello", 4;
+            }
 
         private static Tuple<String, IntLiteral> getTupleSI()
             {

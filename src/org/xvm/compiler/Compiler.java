@@ -1209,6 +1209,10 @@ public class Compiler
      */
     public static final String INCOMPATIBLE_RETURN_TYPE            = "COMPILER-151";
     /**
+     * Return count mismatch for {0} method; required {1}, actual {2}.
+     */
+    public static final String INCOMPATIBLE_RETURN_COUNT           = "COMPILER-152";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";
