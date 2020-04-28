@@ -112,21 +112,24 @@ module TestRunner.xtclang.org
     class Injector
             implements ResourceProvider
         {
-        static service ConsoleBuffer
+        ConsoleBuffer consoleBuffer = new ConsoleBuffer(new ConsoleBack());
+
+        /**
+         * The "client" side of the ConsoleBuffer that operates in the injected space.
+         */
+        static const ConsoleBuffer(ConsoleBack backService)
                 implements Console
             {
-            private StringBuffer buffer = new StringBuffer();
-
             @Override
             void print(Object o)
                 {
-                buffer.append(o.toString());
+                backService.print(o.toString());
                 }
 
             @Override
             void println(Object o = "")
                 {
-                buffer.append(o.toString()).append('\n');
+                backService.println(o.toString());
                 }
 
             @Override
@@ -143,13 +146,34 @@ module TestRunner.xtclang.org
 
             String flush()
                 {
+                return backService.flush();
+                }
+            }
+
+        /**
+         * The "service" side of the ConsoleBuffer.
+         */
+        static service ConsoleBack
+            {
+            private StringBuffer buffer = new StringBuffer();
+
+            void print(String s)
+                {
+                buffer.append(s);
+                }
+
+            void println(String s)
+                {
+                buffer.append(s).append('\n');
+                }
+
+            String flush()
+                {
                 String s = buffer.toString();
                 buffer = new StringBuffer();
                 return s;
                 }
             }
-
-        ConsoleBuffer consoleBuffer = new ConsoleBuffer();
 
         @Override
         Object getResource(Type type, String name)

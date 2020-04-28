@@ -4,61 +4,16 @@ module TestSimple
 
     void run()
         {
-        TestService ts = new TestService();
+        import ecstasy.collections.HashMap;
 
-        @Future Tuple t = ts.getVoid();
-        console.println(&t.completion);
-        console.println(t);
+        Map<String, Int> m = new HashMap();
 
-        @Future Tuple t2 = ts.f.getVoid();
-        console.println(&t2.completion);
-        console.println(t2);
-
-        @Future Int i = ts.getInt();
-        console.println(&i.completion);
-        console.println(i);
-
-        @Future Int i2 = ts.f.getInt();
-        console.println(&i2.completion);
-        console.println(i2);
+        console.println(m);
+        console.println(new Test());
+        console.println("done");
         }
 
-    interface Foo
+    class Test
         {
-        Int  getInt();
-        void getVoid();
-        }
-
-    service TestService
-            delegates Foo(f)
-        {
-        construct()
-            {
-            f = new FooImpl();
-            }
-
-        @Atomic Foo f;
-
-        static service FooImpl
-                implements Foo
-            {
-            @Override
-            Int getInt()
-                {
-                for (Int i : [0..1000))
-                    {
-                    }
-
-                return 42;
-                }
-
-            @Override
-            void getVoid()
-                {
-                for (Int i : [0..1000))
-                    {
-                    }
-                }
-            }
         }
     }
