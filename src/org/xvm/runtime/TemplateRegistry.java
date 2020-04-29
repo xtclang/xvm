@@ -187,7 +187,7 @@ public class TemplateRegistry
         sb.append(sClass, 1, sClass.indexOf('.'));
         return sb.toString();
         }
-    
+
     private static Class classForName(String sFile)
         {
         assert sFile.endsWith(".class");
@@ -265,6 +265,9 @@ public class TemplateRegistry
         FileStructure structApp = new FileStructure(m_moduleSystem);
         structApp.merge(m_moduleNative);
         structApp.merge(moduleApp);
+
+        assert structApp.getConstantPool().getNakedRefType() != null;
+
         return structApp;
         }
 
