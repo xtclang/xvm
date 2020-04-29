@@ -629,7 +629,7 @@ public class Frame
                             {
                             // TODO: how to get the narrowing context?
                             }
-                        else
+                        else if (REPORT_WRAPPING)
                             {
                             System.err.println("WARNING: suspicious assignment from: " + typeFrom.getValueString()
                                 + " to: " + typeTo.getValueString());
@@ -1643,7 +1643,8 @@ public class Frame
             if (frame == null)
                 {
                 Fiber fiberCaller = fiber.f_fiberCaller;
-                if (fiberCaller == null)
+                if (fiberCaller == null ||
+                        fiberCaller.f_context.f_container != fiber.f_context.f_container)
                     {
                     break;
                     }
