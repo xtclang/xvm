@@ -4,7 +4,7 @@ START_TIME=$(date +%s)
 
 # Note: TestLiterals depends on existence of TestFiles.xtc (files.x being compiled)
 
-java -Xms1024m -Xmx1024m -ea -Dxvm.parallelism=1 -classpath ../classes/ org.xvm.tool.Runner \
+java -Xms1024m -Xmx1024m -ea -Dxvm.parallelism=8 -classpath ../classes/ org.xvm.tool.Runner \
     -L . \
     tests/manual/TestRunner.xtc \
     tests/manual/TestAnnotations.xtc \

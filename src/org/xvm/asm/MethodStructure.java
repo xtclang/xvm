@@ -814,9 +814,10 @@ public class MethodStructure
         {
         if (fAbstract)
             {
-            m_abOps   = null;
-            m_code    = null;
-            m_fNative = false;
+            m_aconstLocal = null;
+            m_abOps       = null;
+            m_code        = null;
+            m_fNative     = false;
             }
 
         super.setAbstract(fAbstract);
@@ -1526,6 +1527,8 @@ public class MethodStructure
             in.readFully(abOps);
             }
 
+        assert cConsts == 0 || cbOps > 0;
+
         m_aAnnotations   = aAnnos;
         m_aReturns       = aReturns;
         m_cTypeParams    = cTypeParams;
@@ -1723,24 +1726,6 @@ public class MethodStructure
             aconstDefault[i] = param.getDefaultValue();
             }
         return aconstDefault;
-        }
-
-    /**
-     * As part of the assembly process, register the default parameter values for this method.
-     *
-     * @param registry  the ConstantRegistry to use
-     */
-    protected void registerDefaultArgs(ConstantRegistry registry)
-        {
-        int cDefault = getDefaultParamCount();
-        if (cDefault > 0)
-            {
-            int cAll = getParamCount();
-            for (int i = cAll - cDefault; i < cAll; i++)
-                {
-                getParam(i).getDefaultValue().registerConstants(registry);
-                }
-            }
         }
 
 
@@ -2091,8 +2076,6 @@ public class MethodStructure
             if (f_method.m_abOps == null)
                 {
                 f_method.m_registry = registry = new ConstantRegistry(f_method.getConstantPool());
-
-                f_method.registerDefaultArgs(registry);
 
                 Op[] aop = ensureOps();
                 for (Op op : aop)

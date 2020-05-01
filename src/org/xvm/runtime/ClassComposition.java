@@ -457,7 +457,7 @@ public class ClassComposition
     /**
      * Create a map of fields that serves as a prototype for all instances of this class.
      */
-    public void ensureFieldLayout()
+    public synchronized void ensureFieldLayout()
         {
         if (m_mapFields != null)
             {

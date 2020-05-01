@@ -266,7 +266,7 @@ public class TemplateRegistry
         structApp.merge(m_moduleNative);
         structApp.merge(moduleApp);
 
-        assert structApp.getConstantPool().getNakedRefType() != null;
+        assert structApp.validateConstants();
 
         return structApp;
         }

@@ -784,7 +784,7 @@ public abstract class Component
      *
      * @return obtain the actual map from name to child component, creating the map if necessary
      */
-    public Map<String, Component> ensureChildByNameMap()
+     public synchronized Map<String, Component> ensureChildByNameMap()
         {
         ensureChildren();
 
@@ -808,7 +808,7 @@ public abstract class Component
     /**
      * Make sure that any deferred child deserialization is complete
      */
-    protected void ensureChildren()
+     protected synchronized void ensureChildren()
         {
         if (m_abChildren != null)
             {
@@ -2113,9 +2113,17 @@ public abstract class Component
             throw new IllegalStateException(e);
             }
 
-        if (that.m_listContribs != null)
+        // deep clone the contributions
+        List<Contribution> listContribs = m_listContribs;
+        if (listContribs != null)
             {
-            that.m_listContribs = new ArrayList<>(that.m_listContribs);
+            List<Contribution> listClone = new ArrayList<>(listContribs.size());
+
+            for (int i = 0, c = listContribs.size(); i< c; i++)
+                {
+                listClone.add((Contribution) listContribs.get(i).clone());
+                }
+            that.m_listContribs = listClone;
             }
 
         that.m_sibling     = null;
@@ -2830,6 +2838,7 @@ public abstract class Component
      * of any number of contributing components.
      */
     public static class Contribution
+            implements Cloneable
         {
         /**
          * @see XvmStructure#disassemble(DataInput)
@@ -3343,6 +3352,19 @@ public abstract class Component
                             }
                         }
                     break;
+                }
+            }
+
+        @Override
+        protected Object clone()
+            {
+            try
+                {
+                return super.clone();
+                }
+            catch (CloneNotSupportedException e)
+                {
+                throw new IllegalStateException(e);
                 }
             }
 

@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -112,8 +114,8 @@ public class TypeInfo
 
         // pre-populate the method lookup caches
         // and determine if this type is implicitly abstract
-        f_cacheById  = new HashMap<>(mapMethods);
-        f_cacheByNid = new HashMap<>(mapVirtMethods);
+        f_cacheById  = new ConcurrentHashMap<>(mapMethods);
+        f_cacheByNid = new ConcurrentHashMap<>(mapVirtMethods);
 
         for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
@@ -974,7 +976,7 @@ public class TypeInfo
      *
      * @return a map from property name to PropertyInfo
      */
-    public Map<String, PropertyInfo> ensureNestedPropertiesByName(MethodConstant idMethod)
+    public synchronized Map<String, PropertyInfo> ensureNestedPropertiesByName(MethodConstant idMethod)
         {
         // since a property inside of the method cannot be virtual, we can do
         // a quick check to eliminate the full scan below for 99.9% of scenarios
@@ -1023,7 +1025,7 @@ public class TypeInfo
      *
      * @return a map from property name to PropertyInfo
      */
-    public Map<String, PropertyInfo> ensureNestedPropertiesByName(PropertyConstant idProp)
+    public synchronized Map<String, PropertyInfo> ensureNestedPropertiesByName(PropertyConstant idProp)
         {
         Map<IdentityConstant, Map<String, PropertyInfo>> mapProps = m_mapNestedProperties;
         if (mapProps == null)
@@ -1676,7 +1678,7 @@ public class TypeInfo
      *
      * @return a set of zero or more method constants
      */
-    public Set<MethodInfo> getOpMethodInfos()
+    public synchronized Set<MethodInfo> getOpMethodInfos()
         {
         Set<MethodInfo> setOps = m_setOps;
         if (setOps == null)
@@ -1710,7 +1712,7 @@ public class TypeInfo
      *
      * @return a set of zero or more method constants
      */
-    public Set<MethodConstant> findOpMethods(String sName, String sOp, int cParams)
+    public synchronized Set<MethodConstant> findOpMethods(String sName, String sOp, int cParams)
         {
         Map<String, Set<MethodConstant>> mapOps = m_mapOps;
         if (mapOps == null)
@@ -1781,7 +1783,7 @@ public class TypeInfo
      *
      * @return a set of zero or more method constants
      */
-    public Set<MethodConstant> findMethods(String sName, int cParams, MethodKind kind)
+    public synchronized Set<MethodConstant> findMethods(String sName, int cParams, MethodKind kind)
         {
         Map<String, Set<MethodConstant>> mapMethods = m_mapMethodsByName;
         if (mapMethods == null)
@@ -1876,7 +1878,7 @@ public class TypeInfo
      *
      * @return a set of zero or more method constants
      */
-    public Set<MethodConstant> findNestedMethods(IdentityConstant idContainer, String sName, int cParams)
+    public synchronized Set<MethodConstant> findNestedMethods(IdentityConstant idContainer, String sName, int cParams)
         {
         Map<String, Set<MethodConstant>> mapMethods = m_mapMethodsByName;
         if (mapMethods == null)
@@ -1967,7 +1969,7 @@ public class TypeInfo
      *
      * @return a set of zero or more method constants
      */
-    public Set<MethodInfo> getAutoMethodInfos()
+    public synchronized Set<MethodInfo> getAutoMethodInfos()
         {
         Set<MethodInfo> setAuto = m_setAuto;
         if (setAuto == null)
@@ -2001,7 +2003,7 @@ public class TypeInfo
      *         object whose type is compatible with the specified (desired) type, or null if either
      *         no method matches, or more than one method matches (ambiguous)
      */
-    public MethodConstant findConversion(TypeConstant typeDesired)
+    public synchronized MethodConstant findConversion(TypeConstant typeDesired)
         {
         MethodConstant methodMatch = null;
 

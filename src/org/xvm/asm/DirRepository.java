@@ -213,7 +213,7 @@ public class DirRepository
 
     // ----- inner class: ModuleInfo ---------------------------------------------------------------
 
-    protected class ModuleInfo
+    protected static class ModuleInfo
         {
         public ModuleInfo(File file)
             {
@@ -241,11 +241,7 @@ public class DirRepository
             try
                 {
                 FileStructure struct = new FileStructure(file);
-                XvmStructure top = struct.getModule();
-                if (top instanceof ModuleStructure)
-                    {
-                    return (ModuleStructure) top;
-                    }
+                return struct.getModule();
                 }
             catch (IOException e)
                 {

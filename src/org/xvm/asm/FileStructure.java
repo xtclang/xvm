@@ -18,6 +18,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import java.util.function.Consumer;
+
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -171,12 +173,12 @@ public class FileStructure
         moduleName = module.getName();
 
         ModuleStructure moduleClone = module.cloneBody();
-        addChild(moduleClone);
         moduleClone.setContaining(this);
 
-        ConstantPool pool = this.getConstantPool();
-
+        addChild(moduleClone);
         moduleClone.cloneChildren(module.children());
+
+        ConstantPool pool = this.getConstantPool();
 
         moduleClone.registerConstants(pool);
         moduleClone.registerChildrenConstants(pool);
@@ -947,6 +949,39 @@ public class FileStructure
             }
 
         dumpChildren(out, sIndent);
+        }
+
+    /**
+     * For debugging only: ensure that all constants for all children belong to the same pool.
+     */
+    public boolean validateConstants()
+        {
+        assert pool.getNakedRefType() != null;
+
+        Consumer<Component> visitor = component ->
+            {
+            if (component instanceof ClassStructure)
+                {
+                component.getContributionsAsList().forEach(contrib ->
+                    {
+                    assert contrib.getTypeConstant().getConstantPool() == pool;
+                    });
+                }
+            else if (component instanceof MethodStructure)
+                {
+                MethodStructure method = (MethodStructure) component;
+                Constant[]      aconst = method.getLocalConstants();
+                if (aconst != null)
+                    {
+                    for (Constant constant : aconst)
+                        {
+                        assert constant.getConstantPool() == pool;
+                        }
+                    }
+                }
+            };
+        visitChildren(visitor, false, true);
+        return true;
         }
 
     @Override

@@ -189,19 +189,21 @@ public class TypeParameterConstant
     @Override
     public boolean containsUnresolved()
         {
-        if (fResolved || fReEntry)
+        if (m_tloResolved.get() || m_tloReEntry.get())
             {
             return false;
             }
 
-        fReEntry = true;
+        m_tloReEntry.set(Boolean.TRUE);
         try
             {
-            return !(fResolved = !getMethod().containsUnresolved());
+            boolean fUnresolved = getMethod().containsUnresolved();
+            m_tloResolved.set(!fUnresolved);
+            return fUnresolved;
             }
         finally
             {
-            fReEntry = false;
+            m_tloReEntry.set(Boolean.FALSE);
             }
         }
 
@@ -243,19 +245,19 @@ public class TypeParameterConstant
 
         TypeParameterConstant regThat = (TypeParameterConstant) that;
         int nDif = this.m_iReg - regThat.m_iReg;
-        if (nDif != 0 || fReEntry)
+        if (nDif != 0 || m_tloReEntry.get())
             {
             return nDif;
             }
 
-        fReEntry = true;
+        m_tloReEntry.set(Boolean.TRUE);
         try
             {
             return getParentConstant().compareTo(regThat.getParentConstant());
             }
         finally
             {
-            fReEntry = false;
+            m_tloReEntry.set(Boolean.FALSE);
             }
         }
 
@@ -283,19 +285,19 @@ public class TypeParameterConstant
     @Override
     public int hashCode()
         {
-        if (fReEntry)
+        if (m_tloReEntry.get())
             {
             return m_iReg;
             }
 
-        fReEntry = true;
+        m_tloReEntry.set(Boolean.TRUE);
         try
             {
             return getName().hashCode() + m_iReg;
             }
         finally
             {
-            fReEntry = false;
+            m_tloReEntry.set(Boolean.FALSE);;
             }
         }
 
@@ -312,6 +314,6 @@ public class TypeParameterConstant
      */
     private transient TypeConstant m_typeConstraint;
 
-    private transient boolean fReEntry;
-    private transient boolean fResolved;
+    private transient ThreadLocal<Boolean> m_tloReEntry  = ThreadLocal.withInitial(() -> Boolean.FALSE);
+    private transient ThreadLocal<Boolean> m_tloResolved = ThreadLocal.withInitial(() -> Boolean.FALSE);
     }

@@ -130,7 +130,7 @@ public class ConstantPool
             }
 
         // check if the Constant is already registered
-        final HashMap<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
+        final Map<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
         final Constant constantOld = mapConstants.get(constant);
         boolean fRegisterRecursively = false;
         if (constantOld == null)
@@ -140,19 +140,22 @@ public class ConstantPool
                 constant = constant.adoptedBy(this);
                 }
 
-            // add the Constant
-            constant.setPosition(m_listConst.size());
-            m_listConst.add(constant);
-            mapConstants.put(constant, constant);
-
-            // also allow the constant to be looked up by a locator
-            Object oLocator = constant.getLocator();
-            if (oLocator != null)
+            synchronized (this)
                 {
-                Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
-                if (constOld != null && constOld != constant)
+                // add the Constant
+                constant.setPosition(m_listConst.size());
+                m_listConst.add(constant);
+                mapConstants.put(constant, constant);
+
+                // also allow the constant to be looked up by a locator
+                Object oLocator = constant.getLocator();
+                if (oLocator != null)
                     {
-                    throw new IllegalStateException("locator collision: old=" + constOld + ", new=" + constant);
+                    Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
+                    if (constOld != null && constOld != constant)
+                        {
+                        throw new IllegalStateException("locator collision: old=" + constOld + ", new=" + constant);
+                        }
                     }
                 }
 
@@ -2993,7 +2996,7 @@ public class ConstantPool
      *
      * @return the map from Constant to Constant
      */
-    private HashMap<Constant, Constant> ensureConstantLookup(Format format)
+    private Map<Constant, Constant> ensureConstantLookup(Format format)
         {
         ensureLookup();
         return m_mapConstants.get(format);
@@ -3016,23 +3019,23 @@ public class ConstantPool
      *
      * @return the map from locator to Constant
      */
-    private HashMap<Object, Constant> ensureLocatorLookup(Format format)
+     private synchronized Map<Object, Constant> ensureLocatorLookup(Format format)
         {
         // lazily instantiate the locator map for the specified type
-        return m_mapLocators.computeIfAbsent(format, _format -> new HashMap<>());
+        return m_mapLocators.computeIfAbsent(format, _format -> new ConcurrentHashMap<>());
         }
 
     /**
      * Create the necessary structures for looking up Constant objects quickly, and populate those
      * structures with the set of existing Constant objects.
      */
-    private void ensureLookup()
+    private synchronized void ensureLookup()
         {
         if (m_mapConstants.isEmpty())
             {
             for (Format format : Format.values())
                 {
-                m_mapConstants.put(format, new HashMap<>());
+                m_mapConstants.put(format, new ConcurrentHashMap<>());
                 }
 
             for (Constant constant : m_listConst)
@@ -3590,12 +3593,12 @@ public class ConstantPool
     /**
      * Reverse lookup structure to find a particular constant by constant.
      */
-    private final EnumMap<Format, HashMap<Constant, Constant>> m_mapConstants = new EnumMap<>(Format.class);
+    private final EnumMap<Format, Map<Constant, Constant>> m_mapConstants = new EnumMap<>(Format.class);
 
     /**
      * Reverse lookup structure to find a particular constant by locator.
      */
-    private final EnumMap<Format, HashMap<Object, Constant>> m_mapLocators = new EnumMap<>(Format.class);
+    private final EnumMap<Format, Map<Object, Constant>> m_mapLocators = new EnumMap<>(Format.class);
 
     /**
      * Set of references to ConstantPool instances, defining the only ConstantPool references that
