@@ -5488,7 +5488,6 @@ public class Parser
         log(Severity.ERROR, EXPECTED_TOKEN, m_tokenPrev.getEndPosition(), m_tokenPrev.getEndPosition(),
                 id, m_token.getId());
 
-        // TODO remove this so there can be more than one error reported
         throw new CompilerException("expected token: " + id + " (found: " + token + ")");
         }
 
