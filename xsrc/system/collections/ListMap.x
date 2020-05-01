@@ -405,6 +405,8 @@ class ListMap<Key, Value>
             this.ListMap.clear();
             return this;
             }
+
+        // TODO implement toArray to clone array of keys (or return array of keys if it is immutable)
         }
 
 
@@ -791,5 +793,7 @@ class ListMap<Key, Value>
             this.ListMap.clear();
             return this;
             }
+
+        // TODO implement toArray to clone array of values (or return array of values if it is immutable)
         }
     }
