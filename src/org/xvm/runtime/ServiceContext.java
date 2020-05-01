@@ -45,7 +45,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle
  * The service context.
  */
 public class ServiceContext
-    implements Runnable
+        implements Runnable
     {
     ServiceContext(Container container, ConstantPool pool, String sName, int nId)
         {
@@ -195,6 +195,9 @@ public class ServiceContext
             }
         }
 
+    /**
+     * @return the currently active frame
+     */
     public Frame getCurrentFrame()
         {
         return m_frameCurrent;
@@ -265,9 +268,7 @@ public class ServiceContext
         Message message;
         while ((message = qMsg.poll()) != null)
             {
-            Frame frame = message.createFrame(this);
-
-            suspendFiber(frame);
+            f_queueSuspended.add(message.createFrame(this));
             }
 
         // allow initial timeouts to be processed always, since they won't run any natural code
@@ -316,7 +317,7 @@ public class ServiceContext
         switch (frame.f_fiber.getStatus())
             {
             case Running:
-                throw new IllegalStateException(); // assert
+                throw new IllegalStateException();
 
             case InitialNew:
             case InitialAssociated:
@@ -1226,34 +1227,72 @@ public class ServiceContext
     public final Container        f_container;
     public final TemplateRegistry f_templates;
     public final ObjectHeap       f_heapGlobal;
-    public final ConstantPool     f_pool;
 
-    private final Queue<Message>  f_queueMsg;
-    private final Queue<Response> f_queueResponse;
+    /**
+     * The container's ConstantPool.
+     */
+    public final ConstantPool f_pool;
 
-    private final int    f_nId;   // the service id
-    public  final String f_sName; // the service name
+    /**
+     * The service id.
+     */
+    private final int f_nId;
 
+    /**
+     * The service name.
+     */
+    public final String f_sName;
+
+    /**
+     * The service handle.
+     */
     protected ServiceHandle m_hService;
 
-    // the unhandled exception notification
+    /**
+     * The unhandled exception notification
+     */
     public FunctionHandle m_hExceptionHandler;
 
-    public int m_iFrameCounter; // used to create the Frame id
+    /**
+     * The counter used to create Frame ids
+     */
+    protected int m_iFrameCounter;
 
     /**
      * The current Timeout that will be used by the service when it invokes other services.
      */
     public long m_cTimeoutMillis;
 
-    // Metrics: the total time (in nanos) this service has been running
+    /**
+     * Metrics: the total time (in nanos) this service has been running
+     */
     protected long m_cRuntimeNanos;
 
+    /**
+     * The current frame.
+     */
     private Frame m_frameCurrent;
-    private FiberQueue f_queueSuspended = new FiberQueue(); // suspended fibers
 
+    /**
+     * The queue of incoming messages.
+     */
+    private final Queue<Message>  f_queueMsg;
+
+    /**
+     * The queue of message responses.
+     */
+    private final Queue<Response> f_queueResponse;
+
+    /**
+     * The queue of suspended fibers.
+     */
+    private FiberQueue f_queueSuspended = new FiberQueue();
+
+    /**
+     * The reentrancy policy.
+     */
     enum Reentrancy {Prioritized, Open, Exclusive, Forbidden}
-    public volatile Reentrancy m_reentrancy = Reentrancy.Prioritized;
+    public Reentrancy m_reentrancy = Reentrancy.Prioritized;
 
     /**
      * The context scheduling "lock", atomic operations are performed via {@link #SCHEDULING_LOCK_HANDLE}.
@@ -1263,6 +1302,9 @@ public class ServiceContext
      */
     volatile boolean m_fLockScheduling;
 
+    /**
+     * The current service status.
+     */
     enum ServiceStatus
         {
         Idle,
@@ -1272,6 +1314,9 @@ public class ServiceContext
         }
     private volatile ServiceStatus m_status = ServiceStatus.Idle;
 
+    /**
+     * The context served by the current thread.
+     */
     final static ThreadLocal<ServiceContext[]> s_tloContext = ThreadLocal.withInitial(() -> new ServiceContext[1]);
 
     /**
