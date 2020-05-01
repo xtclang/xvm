@@ -55,7 +55,7 @@ interface Enum
      */
     static <CompileType extends Enum> Int hashCode(CompileType value)
         {
-        return value.ordinal;
+        return value.enumeration.hashCode() + value.ordinal;
         }
 
     /**
