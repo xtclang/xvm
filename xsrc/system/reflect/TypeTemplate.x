@@ -52,7 +52,7 @@ interface TypeTemplate // TODO move
          */
         FormalProperty,
         /**
-         * A format type used as a type parameter to a method or function.
+         * A formal type used as a type parameter to a method or function.
          */
         FormalParameter,
         /**
@@ -266,6 +266,20 @@ interface TypeTemplate // TODO move
      * @return True iff all objects of `this` type are also objects of `that` type
      */
     Boolean isA(TypeTemplate! that);
+
+
+    // ----- reification ---------------------------------------------------------------------------
+
+    /**
+     * Find (or build) the Type within the specified TypeSystem that corresponds to this
+     * TypeTemplate.
+     *
+     * @param typeSystem  the TypeSystem within which to find and/or build the corresponding Type
+     *
+     * @return True iff the corresponding Type exists (or can be built within) the TypeSystem
+     * @return (conditional) the Type within the TypeSystem corresponding to this TypeTemplate
+     */
+    conditional Type reifyWithin(TypeSystem typeSystem);
 
 
     // ----- Stringable ----------------------------------------------------------------------------
