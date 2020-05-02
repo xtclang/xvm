@@ -18,6 +18,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ServiceContext;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -131,17 +132,20 @@ public abstract class OpCallable extends Op
     protected MethodStructure getVirtualConstructor(Frame frame, ObjectHandle hParent)
         {
         // suffix "C" indicates the compile-time constants; "R" - the run-time
-        ClassConstant idParentR = (ClassConstant) hParent.getTemplate().getClassConstant();
-        if (m_constructor != null)
+        ClassConstant   idParentR   = (ClassConstant) hParent.getTemplate().getClassConstant();
+        ServiceContext  context     = frame.f_context;
+        MethodStructure constructor = (MethodStructure) context.getOpInfo(this, Category.Constructor);
+        if (constructor != null)
             {
-            if (m_idParent.equals(idParentR))
+            ClassConstant idParent = (ClassConstant) context.getOpInfo(this, Category.ParentClass);
+            if (idParent.equals(idParentR))
                 {
                 // cached constructor fits the parent's class
-                return m_constructor;
+                return constructor;
                 }
             }
 
-        MethodStructure constructor = getMethodStructure(frame);
+        constructor = getMethodStructure(frame);
         if (constructor == null)
             {
             return null;
@@ -164,8 +168,8 @@ public abstract class OpCallable extends Op
             constructor = info.getTopmostMethodStructure(infoTarget);
             }
 
-        m_idParent    = idParentR;
-        m_constructor = constructor;
+        context.setOpInfo(this, Category.ParentClass, idParentR);
+        context.setOpInfo(this, Category.Constructor, constructor);
         return constructor;
         }
 
@@ -240,7 +244,7 @@ public abstract class OpCallable extends Op
         return "void";
         }
 
-    // ----- helper methods -----
+    // ----- helper methods ------------------------------------------------------------------------
 
     /**
      * Retrieve the method structure for this op-code and cache the parent's template
@@ -251,8 +255,9 @@ public abstract class OpCallable extends Op
      */
     protected MethodStructure getMethodStructure(Frame frame)
         {
+        ServiceContext   context    = frame.f_context;
         MethodConstant   idFunction = (MethodConstant) frame.getConstant(m_nFunctionId);
-        MethodStructure  function   = m_function;
+        MethodStructure  function   = (MethodStructure) context.getOpInfo(this, Category.Function);
         IdentityConstant idParent   = idFunction.getNamespace();
 
         switch (idParent.getFormat())
@@ -267,10 +272,11 @@ public abstract class OpCallable extends Op
                     GenericTypeResolver resolver = frame.getGenericsResolver();
 
                     TypeConstant typeParent = idParent.getFormalType().resolveGenerics(pool, resolver);
-                    m_function = function   = (MethodStructure) idFunction.getComponent();
+
+                    function = (MethodStructure) idFunction.getComponent();
                     if (function == null)
                         {
-                        m_function = function = typeParent.findCallable(idFunction.getSignature());
+                        function = typeParent.findCallable(idFunction.getSignature());
                         }
 
                     if (function == null)
@@ -279,7 +285,10 @@ public abstract class OpCallable extends Op
                             idFunction.getValueString() + "\" for " + typeParent.getValueString());
                         return null;
                         }
-                    m_template = frame.f_context.f_templates.getTemplate(typeParent);
+
+                    context.setOpInfo(this, Category.Function, function);
+                    context.setOpInfo(this, Category.Template,
+                            context.f_templates.getTemplate(typeParent));
                     }
                 break;
                 }
@@ -290,17 +299,21 @@ public abstract class OpCallable extends Op
                 {
                 GenericTypeResolver resolver   = frame.getGenericsResolver();
                 TypeConstant        typeParent = ((FormalConstant) idParent).resolve(resolver);
-                if (function == null || !typeParent.equals(m_typeParent))
+                TypeConstant        typePrev   = (TypeConstant) context.getOpInfo(this, Category.ParentType);
+                if (function == null || !typeParent.equals(typePrev))
                     {
-                    m_function = function = typeParent.findCallable(idFunction.getSignature());
+                    function = typeParent.findCallable(idFunction.getSignature());
                     if (function == null)
                         {
                         frame.raiseException("Unresolvable or ambiguous function \"" +
                             idFunction.getValueString() + "\" for " + typeParent.getValueString());
                         return null;
                         }
-                    m_typeParent = typeParent;
-                    m_template   = frame.f_context.f_templates.getTemplate(typeParent);
+
+                    context.setOpInfo(this, Category.Function, function);
+                    context.setOpInfo(this, Category.ParentType, typeParent);
+                    context.setOpInfo(this, Category.Template,
+                            context.f_templates.getTemplate(typeParent));
                     }
                 break;
                 }
@@ -309,9 +322,11 @@ public abstract class OpCallable extends Op
                 {
                 if (function == null)
                     {
-                    m_function = function = (MethodStructure) idFunction.getComponent();
+                    function = (MethodStructure) idFunction.getComponent();
                     assert !function.isNative();
+
                     // since the function is never native, no need to save the template
+                    context.setOpInfo(this, Category.Function, function);
                     }
                 break;
                 }
@@ -329,8 +344,8 @@ public abstract class OpCallable extends Op
      */
     protected ClassTemplate getNativeTemplate(Frame frame, MethodStructure function)
         {
-        assert function == m_function;
-        return m_template;
+        assert function == frame.f_context.getOpInfo(this, Category.Function);
+        return (ClassTemplate) frame.f_context.getOpInfo(this, Category.Template);
         }
 
     protected int constructChild(Frame frame, MethodStructure constructor,
@@ -400,10 +415,6 @@ public abstract class OpCallable extends Op
     protected Argument   m_argReturn;  // optional
     protected Argument[] m_aArgReturn; // optional
 
-    private TypeConstant    m_typeParent; // the parent type for the cached function
-    private MethodStructure m_function;   // cached function
-    private ClassTemplate   m_template;   // cached template
-
-    private ClassConstant   m_idParent;    // the parent's class id for the cached constructor
-    private MethodStructure m_constructor; // cached constructor
+    // categories for cached info
+    enum Category {Function, Template, ParentClass, ParentType, Constructor};
     }

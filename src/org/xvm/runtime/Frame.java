@@ -395,7 +395,7 @@ public class Frame
 
             case Op.A_SERVICE:
                 {
-                ObjectHandle hService = f_context.m_hService;
+                ObjectHandle hService = f_context.getService();
                 return hService == null
                     ? makeDeferredException("No service")
                     : hService;

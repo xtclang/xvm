@@ -69,7 +69,7 @@ public class I_Get
             return ((IndexSupport) template).extractArrayValue(frame, hTarget, lIndex, m_nRetValue);
             }
 
-        CallChain chain = getOpChain(hTarget.getType());
+        CallChain chain = getOpChain(frame, hTarget.getType());
         if (chain == null)
             {
             chain = template.findOpChain(hTarget, "[]", hIndex);
@@ -77,7 +77,7 @@ public class I_Get
                 {
                 return frame.raiseException("Invalid op: \"[]\"");
                 }
-            saveOpChain(hTarget.getType(), chain);
+            saveOpChain(frame, hTarget.getType(), chain);
             }
 
         MethodStructure method = chain.getTop();

@@ -64,7 +64,7 @@ public class I_Set
                 assignArrayValue(frame, hTarget, hIndex.getValue(), hValue);
             }
 
-        CallChain chain = getOpChain(hTarget.getType());
+        CallChain chain = getOpChain(frame, hTarget.getType());
         if (chain == null)
             {
             chain = template.findOpChain(hTarget, "[]=", new ObjectHandle[] {hIndex, hValue});
@@ -72,7 +72,7 @@ public class I_Set
                 {
                 return frame.raiseException("Invalid op: \"[]=\"");
                 }
-            saveOpChain(hTarget.getType(), chain);
+            saveOpChain(frame, hTarget.getType(), chain);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[Math.max(chain.getMaxVars(), 2)];

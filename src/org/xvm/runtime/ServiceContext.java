@@ -4,7 +4,10 @@ package org.xvm.runtime;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 
 import java.util.concurrent.CompletableFuture;
@@ -71,6 +74,76 @@ public class ServiceContext
         {
         return f_container;
         }
+
+    public ServiceContext getMainContext()
+        {
+        return f_container.getMainContext();
+        }
+
+    public ServiceHandle getService()
+        {
+        return m_hService;
+        }
+
+    public void setService(ServiceHandle hService)
+        {
+        assert m_hService == null;
+        m_hService = hService;
+        }
+
+    public ServiceStatus getStatus()
+        {
+        return m_status;
+        }
+
+    /**
+     * @return the currently active frame
+     */
+    public Frame getCurrentFrame()
+        {
+        return m_frameCurrent;
+        }
+
+    /**
+     * @return the ServiceContext associated with the current Java thread
+     */
+    public static ServiceContext getCurrentContext()
+        {
+        return s_tloContext.get()[0];
+        }
+
+
+    // ----- Op support ----------------------------------------------------------------------------
+
+    /**
+     * Retrieve an Op specific info.
+     *
+     * @param op       the op
+     * @param category the category of the cached info (op specific)
+     *
+     * @return the op info for the specified category
+     */
+    public Object getOpInfo(Op op, Enum category)
+        {
+        EnumMap mapByCategory = m_mapOpInfo.get(op);
+        return mapByCategory == null ? null : mapByCategory.get(category);
+        }
+
+    /**
+     * Store an Op specific info.
+     *
+     * @param op       the op
+     * @param category the category of the cached info (op specific)
+     * @param info     the info
+     */
+    public void setOpInfo(Op op, Enum category, Object info)
+        {
+        m_mapOpInfo.computeIfAbsent(op, (op_) -> new EnumMap(category.getClass()))
+                   .put(category, info);
+        }
+
+
+    // ----- scheduling  ---------------------------------------------------------------------------
 
     /**
      * Attempt to complete all pending work.
@@ -195,45 +268,6 @@ public class ServiceContext
             }
         }
 
-    /**
-     * @return the currently active frame
-     */
-    public Frame getCurrentFrame()
-        {
-        return m_frameCurrent;
-        }
-
-    public static ServiceContext getCurrentContext()
-        {
-        return s_tloContext.get()[0];
-        }
-
-    public ServiceContext getMainContext()
-        {
-        return f_container.getMainContext();
-        }
-
-    public ServiceContext createContext(String sName)
-        {
-        return f_container.createServiceContext(sName);
-        }
-
-    public ServiceHandle getService()
-        {
-        return m_hService;
-        }
-
-    public void setService(ServiceHandle hService)
-        {
-        assert m_hService == null;
-        m_hService = hService;
-        }
-
-    public ServiceStatus getStatus()
-        {
-        return m_status;
-        }
-
     public void addRequest(Message msg)
         {
         f_queueMsg.add(msg);
@@ -256,7 +290,12 @@ public class ServiceContext
             }
         }
 
-    // get a next frame ready for execution
+    /**
+     * Get a next frame ready for execution.
+     *
+     * @return a Frame to execute or null if this service doesn't have any frames ready for
+     *         execution
+     */
     public Frame nextFiber()
         {
         // responses have the highest priority and no natural code runs there;
@@ -312,6 +351,11 @@ public class ServiceContext
             }
         }
 
+    /**
+     * Suspend the fiber that the specified frame belongs to.
+     *
+     * @param frame  the frame to suspend
+     */
     public void suspendFiber(Frame frame)
         {
         switch (frame.f_fiber.getStatus())
@@ -344,7 +388,14 @@ public class ServiceContext
             }
         }
 
-    // return null iff there the context popped up all frames
+    /**
+     * Start or resume execution of the specified frame.
+     *
+     * @param frame  the frame to execute
+     *
+     * @return a frame that has been suspended or null if the fiber associated with this frame has
+     *         finished execution or has been terminated due to an exception or any other means
+     */
     public Frame execute(Frame frame)
         {
         Fiber fiber = frame.f_fiber;
@@ -705,7 +756,7 @@ public class ServiceContext
         }
 
 
-    // ----- helpers ------
+    // ----- helpers -------------------------------------------------------------------------------
 
     // send the specified number of return values back to the caller
     protected static int sendResponse(Fiber fiberCaller, Frame frame,
@@ -821,7 +872,8 @@ public class ServiceContext
         return "Service \"" + f_sName + "\" (id=" + f_nId + ')';
         }
 
-    // --- inner classes
+
+    // --- inner classes ---------------------------------------------------------------------------
 
     public abstract static class Message
         {
@@ -1246,7 +1298,7 @@ public class ServiceContext
     /**
      * The service handle.
      */
-    protected ServiceHandle m_hService;
+    private ServiceHandle m_hService;
 
     /**
      * The unhandled exception notification
@@ -1336,4 +1388,10 @@ public class ServiceContext
             throw new IllegalStateException(e);
             }
         }
+
+    /**
+     * A "service-local" cache for run-time information that needs to be calculated by various ops.
+     * Since only one fiber can access the service context at any time, a simple HashMap is used.
+     */
+    private Map<Op, EnumMap> m_mapOpInfo = new HashMap<>();
     }

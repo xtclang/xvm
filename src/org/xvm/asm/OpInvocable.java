@@ -12,6 +12,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -117,29 +118,41 @@ public abstract class OpInvocable extends Op
         }
 
     // helper methods
-    protected CallChain getCallChain(Frame frame, ObjectHandle hTarget)
+     protected CallChain getCallChain(Frame frame, ObjectHandle hTarget)
         {
-        if (m_chain != null && m_clazz == hTarget.getComposition())
+        ServiceContext  context   = frame.f_context;
+        CallChain       chain     = (CallChain) context.getOpInfo(this, Category.Chain);
+        TypeComposition clazzPrev = (TypeComposition) context.getOpInfo(this, Category.Composition);
+        TypeComposition clazz     = hTarget.getComposition();
+
+        if (chain != null && clazz == clazzPrev)
             {
-            return m_chain;
+            return chain;
             }
 
-        TypeComposition clazz    = m_clazz = hTarget.getComposition();
-        MethodConstant  idMethod = m_constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
+        context.setOpInfo(this, Category.Composition, clazz);
+
+        MethodConstant  idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
         MethodStructure method   = (MethodStructure) idMethod.getComponent();
         if (method != null && method.getAccess() == Access.PRIVATE)
             {
-            return m_chain = new CallChain(method);
+            chain = new CallChain(method);
+
+            context.setOpInfo(this, Category.Chain, chain);
+            m_constMethod = idMethod; // used by "toString()" only
+            return chain;
             }
 
         Object nid = idMethod.resolveNestedIdentity(frame.poolContext(), frame.getGenericsResolver());
 
-        CallChain chain = clazz.getMethodCallChain(nid);
+        chain = clazz.getMethodCallChain(nid);
         if (chain.getDepth() == 0)
             {
             return new CallChain.ExceptionChain(idMethod, hTarget.getType());
             }
-        return m_chain = chain;
+
+        context.setOpInfo(this, Category.Chain, chain);
+        return chain;
         }
 
     /**
@@ -260,6 +273,6 @@ public abstract class OpInvocable extends Op
     protected Argument       m_argReturn;  // optional
     protected Argument[]     m_aArgReturn; // optional
 
-    private TypeComposition m_clazz;       // cached class
-    private CallChain       m_chain;       // cached call chain
+    // categories for cached info
+    enum Category {Chain, Composition};
     }

@@ -100,7 +100,7 @@ public class xService
     public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {
-        ServiceContext contextNew = frame.f_context.createContext(f_sName);
+        ServiceContext contextNew = frame.f_context.f_container.createServiceContext(f_sName);
 
         CompletableFuture cfResult = contextNew.sendConstructRequest(frame, constructor, clazz, hParent, ahArg);
 
@@ -359,10 +359,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        ServiceContext context = hService.f_context;
-        ServiceContext contextCurrent = ServiceContext.getCurrentContext();
-
-        if (context == null || context == contextCurrent || hService.isAtomic(idProp))
+        if (hService.f_context == frame.f_context || hService.isAtomic(idProp))
             {
             return super.setFieldValue(frame, hTarget, idProp, hValue);
             }
