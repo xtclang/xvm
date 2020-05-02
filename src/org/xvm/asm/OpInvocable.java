@@ -134,12 +134,14 @@ public abstract class OpInvocable extends Op
 
         MethodConstant  idMethod = (MethodConstant) frame.getConstant(m_nMethodId);
         MethodStructure method   = (MethodStructure) idMethod.getComponent();
+
+        m_constMethod = idMethod; // used by "toString()" only
+
         if (method != null && method.getAccess() == Access.PRIVATE)
             {
             chain = new CallChain(method);
 
             context.setOpInfo(this, Category.Chain, chain);
-            m_constMethod = idMethod; // used by "toString()" only
             return chain;
             }
 
