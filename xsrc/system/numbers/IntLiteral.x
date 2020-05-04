@@ -22,6 +22,11 @@
 const IntLiteral(String text)
         implements Sequential
     {
+    /**
+     * Construct an IntLiteral from a String.
+     *
+     * @param text  the literal value
+     */
     construct(String text)
         {
 /*  TODO: uncomment when the compiler is sufficiently complete
@@ -191,8 +196,8 @@ const IntLiteral(String text)
         }
 
     /**
-     * The minimum number of bits to store the IntLiteral's value in the IEEE754 binary floating point format,
-     * where the number of bits is a power-of-two of at least 16.
+     * The minimum number of bits to store the IntLiteral's value in the IEEE754 binary floating
+     * point format, where the number of bits is a power-of-two of at least 16.
      */
     @RO Int minFloatBits.get()
         {
@@ -200,8 +205,8 @@ const IntLiteral(String text)
         }
 
     /**
-     * The minimum number of bits to store the IntLiteral's value in the IEEE754 decimal floating point format,
-     * where the number of bits is a power-of-two of at least 8.
+     * The minimum number of bits to store the IntLiteral's value in the IEEE754 decimal floating
+     * point format, where the number of bits is a power-of-two of at least 8.
      */
     @RO Int minDecBits.get()
         {
@@ -362,6 +367,9 @@ const IntLiteral(String text)
 
     // ----- conversions ---------------------------------------------------------------------------
 
+    // TODO doc all
+    // TODO unchecked support
+
     @Auto Bit toBit()
         {
         if (magnitude == 0)
@@ -383,7 +391,7 @@ const IntLiteral(String text)
 
     /**
      * Convert the number to a signed 8-bit integer.
-     * Any additional magnitude is discarded; any fractional value is discarded.
+     * Any additional magnitude is discarded.
      */
     @Auto Int8 toInt8()
         {
@@ -392,7 +400,7 @@ const IntLiteral(String text)
 
     /**
      * Convert the number to a signed 16-bit integer.
-     * Any additional magnitude is discarded; any fractional value is discarded.
+     * Any additional magnitude is discarded.
      */
     @Auto Int16 toInt16()
         {
@@ -401,7 +409,7 @@ const IntLiteral(String text)
 
     /**
      * Convert the number to a signed 32-bit integer.
-     * Any additional magnitude is discarded; any fractional value is discarded.
+     * Any additional magnitude is discarded.
      */
     @Auto Int32 toInt32()
         {
@@ -410,7 +418,7 @@ const IntLiteral(String text)
 
     /**
      * Convert the number to a signed 64-bit integer.
-     * Any additional magnitude is discarded; any fractional value is discarded.
+     * Any additional magnitude is discarded.
      */
     @Auto Int64 toInt()
         {
@@ -419,7 +427,7 @@ const IntLiteral(String text)
 
     /**
      * Convert the number to a signed 128-bit integer.
-     * Any additional magnitude is discarded; any fractional value is discarded.
+     * Any additional magnitude is discarded.
      */
     @Auto Int128 toInt128()
         {
@@ -436,7 +444,7 @@ const IntLiteral(String text)
 
     /**
      * Convert the number to a unsigned 8-bit integer.
-     * Any additional magnitude is discarded; any fractional value is discarded.
+     * Any additional magnitude is discarded.
      */
     @Auto UInt8 toByte()
         {
@@ -445,7 +453,7 @@ const IntLiteral(String text)
 
     /**
      * Convert the number to a unsigned 16-bit integer.
-     * Any additional magnitude is discarded; any fractional value is discarded.
+     * Any additional magnitude is discarded.
      */
     @Auto UInt16 toUInt16()
         {
@@ -454,7 +462,7 @@ const IntLiteral(String text)
 
     /**
      * Convert the number to a unsigned 32-bit integer.
-     * Any additional magnitude is discarded; any fractional value is discarded.
+     * Any additional magnitude is discarded.
      */
     @Auto UInt32 toUInt32()
         {
@@ -463,7 +471,7 @@ const IntLiteral(String text)
 
     /**
      * Convert the number to a unsigned 64-bit integer.
-     * Any additional magnitude is discarded; any fractional value is discarded.
+     * Any additional magnitude is discarded.
      */
     @Auto UInt64 toUInt()
         {
@@ -472,7 +480,7 @@ const IntLiteral(String text)
 
     /**
      * Convert the number to a unsigned 128-bit integer.
-     * Any additional magnitude is discarded; any fractional value is discarded.
+     * Any additional magnitude is discarded.
      */
     @Auto UInt128 toUInt128()
         {
@@ -561,7 +569,7 @@ const IntLiteral(String text)
 
     /**
      * Convert the number to a 4-bit integer.
-     * Any additional magnitude is discarded; any fractional value is discarded.
+     * Any additional magnitude is discarded.
      */
     @Auto Nibble toNibble()
         {
@@ -582,6 +590,7 @@ const IntLiteral(String text)
         return text;
         }
 
+    // TODO @Auto?
     FPLiteral toFPLiteral()
         {
         return new FPLiteral(text);
