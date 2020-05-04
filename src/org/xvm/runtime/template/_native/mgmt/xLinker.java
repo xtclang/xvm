@@ -27,7 +27,6 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
 
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
@@ -109,10 +108,9 @@ public class xLinker
                     InputStream     stream    = new ByteArrayInputStream(hBytes.m_abValue);
                     FileStructure   struct    = new FileStructure(stream);
                     ModuleStructure moduleApp = struct.getModule();
-
-                    ServiceContext context    = frame.f_context;
-                    FileStructure  structApp  = context.f_templates.createFileStructure(moduleApp);
-                    ModuleConstant idModule   = (ModuleConstant)
+                    ServiceContext  context   = frame.f_context;
+                    FileStructure   structApp = context.f_templates.createFileStructure(moduleApp);
+                    ModuleConstant  idModule  = (ModuleConstant)
                             structApp.getChild(moduleApp.getName()).getIdentityConstant();
 
                     SimpleContainer container = new SimpleContainer(context, idModule);
