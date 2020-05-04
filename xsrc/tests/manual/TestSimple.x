@@ -6,14 +6,12 @@ module TestSimple
         {
         import ecstasy.collections.HashMap;
 
-        Map<String, Int> m = new HashMap();
+        console.println(console);
+        console.println(&console.actualType);
 
-        console.println(m);
-        console.println(new Test());
-        console.println("done");
-        }
-
-    class Test
-        {
+        if (Const actual := &console.revealAs(Const))
+            {
+            assert;
+            }
         }
     }

@@ -148,6 +148,12 @@ module TestRunner.xtclang.org
                 {
                 return backService.flush();
                 }
+
+            @Override
+            void appendTo(Appender<Char> appender)
+                {
+                appender.add("Console");
+                }
             }
 
         /**
@@ -194,8 +200,7 @@ module TestRunner.xtclang.org
                 case Console:
                     if (name == "console")
                         {
-                        return &consoleBuffer.maskAs<Console>();
-                        // return console;
+                        return consoleBuffer;
                         }
                     wrongName = True;
                     break;
