@@ -629,7 +629,7 @@ public class Frame
                             {
                             // TODO: how to get the narrowing context?
                             }
-                        else if (REPORT_WRAPPING)
+                        else
                             {
                             System.err.println("WARNING: suspicious assignment from: " + typeFrom.getValueString()
                                 + " to: " + typeTo.getValueString());

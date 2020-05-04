@@ -1,16 +1,23 @@
 package org.xvm.runtime;
 
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import java.util.concurrent.atomic.AtomicLong;
 
 import java.util.function.Function;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.InjectionKey;
 import org.xvm.asm.LinkerContext;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.Op;
+import org.xvm.asm.PackageStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -18,6 +25,8 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
+
+import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.xService;
 
@@ -177,10 +186,69 @@ public abstract class Container
         return f_pendingWorkCount.get() == 0;
         }
 
-    @Override
-    public String toString()
+    /**
+     * Ensure a TypeSystem handle for this container.
+     *
+     * @param frame    the current frame
+     * @param iReturn  the register to put the handle into
+     *
+     * @return Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION
+     */
+    public int ensureTypeSystemHandle(Frame frame, int iReturn)
         {
-        return "Container: " + m_idModule.getName();
+        ObjectHandle hTS = m_hTypeSystem;
+        if (hTS == null)
+            {
+            ModuleConstant  idModule = getModule();
+            ModuleStructure module   = (ModuleStructure) idModule.getComponent();
+            ConstantPool    pool     = module.getConstantPool();
+
+            List<ObjectHandle> listHandles = new ArrayList<>();
+            ObjectHandle       hModule     = frame.getConstHandle(idModule);
+            listHandles.add(hModule);
+
+            boolean fDeferred = Op.isDeferred(hModule);
+
+            for (Component child : module.children())
+                {
+                if (child instanceof PackageStructure)
+                    {
+                    PackageStructure pkg = (PackageStructure) child;
+                    if (pkg.isModuleImport())
+                        {
+                        ModuleConstant idImport = pkg.getImportedModule().getIdentityConstant();
+                        ObjectHandle   hImport  = frame.getConstHandle(idImport);
+
+                        fDeferred |= Op.isDeferred(hImport);
+                        listHandles.add(hImport);
+                        }
+                    }
+                }
+
+            ObjectHandle[]   ahModules   = listHandles.toArray(Utils.OBJECTS_NONE);
+            ClassTemplate    templateTS  = f_templates.getTemplate("TypeSystem");
+            ClassComposition clzTS       = templateTS.getCanonicalClass();
+            TypeConstant     typeArray   = pool.ensureParameterizedTypeConstant(
+                                                pool.typeArray(), pool.typeModule());
+            ClassComposition clzArray    = f_templates.resolveClass(typeArray);
+            MethodStructure constructor = templateTS.getStructure().findMethod("construct", 2);
+            ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
+
+            if (fDeferred)
+                {
+                Frame.Continuation stepNext = frameCaller ->
+                    {
+                    ahArg[0] = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahModules);
+                    return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
+                    };
+
+                return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
+                }
+
+            ahArg[0] = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahModules);
+            return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
+            }
+        return frame.assignValue(iReturn, hTS);
         }
 
 
@@ -225,6 +293,15 @@ public abstract class Container
         {
         // TODO
         return true;
+        }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public String toString()
+        {
+        return "Container: " + m_idModule.getName();
         }
 
 

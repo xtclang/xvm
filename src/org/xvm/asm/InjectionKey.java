@@ -59,6 +59,8 @@ public class InjectionKey
 
     // ----- data fields ---------------------------------------------------------------------------
 
+    public static final InjectionKey[] NO_INJECTIONS = new InjectionKey[0];
+
     public final String       f_sName;
     public final TypeConstant f_type;
     }

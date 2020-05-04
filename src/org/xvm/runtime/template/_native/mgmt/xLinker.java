@@ -135,7 +135,7 @@ public class xLinker
         public CollectResources(SimpleContainer container, ObjectHandle hProvider, int[] aiReturn)
             {
             this.container = container;
-            this.aKeys     = container.collectInjections().toArray(new InjectionKey[0]);
+            this.aKeys     = container.collectInjections().toArray(InjectionKey.NO_INJECTIONS);
             this.hProvider = hProvider;
             this.aiReturn  = aiReturn;
             }
@@ -193,9 +193,26 @@ public class xLinker
                     }
                 }
 
-            return frameCaller.assignValues(aiReturn,
-                xNullable.NULL, // TODO GG
-                xAppControl.INSTANCE.makeHandle(frameCaller.f_context, container));
+            switch (container.ensureTypeSystemHandle(frameCaller, Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    return frameCaller.assignValues(aiReturn,
+                        frameCaller.popStack(),
+                        xAppControl.INSTANCE.makeHandle(frameCaller.f_context, container));
+
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.addContinuation(frameCaller1 ->
+                        frameCaller1.assignValues(aiReturn,
+                            frameCaller1.popStack(),
+                            xAppControl.INSTANCE.makeHandle(frameCaller.f_context, container)));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
 
         private final SimpleContainer container;

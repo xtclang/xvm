@@ -849,59 +849,7 @@ public class xRTType
      */
     public int getPropertyTypeSystem(Frame frame, TypeHandle hType, int iReturn)
         {
-        ObjectHandle hTS = frame.f_context.f_container.m_hTypeSystem;
-        if (hTS == null)
-            {
-            // TODO GG: replace this temporary solution when the "container" API is finalized
-            ConstantPool       pool        = frame.poolContext();
-            ModuleStructure    module      = pool.getFileStructure().getModule();
-            List<ObjectHandle> listHandles = new ArrayList<>();
-
-            ObjectHandle hModule = frame.getConstHandle(module.getIdentityConstant());
-            listHandles.add(hModule);
-
-            boolean fDeferred = Op.isDeferred(hModule);
-
-            for (Component child : module.children())
-                {
-                if (child instanceof PackageStructure)
-                    {
-                    PackageStructure pkg = (PackageStructure) child;
-                    if (pkg.isModuleImport())
-                        {
-                        ModuleConstant idImport = pkg.getImportedModule().getIdentityConstant();
-                        ObjectHandle   hImport  = frame.getConstHandle(idImport);
-
-                        fDeferred |= Op.isDeferred(hImport);
-                        listHandles.add(hImport);
-                        }
-                    }
-                }
-
-            ObjectHandle[]   ahModules   = listHandles.toArray(Utils.OBJECTS_NONE);
-            ClassTemplate    templateTS  = f_templates.getTemplate("TypeSystem");
-            ClassComposition clzTS       = templateTS.getCanonicalClass();
-            TypeConstant     typeArray   = pool.ensureParameterizedTypeConstant(
-                                                pool.typeArray(), pool.typeModule());
-            ClassComposition clzArray    = f_templates.resolveClass(typeArray);
-            MethodStructure  constructor = templateTS.getStructure().findMethod("construct", 2);
-            ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
-
-            if (fDeferred)
-                {
-                Frame.Continuation stepNext = frameCaller ->
-                    {
-                    ahArg[0] = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahModules);
-                    return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
-                    };
-
-                return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
-                }
-
-            ahArg[0] = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahModules);
-            return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
-            }
-        return frame.assignValue(iReturn, hTS);
+        return frame.f_context.f_container.ensureTypeSystemHandle(frame, iReturn);
         }
 
     /**
