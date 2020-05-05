@@ -764,7 +764,7 @@ public class xArray
             ObjectHandle[] ahNew;
             if (ixLower >= ixUpper)
                 {
-                ahNew = new ObjectHandle[0];
+                ahNew = Utils.OBJECTS_NONE;
                 }
             else if (fReverse)
                 {

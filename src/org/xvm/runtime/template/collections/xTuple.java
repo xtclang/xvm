@@ -487,7 +487,7 @@ public class xTuple
             TypeConstant[] atypeNew;
             if (ixLower >= ixUpper)
                 {
-                ahNew    = new ObjectHandle[0];
+                ahNew    = Utils.OBJECTS_NONE;
                 atypeNew = TypeConstant.NO_TYPES;
                 }
             else if (fReverse)

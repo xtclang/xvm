@@ -248,7 +248,7 @@ public class PropertyComposition
     @Override
     public ObjectHandle[] getFieldValueArray(GenericHandle hValue)
         {
-        return new ObjectHandle[0];
+        return Utils.OBJECTS_NONE;
         }
 
     @Override
