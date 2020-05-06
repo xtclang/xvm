@@ -207,7 +207,7 @@ public abstract class Container
      */
     public boolean isIdle()
         {
-        return f_pendingWorkCount.get() == 0;
+        return f_pendingWorkCount.get() == 0 && m_contextMain.isIdle();
         }
 
     /**

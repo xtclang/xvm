@@ -3,10 +3,8 @@ package org.xvm.runtime;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
@@ -195,17 +193,14 @@ public class Fiber
      */
     public void registerRequest(CompletableFuture<?> future)
         {
-        Set<CompletableFuture> setPending = m_setPending;
-        if (setPending == null)
-            {
-            m_setPending = setPending = new HashSet<>();
-            }
-
-        setPending.add(future);
+        m_cPending++;
 
         future.whenComplete((_void, ex) ->
             {
-            m_setPending.remove(future);
+            if (--m_cPending == 0 && m_status == FiberStatus.Terminating)
+                {
+                f_context.terminateFiber(this);
+                }
             });
         }
 
@@ -216,11 +211,6 @@ public class Fiber
     public void onResponse()
         {
         m_fResponded = true;
-
-        if (m_status == FiberStatus.Terminating)
-            {
-            f_context.terminateFiber(this);
-            }
         }
 
     /**
@@ -237,6 +227,7 @@ public class Fiber
             m_mapPendingUncaptured = mapPending = new HashMap<>();
             }
 
+        m_cPending++;
         mapPending.put(future, m_hAsyncSection);
 
         future.whenComplete((_void, ex) ->
@@ -248,6 +239,7 @@ public class Fiber
                 }
 
             m_mapPendingUncaptured.remove(future);
+            m_cPending--;
             });
         }
 
@@ -313,11 +305,9 @@ public class Fiber
     /**
      * Check if there are any pending futures associated with this fiber.
      */
-    public boolean isPending()
+    protected boolean hasPendingRequests()
         {
-        return m_status == FiberStatus.Waiting
-            || m_mapPendingUncaptured != null && !m_mapPendingUncaptured.isEmpty()
-            || m_setPending           != null && !m_setPending.isEmpty();
+        return m_status == FiberStatus.Waiting || m_cPending > 0;
         }
 
     /**
@@ -468,9 +458,10 @@ public class Fiber
     private List<ExceptionHandle> m_listUnhandledEx;
 
     /**
-     * Pending [captured] futures. Can be accessed only on the fiber's service thread.
+     * Counter of pending requests originated by this fiber. Can be mutated only on the fiber's
+     * service thread.
      */
-    private Set<CompletableFuture> m_setPending;
+    private int m_cPending;
 
     /**
      * Pending uncaptured futures; values are AsyncSection? handlers. Can be accessed only on the

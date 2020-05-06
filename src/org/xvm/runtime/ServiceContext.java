@@ -633,7 +633,7 @@ public class ServiceContext
      */
     protected void terminateFiber(Fiber fiber)
         {
-        if (fiber.isPending())
+        if (fiber.hasPendingRequests())
             {
             fiber.setStatus(FiberStatus.Terminating);
             }
@@ -690,8 +690,8 @@ public class ServiceContext
         }
 
     /**
-     *  A service is considered to be contended if it is running and if any other requests are
-     *  pending for the service.
+     * A service is considered to be contended if it is running and if any other requests are
+     * pending for the service.
      *
      * @return true iff the service is contended
      */
@@ -700,10 +700,23 @@ public class ServiceContext
         return m_frameCurrent != null || !f_queueMsg.isEmpty() || !f_queueSuspended.isEmpty();
         }
 
+    /**
+     * @return true iff the service is Idle
+     */
+    public boolean isIdle()
+        {
+        return getStatus() == ServiceStatus.Idle;
+        }
+
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    // send and asynchronous "call later" message to this context
+    /**
+     * Send and asynchronous "call later" message to this context.
+     *
+     * Unlike any of the "send*" methods below, there is no "originating" fiber in this case and the
+     * future registration is done by the request itself.
+     */
     public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
@@ -721,7 +734,9 @@ public class ServiceContext
         return Op.R_NEXT;
         }
 
-    // send and asynchronous "construct service" message to this context
+    /*
+     * Send and asynchronous "construct service" message to this context.
+     */
     public CompletableFuture<ServiceHandle> sendConstructRequest(Frame frameCaller,
                 MethodStructure constructor, ClassComposition clazz, ObjectHandle hParent, ObjectHandle[] ahArg)
         {
@@ -756,7 +771,9 @@ public class ServiceContext
         return future;
         }
 
-    // send and asynchronous "invoke" message with multiple return values
+    /**
+     * Send and asynchronous "invoke" message with multiple return values.
+     */
     public CompletableFuture<ObjectHandle[]> sendInvokeNRequest(Frame frameCaller,
                 FunctionHandle hFunction, ObjectHandle hTarget, ObjectHandle[] ahArg, int cReturns)
         {
@@ -775,7 +792,9 @@ public class ServiceContext
         return future;
         }
 
-    // send and asynchronous property "read" operation message
+    /**
+     * Send and asynchronous property "read" operation message.
+     */
     public CompletableFuture<ObjectHandle> sendProperty01Request(Frame frameCaller,
                                                                  PropertyConstant idProp, PropertyOperation01 op)
         {
@@ -787,7 +806,9 @@ public class ServiceContext
         return future;
         }
 
-    // send and asynchronous property "update" operation message
+    /*
+     * Send and asynchronous property "update" operation message.
+     */
     public void sendProperty10Request(Frame frameCaller,
                                       PropertyConstant idProp, ObjectHandle hValue, PropertyOperation10 op)
         {
@@ -798,7 +819,9 @@ public class ServiceContext
         frameCaller.f_fiber.registerUncapturedRequest(future);
         }
 
-    // send and asynchronous "constant initialization" message
+    /*
+     * Send and asynchronous "constant initialization" message.
+     */
     public CompletableFuture<ObjectHandle> sendConstantRequest(Frame frameCaller,
                                                                List<SingletonConstant> listConstants)
         {
@@ -844,8 +867,9 @@ public class ServiceContext
         callLater(hFunction, new ObjectHandle[]{hException});
         }
 
-
-    // send the specified number of return values back to the caller
+    /**
+     * Send the specified number of return values back to the caller.
+     */
     protected static int sendResponse(Fiber fiberCaller, Frame frame,
                                       CompletableFuture future, int cReturns)
         {
@@ -1081,6 +1105,9 @@ public class ServiceContext
 
             Frame frame0 = context.createServiceEntryFrame(this, 0,
                     new Op[] {opCall, Return_0.INSTANCE});
+
+            // since there was no originating fiber, we need to register the request on-the-spot
+            frame0.f_fiber.registerRequest(f_future);
 
             frame0.addContinuation(_null ->
                 {

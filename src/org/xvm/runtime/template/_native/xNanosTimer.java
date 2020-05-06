@@ -132,7 +132,9 @@ public class xNanosTimer
             m_cNanosStart = System.nanoTime();
             }
 
-        @Override
+        /**
+         * @return false iff this timer has some outstanding asynchronous requests
+         */
         public boolean isIdle()
             {
             if (isRunning())

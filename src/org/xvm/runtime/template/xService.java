@@ -459,14 +459,6 @@ public class xService
             {
             return s_setAtomicProperties.contains(idProp.getName()) || super.isAtomic(idProp);
             }
-
-        /**
-         * @return true iff this service has some outstanding asynchronous requests
-         */
-        public boolean isIdle()
-            {
-            return true;
-            }
         }
 
     // a tag interface for property operations
