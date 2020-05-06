@@ -3,8 +3,10 @@ package org.xvm.runtime;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -46,6 +48,8 @@ public abstract class Container
         m_idModule   = idModule;
         }
 
+    // ----- accessors -----------------------------------------------------------------------------
+
     /**
      * Obtain the "main" service context for this Container.
      */
@@ -53,6 +57,17 @@ public abstract class Container
         {
         return m_contextMain;
         }
+
+    /**
+     * Obtain the module constant for the main module in this Container.
+     */
+    public ModuleConstant getModule()
+        {
+        return m_idModule;
+        }
+
+
+    // ----- Container API -------------------------------------------------------------------------
 
     /**
      * Ensure the existence of the "main" service context for this Container.
@@ -84,8 +99,10 @@ public abstract class Container
      */
     public ServiceContext createServiceContext(String sName)
         {
-        return new ServiceContext(this, m_idModule.getConstantPool(),
+        ServiceContext service = new ServiceContext(this, m_idModule.getConstantPool(),
                 sName, f_runtime.f_idProducer.getAndIncrement());
+        f_setServices.add(service);
+        return service;
         }
 
     /**
@@ -171,16 +188,12 @@ public abstract class Container
         return fnResource == null ? null : fnResource.apply(frame);
         }
 
-    public ModuleConstant getModule()
-        {
-        return m_idModule;
-        }
 
-    public ServiceContext getMainContext()
-        {
-        return m_contextMain;
-        }
+    // ----- x:Container API helpers ---------------------------------------------------------------
 
+    /**
+     * @return true iff there are no pending requests for this service
+     */
     public boolean isIdle()
         {
         return f_pendingWorkCount.get() == 0;
@@ -225,14 +238,14 @@ public abstract class Container
                     }
                 }
 
-            ObjectHandle[]   ahModules   = listHandles.toArray(Utils.OBJECTS_NONE);
-            ClassTemplate    templateTS  = f_templates.getTemplate("TypeSystem");
-            ClassComposition clzTS       = templateTS.getCanonicalClass();
-            TypeConstant     typeArray   = pool.ensureParameterizedTypeConstant(
-                                                pool.typeArray(), pool.typeModule());
-            ClassComposition clzArray    = f_templates.resolveClass(typeArray);
+            ObjectHandle[]   ahModules  = listHandles.toArray(Utils.OBJECTS_NONE);
+            ClassTemplate    templateTS = f_templates.getTemplate("TypeSystem");
+            ClassComposition clzTS      = templateTS.getCanonicalClass();
+            TypeConstant     typeArray  = pool.ensureParameterizedTypeConstant(
+                                               pool.typeArray(), pool.typeModule());
+            ClassComposition clzArray   = f_templates.resolveClass(typeArray);
             MethodStructure constructor = templateTS.getStructure().findMethod("construct", 2);
-            ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
+            ObjectHandle[]   ahArg      = new ObjectHandle[constructor.getMaxVars()];
 
             if (fDeferred)
                 {
@@ -311,15 +324,18 @@ public abstract class Container
     public final TemplateRegistry f_templates;
     public final ObjectHeap       f_heapGlobal;
 
+    /**
+     * The main module id.
+     */
     protected ModuleConstant m_idModule;
 
-    // the service context for the container itself
+    /**
+     * The service context for the container itself.
+     */
     protected ServiceContext m_contextMain;
 
     /**
      * Cached TypeSystem handle.
-     *
-     * TODO GG: temporary, until the container API is finalized.
      */
     public ObjectHandle m_hTypeSystem;
 
@@ -330,5 +346,13 @@ public abstract class Container
      */
     public final AtomicLong f_pendingWorkCount = new AtomicLong();
 
-    final Map<InjectionKey, Function<Frame, ObjectHandle>> f_mapResources = new HashMap<>();
+    /**
+     * Map of resources that are injectable to this container, keyed by their InjectionKey.
+     */
+    protected final Map<InjectionKey, Function<Frame, ObjectHandle>> f_mapResources = new HashMap<>();
+
+    /**
+     * Set of services that were started by this container.
+     */
+    protected final Set<ServiceContext> f_setServices = new HashSet<>();
     }

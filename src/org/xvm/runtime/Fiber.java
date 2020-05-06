@@ -2,11 +2,13 @@ package org.xvm.runtime;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.xvm.asm.MethodStructure;
@@ -28,69 +30,12 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
  *
  * This class is completely thread safe since all the mutating methods here can only be called
  * on the parent ServiceContext native thread.
+ *
+ * It implements Comparable to allow a registry of Fiber objects in a concurrent set.
  */
 public class Fiber
+        implements Comparable<Fiber>
     {
-    final long f_lId;
-
-    final ServiceContext f_context;
-
-    // the caller's fiber (null for original)
-    final Fiber f_fiberCaller;
-
-    // the caller's frame id
-    final int f_iCallerId;
-
-    // the function of the caller's service invocation Op
-    final MethodStructure f_fnCaller;
-
-    // the fiber status can only be mutated by the fiber itself
-    private FiberStatus m_status;
-
-    // if the fiber is not running, the frame it was suspended at
-    public Frame m_frame;
-
-    // this flag serves a hint that the execution could possibly be resumed;
-    // it's set by the responding fiber and cleared reset when the execution resumes
-    // the use of this flag is tolerant to the possibility that the "waiting" state times out
-    // and the execution resumes before the flag is set; however, we will never lose a
-    // "a response has arrived" notification and get stuck waiting
-    public volatile boolean m_fResponded;
-
-    // Metrics: the timestamp (in nanos) when the fiber execution has started
-    private long m_nanoStarted;
-
-    /**
-     * The timeout (timestamp) that this fiber is subject to (optional).
-     */
-    public long m_ldtTimeout;
-
-    // Currently active AsyncSection
-    private ObjectHandle m_hAsyncSection = xNullable.NULL;
-
-    // list of exceptions to be processed by this fiber when the active AsyncSection is closed
-    private List<ExceptionHandle> m_listUnhandledEx;
-
-    // Pending uncaptured futures; values are AsyncSection handlers
-    private Map<CompletableFuture, ObjectHandle> m_mapPendingFutures;
-
-    // if specified, indicates an action to be done first as the fiber execution resumes
-    private Frame.Continuation m_resume;
-
-    private static AtomicLong s_counter = new AtomicLong();
-
-    enum FiberStatus
-        {
-        InitialNew,        // a new fiber has not been scheduled for execution yet
-        InitialAssociated, // a fiber that is associated with another existing fiber, but
-                           // has not been scheduled for execution yet
-        Running,           // normal execution
-        Paused,            // the execution was paused by the scheduler
-        Yielded,           // the execution was explicitly yielded by the user code
-        Waiting,           // execution is blocked until the "waiting" futures are completed
-        Terminated
-        }
-
     public Fiber(ServiceContext context, ServiceContext.Message msgCall)
         {
         f_lId = s_counter.getAndIncrement();
@@ -100,9 +45,8 @@ public class Fiber
         Fiber fiberCaller = f_fiberCaller = msgCall.f_fiberCaller;
 
         f_iCallerId = msgCall.f_iCallerId;
-        f_fnCaller = msgCall.f_fnCaller;
-
-        m_status = FiberStatus.InitialNew;
+        f_fnCaller  = msgCall.f_fnCaller;
+        m_status    = FiberStatus.InitialNew;
 
         if (fiberCaller == null)
             {
@@ -161,7 +105,9 @@ public class Fiber
         return m_hAsyncSection;
         }
 
-    // called only from this fiber's execution context
+    /**
+     * Set tne fiber's status; called only from this fiber's service thread.
+     */
     public void setStatus(FiberStatus status)
         {
         switch (m_status = status)
@@ -185,18 +131,23 @@ public class Fiber
                 m_frame = f_context.getCurrentFrame();
                 break;
 
-            case Terminated:
+            case Terminating:
                 m_frame = null;
                 break;
             }
         }
 
-    // the fiber is not ready for execution if it is waiting, not responded and not timed-out
+    /*
+     * The fiber is not ready for execution if it is waiting, not responded and not timed-out.
+     */
     public boolean isReady()
         {
         return m_status != FiberStatus.Waiting || m_fResponded || isTimedOut();
         }
 
+    /**
+     * @return true iff the fiber has timed out
+     */
     public boolean isTimedOut()
         {
         return m_ldtTimeout > 0 && System.currentTimeMillis() > m_ldtTimeout;
@@ -237,12 +188,53 @@ public class Fiber
         return iResult;
         }
 
+    /**
+     * Register an invoke/call request to another service.
+     *
+     * @param future  the future representing the call
+     */
+    public void registerRequest(CompletableFuture<?> future)
+        {
+        Set<CompletableFuture> setPending = m_setPending;
+        if (setPending == null)
+            {
+            m_setPending = setPending = new HashSet<>();
+            }
+
+        setPending.add(future);
+
+        future.whenComplete((_void, ex) ->
+            {
+            m_setPending.remove(future);
+            });
+        }
+
+    /**
+     * A notification indicating that a request sent by this fiber to another service has been
+     * processed.
+     */
+    public void onResponse()
+        {
+        m_fResponded = true;
+
+        if (m_status == FiberStatus.Terminating)
+            {
+            f_context.terminateFiber(this);
+            }
+        }
+
+    /**
+     * Uncaptured request is a "fire and forget" call that needs to be tracked and reported
+     * to an UnhandledExceptionHandler if such a handle was registered naturally.
+     *
+     * @param future  the future representing the call
+     */
     public void registerUncapturedRequest(CompletableFuture<?> future)
         {
-        Map<CompletableFuture, ObjectHandle> mapPending = m_mapPendingFutures;
+        Map<CompletableFuture, ObjectHandle> mapPending = m_mapPendingUncaptured;
         if (mapPending == null)
             {
-            mapPending = m_mapPendingFutures = new ConcurrentHashMap<>();
+            m_mapPendingUncaptured = mapPending = new HashMap<>();
             }
 
         mapPending.put(future, m_hAsyncSection);
@@ -255,11 +247,7 @@ public class Fiber
                     ((ExceptionHandle.WrapperException) ex).getExceptionHandle());
                 }
 
-            m_mapPendingFutures.remove(future);
-            if (m_mapPendingFutures.isEmpty())
-                {
-                m_fResponded = true;
-                }
+            m_mapPendingUncaptured.remove(future);
             });
         }
 
@@ -276,7 +264,7 @@ public class Fiber
             List<ExceptionHandle> listEx = m_listUnhandledEx;
             if (listEx == null)
                 {
-                listEx = m_listUnhandledEx = new ArrayList<>();
+                m_listUnhandledEx = listEx = new ArrayList<>();
                 }
             listEx.add(hException);
             }
@@ -295,11 +283,11 @@ public class Fiber
         if (hSectionOld != xNullable.NULL)
             {
             // check if all the unguarded calls have completed
-            if (isPending(hSectionOld))
+            if (isSectionPending(hSectionOld))
                 {
                 m_resume = frameCaller ->
                     {
-                    if (isPending(hSectionOld))
+                    if (isSectionPending(hSectionOld))
                         {
                         return Op.R_BLOCK;
                         }
@@ -322,10 +310,43 @@ public class Fiber
         return Op.R_NEXT;
         }
 
-    // Check if there are any pending futures associated with the specified AsyncSection
-    private boolean isPending(ObjectHandle hSection)
+    /**
+     * Check if there are any pending futures associated with this fiber.
+     */
+    public boolean isPending()
         {
-        return m_mapPendingFutures != null && m_mapPendingFutures.containsValue(hSection);
+        return m_status == FiberStatus.Waiting
+            || m_mapPendingUncaptured != null && !m_mapPendingUncaptured.isEmpty()
+            || m_setPending           != null && !m_setPending.isEmpty();
+        }
+
+    /**
+     * Check if there are any pending futures associated with the specified AsyncSection.
+     */
+    private boolean isSectionPending(ObjectHandle hSection)
+        {
+        return m_mapPendingUncaptured != null && m_mapPendingUncaptured.containsValue(hSection);
+        }
+
+
+    // ----- Comparable & Object methods -----------------------------------------------------------
+
+    @Override
+    public int compareTo(Fiber that)
+        {
+        return Long.compare(this.f_lId, that.f_lId);
+        }
+
+    @Override
+    public int hashCode()
+        {
+        return Long.hashCode(f_lId);
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        return obj instanceof Fiber && f_lId == ((Fiber) obj).f_lId;
         }
 
     @Override
@@ -334,6 +355,12 @@ public class Fiber
         return "Fiber " + f_lId + " of " + f_context + ": " + m_status.name();
         }
 
+
+    // ----- inner classes -------------------------------------------------------------------------
+
+    /**
+     * Support for "notify" call.
+     */
     protected static class CallNotify
             implements Frame.Continuation
         {
@@ -371,5 +398,125 @@ public class Fiber
 
             return Op.R_NEXT;
             }
+        }
+
+
+    // ----- data fields ---------------------------------------------------------------------------
+
+    /**
+     * The id.
+     */
+    private final long f_lId;
+
+    /**
+     * The parent context.
+     */
+    final ServiceContext f_context;
+
+    /**
+     * The caller's fiber (null for original).
+     */
+    final Fiber f_fiberCaller;
+
+    /*
+     * The caller's frame id (used for stack trace only).
+     */
+    final int f_iCallerId;
+
+    /**
+     * The function of the caller's service invocation Op (used for stack trace only).
+     */
+    final MethodStructure f_fnCaller;
+
+    /**
+     * The fiber status (can only be mutated by the fiber itself).
+     */
+    private volatile FiberStatus m_status;
+
+    /**
+     * If the fiber is not running, the frame it was suspended at.
+     */
+    public Frame m_frame;
+
+    /**
+     * this flag serves a hint that the execution could possibly be resumed;
+     * it's set by the responding fiber and reset when the execution resumes;
+     * the use of this flag is tolerant to the possibility that the "waiting" state times-out
+     * and the execution resumes before the flag is set; however, we will never lose a
+     * "a response has arrived" notification and get stuck waiting
+     */
+    public volatile boolean m_fResponded;
+
+    /**
+     * Metrics: the timestamp (in nanos) when the fiber execution has started.
+     */
+    private long m_nanoStarted;
+
+    /**
+     * The timeout (timestamp) that this fiber is subject to (optional).
+     */
+    public long m_ldtTimeout;
+
+    /**
+     * Currently active AsyncSection.
+     */
+    private ObjectHandle m_hAsyncSection = xNullable.NULL;
+
+    /**
+     * List of exceptions to be processed by this fiber when the active AsyncSection is closed.
+     */
+    private List<ExceptionHandle> m_listUnhandledEx;
+
+    /**
+     * Pending [captured] futures. Can be accessed only on the fiber's service thread.
+     */
+    private Set<CompletableFuture> m_setPending;
+
+    /**
+     * Pending uncaptured futures; values are AsyncSection? handlers. Can be accessed only on the
+     * fiber's service thread.
+     */
+    private Map<CompletableFuture, ObjectHandle> m_mapPendingUncaptured;
+
+    /**
+     * If specified, indicates an action to be performed as the fiber execution resumes.
+     */
+    private Frame.Continuation m_resume;
+
+    /**
+     * The counter used to create fibers ids.
+     */
+    private static AtomicLong s_counter = new AtomicLong();
+
+    enum FiberStatus
+        {
+        InitialNew        (4), // a new fiber has not been scheduled for execution yet
+        InitialAssociated (4), // a fiber that is associated with another existing fiber, but
+                               // has not been scheduled for execution yet
+        Running           (5), // normal execution
+        Paused            (3), // the execution was paused by the scheduler
+        Yielded           (2), // the execution was explicitly yielded by the user code
+        Waiting           (1), // execution is blocked until the "waiting" futures are completed
+        Terminating       (0); // the fiber has been terminated, but some requests are still pending
+
+        /**
+         * @param nActivity  the activity index
+         */
+        FiberStatus(int nActivity)
+            {
+            this.nActivity = nActivity;
+            }
+
+        FiberStatus moreActive(FiberStatus that)
+            {
+            return that == null || this.nActivity >= that.nActivity
+                    ? this
+                    : that;
+            }
+
+        /**
+         * The activity index; the higher the index, the more active the status
+         */
+        private int nActivity;
         }
     }

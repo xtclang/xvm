@@ -490,10 +490,9 @@ public class xFutureVar
 
             // add a notification and wait for the assignment/completion;
             // the service is responsible for timing out
-            cf.whenComplete
-                (
-                (r, x) -> frame.f_fiber.m_fResponded = true
-                );
+            cf.whenComplete(
+                (r, x) -> frame.f_fiber.onResponse());
+
             return frame.call(Utils.createWaitFrame(frame, cf, iReturn));
             }
 

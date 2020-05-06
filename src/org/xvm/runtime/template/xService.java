@@ -1,6 +1,9 @@
 package org.xvm.runtime.template;
 
 
+import java.util.HashSet;
+import java.util.Set;
+
 import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.ClassStructure;
@@ -24,6 +27,8 @@ import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.xEnum.EnumHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
@@ -54,6 +59,24 @@ public class xService
     public void registerNativeTemplates()
         {
         new InterfaceProxy(f_templates); // this initializes the InterfaceProxy.INSTANCE reference
+        }
+
+    @Override
+    public void initNative()
+        {
+        STATUS_INDICATOR = (xEnum) f_templates.getTemplate("Service.StatusIndicator");
+        REENTRANCY       = (xEnum) f_templates.getTemplate("Service.Reentrancy");
+
+        // since Service is an interface, we cannot annotate the properties naturally and need to do
+        // an ad-hoc check (the list is to be updated)
+        Set<String> setAtomic = new HashSet<>();
+        setAtomic.add("serviceName");
+        setAtomic.add("statusIndicator");
+        setAtomic.add("timeout");
+        setAtomic.add("upTime");
+        setAtomic.add("cpuTime");
+        setAtomic.add("contended");
+        s_setAtomicProperties = setAtomic;
         }
 
     @Override
@@ -208,8 +231,32 @@ public class xService
         switch (sPropName)
             {
             case "serviceName":
-                return frame.assignValue(iReturn,
-                    xString.makeHandle(hTarget.getComposition().getTemplate().f_sName));
+                {
+                ServiceHandle hService = (ServiceHandle) hTarget;
+                return frame.assignValue(iReturn, xString.makeHandle(hService.f_context.f_sName));
+                }
+
+            case "statusIndicator":
+                {
+                ServiceHandle hService = (ServiceHandle) hTarget;
+                EnumHandle    hStatus  = STATUS_INDICATOR.getEnumByName(
+                        hService.f_context.getStatus().name());
+                return Utils.assignInitializedEnum(frame, hStatus, iReturn);
+                }
+
+            case "reentrancy":
+                {
+                ServiceHandle hService = (ServiceHandle) hTarget;
+                EnumHandle    hStatus  = REENTRANCY.getEnumByName(
+                        hService.f_context.m_reentrancy.name());
+                return Utils.assignInitializedEnum(frame, hStatus, iReturn);
+                }
+
+            case "contented":
+                {
+                ServiceHandle hService = (ServiceHandle) hTarget;
+                return frame.assignValue(iReturn, xBoolean.makeHandle(hService.f_context.isContended()));
+                }
 
             case "asyncSection":
                 return frame.assignValue(iReturn, frame.f_fiber.getAsyncSection());
@@ -407,6 +454,12 @@ public class xService
             m_owner   = context.f_container;
             }
 
+        @Override
+        public boolean isAtomic(PropertyConstant idProp)
+            {
+            return s_setAtomicProperties.contains(idProp.getName()) || super.isAtomic(idProp);
+            }
+
         /**
          * @return true iff this service has some outstanding asynchronous requests
          */
@@ -452,4 +505,17 @@ public class xService
         {
         int invoke(Frame frame, ObjectHandle[] ahArg, int iReturn);
         }
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * Enums used by the native properties.
+     */
+    public static xEnum STATUS_INDICATOR;
+    public static xEnum REENTRANCY;
+
+    /**
+     * Names of atomic properties.
+     */
+    private static Set<String> s_setAtomicProperties;
     }

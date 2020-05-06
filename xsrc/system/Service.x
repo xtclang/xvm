@@ -75,13 +75,18 @@ interface Service()
     /**
      * A service exposes its status through a status indicator:
      *
-     * * Idle indicates that the service is ready to accept a request;
+     * * Idle indicates that the service is ready to accept any request and all previous requests
+     *   have been processed;
+     * * IdleWaiting indicates that the service has sent a request to another service and is waiting
+     *   (asynchronously) for a response at which point it will resume the execution;
      * * Busy indicates that the service is processing a request;
+     * * BusyWaiting indicates that the service has sent a request to another service and the calling
+     *   fiber is now waiting synchronously (blocked) for a response;
      * * ShuttingDown indicates that the service has received a shutdown request;
      * * Terminated indicates that the service terminated as a result of either a shutdown or kill
      *   request.
      */
-    enum StatusIndicator {Idle, Busy, ShuttingDown, Terminated}
+    enum StatusIndicator {Idle, IdleWaiting, Busy, BusyWaiting, ShuttingDown, Terminated}
 
     /**
      * Determine if the service is still running.

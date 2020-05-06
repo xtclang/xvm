@@ -9,9 +9,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
@@ -77,7 +79,7 @@ public class ServiceContext
 
     public ServiceContext getMainContext()
         {
-        return f_container.getMainContext();
+        return f_container.getServiceContext();
         }
 
     public ServiceHandle getService()
@@ -89,11 +91,6 @@ public class ServiceContext
         {
         assert m_hService == null;
         m_hService = hService;
-        }
-
-    public ServiceStatus getStatus()
-        {
-        return m_status;
         }
 
     /**
@@ -515,7 +512,7 @@ public class ServiceContext
                     if (frame == null)
                         {
                         // all done
-                        fiber.setStatus(FiberStatus.Terminated);
+                        terminateFiber(fiber);
                         return null;
                         }
 
@@ -572,7 +569,7 @@ public class ServiceContext
                                 throw new IllegalStateException();
                             }
 
-                        fiber.setStatus(FiberStatus.Terminated);
+                        terminateFiber(fiber);
                         return m_frameCurrent = null;
                         }
                     break;
@@ -605,7 +602,7 @@ public class ServiceContext
         // create a pseudo frame that has variables to collect the return values
         ObjectHandle[] ahVar = new ObjectHandle[cReturns];
 
-        Fiber fiber = new Fiber(this, msg);
+        Fiber fiber = createFiber(msg);
         Frame frame = new Frame(fiber, msg.f_iCallerPC, aopNative, ahVar, Op.A_IGNORE, null);
 
         for (int nVar = 0; nVar < cReturns; nVar++)
@@ -615,12 +612,98 @@ public class ServiceContext
         return frame;
         }
 
-    // ----- x:Service methods -----
+    /**
+     * Create a new fiber for this service.
+     *
+     * @param msg  the message that caused the fiber creation
+     *
+     * @return a new fiber
+     */
+    protected Fiber createFiber(Message msg)
+        {
+        Fiber fiber = new Fiber(this, msg);
+        f_setFibers.add(fiber);
+        return fiber;
+        }
 
+    /**
+     * Terminate the specified fiber.
+     *
+     * @param fiber  the fiber that has terminated
+     *
+     * @return a new fiber
+     */
+    protected void terminateFiber(Fiber fiber)
+        {
+        if (fiber.isPending())
+            {
+            fiber.setStatus(FiberStatus.Terminating);
+            }
+        else
+            {
+            f_setFibers.remove(fiber);
+            }
+        }
+
+
+    // ----- x:Service methods ---------------------------------------------------------------------
+
+    /**
+     * @return the status indicator (the names must be congruent to natural Service.StatusIndicator)
+     */
+    public ServiceStatus getStatus()
+        {
+        // TODO: ShuttingDown is not currently supported
+
+        if (m_hService == null)
+            {
+            return ServiceStatus.Terminated;
+            }
+
+        FiberStatus statusActive = null;
+        for (Fiber fiber : f_setFibers)
+            {
+            statusActive = fiber.getStatus().moreActive(statusActive);
+            }
+
+        if (statusActive == null)
+            {
+            return ServiceStatus.Idle;
+            }
+
+        switch (statusActive)
+            {
+            case InitialNew:
+            case InitialAssociated:
+            case Running:
+            case Paused:
+            case Yielded:
+                return ServiceStatus.Busy;
+
+            case Waiting:
+                return ServiceStatus.BusyWaiting;
+
+            case Terminating:
+                return ServiceStatus.IdleWaiting;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     *  A service is considered to be contended if it is running and if any other requests are
+     *  pending for the service.
+     *
+     * @return true iff the service is contended
+     */
     public boolean isContended()
         {
-        return !f_queueMsg.isEmpty() || !f_queueSuspended.isEmpty() || m_frameCurrent != null;
+        return m_frameCurrent != null || !f_queueMsg.isEmpty() || !f_queueSuspended.isEmpty();
         }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
 
     // send and asynchronous "call later" message to this context
     public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
@@ -648,6 +731,7 @@ public class ServiceContext
 
         addRequest(new ConstructRequest(frameCaller, constructor, clazz, future, hParent, ahArg));
 
+        frameCaller.f_fiber.registerRequest(future);
         return future;
         }
 
@@ -663,11 +747,14 @@ public class ServiceContext
 
         addRequest(new Invoke1Request(frameCaller, hFunction, hTarget, ahArg, cReturns, future));
 
+        Fiber fiber = frameCaller.f_fiber;
         if (cReturns == 0)
             {
-            frameCaller.f_fiber.registerUncapturedRequest(future);
+            fiber.registerUncapturedRequest(future);
             return null;
             }
+
+        fiber.registerRequest(future);
         return future;
         }
 
@@ -679,11 +766,14 @@ public class ServiceContext
 
         addRequest(new InvokeNRequest(frameCaller, hFunction, hTarget, ahArg, cReturns, future));
 
+        Fiber fiber = frameCaller.f_fiber;
         if (cReturns == 0)
             {
-            frameCaller.f_fiber.registerUncapturedRequest(future);
+            fiber.registerUncapturedRequest(future);
             return null;
             }
+
+        fiber.registerRequest(future);
         return future;
         }
 
@@ -695,6 +785,7 @@ public class ServiceContext
 
         addRequest(new PropertyOpRequest(frameCaller, idProp, null, 1, future, op));
 
+        frameCaller.f_fiber.registerRequest(future);
         return future;
         }
 
@@ -756,8 +847,6 @@ public class ServiceContext
         }
 
 
-    // ----- helpers -------------------------------------------------------------------------------
-
     // send the specified number of return values back to the caller
     protected static int sendResponse(Fiber fiberCaller, Frame frame,
                                       CompletableFuture future, int cReturns)
@@ -787,7 +876,7 @@ public class ServiceContext
                 break;
                 }
 
-            case -1:
+            case -1: // tuple return
                 {
                 ObjectHandle[]  ahReturn   = frame.f_ahVar;
                 ExceptionHandle hException = frame.m_hException;
@@ -875,6 +964,9 @@ public class ServiceContext
 
     // --- inner classes ---------------------------------------------------------------------------
 
+    /**
+     * Base class for requests.
+     */
     public abstract static class Message
         {
         public final Fiber           f_fiberCaller;
@@ -1261,7 +1353,7 @@ public class ServiceContext
         @Override
         public void run()
             {
-            f_fiberCaller.m_fResponded = true;
+            f_fiberCaller.onResponse();
 
             if (f_hException == null)
                 {
@@ -1316,7 +1408,7 @@ public class ServiceContext
     public long m_cTimeoutMillis;
 
     /**
-     * Metrics: the total time (in nanos) this service has been running
+     * Metrics: the total time (in nanos) this service has been running.
      */
     protected long m_cRuntimeNanos;
 
@@ -1336,14 +1428,19 @@ public class ServiceContext
     private final Queue<Response> f_queueResponse;
 
     /**
-     * The queue of suspended fibers.
+     * The set of active fibers. It can be [read] accessed by outside threads.
      */
-    private FiberQueue f_queueSuspended = new FiberQueue();
+    private final Set<Fiber> f_setFibers = new ConcurrentSkipListSet<>();
 
     /**
-     * The reentrancy policy.
+     * The queue of suspended fibers.
      */
-    enum Reentrancy {Prioritized, Open, Exclusive, Forbidden}
+    private final FiberQueue f_queueSuspended = new FiberQueue();
+
+    /**
+     * The reentrancy policy. Must be the same names as in natural Service.Reentrancy.
+     */
+    public enum Reentrancy {Prioritized, Open, Exclusive, Forbidden}
     public Reentrancy m_reentrancy = Reentrancy.Prioritized;
 
     /**
@@ -1355,16 +1452,17 @@ public class ServiceContext
     volatile boolean m_fLockScheduling;
 
     /**
-     * The current service status.
+     * The current service status. Must be the same names as in natural Service.StatusIndicator.
      */
-    enum ServiceStatus
+    public enum ServiceStatus
         {
         Idle,
+        IdleWaiting,
         Busy,
+        BusyWaiting,
         ShuttingDown,
-        Terminated,
+        Terminated;
         }
-    private volatile ServiceStatus m_status = ServiceStatus.Idle;
 
     /**
      * The context served by the current thread.

@@ -11,7 +11,7 @@ module TestServices
 
         TestService[] svcs = new Array<TestService>(4, (x) -> new TestService());
 
-        console.println($"{tag()} calling service async/wait-style: {svc}");
+        console.println($"{tag()} calling service async/wait-style {svc.serviceName} {svc.statusIndicator} {svc.reentrancy}");
         Int n = svc.calcSomethingBig(new Duration(0));
         console.println($"{tag()} async/wait-style result={n}");
 
