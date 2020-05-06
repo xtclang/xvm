@@ -19,7 +19,7 @@ public class SimpleContainer
     {
     public SimpleContainer(ServiceContext context, ModuleConstant idModule)
         {
-        super(context.getRuntime(), context.f_templates, context.f_heapGlobal, idModule);
+        super(context.getRuntime(), context.f_templates, context.f_container.f_heapGlobal, idModule);
         }
 
     public Set<InjectionKey> collectInjections()

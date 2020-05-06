@@ -40,7 +40,7 @@ public class ObjectHeap
      *
      * @param constValue "literal" (Int/String/etc.) constant known by the ConstantPool
      *
-     * @return R_NEXT or R_CALL
+     * @return an ObjectHandle (could be DeferredCallHandle representing a call or an exception)
      */
     public ObjectHandle ensureConstHandle(Frame frame, Constant constValue)
         {

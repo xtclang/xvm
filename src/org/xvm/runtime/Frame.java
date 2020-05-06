@@ -1049,7 +1049,7 @@ public class Frame
      */
     public ObjectHandle getConstHandle(Constant constant)
         {
-        return f_context.f_heapGlobal.ensureConstHandle(this, constant);
+        return f_context.f_container.ensureConstHandle(this, constant);
         }
 
     /**
@@ -1057,7 +1057,7 @@ public class Frame
      */
     public ObjectHandle getConstHandle(int iArg)
         {
-        return f_context.f_heapGlobal.ensureConstHandle(this, getConstant(iArg));
+        return f_context.f_container.ensureConstHandle(this, getConstant(iArg));
         }
 
     public Constant getConstant(int iArg)

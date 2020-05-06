@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.InjectionKey;
 import org.xvm.asm.LinkerContext;
@@ -186,6 +187,16 @@ public abstract class Container
             f_mapResources.get(new InjectionKey(sName, type));
 
         return fnResource == null ? null : fnResource.apply(frame);
+        }
+
+    /**
+     * A delegation method into the ObjectHeap API.
+     *
+     * Could be overridden by Container implementations to use container-specific heaps.
+     */
+    public ObjectHandle ensureConstHandle(Frame frame, Constant constValue)
+        {
+        return f_heapGlobal.ensureConstHandle(frame, constValue);
         }
 
 

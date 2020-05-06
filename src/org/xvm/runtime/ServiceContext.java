@@ -54,11 +54,9 @@ public class ServiceContext
     {
     ServiceContext(Container container, ConstantPool pool, String sName, int nId)
         {
-        f_container = container;
-        f_sName     = sName;
-        f_nId       = nId;
-
-        f_heapGlobal    = container.f_heapGlobal;
+        f_container     = container;
+        f_sName         = sName;
+        f_nId           = nId;
         f_templates     = container.f_templates;
         f_pool          = pool;
         f_queueMsg      = new ConcurrentLinkedQueue<>();
@@ -1370,7 +1368,6 @@ public class ServiceContext
 
     public final Container        f_container;
     public final TemplateRegistry f_templates;
-    public final ObjectHeap       f_heapGlobal;
 
     /**
      * The container's ConstantPool.
