@@ -1,11 +1,16 @@
 module TestSimple
     {
+    import ecstasy.mgmt.Container.ApplicationControl;
+
     @Inject Console console;
 
     void run()
         {
+        Service svcMain = this:service;
+        console.println($"serviceMain={svcMain}; type={&svcMain.actualType}; reentrancy={svcMain.reentrancy}");
+
         TestService svc = new TestService();
-        console.println($"service={svc}; name={svc.serviceName}; reentrancy={svc.reentrancy}");
+        console.println($"service={svc}; type={&svc.actualType}; reentrancy={svc.reentrancy}");
 
         console.println($"0: status={svc.statusIndicator}");
 
@@ -15,7 +20,7 @@ module TestSimple
 
         &delayResult.whenComplete((n, e) ->
             {
-            console.println($"1a. status={svc.statusIndicator}");
+            console.println($"1a. status={svc.statusIndicator} ");
             });
 
         @Future Int spinResult = svc.spin(10_000);
