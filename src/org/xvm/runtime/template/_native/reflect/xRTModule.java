@@ -218,10 +218,7 @@ public class xRTModule
         ModuleStructure module   = (ModuleStructure) idModule.getComponent();
 
         // starting with this module, find all module dependencies, and the shortest path to each
-        Map<ModuleConstant, String> mapModulePaths = new HashMap<>();
-        mapModulePaths.put(idModule, "");
-        collectDependencies("", module, mapModulePaths);
-
+        Map<ModuleConstant, String> mapModulePaths = collectDependencies(module);
         int cModules = mapModulePaths.size() - 1;
         if (cModules == 0)
             {
@@ -269,6 +266,22 @@ public class xRTModule
      * Given a module, build a list of all of the module dependencies, and the shortest path to
      * each.
      *
+     * @param module   pass the primary module
+     *
+     * @return  a map containing all of the module dependencies, and the shortest path to each
+     */
+    public static Map<ModuleConstant, String> collectDependencies(ModuleStructure module)
+        {
+        Map<ModuleConstant, String> mapModulePaths = new HashMap<>();
+        mapModulePaths.put(module.getIdentityConstant(), "");
+        xRTModule.collectDependencies("", module, mapModulePaths);
+        return mapModulePaths;
+        }
+
+    /**
+     * Given a module, build a list of all of the module dependencies, and the shortest path to
+     * each.
+     *
      * @param sModulePath     pass "" for the primary module
      * @param moduleOrPkg     pass the primary module
      * @param mapModulePaths  pass a map containing all previously encountered modules (including
@@ -299,6 +312,7 @@ public class xRTModule
                     else if (sNewPath.length() < sOldPath.length())
                         {
                         mapModulePaths.put(idDep, sNewPath);
+                        // TODO rewrite any other paths (i.e. nested) that started with the old path
                         }
                     }
                 else

@@ -1,5 +1,6 @@
 module TestReflection
     {
+    import ecstasy.TypeSystem;
     import ecstasy.reflect.TypeTemplate;
 
     @Inject ecstasy.io.Console console;
@@ -21,6 +22,7 @@ module TestReflection
         testEnum();
         testStruct();
         testClass();
+        testTypeSystem();
         }
 
     Function<<Int, String>, <Int>> foo()
@@ -506,6 +508,14 @@ module TestReflection
                 console.println($"clone={clone}");
                 }
             }
+        }
+
+    void testTypeSystem()
+        {
+        console.println("\n** testTypeSystem");
+
+        TypeSystem ts = this:service.typeSystem;
+        console.println($"current TypeSystem={ts}");
         }
 
 

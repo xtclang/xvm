@@ -43,7 +43,7 @@ const TypeSystem
             moduleBySimpleName.putIfAbsent(simpleName, _module);
 
             if (shared.size > Loop.count && shared[Loop.count]
-                    || qualifiedName == MackKernel)           // the core Ecstasy module is always shared
+                    || qualifiedName == MackKernel)     // the core Ecstasy module is always shared
                 {
                 sharedModules.add(_module);
                 }
@@ -164,6 +164,52 @@ const TypeSystem
      * The modules in this type system that are shared with the type system of the parent container.
      */
     HashSet<Module> sharedModules;
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        Int size = "TypeSystem{ (primary)}".size + 2 * (moduleByQualifiedName.size - 1);
+        Modules: for ((String name, Module _module) : moduleByQualifiedName)
+            {
+            size += name.size;
+            if (sharedModules.contains(_module))
+                {
+                size += " (shared)".size;
+                }
+            }
+        return size;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        appender.add("TypeSystem{");
+
+        Modules: for ((String name, Module _module) : moduleByQualifiedName)
+            {
+            if (!Modules.first)
+                {
+                appender.add(", ");
+                }
+
+            appender.add(name);
+
+            if (Modules.first)
+                {
+                appender.add(" (primary)");
+                }
+
+            if (sharedModules.contains(_module))
+                {
+                appender.add(" (shared)");
+                }
+            }
+
+        appender.add('}');
+        }
     }
 
 

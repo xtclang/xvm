@@ -28,6 +28,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
@@ -230,6 +231,11 @@ public class xService
         {
         switch (sPropName)
             {
+            case "typeSystem":
+                // since typeSystem is NOT atomic, this code always executes within the context of
+                // the service -- within the context of the container (and container == typesystem)
+                return frame.f_context.f_container.ensureTypeSystemHandle(frame, iReturn);
+
             case "serviceName":
                 {
                 ServiceHandle hService = (ServiceHandle) hTarget;

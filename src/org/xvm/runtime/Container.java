@@ -1,10 +1,8 @@
 package org.xvm.runtime;
 
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -12,7 +10,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import java.util.function.Function;
 
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.InjectionKey;
@@ -20,7 +17,6 @@ import org.xvm.asm.LinkerContext;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.PackageStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -29,9 +25,10 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
 
-import org.xvm.runtime.template.collections.xArray;
-
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xService;
+
+import org.xvm.runtime.template._native.reflect.xRTModule;
 
 
 /**
@@ -227,49 +224,43 @@ public abstract class Container
             ModuleStructure module   = (ModuleStructure) idModule.getComponent();
             ConstantPool    pool     = module.getConstantPool();
 
-            List<ObjectHandle> listHandles = new ArrayList<>();
-            ObjectHandle       hModule     = frame.getConstHandle(idModule);
-            listHandles.add(hModule);
-
-            boolean fDeferred = Op.isDeferred(hModule);
-
-            for (Component child : module.children())
+            Map<ModuleConstant, String> mapModules = xRTModule.collectDependencies(module);
+            int                         cModules   = mapModules.size();
+            ObjectHandle[]              ahModules  = new ObjectHandle[cModules];
+            ObjectHandle[]              ahShared   = new ObjectHandle[cModules];
+            boolean                     fDeferred  = false;
+            int                         index      = 0;
+            for (ModuleConstant idDep : mapModules.keySet())
                 {
-                if (child instanceof PackageStructure)
-                    {
-                    PackageStructure pkg = (PackageStructure) child;
-                    if (pkg.isModuleImport())
-                        {
-                        ModuleConstant idImport = pkg.getImportedModule().getIdentityConstant();
-                        ObjectHandle   hImport  = frame.getConstHandle(idImport);
-
-                        fDeferred |= Op.isDeferred(hImport);
-                        listHandles.add(hImport);
-                        }
-                    }
+                ObjectHandle hModule = frame.getConstHandle(idDep);
+                ahModules[index] = hModule;
+                ahShared [index] = xBoolean.FALSE; // TODO GG
+                fDeferred |= Op.isDeferred(hModule);
+                ++index;
                 }
 
-            ObjectHandle[]   ahModules  = listHandles.toArray(Utils.OBJECTS_NONE);
-            ClassTemplate    templateTS = f_templates.getTemplate("TypeSystem");
-            ClassComposition clzTS      = templateTS.getCanonicalClass();
-            TypeConstant     typeArray  = pool.ensureParameterizedTypeConstant(
-                                               pool.typeArray(), pool.typeModule());
-            ClassComposition clzArray   = f_templates.resolveClass(typeArray);
-            MethodStructure constructor = templateTS.getStructure().findMethod("construct", 2);
-            ObjectHandle[]   ahArg      = new ObjectHandle[constructor.getMaxVars()];
+            ClassTemplate    templateTS  = f_templates.getTemplate("TypeSystem");
+            ClassComposition clzTS       = templateTS.getCanonicalClass();
+            MethodStructure  constructor = templateTS.getStructure().findMethod("construct", 2);
+            ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
+// TODO GG
+//            ahArg[1] = xBooleanArray.INSTANCE.createArrayHandle(
+//                    xBooleanArray.INSTANCE.getCanonicalClass(), ahShared);
 
             if (fDeferred)
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     {
-                    ahArg[0] = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahModules);
+                    ahArg[0] = xRTModule.ensureArrayTemplate().createArrayHandle(
+                            xRTModule.ensureArrayComposition(), ahModules);
                     return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
                     };
 
                 return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
                 }
 
-            ahArg[0] = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahModules);
+            ahArg[0] = xRTModule.ensureArrayTemplate().createArrayHandle(
+                    xRTModule.ensureArrayComposition(), ahModules);
             return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
             }
         return frame.assignValue(iReturn, hTS);
