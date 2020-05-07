@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -18,7 +20,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * @see TypeConstant#isDecoratedClass()
  */
 public class DecoratedClassConstant
-        extends ClassConstant
+        extends IdentityConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -34,7 +36,7 @@ public class DecoratedClassConstant
     public DecoratedClassConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
-        super(pool, format, in);
+        super(pool);
         m_iType = readMagnitude(in);
         }
 
@@ -46,9 +48,7 @@ public class DecoratedClassConstant
      */
     public DecoratedClassConstant(ConstantPool pool, TypeConstant type)
         {
-        super(pool,
-                ((ClassConstant) type.getDefiningConstant()).getParentConstant(),
-                ((ClassConstant) type.getDefiningConstant()).getName());
+        super(pool);
 
         assert type.isExplicitClassIdentity(true);
         m_type = type;
@@ -62,7 +62,21 @@ public class DecoratedClassConstant
         }
 
 
-    // ----- ClassConstant methods -----------------------------------------------------------------
+    // ----- IdentityConstant methods --------------------------------------------------------------
+
+    /**
+     * @return the IdentityConstant that this DecoratedClassConstant represents a class of
+     */
+    IdentityConstant getClassIdentityConstant()
+        {
+        return (IdentityConstant) m_type.getDefiningConstant();
+        }
+
+    @Override
+    public String getName()
+        {
+        return getClassIdentityConstant().getName();
+        }
 
     /**
      * @return true iff this class is a virtual child class
@@ -73,11 +87,23 @@ public class DecoratedClassConstant
         }
 
     @Override
+    public Component getComponent()
+        {
+        return getClassIdentityConstant().getComponent();
+        }
+
+    @Override
     public IdentityConstant getParentConstant()
         {
         return isVirtualChild()
                 ? getConstantPool().ensureClassConstant(m_type.getParentType())
-                : super.getParentConstant();
+                : getClassIdentityConstant().getParentConstant();
+        }
+
+    @Override
+    public TypeConstant getFormalType()
+        {
+        return getType();
         }
 
 
@@ -87,6 +113,12 @@ public class DecoratedClassConstant
     public Format getFormat()
         {
         return Format.DecoratedClass;
+        }
+
+    @Override
+    public boolean isClass()
+        {
+        return true;
         }
 
     @Override
@@ -100,6 +132,35 @@ public class DecoratedClassConstant
         {
         ConstantPool pool = that.getConstantPool();
         return pool.ensureClassConstant(that, getName());
+        }
+
+    @Override
+    public boolean containsUnresolved()
+        {
+        return m_type.containsUnresolved();
+        }
+
+    @Override
+    protected Object getLocator()
+        {
+        return m_type;
+        }
+
+    @Override
+    protected int compareDetails(Constant that)
+        {
+        if (!(that instanceof DecoratedClassConstant))
+            {
+            return -1;
+            }
+
+        return this.m_type.compareTo(((DecoratedClassConstant) that).m_type);
+        }
+
+    @Override
+    public String getValueString()
+        {
+        return getType().getValueString();
         }
 
 
@@ -117,6 +178,18 @@ public class DecoratedClassConstant
         {
         super.assemble(out);
         writePackedLong(out, m_type.getPosition());
+        }
+
+    @Override
+    public String getDescription()
+        {
+        Constant constParent = getNamespace();
+        while (constParent instanceof ClassConstant)
+            {
+            constParent = ((ClassConstant) constParent).getNamespace();
+            }
+
+        return "class=" + getValueString() + ", " + constParent.getDescription();
         }
 
 

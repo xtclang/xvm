@@ -588,23 +588,6 @@ public abstract class IdentityConstant
         }
 
     /**
-     * @return the ClassConstant that would represent a child class of the specified name
-     */
-    public ClassConstant ensureChild(String sName)
-        {
-        switch (getFormat())
-            {
-            case Module:
-            case Package:
-            case Class:
-                return getConstantPool().ensureClassConstant(this, sName);
-
-            default:
-                throw new IllegalStateException("not a class type: " + this);
-            }
-        }
-
-    /**
      * @return the TypeInfo for the type implied by this identity, which must be a class identity
      *         (including module and package), or a property identity (to obtain a nested TypeInfo
      *         for the property, as if the property were a class itself)

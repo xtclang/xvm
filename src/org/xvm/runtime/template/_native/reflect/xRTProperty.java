@@ -12,17 +12,19 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xString;
+
+import org.xvm.runtime.template.collections.xArray;
 
 
 /**
@@ -361,4 +363,72 @@ public class xRTProperty
         ObjectHandle     hValue  = ahArg[1];
         return hTarget.getTemplate().setPropertyValue(frame, hTarget, idProp, hValue);
         }
+
+
+    // ----- Template, Composition, and handle caching ---------------------------------------------
+
+    /**
+     * @return the ClassTemplate for an Array of Property
+     */
+    public static xArray ensureArrayTemplate()
+        {
+        xArray template = ARRAY_TEMPLATE;
+        if (template == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeProperty());
+            ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typePropertyArray));
+            assert template != null;
+            }
+        return template;
+        }
+
+    /**
+     * @return the ClassComposition for an Array of Property
+     */
+    public static ClassComposition ensureArrayComposition()
+        {
+        ClassComposition clz = ARRAY_CLZCOMP;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeProperty());
+            ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typePropertyArray);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    /**
+     * @return the handle for an empty Array of Property
+     */
+    public static ObjectHandle.ArrayHandle ensureEmptyArray()
+        {
+        if (ARRAY_EMPTY == null)
+            {
+            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+                ensureArrayComposition(), new ObjectHandle[0]);
+            }
+        return ARRAY_EMPTY;
+        }
+
+    /**
+     * @return the ClassComposition for an Array of Property
+     */
+    public static ClassComposition ensureArrayComposition(TypeConstant typeTarget)
+        {
+        assert typeTarget != null;
+
+        ConstantPool pool              = INSTANCE.pool();
+        TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                pool.ensureParameterizedTypeConstant(pool.typeProperty(), typeTarget));
+        return INSTANCE.f_templates.resolveClass(typePropertyArray);
+        }
+
+
+    // ----- data members --------------------------------------------------------------------------
+
+    private static xArray           ARRAY_TEMPLATE;
+    private static ClassComposition ARRAY_CLZCOMP;
+    private static ArrayHandle      ARRAY_EMPTY;
     }

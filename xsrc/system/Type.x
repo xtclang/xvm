@@ -66,6 +66,16 @@ interface Type<DataType, OuterType>
     {
     // ----- inner classes -------------------------------------------------------------------------
 
+    /**
+     * A constructor, within this API, is a factory function that accepts some number of parameters,
+     * and returns an instantiated object. This is dramatically different than the actual
+     * composition of constructors, but the runtime provides this abstraction as a means to
+     * guarantee control over the stages and the rules of instantiation.
+     *
+     * Note that the Constructor type definition appears to be defined here as taking no parameters;
+     * the empty tuple type is used to define the minimum number of constructor parameters (i.e.
+     * none), and not the exact parameters of any given constructor.
+     */
     typedef Function<<>, <DataType>> Constructor;
 
     typedef TypeTemplate.Form Form;
@@ -409,6 +419,18 @@ interface Type<DataType, OuterType>
 
 
     // ----- operators -----------------------------------------------------------------------------
+
+    /**
+     * Create a type that is a parameterized form of this type. Passing an empty sequence will
+     * produce the canonical type.
+     *
+     * @param paramTypes  a sequence of type parameter types
+     *
+     * @return a corresponding type parameterized as indicated
+     *
+     * @throws InvalidType  if the parameterization would violate the rules of the type system
+     */
+    Type!<> parameterize(Type!<>... paramTypes);
 
     /**
      * Create a type that is the union of this type and another type.

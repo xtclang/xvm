@@ -33,6 +33,7 @@ import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xIntArray.IntArrayHandle;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
@@ -1178,7 +1179,87 @@ public class xRTFunction
         }
 
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- Template, Composition, and handle caching ---------------------------------------------
+
+    /**
+     * @return the ClassTemplate for an Array of Function
+     */
+    public static xArray ensureArrayTemplate()
+        {
+        xArray template = ARRAY_TEMPLATE;
+        if (template == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeFunctionArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeFunction());
+            ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeFunctionArray));
+            assert template != null;
+            }
+        return template;
+        }
+
+    /**
+     * @return the ClassComposition for an Array of Function
+     */
+    public static ClassComposition ensureArrayComposition()
+        {
+        ClassComposition clz = ARRAY_CLZCOMP;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeFunctionArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeFunction());
+            ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeFunctionArray);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    /**
+     * @return the handle for an empty Array of Function
+     */
+    public static ArrayHandle ensureEmptyArray()
+        {
+        if (ARRAY_EMPTY == null)
+            {
+            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+                ensureArrayComposition(), new ObjectHandle[0]);
+            }
+        return ARRAY_EMPTY;
+        }
+
+    /**
+     * @return the TypeConstant for a Constructor
+     */
+    public static TypeConstant ensureConstructorType(TypeConstant typeTarget, TypeConstant typeParent)
+        {
+        assert typeTarget != null;
+
+        ConstantPool pool        = INSTANCE.pool();
+        TypeConstant typeParams  = typeParent == null
+                ? pool.ensureParameterizedTypeConstant(pool.typeTuple(), TypeConstant.NO_TYPES)
+                : pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeParent);
+        TypeConstant typeReturns = pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeTarget);
+        return pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeParams, typeReturns);
+        }
+
+    /**
+     * @return the ClassComposition for an Array of Constructor
+     */
+    public static ClassComposition ensureConstructorArray(TypeConstant typeTarget, TypeConstant typeParent)
+        {
+        assert typeTarget != null;
+
+        ConstantPool pool      = INSTANCE.pool();
+        TypeConstant typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                ensureConstructorType(typeTarget, typeParent));
+        return INSTANCE.f_templates.resolveClass(typeArray);
+        }
+
+
+    // ----- data members --------------------------------------------------------------------------
+
+    private static xArray           ARRAY_TEMPLATE;
+    private static ClassComposition ARRAY_CLZCOMP;
+    private static ArrayHandle      ARRAY_EMPTY;
 
     /**
      * static (Int[], Object[]) toArray(Map<Parameter, Object> params)

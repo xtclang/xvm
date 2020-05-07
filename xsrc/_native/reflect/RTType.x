@@ -35,6 +35,7 @@ const RTType<DataType, OuterType>
     @Override conditional Type!<>[] parameterized()                      { TODO("native"); }
 
     @Override Type!<> purify()                                           { TODO("native"); }
+    @Override Type!<> parameterize(Type!<>... paramTypes)                { TODO("native"); }
 
     @Override @Op("+") Type!<> add(Type!<> that)                         { TODO("native"); }
     @Override @Op("+") Type!<> add(Method... methods)                    { TODO("native"); }

@@ -99,6 +99,13 @@ interface Ref<Referent>
     @RO Type actualType;
 
     /**
+     * Obtain the class of the referent. If the reference is masked, and the caller is not permitted
+     * to reveal the type of the referent, then the `actualClass` is the class of the interface type
+     * used to mask the reference, and not the class of the referent itself.
+     */
+    @RO Class actualClass;
+
+    /**
      * Obtain an opaque object that represents the identity of the reference held by this Ref. The
      * identity can be used for comparison with other identities to determine whether two identities
      * originate from the same object.

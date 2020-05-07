@@ -1028,10 +1028,10 @@ public class ConstantPool
      *
      * @return the specified class constant
      */
-    public ClassConstant ensureClassConstant(TypeConstant type)
+    public IdentityConstant ensureClassConstant(TypeConstant type)
         {
         // check the pre-existing constants first
-        ClassConstant constant = (DecoratedClassConstant) ensureLocatorLookup(
+        IdentityConstant constant = (DecoratedClassConstant) ensureLocatorLookup(
                 Format.DecoratedClass).get(type);
         if (constant == null)
             {
@@ -1057,7 +1057,7 @@ public class ConstantPool
                 }
             while (typeCur != null);
 
-            constant = fUseType
+            constant = fUseType || !(type.getDefiningConstant() instanceof ClassConstant)
                     ? (DecoratedClassConstant) register(new DecoratedClassConstant(this, type))
                     : (ClassConstant) type.getDefiningConstant();
             }

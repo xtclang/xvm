@@ -121,6 +121,38 @@ module Ecstasy.xtclang.org
         }
 
     /**
+     * Represents an Ecstasy Package.
+     *
+     * Because of its name, the Package type must be defined inside (textually included
+     * in) the Ecstasy "module.x" file, because the file name "package.x" is reserved for
+     * defining the package itself, while in this case we are defining the "Package" type.
+     */
+    interface Package
+            extends immutable Const
+        {
+        /**
+         * Test to see if this package represents a module import and if so, return it.
+         *
+         * @return True iff this package imports a module
+         * @return (conditional) the [Module] that this package imports
+         */
+        conditional /* TODO GG immutable */ Module isModuleImport();
+
+        /**
+         * The classes contained immediately within this package.
+         */
+        @RO immutable Class[] classes.get()
+            {
+            return classByName.values.toArray().ensureImmutable(true);
+            }
+
+        /**
+         * A mapping from simple name to class within this package.
+         */
+        @RO immutable Map<String, Class> classByName;
+        }
+
+    /**
      * Represents an Ecstasy Module, which is the outer-most level organizational unit for
      * source code, and the aggregate unit for compiled code distribution and deployment.
      *
@@ -136,7 +168,6 @@ module Ecstasy.xtclang.org
         /**
          * The simple qualified name of the module, such as "Ecstasy".
          */
-        @Override
         @RO String simpleName.get()
             {
             return qualifiedName.split('.')[0];
@@ -145,8 +176,10 @@ module Ecstasy.xtclang.org
         /**
          * The fully qualified name of the module, such as "Ecstasy.xtclang.org".
          */
-        @Override
-        @RO String qualifiedName;
+        @RO String qualifiedName.get()
+            {
+            return &this.actualClass.name;
+            }
 
         /**
          * The version of the module, if the version is known.
@@ -154,14 +187,14 @@ module Ecstasy.xtclang.org
         @RO Version? version;
 
         /**
-         * The array of modules that this module depends on.
+         * The modules that this module depends on by linkage, both directly and indirectly. For
+         * each such module that this module is linked to, and that is also visible within this
+         * module's namespace, the shortest path (dot-delimited) name and the depended-upon module
+         * will be provided in the map. In the case of an unlinked, optional module (one that is
+         * specified as a "desired" or "optional" import, but was not loaded and linked with this
+         * module for whatever reason), no entry will be present in the map.
          */
-        @RO immutable Module[] dependsOn;
-
-        /**
-         * True iff the module contains at least one singleton service.
-         */
-        @RO Boolean containsSingletonServices;
+        @RO immutable Map<String, Module> modulesByName;
 
         /**
          * Given the qualified name of a class nested within this module, obtain the [Class].
@@ -170,34 +203,5 @@ module Ecstasy.xtclang.org
          * @return (conditional) the specified [Class]
          */
         conditional Class classForName(String name);
-        }
-
-    /**
-     * Represents an Ecstasy Package.
-     *
-     * Because of its name, the Package type must be defined inside (textually included
-     * in) the Ecstasy "module.x" file, because the file name "package.x" is reserved for
-     * defining the package itself, while in this case we are defining the "Package" type.
-     */
-    interface Package
-            extends Const
-        {
-        /**
-         * The simple qualified name of the package, such as "maps".
-         */
-        @RO String simpleName;
-
-        /**
-         * The fully qualified name of the package, such as "Ecstasy.xtclang.org:collections.map".
-         */
-        @RO String qualifiedName;
-
-        /**
-         * Test to see if this package represents a module import and if so, return it.
-         *
-         * @return True iff this package imports a module
-         * @return (conditional) the [Module] that this package imports
-         */
-        conditional Module isModuleImport();
         }
     }

@@ -25,7 +25,7 @@ const RTClass<PublicType, ProtectedType extends PublicType,
     @Override conditional StructType allocate()                                                { TODO("native"); }
     (String[], Type[]) getFormalNamesAndTypes()                                                { TODO("native"); }
 
-    @Override @Lazy ListMap<String, Type> formalTypes.calc()
+    @Override @Lazy ListMap<String, Type> canonicalParams.calc()
         {
         (String[] names, Type[] types) = getFormalNamesAndTypes();
         return new ListMap<String, Type>(names, types).ensureImmutable(true);

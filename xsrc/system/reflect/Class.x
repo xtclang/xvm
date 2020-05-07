@@ -15,7 +15,7 @@ import reflect.ClassTemplate.Composition;
  *   Class.
  * * From inside an object, the Class of the object is `this:class`. From outside of the object,
  *   the class may be obtained from the object's type iff the type is _classy_; for example, one
- *   one can obtain the Class for an object `o`: `if (Class c := &o.actualType.classy()) {...}`.
+ *   one can obtain the Class for an object `o`: `Class c = &o.actualClass;`.
  *   However, an object that is injected into a container may hide the _classy_ `actualType` and
  *   only expose an interface type, which results in the class of the injected object being hidden
  *   from the code running inside the container.
@@ -85,23 +85,38 @@ const Class<PublicType, ProtectedType extends PublicType,
      * Construct a `Class` based on a [Composition], the formal types of the class (if any), and
      * (for singletons) a function that provides the singleton value.
      *
-     * @param composition
-     * @param formalTypes
-     * @param allocateStruct
+     * @param composition      the class composition information
+     * @param canonicalParams  the canonical types corresponding to the generic type parameters of
+     *                         this class; the canonical types represent the declared type constraint
+     *                         for each type parameter, and not the actual specified type for each
+     * @param allocateStruct   the function that is used to allocate an initial structure that can
+     *                         be populated and used to instantiate an object of this class
      */
     construct(Composition            composition,
-              Map<String, Type>      formalTypes    = Map:[],
-              function StructType()? allocateStruct = Null)
+              ListMap<String, Type>? canonicalParams = Null,
+              function StructType()? allocateStruct  = Null)
         {
-        if (!formalTypes.is(ListMap))
+        if (Type[] formalTypes := PublicType.parameterized(), formalTypes.size > 0)
             {
-            formalTypes = new ListMap(formalTypes.keys.toArray(), formalTypes.values.toArray());
+            assert:arg canonicalParams != Null;
+            assert:arg canonicalParams.size == formalTypes.size;
+            val formals    = formalTypes.iterator();
+            val canonicals = canonicalParams.values.iterator();
+            while (Type formal := formals.next())
+                {
+                assert:arg Type canonical := canonicals.next();
+                assert:arg formal.isA(canonical);
+                }
+            }
+        else
+            {
+            assert:arg canonicalParams?.size == 0;
             }
 
-        this.composition    = composition;
-        this.formalTypes    = formalTypes.ensureImmutable()
-                                .as(ListMap<String, Type>); // TODO GG - should not require this
-        this.allocateStruct = allocateStruct;
+        this.composition     = composition;
+        this.canonicalParams = (canonicalParams ?: new ListMap()).ensureImmutable()
+                                .as(ListMap<String, Type>);     // TODO GG - should not require this
+        this.allocateStruct  = allocateStruct;
         }
 
 
@@ -115,16 +130,83 @@ const Class<PublicType, ProtectedType extends PublicType,
         return composition.template.name;
         }
 
+    // TODO need: conditional String identityWithin(TypeSystem)
+
     /**
      * The composition of the class.
      */
     Composition composition;
 
     /**
+     * The formal type parameter names and the canonical (constraint) type for each. The order is
+     * significant, and matches the type parameters in [PublicType], etc.
+     */
+    ListMap<String, Type> canonicalParams;
+
+    /**
      * The values for each of the formal types required by the class. The order of the entries in
      * the map is significant.
      */
-    ListMap<String, Type> formalTypes;
+    @Lazy ListMap<String, Type> formalTypes.calc()
+        {
+        ListMap<String, Type> canonicals = canonicalParams;
+        ListMap<String, Type> formals    = new ListMap(canonicals.size);
+        if (Type[] formalTypes := PublicType.parameterized())
+            {
+            assert formalTypes.size == canonicals.size;
+            Loop: for (String name : canonicals.keys)
+                {
+                // TODO GG? formals[name] = formalTypes[Loop.count];
+                formals.put(name, formalTypes[Loop.count]);
+                }
+            }
+        // TODO immutable
+        return formals;
+        }
+
+    /**
+     * @return the canonical form of this class
+     */
+    @RO Class!<> canonicalClass.get()
+        {
+        if (PublicType.parameterized())
+            {
+            assert Class!<> that := PublicType.parameterize([]).fromClass(); // TODO GG should not require []
+            return that;
+            }
+
+        return this;
+        }
+
+    /**
+     * @return the canonical form of this class
+     */
+    Class!<> parameterize(Type... paramTypes)
+        {
+        Type[] oldParams = [];
+        oldParams := PublicType.parameterized();
+        CheckSame: if (paramTypes.size == oldParams.size)
+            {
+            for (Int i = 0, Int c = paramTypes.size; i < c; ++i)
+                {
+                if (paramTypes[i] != oldParams[i])
+                    {
+                    break CheckSame;
+                    }
+                }
+            return this;
+            }
+
+        Type[] canonicalTypes = canonicalParams.values.toArray();
+        assert:arg paramTypes.size <= canonicalTypes.size;
+        for (Int i = 0, Int c = paramTypes.size; i < c; ++i)
+            {
+            assert:arg paramTypes[i].isA(canonicalTypes[i]);     // REVIEW should this be isA(Ttype<cT[i]>) ?
+            }
+
+        assert Class!<> that := PublicType.parameterize(paramTypes).fromClass();
+        return that;
+        }
 
     /**
      * The factory for structure instances, if the class is not abstract in this [TypeSystem].
@@ -239,14 +321,26 @@ const Class<PublicType, ProtectedType extends PublicType,
     // ----- construction --------------------------------------------------------------------------
 
     /**
-     * TODO
+     * Obtain the child class of the specified name, parameterized by the optional sequence of type
+     * parameters.
+     *
+     * @param name        the name of the child class
+     * @param paramTypes  the type parameters of the child class
+     *
+     * @return the child class as specified
      */
-//    Class childForName(String name, Type... paramType);
+    Class!<> childForName(String name, Type... paramTypes)
+        {
+        assert Type     childType  := PrivateType.childTypes.get(name);
+        assert Class!<> childClass := childType.parameterize(paramTypes).fromClass();
+        return childClass;
+        }
 
     /**
      * Determine if the class defines a singleton, and if so, obtain that singleton. If a class is
      * a singleton class, that means that only one instance of that class can be instantiated, and
-     * that instance is assumed to be instantiated by the first time that it is requested).
+     * that instance is assumed to be instantiated no later than the first time that it is
+     * requested).
      *
      * @throws IllegalState if the class is not part of the caller's type system, or a type system
      *         of a container nested under the caller's container

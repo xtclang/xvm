@@ -164,11 +164,9 @@ public class xRTSignature
      */
     protected int getPropertyParamTypes(Frame frame, SignatureHandle hFunc, int iReturn)
         {
-        int            cParams = hFunc.getParamCount();
-        ObjectHandle[] ahType  = new ObjectHandle[cParams];
-
-        ClassComposition clzArray = xRTType.INSTANCE.ensureTypeArray();
-
+        int              cParams  = hFunc.getParamCount();
+        ObjectHandle[]   ahType   = new ObjectHandle[cParams];
+        ClassComposition clzArray = xRTType.ensureArrayComposition();
         for (int i = 0; i < cParams; i++)
             {
             ahType[i] = hFunc.getParamType(i).getTypeHandle();
@@ -181,11 +179,9 @@ public class xRTSignature
      */
     protected int getPropertyReturnTypes(Frame frame, SignatureHandle hFunc, int iReturn)
         {
-        int            cReturns = hFunc.getReturnCount();
-        ObjectHandle[] ahType   = new ObjectHandle[cReturns];
-
-        ClassComposition clzArray = xRTType.INSTANCE.ensureTypeArray();
-
+        int              cReturns = hFunc.getReturnCount();
+        ObjectHandle[]   ahType   = new ObjectHandle[cReturns];
+        ClassComposition clzArray = xRTType.ensureArrayComposition();
         for (int i = 0; i < cReturns; i++)
             {
             ahType[i] = hFunc.getReturnType(i).getTypeHandle();
@@ -232,7 +228,7 @@ public class xRTSignature
         if (type == null)
             {
             RTRETURN_TYPE = type = f_templates.getComponent("_native.reflect.RTReturn").
-                                    getIdentityConstant().getType();
+                    getIdentityConstant().getType();
             assert type != null;
             }
         return type;
@@ -262,7 +258,7 @@ public class xRTSignature
         if (type == null)
             {
             RTPARAM_TYPE = type = f_templates.getComponent("_native.reflect.RTParameter").
-                                    getIdentityConstant().getType();
+                    getIdentityConstant().getType();
             assert type != null;
             }
         return type;

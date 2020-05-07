@@ -15,12 +15,14 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xCharArray;
 import org.xvm.runtime.template.collections.xCharArray.CharArrayHandle;
 
@@ -444,7 +446,7 @@ public class xString
         }
 
 
-    // --=-- handle --------------------------------------------------------------------------------
+    // ----- handle --------------------------------------------------------------------------------
 
     public static class StringHandle
             extends ObjectHandle
@@ -517,12 +519,66 @@ public class xString
         }
 
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- Template, Composition, and handle caching ---------------------------------------------
+
+    /**
+     * @return the ClassTemplate for an Array of String
+     */
+    public static xArray ensureArrayTemplate()
+        {
+        xArray template = ARRAY_TEMPLATE;
+        if (template == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeStringArray = pool.ensureParameterizedTypeConstant(
+                    pool.typeArray(), pool.typeString());
+            ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeStringArray));
+            assert template != null;
+            }
+        return template;
+        }
+
+    /**
+     * @return the ClassComposition for an Array of String
+     */
+    public static ClassComposition ensureArrayComposition()
+        {
+        ClassComposition clz = ARRAY_CLZCOMP;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeStringArray = pool.ensureParameterizedTypeConstant(
+                    pool.typeArray(), pool.typeString());
+            ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeStringArray);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    /**
+     * @return the handle for an empty Array of String
+     */
+    public static ObjectHandle.ArrayHandle ensureEmptyArray()
+        {
+        if (ARRAY_EMPTY == null)
+            {
+            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+                    ensureArrayComposition(), new ObjectHandle[0]);
+            }
+        return ARRAY_EMPTY;
+        }
+
+
+    // ----- data members --------------------------------------------------------------------------
 
     public static StringHandle EMPTY_STRING;
     public static StringHandle EMPTY_ARRAY;
     public static StringHandle ZERO;
     public static StringHandle ONE;
+
+    private static xArray           ARRAY_TEMPLATE;
+    private static ClassComposition ARRAY_CLZCOMP;
+    private static ArrayHandle      ARRAY_EMPTY;
 
     protected static MethodStructure METHOD_APPEND_TO;
     }

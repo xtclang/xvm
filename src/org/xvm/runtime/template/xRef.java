@@ -102,6 +102,11 @@ public class xRef
                 return actOnReferent(frame, hRef,
                     h -> frame.assignValue(iReturn, h.getType().getTypeHandle()));
 
+            case "actualClass":
+                return actOnReferent(frame, hRef,
+                    h -> frame.assignValue(iReturn, frame.getConstHandle(
+                        pool().ensureClassConstant(h.getComposition().getType()))));
+
             case "assigned":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned()));
 

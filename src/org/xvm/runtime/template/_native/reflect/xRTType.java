@@ -2,18 +2,14 @@ package org.xvm.runtime.template._native.reflect;
 
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.PackageStructure;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.ChildInfo;
@@ -23,7 +19,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.StringConstant;
@@ -108,6 +103,7 @@ public class xRTType
         markNativeMethod("parameterized"  , null, null);
         markNativeMethod("relational"     , null, null);
 
+        // TODO parameterize
         // TODO ops: add x3, or, and, sub x3
 
         ClassConstant   idType     = pool().clzType();
@@ -491,8 +487,8 @@ public class xRTType
             listProps.add(hProperty);
             }
 
-        ArrayHandle hArray = ensurePropertyArrayTemplate().createArrayHandle(
-                ensureConstantArray(), listProps.toArray(new ObjectHandle[0]));
+        ArrayHandle hArray = xRTProperty.ensureArrayTemplate().createArrayHandle(
+                xRTProperty.ensureArrayComposition(), listProps.toArray(new ObjectHandle[0]));
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -620,8 +616,8 @@ public class xRTType
             ahFunctions = new FunctionHandle[0];
             }
 
-        ArrayHandle hArray = ensureFunctionArrayTemplate().createArrayHandle(
-                ensureConstructorArray(typeTarget, typeParent), ahFunctions);
+        ArrayHandle hArray = xRTFunction.ensureArrayTemplate().createArrayHandle(
+                xRTFunction.ensureConstructorArray(typeTarget, typeParent), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -774,8 +770,8 @@ public class xRTType
                 }
             }
         FunctionHandle[] ahFunctions = listHandles.toArray(new FunctionHandle[0]);
-        ArrayHandle      hArray      = ensureFunctionArrayTemplate().createArrayHandle(
-                ensureFunctionArray(), ahFunctions);
+        ArrayHandle      hArray      = xRTFunction.ensureArrayTemplate().createArrayHandle(
+                xRTFunction.ensureArrayComposition(), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -797,8 +793,8 @@ public class xRTType
                 }
             }
         MethodHandle[] ahMethods = listHandles.toArray(new MethodHandle[0]);
-        ArrayHandle    hArray    = ensureMethodArrayTemplate().createArrayHandle(
-                ensureMethodArray(typeTarget), ahMethods);
+        ArrayHandle    hArray    = xRTMethod.ensureArrayTemplate().createArrayHandle(
+                xRTMethod.ensureArrayComposition(typeTarget), ahMethods);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -823,8 +819,8 @@ public class xRTType
                 listProps.add(hProperty);
                 }
             }
-        ArrayHandle hArray = ensurePropertyArrayTemplate().createArrayHandle(
-                ensurePropertyArray(typeTarget), listProps.toArray(new ObjectHandle[0]));
+        ArrayHandle hArray = xRTProperty.ensureArrayTemplate().createArrayHandle(
+                xRTProperty.ensureArrayComposition(typeTarget), listProps.toArray(new ObjectHandle[0]));
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -878,7 +874,7 @@ public class xRTType
             ahTypes[i] = aUnderlying[i].getTypeHandle();
             }
 
-        ArrayHandle hArray = ensureTypeArrayTemplate().createArrayHandle(ensureTypeArray(), ahTypes);
+        ArrayHandle hArray = ensureArrayTemplate().createArrayHandle(ensureArrayComposition(), ahTypes);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -1036,7 +1032,7 @@ public class xRTType
             ahTypes[i] = makeHandle(atypes[i]);
             }
 
-        ArrayHandle hArray = ensureTypeArrayTemplate().createArrayHandle(ensureTypeArray(), ahTypes);
+        ArrayHandle hArray = ensureArrayTemplate().createArrayHandle(ensureArrayComposition(), ahTypes);
         return frame.assignValues(aiReturn, xBoolean.TRUE, hArray);
         }
 
@@ -1060,185 +1056,6 @@ public class xRTType
                         type.getUnderlyingType2().getTypeHandle())
                 : frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
-
-
-    // ----- Template caching -----------------------------------------------------------------------
-
-    /**
-     * @return the ClassTemplate for an Array of Type
-     */
-    public xArray ensureTypeArrayTemplate()
-        {
-        xArray template = TYPE_ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
-            TYPE_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeTypeArray));
-            assert template != null;
-            }
-        return template;
-        }
-
-    /**
-     * @return the ClassTemplate for an Array of Property
-     */
-    public xArray ensurePropertyArrayTemplate()
-        {
-        xArray template = PROPERTY_ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeProperty());
-            PROPERTY_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typePropertyArray));
-            assert template != null;
-            }
-        return template;
-        }
-
-    /**
-     * @return the ClassTemplate for an Array of Method
-     */
-    public xArray ensureMethodArrayTemplate()
-        {
-        xArray template = METHOD_ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeMethodArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeMethod());
-            METHOD_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeMethodArray));
-            assert template != null;
-            }
-        return template;
-        }
-
-    /**
-     * @return the ClassTemplate for an Array of Function
-     */
-    public xArray ensureFunctionArrayTemplate()
-        {
-        xArray template = FUNCTION_ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeFunctionArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeFunction());
-            FUNCTION_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeFunctionArray));
-            assert template != null;
-            }
-        return template;
-        }
-
-    private static xArray TYPE_ARRAY_TEMPLATE;
-    private static xArray PROPERTY_ARRAY_TEMPLATE;
-    private static xArray METHOD_ARRAY_TEMPLATE;
-    private static xArray FUNCTION_ARRAY_TEMPLATE;
-
-
-    // ----- ClassComposition caching and helpers --------------------------------------------------
-
-    /**
-     * @return the ClassComposition for an Array of Type
-     */
-    public ClassComposition ensureTypeArray()
-        {
-        ClassComposition clz = TYPE_ARRAY;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
-            TYPE_ARRAY = clz = f_templates.resolveClass(typeTypeArray);
-            assert clz != null;
-            }
-        return clz;
-        }
-
-    /**
-     * @return the ClassComposition for an Array of Property
-     */
-    public ClassComposition ensurePropertyArray(TypeConstant typeTarget)
-        {
-        assert typeTarget != null;
-        ConstantPool pool = pool();
-        TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                pool.ensureParameterizedTypeConstant(pool.typeProperty(), typeTarget));
-        return f_templates.resolveClass(typePropertyArray);
-        }
-
-    /**
-     * @return the ClassComposition for an Array of Property constants
-     */
-    public ClassComposition ensureConstantArray()
-        {
-        ClassComposition clz = CONSTANT_ARRAY;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeConstantArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeProperty());
-            CONSTANT_ARRAY = clz = f_templates.resolveClass(typeConstantArray);
-            assert clz != null;
-            }
-        return clz;
-        }
-
-    /**
-     * @return the ClassComposition for an Array of Method
-     */
-    public ClassComposition ensureMethodArray(TypeConstant typeTarget)
-        {
-        assert typeTarget != null;
-        ConstantPool pool = pool();
-        TypeConstant typeMethodArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget));
-        return f_templates.resolveClass(typeMethodArray);
-        }
-
-    /**
-     * @return the ClassComposition for an Array of Function
-     */
-    public ClassComposition ensureFunctionArray()
-        {
-        ClassComposition clz = FUNCTION_ARRAY;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeFunctionArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeFunction());
-            FUNCTION_ARRAY = clz = f_templates.resolveClass(typeFunctionArray);
-            assert clz != null;
-            }
-        return clz;
-        }
-
-    /**
-     * @return the TypeConstant for a Constructor
-     */
-    public TypeConstant ensureConstructorType(TypeConstant typeTarget, TypeConstant typeParent)
-        {
-        assert typeTarget != null;
-        ConstantPool pool = pool();
-        TypeConstant typeParams  = typeParent == null
-                ? pool.ensureParameterizedTypeConstant(pool.typeTuple(), TypeConstant.NO_TYPES)
-                : pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeParent);
-        TypeConstant typeReturns = pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeTarget);
-        return pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeParams, typeReturns);
-        }
-
-    /**
-     * @return the ClassComposition for an Array of Constructor
-     */
-    public ClassComposition ensureConstructorArray(TypeConstant typeTarget, TypeConstant typeParent)
-        {
-        ConstantPool pool = pool();
-
-        assert typeTarget != null;
-
-        TypeConstant typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                ensureConstructorType(typeTarget, typeParent));
-        return f_templates.resolveClass(typeArray);
-        }
-
-    private static ClassComposition TYPE_ARRAY;
-    private static ClassComposition CONSTANT_ARRAY;
-    private static ClassComposition FUNCTION_ARRAY;
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -1363,4 +1180,59 @@ public class xRTType
                 throw new IllegalStateException("unsupported type: " + type);
             }
         }
+
+
+    // ----- Template, Composition, and handle caching ---------------------------------------------
+
+    /**
+     * @return the ClassTemplate for an Array of Type
+     */
+    public static xArray ensureArrayTemplate()
+        {
+        xArray template = ARRAY_TEMPLATE;
+        if (template == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
+            ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeTypeArray));
+            assert template != null;
+            }
+        return template;
+        }
+
+    /**
+     * @return the ClassComposition for an Array of Type
+     */
+    public static ClassComposition ensureArrayComposition()
+        {
+        ClassComposition clz = ARRAY_CLZCOMP;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
+            ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeTypeArray);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    /**
+     * @return the handle for an empty Array of Type
+     */
+    public static ArrayHandle ensureEmptyArray()
+        {
+        if (ARRAY_EMPTY == null)
+            {
+            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+                ensureArrayComposition(), new ObjectHandle[0]);
+            }
+        return ARRAY_EMPTY;
+        }
+
+
+    // ----- data members --------------------------------------------------------------------------
+
+    private static xArray           ARRAY_TEMPLATE;
+    private static ClassComposition ARRAY_CLZCOMP;
+    private static ArrayHandle      ARRAY_EMPTY;
     }

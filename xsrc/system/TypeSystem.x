@@ -1,6 +1,8 @@
 import collections.ListMap;
 import collections.HashSet;
+
 import reflect.ClassTemplate;
+import reflect.TypeTemplate;
 
 
 /**
@@ -41,7 +43,7 @@ const TypeSystem
             moduleBySimpleName.putIfAbsent(simpleName, _module);
 
             if (shared.size > Loop.count && shared[Loop.count]
-                    || qualifiedName == CORE)           // the core Ecstasy module is always shared
+                    || qualifiedName == MackKernel)           // the core Ecstasy module is always shared
                 {
                 sharedModules.add(_module);
                 }
@@ -49,8 +51,8 @@ const TypeSystem
 
         // make sure that the core Ecstasy module is always present, and always shared
         Module ecstasy = this:module;
-        assert ecstasy.qualifiedName == CORE;
-        if (moduleByQualifiedName.putIfAbsent(CORE, ecstasy))
+        assert ecstasy.qualifiedName == MackKernel;
+        if (moduleByQualifiedName.putIfAbsent(MackKernel, ecstasy))
             {
             modules = modules + ecstasy;
             sharedModules.add(ecstasy);
@@ -63,9 +65,23 @@ const TypeSystem
         }
 
     /**
-     * The qualified name of the core Ecstasy module.
+     * The qualified name of the core Ecstasy module. The core Ecstasy module is notable for two
+     * unique reasons:
+     *
+     * * It has no dependencies on other modules;
+     * * It is automatically present in every module.
+     *
+     * As the foundation module for the _Turtles Type System_, this module is known as the Mack
+     * kernel, whose namesake is the bottom turtle in the technical documentation by Dr. Seuss.
+     * (Apologies to Richard Rashid.)
      */
-    static String CORE = "Ecstasy.xtclang.org";
+    static String MackKernel = "Ecstasy.xtclang.org";
+
+    /**
+     * The reserved package import name for the core Ecstasy module. This package name automatically
+     * exists in the root of every module.
+     */
+    static String MackPackage = "ecstasy";
 
     /**
      * The modules that make up the type system.
@@ -105,18 +121,6 @@ const TypeSystem
     ListMap<String, Module> moduleBySimpleName;
 
     /**
-     * Obtain a [ClassTemplate] that is loaded within this `TypeSystem`, based on its qualified
-     * name.
-     *
-     * @return True iff the name identifies a `ClassTemplate`
-     * @return (conditional) the specified `ClassTemplate`
-     */
-    conditional ClassTemplate templateForName(String name)
-        {
-        TODO
-        }
-
-    /**
      * Obtain a [Class] that exists within this `TypeSystem`, based on its class string.
      *
      * @return True iff the name identifies a `Class` that exists in this `TypeSystem`
@@ -124,7 +128,25 @@ const TypeSystem
      */
     conditional Class classForName(String name)
         {
-        TODO
+        if (Int moduleSep := name.indexOf(':'))
+            {
+            String moduleName = name[0..moduleSep);
+            if (Module _module := moduleByQualifiedName.get(moduleName))
+                {
+                return _module.classForName(name[moduleSep+1 .. name.size));
+                }
+
+            if (Module _module := moduleBySimpleName.get(moduleName))
+                {
+                return _module.classForName(name[moduleSep+1 .. name.size));
+                }
+
+            return false;
+            }
+        else
+            {
+            return primaryModule.classForName(name);
+            }
         }
 
     /**
@@ -135,21 +157,13 @@ const TypeSystem
      */
     conditional Type typeForName(String name)
         {
-        TODO
+        TODO this needs to handle '(..)', '?', '+', '-', '|', and the rest of the type syntax
         }
 
     /**
      * The modules in this type system that are shared with the type system of the parent container.
      */
     HashSet<Module> sharedModules;
-
-    /**
-     * True iff the module contains at least one singleton service.
-     */
-    @Lazy Boolean containsSingletonServices.calc()
-        {
-        return modules.iterator().untilAny(m -> m.containsSingletonServices);
-        }
     }
 
 

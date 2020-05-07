@@ -67,7 +67,7 @@ public class NamedTypeExpression
     /**
      * Construct a NamedTypeExpression with a "left".
      */
-    public NamedTypeExpression(NamedTypeExpression left, List<Token> names,
+    public NamedTypeExpression(TypeExpression left, List<Token> names,
                                List<TypeExpression> params, long lEndPos)
         {
         this.left       = left;
@@ -98,8 +98,69 @@ public class NamedTypeExpression
         setStage(Stage.Validated);
         }
 
+    /**
+     * Construct a NamedTypeExpression with an optional module. (This is NOT for the compiler.)
+     */
+    public NamedTypeExpression(List<Token> module, List<Token> names,
+                               List<TypeExpression> params, long lEndPos)
+        {
+        this.module     = module;
+        this.left       = null;
+        this.immutable  = null;
+        this.names      = names;
+        this.access     = null;
+        this.nonnarrow  = null;
+        this.paramTypes = params;
+        this.lStartPos  = (module == null ? names : module).get(0).getStartPosition();
+        this.lEndPos    = lEndPos;
+        }
+
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * Assemble the qualified name of the module. This information and this method are not used by
+     * compilation; this is for runtime support only.
+     *
+     * @return the dot-delimited name of the module, or null if no module is specified
+     */
+    public String getModule()
+        {
+        if (module == null)
+            {
+            return null;
+            }
+
+        StringBuilder sb = new StringBuilder();
+
+        boolean first = true;
+        for (Token name : module)
+            {
+            if (first)
+                {
+                first = false;
+                }
+            else
+                {
+                sb.append('.');
+                }
+            sb.append(name.getValueText());
+            }
+
+        return sb.toString();
+        }
+
+    public String[] getModuleNames()
+        {
+        List<Token> list = module;
+        int         c    = list.size();
+        String[]    as   = new String[c];
+        for (int i = 0; i < c; ++i)
+            {
+            as[i] = list.get(i).getValueText();
+            }
+        return as;
+        }
 
     /**
      * Assemble the qualified name.
@@ -108,6 +169,11 @@ public class NamedTypeExpression
      */
     public String getName()
         {
+        if (names == null)
+            {
+            return "";
+            }
+
         StringBuilder sb = new StringBuilder();
 
         boolean first = true;
@@ -121,7 +187,7 @@ public class NamedTypeExpression
                 {
                 sb.append('.');
                 }
-            sb.append(name.getValue());
+            sb.append(name.getValueText());
             }
 
         return sb.toString();
@@ -130,7 +196,7 @@ public class NamedTypeExpression
     public String[] getNames()
         {
         List<Token> list = names;
-        int         c    = list.size();
+        int         c    = list == null ? 0 : list.size();
         String[]    as   = new String[c];
         for (int i = 0; i < c; ++i)
             {
@@ -275,16 +341,16 @@ public class NamedTypeExpression
     protected List<String> collectNames(int cNames)
         {
         List<Token>  listThis   = names;
-        int          cNamesThis = listThis.size();
+        int          cNamesThis = listThis == null ? 0 : listThis.size();
         List<String> listNames;
 
-        if (left == null)
+        if (left instanceof NamedTypeExpression)
             {
-            listNames = new ArrayList<>(cNames + cNamesThis);
+            listNames = ((NamedTypeExpression) left).collectNames(cNames + cNamesThis);
             }
         else
             {
-            listNames = left.collectNames(cNames + names.size());
+            listNames = new ArrayList<>(cNames + cNamesThis);
             }
 
         for (int i = 0; i < cNamesThis; ++i)
@@ -521,7 +587,8 @@ public class NamedTypeExpression
                         log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                         fProceed = false;
                         }
-                    else if (((PropertyConstant) constId).isFormalType() && names.size() > 1)
+                    else if (((PropertyConstant) constId).isFormalType()
+                            && names != null && names.size() > 1)
                         {
                         errsTemp.merge();
                         log(errs, Severity.ERROR, Compiler.INVALID_FORMAL_TYPE_IDENTITY);
@@ -568,8 +635,8 @@ public class NamedTypeExpression
                 }
 
             case ERROR:
-                if (left == null && names.size() > 1 && access == null && immutable == null &&
-                        paramTypes == null && getCodeContainer() != null)
+                if (left == null && names != null && names.size() > 1 && access == null
+                        && immutable == null && paramTypes == null && getCodeContainer() != null)
                     {
                     // assume that the type is "dynamic", for example: "that.Element"
                     return;
@@ -618,7 +685,8 @@ public class NamedTypeExpression
                             log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                             return null;
                             }
-                        if (((PropertyConstant) constId).isFormalType() && names.size() > 1)
+                        if (((PropertyConstant) constId).isFormalType()
+                                && names != null && names.size() > 1)
                             {
                             errsTemp.merge();
                             log(errs, Severity.ERROR, Compiler.INVALID_FORMAL_TYPE_IDENTITY);
@@ -684,7 +752,7 @@ public class NamedTypeExpression
             }
         else
             {
-            NamedTypeExpression exprOld = left;
+            TypeExpression exprOld = left;
 
             Expression exprNew = exprOld.validate(ctx, null, errs);
             if (exprNew == null)
@@ -1017,9 +1085,12 @@ public class NamedTypeExpression
             switch (m_constId.getFormat())
                 {
                 case Class:
-                    for (Token name : names)
+                    if (names != null)
                         {
-                        type = pool.ensureVirtualChildTypeConstant(type, name.getValueText());
+                        for (Token name : names)
+                            {
+                            type = pool.ensureVirtualChildTypeConstant(type, name.getValueText());
+                            }
                         }
                     return type;
 
@@ -1058,6 +1129,12 @@ public class NamedTypeExpression
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
+
+        if (module != null)
+            {
+            sb.append(getModule())
+              .append(':');
+            }
 
         if (left != null)
             {
@@ -1114,7 +1191,8 @@ public class NamedTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected NamedTypeExpression  left;
+    protected List<Token>          module;
+    protected TypeExpression       left;
     protected Token                immutable;
     protected List<Token>          names;
     protected Token                access;

@@ -24,16 +24,15 @@ service Container
         // TODO
 
         // load and link the modules
-
         @Inject Linker linker;
         (TypeSystem typeSystem, ApplicationControl appControl) =
-                linker.loadAndLink(moduleName, repository, injector);
+                linker.loadAndLink(moduleName, repository, injector);  // REVIEW GG typeSystem property is on Service
 
         // store off the results
         this.moduleName    = moduleName;
         this.repository    = repository;
         this.sharedModules = sharedModules;
-        this.typeSystem    = typeSystem;
+    //  this.typeSystem    = typeSystem; REVIEW
         this.appControl    = appControl;
         }
 
@@ -54,11 +53,6 @@ service Container
      * The shared modules.
      */
     public/private Module[] sharedModules;
-
-    /**
-     * The TypeSystem for the underlying module.
-     */
-    public/private TypeSystem typeSystem;
 
     /**
      * The AppControl for the underlying module.

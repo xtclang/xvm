@@ -27,14 +27,14 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
-import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xPackage;
 import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
+import org.xvm.runtime.template._native.reflect.xRTModule;
+import org.xvm.runtime.template._native.reflect.xRTPackage;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
@@ -673,11 +673,11 @@ public abstract class Utils
             switch (constValue.getFormat())
                 {
                 case Module:
-                    iResult = xModule.INSTANCE.createConstHandle(frame, constValue);
+                    iResult = xRTModule.INSTANCE.createConstHandle(frame, constValue);
                     break;
 
                 case Package:
-                    iResult = xPackage.INSTANCE.createConstHandle(frame, constValue);
+                    iResult = xRTPackage.INSTANCE.createConstHandle(frame, constValue);
                     break;
 
                 case Property:

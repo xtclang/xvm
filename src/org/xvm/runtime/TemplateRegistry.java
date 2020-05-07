@@ -27,17 +27,17 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction;
-import org.xvm.runtime.template._native.reflect.xRTType;
-
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.Mixin;
-import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xObject;
-import org.xvm.runtime.template.xPackage;
 import org.xvm.runtime.template.xService;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTModule;
+import org.xvm.runtime.template._native.reflect.xRTPackage;
+import org.xvm.runtime.template._native.reflect.xRTType;
 
 import org.xvm.util.Handy;
 
@@ -128,6 +128,8 @@ public class TemplateRegistry
             }
 
         // add run-time templates
+        f_mapTemplatesByType.put(pool.typeModule()  , xRTModule  .INSTANCE); // TODO GG - why is this needed?
+        f_mapTemplatesByType.put(pool.typePackage() , xRTPackage .INSTANCE);
         f_mapTemplatesByType.put(pool.typeFunction(), xRTFunction.INSTANCE);
         f_mapTemplatesByType.put(pool.typeType()    , xRTType    .INSTANCE);
 
@@ -375,11 +377,11 @@ public class TemplateRegistry
                     break;
 
                 case MODULE:
-                    template = new xModule(this, structClass, false);
+                    template = new xRTModule(this, structClass, false);
                     break;
 
                 case PACKAGE:
-                    template = new xPackage(this, structClass, false);
+                    template = new xRTPackage(this, structClass, false);
                     break;
 
                 default:

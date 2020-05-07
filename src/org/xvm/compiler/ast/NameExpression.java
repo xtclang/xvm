@@ -2018,7 +2018,7 @@ public class NameExpression
                         }
                     else
                         {
-                        ClassConstant clz = pool.ensureClassConstant(type);
+                        IdentityConstant clz = pool.ensureClassConstant(type);
                         m_plan = Plan.None;
                         m_arg  = clz;
                         return clz.getValueType(type);

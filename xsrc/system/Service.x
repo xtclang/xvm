@@ -66,6 +66,20 @@
 interface Service()
     {
     /**
+     * The TypeSystem of the container that this service is running within.
+     *
+     * This is almost always the same TypeSystem of the service that created this service, except in
+     * the case of the container service itself, which uses the TypeSystem that it forms in its
+     * constructor from the set of modules that it is instantiated around.
+     *
+     * When running code needs to determine the TypeSystem of the current container, it can simply
+     * obtain this value:
+     *
+     *     TypeSystem ts = this:service.typeSystem;
+     */
+    @RO TypeSystem typeSystem;
+
+    /**
      * The name assigned to the service. If this method is not overridden, the name
      * defaults to the name of the service class. This property is intended as a means to help
      * diagnose faults, and to provide runtime manageability information.
@@ -329,6 +343,8 @@ interface Service()
     @Override
     immutable Service makeImmutable()
         {
+        // services are, by their nature, mutable; it is illegal to attempt to make a service into
+        // an immutable object
         throw new UnsupportedOperation();
         }
     }

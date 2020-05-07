@@ -11,6 +11,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.DecoratedClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -57,7 +58,6 @@ public class xRTClass
         {
         markNativeProperty("abstract");
         markNativeProperty("composition");
-        markNativeProperty("formalTypes");
         markNativeProperty("name");
         markNativeProperty("virtualChild");
 
@@ -75,9 +75,9 @@ public class xRTClass
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof ClassConstant)
+        if (constant instanceof ClassConstant || constant instanceof DecoratedClassConstant)
             {
-            ClassConstant    idClz    = (ClassConstant) constant;
+            IdentityConstant idClz    = (IdentityConstant) constant;
             TypeConstant     typeClz  = idClz.getValueType(null);
             ClassComposition clz      = ensureClass(typeClz);
             ClassTemplate    template = clz.getTemplate();
@@ -252,8 +252,8 @@ public class xRTClass
         int            cParams = clz.getTypeParamCount();
         if (cParams == 0)
             {
-            hNames = ensureEmptyStringArray();
-            hTypes = ensureEmptyTypeArray();
+            hNames = xString.ensureEmptyArray();
+            hTypes = xRTType.ensureEmptyArray();
             }
         else
             {
@@ -266,8 +266,11 @@ public class xRTClass
                 ahNames[i] = xString.makeHandle(iterNames.next().getValue());
                 ahTypes[i] = xRTType.makeHandle(atypeParam[i]);
                 }
-            hNames = ensureStringArrayTemplate().createArrayHandle(ensureStringArrayComposition(), ahNames);
-            hTypes = ensureTypeArrayTemplate()  .createArrayHandle(ensureTypeArrayComposition()  , ahTypes);
+
+            hNames = xString.ensureArrayTemplate().createArrayHandle(
+                    xString.ensureArrayComposition(), ahNames);
+            hTypes = xRTType.ensureArrayTemplate().createArrayHandle(
+                    xRTType.ensureArrayComposition(), ahTypes);
             }
         return frame.assignValues(aiReturn, hNames, hTypes);
         }
@@ -357,102 +360,54 @@ public class xRTClass
     // ----- Template, Composition, and handle caching ---------------------------------------------
 
     /**
-     * @return the ClassTemplate for an Array of Type
+     * @return the ClassTemplate for an Array of Class
      */
-    public xArray ensureTypeArrayTemplate()
+    public static xArray ensureArrayTemplate()
         {
-        xArray template = TYPE_ARRAY_TEMPLATE;
+        xArray template = ARRAY_TEMPLATE;
         if (template == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
-            TYPE_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeTypeArray));
+            TypeConstant typeClassArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeClass());
+            ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeClassArray));
             assert template != null;
             }
         return template;
         }
 
     /**
-     * @return the ClassComposition for an Array of Type
+     * @return the ClassComposition for an Array of Class
      */
-    public ClassComposition ensureTypeArrayComposition()
+    public static ClassComposition ensureArrayComposition()
         {
-        ClassComposition clz = TYPE_ARRAY_CLZCOMP;
+        ClassComposition clz = ARRAY_CLZCOMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
-            TYPE_ARRAY_CLZCOMP = clz = f_templates.resolveClass(typeTypeArray);
+            TypeConstant typeClassArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeClass());
+            ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeClassArray);
             assert clz != null;
             }
         return clz;
         }
 
     /**
-     * @return the handle for an empty Array of Type
+     * @return the handle for an empty Array of Class
      */
-    ArrayHandle ensureEmptyTypeArray()
+    public static ArrayHandle ensureEmptyArray()
         {
-        if (TYPE_ARRAY_EMPTY == null)
+        if (ARRAY_EMPTY == null)
             {
-            TYPE_ARRAY_EMPTY = ensureTypeArrayTemplate().createArrayHandle(
-                    ensureTypeArrayComposition(), new ObjectHandle[0]);
+            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+                ensureArrayComposition(), new ObjectHandle[0]);
             }
-        return TYPE_ARRAY_EMPTY;
-        }
-
-    /**
-     * @return the ClassTemplate for an Array of String
-     */
-    public xArray ensureStringArrayTemplate()
-        {
-        xArray template = STRING_ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeStringArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeString());
-            STRING_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeStringArray));
-            assert template != null;
-            }
-        return template;
-        }
-
-    /**
-     * @return the ClassComposition for an Array of String
-     */
-    public ClassComposition ensureStringArrayComposition()
-        {
-        ClassComposition clz = STRING_ARRAY_CLZCOMP;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeStringArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeString());
-            STRING_ARRAY_CLZCOMP = clz = f_templates.resolveClass(typeStringArray);
-            assert clz != null;
-            }
-        return clz;
-        }
-
-    /**
-     * @return the handle for an empty Array of String
-     */
-    ArrayHandle ensureEmptyStringArray()
-        {
-        if (STRING_ARRAY_EMPTY == null)
-            {
-            STRING_ARRAY_EMPTY = ensureStringArrayTemplate().createArrayHandle(
-                ensureStringArrayComposition(), new ObjectHandle[0]);
-            }
-        return STRING_ARRAY_EMPTY;
+        return ARRAY_EMPTY;
         }
 
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static xArray           TYPE_ARRAY_TEMPLATE;
-    private static ClassComposition TYPE_ARRAY_CLZCOMP;
-    private static ArrayHandle      TYPE_ARRAY_EMPTY;
-    private static xArray           STRING_ARRAY_TEMPLATE;
-    private static ClassComposition STRING_ARRAY_CLZCOMP;
-    private static ArrayHandle      STRING_ARRAY_EMPTY;
+    private static xArray           ARRAY_TEMPLATE;
+    private static ClassComposition ARRAY_CLZCOMP;
+    private static ArrayHandle      ARRAY_EMPTY;
     }

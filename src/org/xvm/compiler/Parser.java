@@ -34,7 +34,7 @@ import org.xvm.util.Severity;
  */
 public class Parser
     {
-    // ----- constructors ------------------------------------------------------
+    // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct an XTC lexical analyzer.
@@ -75,7 +75,7 @@ public class Parser
         }
 
 
-    // ----- parsing -----------------------------------------------------------
+    // ----- parsing -------------------------------------------------------------------------------
 
     /**
      * Parse the compilation unit.
@@ -192,6 +192,108 @@ public class Parser
             }
 
         return null;
+        }
+
+    /**
+     * As part of the runtime (NOT compile-time), parse the name of the class that is in the source.
+     *
+     * <p/><code><pre>
+     * ClassExpression
+     *     AnnotationList-opt ModuleName-opt QualifiedName TypeParameterTypeList-opt ChildClasses-opt Modifiers-opt
+     *
+     * AnnotationList
+     *     AnnotationList Annotation
+     *     Annotation
+     *
+     * Annotation
+     *     "@" ClassName ArgumentList-opt       # arguments must be constants
+     *
+     * ModuleName
+     *     QualifiedName ":"
+     *
+     * ChildClasses
+     *     ChildClasses ChildClass
+     *     ChildClass
+     *
+     * ChildClass
+     *     "." AnnotationList-opt QualifiedName TypeParameterTypeList-opt
+     *
+     * ClassModifiers
+     *     ClassModifiers ClassModifier
+     *     ClassModifier
+     *
+     * ClassModifier
+     *     "[" DimIndicators-opt "]"
+     *     "..."
+     * </pre></code>
+     *
+     * In the above BNF, the definitions are custom to this method, except for ArgumentList,
+     * DimIndicators, and QualifiedName
+     *
+     * @return the TypeExpression for the class that is parsed, or null
+     */
+    public TypeExpression parseClassExpression()
+        {
+        TypeExpression exprResult = null;
+        do
+            {
+            List<AnnotationExpression> annotations = null;
+            AnnotationExpression       annotation  = null;
+            while ((annotation = parseAnnotation(false)) != null)
+                {
+                if (annotations == null)
+                    {
+                    annotations = new ArrayList<>();
+                    }
+                annotations.add(annotation);
+                }
+
+            List<Token> moduleNames = null;
+            List<Token> classNames  = parseQualifiedName();
+            if (exprResult == null && match(Id.COLON) != null)
+                {
+                moduleNames = classNames;
+                classNames  = parseQualifiedName(false);
+                }
+
+            List<TypeExpression> params = parseTypeParameterTypeList(false, true);
+
+            if (exprResult == null)
+                {
+                exprResult = new NamedTypeExpression(moduleNames, classNames, params, prev().getEndPosition());
+                }
+            else
+                {
+                exprResult = new NamedTypeExpression(exprResult, classNames, params, prev().getEndPosition());
+                }
+            }
+        while (match(Id.DOT) != null);
+
+        // parse modifiers
+        while (!eof())
+            {
+            if (peek().getId() == Id.ELLIPSIS)
+                {
+                exprResult = new SequenceTypeExpression(exprResult, expect(Id.ELLIPSIS));
+                }
+            else
+                {
+                expect(Id.L_SQUARE);
+                int cExplicitDims = 0;
+                while (match(Id.R_SQUARE) == null)
+                    {
+                    if (cExplicitDims > 0)
+                        {
+                        expect(Id.COMMA);
+                        }
+                    expect(Id.COND);
+                    ++cExplicitDims;
+                    }
+                exprResult = new ArrayTypeExpression(exprResult, cExplicitDims, prev().getEndPosition());
+                }
+            }
+
+        return exprResult;
         }
 
     /**
@@ -4469,6 +4571,31 @@ public class Parser
     /**
      * Parse a dot-delimited list of names.
      *
+     * @param fRequired  pass true if the name is required; false if it is optional
+     *
+     * @return a list of zero or more identifier tokens
+     */
+    List<Token> parseQualifiedName(boolean fRequired)
+        {
+        if (!fRequired)
+            {
+            Token tokTest = match(Id.IDENTIFIER);
+            if (tokTest == null)
+                {
+                return Collections.EMPTY_LIST;
+                }
+            else
+                {
+                putBack(tokTest);
+                }
+            }
+
+        return parseQualifiedName();
+        }
+
+    /**
+     * Parse a dot-delimited list of names.
+     *
      * <p/><code><pre>
      * QualifiedName
      *    Name
@@ -5594,7 +5721,7 @@ public class Parser
         }
 
 
-    // ----- constants ---------------------------------------------------------
+    // ----- constants -----------------------------------------------------------------------------
 
     /**
      * Unknown fatal error.
@@ -5696,7 +5823,7 @@ public class Parser
     public static final String INVALID_PATH      = "PARSER-24";
 
 
-    // ----- data members ------------------------------------------------------
+    // ----- data members --------------------------------------------------------------------------
 
     /**
      * The Source to parse.
