@@ -189,7 +189,9 @@ public class DecoratedClassConstant
             constParent = ((ClassConstant) constParent).getNamespace();
             }
 
-        return "class=" + getValueString() + ", " + constParent.getDescription();
+        return constParent == null
+            ? "class=" + getValueString()
+            : "class=" + getValueString() + ", " + constParent.getDescription();
         }
 
 

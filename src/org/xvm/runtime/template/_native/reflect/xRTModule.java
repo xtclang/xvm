@@ -206,8 +206,7 @@ public class xRTModule
                 }
             else
                 {
-                ConstantPool     pool  = frame.poolContext();
-                IdentityConstant idClz = pool.ensureClassConstant(typeClz);
+                IdentityConstant idClz = typeClz.getConstantPool().ensureClassConstant(typeClz);
                 ObjectHandle     hClz  = frame.getConstHandle(idClz);
                 if (Op.isDeferred(hClz))
                     {
