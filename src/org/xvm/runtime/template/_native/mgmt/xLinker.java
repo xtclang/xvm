@@ -195,14 +195,12 @@ public class xLinker
                 {
                 case Op.R_NEXT:
                     return frameCaller.assignValues(aiReturn,
-                        frameCaller.popStack(),
-                        xAppControl.INSTANCE.makeHandle(frameCaller.f_context, container));
+                        frameCaller.popStack(), xAppControl.INSTANCE.makeHandle(container));
 
                 case Op.R_CALL:
                     frameCaller.m_frameNext.addContinuation(frameCaller1 ->
                         frameCaller1.assignValues(aiReturn,
-                            frameCaller1.popStack(),
-                            xAppControl.INSTANCE.makeHandle(frameCaller.f_context, container)));
+                            frameCaller1.popStack(), xAppControl.INSTANCE.makeHandle(container)));
                     return Op.R_CALL;
 
                 case Op.R_EXCEPTION:

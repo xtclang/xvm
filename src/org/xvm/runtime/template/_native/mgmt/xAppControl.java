@@ -10,6 +10,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -23,7 +24,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xService;
+import org.xvm.runtime.template.xService.ServiceHandle;
 import org.xvm.runtime.template.xString.StringHandle;
 
 
@@ -31,13 +32,13 @@ import org.xvm.runtime.template.xString.StringHandle;
  * Native implementation of _native.mgmt.AppControl class.
  */
 public class xAppControl
-        extends xService
+        extends ClassTemplate
     {
     public static xAppControl INSTANCE;
 
     public xAppControl(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(templates, structure);
 
         if (fInstance)
             {
@@ -134,19 +135,20 @@ public class xAppControl
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    public ObjectHandle makeHandle(ServiceContext ctxOuter, Container container)
+    public ObjectHandle makeHandle(Container container)
         {
-        return new ControlHandle(m_clzControl, ctxOuter, container);
+        return new ControlHandle(m_clzControl, container);
         }
 
     protected static class ControlHandle
-            extends ServiceHandle
+            extends ObjectHandle
         {
-        protected ControlHandle(TypeComposition clazz, ServiceContext ctx, Container container)
+        protected ControlHandle(TypeComposition clazz, Container container)
             {
-            super(clazz, ctx);
+            super(clazz);
 
             m_container = container;
+            m_fMutable  = false;
             }
 
         /**

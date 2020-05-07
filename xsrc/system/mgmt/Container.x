@@ -25,15 +25,15 @@ service Container
 
         // load and link the modules
         @Inject Linker linker;
-        (TypeSystem typeSystem, ApplicationControl appControl) =
-                linker.loadAndLink(moduleName, repository, injector);  // REVIEW GG typeSystem property is on Service
+        (TypeSystem innerTypeSystem, ApplicationControl appControl) =
+                linker.loadAndLink(moduleName, repository, injector);
 
         // store off the results
-        this.moduleName    = moduleName;
-        this.repository    = repository;
-        this.sharedModules = sharedModules;
-    //  this.typeSystem    = typeSystem; REVIEW
-        this.appControl    = appControl;
+        this.moduleName      = moduleName;
+        this.repository      = repository;
+        this.sharedModules   = sharedModules;
+        this.innerTypeSystem = innerTypeSystem;
+        this.appControl      = appControl;
         }
 
 
@@ -55,9 +55,17 @@ service Container
     public/private Module[] sharedModules;
 
     /**
-     * The AppControl for the underlying module.
+     * The TypeSystem for services running inside this Container.
      */
-    @Atomic public/private ApplicationControl appControl;
+    public/private TypeSystem innerTypeSystem;
+
+    /**
+     * The AppControl for services running inside this Container.
+     *
+     * Note: this delegating property is marked as Atomic, which creates an asynchronous delegating
+     *       stub.
+     */
+    @Atomic private ApplicationControl appControl;
 
     /**
      * The linker.
