@@ -35,8 +35,7 @@ public class xFloat32
         if (constant instanceof Float32Constant)
             {
             double dValue = ((Float32Constant) constant).getValue();
-            frame.pushStack(makeHandle(dValue));
-            return Op.R_NEXT;
+            return frame.pushStack(makeHandle(dValue));
             }
 
         return super.createConstHandle(frame, constant);

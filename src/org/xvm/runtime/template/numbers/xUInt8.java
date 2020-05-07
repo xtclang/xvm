@@ -71,9 +71,8 @@ public class xUInt8
         {
         if (constant instanceof UInt8Constant)
             {
-            frame.pushStack(
-                makeHandle(((UInt8Constant) constant).getValue().longValue()));
-            return Op.R_NEXT;
+            return frame.pushStack(
+                    makeHandle(((UInt8Constant) constant).getValue().longValue()));
             }
 
         return super.createConstHandle(frame, constant);

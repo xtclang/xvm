@@ -91,8 +91,7 @@ public class xRef
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName,
-                               ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         RefHandle hRef = (RefHandle) hTarget;
 
@@ -104,7 +103,7 @@ public class xRef
 
             case "actualClass":
                 return actOnReferent(frame, hRef,
-                    h -> frame.assignValue(iReturn, frame.getConstHandle(
+                    h -> frame.assignDeferredValue(iReturn, frame.getConstHandle(
                         h.getType().getConstantPool().ensureClassConstant(h.getType()))));
 
             case "assigned":

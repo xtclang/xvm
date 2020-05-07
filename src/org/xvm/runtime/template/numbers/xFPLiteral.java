@@ -75,8 +75,7 @@ public class xFPLiteral
         StringHandle    hText       = (StringHandle) frame.getConstHandle(constVal.getStringConstant());
         VarFPHandle     hFPLiteral  = makeFPLiteral(constVal.getBigDecimal(), hText);
 
-        frame.pushStack(hFPLiteral);
-        return Op.R_NEXT;
+        return frame.pushStack(hFPLiteral);
         }
 
     @Override

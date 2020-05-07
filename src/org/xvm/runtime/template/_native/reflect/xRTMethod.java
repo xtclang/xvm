@@ -82,8 +82,8 @@ public class xRTMethod
         {
         if (constant instanceof MethodConstant)
             {
-            frame.pushStack(makeHandle(frame.getThis().getType(), (MethodConstant) constant));
-            return Op.R_NEXT;
+            return frame.pushStack(
+                    makeHandle(frame.getThis().getType(), (MethodConstant) constant));
             }
 
         return super.createConstHandle(frame, constant);

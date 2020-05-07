@@ -52,9 +52,8 @@ public class xInt8
         {
         if (constant instanceof Int8Constant)
             {
-            frame.pushStack(
-                makeJavaLong(((Int8Constant) constant).getValue().longValue()));
-            return Op.R_NEXT;
+            return frame.pushStack(
+                    makeJavaLong(((Int8Constant) constant).getValue().longValue()));
             }
 
         return super.createConstHandle(frame, constant);

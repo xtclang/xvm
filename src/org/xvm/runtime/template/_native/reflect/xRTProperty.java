@@ -82,8 +82,7 @@ public class xRTProperty
             TypeConstant     typeProperty = idProperty.getValueType(typeParent);
             ObjectHandle     hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
 
-            frame.pushStack(hProperty);
-            return Op.R_NEXT;
+            return frame.pushStack(hProperty);
             }
 
         return super.createConstHandle(frame, constant);
@@ -312,25 +311,15 @@ public class xRTProperty
     public int invokeIsConstant(Frame frame, PropertyHandle hProp, int[] aiReturn)
         {
         PropertyInfo info = hProp.getPropertyInfo();
-        if (!info.isConstant())
+        if (info.isConstant())
             {
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            PropertyConstant  idProp      = hProp.getPropertyConstant();
+            SingletonConstant idSingleton = idProp.getConstantPool().ensureSingletonConstConstant(idProp);
+
+            return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(idSingleton));
             }
 
-        PropertyConstant  idProp      = hProp.getPropertyConstant();
-        SingletonConstant idSingleton = idProp.getConstantPool().ensureSingletonConstConstant(idProp);
-        ObjectHandle      hValue      = frame.getConstHandle(idSingleton);
-
-        if (Op.isDeferred(hValue))
-            {
-            ObjectHandle[] ahTarget = new ObjectHandle[] {hValue};
-            Frame.Continuation stepNext = frameCaller ->
-                frame.assignValues(aiReturn, xBoolean.TRUE, ahTarget[0]);
-
-            return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
-            }
-
-        return frame.assignValues(aiReturn, xBoolean.TRUE, hValue);
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
     /**

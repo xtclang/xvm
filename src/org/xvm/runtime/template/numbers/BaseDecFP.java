@@ -42,8 +42,7 @@ abstract public class BaseDecFP
         if (constant instanceof DecimalConstant)
             {
             Decimal dec = ((DecimalConstant) constant).getValue();
-            frame.pushStack(makeHandle(dec));
-            return Op.R_NEXT;
+            return frame.pushStack(makeHandle(dec));
             }
 
         return super.createConstHandle(frame, constant);

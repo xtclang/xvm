@@ -129,8 +129,7 @@ public class xRTType
 
             TypeConstant typeData = typeTarget.getParamType(0).
                     resolveGenerics(pool, frame.getGenericsResolver());
-            frame.pushStack(typeData.getTypeHandle());
-            return Op.R_NEXT;
+            return frame.pushStack(typeData.getTypeHandle());
             }
 
         return super.createConstHandle(frame, constant);
@@ -460,8 +459,8 @@ public class xRTType
                 poolCtx.ensureParameterizedTypeConstant(poolCtx.typeMap(),
                         poolCtx.typeString(), poolCtx.typeType()));
         MapConstant  constResult = poolCtx.ensureMapConstant(typeResult, mapResult);
-        ObjectHandle hResult     = frame.getConstHandle(constResult);
-        return frame.assignValue(iReturn, hResult);
+
+        return frame.assignDeferredValue(iReturn, frame.getConstHandle(constResult));
         }
 
     /**
@@ -892,16 +891,7 @@ public class xRTType
             ObjectHandle hEnum = Utils.ensureInitializedEnum(frame,
                 makeAccessHandle(frame, type.getAccess()));
 
-            if (Op.isDeferred(hEnum))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hEnum};
-                Frame.Continuation stepNext = frameCaller ->
-                    frameCaller.assignValues(aiReturn, xBoolean.TRUE, ahValue[0]);
-
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-
-            return frame.assignValues(aiReturn, xBoolean.TRUE, hEnum);
+            return frame.assignConditionalDeferredValue(aiReturn, hEnum);
             }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
@@ -943,19 +933,9 @@ public class xRTType
         TypeConstant typeTarget = hType.getDataType();
         if (typeTarget.isExplicitClassIdentity(true))
             {
-            IdentityConstant idClz  = typeTarget.getSingleUnderlyingClass(true);
-            ObjectHandle     hClass = frame.getConstHandle(idClz);
+            IdentityConstant idClz = typeTarget.getSingleUnderlyingClass(true);
 
-            if (Op.isDeferred(hClass))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hClass};
-                Frame.Continuation stepNext = frameCaller ->
-                    frameCaller.assignValues(aiReturn, xBoolean.TRUE, ahValue[0]);
-
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-
-            return frame.assignValues(aiReturn, xBoolean.TRUE, hClass);
+            return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(idClz));
             }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }

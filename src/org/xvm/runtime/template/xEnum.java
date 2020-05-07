@@ -117,8 +117,7 @@ public class xEnum
                     }
                 }
 
-            frame.pushStack(hValue);
-            return Op.R_NEXT;
+            return frame.pushStack(hValue);
             }
 
         return super.createConstHandle(frame, constant);

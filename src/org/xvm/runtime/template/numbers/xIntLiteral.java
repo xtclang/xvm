@@ -85,8 +85,7 @@ public class xIntLiteral
         StringHandle hText       = (StringHandle) frame.getConstHandle(constVal.getStringConstant());
         VarIntHandle hIntLiteral = makeIntLiteral(constVal.getPackedInteger(), hText);
 
-        frame.pushStack(hIntLiteral);
-        return Op.R_NEXT;
+        return frame.pushStack(hIntLiteral);
         }
 
     @Override

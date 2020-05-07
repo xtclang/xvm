@@ -84,9 +84,8 @@ public abstract class BaseInt128
             {
             PackedInteger piValue = ((IntConstant) constant).getValue();
 
-            frame.pushStack(makeLongLong(
+            return frame.pushStack(makeLongLong(
                 LongLong.fromBigInteger(piValue.getBigInteger())));
-            return Op.R_NEXT;
             }
 
         return super.createConstHandle(frame, constant);

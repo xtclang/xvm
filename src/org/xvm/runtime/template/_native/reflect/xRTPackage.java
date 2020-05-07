@@ -143,15 +143,9 @@ public class xRTPackage
             ModuleConstant   idModule      = module.getIdentityConstant();
             ConstantPool     pool          = frame.poolContext();
             Constant         constInstance = pool.ensureSingletonConstConstant(idModule);
-            ObjectHandle     hInstance     = frame.getConstHandle(constInstance);
-            if (Op.isDeferred(hInstance))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hInstance};
-                Frame.Continuation stepNext = frameCaller ->
-                        frameCaller.assignValues(aiReturn, xBoolean.TRUE, ahValue[0]);
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-            return frame.assignValues(aiReturn, xBoolean.TRUE, hInstance);
+
+            return frame.assignConditionalDeferredValue(aiReturn,
+                    frame.getConstHandle(constInstance));
             }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
@@ -181,23 +175,23 @@ public class xRTPackage
         ObjectHandle[] ahNames   = listNames  .toArray(Utils.OBJECTS_NONE);
         ObjectHandle[] ahClasses = listClasses.toArray(Utils.OBJECTS_NONE);
 
-        ArrayHandle hNames = xString.INSTANCE.ensureArrayTemplate().createArrayHandle(
-            xString.INSTANCE.ensureArrayComposition(), ahNames);
+        ArrayHandle hNames = xString.ensureArrayTemplate().createArrayHandle(
+            xString.ensureArrayComposition(), ahNames);
 
         if (fDeferred)
             {
             Frame.Continuation stepNext = frameCaller ->
                 {
-                ArrayHandle hClasses = xRTClass.INSTANCE.ensureArrayTemplate().createArrayHandle(
-                        xRTClass.INSTANCE.ensureArrayComposition(), ahClasses);
+                ArrayHandle hClasses = xRTClass.ensureArrayTemplate().createArrayHandle(
+                        xRTClass.ensureArrayComposition(), ahClasses);
                 return frame.assignValues(aiReturn, hNames, hClasses);
                 };
 
             return new Utils.GetArguments(ahClasses, stepNext).doNext(frame);
             }
 
-        ArrayHandle hClasses = xRTClass.INSTANCE.ensureArrayTemplate().createArrayHandle(
-                xRTClass.INSTANCE.ensureArrayComposition(), ahClasses);
+        ArrayHandle hClasses = xRTClass.ensureArrayTemplate().createArrayHandle(
+                xRTClass.ensureArrayComposition(), ahClasses);
         return frame.assignValues(aiReturn, hNames, hClasses);
         }
     }

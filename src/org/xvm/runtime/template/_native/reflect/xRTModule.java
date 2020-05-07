@@ -154,20 +154,9 @@ public class xRTModule
         {
         VersionConstant ver = null; // TODO CP need version constant on linked ModuleStructure
 
-        if (ver == null)
-            {
-            return frame.assignValue(iReturn, xNullable.NULL);
-            }
-
-        ObjectHandle hVersion = frame.getConstHandle(ver);
-        if (Op.isDeferred(hVersion))
-            {
-            ObjectHandle[] ahArg = new ObjectHandle[] {hVersion};
-            return new Utils.GetArguments(ahArg,
-                    frameCaller -> frameCaller.assignValue(iReturn, ahArg[0])).doNext(frame);
-            }
-
-        return frame.assignValue(iReturn, hVersion);
+        return ver == null
+                ? frame.assignValue(iReturn, xNullable.NULL)
+                : frame.assignDeferredValue(iReturn, frame.getConstHandle(ver));
         }
 
 
@@ -207,16 +196,8 @@ public class xRTModule
             else
                 {
                 IdentityConstant idClz = typeClz.getConstantPool().ensureClassConstant(typeClz);
-                ObjectHandle     hClz  = frame.getConstHandle(idClz);
-                if (Op.isDeferred(hClz))
-                    {
-                    ObjectHandle[] ahValue = new ObjectHandle[] {hClz};
-                    Frame.Continuation stepNext = frameCaller ->
-                            frameCaller.assignValues(aiReturn, xBoolean.TRUE, ahValue[0]);
-                    return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                    }
 
-                return frame.assignValues(aiReturn, xBoolean.TRUE, hClz);
+                return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(idClz));
                 }
             }
 

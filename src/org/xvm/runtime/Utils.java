@@ -198,18 +198,7 @@ public abstract class Utils
      */
     public static int assignInitializedEnum(Frame frame, EnumHandle hEnum, int iReturn)
         {
-        ObjectHandle hValue = ensureInitializedEnum(frame, hEnum);
-
-        if (Op.isDeferred(hValue))
-            {
-            ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
-            Frame.Continuation stepNext = frameCaller ->
-                frameCaller.assignValue(iReturn, ahValue[0]);
-
-            return new GetArguments(ahValue, stepNext).doNext(frame);
-            }
-
-        return frame.assignValue(iReturn, hValue);
+        return frame.assignDeferredValue(iReturn, ensureInitializedEnum(frame, hEnum));
         }
 
 
@@ -766,20 +755,7 @@ public abstract class Utils
             return frame.call1(methodInit, null, ahVar, Op.A_STACK);
             }
 
-        hValue = frame.getConstHandle(constVal);
-        if (Op.isDeferred(hValue))
-            {
-            ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
-            Frame.Continuation stepNext = frameCaller ->
-                {
-                frame.pushStack(ahValue[0]);
-                return Op.R_NEXT;
-                };
-            return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-            }
-
-        frame.pushStack(hValue);
-        return Op.R_NEXT;
+        return frame.pushDeferredValue(frame.getConstHandle(constVal));
         }
 
     /**

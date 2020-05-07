@@ -97,8 +97,7 @@ public class xRTFunction
 
             assert structFunc.isFunction();
 
-            frame.pushStack(new FunctionHandle(structFunc));
-            return Op.R_NEXT;
+            return frame.pushStack(new FunctionHandle(structFunc));
             }
 
         return super.createConstHandle(frame, constant);
@@ -971,9 +970,9 @@ public class xRTFunction
                 if (Op.isDeferred(hTarget))
                     {
                     ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                        Frame.Continuation stepNext = frameCaller ->
-                            super.callNImpl(frame, ahTarget[0], ahVar, aiReturn);
-                        return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
+                    Frame.Continuation stepNext = frameCaller ->
+                        super.callNImpl(frame, ahTarget[0], ahVar, aiReturn);
+                    return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
                     }
                 return super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }

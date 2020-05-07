@@ -84,9 +84,8 @@ public class xString
         {
         if (constant instanceof StringConstant)
             {
-            frame.pushStack(new StringHandle(getCanonicalClass(),
-                ((StringConstant) constant).getValue().toCharArray()));
-            return Op.R_NEXT;
+            return frame.pushStack(new StringHandle(getCanonicalClass(),
+                    ((StringConstant) constant).getValue().toCharArray()));
             }
 
         return super.createConstHandle(frame, constant);

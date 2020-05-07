@@ -837,12 +837,8 @@ public abstract class ObjectHandle
         @Override
         public int proceed(Frame frameCaller, Frame.Continuation continuation)
             {
-            Frame.Continuation stepAssign = frame ->
-                {
-                frame.pushStack(
-                    ((xArray) f_clzArray.getTemplate()).createArrayHandle(f_clzArray, f_ahValue));
-                return Op.R_NEXT;
-                };
+            Frame.Continuation stepAssign = frame -> frame.pushStack(
+                ((xArray) f_clzArray.getTemplate()).createArrayHandle(f_clzArray, f_ahValue));
 
             switch (new Utils.GetArguments(f_ahValue, stepAssign).doNext(frameCaller))
                 {

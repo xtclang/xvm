@@ -35,8 +35,7 @@ public class xFloat64
         if (constant instanceof Float64Constant)
             {
             double dValue = ((Float64Constant) constant).getValue();
-            frame.pushStack(makeHandle(dValue));
-            return Op.R_NEXT;
+            return frame.pushStack(makeHandle(dValue));
             }
 
         return super.createConstHandle(frame, constant);

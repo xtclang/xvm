@@ -21,6 +21,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.Mutability;
@@ -208,18 +209,13 @@ public class xArray
         ClassComposition clzArray = f_templates.resolveClass(typeArray);
         if (fDeferred)
             {
-            Frame.Continuation stepNext = frameCaller ->
-                {
-                frameCaller.pushStack(
+            Frame.Continuation stepNext = frameCaller -> frameCaller.pushStack(
                     ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
-                return Op.R_NEXT;
-                };
-
             return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
             }
 
-        frame.pushStack(((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
-        return Op.R_NEXT;
+        return frame.pushStack(
+                ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
         }
 
     /**
@@ -307,6 +303,14 @@ public class xArray
                     if (hSupplier == ObjectHandle.DEFAULT)
                         {
                         ObjectHandle hValue = frame.getConstHandle(typeEl.getDefaultValue());
+                        if (Op.isDeferred(hValue))
+                            {
+                            ((DeferredCallHandle) hValue).proceed(frame, frameCaller ->
+                                {
+                                fill(hArray, cSize, frameCaller.popStack());
+                                return frameCaller.assignValue(iReturn, hArray);
+                                });
+                            }
                         fill(hArray, cSize, hValue);
                         }
                     else if (hSupplier.getType().isA(typeEl))

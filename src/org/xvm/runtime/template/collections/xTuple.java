@@ -108,8 +108,7 @@ public class xTuple
 
         if (c == 0)
             {
-            frame.pushStack(H_VOID);
-            return Op.R_NEXT;
+            return frame.pushStack(H_VOID);
             }
 
         TypeConstant typeTuple = constTuple.getType().resolveGenerics(
@@ -132,16 +131,11 @@ public class xTuple
         if (fDeferred)
             {
             Frame.Continuation stepNext = frameCaller ->
-                {
-                frameCaller.pushStack(makeImmutableHandle(clzTuple, ahValue));
-                return Op.R_NEXT;
-                };
-
+                    frameCaller.pushStack(makeImmutableHandle(clzTuple, ahValue));
             return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
             }
 
-        frame.pushStack(makeImmutableHandle(clzTuple, ahValue));
-        return Op.R_NEXT;
+        return frame.pushStack(makeImmutableHandle(clzTuple, ahValue));
         }
 
     @Override

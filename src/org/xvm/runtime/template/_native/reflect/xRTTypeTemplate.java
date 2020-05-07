@@ -298,16 +298,7 @@ public class xRTTypeTemplate
             ObjectHandle hEnum = Utils.ensureInitializedEnum(frame,
                     makeAccessHandle(frame, type.getAccess()));
 
-            if (Op.isDeferred(hEnum))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hEnum};
-                Frame.Continuation stepNext = frameCaller ->
-                        frameCaller.assignValues(aiReturn, xBoolean.TRUE, ahValue[0]);
-
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-
-            return frame.assignValues(aiReturn, xBoolean.TRUE, hEnum);
+            return frame.assignConditionalDeferredValue(aiReturn, hEnum);
             }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }

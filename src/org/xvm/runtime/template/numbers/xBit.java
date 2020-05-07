@@ -65,13 +65,11 @@ public class xBit
         {
         if (constant instanceof IntConstant)
             {
-            frame.pushStack(makeHandle(((IntConstant) constant).getValue().getLong() != 0L));
-            return Op.R_NEXT;
+            return frame.pushStack(makeHandle(((IntConstant) constant).getValue().getLong() != 0L));
             }
         if (constant.getFormat() == Format.Bit)
             {
-            frame.pushStack(makeHandle(((UInt8Constant) constant).getValue().intValue() != 0));
-            return Op.R_NEXT;
+            return frame.pushStack(makeHandle(((UInt8Constant) constant).getValue().intValue() != 0));
             }
         return super.createConstHandle(frame, constant);
         }

@@ -358,9 +358,8 @@ public class CoreContainer
                             {
                             ObjectHandle h = frameCaller1.popStack().
                                     maskAs(NATIVE_CONTAINER, typeRevealed);
-                            frameCaller1.pushStack(h);
                             consumer.accept(h);
-                            return Op.R_NEXT;
+                            return frameCaller1.pushStack(h);
                             });
                         break;
                     }
@@ -384,9 +383,8 @@ public class CoreContainer
                 frameNext.addContinuation(frameCaller ->
                     {
                     ObjectHandle h = frameCaller.popStack().maskAs(NATIVE_CONTAINER, typeRevealed);
-                    frameCaller.pushStack(h);
                     consumer.accept(h);
-                    return Op.R_NEXT;
+                    return frameCaller.pushStack(h);
                     });
                 return new DeferredCallHandle(frameNext);
 

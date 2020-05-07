@@ -150,9 +150,8 @@ public abstract class xConstrainedInteger
         {
         if (constant instanceof IntConstant)
             {
-            frame.pushStack(new JavaLong(getCanonicalClass(),
+            return frame.pushStack(new JavaLong(getCanonicalClass(),
                     (((IntConstant) constant).getValue().getLong())));
-            return Op.R_NEXT;
             }
 
         return super.createConstHandle(frame, constant);

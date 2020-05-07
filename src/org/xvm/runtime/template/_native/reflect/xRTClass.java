@@ -286,15 +286,9 @@ public class xRTClass
             IdentityConstant idClz         = typeClz.getSingleUnderlyingClass(false);
             ConstantPool     pool          = frame.poolContext();
             Constant         constInstance = pool.ensureSingletonConstConstant(idClz);
-            ObjectHandle     hInstance     = frame.getConstHandle(constInstance);
-            if (Op.isDeferred(hInstance))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hInstance};
-                Frame.Continuation stepNext = frameCaller ->
-                    frameCaller.assignValues(aiReturn, xBoolean.TRUE, ahValue[0]);
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-            return frame.assignValues(aiReturn, xBoolean.TRUE, hInstance);
+
+            return frame.assignConditionalDeferredValue(aiReturn,
+                    frame.getConstHandle(constInstance));
             }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }

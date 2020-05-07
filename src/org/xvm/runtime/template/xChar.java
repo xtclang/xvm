@@ -66,9 +66,8 @@ public class xChar
         {
         if (constant instanceof CharConstant)
             {
-            frame.pushStack(new JavaLong(getCanonicalClass(),
+            return frame.pushStack(new JavaLong(getCanonicalClass(),
                     (((CharConstant) constant).getValue())));
-            return Op.R_NEXT;
             }
 
         return super.createConstHandle(frame, constant);

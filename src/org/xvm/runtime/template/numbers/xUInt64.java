@@ -70,8 +70,7 @@ public class xUInt64
                 {
                 lValue = piValue.getLong();
                 }
-            frame.pushStack(makeJavaLong(lValue));
-            return Op.R_NEXT;
+            return frame.pushStack(makeJavaLong(lValue));
             }
 
         return super.createConstHandle(frame, constant);

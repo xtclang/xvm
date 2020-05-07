@@ -498,10 +498,12 @@ public class Frame
      * Push a value on the local stack.
      *
      * @param hValue  a value to push
+     *
+     * @return Op.R_NEXT
      */
-    public void pushStack(ObjectHandle hValue)
+    public int pushStack(ObjectHandle hValue)
         {
-        assert hValue != null;
+        assert hValue != null && !(hValue instanceof DeferredCallHandle);
         if (m_hStackTop != null)
             {
             Deque<ObjectHandle> stack = m_stack;
@@ -512,6 +514,7 @@ public class Frame
             stack.push(m_hStackTop);
             }
         m_hStackTop = hValue;
+        return Op.R_NEXT;
         }
 
     /**
@@ -571,6 +574,8 @@ public class Frame
 
             return Op.R_NEXT;
             }
+
+        assert !(hValue instanceof DeferredCallHandle);
 
         if (nVar >= 0)
             {
@@ -647,8 +652,7 @@ public class Frame
                 return Op.R_NEXT;
 
             case Op.A_STACK:
-                pushStack(hValue);
-                return Op.R_NEXT;
+                return pushStack(hValue);
 
             default:
                 try
@@ -795,6 +799,54 @@ public class Frame
 
         // the wait frame will deal with exceptions
         return call(Utils.createWaitFrame(this, cfResult, iReturn));
+        }
+
+    /**
+     * Assign a specified register on this frame with a handle that can potentially be a
+     * DeferredCallHandle.
+     *
+     * @param nVar    the register id
+     * @param hValue  the value to assign
+     *
+     * @return R_NEXT, R_CALL, R_EXCEPTION
+     */
+    public int assignDeferredValue(int nVar, ObjectHandle hValue)
+        {
+        return hValue instanceof DeferredCallHandle
+                ? ((DeferredCallHandle) hValue).proceed(this, frame ->
+                    frame.assignValue(nVar, frame.popStack()))
+                : assignValue(nVar, hValue);
+        }
+
+    /**
+     * Assign specified registers on this frame with a True and a handle that can potentially be a
+     * DeferredCallHandle.
+     *
+     * @param anVar   the registers
+     * @param hValue  the value to assign
+     *
+     * @return R_NEXT, R_CALL, R_EXCEPTION
+     */
+    public int assignConditionalDeferredValue(int[] anVar, ObjectHandle hValue)
+        {
+        return hValue instanceof DeferredCallHandle
+                ? ((DeferredCallHandle) hValue).proceed(this, frame ->
+                    frame.assignValues(anVar, xBoolean.TRUE, frame.popStack()))
+                : assignValues(anVar, xBoolean.TRUE, hValue);
+        }
+
+    /**
+     * Push a potentially deferred value on the local stack.
+     *
+     * @param hValue  a value to push
+     *
+     * @return R_NEXT, R_CALL or R_EXCEPTION
+     */
+    public int pushDeferredValue(ObjectHandle hValue)
+        {
+        return hValue instanceof DeferredCallHandle
+                ? ((DeferredCallHandle) hValue).proceed(this, frame -> Op.R_NEXT)
+                : pushStack(hValue);
         }
 
     /**
