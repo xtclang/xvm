@@ -643,7 +643,7 @@ public abstract class IdentityConstant
             // of the expression that yields this constant is the Class type:
             //  Class<PublicType, ProtectedType, PrivateType, StructType>
             ConstantPool pool = getConstantPool();
-            TypeConstant type = getType();
+            TypeConstant type = getType().normalizeParameters();
             return pool.ensureParameterizedTypeConstant(pool.typeClass(),
                     pool.ensureAccessTypeConstant(type, Access.PUBLIC),
                     pool.ensureAccessTypeConstant(type, Access.PROTECTED),
