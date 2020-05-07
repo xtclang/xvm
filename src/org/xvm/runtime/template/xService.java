@@ -28,7 +28,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
