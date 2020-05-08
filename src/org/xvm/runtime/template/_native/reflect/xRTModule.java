@@ -71,8 +71,9 @@ public class xRTModule
         markNativeProperty("simpleName");
         markNativeProperty("version");
 
-        markNativeMethod("classForName", null, null);
+        markNativeMethod("classForName"         , null, null);
         markNativeMethod("getModuleDependencies", null, null);
+        markNativeMethod("typeForName"          , null, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -121,6 +122,10 @@ public class xRTModule
             case "classForName":
                 assert ahArg.length == 1;
                 return invokeClassForName(frame, hModule, ahArg[0], aiReturn);
+
+            case "typeForName":
+                assert ahArg.length == 1;
+                return invokeTypeForName(frame, hModule, ahArg[0], aiReturn);
 
             case "getModuleDependencies":
                 return invokeGetModuleDependencies(frame, hModule, aiReturn);
@@ -183,6 +188,28 @@ public class xRTModule
             TypeConstant     typeClz = (TypeConstant) oResult;
             IdentityConstant idClz   = typeClz.getConstantPool().ensureClassConstant(typeClz);
             return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(idClz));
+            }
+
+        return frame.raiseException((String) oResult);
+        }
+
+    /**
+     * Implementation for: {@code conditional Type typeForName(String name)}.
+     */
+    public int invokeTypeForName(Frame frame, PackageHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+        {
+        ModuleStructure module  = (ModuleStructure) hTarget.getStructure();
+        String          sType   = ((StringHandle) hArg).getStringValue();
+        Object          oResult = resolveType(module.getFileStructure(), module, sType);
+        if (oResult == null)
+            {
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            }
+
+        if (oResult instanceof TypeConstant)
+            {
+            TypeConstant typeClz = (TypeConstant) oResult;
+            return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(typeClz));
             }
 
         return frame.raiseException((String) oResult);
@@ -314,7 +341,7 @@ public class xRTModule
      * @param module      (optional) the module to begin the name resolution from
      * @param sClass      the class string
      *
-     * @return either a TypeConstant or a String error
+     * @return either a TypeConstant or a String error or null
      */
     public static Object resolveClass(FileStructure typeSystem, ModuleStructure module, String sClass)
         {
@@ -349,9 +376,58 @@ public class xRTModule
                     return "Exception occurred while resolving \"" + sClass + "\": " + e;
                     }
 
+                // REVIEW should we check errs again here?
                 return typeClz == null || typeClz.containsUnresolved()
                         ? null
                         : typeClz;
+                }
+            }
+
+        return errs.getErrors().stream()
+                .filter(i -> (i.getSeverity().compareTo(Severity.ERROR) > 0))
+                .findFirst().get().getMessage();
+        }
+
+    /**
+     * Resolve a type string into a type.
+     *
+     * @param typeSystem  (optional) the FileStructure representing the TypeSystem
+     * @param module      (optional) the module to begin the name resolution from
+     * @param sType       the type string
+     *
+     * @return either a TypeConstant or a String error or null
+     */
+    public static Object resolveType(FileStructure typeSystem, ModuleStructure module, String sType)
+        {
+        if (module == null)
+            {
+            module = typeSystem == null
+                    ? INSTANCE.f_struct.getFileStructure().getModule()  // only Ecstasy classes
+                    : typeSystem.getModule();
+            }
+
+        Source         source = new Source(sType);
+        ErrorList      errs   = new ErrorList(10);
+        TypeExpression expr   = new Parser(source, errs).parseTypeExpression();
+        if (errs.getSeriousErrorCount() == 0)
+            {
+            TypeCompositionStatement stmtModule = new TypeCompositionStatement(module, source, expr);
+            if (new StageMgr(expr, Compiler.Stage.Resolved, errs).fastForward(3))
+                {
+                TypeConstant typeResult;
+                try
+                    {
+                    typeResult = expr.ensureTypeConstant();
+                    }
+                catch (RuntimeException e)
+                    {
+                    return "Exception occurred while resolving \"" + sType + "\": " + e;
+                    }
+
+                // REVIEW should we check errs again here?
+                return typeResult == null || typeResult.containsUnresolved()
+                        ? null
+                        : typeResult;
                 }
             }
 

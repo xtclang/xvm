@@ -203,5 +203,13 @@ module Ecstasy.xtclang.org
          * @return (conditional) the specified [Class]
          */
         conditional Class classForName(String name);
+
+        /**
+         * Given the qualified name of a type nested within this module, obtain the [Type].
+         *
+         * @return True iff the name identifies a type
+         * @return (conditional) the specified [Type]
+         */
+        conditional Type typeForName(String name);
         }
     }

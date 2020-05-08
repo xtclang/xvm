@@ -521,6 +521,12 @@ module TestReflection
         console.println($"moduleBySimpleName   : {ts.moduleBySimpleName   }");
         console.println($"moduleByQualifiedName: {ts.moduleByQualifiedName}");
 
+        console.println("modules:");
+        for (Module _module : ts.modules)
+            {
+            displayModule(_module);
+            }
+
         String[] names =
                 [
                 "String",                   // should use "implicit.x" to find it
@@ -558,6 +564,16 @@ module TestReflection
                 console.println($"exception occurred lookup up class \"{name}\"; exception={e}");
                 }
             }
+        }
+
+    void displayModule(Module _module)
+        {
+        console.println($"module \"{_module.simpleName}\" (\"{_module.qualifiedName}\") version={_module.version}, dependencies:");
+// TODO GG - it thinks modulesByName is native
+//        for ((String name, Module dep) : _module.modulesByName)
+//            {
+//            console.println($" - \"{name}\" => \"{dep.qualifiedName}\"");
+//            }
         }
 
 

@@ -158,7 +158,8 @@ const TypeSystem
      */
     conditional Type typeForName(String name)
         {
-        TODO this needs to handle '(..)', '?', '+', '-', '|', and the rest of the type syntax
+        // TODO this needs to handle '(..)', '?', '+', '-', '|', and the rest of the type syntax
+        return primaryModule.typeForName(name);
         }
 
     /**

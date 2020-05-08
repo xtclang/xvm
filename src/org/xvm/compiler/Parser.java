@@ -4234,7 +4234,7 @@ public class Parser
      *
      * @return a TypeExpression
      */
-    TypeExpression parseTypeExpression()
+    public TypeExpression parseTypeExpression()
         {
         return parseUnionedTypeExpression();
         }
