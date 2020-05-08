@@ -44,18 +44,7 @@ public class Parser
      */
     public Parser(Source source, ErrorListener listener)
         {
-        if (source == null)
-            {
-            throw new IllegalArgumentException("Source required");
-            }
-        if (listener == null)
-            {
-            throw new IllegalArgumentException("ErrorListener required");
-            }
-
-        m_source        = source;
-        m_errorListener = listener;
-        m_lexer         = new Lexer(source, listener);
+        this(source, listener, new Lexer(source, listener));
         }
 
     /**
@@ -66,14 +55,28 @@ public class Parser
      */
     protected Parser(Parser parent, Token[] atoken)
         {
-        m_source        = parent.m_source;
-        m_errorListener = parent.m_errorListener;
-        m_lexer         = parent.m_lexer.createLexer(atoken);
+        this(parent.m_source, parent.m_errorListener, parent.m_lexer.createLexer(atoken));
+        }
+
+    private Parser(Source source, ErrorListener errs, Lexer lexer)
+        {
+        if (source == null)
+            {
+            throw new IllegalArgumentException("Source required");
+            }
+
+        if (errs == null)
+            {
+            throw new IllegalArgumentException("ErrorListener required");
+            }
+
+        m_source        = source;
+        m_errorListener = errs;
+        m_lexer         = lexer;
 
         // prime the token stream
         next();
         }
-
 
     // ----- parsing -------------------------------------------------------------------------------
 
@@ -100,9 +103,6 @@ public class Parser
             // during parsing
             m_fDone = true;
 
-            // prime the token stream
-            next();
-
             List<Statement> stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
             m_root = new StatementBlock(stmts, m_source, stmts.get(0).getStartPosition(),
                     stmts.get(stmts.size()-1).getEndPosition());
@@ -127,9 +127,6 @@ public class Parser
     public Map<String, String[]> parseImplicits()
         {
         Map<String, String[]> imports = new HashMap<>();
-
-        // prime the token stream
-        next();
 
         while (!eof())
             {
@@ -305,7 +302,6 @@ public class Parser
      */
     public TypeConstant parseType(Component ctx)
         {
-        next();
         TypeExpression type = parseTypeExpression();
 
         Token var = new Token(type.getEndPosition(), type.getEndPosition(), Id.IDENTIFIER, "test");

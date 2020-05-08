@@ -10,6 +10,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import java.util.function.Function;
 
+import java.util.stream.Collectors;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.InjectionKey;
@@ -230,7 +232,10 @@ public abstract class Container
             ObjectHandle[]              ahShared   = new ObjectHandle[cModules];
             boolean                     fDeferred  = false;
             int                         index      = 0;
-            for (ModuleConstant idDep : mapModules.keySet())
+            for (ModuleConstant idDep : mapModules.entrySet().stream()
+                    .sorted(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList()))
                 {
                 ObjectHandle hModule = frame.getConstHandle(idDep);
                 ahModules[index] = hModule;

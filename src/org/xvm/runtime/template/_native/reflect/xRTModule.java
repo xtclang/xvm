@@ -10,6 +10,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
@@ -20,9 +21,12 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.VersionConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
+import org.xvm.compiler.ast.StageMgr;
+import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.compiler.ast.TypeExpression;
 
 import org.xvm.runtime.ClassComposition;
@@ -32,7 +36,6 @@ import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.Identity;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xString;
@@ -167,46 +170,22 @@ public class xRTModule
      */
     public int invokeClassForName(Frame frame, PackageHandle hTarget, ObjectHandle hArg, int[] aiReturn)
         {
-        String sClass = ((StringHandle) hArg).getStringValue();
-        if (sClass.length() == 0)
+        ModuleStructure module  = (ModuleStructure) hTarget.getStructure();
+        String          sClass  = ((StringHandle) hArg).getStringValue();
+        Object          oResult = resolveClass(module.getFileStructure(), module, sClass);
+        if (oResult == null)
             {
-            // module.classForName("") is the module itself
-            return frame.assignValues(aiReturn, xBoolean.TRUE, hTarget);
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
-        ErrorList      errs = new ErrorList(10);
-        TypeExpression expr = new Parser(new Source(sClass), errs).parseClassExpression();
-        String         sErr = null;
-        if (errs.getSeriousErrorCount() > 0)
+        if (oResult instanceof TypeConstant)
             {
-            sErr = errs.getErrors().stream()
-                        .filter(i -> (i.getSeverity().compareTo(Severity.ERROR) > 0))
-                        .findFirst().get().getMessage();
+            TypeConstant     typeClz = (TypeConstant) oResult;
+            IdentityConstant idClz   = typeClz.getConstantPool().ensureClassConstant(typeClz);
+            return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(idClz));
             }
 
-        if (sErr == null)
-            {
-// TODO CP resolve expr -> clz
-// ModuleStructure module = (ModuleStructure) hTarget.getStructure();
-            TypeConstant typeClz = expr.ensureTypeConstant();
-            if (typeClz.containsUnresolved())
-                {
-                sErr = "Unable to resolve: " + sClass;
-                }
-            else
-                {
-                IdentityConstant idClz = typeClz.getConstantPool().ensureClassConstant(typeClz);
-
-                return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(idClz));
-                }
-            }
-
-        if (sErr != null)
-            {
-            return frame.raiseException(sErr);
-            }
-
-        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        return frame.raiseException((String) oResult);
         }
 
     /**
@@ -321,6 +300,64 @@ public class xRTModule
                     }
                 }
             }
+        }
+
+    /**
+     * Resolve a class string into a class type.
+     *
+     * @param typeSystem  (optional) the FileStructure representing the TypeSystem
+     * @param module      (optional) the module to begin the name resolution from
+     * @param sClass      the class string
+     *
+     * @return either a TypeConstant or a String error
+     */
+    public static Object resolveClass(FileStructure typeSystem, ModuleStructure module, String sClass)
+        {
+        if (module == null)
+            {
+            module = typeSystem == null
+                    ? INSTANCE.f_struct.getFileStructure().getModule()  // only Ecstasy classes
+                    : typeSystem.getModule();
+            }
+
+        if (sClass.length() == 0)
+            {
+            // module.classForName("") is the module itself
+            return module.getIdentityConstant().getType();
+            }
+
+        Source         source = new Source(sClass);
+        ErrorList      errs   = new ErrorList(10);
+        TypeExpression expr   = new Parser(source, errs).parseClassExpression();
+        if (errs.getSeriousErrorCount() == 0)
+            {
+            TypeCompositionStatement stmtModule = new TypeCompositionStatement(module, source, expr);
+            if (new StageMgr(expr, Compiler.Stage.Resolved, errs).fastForward(3))
+                {
+                TypeConstant typeClz;
+                try
+                    {
+                    typeClz = expr.ensureTypeConstant();
+                    }
+                catch (RuntimeException e)
+                    {
+                    return "Exception occurred while resolving \"" + sClass + "\": " + e;
+                    }
+
+                if (typeClz == null || typeClz.containsUnresolved())
+                    {
+                    return "Unable to resolve: \"" + sClass + '\"';
+                    }
+                else
+                    {
+                    return typeClz;
+                    }
+                }
+            }
+
+        return errs.getErrors().stream()
+                .filter(i -> (i.getSeverity().compareTo(Severity.ERROR) > 0))
+                .findFirst().get().getMessage();
         }
 
 

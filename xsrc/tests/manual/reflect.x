@@ -516,6 +516,26 @@ module TestReflection
 
         TypeSystem ts = this:service.typeSystem;
         console.println($"current TypeSystem={ts}");
+
+        String[] names = ["String", "ecstasy.String", "ecstasy.ecstasy.String", "Map<String, Int>", "", "Point"];
+        for (String name : names)
+            {
+            try
+                {
+                if (Class clz := ts.classForName(name))
+                    {
+                    console.println($"class for \"{name}\"={clz}");
+                    }
+                else
+                    {
+                    console.println($"no such class: \"{name}\"");
+                    }
+                }
+            catch (Exception e)
+                {
+                console.println($"exception occurred lookup up class \"{name}\"; exception={e}");
+                }
+            }
         }
 
 

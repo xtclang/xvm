@@ -4,10 +4,13 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
@@ -171,6 +174,31 @@ public class TypeCompositionStatement
 
         setParent(parent);
         introduceParentage();
+        }
+
+    /**
+     * Create a fake module statement that holds onto a compiled module and uses it as the basis for
+     * resolving some other AST node. This is used by the runtime, not by the compiler.
+     *
+     * @param module  a compiled module
+     * @param source  the source code for the child
+     * @param type    the child node to resolve
+     */
+    public TypeCompositionStatement(ModuleStructure module, Source source, TypeExpression type)
+        {
+        super(0,0);
+
+        this.source    = source;
+        this.category  = new Token(0, 0, Id.MODULE);
+        this.name      = new Token(0, 0, Id.IDENTIFIER, module.getSimpleName());
+        this.qualified = Arrays.stream(Handy.parseDelimitedString(module.getName(), '.'))
+                .map(s -> new Token(0, 0, Id.IDENTIFIER, s))
+                .collect(Collectors.toCollection(ArrayList::new));
+        this.typeArgs  = new ArrayList<>(Arrays.asList(type));
+
+        introduceParentage();
+        setComponent(module);
+        setStage(Stage.Emitted);
         }
 
 
