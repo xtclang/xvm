@@ -148,7 +148,7 @@ public class xRTMethod
         }
 
     @Override
-    protected int callEqualsImpl(Frame frame,  ClassComposition clazz,
+    protected int callEqualsImpl(Frame frame, ClassComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         MethodHandle hMethod1 = (MethodHandle) hValue1;

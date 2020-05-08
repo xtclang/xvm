@@ -30,8 +30,9 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
 
-import org.xvm.runtime.template._native.reflect.xRTClass;
+import org.xvm.runtime.template.numbers.xInt64;
 
+import org.xvm.runtime.template._native.reflect.xRTClass;
 
 /**
  * Native implementation of Package interface.
@@ -95,6 +96,21 @@ public class xPackage
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+        }
+
+    @Override
+    protected int callEqualsImpl(Frame frame, ClassComposition clazz,
+                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return frame.assignValue(iReturn, xBoolean.makeHandle(
+            (((PackageHandle) hValue1).getId().equals(((PackageHandle) hValue2).getId()))));
+        }
+
+    @Override
+    protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+        {
+        return frame.assignValue(iReturn,
+            xInt64.makeHandle(((PackageHandle) hTarget).getId().hashCode()));
         }
 
 
@@ -180,7 +196,6 @@ public class xPackage
      */
     private static ClassComposition ensureListMapComposition()
         {
-        // TODO: move the common part to a helper (see xModule.ensureListMapComposition)
         ClassComposition clz = LISTMAP_CLZ;
         if (clz == null)
             {
@@ -227,6 +242,31 @@ public class xPackage
         public ClassStructure getStructure()
             {
             return (ClassStructure) getId().getComponent();
+            }
+
+        @Override
+        public boolean isNativeEqual()
+            {
+            return true;
+            }
+
+        @Override
+        public int compareTo(ObjectHandle that)
+            {
+            return getId().compareTo(((PackageHandle) that).getId());
+            }
+
+        @Override
+        public int hashCode()
+            {
+            return getId().hashCode();
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            return obj instanceof PackageHandle &&
+                getId().equals(((PackageHandle) obj).getId());
             }
         }
     }

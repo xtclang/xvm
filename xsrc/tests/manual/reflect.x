@@ -569,11 +569,10 @@ module TestReflection
     void displayModule(Module _module)
         {
         console.println($"module \"{_module.simpleName}\" (\"{_module.qualifiedName}\") version={_module.version}, dependencies:");
-// TODO GG - it thinks modulesByName is native
-//        for ((String name, Module dep) : _module.modulesByName)
-//            {
-//            console.println($" - \"{name}\" => \"{dep.qualifiedName}\"");
-//            }
+        for ((String name, Module dep) : _module.modulesByName)
+            {
+            console.println($" - \"{name}\" => \"{dep.qualifiedName}\"");
+            }
         }
 
 

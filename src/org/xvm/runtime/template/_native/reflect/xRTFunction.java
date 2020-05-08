@@ -144,7 +144,7 @@ public class xRTFunction
         }
 
     @Override
-    protected int callEqualsImpl(Frame frame,  ClassComposition clazz,
+    protected int callEqualsImpl(Frame frame, ClassComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));

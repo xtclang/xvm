@@ -293,7 +293,7 @@ public class xConst
         }
 
     @Override
-    protected int callEqualsImpl(Frame frame,  ClassComposition clazz,
+    protected int callEqualsImpl(Frame frame, ClassComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // Note: the actual types could be subclasses of the specified class

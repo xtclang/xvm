@@ -133,6 +133,9 @@ public class xArray
         // cache "Iterable.toArray()" method
         ITERABLE_TO_ARRAY = f_templates.getClassStructure("Iterable").findMethod("toArray", 1);
 
+        // cache "ListMap.construct(Key[], Value[])" constructor
+        LIST_MAP_CONSTRUCT = f_templates.getClassStructure("collections.ListMap").findMethod("construct", 2);
+
         // cache Mutability template
         MUTABILITY = (xEnum) f_templates.getTemplate("collections.VariablyMutable.Mutability");
 
@@ -1044,14 +1047,12 @@ public class xArray
     public static int constructListMap(Frame frame, ClassComposition clzMap,
                                        ArrayHandle haKeys, ArrayHandle haValues, int iReturn)
         {
-        ClassTemplate    template    = clzMap.getTemplate();
-        ClassStructure   struct      = template.getStructure();
-        MethodStructure  constructor = struct.findMethod("construct", 2);
-        ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
+        MethodStructure constructor = LIST_MAP_CONSTRUCT;
+        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = haKeys;
         ahArg[1] = haValues;
 
-        return template.construct(frame, constructor, clzMap, null, ahArg, iReturn);
+        return clzMap.getTemplate().construct(frame, constructor, clzMap, null, ahArg, iReturn);
         }
 
     /**
@@ -1154,6 +1155,7 @@ public class xArray
     // array of constructors
     private static MethodConstant[] CONSTRUCTORS = new MethodConstant[4];
     private static MethodStructure  ITERABLE_TO_ARRAY;
+    private static MethodStructure  LIST_MAP_CONSTRUCT;
 
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};
     protected static final String[] ARRAY        = new String[] {"collections.Array!<Element>"};

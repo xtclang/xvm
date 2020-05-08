@@ -27,7 +27,10 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
 
+import org.xvm.runtime.template.collections.xBooleanArray;
+
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xService;
 
@@ -223,12 +226,11 @@ public abstract class Container
             {
             ModuleConstant  idModule = getModule();
             ModuleStructure module   = (ModuleStructure) idModule.getComponent();
-            ConstantPool    pool     = module.getConstantPool();
 
             Map<ModuleConstant, String> mapModules = xModule.collectDependencies(module);
             int                         cModules   = mapModules.size();
             ObjectHandle[]              ahModules  = new ObjectHandle[cModules];
-            ObjectHandle[]              ahShared   = new ObjectHandle[cModules];
+            BooleanHandle[]             ahShared   = new BooleanHandle[cModules];
             boolean                     fDeferred  = false;
             int                         index      = 0;
             for (ModuleConstant idDep : mapModules.entrySet().stream()
@@ -238,7 +240,7 @@ public abstract class Container
                 {
                 ObjectHandle hModule = frame.getConstHandle(idDep);
                 ahModules[index] = hModule;
-                ahShared [index] = xBoolean.FALSE; // TODO GG
+                ahShared [index] = xBoolean.makeHandle(isModuleShared(idDep));
                 fDeferred |= Op.isDeferred(hModule);
                 ++index;
                 }
@@ -247,9 +249,9 @@ public abstract class Container
             ClassComposition clzTS       = templateTS.getCanonicalClass();
             MethodStructure  constructor = templateTS.getStructure().findMethod("construct", 2);
             ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
-// TODO GG
-//            ahArg[1] = xBooleanArray.INSTANCE.createArrayHandle(
-//                    xBooleanArray.INSTANCE.getCanonicalClass(), ahShared);
+
+            ahArg[1] = xBooleanArray.INSTANCE.createArrayHandle(
+                    xBooleanArray.INSTANCE.getCanonicalClass(), ahShared);
 
             if (fDeferred)
                 {
@@ -270,6 +272,15 @@ public abstract class Container
         return frame.assignValue(iReturn, hTS);
         }
 
+    /**
+     * @return true iff the specified module is shared
+     */
+    protected boolean isModuleShared(ModuleConstant idModule)
+        {
+        // TODO: this information will be supplied by the Linker;
+        // for now assume that only the Ecstasy module is shared
+        return idModule.getName().equals(ModuleStructure.ECSTASY_MODULE);
+        }
 
     // ----- LinkerContext interface ---------------------------------------------------------------
 

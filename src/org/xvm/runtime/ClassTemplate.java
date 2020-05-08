@@ -1442,7 +1442,7 @@ public abstract class ClassTemplate
     /**
      * Default implementation for "equals"; overridden only by xConst.
      */
-    protected int callEqualsImpl(Frame frame,  ClassComposition clazz,
+    protected int callEqualsImpl(Frame frame, ClassComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.assignValue(iReturn, xBoolean.FALSE);
@@ -1485,7 +1485,7 @@ public abstract class ClassTemplate
     /**
      * Default implementation for "compare"; overridden only by xConst.
      */
-    protected int callCompareImpl(Frame frame,  ClassComposition clazz,
+    protected int callCompareImpl(Frame frame, ClassComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.raiseException("No implementation for \"compare()\" function at " + f_sName);

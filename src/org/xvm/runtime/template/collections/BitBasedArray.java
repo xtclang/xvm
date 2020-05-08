@@ -44,7 +44,7 @@ public abstract class BitBasedArray
         byte[] ab    = new byte[storage(cBits)];
         for (int i = 0; i < cBits; i++)
             {
-            if (((JavaLong) ahArg[i]).getValue() == 1)
+            if (isSet(ahArg[i]))
                 {
                 ab[index(i)] |= bitMask(i);
                 }

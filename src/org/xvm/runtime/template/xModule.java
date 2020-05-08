@@ -414,7 +414,7 @@ public class xModule
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeModuleArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeModule());
-            ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeModuleArray));
+            ARRAY_TEMPLATE = template = (xArray) INSTANCE.f_templates.getTemplate(typeModuleArray);
             assert template != null;
             }
         return template;
