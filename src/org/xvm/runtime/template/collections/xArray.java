@@ -81,13 +81,15 @@ public class xArray
         {
         // register array specializations
         ConstantPool              pool         = pool();
-        Map<TypeConstant, xArray> mapTemplates = ARRAY_TEMPLATES = new HashMap<>();
+        Map<TypeConstant, xArray> mapTemplates = new HashMap<>();
 
         mapTemplates.put(pool.typeInt(),     xIntArray.INSTANCE);
         mapTemplates.put(pool.typeChar(),    xCharArray.INSTANCE);
         mapTemplates.put(pool.typeBoolean(), xBooleanArray.INSTANCE);
         mapTemplates.put(pool.typeBit(),     xBitArray.INSTANCE);
         mapTemplates.put(pool.typeByte(),    xByteArray.INSTANCE);
+
+        ARRAY_TEMPLATES = mapTemplates;
 
         // cache the constructors
         for (MethodStructure method :
@@ -867,7 +869,7 @@ public class xArray
         return hArray.m_cSize;
         }
 
-    // ----- helper methods -----
+    // ----- helper methods ------------------------------------------------------------------------
 
     private xArray getArrayTemplate(TypeConstant typeParam)
         {
@@ -897,7 +899,7 @@ public class xArray
         return cDesired + Math.max(cDesired >> 2, 16);
         }
 
-    // ----- helper classes -----
+    // ----- helper classes ------------------------------------------------------------------------
 
     /**
      * Helper class for array initialization.
@@ -1026,7 +1028,31 @@ public class xArray
         }
 
 
-    // ----- ObjectHandle helpers -----
+    // ----- ObjectHandle helpers ------------------------------------------------------------------
+
+    /**
+     * Construct a ListMap based on the arrays of keys and values.
+     *
+     * @param frame     the current frame
+     * @param clzMap    the ListMap class
+     * @param haKeys    the array of keys
+     * @param haValues  the array of values
+     * @param iReturn   the register to place the ListMap handle into
+     *
+     * @return R_CALL or R_EXCEPTION
+     */
+    public static int constructListMap(Frame frame, ClassComposition clzMap,
+                                       ArrayHandle haKeys, ArrayHandle haValues, int iReturn)
+        {
+        ClassTemplate    template    = clzMap.getTemplate();
+        ClassStructure   struct      = template.getStructure();
+        MethodStructure  constructor = struct.findMethod("construct", 2);
+        ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
+        ahArg[0] = haKeys;
+        ahArg[1] = haValues;
+
+        return template.construct(frame, constructor, clzMap, null, ahArg, iReturn);
+        }
 
     /**
      * @return an immutable String array handle
@@ -1127,7 +1153,7 @@ public class xArray
 
     // array of constructors
     private static MethodConstant[] CONSTRUCTORS = new MethodConstant[4];
-    private static MethodStructure ITERABLE_TO_ARRAY;
+    private static MethodStructure  ITERABLE_TO_ARRAY;
 
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};
     protected static final String[] ARRAY        = new String[] {"collections.Array!<Element>"};

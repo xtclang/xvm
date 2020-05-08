@@ -1,9 +1,8 @@
-package org.xvm.runtime.template._native.reflect;
+package org.xvm.runtime.template;
 
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -30,31 +29,28 @@ import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.compiler.ast.TypeExpression;
 
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xNullable;
-import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.util.Severity;
 
-
 /**
  * Native implementation of Module interface.
  */
-public class xRTModule
-        extends xRTPackage
+public class xModule
+        extends xPackage
     {
-    public static xRTModule INSTANCE;
+    public static xModule INSTANCE;
 
-    public xRTModule(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xModule(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
 
@@ -67,15 +63,6 @@ public class xRTModule
     @Override
     public void initNative()
         {
-        markNativeProperty("qualifiedName");
-        markNativeProperty("simpleName");
-        markNativeProperty("version");
-
-        markNativeMethod("classForName"         , null, null);
-        markNativeMethod("getModuleDependencies", null, null);
-        markNativeMethod("typeForName"          , null, null);
-
-        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override
@@ -99,14 +86,11 @@ public class xRTModule
         PackageHandle hModule = (PackageHandle) hTarget;
         switch (sPropName)
             {
-            case "qualifiedName":
-                return getPropertyQualifiedName(frame, hModule, iReturn);
-
-            case "simpleName":
-                return getPropertySimpleName(frame, hModule, iReturn);
-
             case "version":
                 return getPropertyVersion(frame, hModule, iReturn);
+
+            case "modulesByName":
+                return getPropertyModulesByName(frame, hModule, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -126,9 +110,6 @@ public class xRTModule
             case "typeForName":
                 assert ahArg.length == 1;
                 return invokeTypeForName(frame, hModule, ahArg[0], aiReturn);
-
-            case "getModuleDependencies":
-                return invokeGetModuleDependencies(frame, hModule, aiReturn);
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -136,24 +117,6 @@ public class xRTModule
 
 
     // ----- property implementations --------------------------------------------------------------
-
-    /**
-     * Implements property: simpleName.get()
-     */
-    public int getPropertySimpleName(Frame frame, PackageHandle hModule, int iReturn)
-        {
-        String sName = ((ModuleConstant) hModule.getId()).getUnqualifiedName();
-        return frame.assignValue(iReturn, xString.makeHandle(sName));
-        }
-
-    /**
-     * Implements property: qualifiedName.get()
-     */
-    public int getPropertyQualifiedName(Frame frame, PackageHandle hModule, int iReturn)
-        {
-        String sName = hModule.getId().getName();
-        return frame.assignValue(iReturn, xString.makeHandle(sName));
-        }
 
     /**
      * Implements property: version.get()
@@ -165,6 +128,61 @@ public class xRTModule
         return ver == null
                 ? frame.assignValue(iReturn, xNullable.NULL)
                 : frame.assignDeferredValue(iReturn, frame.getConstHandle(ver));
+        }
+
+    /**
+     * Implements property: modulesByName.get()
+     */
+    public int getPropertyModulesByName(Frame frame, PackageHandle hTarget, int iReturn)
+        {
+        // TODO GG: how to cache the result?
+        ModuleConstant   idModule = (ModuleConstant) hTarget.getId();
+        ModuleStructure  module   = (ModuleStructure) idModule.getComponent();
+        ClassComposition clzMap   = ensureListMapComposition();
+
+        // starting with this module, find all module dependencies, and the shortest path to each
+        Map<ModuleConstant, String> mapModulePaths = collectDependencies(module);
+        int cModules = mapModulePaths.size() - 1;
+        if (cModules == 0)
+            {
+            return xArray.constructListMap(frame, clzMap,
+                    xString.ensureEmptyArray(), ensureEmptyArray(), iReturn);
+            }
+
+        ObjectHandle[] ahPaths   = new ObjectHandle[cModules];
+        ObjectHandle[] ahModules = new ObjectHandle[cModules];
+        boolean        fDeferred = false;
+        int            index     = 0;
+        for (Map.Entry<ModuleConstant, String> entry : mapModulePaths.entrySet())
+            {
+            ModuleConstant idDep = entry.getKey();
+            if (idDep != idModule)
+                {
+                ObjectHandle hM = frame.getConstHandle(idDep);
+                ahPaths  [index] = xString.makeHandle(entry.getValue());
+                ahModules[index] = hM;
+                fDeferred |= Op.isDeferred(hM);
+                ++index;
+                }
+            }
+
+        ArrayHandle hPaths = xString.ensureArrayTemplate().createArrayHandle(
+            xString.ensureArrayComposition(), ahPaths);
+
+        if (fDeferred)
+            {
+            Frame.Continuation stepNext = frameCaller ->
+                {
+                ArrayHandle hModules = ensureArrayTemplate().createArrayHandle(
+                        ensureArrayComposition(), ahModules);
+                return xArray.constructListMap(frame, clzMap, hPaths, hModules, iReturn);
+                };
+            return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
+            }
+
+        ArrayHandle hModules = ensureArrayTemplate().createArrayHandle(
+                ensureArrayComposition(), ahModules);
+        return xArray.constructListMap(frame, clzMap, hPaths, hModules, iReturn);
         }
 
 
@@ -216,59 +234,6 @@ public class xRTModule
         }
 
     /**
-     * Implementation for: {@code (String[], Module[]) getModuleDependencies()}.
-     */
-    public int invokeGetModuleDependencies(Frame frame, PackageHandle hTarget, int[] aiReturn)
-        {
-        ModuleConstant  idModule = (ModuleConstant) hTarget.getId();
-        ModuleStructure module   = (ModuleStructure) idModule.getComponent();
-
-        // starting with this module, find all module dependencies, and the shortest path to each
-        Map<ModuleConstant, String> mapModulePaths = collectDependencies(module);
-        int cModules = mapModulePaths.size() - 1;
-        if (cModules == 0)
-            {
-            return frame.assignValues(aiReturn, xString.ensureEmptyArray(), ensureEmptyArray());
-            }
-
-        ObjectHandle[] ahPaths   = new ObjectHandle[cModules];
-        ObjectHandle[] ahModules = new ObjectHandle[cModules];
-        boolean        fDeferred = false;
-        int            index     = 0;
-        for (Entry<ModuleConstant, String> entry : mapModulePaths.entrySet())
-            {
-            ModuleConstant idDep = entry.getKey();
-            if (idDep != idModule)
-                {
-                ObjectHandle hModule = frame.getConstHandle(idDep);
-                ahPaths  [index] = xString.makeHandle(entry.getValue());
-                ahModules[index] = hModule;
-                fDeferred |= Op.isDeferred(hModule);
-                ++index;
-                }
-            }
-
-        ArrayHandle hPaths = xString.ensureArrayTemplate().createArrayHandle(
-            xString.ensureArrayComposition(), ahPaths);
-
-        if (fDeferred)
-            {
-            Frame.Continuation stepNext = frameCaller ->
-                {
-                ArrayHandle hModules = ensureArrayTemplate().createArrayHandle(
-                        ensureArrayComposition(), ahModules);
-                return frame.assignValues(aiReturn, hPaths, hModules);
-                };
-
-            return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
-            }
-
-        ArrayHandle hModules = ensureArrayTemplate().createArrayHandle(
-                ensureArrayComposition(), ahModules);
-        return frame.assignValues(aiReturn, hPaths, hModules);
-        }
-
-    /**
      * Given a module, build a list of all of the module dependencies, and the shortest path to
      * each.
      *
@@ -280,7 +245,7 @@ public class xRTModule
         {
         Map<ModuleConstant, String> mapModulePaths = new HashMap<>();
         mapModulePaths.put(module.getIdentityConstant(), "");
-        xRTModule.collectDependencies("", module, mapModulePaths);
+        collectDependencies("", module, mapModulePaths);
         return mapModulePaths;
         }
 
@@ -337,19 +302,19 @@ public class xRTModule
     /**
      * Resolve a class string into a class type.
      *
-     * @param typeSystem  (optional) the FileStructure representing the TypeSystem
-     * @param module      (optional) the module to begin the name resolution from
-     * @param sClass      the class string
+     * @param structTS  (optional) the FileStructure representing the TypeSystem
+     * @param module    (optional) the module to begin the name resolution from
+     * @param sClass    the class string
      *
      * @return either a TypeConstant or a String error or null
      */
-    public static Object resolveClass(FileStructure typeSystem, ModuleStructure module, String sClass)
+    public static Object resolveClass(FileStructure structTS, ModuleStructure module, String sClass)
         {
         if (module == null)
             {
-            module = typeSystem == null
+            module = structTS == null
                     ? INSTANCE.f_struct.getFileStructure().getModule()  // only Ecstasy classes
-                    : typeSystem.getModule();
+                    : structTS.getModule();
             }
 
         if (sClass.length() == 0)
@@ -460,12 +425,12 @@ public class xRTModule
      */
     public static ClassComposition ensureArrayComposition()
         {
-        ClassComposition clz = ARRAY_CLZCOMP;
+        ClassComposition clz = ARRAY_CLZ;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeModuleArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeModule());
-            ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeModuleArray);
+            ARRAY_CLZ = clz = INSTANCE.f_templates.resolveClass(typeModuleArray);
             assert clz != null;
             }
         return clz;
@@ -474,7 +439,7 @@ public class xRTModule
     /**
      * @return the handle for an empty Array of Module
      */
-    public static ObjectHandle.ArrayHandle ensureEmptyArray()
+    public static ArrayHandle ensureEmptyArray()
         {
         if (ARRAY_EMPTY == null)
             {
@@ -484,10 +449,29 @@ public class xRTModule
         return ARRAY_EMPTY;
         }
 
+    /**
+     * @return the ClassComposition for ListMap<String, Module>
+     */
+    private static ClassComposition ensureListMapComposition()
+        {
+        ClassComposition clz = LISTMAP_CLZ;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
+            typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeModule());
+            LISTMAP_CLZ = clz = INSTANCE.f_templates.resolveClass(typeList);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    private static ClassComposition LISTMAP_CLZ;
+
 
     // ----- data members --------------------------------------------------------------------------
 
     private static xArray           ARRAY_TEMPLATE;
-    private static ClassComposition ARRAY_CLZCOMP;
+    private static ClassComposition ARRAY_CLZ;
     private static ArrayHandle      ARRAY_EMPTY;
     }

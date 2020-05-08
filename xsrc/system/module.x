@@ -150,6 +150,21 @@ module Ecstasy.xtclang.org
          * A mapping from simple name to class within this package.
          */
         @RO immutable Map<String, Class> classByName;
+
+
+        // ----- Stringable methods --------------------------------------------------------------------
+
+        @Override
+        Int estimateStringLength()
+            {
+            return &this.actualClass.name.size;
+            }
+
+        @Override
+        void appendTo(Appender<Char> appender)
+            {
+            &this.actualClass.name.appendTo(appender);
+            }
         }
 
     /**
@@ -211,5 +226,20 @@ module Ecstasy.xtclang.org
          * @return (conditional) the specified [Type]
          */
         conditional Type typeForName(String name);
+
+
+        // ----- Stringable methods --------------------------------------------------------------------
+
+        @Override
+        Int estimateStringLength()
+            {
+            return qualifiedName.size;
+            }
+
+        @Override
+        void appendTo(Appender<Char> appender)
+            {
+            qualifiedName.appendTo(appender);
+            }
         }
     }

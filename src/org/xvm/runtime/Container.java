@@ -28,9 +28,8 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xService;
-
-import org.xvm.runtime.template._native.reflect.xRTModule;
 
 
 /**
@@ -226,7 +225,7 @@ public abstract class Container
             ModuleStructure module   = (ModuleStructure) idModule.getComponent();
             ConstantPool    pool     = module.getConstantPool();
 
-            Map<ModuleConstant, String> mapModules = xRTModule.collectDependencies(module);
+            Map<ModuleConstant, String> mapModules = xModule.collectDependencies(module);
             int                         cModules   = mapModules.size();
             ObjectHandle[]              ahModules  = new ObjectHandle[cModules];
             ObjectHandle[]              ahShared   = new ObjectHandle[cModules];
@@ -256,16 +255,16 @@ public abstract class Container
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     {
-                    ahArg[0] = xRTModule.ensureArrayTemplate().createArrayHandle(
-                            xRTModule.ensureArrayComposition(), ahModules);
+                    ahArg[0] = xModule.ensureArrayTemplate().createArrayHandle(
+                            xModule.ensureArrayComposition(), ahModules);
                     return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
                     };
 
                 return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
                 }
 
-            ahArg[0] = xRTModule.ensureArrayTemplate().createArrayHandle(
-                    xRTModule.ensureArrayComposition(), ahModules);
+            ahArg[0] = xModule.ensureArrayTemplate().createArrayHandle(
+                    xModule.ensureArrayComposition(), ahModules);
             return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
             }
         return frame.assignValue(iReturn, hTS);

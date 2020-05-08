@@ -91,4 +91,12 @@ class ConstHelper
             }
         return result;
         }
+
+    /**
+     * Helper function to create an immutable ListMap out of two arrays
+     */
+//    static <Key, Value> immutable ListMap<Key, Value> crateListMap(Key[] keys, Value[] values)
+//        {
+//        return new ListMap<Key, Value>(keys, values).ensureImmutable(true);
+//        }
     }

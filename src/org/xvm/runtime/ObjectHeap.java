@@ -173,16 +173,9 @@ public class ObjectHeap
             case Duration:
             case Range:
             case Version:
-                return constValue.getType();
-
             case Module:
-                sComponent = "_native.reflect.RTModule";
-                break;
-
             case Package:
-                sComponent = "_native.reflect.RTPackage";
-                break;
-
+                return constValue.getType();
 
             case FileStore:
                 sComponent = "_native.fs.CPFileStore";
