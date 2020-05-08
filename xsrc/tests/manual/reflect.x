@@ -516,8 +516,30 @@ module TestReflection
 
         TypeSystem ts = this:service.typeSystem;
         console.println($"current TypeSystem={ts}");
+        console.println($"modules              : {ts.modules              }"); // TODO clean up module toString
+        console.println($"sharedModules        : {ts.sharedModules        }"); // TODO clean up hashSet toString
+        console.println($"moduleBySimpleName   : {ts.moduleBySimpleName   }");
+        console.println($"moduleByQualifiedName: {ts.moduleByQualifiedName}");
 
-        String[] names = ["String", "ecstasy.String", "ecstasy.ecstasy.String", "Map<String, Int>", "", "Point"];
+        String[] names =
+                [
+                "String",                   // should use "implicit.x" to find it
+                "ecstasy.String",           // should find it via package import
+                "ecstasy.ecstasy.String",   // should find it via package import (x2)
+                "Map<String, Int>",         // type parameters (and implicit.x) TODO toString is missing the package name on Map, but has it on Int
+                "",                         // == test module
+                "Point",                    // in test module
+                "bob",                      // shouldn't find it
+                "Point.Bob",                // shouldn't find it
+                "TestReflection:Point",     // with explicit module name
+                "Ecstasy:collections.HashMap",
+                "Ecstasy.xtclang.org:collections.HashMap",
+                "TestReflection:",          // just explicit module name
+                "Ecstasy:",
+                "Ecstasy.xtclang.org:",
+                "@Unchecked Int",           // annotation TODO class toString doesn't show annotation!!!
+                ];
+
         for (String name : names)
             {
             try

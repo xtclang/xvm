@@ -263,6 +263,14 @@ public class Parser
                 {
                 exprResult = new NamedTypeExpression(exprResult, classNames, params, prev().getEndPosition());
                 }
+
+            if (annotations != null)
+                {
+                for (int i = annotations.size()-1; i >= 0; --i)
+                    {
+                    exprResult = new AnnotatedTypeExpression(annotations.get(i), exprResult);
+                    }
+                }
             }
         while (match(Id.DOT) != null);
 

@@ -291,7 +291,12 @@ public class xRTModule
                     else if (sNewPath.length() < sOldPath.length())
                         {
                         mapModulePaths.put(idDep, sNewPath);
-                        // TODO rewrite any other paths (i.e. nested) that started with the old path
+
+                        // replace everything else using the new path that was already registered
+                        // as being reached via the old path
+                        mapModulePaths.entrySet().stream()
+                                .filter(e -> e.getValue().startsWith(sOldPath + '.'))
+                                .forEach(e -> e.setValue(sNewPath + e.getValue().substring(sOldPath.length())));
                         }
                     }
                 else
@@ -344,14 +349,9 @@ public class xRTModule
                     return "Exception occurred while resolving \"" + sClass + "\": " + e;
                     }
 
-                if (typeClz == null || typeClz.containsUnresolved())
-                    {
-                    return "Unable to resolve: \"" + sClass + '\"';
-                    }
-                else
-                    {
-                    return typeClz;
-                    }
+                return typeClz == null || typeClz.containsUnresolved()
+                        ? null
+                        : typeClz;
                 }
             }
 

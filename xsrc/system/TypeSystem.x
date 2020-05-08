@@ -128,6 +128,7 @@ const TypeSystem
      */
     conditional Class classForName(String name)
         {
+        // TODO conflict expected with combination of annotations and module spec (':')
         if (Int moduleSep := name.indexOf(':'))
             {
             String moduleName = name[0..moduleSep);
@@ -211,5 +212,3 @@ const TypeSystem
         appender.add('}');
         }
     }
-
-
