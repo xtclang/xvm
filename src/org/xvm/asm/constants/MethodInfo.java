@@ -825,9 +825,20 @@ public class MethodInfo
                                 }
                             body = new MethodBody(body, Implementation.Native);
                             }
-                        // fall through
-                    case Native:
                         if (listNew != null)
+                            {
+                            listNew.add(body);
+                            }
+                        break;
+
+                    case Native:
+                        if (bodyDefault != null &&
+                            body.getIdentity().getNamespace().equals(pool().clzObject()))
+                            {
+                            // Object is the only interface with native methods; since another
+                            // interface implements that method - ignore the native one
+                            }
+                        else if (listNew != null)
                             {
                             listNew.add(body);
                             }
