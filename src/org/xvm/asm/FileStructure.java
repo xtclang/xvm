@@ -886,17 +886,6 @@ public class FileStructure
         }
 
     @Override
-    public boolean validate(ErrorListener errlist)
-        {
-        boolean fAbort = super.validate(errlist);
-        if (!fAbort && !errlist.isAbortDesired())
-            {
-            fAbort |= getConstantPool().postValidate(errlist) | errlist.isAbortDesired();
-            }
-        return fAbort;
-        }
-
-    @Override
     public String getDescription()
         {
         StringBuilder sb = new StringBuilder();

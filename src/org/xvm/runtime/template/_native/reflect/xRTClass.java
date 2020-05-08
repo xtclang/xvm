@@ -119,6 +119,19 @@ public class xRTClass
         }
 
     @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "implements":
+                return invokeImplements(frame, hTarget, hArg, iReturn);
+            }
+
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn)
         {
@@ -291,6 +304,17 @@ public class xRTClass
                     frame.getConstHandle(constInstance));
             }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        }
+
+    /**
+     * Implementation for: {@code Boolean implements(Class clz)}.
+     */
+    public int invokeImplements(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        TypeConstant typeThis = getClassType(hTarget);
+        TypeConstant typeThat = getClassType(hArg);
+        // TODO GG: not quite right
+        return frame.assignValue(iReturn, xBoolean.makeHandle(typeThis.isA(typeThat)));
         }
 
 

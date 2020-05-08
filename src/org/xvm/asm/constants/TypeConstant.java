@@ -1956,10 +1956,8 @@ public abstract class TypeConstant
             case PACKAGE:
                 if (cContribs == 0)
                     {
-                    PackageStructure pkg = (PackageStructure) struct;
-                    assert pkg.isModuleImport();
-                    // module import is completely synthetic
-                    break;
+                    assert ((PackageStructure) struct).isModuleImport();
+                    // module import is still a Package and needs to be "re-based"
                     }
                 // fall through
             case MODULE:

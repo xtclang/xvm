@@ -28,8 +28,9 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template._native.reflect.xRTClass;
 import org.xvm.runtime.template.collections.xArray;
+
+import org.xvm.runtime.template._native.reflect.xRTClass;
 
 
 /**
@@ -105,8 +106,8 @@ public class xPackage
     public int getPropertyClassByName(Frame frame, PackageHandle hTarget, int iReturn)
         {
         // TODO GG: how to cache the result?
-        ClassStructure   pkg         = hTarget.getStructure();
-        ClassComposition clzMap      = ensureListMapComposition();
+        ClassStructure   pkg    = hTarget.getStructure();
+        ClassComposition clzMap = ensureListMapComposition();
 
         Map<String, Component>          mapChildren = pkg.getChildByNameMap();
         ArrayList<xString.StringHandle> listNames   = new ArrayList<>(mapChildren.size());
@@ -114,11 +115,13 @@ public class xPackage
         boolean                         fDeferred   = false;
         for (Map.Entry<String, Component> entry : mapChildren.entrySet())
             {
-            Component component = entry.getValue();
+            Component        component = entry.getValue();
             if (component instanceof ClassStructure)
                 {
                 listNames.add(xString.makeHandle(entry.getKey()));
-                ObjectHandle hClass = frame.getConstHandle(component.getIdentityConstant());
+                IdentityConstant id = component.getIdentityConstant();
+                ObjectHandle hClass = frame.getConstHandle(
+                        id.getConstantPool().ensureClassConstant(id.getType()));
                 fDeferred |= Op.isDeferred(hClass);
                 listClasses.add(hClass);
                 }
@@ -173,7 +176,7 @@ public class xPackage
     // ----- Helpers -------------------------------------------------------------------------------
 
     /**
-     * @return the ClassComposition for ListMap<String, Package>
+     * @return the ClassComposition for ListMap<String, Class>
      */
     private static ClassComposition ensureListMapComposition()
         {
@@ -183,7 +186,7 @@ public class xPackage
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
-            typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typePackage());
+            typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeClass());
             LISTMAP_CLZ = clz = INSTANCE.f_templates.resolveClass(typeList);
             assert clz != null;
             }
