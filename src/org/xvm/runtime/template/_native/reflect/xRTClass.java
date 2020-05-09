@@ -13,6 +13,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecoratedClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -180,9 +181,13 @@ public class xRTClass
      */
     public int getPropertyName(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        TypeConstant typeTarget = getClassType(hTarget);
-        ObjectHandle hResult    = xString.makeHandle(typeTarget.getSingleUnderlyingClass(true).getName());
-        return frame.assignValue(iReturn, hResult);
+        TypeConstant     typeTarget = getClassType(hTarget);
+        IdentityConstant idClz      = typeTarget.getSingleUnderlyingClass(true);
+        String           sName      = idClz instanceof ModuleConstant
+                ? idClz.getName()
+                : idClz.getPathString();
+
+        return frame.assignValue(iReturn, xString.makeHandle(sName));
         }
 
     /**

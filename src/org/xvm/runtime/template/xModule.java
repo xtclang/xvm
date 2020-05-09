@@ -226,7 +226,7 @@ public class xModule
 
         if (oResult instanceof TypeConstant)
             {
-            TypeConstant typeClz = (TypeConstant) oResult;
+            TypeConstant typeClz = ((TypeConstant) oResult).getType();
             return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(typeClz));
             }
 

@@ -107,6 +107,14 @@ public class xPackage
         }
 
     @Override
+    protected int callCompareImpl(Frame frame, ClassComposition clazz,
+                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return frame.assignValue(iReturn, xOrdered.makeHandle(
+            (((PackageHandle) hValue1).getId().compareTo(((PackageHandle) hValue2).getId()))));
+        }
+
+    @Override
     protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn,
