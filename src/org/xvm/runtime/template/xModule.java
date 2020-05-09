@@ -29,7 +29,6 @@ import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.compiler.ast.TypeExpression;
 
 import org.xvm.runtime.ClassComposition;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -40,7 +39,6 @@ import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 
-import org.xvm.util.Severity;
 
 /**
  * Native implementation of Module interface.
@@ -306,99 +304,72 @@ public class xModule
      * @param module    (optional) the module to begin the name resolution from
      * @param sClass    the class string
      *
-     * @return either a TypeConstant or a String error or null
+     * @return either a TypeConstant or null if the class couldn't be resolved for any reason
      */
     public static Object resolveClass(FileStructure structTS, ModuleStructure module, String sClass)
         {
-        if (module == null)
-            {
-            module = structTS == null
-                    ? INSTANCE.f_struct.getFileStructure().getModule()  // only Ecstasy classes
-                    : structTS.getModule();
-            }
-
-        if (sClass.length() == 0)
-            {
-            // module.classForName("") is the module itself
-            return module.getIdentityConstant().getType();
-            }
-
-        Source         source = new Source(sClass);
-        ErrorList      errs   = new ErrorList(10);
-        TypeExpression expr   = new Parser(source, errs).parseClassExpression();
-        if (errs.getSeriousErrorCount() == 0)
-            {
-            TypeCompositionStatement stmtModule = new TypeCompositionStatement(module, source, expr);
-            if (new StageMgr(expr, Compiler.Stage.Resolved, errs).fastForward(3))
-                {
-                TypeConstant typeClz;
-                try
-                    {
-                    typeClz = expr.ensureTypeConstant();
-                    }
-                catch (RuntimeException e)
-                    {
-                    return "Exception occurred while resolving \"" + sClass + "\": " + e;
-                    }
-
-                // REVIEW should we check errs again here?
-                return typeClz == null || typeClz.containsUnresolved()
-                        ? null
-                        : typeClz;
-                }
-            }
-
-        return errs.getErrors().stream()
-                .filter(i -> (i.getSeverity().compareTo(Severity.ERROR) > 0))
-                .findFirst().get().getMessage();
+        return resolveClassOrType(structTS, module, sClass, true);
         }
 
     /**
      * Resolve a type string into a type.
      *
-     * @param typeSystem  (optional) the FileStructure representing the TypeSystem
-     * @param module      (optional) the module to begin the name resolution from
-     * @param sType       the type string
+     * @param structTS  (optional) the FileStructure representing the TypeSystem
+     * @param module    (optional) the module to begin the name resolution from
+     * @param sType     the type string
      *
-     * @return either a TypeConstant or a String error or null
+     * @return either a TypeConstant or null if the type couldn't be resolved for any reason
      */
-    public static Object resolveType(FileStructure typeSystem, ModuleStructure module, String sType)
+    public static Object resolveType(FileStructure structTS, ModuleStructure module, String sType)
+        {
+        return resolveClassOrType(structTS, module, sType, false);
+        }
+
+    private static Object resolveClassOrType(FileStructure structTS, ModuleStructure module, String sClassOrType, boolean fClass)
         {
         if (module == null)
             {
-            module = typeSystem == null
-                    ? INSTANCE.f_struct.getFileStructure().getModule()  // only Ecstasy classes
-                    : typeSystem.getModule();
+            module = structTS == null
+                ? INSTANCE.f_struct.getFileStructure().getModule()  // only Ecstasy classes
+                : structTS.getModule();
             }
 
-        Source         source = new Source(sType);
+        if (fClass && sClassOrType.length() == 0)
+            {
+            // module.classForName("") is the module itself
+            return module.getIdentityConstant().getType();
+            }
+
+        Source         source = new Source(sClassOrType);
         ErrorList      errs   = new ErrorList(10);
-        TypeExpression expr   = new Parser(source, errs).parseTypeExpression();
-        if (errs.getSeriousErrorCount() == 0)
+        Parser         parser = new Parser(source, errs);
+        TypeExpression expr   = null;
+        try
+            {
+            expr = fClass ? parser.parseClassExpression() : parser.parseTypeExpression();
+            }
+        catch (RuntimeException e) {}
+
+        if (expr != null && errs.getSeriousErrorCount() == 0)
             {
             TypeCompositionStatement stmtModule = new TypeCompositionStatement(module, source, expr);
             if (new StageMgr(expr, Compiler.Stage.Resolved, errs).fastForward(3))
                 {
-                TypeConstant typeResult;
+                TypeConstant typeClz = null;
                 try
                     {
-                    typeResult = expr.ensureTypeConstant();
+                    typeClz = expr.ensureTypeConstant();
                     }
-                catch (RuntimeException e)
-                    {
-                    return "Exception occurred while resolving \"" + sType + "\": " + e;
-                    }
+                catch (RuntimeException e) {}
 
-                // REVIEW should we check errs again here?
-                return typeResult == null || typeResult.containsUnresolved()
-                        ? null
-                        : typeResult;
+                if (typeClz != null && !typeClz.containsUnresolved())
+                    {
+                    return typeClz;
+                    }
                 }
             }
 
-        return errs.getErrors().stream()
-                .filter(i -> (i.getSeverity().compareTo(Severity.ERROR) > 0))
-                .findFirst().get().getMessage();
+        return null;
         }
 
 

@@ -568,10 +568,31 @@ module TestReflection
 
     void displayModule(Module _module)
         {
-        console.println($"module \"{_module.simpleName}\" (\"{_module.qualifiedName}\") version={_module.version}, dependencies:");
-        for ((String name, Module dep) : _module.modulesByName)
+        console.println($"module \"{_module.simpleName}\" (\"{_module.qualifiedName}\")");
+        val deps = _module.modulesByName;
+        if (!deps.empty)
             {
-            console.println($" - \"{name}\" => \"{dep.qualifiedName}\"");
+            console.println($" - dependencies:");
+            for ((String name, Module dep) : deps)
+                {
+                console.println($"    - \"{name}\" => \"{dep.qualifiedName}\"");
+                }
+            }
+
+        console.println(" - contents:");
+        displayPackage(_module, "   ");
+        }
+
+    void displayPackage(Package pkg, String prefix = "")
+        {
+        prefix += " |-";
+        for (Class child : pkg.classes)
+            {
+            console.println($"{prefix} {child.name}");
+            if (child.implements(Package), Object instance := child.isSingleton())
+                {
+                displayPackage(instance.as(Package), prefix);
+                }
             }
         }
 

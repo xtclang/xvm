@@ -208,13 +208,6 @@ module Ecstasy.xtclang.org
          * will be provided in the map. In the case of an unlinked, optional module (one that is
          * specified as a "desired" or "optional" import, but was not loaded and linked with this
          * module for whatever reason), no entry will be present in the map.
-         *
-         * TODO GG the following declaration:
-         *   @RO immutable Map<String, Module> modulesByName;
-         * (i.e. without the '!') compiled successfully, but then caused:
-         *   2020-05-08 20:41:50.014 Service "HelloWorld" (id=0), fiber 1: Unhandled exception: Ecstasy:Exception Missing method "Ecstasy:Iterator<Ecstasy:collections.Map<Ecstasy:String, HelloWorld>.Entry> iterator()" on immutable Ecstasy:collections.ListMap<Ecstasy:String, Ecstasy:Module>.Entries
-         *   	at run() (line=12, op=Invoke_01)
-         *   	at <HelloWorld> (iPC=0, op=)
          */
         @RO immutable Map<String, Module!> modulesByName;
 
