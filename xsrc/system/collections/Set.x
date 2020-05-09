@@ -4,6 +4,7 @@
  */
 interface Set<Element>
         extends Collection<Element>
+        extends Stringable
     {
     // ----- read operations -----------------------------------------------------------------------
 
@@ -91,5 +92,57 @@ interface Set<Element>
         // TODO default implementation should just create a Set that answers the opposite of what
         //      this set answers for all the "contains" etc. operations
         throw new UnsupportedOperation();
+        }
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        Int count = &this.actualClass.name.size + 2 + 2 * size;
+        if (Element.is(Type<Stringable>))
+            {
+            for (Element e : this)
+                {
+                count += e.estimateStringLength();
+                }
+            }
+        else
+            {
+            count += 5 * size; // guess poorly
+            }
+
+        return size;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        &this.actualClass.name.appendTo(appender);
+        appender.add('{');
+        if (Element.is(Type<Stringable>))
+            {
+            Loop: for (Element e : this)
+                {
+                if (!Loop.first)
+                    {
+                    appender.add(", ");
+                    }
+                e.appendTo(appender);
+                }
+            }
+        else
+            {
+            Loop: for (Element e : this)
+                {
+                if (!Loop.first)
+                    {
+                    appender.add(", ");
+                    }
+                appender.add(e.toString());
+                }
+            }
+        appender.add('}');
         }
     }
