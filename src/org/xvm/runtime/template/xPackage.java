@@ -139,7 +139,7 @@ public class xPackage
         boolean                         fDeferred   = false;
         for (Map.Entry<String, Component> entry : mapChildren.entrySet())
             {
-            Component        component = entry.getValue();
+            Component component = entry.getValue();
             if (component instanceof ClassStructure)
                 {
                 listNames.add(xString.makeHandle(entry.getKey()));
