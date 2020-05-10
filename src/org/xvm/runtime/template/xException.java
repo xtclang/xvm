@@ -39,16 +39,17 @@ public class xException
             {
             // cache all the well-known exception classes
             s_clzException            = INSTANCE.getCanonicalClass();
-            s_clzIllegalArgument      = f_templates.getTemplate("IllegalArgument").getCanonicalClass();
-            s_clzIllegalState         = f_templates.getTemplate("IllegalState").getCanonicalClass();
-            s_clzOutOfBounds          = f_templates.getTemplate("OutOfBounds").getCanonicalClass();
-            s_clzReadOnly             = f_templates.getTemplate("ReadOnly").getCanonicalClass();
-            s_clzTimedOut             = f_templates.getTemplate("TimedOut").getCanonicalClass();
-            s_clzTypeMismatch         = f_templates.getTemplate("TypeMismatch").getCanonicalClass();
-            s_clzUnsupportedOperation = f_templates.getTemplate("UnsupportedOperation").getCanonicalClass();
+            s_clzIllegalArgument      = f_templates.getTemplate("IllegalArgument"              ).getCanonicalClass();
+            s_clzIllegalState         = f_templates.getTemplate("IllegalState"                 ).getCanonicalClass();
+            s_clzInvalidType          = f_templates.getTemplate("reflect.InvalidType"          ).getCanonicalClass();
+            s_clzOutOfBounds          = f_templates.getTemplate("OutOfBounds"                  ).getCanonicalClass();
+            s_clzReadOnly             = f_templates.getTemplate("ReadOnly"                     ).getCanonicalClass();
+            s_clzTimedOut             = f_templates.getTemplate("TimedOut"                     ).getCanonicalClass();
+            s_clzTypeMismatch         = f_templates.getTemplate("TypeMismatch"                 ).getCanonicalClass();
+            s_clzUnsupportedOperation = f_templates.getTemplate("UnsupportedOperation"         ).getCanonicalClass();
             s_clzDivisionByZero       = f_templates.getTemplate("numbers.Number.DivisionByZero").getCanonicalClass();
-            s_clzPathException        = f_templates.getTemplate("fs.PathException").getCanonicalClass();
-            s_clzIOException          = f_templates.getTemplate("io.IOException").getCanonicalClass();
+            s_clzPathException        = f_templates.getTemplate("fs.PathException"             ).getCanonicalClass();
+            s_clzIOException          = f_templates.getTemplate("io.IOException"               ).getCanonicalClass();
 
             METHOD_FORMAT_EXCEPTION = getStructure().findMethod("formatExceptionString", 2);
 
@@ -99,6 +100,16 @@ public class xException
     public static ExceptionHandle illegalState(Frame frame, String sMsg)
         {
         return makeHandle(frame, s_clzIllegalState, sMsg);
+        }
+
+    public static ExceptionHandle invalidType(Frame frame, String sMsg)
+        {
+        return makeHandle(frame, s_clzInvalidType, sMsg);
+        }
+
+    public static ExceptionHandle invalidType(Frame frame, Throwable e)
+        {
+        return new ExceptionHandle(xException.s_clzInvalidType, true, e);
         }
 
     public static ExceptionHandle mutableObject(Frame frame)
@@ -203,6 +214,7 @@ public class xException
     private static ClassComposition s_clzException;
     private static ClassComposition s_clzIllegalArgument;
     private static ClassComposition s_clzIllegalState;
+    private static ClassComposition s_clzInvalidType;
     private static ClassComposition s_clzOutOfBounds;
     private static ClassComposition s_clzReadOnly;
     private static ClassComposition s_clzTimedOut;

@@ -92,6 +92,20 @@ public class ConstantPool
         }
 
     /**
+     * Obtain the corresponding Constant that is currently stored in this pool.
+     *
+     * @param constant  the Constant to find in the pool
+     *
+     * @return the corresponding constant from the pool, it was already present in this pool
+     */
+    public Constant getConstant(Constant constant)
+        {
+        return constant == null
+                ? null
+                : ensureConstantLookup(constant.getFormat()).get(constant);
+        }
+
+    /**
      * Register a Constant. This is used when a new Constant is created by the ConstantPool, but it
      * can also be used directly by a consumer, and it's used during the bulk (re-)registration of
      * Constants by the {@link XvmStructure#registerConstants} method of all of the various parts

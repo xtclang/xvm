@@ -52,6 +52,7 @@ import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
 import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 import org.xvm.runtime.template.collections.xTuple;
 
 import org.xvm.util.ListMap;
@@ -99,12 +100,23 @@ public class xRTType
         markNativeMethod("fromProperty"   , null, null);
         markNativeMethod("modifying"      , null, null);
         markNativeMethod("named"          , null, null);
-        markNativeMethod("purify"         , null, null);
+        markNativeMethod("parameterize"   , null, null);
         markNativeMethod("parameterized"  , null, null);
+        markNativeMethod("purify"         , null, null);
         markNativeMethod("relational"     , null, null);
 
-        // TODO parameterize
-        // TODO ops: add x3, or, and, sub x3
+        final String[] PARAM_TYPE    = new String[] {"Type!<>"};
+        final String[] PARAM_METHODS = new String[] {"collections.Sequence<reflect.Method>"};
+        final String[] PARAM_PROPS   = new String[] {"collections.Sequence<reflect.Property>"};
+
+        markNativeMethod("add", PARAM_TYPE   , null);
+        markNativeMethod("add", PARAM_METHODS, null);
+        markNativeMethod("add", PARAM_PROPS  , null);
+        markNativeMethod("sub", PARAM_TYPE   , null);
+        markNativeMethod("sub", PARAM_METHODS, null);
+        markNativeMethod("sub", PARAM_PROPS  , null);
+        markNativeMethod("and", PARAM_TYPE   , null);
+        markNativeMethod("or" , PARAM_TYPE   , null);
 
         ClassConstant   idType     = pool().clzType();
         TypeConstant    typeType   = idType.getType();
@@ -218,6 +230,9 @@ public class xRTType
             case "or":
                 return invokeOr(frame, hType, hArg, iReturn);
 
+            case "parameterize":
+                return invokeParameterize(frame, hType, hArg, iReturn);
+
             case "purify":
                 return invokePurify(frame, hType, iReturn);
             }
@@ -266,29 +281,107 @@ public class xRTType
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        // TODO
-        throw new UnsupportedOperationException();
+        // hArg may be a Type, a Method, or a Property
+        if (hArg instanceof TypeHandle)
+            {
+            TypeConstant typeThis = ((TypeHandle) hTarget).getDataType();
+            TypeConstant typeThat = ((TypeHandle) hArg   ).getDataType();
+            ConstantPool pool     = selectPool(typeThis, typeThat);
+            if (pool == null)
+                {
+                return frame.raiseException("no common TypeSystem for ("
+                        + typeThis + " + " + typeThat + ")");
+                }
+            TypeConstant typeResult = pool.ensureUnionTypeConstant(typeThis, typeThat);
+            return frame.assignValue(iReturn, typeResult.getTypeHandle());
+            }
+        else if (hArg instanceof MethodHandle)
+            {
+            // TODO
+            throw new UnsupportedOperationException();
+            }
+        else if (hArg instanceof PropertyHandle)
+            {
+            // TODO
+            throw new UnsupportedOperationException();
+            }
+
+        return super.invokeAdd(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        // TODO
-        throw new UnsupportedOperationException();
+        // hArg may be a Type, a Method, or a Property
+        if (hArg instanceof TypeHandle)
+            {
+            TypeConstant typeThis = ((TypeHandle) hTarget).getDataType();
+            TypeConstant typeThat = ((TypeHandle) hArg   ).getDataType();
+            ConstantPool pool     = selectPool(typeThis, typeThat);
+            if (pool == null)
+                {
+                return frame.raiseException("no common TypeSystem for ("
+                    + typeThis + " - " + typeThat + ")");
+                }
+            TypeConstant typeResult = pool.ensureDifferenceTypeConstant(typeThis, typeThat);
+            return frame.assignValue(iReturn, typeResult.getTypeHandle());
+            }
+        else if (hArg instanceof MethodHandle)
+            {
+            // TODO
+            throw new UnsupportedOperationException();
+            }
+        else if (hArg instanceof PropertyHandle)
+            {
+            // TODO
+            throw new UnsupportedOperationException();
+            }
+
+        return super.invokeAdd(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        // TODO
-        throw new UnsupportedOperationException();
+        // hArg is a Type
+        if (hArg instanceof TypeHandle)
+            {
+            TypeConstant typeThis = ((TypeHandle) hTarget).getDataType();
+            TypeConstant typeThat = ((TypeHandle) hArg   ).getDataType();
+            ConstantPool pool     = selectPool(typeThis, typeThat);
+            if (pool == null)
+                {
+                return frame.raiseException("no common TypeSystem for ("
+                    + typeThis + " & " + typeThat + ")");
+                }
+            // TODO
+            // TypeConstant typeResult = pool.ensure???TypeConstant(typeThis, typeThat);
+            // return frame.assignValue(iReturn, typeResult.getTypeHandle());
+            throw new UnsupportedOperationException();
+            }
+
+        return super.invokeOr(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        // TODO
-        throw new UnsupportedOperationException();
+        // hArg is a Type
+        if (hArg instanceof TypeHandle)
+            {
+            TypeConstant typeThis = ((TypeHandle) hTarget).getDataType();
+            TypeConstant typeThat = ((TypeHandle) hArg   ).getDataType();
+            ConstantPool pool     = selectPool(typeThis, typeThat);
+            if (pool == null)
+                {
+                return frame.raiseException("no common TypeSystem for ("
+                    + typeThis + " | " + typeThat + ")");
+                }
+            TypeConstant typeResult = pool.ensureIntersectionTypeConstant(typeThis, typeThat);
+            return frame.assignValue(iReturn, typeResult.getTypeHandle());
+            }
+
+        return super.invokeOr(frame, hTarget, hArg, iReturn);
         }
 
     @Override
@@ -1022,6 +1115,41 @@ public class xRTType
         }
 
     /**
+     * Implementation for: {@code Type!<> parameterize(Type!<>... paramTypes)}.
+     */
+    public int invokeParameterize(Frame frame, TypeHandle hType, ObjectHandle hArg, int iReturn)
+        {
+        if (hArg instanceof GenericArrayHandle)
+            {
+            TypeConstant       typeThis         = hType.getDataType();
+            GenericArrayHandle hFormalTypeArray = (GenericArrayHandle) hArg;
+            ObjectHandle[]     ahFormalTypes    = hFormalTypeArray.m_ahValue;
+            int                cFormalTypes     = hFormalTypeArray.m_cSize;
+            TypeConstant[]     atypeParams      = new TypeConstant[cFormalTypes];
+            for (int i = 0; i < cFormalTypes; ++i)
+                {
+                atypeParams[i] = ((TypeHandle) ahFormalTypes[i]).getDataType();
+                }
+
+            TypeConstant typeResult;
+            try
+                {
+                typeResult = typeThis.getConstantPool().ensureParameterizedTypeConstant(typeThis, atypeParams);
+                }
+            catch (RuntimeException e)
+                {
+                return frame.raiseException(xException.invalidType(frame, e));
+                }
+            return frame.assignValue(iReturn, typeResult.getTypeHandle());
+            }
+        else
+            {
+            // TODO GG return a continuation that turns the parameters into an array and calls this?
+            throw new UnsupportedOperationException();
+            }
+        }
+
+    /**
      * Implementation for: {@code conditional Type!<> purify()}.
      */
     public int invokePurify(Frame frame, TypeHandle hType, int iReturn)
@@ -1164,6 +1292,36 @@ public class xRTType
             default:
                 throw new IllegalStateException("unsupported type: " + type);
             }
+        }
+
+    /**
+     * Determine the pool to use with the two specified types.
+     *
+     * @param type1
+     * @param type2
+     *
+     * @return a pool that can work with both specified types, or null
+     */
+    protected ConstantPool selectPool(TypeConstant type1, TypeConstant type2)
+        {
+        ConstantPool pool1 = type1.getConstantPool();
+        ConstantPool pool2 = type2.getConstantPool();
+        if (pool1 == pool2)
+            {
+            return pool1;
+            }
+
+        if (pool1.getConstant(type2) != null)
+            {
+            return pool1;
+            }
+
+        if (pool2.getConstant(type1) != null)
+            {
+            return pool2;
+            }
+
+        return null;
         }
 
 

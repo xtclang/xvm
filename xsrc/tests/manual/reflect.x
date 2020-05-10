@@ -7,22 +7,23 @@ module TestReflection
 
     void run()
         {
-        testFuncType();
-        testTypeStrings();
-        testInstanceOf();
-        testMaskReveal();
-        testForm();
-        testProps();
-        testInvoke();
-        testInvoke2();
-        testInvokeAsync();
-        testBind();
-        testChildTypes();
-        testTypeTemplate();
-        testEnum();
-        testStruct();
-        testClass();
-        testTypeSystem();
+//        testFuncType();
+//        testTypeStrings();
+//        testInstanceOf();
+//        testMaskReveal();
+//        testForm();
+//        testProps();
+//        testInvoke();
+//        testInvoke2();
+//        testInvokeAsync();
+//        testBind();
+//        testChildTypes();
+//        testTypeTemplate();
+//        testEnum();
+//        testStruct();
+//        testClass();
+//        testTypeSystem();
+        testTypes();
         }
 
     Function<<Int, String>, <Int>> foo()
@@ -594,6 +595,55 @@ module TestReflection
                 displayPackage(instance.as(Package), prefix);
                 }
             }
+        }
+
+    void testTypes()
+        {
+        console.println("\n** testTypes");
+
+        {
+        Type t1 = Map;
+        Type t2 = Int;
+        Type t3 = t1.parameterize([t2]);
+// TODO CP - need to improve Type toString impl
+        console.println($"{t1} < {t2} > = {t3}");
+        assert t3 == Map<Int>;
+        }
+
+        {
+        Type t1 = Map;
+        Type t2 = String;
+        Type t3 = Int;
+        Type t4 = t1.parameterize([t2, t3]);
+        console.println($"{t1} < {t2}, {t3} > = {t4}");
+        assert t4 == Map<String, Int>;
+        }
+
+        {
+        Type t1 = Map;
+        Type t2 = Stringable;
+        Type t3 = t1 + t2;
+// TODO CP - need to improve Type toString impl
+//        console.println($"{t1} + {t2} = {t3}");
+        assert t3 == Map + Stringable;
+        }
+
+        {
+        Type t1 = Map;
+        Type t2 = Set;
+        Type t3 = t1 | t2;
+//        console.println($"{t1} | {t2} = {t3}");
+        assert t3 == Map | Set;
+        }
+
+        {
+        Type t1 = ecstasy.collections.HashMap;
+        Type t2 = Map;
+        Type t3 = t1 - t2;
+//        console.println($"{t1} - {t2} = {t3}");
+        assert t3 == ecstasy.collections.HashMap - Map;
+        }
+
         }
 
 
