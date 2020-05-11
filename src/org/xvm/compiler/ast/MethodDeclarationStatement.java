@@ -387,7 +387,7 @@ public class MethodDeclarationStatement
                         }
                     }
 
-                org.xvm.asm.Parameter[] aParams = buildParameters(pool);
+                org.xvm.asm.Parameter[] aParams = buildParameters(pool, errs);
                 Access                  access  = container instanceof MethodStructure
                                                     ? Access.PRIVATE
                                                     : getDefaultAccess();
@@ -532,7 +532,7 @@ public class MethodDeclarationStatement
                         aReturns[i] = param;
                         }
 
-                    org.xvm.asm.Parameter[] aParams = buildParameters(pool);
+                    org.xvm.asm.Parameter[] aParams = buildParameters(pool, errs);
 
                     // the parameters were already matched; no need to re-check
                     Annotation[] annos = new Annotation[]
@@ -679,20 +679,36 @@ public class MethodDeclarationStatement
                 Parameter    param     = params.get(i);
                 Expression   value     = param.value;
 
-                Expression   valueNew;
-                ctx      = ctx.enterInferring(typeParam);
-                valueNew = value.validate(ctx, typeParam, errs);
-                ctx      = ctx.exit();
-
-                if (valueNew != null)
+                if (value == null)
                     {
-                    if (valueNew.isConstant())
+                    // the param must be a last one and is a SequenceTypeExpression
+                    // (see buildParameters() method)
+                    ConstantPool pool = pool();
+                    assert i == cParamExprs - 1 && typeParam.isA(pool.typeSequence());
+
+                    TypeConstant typeDefault = pool.ensureParameterizedTypeConstant(
+                            pool.typeArray(), typeParam.getParamType(0));
+
+                    parameter.setDefaultValue(
+                            pool.ensureArrayConstant(typeDefault, Constant.NO_CONSTS));
+                    }
+                else
+                    {
+                    Expression valueNew;
+                    ctx      = ctx.enterInferring(typeParam);
+                    valueNew = value.validate(ctx, typeParam, errs);
+                    ctx      = ctx.exit();
+
+                    if (valueNew != null)
                         {
-                        parameter.setDefaultValue(value.toConstant());
-                        }
-                    else
-                        {
-                        value.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                        if (valueNew.isConstant())
+                            {
+                            parameter.setDefaultValue(value.toConstant());
+                            }
+                        else
+                            {
+                            value.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                            }
                         }
                     }
                 }
@@ -735,7 +751,7 @@ public class MethodDeclarationStatement
         return aAnnotations;
         }
 
-    protected org.xvm.asm.Parameter[] buildParameters(ConstantPool pool)
+    protected org.xvm.asm.Parameter[] buildParameters(ConstantPool pool, ErrorListener errs)
         {
         // build array of parameters
         int cTypes  = typeParams == null ? 0 : typeParams.size();
@@ -751,15 +767,34 @@ public class MethodDeclarationStatement
                             : exprType.ensureTypeConstant());
             aParams[i] = new org.xvm.asm.Parameter(pool, constType, param.getName(), null, false, i, true);
             }
+
+        boolean fDefaultRequired = false;
         for (int i = cTypes; i < cParams; ++i)
             {
-            Parameter param = params.get(i-cTypes);
-            aParams[i] = new org.xvm.asm.Parameter(pool, param.getType().ensureTypeConstant(),
-                    param.getName(), null, false, i, false);
-            if (param.value != null)
+            Parameter      param        = params.get(i - cTypes);
+            String         sName        = param.getName();
+            TypeExpression exprType     = param.getType();
+            TypeConstant   typeArg      = exprType.ensureTypeConstant();
+
+            aParams[i] = new org.xvm.asm.Parameter(pool, typeArg, sName, null, false, i, false);
+
+            if (param.value == null)
                 {
-                // TODO: ensure that all default values are grouped at the end
+                // if the very last parameter is a SequenceTypeExpression (i.e. "T... param"),
+                // we will generate an implicit default value
+                if (i == cParams - 1 && exprType instanceof SequenceTypeExpression)
+                    {
+                    aParams[i].markDefaultValue();
+                    }
+                else if (fDefaultRequired)
+                    {
+                    param.log(errs, Severity.ERROR, Compiler.DEFAULT_VALUE_REQUIRED, sName);
+                    }
+                }
+            else
+                {
                 aParams[i].markDefaultValue();
+                fDefaultRequired = true;
                 }
             }
         return aParams;

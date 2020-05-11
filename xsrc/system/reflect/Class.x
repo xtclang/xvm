@@ -170,7 +170,7 @@ const Class<PublicType, ProtectedType extends PublicType,
         {
         if (PublicType.parameterized())
             {
-            assert Class!<> that := PublicType.parameterize([]).fromClass(); // TODO GG should not require []
+            assert Class!<> that := PublicType.parameterize().fromClass();
             return that;
             }
 

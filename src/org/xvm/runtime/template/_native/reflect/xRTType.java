@@ -1120,34 +1120,40 @@ public class xRTType
      */
     public int invokeParameterize(Frame frame, TypeHandle hType, ObjectHandle hArg, int iReturn)
         {
+        ObjectHandle[] ahFormalTypes;
+
         if (hArg instanceof GenericArrayHandle)
             {
-            TypeConstant       typeThis         = hType.getDataType();
-            GenericArrayHandle hFormalTypeArray = (GenericArrayHandle) hArg;
-            ObjectHandle[]     ahFormalTypes    = hFormalTypeArray.m_ahValue;
-            int                cFormalTypes     = hFormalTypeArray.m_cSize;
-            TypeConstant[]     atypeParams      = new TypeConstant[cFormalTypes];
-            for (int i = 0; i < cFormalTypes; ++i)
-                {
-                atypeParams[i] = ((TypeHandle) ahFormalTypes[i]).getDataType();
-                }
-
-            TypeConstant typeResult;
-            try
-                {
-                typeResult = typeThis.getConstantPool().ensureParameterizedTypeConstant(typeThis, atypeParams);
-                }
-            catch (RuntimeException e)
-                {
-                return frame.raiseException(xException.invalidType(frame, e));
-                }
-            return frame.assignValue(iReturn, typeResult.getTypeHandle());
+            ahFormalTypes = ((GenericArrayHandle) hArg).m_ahValue;
+            }
+        else if (hArg == ObjectHandle.DEFAULT)
+            {
+            ahFormalTypes = Utils.OBJECTS_NONE;
             }
         else
             {
-            // TODO GG return a continuation that turns the parameters into an array and calls this?
+            // TODO GG return a continuation that turns the sequence into an array and calls this?
             throw new UnsupportedOperationException();
             }
+
+        TypeConstant   typeThis     = hType.getDataType();
+        int            cFormalTypes = ahFormalTypes.length;
+        TypeConstant[] atypeParams  = new TypeConstant[cFormalTypes];
+        for (int i = 0; i < cFormalTypes; ++i)
+            {
+            atypeParams[i] = ((TypeHandle) ahFormalTypes[i]).getDataType();
+            }
+
+        TypeConstant typeResult;
+        try
+            {
+            typeResult = typeThis.getConstantPool().ensureParameterizedTypeConstant(typeThis, atypeParams);
+            }
+        catch (RuntimeException e)
+            {
+            return frame.raiseException(xException.invalidType(frame, e.getMessage()));
+            }
+        return frame.assignValue(iReturn, typeResult.getTypeHandle());
         }
 
     /**

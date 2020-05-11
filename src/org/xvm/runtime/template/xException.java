@@ -107,11 +107,6 @@ public class xException
         return makeHandle(frame, s_clzInvalidType, sMsg);
         }
 
-    public static ExceptionHandle invalidType(Frame frame, Throwable e)
-        {
-        return new ExceptionHandle(xException.s_clzInvalidType, true, e);
-        }
-
     public static ExceptionHandle mutableObject(Frame frame)
         {
         return illegalArgument(frame, "mutable object cannot be used for a service call");

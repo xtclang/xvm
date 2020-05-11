@@ -1213,6 +1213,10 @@ public class Compiler
      */
     public static final String INCOMPATIBLE_RETURN_COUNT           = "COMPILER-152";
     /**
+     * Argument {0} must have a default value.
+     */
+    public static final String DEFAULT_VALUE_REQUIRED              = "COMPILER-153";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

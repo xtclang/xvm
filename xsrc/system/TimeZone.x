@@ -44,8 +44,12 @@ const TimeZone(Int picos, String? name = null)
      *   ±hh:mm
      *   ±hhmm
      *   ±hh
+     *
+     * @param name   the name of the TimeZone
+     * @param rules  an optional Sequence of Rules to translate information from UTC to other
+     *               TimeZones
      */
-    construct(String tz)
+    construct(String tz, Rule... rules)
         {
         static Int valOf(Char ch)
             {
@@ -90,6 +94,11 @@ const TimeZone(Int picos, String? name = null)
                 }
             }
 
+        if (rules.size > 0)
+            {
+            TODO
+            }
+
         throw new IllegalArgument($"invalid ISO-8601 timezone offset: \"{tz}\"");
         }
 
@@ -99,19 +108,6 @@ const TimeZone(Int picos, String? name = null)
     static const Rule
         {
         // TODO
-        }
-
-    /**
-     * Construct a TimeZone that uses a series of rules to translate information from UTC to other
-     * TimeZones.
-     *
-     * @param name   the name of the TimeZone
-     * @param rules  a Sequence of Rules
-     */
-    construct(String name, Rule... rules)
-        {
-        this.name = name;
-        TODO this.rules = ...   `
         }
 
     /**
