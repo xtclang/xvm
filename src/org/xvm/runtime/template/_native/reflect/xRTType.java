@@ -14,6 +14,7 @@ import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MapConstant;
@@ -22,10 +23,12 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
@@ -1080,12 +1083,38 @@ public class xRTType
         String       sName = null;
         TypeConstant type  = hType.getDataType();
 
-        if (type.isExplicitClassIdentity(true))
+
+        if (type.isSingleDefiningConstant())
             {
-            IdentityConstant idClz = type.getSingleUnderlyingClass(true);
-            sName = idClz instanceof ModuleConstant
-                    ? idClz.getName()
-                    : idClz.getPathString();
+            Constant id = type.getDefiningConstant();
+            switch (id.getFormat())
+                {
+                case Module:
+                    sName = ((ModuleConstant) id).getName();
+                    break;
+
+                case Package:
+                case Class:
+                case NativeClass:
+                    sName = ((IdentityConstant) id).getPathString();
+                    break;
+
+                case Property:
+                case TypeParameter:
+                case FormalTypeChild:
+                    sName = ((FormalConstant) id).getPathString();
+                    break;
+
+                case ThisClass:
+                case ParentClass:
+                case ChildClass:
+                    sName = ((PseudoConstant) id).getDeclarationLevelClass().getPathString();
+                    break;
+
+                case Typedef:
+                    sName = ((TypedefConstant) id).getName();
+                    break;
+                }
             }
 
         return sName == null
