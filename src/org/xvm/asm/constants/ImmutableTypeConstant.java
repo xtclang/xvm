@@ -114,6 +114,26 @@ public class ImmutableTypeConstant
         return pool.ensureImmutableTypeConstant(type);
         }
 
+    @Override
+    public TypeConstant resolveTypedefs()
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        if (constOriginal.containsUnresolved())
+            {
+            return this;
+            }
+
+        // the underlying type could be immutable, in which case it should be returned
+        // (it can happen if the underlying type was resolved before its contribution were
+        //  resolved, changing its answer to "isImmutable()" question)
+        TypeConstant constResolved = constOriginal.resolveTypedefs();
+        return constResolved.isImmutable()
+                ? constResolved
+                : constResolved == constOriginal
+                    ? this
+                    : cloneSingle(getConstantPool(), constResolved);
+        }
+
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 

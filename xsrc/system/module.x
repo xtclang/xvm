@@ -136,7 +136,7 @@ module Ecstasy.xtclang.org
          * @return True iff this package imports a module
          * @return (conditional) the [Module] that this package imports
          */
-        conditional /* TODO GG immutable */ Module isModuleImport();
+        conditional immutable Module isModuleImport();
 
         /**
          * The classes contained immediately within this package.
