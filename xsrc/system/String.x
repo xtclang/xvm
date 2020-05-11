@@ -305,7 +305,6 @@ const String
     @Override
     @Op("[..]") String slice(Range<Int> indexes)
         {
-//        return new String(chars[first..last));    // TODO GG this blows (it's the wrong code anyhow, but ...)
         return new String(chars[indexes]);
         }
 
