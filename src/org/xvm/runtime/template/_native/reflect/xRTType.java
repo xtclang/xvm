@@ -467,12 +467,13 @@ public class xRTType
      */
     public static TypeHandle makeHandle(TypeConstant type, TypeConstant typeOuter)
         {
-        ClassComposition clzType = INSTANCE.ensureClass(type.getType());
-        // TODO GG - implement outer type
+        ConstantPool pool     = type.getConstantPool();
+        TypeConstant typeType = pool.ensureParameterizedTypeConstant(pool.typeType(),
+                type.normalizeParameters(), typeOuter == null ? pool.typeObject() : typeOuter);
 
         // unfortunately, "makeHandle" is called from places where we cannot easily invoke the
         // default initializer, so we need to do it by hand
-        TypeHandle    hType  = new TypeHandle(clzType);
+        TypeHandle    hType  = new TypeHandle(INSTANCE.ensureClass(typeType));
         GenericHandle hMulti = (GenericHandle) hType.getField("multimethods");
         hMulti.setField(GenericHandle.OUTER, hType);
         hMulti.setField("calculate",  xNullable.NULL);
@@ -1147,7 +1148,7 @@ public class xRTType
         TypeConstant typeResult;
         try
             {
-            typeResult = typeThis.getConstantPool().ensureParameterizedTypeConstant(typeThis, atypeParams);
+            typeResult = typeThis.adoptParameters(typeThis.getConstantPool(), atypeParams);
             }
         catch (RuntimeException e)
             {
