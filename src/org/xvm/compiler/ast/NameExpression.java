@@ -666,6 +666,10 @@ public class NameExpression
                                 constVal = pool.ensureSingletonConstConstant(idClass);
                                 break;
 
+                            case TypeOfClass:
+                                constVal = type;
+                                break;
+
                             default:
                                 throw new IllegalStateException("plan=" + m_plan);
                             }
@@ -1962,11 +1966,11 @@ public class NameExpression
                 // determine the type of the class
                 if (aTypeParams != null || (typeDesired != null && typeDesired.isA(pool.typeType())))
                     {
-                    TypeConstant   type      = null;
-                    ClassConstant  idTarget  = (ClassConstant) constant;
-                    Component      component = getComponent();
-                    ClassStructure clzThis   = component.getContainingClass();
-                    ClassStructure clzTarget = (ClassStructure) idTarget.getComponent();
+                    TypeConstant     type      = null;
+                    IdentityConstant idTarget  = (IdentityConstant) constant;
+                    Component        component = getComponent();
+                    ClassStructure   clzThis   = component.getContainingClass();
+                    ClassStructure   clzTarget = (ClassStructure) idTarget.getComponent();
 
                     if (clzThis != null)
                         {
@@ -1981,7 +1985,7 @@ public class NameExpression
                                 {
                                 if (clzTarget.isVirtualChild())
                                     {
-                                    ClassConstant  idBase  = idTarget.getOutermost();
+                                    ClassConstant  idBase  = ((ClassConstant) idTarget).getOutermost();
                                     ClassStructure clzBase = (ClassStructure) idBase.getComponent();
                                     boolean        fFormal = !(component instanceof MethodStructure &&
                                                              ((MethodStructure) component).isFunction());

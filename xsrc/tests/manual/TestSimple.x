@@ -4,7 +4,7 @@ module TestSimple
 
     @Inject Console console;
 
-    void run()
+    void run( )
         {
         report(this:module);
         report(ecstasy);

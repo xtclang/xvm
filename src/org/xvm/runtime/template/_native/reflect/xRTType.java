@@ -19,6 +19,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.StringConstant;
@@ -1077,13 +1078,13 @@ public class xRTType
         {
         String       sName = null;
         TypeConstant type  = hType.getDataType();
-        if (type.isSingleDefiningConstant())
+
+        if (type.isExplicitClassIdentity(true))
             {
-            Constant id = type.getDefiningConstant();
-            if (id.getFormat() == Constant.Format.Class)
-                {
-                sName = ((ClassConstant) id).getPathString();
-                }
+            IdentityConstant idClz = type.getSingleUnderlyingClass(true);
+            sName = idClz instanceof ModuleConstant
+                    ? idClz.getName()
+                    : idClz.getPathString();
             }
 
         return sName == null
