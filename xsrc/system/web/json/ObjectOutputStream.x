@@ -701,7 +701,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
 
         Int? nextId.get()
             {
-            return this.is(ArrayOutputStream) ? this.as(ArrayOutputStream).count : Null;   // TODO GG cast should be unnecessary
+            return this.is(ArrayOutputStream) ? this.count : Null;
             }
 
         @Override

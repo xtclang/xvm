@@ -114,8 +114,7 @@ const Class<PublicType, ProtectedType extends PublicType,
             }
 
         this.composition     = composition;
-        this.canonicalParams = (canonicalParams ?: new ListMap()).ensureImmutable()
-                                .as(ListMap<String, Type>);     // TODO GG - should not require this
+        this.canonicalParams = canonicalParams ?: new ListMap();
         this.allocateStruct  = allocateStruct;
         }
 
