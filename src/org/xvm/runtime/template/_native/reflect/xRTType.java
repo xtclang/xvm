@@ -27,8 +27,8 @@ import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-
 import org.xvm.asm.constants.TypedefConstant;
+
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
