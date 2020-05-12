@@ -101,7 +101,7 @@ const RTType<DataType, OuterType>
 
             case Class:
                 assert Class clz := fromClass();
-                return clz.name.size;
+                return clz.name.size + estimateParameterizedStringLength();
 
             case Property:
                 assert Property prop := fromProperty();
@@ -109,7 +109,7 @@ const RTType<DataType, OuterType>
 
             case Child:
                 assert String name := named();
-                return OuterType.estimateStringLength() + 1 + name.size;
+                return OuterType.estimateStringLength() + 1 + name.size + estimateParameterizedStringLength();
 
             case Intersection:
                 assert (Type<> t1, Type<> t2) := relational();
@@ -209,6 +209,7 @@ const RTType<DataType, OuterType>
             case Class:
                 assert Class clz := fromClass();
                 clz.name.appendTo(appender);
+                appendParameterizedTo(appender);
                 break;
 
             case Property:
@@ -223,6 +224,7 @@ const RTType<DataType, OuterType>
                 appender.add('.');
                 assert String name := named();
                 name.appendTo(appender);
+                appendParameterizedTo(appender);
                 break;
 
             case Intersection:
