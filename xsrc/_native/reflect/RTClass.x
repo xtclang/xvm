@@ -11,21 +11,24 @@ const RTClass<PublicType, ProtectedType extends PublicType,
     {
     construct() {}
 
-    @Override String name                                                               .get() { TODO("native"); }
-    @Override @Unassigned Composition composition                                       .get() { TODO("native"); }
-    @Override @Unassigned protected function StructType()? allocateStruct               .get() { assert;         }
-    @Override Boolean abstract                                                          .get() { TODO("native"); }
-    @Override Boolean virtualChild                                                      .get() { TODO("native"); }
+    @Override Boolean                                      abstract       .get() { TODO("native"); }
+    @Override @Unassigned protected function StructType()? allocateStruct .get() { assert;         }
+    @Override @Unassigned Composition                      composition    .get() { TODO("native"); }
+    @Override String?                                      implicitName   .get() { TODO("native"); }
+    @Override String                                       name           .get() { TODO("native"); }
+    @Override String                                       path           .get() { TODO("native"); }
+    @Override Boolean                                      virtualChild   .get() { TODO("native"); }
 
-    @Override Boolean extends(Class!<> clz)                                                    { TODO("native"); }
-    @Override Boolean incorporates(Class!<> clz)                                               { TODO("native"); }
-    @Override Boolean implements(Class!<> clz)                                                 { TODO("native"); }
-    @Override Boolean derivesFrom(Class!<> clz)                                                { TODO("native"); }
-    @Override conditional PublicType isSingleton()                                             { TODO("native"); }
-    @Override conditional StructType allocate()                                                { TODO("native"); }
-    (String[], Type[]) getFormalNamesAndTypes()                                                { TODO("native"); }
+    @Override             Boolean    extends(Class!<> clz)                       { TODO("native"); }
+    @Override             Boolean    incorporates(Class!<> clz)                  { TODO("native"); }
+    @Override             Boolean    implements(Class!<> clz)                    { TODO("native"); }
+    @Override             Boolean    derivesFrom(Class!<> clz)                   { TODO("native"); }
+    @Override conditional PublicType isSingleton()                               { TODO("native"); }
+    @Override conditional StructType allocate()                                  { TODO("native"); }
+    (String[], Type[])               getFormalNamesAndTypes()                    { TODO("native"); }
 
-    @Override @Lazy ListMap<String, Type> canonicalParams.calc()
+    @Override
+    @Lazy ListMap<String, Type> canonicalParams.calc()
         {
         (String[] names, Type[] types) = getFormalNamesAndTypes();
         return new ListMap<String, Type>(names, types).ensureImmutable(true);
@@ -59,7 +62,27 @@ const RTClass<PublicType, ProtectedType extends PublicType,
     @Override
     void appendTo(Appender<Char> appender)
         {
-        appender.add(name);
+        // TODO annotations
+
+        String  path;
+        String? alias = implicitName;
+        if (alias == null)
+            {
+            if (String relative := pathWithin(this:service.typeSystem))
+                {
+                path = relative;
+                }
+            else
+                {
+                // use absolute path
+                path = this.path;
+                }
+            }
+        else
+            {
+            path = alias;
+            }
+        appender.add(path);
 
         ListMap<String, Type> params = formalTypes;
         if (!params.empty)

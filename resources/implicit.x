@@ -51,6 +51,7 @@ import ecstasy.TimedOut;
 import ecstasy.Timer;
 import ecstasy.TimeZone;
 import ecstasy.Type;
+import ecstasy.TypeSystem;
 import ecstasy.UnsupportedOperation;
 import ecstasy.Var;
 
@@ -70,9 +71,12 @@ import ecstasy.numbers.UInt64 as UInt;
 
 import ecstasy.collections.Array;
 import ecstasy.collections.Hashable;
+import ecstasy.collections.HashMap;
+import ecstasy.collections.HashSet;
 import ecstasy.collections.List;
+import ecstasy.collections.ListMap;
+import ecstasy.collections.ListSet;
 import ecstasy.collections.Map;
-import ecstasy.collections.Map.Entry;
 import ecstasy.collections.Matrix;
 import ecstasy.collections.Sequence;
 import ecstasy.collections.Set;

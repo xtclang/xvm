@@ -58,10 +58,18 @@ const TypeSystem
             sharedModules.add(ecstasy);
             }
 
-        this.modules                = modules;
-        this.sharedModules          = sharedModules;
-        this.moduleBySimpleName     = moduleBySimpleName;
-        this.moduleByQualifiedName  = moduleByQualifiedName;
+        ListMap<Module, String> modulePaths = new ListMap();
+        modulePaths.put(modules[0], "");
+        for ((String path, Module _module) : modules[0].modulesByPath)
+            {
+            modulePaths.put(_module, path);
+            }
+
+        this.modules               = modules;
+        this.modulePaths           = modulePaths;
+        this.sharedModules         = sharedModules;
+        this.moduleBySimpleName    = moduleBySimpleName;
+        this.moduleByQualifiedName = moduleByQualifiedName;
         }
 
     /**
@@ -87,6 +95,19 @@ const TypeSystem
      * The modules that make up the type system.
      */
     Module[] modules;
+
+    /**
+     * The path of each module relative to the primary module of this type system; the path is
+     * the shortest sequence of dot-delimited package names that leads to the module, with the
+     * primary module having the empty path `""`.
+     *
+     * Modules that are not reachable by a path from the primary module are not present in this map.
+     * This could occur if a module that is not depended upon is explicitly loaded as part of the
+     * type system, for whatever reason. In such a case, the classes within the module would only be
+     * identifiable using the explicit module qualification format, such as
+     * `"Ecstasy.xtclang.org:collections.HashMap"`.
+     */
+    ListMap<Module, String> modulePaths;
 
     /**
      * The primary module is the module that is assumed to have defined the set of modules in the
@@ -174,9 +195,15 @@ const TypeSystem
     Int estimateStringLength()
         {
         Int size = "TypeSystem{ (primary)}".size + 2 * (moduleByQualifiedName.size - 1);
-        Modules: for ((String name, Module _module) : moduleByQualifiedName)
+        Modules: for (Module _module : modules)
             {
-            size += name.size;
+            size += _module.qualifiedName.size;
+
+            if (String path := modulePaths.get(_module), path.size > 0)
+                {
+                size += 6 + path.size;
+                }
+
             if (sharedModules.contains(_module))
                 {
                 size += " (shared)".size;
@@ -190,14 +217,21 @@ const TypeSystem
         {
         appender.add("TypeSystem{");
 
-        Modules: for ((String name, Module _module) : moduleByQualifiedName)
+        Modules: for (Module _module : modules)
             {
             if (!Modules.first)
                 {
                 appender.add(", ");
                 }
 
-            appender.add(name);
+            appender.add(_module.qualifiedName);
+
+            if (String path := modulePaths.get(_module), path.size > 0)
+                {
+                appender.add(" at \"")
+                        .add(path)
+                        .add('\"');
+                }
 
             if (Modules.first)
                 {

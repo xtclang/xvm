@@ -91,10 +91,15 @@ const Class<PublicType, ProtectedType extends PublicType,
      *                         for each type parameter, and not the actual specified type for each
      * @param allocateStruct   the function that is used to allocate an initial structure that can
      *                         be populated and used to instantiate an object of this class
+     * @param implicitName     for a small number of commonly used classes in the
+     *                         `Ecstasy.xtclang.org` module, an implicit name is provided to make
+     *                         the usage of the class as simple as having imported the class "as"
+     *                         the implicit name
      */
     construct(Composition            composition,
               ListMap<String, Type>? canonicalParams = Null,
-              function StructType()? allocateStruct  = Null)
+              function StructType()? allocateStruct  = Null,
+              String?                implicitName    = Null)
         {
         if (Type[] formalTypes := PublicType.parameterized(), formalTypes.size > 0)
             {
@@ -116,20 +121,72 @@ const Class<PublicType, ProtectedType extends PublicType,
         this.composition     = composition;
         this.canonicalParams = canonicalParams ?: new ListMap();
         this.allocateStruct  = allocateStruct;
+        // TODO GG this.implicitName    = implicitName;
         }
 
 
     // ----- attributes ----------------------------------------------------------------------------
 
     /**
-     * The name of the Class.
+     * The simple unqualified name of the Class.
      */
     @RO String name.get()
         {
         return composition.template.name;
         }
 
-    // TODO need: conditional String identityWithin(TypeSystem)
+    /**
+     * A name by which the Class is globally visible at compile time. This only applies to a small
+     * subset of classes in the core Ecstasy module; for example, `numbers.Int64` has the implicit
+     * name `Int`.
+     */
+    @RO String? implicitName.get()
+        {
+        return null; // TODO GG - if this is a field, we can't override it with a native get() method on RTClass
+        }
+
+    /**
+     * TODO
+     */
+    @RO String path.get()
+        {
+        return composition.template.path;
+        }
+
+    /**
+     * Given a specified TypeSystem, determine the path that identifies this Class within that
+     * TypeSystem.
+     *
+     * @param a TypeSystem
+     *
+     * @return True iff the class exists within the specified TypeSystem
+     * @return (optional) the qualified path to the class within the TypeSystem, in a format that
+     *         is supported by [TypeSystem.classForName]
+     */
+    conditional String pathWithin(TypeSystem typesys)
+        {
+        String path       = this.path;
+        assert Int colon := path.indexOf(':');
+        String moduleName = path[0 .. colon);
+        if (Module _module := typesys.moduleByQualifiedName.get(moduleName))
+            {
+            if (String modPath := typesys.modulePaths.get(_module))
+                {
+                // compute a relative path from the root of the primary module
+                String relPath = path.substring(colon+1);
+                return True, modPath == ""
+                        ? relPath
+                        : modPath + '.' + relPath;
+                }
+            else
+                {
+                // use the absolute path including the module qualified name
+                return True, path;
+                }
+            }
+
+        return False;
+        }
 
     /**
      * The composition of the class.
@@ -394,4 +451,6 @@ const Class<PublicType, ProtectedType extends PublicType,
         {
         return PublicType;
         }
+
+    // TODO Stringable support
     }

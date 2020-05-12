@@ -27,13 +27,15 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
+
+import org.xvm.runtime.template.collections.xArray;
 
 
 /**
@@ -59,7 +61,9 @@ public class xRTClass
         {
         markNativeProperty("abstract");
         markNativeProperty("composition");
+        markNativeProperty("implicitName");
         markNativeProperty("name");
+        markNativeProperty("path");
         markNativeProperty("virtualChild");
 
         markNativeMethod("allocate"              , null, null);
@@ -109,8 +113,14 @@ public class xRTClass
             case "composition":
                 return getPropertyComposition(frame, hTarget, iReturn);
 
+            case "implicitName":
+                return getPropertyImplicitName(frame, hTarget, iReturn);
+
             case "name":
                 return getPropertyName(frame, hTarget, iReturn);
+
+            case "path":
+                return getPropertyPath(frame, hTarget, iReturn);
 
             case "virtualChild":
                 return getPropertyVirtualChild(frame, hTarget, iReturn);
@@ -177,6 +187,23 @@ public class xRTClass
         }
 
     /**
+     * Implements property: implicitName.get()
+     */
+    public int getPropertyImplicitName(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        TypeConstant     typeTarget = getClassType(hTarget);
+        IdentityConstant idClz      = typeTarget.getSingleUnderlyingClass(true);
+        ModuleConstant   idModule   = idClz.getModuleConstant();
+        if (idModule.isEcstasyModule())
+            {
+            String sAlias = pool().getImplicitImportName("ecstasy." + idClz.getPathString());
+            if (sAlias != null)
+            return frame.assignValue(iReturn, xString.makeHandle(sAlias));
+            }
+        return frame.assignValue(iReturn, xNullable.NULL);
+        }
+
+    /**
      * Implements property: name.get()
      */
     public int getPropertyName(Frame frame, ObjectHandle hTarget, int iReturn)
@@ -185,6 +212,17 @@ public class xRTClass
         IdentityConstant idClz      = typeTarget.getSingleUnderlyingClass(true);
         String           sName      = idClz.getName();
         return frame.assignValue(iReturn, xString.makeHandle(sName));
+        }
+
+    /**
+     * Implements property: path.get()
+     */
+    public int getPropertyPath(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        TypeConstant     typeTarget = getClassType(hTarget);
+        IdentityConstant idClz      = typeTarget.getSingleUnderlyingClass(true);
+        String           sPath      = idClz.getModuleConstant().getName() + ':' + idClz.getPathString();
+        return frame.assignValue(iReturn, xString.makeHandle(sPath));
         }
 
     /**

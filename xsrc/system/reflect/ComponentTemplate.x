@@ -67,6 +67,11 @@ interface ComponentTemplate
      */
     @RO String name;
 
+    @RO String path.get()
+        {
+        return parent?.path + '.' + name : name;
+        }
+
     /**
      * Templates include an "access" indicator. The meaning of the access indicator is specific to
      * the combination of the context of the template, and the type of the template.

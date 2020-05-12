@@ -87,8 +87,8 @@ public class xModule
             case "version":
                 return getPropertyVersion(frame, hModule, iReturn);
 
-            case "modulesByName":
-                return getPropertyModulesByName(frame, hModule, iReturn);
+            case "modulesByPath":
+                return getPropertyModulesByPath(frame, hModule, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -129,9 +129,9 @@ public class xModule
         }
 
     /**
-     * Implements property: modulesByName.get()
+     * Implements property: modulesByPath.get()
      */
-    public int getPropertyModulesByName(Frame frame, PackageHandle hTarget, int iReturn)
+    public int getPropertyModulesByPath(Frame frame, PackageHandle hTarget, int iReturn)
         {
         // TODO GG: how to cache the result?
         ModuleConstant   idModule = (ModuleConstant) hTarget.getId();

@@ -204,12 +204,12 @@ module Ecstasy.xtclang.org
         /**
          * The modules that this module depends on by linkage, both directly and indirectly. For
          * each such module that this module is linked to, and that is also visible within this
-         * module's namespace, the shortest path (dot-delimited) name and the depended-upon module
-         * will be provided in the map. In the case of an unlinked, optional module (one that is
-         * specified as a "desired" or "optional" import, but was not loaded and linked with this
-         * module for whatever reason), no entry will be present in the map.
+         * module's namespace, the shortest dot-delimited path and the depended-upon module will
+         * be present in the map. In the case of an unlinked, optional module (one that is specified
+         * as a "desired" or "optional" import, but was not loaded and linked with this module for
+         * whatever reason), no entry will be present in the map.
          */
-        @RO immutable Map<String, Module!> modulesByName;
+        @RO immutable Map<String, Module!> modulesByPath;
 
         /**
          * Given the qualified name of a class nested within this module, obtain the [Class].

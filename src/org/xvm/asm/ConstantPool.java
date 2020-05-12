@@ -1221,6 +1221,18 @@ public class ConstantPool
         }
 
     /**
+     * Look up the simple name by which the specified name is implicitly imported.
+     *
+     * @param sPath  the fully qualified identity path
+     *
+     * @return the "import as" name, or null
+     */
+    public String getImplicitImportName(String sPath)
+        {
+        return s_implicitsByPath.get(sPath);
+        }
+
+    /**
      * Given the specified typedef name and the context (module, package, class, method) within
      * which it exists, obtain a TypedefConstant that represents it.
      *
@@ -3670,7 +3682,8 @@ public class ConstantPool
     /**
      * A cached and pre-parsed image of the "implicit.x" file.
      */
-    private static Map<String, String[]> s_implicits;
+    private static final Map<String, String[]> s_implicits;
+    private static final Map<String, String>   s_implicitsByPath;
     static
         {
         try
@@ -3693,7 +3706,27 @@ public class ConstantPool
 
             ErrorList errs   = new ErrorList(1);
             Parser    parser = new Parser(src, errs);
-            s_implicits = parser.parseImplicits();
+            s_implicits       = parser.parseImplicits();
+            s_implicitsByPath = new HashMap<>();
+            for (Map.Entry<String, String[]> entry : s_implicits.entrySet())
+                {
+                StringBuilder sb     = new StringBuilder();
+                boolean       fFirst = true;
+                for (String sPart : entry.getValue())
+                    {
+                    if (fFirst)
+                        {
+                        fFirst = false;
+                        }
+                    else
+                        {
+                        sb.append('.');
+                        }
+                    sb.append(sPart);
+                    }
+                s_implicitsByPath.putIfAbsent(sb.toString(), entry.getKey());
+                }
+
             for (ErrorListener.ErrorInfo err : errs.getErrors())
                 {
                 System.err.println(err);

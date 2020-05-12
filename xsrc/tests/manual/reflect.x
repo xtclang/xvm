@@ -570,13 +570,13 @@ module TestReflection
     void displayModule(Module _module)
         {
         console.println($"module \"{_module.simpleName}\" (\"{_module.qualifiedName}\")");
-        val deps = _module.modulesByName;
+        val deps = _module.modulesByPath;
         if (!deps.empty)
             {
             console.println($" - dependencies:");
-            for ((String name, Module dep) : deps)
+            for ((String path, Module dep) : deps)
                 {
-                console.println($"    - \"{name}\" => \"{dep.qualifiedName}\"");
+                console.println($"    - \"{path}\" => \"{dep.qualifiedName}\"");
                 }
             }
 
