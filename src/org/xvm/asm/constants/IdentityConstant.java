@@ -137,20 +137,21 @@ public abstract class IdentityConstant
         }
 
     /**
-     * Test for a virtual child visibility. This virtual child (A) is said to be a "nest mate" of
-     * the specified class (B) iff
+     * Test for a child visibility. This child (A) is said to be a "nest mate" of the specified
+     * class (B) iff
      * <ul>
      *   <li> both A and B have have the same outermost underlying class, or
-     *   <li> the outermost underlying class of A extends the outermost underlying class of B
+     *   <li> the outermost underlying class of B extends the outermost underlying class of A.
      * </ul>
      * In other words, this class is a nest mate of the specified class if this class is "visible"
-     * from the context of the specified class and could be virtually constructed in that context
-     * (given an appropriate parent instance).
+     * from the context of the specified class and could be privately accessed in that context.
+     * <p/>
+     * For example, Map.Entry is a nest mate of both HashMap and HashMap.EntrySet.
      *
      * @param idClass  the class to test nest the visibility from; note that it can represent
      *                 a non virtual (e.g. anonymous) inner class
      *
-     * @return true if this class is a virtual child visible from the specified class context
+     * @return true if this class is a child "privately" visible from the specified class context
      */
     public boolean isNestMateOf(IdentityConstant idClass)
         {

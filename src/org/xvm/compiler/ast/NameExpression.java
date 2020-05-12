@@ -1981,17 +1981,14 @@ public class NameExpression
                             }
                         else
                             {
-                            if (idTarget.isNestMateOf(idThis))
+                            if (idTarget.isNestMateOf(idThis) && clzTarget.isVirtualChild())
                                 {
-                                if (clzTarget.isVirtualChild())
-                                    {
-                                    ClassConstant  idBase  = ((ClassConstant) idTarget).getOutermost();
-                                    ClassStructure clzBase = (ClassStructure) idBase.getComponent();
-                                    boolean        fFormal = !(component instanceof MethodStructure &&
-                                                             ((MethodStructure) component).isFunction());
-                                    type = pool.ensureVirtualTypeConstant(clzBase, clzTarget,
-                                        fFormal, /*fParameterize*/ false, /*fAutoNarrowing*/ false);
-                                    }
+                                ClassConstant  idBase  = ((ClassConstant) idTarget).getOutermost();
+                                ClassStructure clzBase = (ClassStructure) idBase.getComponent();
+                                boolean        fFormal = !(component instanceof MethodStructure &&
+                                                         ((MethodStructure) component).isFunction());
+                                type = pool.ensureVirtualTypeConstant(clzBase, clzTarget,
+                                    fFormal, /*fParameterize*/ false, /*fAutoNarrowing*/ false);
                                 }
                             }
                         }

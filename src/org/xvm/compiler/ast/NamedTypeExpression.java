@@ -1031,10 +1031,12 @@ public class NamedTypeExpression
                                 clzBase, clzTarget, fFormalParent, fFormalChIld, fThisClass);
                         assert typeTarget != null;
                         }
-                    else
+                    else if (idTarget.equals(idClass) || clzClass.isVirtualChild())
                         {
-                        // the target is the base class itself or some of it's contributions
-                        // (e.g. HashMap or Map if we are inside of HashMap);
+                        // the target is the context class itself (e.g. Interval type referred to
+                        // by a method in Interval mixin), or
+                        // the context class is a virtual child referring to an outside mate
+                        // (e.g. List.Cursor property referring to the containing List type);
                         // default to the formal type unless the type parameters are explicitly
                         // specified by this expression or the context is static (e.g. function)
                         if (clzTarget.isParameterized() && paramTypes == null && !component.isStatic())

@@ -872,7 +872,7 @@ mixin FutureVar<Referent>
     static class ContinuationStep<Referent, InputType>(function Referent (InputType) invokeAsync)
             extends DependentFuture<Referent, InputType>
         {
-        protected FutureVar? asyncResult;
+        protected FutureVar<Referent>? asyncResult;
 
         @Override
         void parentCompleted(Completion completion, InputType? input, Exception? e)

@@ -98,7 +98,7 @@ interface Type<DataType, OuterType>
      * type; a relational type will have two underlying types; and a Sequence type will have zero
      * or more underlying types.
      */
-    @RO Type![] underlyingTypes;
+    @RO Type!<>[] underlyingTypes;
 
     /**
      * Obtain the raw set of all properties on the type.

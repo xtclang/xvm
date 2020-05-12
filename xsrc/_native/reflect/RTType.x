@@ -7,7 +7,6 @@ import ecstasy.reflect.TypeTemplate;
 
 /**
  * The native Type implementation.
- * TODO GG all instances of "Type!<>" should just be "Type" (which is the same thing at this level anyhow), but fails to compile
  */
 const RTType<DataType, OuterType>
         implements Type<DataType, OuterType>
@@ -32,19 +31,19 @@ const RTType<DataType, OuterType>
     @Override conditional Property     fromProperty()                            { TODO("native"); }
     @Override conditional Type         modifying()                               { TODO("native"); }
     @Override conditional String       named()                                   { TODO("native"); }
-    @Override             Type         parameterize(Type!<>... paramTypes)       { TODO("native"); }
+    @Override             Type         parameterize(Type... paramTypes)          { TODO("native"); }
     @Override conditional Type[]       parameterized()                           { TODO("native"); }
     @Override             Type         purify()                                  { TODO("native"); }
     @Override conditional (Type, Type) relational()                              { TODO("native"); }
 
-    @Override @Op("+") Type add(Type!<> that)                                    { TODO("native"); }
+    @Override @Op("+") Type add(Type! that)                                      { TODO("native"); }
     @Override @Op("+") Type add(Method... methods)                               { TODO("native"); }
     @Override @Op("+") Type add(Property... properties)                          { TODO("native"); }
-    @Override @Op("-") Type sub(Type!<> that)                                    { TODO("native"); }
+    @Override @Op("-") Type sub(Type! that)                                      { TODO("native"); }
     @Override @Op("-") Type sub(Method... methods)                               { TODO("native"); }
     @Override @Op("-") Type sub(Property... properties)                          { TODO("native"); }
-    @Override @Op("&") Type and(Type!<> that)                                    { TODO("native"); }
-    @Override @Op("|") Type or(Type!<> that)                                     { TODO("native"); }
+    @Override @Op("&") Type and(Type! that)                                      { TODO("native"); }
+    @Override @Op("|") Type or(Type! that)                                       { TODO("native"); }
 
     // natural code:
     //   Boolean isA(Type that)
@@ -112,32 +111,32 @@ const RTType<DataType, OuterType>
                 return OuterType.estimateStringLength() + 1 + name.size + estimateParameterizedStringLength();
 
             case Intersection:
-                assert (Type<> t1, Type<> t2) := relational();
+                assert (Type t1, Type t2) := relational();
                 return t1 == Type<Nullable>
                         ? t2.estimateStringLength() + (t2.relational() ? 3 : 1)
                         : t1.estimateStringLength() + 3 + t2.estimateStringLength();
 
             case Union:
             case Difference:
-                assert (Type<> t1, Type<> t2) := relational();
+                assert (Type t1, Type t2) := relational();
                 return t1.estimateStringLength() + 3 + t2.estimateStringLength();
 
             case Immutable:
-                assert Type<> t := modifying();
+                assert Type t := modifying();
                 return "immutable ".size + t.estimateStringLength();
 
             case Access:
-                assert Type<> t := modifying();
+                assert Type t := modifying();
                 assert Access access := accessSpecified();
                 return t.estimateStringLength() + 1 + access.keyword.size;
 
             case Annotated:
                 assert Annotation anno := annotated();
-                assert Type<> t := modifying();
+                assert Type t := modifying();
                 return anno.estimateStringLength() + 1 + t.estimateStringLength();
 
             case Sequence:
-                Type<>[] types = underlyingTypes;
+                Type[] types = underlyingTypes;
                 return types.size == 0
                         ? 2
                         : types.iterator().map(t -> t.estimateStringLength() + 2)
@@ -154,7 +153,7 @@ const RTType<DataType, OuterType>
 
     private Int estimateParameterizedStringLength()
         {
-        if (Type<>[] params := parameterized())
+        if (Type[] params := parameterized())
             {
             return params.size == 0
                     ? 2
@@ -228,7 +227,7 @@ const RTType<DataType, OuterType>
                 break;
 
             case Intersection:
-                assert (Type<> t1, Type<> t2) := relational();
+                assert (Type t1, Type t2) := relational();
                 if (t1 == Type<Nullable>)
                     {
                     if (t2.relational())
@@ -253,14 +252,14 @@ const RTType<DataType, OuterType>
 
 
             case Union:
-                assert (Type<> t1, Type<> t2) := relational();
+                assert (Type t1, Type t2) := relational();
                 t1   .appendTo(appender);
                 " + ".appendTo(appender);
                 t2   .appendTo(appender);
                 break;
 
             case Difference:
-                assert (Type<> t1, Type<> t2) := relational();
+                assert (Type t1, Type t2) := relational();
                 t1   .appendTo(appender);
                 " - ".appendTo(appender);
                 t2   .appendTo(appender);
@@ -268,12 +267,12 @@ const RTType<DataType, OuterType>
 
             case Immutable:
                 "immutable ".appendTo(appender);
-                assert Type<> t := modifying();
+                assert Type t := modifying();
                 t.appendTo(appender);
                 break;
 
             case Access:
-                assert Type<> t := modifying();
+                assert Type t := modifying();
                 t.appendTo(appender);
                 appender.add(':');
                 assert Access access := accessSpecified();
@@ -284,14 +283,14 @@ const RTType<DataType, OuterType>
                 assert Annotation anno := annotated();
                 anno.appendTo(appender);
                 appender.add(' ');
-                assert Type<> t := modifying();
+                assert Type t := modifying();
                 t.appendTo(appender);
                 break;
 
             case Sequence:
-                Type<>[] types = underlyingTypes;
+                Type[] types = underlyingTypes;
                 appender.add('<');
-                Loop: for (Type<> type : types)
+                Loop: for (Type type : types)
                     {
                     if (!Loop.first)
                         {
@@ -314,10 +313,10 @@ const RTType<DataType, OuterType>
 
     private void appendParameterizedTo(Appender<Char> appender)
         {
-        if (Type<>[] params := parameterized())
+        if (Type[] params := parameterized())
             {
             appender.add('<');
-            Loop: for (Type<> param : params)
+            Loop: for (Type param : params)
                 {
                 if (!Loop.first)
                     {
