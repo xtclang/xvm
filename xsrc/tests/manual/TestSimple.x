@@ -1,22 +1,24 @@
 module TestSimple
     {
-    import ecstasy.TypeSystem;
-    import ecstasy.mgmt.Container.ApplicationControl;
-
     @Inject Console console;
 
     void run()
         {
-        testParams();
+        report(TestSimple);
+        report(ecstasy);
+        report(utilities.misc);
         }
 
-    void testParams(Int i=0, String... strings)
+    void report(Class m)
         {
-        console.println(strings.size);
+        console.println(m);
+        console.println($"name={m.name}");
+        }
 
-        for (String s : strings)
+    package utilities
+        {
+        package misc
             {
-            console.println(s);
             }
         }
     }

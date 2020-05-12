@@ -2032,13 +2032,14 @@ public class NameExpression
                     {
                     m_plan = Plan.None;
 
-                    ClassStructure   clazz     = ctx.getThisClass();
-                    IdentityConstant idClass   = clazz.getIdentityConstant();
-                    TypeConstant     typeClass = clazz.getFormalType();
+                    if (!(constant instanceof ClassConstant))
+                        {
+                        // Module or Package are represented by a DecoratedClassConstant
+                        m_arg = pool.ensureClassConstant(constant.getType());
+                        }
 
-                    return constant instanceof PseudoConstant
-                            ? ((PseudoConstant) constant).resolveClass(idClass).getValueType(typeClass)
-                            : ((IdentityConstant) constant).getValueType(typeClass);
+                    TypeConstant typeThisClass = ctx.getThisClass().getFormalType();
+                    return ((IdentityConstant) constant).getValueType(typeThisClass);
                     }
 
             case Property:
