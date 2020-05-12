@@ -279,7 +279,7 @@ public class xRTClass
             for (int i = 0; i < cParams; ++i)
                 {
                 ahNames[i] = xString.makeHandle(iterNames.next().getValue());
-                ahTypes[i] = xRTType.makeHandle(atypeParam[i]);
+                ahTypes[i] = atypeParam[i].getTypeHandle();
                 }
 
             hNames = xString.ensureArrayTemplate().createArrayHandle(

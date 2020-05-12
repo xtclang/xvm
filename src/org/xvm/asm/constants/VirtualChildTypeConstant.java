@@ -468,13 +468,6 @@ public class VirtualChildTypeConstant
         }
 
     @Override
-    public TypeConstant getType()
-        {
-        ConstantPool pool = getConstantPool();
-        return pool.ensureParameterizedTypeConstant(pool.typeType(), this, getParentType());
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         super.forEachUnderlying(visitor);

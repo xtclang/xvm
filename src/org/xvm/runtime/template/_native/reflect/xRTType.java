@@ -14,20 +14,17 @@ import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypedefConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
@@ -145,7 +142,7 @@ public class xRTType
 
             TypeConstant typeData = typeTarget.getParamType(0).
                     resolveGenerics(pool, frame.getGenericsResolver());
-            return frame.pushStack(typeData.getTypeHandle());
+            return frame.pushStack(typeData.normalizeParameters().getTypeHandle());
             }
 
         return super.createConstHandle(frame, constant);
@@ -457,26 +454,9 @@ public class xRTType
      */
     public static TypeHandle makeHandle(TypeConstant type)
         {
-        return makeHandle(type, null);
-        }
-
-    /**
-     * Obtain a {@link TypeHandle} for the specified type.
-     *
-     * @param type       the {@link TypeConstant} to obtain a {@link TypeHandle} for
-     * @param typeOuter  the {@link TypeConstant} for the parent of the virtual child, or null
-     *
-     * @return the resulting {@link TypeHandle}
-     */
-    public static TypeHandle makeHandle(TypeConstant type, TypeConstant typeOuter)
-        {
-        ConstantPool pool     = type.getConstantPool();
-        TypeConstant typeType = pool.ensureParameterizedTypeConstant(pool.typeType(),
-                type.normalizeParameters(), typeOuter == null ? pool.typeObject() : typeOuter);
-
         // unfortunately, "makeHandle" is called from places where we cannot easily invoke the
         // default initializer, so we need to do it by hand
-        TypeHandle    hType  = new TypeHandle(INSTANCE.ensureClass(typeType));
+        TypeHandle    hType  = new TypeHandle(INSTANCE.ensureClass(type.getType()));
         GenericHandle hMulti = (GenericHandle) hType.getField("multimethods");
         hMulti.setField(GenericHandle.OUTER, hType);
         hMulti.setField("calculate",  xNullable.NULL);
@@ -1129,7 +1109,7 @@ public class xRTType
         TypeHandle[]   ahTypes = new TypeHandle[cTypes];
         for (int i = 0; i < cTypes; ++i)
             {
-            ahTypes[i] = makeHandle(atypes[i]);
+            ahTypes[i] = atypes[i].normalizeParameters().getTypeHandle();
             }
 
         ArrayHandle hArray = ensureArrayTemplate().createArrayHandle(ensureArrayComposition(), ahTypes);

@@ -652,7 +652,6 @@ module TestReflection
         {
         val container = new Container<String,Int,Char>();
         val containee = container.new Containee<Char,String,Map<Int, String>>();
-        // TODO GG - the OuterType is Object (should be Container<String,Int,Char>)
         console.println($"Container<String,Int,Char>.Containee<Char,String,Map<Int, String>> = {&containee.actualType}");
         }
         }

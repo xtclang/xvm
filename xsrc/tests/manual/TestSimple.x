@@ -2,9 +2,9 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run( )
         {
-        Type t = immutable Map<Int>;
+        Type t = Type<Var-Ref>;
         console.println(t);
         }
     }

@@ -5722,7 +5722,12 @@ public abstract class TypeConstant
     public TypeConstant getType()
         {
         ConstantPool pool = getConstantPool();
-        return pool.ensureParameterizedTypeConstant(pool.typeType(), this, pool.typeObject());
+
+        TypeConstant typeParent = isVirtualChild()
+                ? getParentType()
+                : pool.typeObject();
+
+        return pool.ensureParameterizedTypeConstant(pool.typeType(), this, typeParent);
         }
 
     @Override
