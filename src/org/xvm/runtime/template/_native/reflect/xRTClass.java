@@ -183,10 +183,7 @@ public class xRTClass
         {
         TypeConstant     typeTarget = getClassType(hTarget);
         IdentityConstant idClz      = typeTarget.getSingleUnderlyingClass(true);
-        String           sName      = idClz instanceof ModuleConstant
-                ? idClz.getName()
-                : idClz.getPathString();
-
+        String           sName      = idClz.getName();
         return frame.assignValue(iReturn, xString.makeHandle(sName));
         }
 

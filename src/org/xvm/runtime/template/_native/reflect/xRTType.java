@@ -1090,29 +1090,20 @@ public class xRTType
             switch (id.getFormat())
                 {
                 case Module:
-                    sName = ((ModuleConstant) id).getName();
-                    break;
-
                 case Package:
                 case Class:
                 case NativeClass:
-                    sName = ((IdentityConstant) id).getPathString();
-                    break;
-
                 case Property:
                 case TypeParameter:
                 case FormalTypeChild:
-                    sName = ((FormalConstant) id).getPathString();
+                case Typedef:
+                    sName = ((IdentityConstant) id).getName();
                     break;
 
                 case ThisClass:
                 case ParentClass:
                 case ChildClass:
-                    sName = ((PseudoConstant) id).getDeclarationLevelClass().getPathString();
-                    break;
-
-                case Typedef:
-                    sName = ((TypedefConstant) id).getName();
+                    sName = ((PseudoConstant) id).getDeclarationLevelClass().getName();
                     break;
                 }
             }

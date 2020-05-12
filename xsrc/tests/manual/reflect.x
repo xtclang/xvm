@@ -597,6 +597,13 @@ module TestReflection
             }
         }
 
+    class Container<A, B, C>
+        {
+        class Containee<D, E, F>
+            {
+            }
+        }
+
     void testTypes()
         {
         console.println("\n** testTypes");
@@ -642,5 +649,11 @@ module TestReflection
         assert t3 == ecstasy.collections.HashMap - Map;
         }
 
+        {
+        val container = new Container<String,Int,Char>();
+        val containee = container.new Containee<Char,String,Map<Int, String>>();
+        // TODO GG - the OuterType is Object (should be Container<String,Int,Char>)
+        console.println($"Container<String,Int,Char>.Containee<Char,String,Map<Int, String>> = {&containee.actualType}");
+        }
         }
     }
