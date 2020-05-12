@@ -234,7 +234,7 @@ public abstract class TypeExpression
         {
         TypeConstant typeReferent  = ensureTypeConstant(ctx);
         TypeConstant typeReference = typeReferent.getType();
-        return finishValidation(typeRequired, typeReference, TypeFit.Fit, typeReferent, errs);
+        return finishValidation(typeRequired, typeReference, TypeFit.Fit, typeReference, errs);
         }
 
     @Override
