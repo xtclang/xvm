@@ -4,21 +4,7 @@ module TestSimple
 
     void run()
         {
-        report(TestSimple);
-        report(ecstasy);
-        report(utilities.misc);
-        }
-
-    void report(Class m)
-        {
-        console.println(m);
-        console.println($"name={m.name}");
-        }
-
-    package utilities
-        {
-        package misc
-            {
-            }
+        Type t = immutable Map<Int>;
+        console.println(t);
         }
     }
