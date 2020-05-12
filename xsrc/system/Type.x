@@ -263,8 +263,8 @@ interface Type<DataType, OuterType>
      * type for each specified parameter. (Conflicting type parameter information can result in a
      * relational type, since it is composed of multiple types.)
      *
-     * A type whose form is `Parameterized` will always have type parameters, although the number of
-     * type parameters may be zero (i.e. resulting in an empty array).
+     * A type whose form is `Class` or `Child` will have type parameters if the type is
+     * parameterized.
      *
      * @return True iff the type is parameterized
      * @return (conditional) an array of the type parameters

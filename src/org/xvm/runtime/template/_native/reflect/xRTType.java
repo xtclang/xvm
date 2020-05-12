@@ -1299,7 +1299,8 @@ public class xRTType
                 return enumForm.getEnumByName("Annotated");
 
             case ParameterizedType:
-                return enumForm.getEnumByName("Parameterized");
+                // the underlying type will be "Class" or "Child"
+                return makeFormHandle(frame, type.getUnderlyingType());
 
             case TurtleType:
                 return enumForm.getEnumByName("Sequence");

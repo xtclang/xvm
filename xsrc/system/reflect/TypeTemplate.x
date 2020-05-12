@@ -37,6 +37,7 @@ interface TypeTemplate // TODO move
         Pure,
         /**
          * A type that is drawn from (represents the implementation of) a class composition.
+         * A class type may also specify be parameterized.
          */
         Class,
         /**
@@ -45,6 +46,7 @@ interface TypeTemplate // TODO move
         Property,
         /**
          * A type that represents a class that is a virtual child of another class.
+         * A child type may also specify be parameterized.
          */
         Child,
         /**
@@ -84,10 +86,6 @@ interface TypeTemplate // TODO move
          * A type that adds an annotation _to another type_.
          */
         Annotated    (modifying = True),
-        /**
-         * A type that specifies the formal types _of another type_.
-         */
-        Parameterized(modifying = True),
         /**
          * A type that acts as a name _of another type_.
          */
@@ -222,8 +220,8 @@ interface TypeTemplate // TODO move
      * type for each specified parameter. (Conflicting type parameter information can result in a
      * relational type, since it is composed of multiple types.)
      *
-     * A type whose form is `Parameterized` will always have type parameters, although the number of
-     * type parameters may be zero (i.e. resulting in an empty array).
+     * A type whose form is `Class` or `Child` will have type parameters if the type is
+     * parameterized.
      *
      * @return True iff the type is parameterized
      * @return (conditional) an array of the type parameters
@@ -293,6 +291,7 @@ interface TypeTemplate // TODO move
     @Override
     void appendTo(Appender<Char> appender)
         {
+        Boolean fParams = False;
         switch (form)
             {
             case Pure:
@@ -307,10 +306,13 @@ interface TypeTemplate // TODO move
                             .add(' ');
                     }
                 appender.add(cmp.template.name);
+                fParams = True;
                 break;
 
-            case Property:
             case Child:
+                fParams = True;
+                continue;
+            case Property:
             case FormalProperty:
             case FormalParameter:
             case FormalChild:
@@ -348,22 +350,6 @@ interface TypeTemplate // TODO move
             case Annotated:
                 TODO
 
-            case Parameterized:
-                assert TypeTemplate[] params := parameterized();
-                assert TypeTemplate   t1     := modifying();
-                t1.appendTo(appender);
-                appender.add('<');
-                EachParam: for (TypeTemplate param : params)
-                    {
-                    if (!EachParam.first)
-                        {
-                        appender.add(", ");
-                        }
-                    param.appendTo(appender);
-                    }
-                appender.add('>');
-                break;
-
             case Typedef:
                 (name?.as(Stringable) : underlyingTypes[0]).appendTo(appender);
                 break;
@@ -373,6 +359,20 @@ interface TypeTemplate // TODO move
 
             default:
                 assert;
+            }
+
+        if (fParams, TypeTemplate[] params := parameterized())
+            {
+            appender.add('<');
+            EachParam: for (TypeTemplate param : params)
+                {
+                if (!EachParam.first)
+                    {
+                    appender.add(", ");
+                    }
+                param.appendTo(appender);
+                }
+            appender.add('>');
             }
         }
 

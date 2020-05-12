@@ -7,22 +7,22 @@ module TestReflection
 
     void run()
         {
-//        testFuncType();
-//        testTypeStrings();
-//        testInstanceOf();
-//        testMaskReveal();
-//        testForm();
-//        testProps();
-//        testInvoke();
-//        testInvoke2();
-//        testInvokeAsync();
-//        testBind();
-//        testChildTypes();
-//        testTypeTemplate();
-//        testEnum();
-//        testStruct();
-//        testClass();
-//        testTypeSystem();
+        testFuncType();
+        testTypeStrings();
+        testInstanceOf();
+        testMaskReveal();
+        testForm();
+        testProps();
+        testInvoke();
+        testInvoke2();
+        testInvokeAsync();
+        testBind();
+        testChildTypes();
+        testTypeTemplate();
+        testEnum();
+        testStruct();
+        testClass();
+        testTypeSystem();
         testTypes();
         }
 
@@ -53,7 +53,7 @@ module TestReflection
         Type[]   types = [Type<String>, Type<String?>, Type<String|Int>, Type<Ref>, Type<Ref<Int> >, Type<Var<Int?>>, Type<Int+Ref>, Type<Var-Ref>];
         Each: for (Type type : types)
             {
-            console.println($"{names[Each.count]}={formatType(type.DataType)}");
+            console.println($"{names[Each.count]}={type.DataType}");
             }
         }
 
@@ -164,7 +164,7 @@ module TestReflection
         console.println($"Point point={point}");
 
         Type<Point> t = Point;
-        console.println($"Point type={formatType(t)}");
+        console.println($"Point type={t}");
         for (Property<Point> prop : t.properties)
             {
             console.println($"prop={prop}");
@@ -186,7 +186,7 @@ module TestReflection
             }
 
         Ref impl = point.&x;
-        console.println($"Ref={impl}, type={formatType(impl.actualType)}, get()={impl.get()}");
+        console.println($"Ref={impl}, type={impl.actualType}, get()={impl.get()}");
 
         Type typeImpl = &impl.actualType;
         if (Property prop2 := typeImpl.fromProperty())
@@ -605,7 +605,6 @@ module TestReflection
         Type t1 = Map;
         Type t2 = Int;
         Type t3 = t1.parameterize([t2]);
-// TODO CP - need to improve Type toString impl
         console.println($"{t1} < {t2} > = {t3}");
         assert t3 == Map<Int>;
         }
@@ -623,8 +622,7 @@ module TestReflection
         Type t1 = Map;
         Type t2 = Stringable;
         Type t3 = t1 + t2;
-// TODO CP - need to improve Type toString impl
-//        console.println($"{t1} + {t2} = {t3}");
+        console.println($"{t1} + {t2} = {t3}");
         assert t3 == Map + Stringable;
         }
 
@@ -632,7 +630,7 @@ module TestReflection
         Type t1 = Map;
         Type t2 = Set;
         Type t3 = t1 | t2;
-//        console.println($"{t1} | {t2} = {t3}");
+        console.println($"{t1} | {t2} = {t3}");
         assert t3 == Map | Set;
         }
 
@@ -640,90 +638,9 @@ module TestReflection
         Type t1 = ecstasy.collections.HashMap;
         Type t2 = Map;
         Type t3 = t1 - t2;
-//        console.println($"{t1} - {t2} = {t3}");
+        console.println($"{t1} - {t2} = {t3}");
         assert t3 == ecstasy.collections.HashMap - Map;
         }
 
-        }
-
-
-    // ---------------------------------------------------------------------------------------------
-
-    String formatType(Type type)
-        {
-        Type.Form form = type.form;
-        switch (form)
-            {
-            case Pure:
-                break;
-
-            case Class:
-                assert Class clz := type.fromClass();
-//                Class.Composition cmp = clz.composition;
-//                while ((Annotation annotation, cmp) := cmp.deannotate())
-//                    {
-//                    // print out annotation
-//                    }
-//                cmp.template.name;
-                return clz.name;
-
-            case Property:
-            case Child:
-            case FormalProperty:
-            case FormalParameter:
-            case FormalChild:
-                break;
-
-            case Intersection:
-                assert (Type t1, Type t2) := type.relational();
-                return $"{formatType(t1)} | {formatType(t2)}";
-
-            case Union:
-                assert (Type t1, Type t2) := type.relational();
-                return $"{formatType(t1)} + {formatType(t2)}";
-
-            case Difference:
-                assert (Type t1, Type t2) := type.relational();
-                return $"{formatType(t1)} - {formatType(t2)}";
-
-            case Immutable:
-                assert Type t1 := type.modifying();
-                return $"immutable {formatType(t1)}";
-
-            case Access:
-                assert val access := type.accessSpecified();
-                assert Type t1 := type.modifying();
-                return $"{formatType(t1)}:{access.keyword}";
-
-            case Annotated:
-                break;
-
-            case Parameterized:
-                assert Type[] params := type.parameterized();
-                assert Type   t1     := type.modifying();
-                StringBuffer sb = new StringBuffer();
-                sb.append(formatType(t1))
-                  .append('<');
-                EachParam: for (Type param : params)
-                    {
-                    if (!EachParam.first)
-                        {
-                        sb.append(", ");
-                        }
-                    sb.append(formatType(param));
-                    }
-                sb.append('>');
-                return sb.toString();
-
-            case Typedef:
-            case Sequence:
-                break;
-
-            default:
-                assert;
-            }
-
-        // TODO
-        return type.toString();
         }
     }
