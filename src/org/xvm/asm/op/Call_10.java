@@ -122,19 +122,18 @@ public class Call_10
                 return complete(frame, hArg, function);
                 }
 
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
-            assert !isDeferred(hFunction); // TODO GG
+            ObjectHandle hFunction = frame.getArgument(m_nFunctionId);
 
-            if (isDeferred(hArg))
+            if (isDeferred(hArg) || isDeferred(hFunction))
                 {
-                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+                ObjectHandle[] ahArg = new ObjectHandle[] {hArg, hFunction};
                 Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, ahArg[0], hFunction);
+                    complete(frameCaller, ahArg[0], (FunctionHandle) ahArg[1]);
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            return complete(frame, hArg, hFunction);
+            return complete(frame, hArg, (FunctionHandle) hFunction);
             }
         catch (ExceptionHandle.WrapperException e)
             {

@@ -120,8 +120,6 @@ public class Call_1T
                     return R_EXCEPTION;
                     }
 
-                checkReturnTupleRegister(frame, function);
-
                 if (isDeferred(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
@@ -134,22 +132,18 @@ public class Call_1T
                 return complete(frame, hArg, function);
                 }
 
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
+            ObjectHandle hFunction = frame.getArgument(m_nFunctionId);
 
-            assert !isDeferred(hFunction); // TODO GG
-
-            checkReturnTupleRegister(frame, hFunction.getMethod());
-
-            if (isDeferred(hArg))
+            if (isDeferred(hArg) || isDeferred(hFunction))
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                 Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, ahArg[0], hFunction);
+                    complete(frameCaller, ahArg[0], (FunctionHandle) ahArg[1]);
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            return complete(frame, hArg, hFunction);
+            return complete(frame, hArg, (FunctionHandle) hFunction);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -159,6 +153,8 @@ public class Call_1T
 
     protected int complete(Frame frame, ObjectHandle hArg, MethodStructure function)
         {
+        checkReturnTupleRegister(frame, function);
+
         if (function.isNative())
             {
             return getNativeTemplate(frame, function).
@@ -172,6 +168,8 @@ public class Call_1T
 
     protected int complete(Frame frame, ObjectHandle hArg, FunctionHandle hFunction)
         {
+        checkReturnTupleRegister(frame, hFunction.getMethod());
+
         ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
         ahVar[0] = hArg;
 

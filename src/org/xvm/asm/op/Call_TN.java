@@ -126,8 +126,6 @@ public class Call_TN
                     return R_EXCEPTION;
                     }
 
-                checkReturnRegisters(frame, function);
-
                 if (isDeferred(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
@@ -140,22 +138,18 @@ public class Call_TN
                 return complete(frame, function, (TupleHandle) hArg);
                 }
 
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
+            ObjectHandle hFunction = frame.getArgument(m_nFunctionId);
 
-            assert !isDeferred(hFunction); // TODO GG
-
-            checkReturnRegisters(frame, hFunction.getMethod());
-
-            if (isDeferred(hArg))
+            if (isDeferred(hArg) || isDeferred(hFunction))
                 {
-                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+                ObjectHandle[] ahArg = new ObjectHandle[] {hArg, hFunction};
                 Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, hFunction, (TupleHandle) ahArg[0]);
+                    complete(frameCaller, (FunctionHandle) ahArg[1], (TupleHandle) ahArg[0]);
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            return complete(frame, hFunction, (TupleHandle) hArg);
+            return complete(frame, (FunctionHandle) hFunction, (TupleHandle) hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -165,6 +159,8 @@ public class Call_TN
 
     protected int complete(Frame frame, MethodStructure function, TupleHandle hArg)
         {
+        checkReturnRegisters(frame, function);
+
         ObjectHandle[] ahArg = hArg.m_ahValue;
         if (ahArg.length != function.getParamCount())
             {
@@ -183,6 +179,8 @@ public class Call_TN
 
     protected int complete(Frame frame, FunctionHandle hFunction, TupleHandle hArg)
         {
+        checkReturnRegisters(frame, hFunction.getMethod());
+
         ObjectHandle[] ahArg = hArg.m_ahValue;
         if (ahArg.length != hFunction.getParamCount())
             {
@@ -212,4 +210,4 @@ public class Call_TN
     private int m_nArgTupleValue;
 
     private Argument m_argValue;
-}
+    }

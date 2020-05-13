@@ -117,8 +117,6 @@ public class Call_11
                     return R_EXCEPTION;
                     }
 
-                checkReturnRegister(frame, function);
-
                 if (isDeferred(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
@@ -131,21 +129,18 @@ public class Call_11
                 return complete(frame, hArg, function);
                 }
 
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
-            assert !isDeferred(hFunction); // TODO GG
+            ObjectHandle hFunction = frame.getArgument(m_nFunctionId);
 
-            checkReturnRegister(frame, hFunction.getMethod());
-
-            if (isDeferred(hArg))
+            if (isDeferred(hArg) || isDeferred(hFunction))
                 {
-                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+                ObjectHandle[] ahArg = new ObjectHandle[] {hArg, hFunction};
                 Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, ahArg[0], hFunction);
+                    complete(frameCaller, ahArg[0], (FunctionHandle) ahArg[1]);
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            return complete(frame, hArg, hFunction);
+            return complete(frame, hArg, (FunctionHandle) hFunction);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -155,6 +150,8 @@ public class Call_11
 
     protected int complete(Frame frame, ObjectHandle hArg, MethodStructure function)
         {
+        checkReturnRegister(frame, function);
+
         if (function.isNative())
             {
             return getNativeTemplate(frame, function).
@@ -168,6 +165,8 @@ public class Call_11
 
     protected int complete(Frame frame, ObjectHandle hArg, FunctionHandle hFunction)
         {
+        checkReturnRegister(frame, hFunction.getMethod());
+
         ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
         ahVar[0] = hArg;
 

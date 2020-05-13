@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 import org.xvm.asm.Register;
@@ -132,22 +131,42 @@ public class FBind
                 }
             else
                 {
-                hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
-                assert !isDeferred(hFunction); // TODO GG
-                }
+                ObjectHandle hFn = frame.getArgument(m_nFunctionId);
 
-            int cParams = m_anParamIx.length;
-            ObjectHandle[] ahParam = new ObjectHandle[cParams];
-            boolean fAnyProperty = false;
+                if (isDeferred(hFn))
+                    {
+                    ObjectHandle[] ahFn = new ObjectHandle[] {hFn};
+                    Frame.Continuation stepNext = frameCaller ->
+                        resolveArguments(frameCaller, (FunctionHandle) ahFn[0]);
+
+                    return new Utils.GetArguments(ahFn, stepNext).doNext(frame);
+                    }
+                hFunction = (FunctionHandle) hFn;
+                }
+            return resolveArguments(frame, hFunction);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
+        }
+
+    protected int resolveArguments(Frame frame, FunctionHandle hFunction)
+        {
+        try
+            {
+            int            cParams   = m_anParamIx.length;
+            ObjectHandle[] ahParam   = new ObjectHandle[cParams];
+            boolean        fDeferred = false;
 
             for (int i = 0; i < cParams; i++)
                 {
                 ObjectHandle hParam = frame.getArgument(m_anParamValue[i]);
                 ahParam[i] = hParam;
-                fAnyProperty |= isDeferred(hParam);
+                fDeferred |= isDeferred(hParam);
                 }
 
-            if (fAnyProperty)
+            if (fDeferred)
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, hFunction, ahParam);

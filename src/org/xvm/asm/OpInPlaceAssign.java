@@ -99,13 +99,11 @@ public abstract class OpInPlaceAssign
                     ObjectHandle hTarget = frame.getArgument(nTarget);
                     ObjectHandle hValue  = frame.getArgument(m_nArgValue);
 
-                    assert !isDeferred(hTarget);
-
-                    if (isDeferred(hValue))
+                    if (isDeferred(hTarget) || isDeferred(hValue))
                         {
-                        ObjectHandle[] ahArg = new ObjectHandle[] {hValue};
+                        ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hValue};
                         Frame.Continuation stepNext = frameCaller ->
-                            completeWithRegister(frameCaller, hTarget, ahArg[0]);
+                            completeWithRegister(frameCaller, ahArg[1], ahArg[0]);
 
                         return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                         }

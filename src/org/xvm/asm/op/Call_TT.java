@@ -120,8 +120,6 @@ public class Call_TT
                     return R_EXCEPTION;
                     }
 
-                checkReturnTupleRegister(frame, function);
-
                 if (isDeferred(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
@@ -134,22 +132,18 @@ public class Call_TT
                 return complete(frame, function, (TupleHandle) hArg);
                 }
 
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
+            ObjectHandle hFunction = frame.getArgument(m_nFunctionId);
 
-            assert !isDeferred(hFunction); // TODO GG
-
-            checkReturnTupleRegister(frame, hFunction.getMethod());
-
-            if (isDeferred(hArg))
+            if (isDeferred(hArg) || isDeferred(hFunction))
                 {
-                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
+                ObjectHandle[] ahArg = new ObjectHandle[] {hArg, hFunction};
                 Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, hFunction, (TupleHandle) ahArg[0]);
+                    complete(frameCaller, (FunctionHandle) ahArg[1], (TupleHandle) ahArg[0]);
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            return complete(frame, hFunction, (TupleHandle) hArg);
+            return complete(frame, (FunctionHandle) hFunction, (TupleHandle) hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -159,6 +153,8 @@ public class Call_TT
 
     protected int complete(Frame frame, MethodStructure function, TupleHandle hArg)
         {
+        checkReturnTupleRegister(frame, function);
+
         ObjectHandle[] ahArg = hArg.m_ahValue;
         if (ahArg.length != function.getParamCount())
             {
@@ -177,6 +173,8 @@ public class Call_TT
 
     protected int complete(Frame frame, FunctionHandle hFunction, TupleHandle hArg)
         {
+        checkReturnTupleRegister(frame, hFunction.getMethod());
+
         ObjectHandle[] ahArg = hArg.m_ahValue;
         if (ahArg.length != hFunction.getParamCount())
             {
