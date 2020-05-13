@@ -11,10 +11,12 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Var_S;
+import org.xvm.asm.op.Var_SN;
 
 
 /**
@@ -274,6 +276,28 @@ public class ListExpression
         }
 
     @Override
+    public boolean supportsCompactInit()
+        {
+        return true;
+        }
+
+    @Override
+    public void generateCompactInit(
+            Context ctx, Code code, VariableDeclarationStatement lvalue, ErrorListener errs)
+        {
+        if (isConstant())
+            {
+            super.generateCompactInit(ctx, code, lvalue, errs);
+            }
+        else
+            {
+            StringConstant idName = pool().ensureStringConstant(lvalue.getName());
+
+            code.add(new Var_SN(lvalue.getRegister(), idName, collectArguments(ctx, code, errs)));
+            }
+        }
+
+    @Override
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
@@ -282,15 +306,24 @@ public class ListExpression
             return toConstant();
             }
 
+        code.add(new Var_S(getType(), collectArguments(ctx, code, errs)));
+        return code.lastRegister();
+        }
+
+    /**
+     * Helper method to generate an array of arguments.
+     */
+    private Argument[] collectArguments(Context ctx, Code code, ErrorListener errs)
+        {
         List<Expression> listExprs = exprs;
         int              cArgs     = listExprs.size();
         Argument[]       aArgs     = new Argument[cArgs];
+
         for (int i = 0; i < cArgs; ++i)
             {
-            aArgs[i] = listExprs.get(i).generateArgument(ctx, code, false, true, errs);
+            aArgs[i] = listExprs.get(i).generateArgument(ctx, code, true, false, errs);
             }
-        code.add(new Var_S(getType(), aArgs));
-        return code.lastRegister();
+        return aArgs;
         }
 
 

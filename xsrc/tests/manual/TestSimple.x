@@ -4,21 +4,13 @@ module TestSimple
 
     void run()
         {
-        TestService svc = new TestService();
-        @Future function Int(Int) f = svc.getFn();
+        Int i = 1;
+        Int j = 2;
+        Int[] ints = [i, 0, j];
 
-        Int j = f(5);
-        }
+        Tuple<String, Int> t = ("j", j);
 
-    service TestService
-        {
-        function Int(Int) getFn()
-            {
-            for (Int x : [0..1000])
-                {
-                }
-
-            return i -> i+1;
-            }
+        console.println(ints);
+        console.println(t);
         }
     }

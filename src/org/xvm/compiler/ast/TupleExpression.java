@@ -15,9 +15,11 @@ import org.xvm.asm.Argument;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Var_T;
+import org.xvm.asm.op.Var_TN;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
@@ -478,23 +480,55 @@ public class TupleExpression
         }
 
     @Override
-    public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public boolean supportsCompactInit()
+        {
+        return true;
+        }
+
+    @Override
+    public void generateCompactInit(
+            Context ctx, Code code, VariableDeclarationStatement lvalue, ErrorListener errs)
+        {
+        if (isConstant())
+            {
+            super.generateCompactInit(ctx, code, lvalue, errs);
+            }
+        else
+            {
+            StringConstant idName = pool().ensureStringConstant(lvalue.getName());
+
+            code.add(new Var_TN(lvalue.getRegister(), idName, collectArguments(ctx, code, errs)));
+            }
+        }
+
+    @Override
+    public Argument[] generateArguments(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         if (isConstant())
             {
             return toConstants();
             }
 
-        int        cExprs = exprs.size();
-        Argument[] aArgs  = new Argument[cExprs];
-        for (int i = 0; i < cExprs; ++i)
-            {
-            aArgs[i] = exprs.get(i).generateArgument(ctx, code, true, false, errs);
-            }
-
         // generate the tuple itself, and return it as an argument
-        code.add(new Var_T(getType(), aArgs));
+        code.add(new Var_T(getType(), collectArguments(ctx, code, errs)));
         return new Argument[] {code.lastRegister()};
+        }
+
+    /**
+     * Helper method to generate an array of arguments.
+     */
+    private Argument[] collectArguments(Context ctx, Code code, ErrorListener errs)
+        {
+        List<Expression> listExprs = exprs;
+        int              cArgs     = listExprs.size();
+        Argument[]       aArgs     = new Argument[cArgs];
+
+        for (int i = 0; i < cArgs; ++i)
+            {
+            aArgs[i] = listExprs.get(i).generateArgument(ctx, code, true, false, errs);
+            }
+        return aArgs;
         }
 
 

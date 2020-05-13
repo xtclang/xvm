@@ -678,16 +678,15 @@ public class AssignmentStatement
             {
             case Assign:
                 {
-                // code gen optimization for the common case of a combined declaration & constant assignment
-                // of a single value
+                // code gen optimization for the common case of a combined declaration and
+                // constant assignment of a single value
                 if (lvalueExpr.isSingle()
-                        && rvalue.isConstant()
                         && lvalue instanceof VariableDeclarationStatement
-                        && !((VariableDeclarationStatement) lvalue).hasRefAnnotations())
+                        && !((VariableDeclarationStatement) lvalue).hasRefAnnotations()
+                        && rvalue.supportsCompactInit())
                     {
-                    VariableDeclarationStatement lvalue = (VariableDeclarationStatement) this.lvalue;
-                    StringConstant               idName = pool.ensureStringConstant(lvalue.getName());
-                    code.add(new Var_IN(lvalue.getRegister(), idName, rvalue.toConstant()));
+                    assert lvalueExpr.isCompletable();
+                    rvalue.generateCompactInit(ctx, code, (VariableDeclarationStatement) lvalue,  errs);
                     break;
                     }
 

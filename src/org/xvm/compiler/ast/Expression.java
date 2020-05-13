@@ -17,73 +17,11 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.asm.op.IIP_Add;
-import org.xvm.asm.op.IIP_And;
-import org.xvm.asm.op.IIP_Dec;
-import org.xvm.asm.op.IIP_Div;
-import org.xvm.asm.op.IIP_Inc;
-import org.xvm.asm.op.IIP_Mod;
-import org.xvm.asm.op.IIP_Mul;
-import org.xvm.asm.op.IIP_Or;
-import org.xvm.asm.op.IIP_PostDec;
-import org.xvm.asm.op.IIP_PostInc;
-import org.xvm.asm.op.IIP_PreDec;
-import org.xvm.asm.op.IIP_PreInc;
-import org.xvm.asm.op.IIP_Shl;
-import org.xvm.asm.op.IIP_Shr;
-import org.xvm.asm.op.IIP_ShrAll;
-import org.xvm.asm.op.IIP_Sub;
-import org.xvm.asm.op.IIP_Xor;
-import org.xvm.asm.op.IP_Add;
-import org.xvm.asm.op.IP_And;
-import org.xvm.asm.op.IP_Dec;
-import org.xvm.asm.op.IP_Div;
-import org.xvm.asm.op.IP_Inc;
-import org.xvm.asm.op.IP_Mod;
-import org.xvm.asm.op.IP_Mul;
-import org.xvm.asm.op.IP_Or;
-import org.xvm.asm.op.IP_PostDec;
-import org.xvm.asm.op.IP_PostInc;
-import org.xvm.asm.op.IP_PreDec;
-import org.xvm.asm.op.IP_PreInc;
-import org.xvm.asm.op.IP_Shl;
-import org.xvm.asm.op.IP_Shr;
-import org.xvm.asm.op.IP_ShrAll;
-import org.xvm.asm.op.IP_Sub;
-import org.xvm.asm.op.IP_Xor;
-import org.xvm.asm.op.I_Get;
-import org.xvm.asm.op.I_Set;
-import org.xvm.asm.op.Jump;
-import org.xvm.asm.op.JumpFalse;
-import org.xvm.asm.op.JumpTrue;
-import org.xvm.asm.op.L_Get;
-import org.xvm.asm.op.L_Set;
-import org.xvm.asm.op.Label;
-import org.xvm.asm.op.Move;
-import org.xvm.asm.op.PIP_Add;
-import org.xvm.asm.op.PIP_And;
-import org.xvm.asm.op.PIP_Dec;
-import org.xvm.asm.op.PIP_Div;
-import org.xvm.asm.op.PIP_Inc;
-import org.xvm.asm.op.PIP_Mod;
-import org.xvm.asm.op.PIP_Mul;
-import org.xvm.asm.op.PIP_Or;
-import org.xvm.asm.op.PIP_PostDec;
-import org.xvm.asm.op.PIP_PostInc;
-import org.xvm.asm.op.PIP_PreDec;
-import org.xvm.asm.op.PIP_PreInc;
-import org.xvm.asm.op.PIP_Shl;
-import org.xvm.asm.op.PIP_Shr;
-import org.xvm.asm.op.PIP_ShrAll;
-import org.xvm.asm.op.PIP_Sub;
-import org.xvm.asm.op.PIP_Xor;
-import org.xvm.asm.op.P_Get;
-import org.xvm.asm.op.P_Set;
-import org.xvm.asm.op.Var;
-import org.xvm.asm.op.Var_I;
+import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -1146,6 +1084,20 @@ public abstract class Expression
         }
 
     /**
+     * (Post-validation) Determine if the expression can generate a compact variable initialization
+     * (constant, sequence or tuple).
+     *
+     * This method should be overridden by any expression that can produce better code than the
+     * default lvalue assignment code.
+     *
+     * @return true iff the expression can generate a compact var initialization
+     */
+    public boolean supportsCompactInit()
+        {
+        return isConstant();
+        }
+
+    /**
      * (Post-validation) For a expression that provides a compile-time constant, indicated by the
      * {@link #isConstant()} method returning true, obtain a constant representation of the value.
      * <p/>
@@ -1221,6 +1173,26 @@ public abstract class Expression
                 generateAssignments(ctx, code, asnVoid, errs);
                 }
             }
+        }
+
+    /**
+     * Generate the necessary code that initializes an lvalue variable.
+     * <p/>
+     * This method should be overridden by any expression that overrides
+     * {@link #supportsCompactInit()} method.
+     *
+     * @param ctx     the compilation context for the statement
+     * @param code    the code block
+     * @param lvalue  the variable declaration statement representing the lvalue
+     * @param errs    the error list to log any errors to
+     */
+    public void generateCompactInit(
+            Context ctx, Code code, VariableDeclarationStatement lvalue, ErrorListener errs)
+        {
+        assert supportsCompactInit();
+
+        StringConstant idName = pool().ensureStringConstant(lvalue.getName());
+        code.add(new Var_IN(lvalue.getRegister(), idName, toConstant()));
         }
 
     /**

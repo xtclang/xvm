@@ -144,6 +144,7 @@ public class Var_TN
         {
         super.registerConstants(registry);
 
+        m_constName = (StringConstant) registerArgument(m_constName, registry);
         registerArguments(m_aArgValue, registry);
         }
 
@@ -151,13 +152,6 @@ public class Var_TN
     public String getName(Constant[] aconst)
         {
         return getName(aconst, m_constName, m_nNameId);
-        }
-
-    @Override
-    public String toString()
-        {
-        return super.toString();
-        // TODO arguments
         }
 
     private int   m_nNameId;
