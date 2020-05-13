@@ -27,7 +27,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * VAR_SN TYPE, STRING, #values:(rvalue-src) ; next register is a named initialized anonymous Sequence variable
+ * VAR_SN TYPE, STRING, #values:(rvalue-src) ; next register is an initialized named Sequence variable
  */
 public class Var_SN
         extends OpVar
@@ -37,7 +37,7 @@ public class Var_SN
      *
      * @param constType the variable type
      * @param constName  the name constant
-     * @param aArgValue  the value argument
+     * @param aArgValue  the value arguments
      */
     public Var_SN(TypeConstant constType, StringConstant constName, Argument[] aArgValue)
         {
@@ -57,7 +57,7 @@ public class Var_SN
      *
      * @param reg        the register
      * @param constName  the name constant
-     * @param aArgValue  the value argument
+     * @param aArgValue  the value arguments
      */
     public Var_SN(Register reg, StringConstant constName, Argument[] aArgValue)
         {
@@ -83,7 +83,7 @@ public class Var_SN
         {
         super(in, aconst);
 
-        m_nNameId = readPackedInt(in);
+        m_nNameId    = readPackedInt(in);
         m_anArgValue = readIntArray(in);
         }
 
@@ -95,7 +95,7 @@ public class Var_SN
 
         if (m_constName != null)
             {
-            m_nNameId = encodeArgument(m_constName, registry);
+            m_nNameId    = encodeArgument(m_constName, registry);
             m_anArgValue = encodeArguments(m_aArgValue, registry);
             }
 

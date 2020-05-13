@@ -12,10 +12,17 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Var_M;
+import org.xvm.asm.op.Var_MN;
+
+import org.xvm.compiler.Compiler;
+
 import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 
 /**
@@ -128,7 +135,8 @@ public class MapExpression
         TypeFit          fit         = TypeFit.Fit;
         List<Expression> listKeys    = keys;
         List<Expression> listVals    = values;
-        boolean          fConstant   = true;
+        boolean          fConstKeys  = true;
+        boolean          fConstVals  = true;
         TypeConstant     typeActual  = pool.typeMap();
         TypeConstant     typeKey     = null;
         TypeConstant     typeVal     = null;
@@ -152,8 +160,8 @@ public class MapExpression
             TypeExpression exprNewType = (TypeExpression) exprOldType.validate(ctx, typeMapType, errs);
             if (exprNewType == null)
                 {
-                fit       = TypeFit.NoFit;
-                fConstant = false;
+                fit        = TypeFit.NoFit;
+                fConstKeys = false;
                 }
             else
                 {
@@ -219,8 +227,8 @@ public class MapExpression
             Expression exprNew = exprOld.validate(ctx, typeKey, errs);
             if (exprNew == null)
                 {
-                fit       = TypeFit.NoFit;
-                fConstant = false;
+                fit        = TypeFit.NoFit;
+                fConstKeys = false;
                 }
             else
                 {
@@ -228,7 +236,7 @@ public class MapExpression
                     {
                     listKeys.set(i, exprNew);
                     }
-                fConstant &= exprNew.isConstant();
+                fConstKeys &= exprNew.isConstant();
                 }
 
             // validate value
@@ -236,8 +244,8 @@ public class MapExpression
             exprNew = exprOld.validate(ctx, typeVal, errs);
             if (exprNew == null)
                 {
-                fit       = TypeFit.NoFit;
-                fConstant = false;
+                fit        = TypeFit.NoFit;
+                fConstVals = false;
                 }
             else
                 {
@@ -245,39 +253,42 @@ public class MapExpression
                     {
                     listVals.set(i, exprNew);
                     }
-                fConstant &= exprNew.isConstant();
+                fConstVals &= exprNew.isConstant();
                 }
             }
 
         // the type must either be Map (in which case a system-selected type will be used), or a
         // type that is a Map and takes the contents in its constructor, or has a no-parameter
         // constructor (so the map can be created empty and the items added to it)
-        if (!typeActual.isSingleUnderlyingClass(true) || !typeActual.getSingleUnderlyingClass(true).equals(pool.clzMap()))
+        if (!typeActual.isSingleUnderlyingClass(true) ||
+                !typeActual.getSingleUnderlyingClass(true).equals(pool.clzMap()))
             {
             // REVIEW how to handle another type besides "Map"? same problem will exist for List, Array, etc.
-            notImplemented();
-
-            fConstant = false;
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                    pool.typeMap().getValueString(), typeActual.getValueString());
+            return null;
             }
 
         // build a constant if it's a known container type and all of the elements are constants
         Constant constVal = null;
-        if (fConstant)
+        if (fConstKeys)
             {
-            Map map = new ListMap<>(cExprs);
+            Map<Constant, Constant> map = new ListMap<>(cExprs);
             for (int i = 0; i < cExprs; ++i)
                 {
-                map.put(listKeys.get(i).toConstant(), listVals.get(i).toConstant());
+                Constant constKey = listKeys.get(i).toConstant();
+                if (map.containsKey(constKey))
+                    {
+                    log (errs, Severity.ERROR, Compiler.MAP_KEYS_DUPLICATE, constKey.getValueString());
+                    return null;
+                    }
+
+                map.put(constKey, fConstVals ? listVals.get(i).toConstant() : pool.val0());
                 }
 
-            if (map.size() == cExprs)
+            if (fConstVals)
                 {
                 constVal = pool.ensureMapConstant(typeActual, map);
-                }
-            else
-                {
-                // TODO WARNING or ERROR that the map contains non-unique keys
-                System.out.println("MapExpression: constant contains key collision(s): " + this);
                 }
             }
 
@@ -329,6 +340,34 @@ public class MapExpression
         }
 
     @Override
+    public boolean supportsCompactInit(VariableDeclarationStatement lvalue)
+        {
+        // there may be not enough information in the lvalue type to use the VAR_SN op,
+        // for example "Object map = [k1=v1];"
+        TypeConstant typeMap = lvalue.getRegister().getType();
+        return typeMap.resolveGenericType("Key")   != null &&
+               typeMap.resolveGenericType("Value") != null;
+        }
+
+    @Override
+    public void generateCompactInit(
+            Context ctx, Code code, VariableDeclarationStatement lvalue, ErrorListener errs)
+        {
+        if (isConstant())
+            {
+            super.generateCompactInit(ctx, code, lvalue, errs);
+            }
+        else
+            {
+            StringConstant idName = pool().ensureStringConstant(lvalue.getName());
+
+            code.add(new Var_MN(lvalue.getRegister(), idName,
+                    collectArguments(ctx, code, true, errs),
+                    collectArguments(ctx, code, false, errs)));
+            }
+        }
+
+    @Override
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
@@ -337,19 +376,26 @@ public class MapExpression
             return toConstant();
             }
 
-        List<Expression> listKeys = keys;
-        List<Expression> listVals = values;
-        int              cEntries = listKeys.size();
-        Argument[]       aKeys    = new Argument[cEntries];
-        Argument[]       aVals    = new Argument[cEntries];
-        for (int i = 0; i < cEntries; ++i)
-            {
-            aKeys[i] = listKeys.get(i).generateArgument(ctx, code, false, true, errs);
-            aVals[i] = listVals.get(i).generateArgument(ctx, code, false, true, errs);
-            }
-        notImplemented();
-        // TODO code.add(new Var_M(getType(), aKeys, aVals));
+        code.add(new Var_M(getType(),
+                collectArguments(ctx, code, true, errs),
+                collectArguments(ctx, code, false, errs)));
         return code.lastRegister();
+        }
+
+    /**
+     * Helper method to generate an array of keys or values.
+     */
+    private Argument[] collectArguments(Context ctx, Code code, boolean fKeys, ErrorListener errs)
+        {
+        List<Expression> list  = fKeys ? keys : values;
+        int              cArgs = list.size();
+        Argument[]       aArg  = new Argument[cArgs];
+
+        for (int i = 0; i < cArgs; ++i)
+            {
+            aArg[i] = list.get(i).generateArgument(ctx, code, true, false, errs);
+            }
+        return aArg;
         }
 
 

@@ -1217,6 +1217,10 @@ public class Compiler
      */
     public static final String DEFAULT_VALUE_REQUIRED              = "COMPILER-153";
     /**
+     * The Map constant contains duplicate keys: {0}.
+     */
+    public static final String MAP_KEYS_DUPLICATE                  = "COMPILER-154";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

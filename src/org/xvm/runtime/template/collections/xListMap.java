@@ -8,8 +8,8 @@ import org.xvm.asm.Constant;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
-
 import org.xvm.asm.Op;
+
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -72,31 +72,51 @@ public class xListMap
                 ix++;
                 }
 
-            ConstantPool pool         = typeMap.getConstantPool();
-            TypeConstant typeKey      = typeMap.resolveGenericType("Key");
-            TypeConstant typeVal      = typeMap.resolveGenericType("Value");
-            TypeConstant typeKeyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeKey);
-            TypeConstant typeValArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeVal);
-
-            ClassComposition clzKeyArray = f_templates.resolveClass(typeKeyArray);
-            ClassComposition clzValArray = f_templates.resolveClass(typeValArray);
-            ClassComposition clzMap      = ensureClass(
-                pool.ensureParameterizedTypeConstant(getClassConstant().getType(), typeKey, typeVal));
-
-            ObjectHandle     haKeys = fDeferredKey
-                    ? new DeferredArrayHandle(clzKeyArray, ahKey)
-                    : ((xArray) clzKeyArray.getTemplate()).createArrayHandle(clzKeyArray, ahKey);
-            ObjectHandle     haVals = fDeferredVal
-                    ? new DeferredArrayHandle(clzValArray, ahVal)
-                    : ((xArray) clzValArray.getTemplate()).createArrayHandle(clzValArray, ahVal);
-
-            ObjectHandle[] ahArg = new ObjectHandle[CONSTRUCTOR.getMaxVars()];
-            ahArg[0] = haKeys;
-            ahArg[1] = haVals;
-            return construct(frame, CONSTRUCTOR, clzMap, null, ahArg, Op.A_STACK);
+            return constructMap(frame, typeMap, ahKey, ahVal, fDeferredKey, fDeferredVal, Op.A_STACK);
             }
         return super.createConstHandle(frame, constant);
         }
+
+    /**
+     * Create an immutable ListMap for a specified type and content.
+     *
+     * @param frame         the current frame
+     * @param typeMap       the map type
+     * @param ahKey         the array of keys
+     * @param ahKey         the array of values
+     * @param fDeferredKey  if true, some key handles could be deferred
+     * @param fDeferredVal  if true, some value handles could be deferred
+     * @param iReturn       the register to place the resulting map to
+     *
+     * @return R_CALL or R_EXCEPTION
+     */
+    public int constructMap(Frame frame, TypeConstant typeMap, ObjectHandle[] ahKey, ObjectHandle[] ahVal,
+                               boolean fDeferredKey, boolean fDeferredVal, int iReturn)
+        {
+        ConstantPool pool         = frame.poolContext();
+        TypeConstant typeKey      = typeMap.resolveGenericType("Key");
+        TypeConstant typeVal      = typeMap.resolveGenericType("Value");
+        TypeConstant typeKeyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeKey);
+        TypeConstant typeValArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeVal);
+
+        ClassComposition clzKeyArray = f_templates.resolveClass(typeKeyArray);
+        ClassComposition clzValArray = f_templates.resolveClass(typeValArray);
+        ClassComposition clzMap      = ensureClass(
+            pool.ensureParameterizedTypeConstant(getClassConstant().getType(), typeKey, typeVal));
+
+        ObjectHandle     haKeys = fDeferredKey
+                ? new DeferredArrayHandle(clzKeyArray, ahKey)
+                : ((xArray) clzKeyArray.getTemplate()).createArrayHandle(clzKeyArray, ahKey);
+        ObjectHandle     haVals = fDeferredVal
+                ? new DeferredArrayHandle(clzValArray, ahVal)
+                : ((xArray) clzValArray.getTemplate()).createArrayHandle(clzValArray, ahVal);
+
+        ObjectHandle[] ahArg = new ObjectHandle[CONSTRUCTOR.getMaxVars()];
+        ahArg[0] = haKeys;
+        ahArg[1] = haVals;
+        return construct(frame, CONSTRUCTOR, clzMap, null, ahArg, iReturn);
+        }
+
 
     private static MethodStructure CONSTRUCTOR;
     }

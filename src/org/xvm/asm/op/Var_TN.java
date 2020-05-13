@@ -26,7 +26,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * VAR_TN STRING, #values:(TYPE, rvalue-src) ; next register is an initialized anonymous Tuple variable
+ * VAR_TN STRING, #values:(TYPE, rvalue-src) ; next register is an initialized named Tuple variable
  */
 public class Var_TN
         extends OpVar
@@ -36,7 +36,7 @@ public class Var_TN
      *
      * @param constType the variable type
      * @param constName  the name constant
-     * @param aArgValue  the value argument
+     * @param aArgValue  the value arguments
      */
     public Var_TN(TypeConstant constType, StringConstant constName, Argument[] aArgValue)
         {
@@ -56,7 +56,7 @@ public class Var_TN
      *
      * @param reg        the register
      * @param constName  the name constant
-     * @param aArgValue  the value argument
+     * @param aArgValue  the value arguments
      */
     public Var_TN(Register reg, StringConstant constName, Argument[] aArgValue)
         {
@@ -82,7 +82,7 @@ public class Var_TN
         {
         super(in, aconst);
 
-        m_nNameId = readPackedInt(in);
+        m_nNameId    = readPackedInt(in);
         m_anArgValue = readIntArray(in);
         }
 
@@ -94,7 +94,7 @@ public class Var_TN
 
         if (m_constName != null)
             {
-            m_nNameId = encodeArgument(m_constName, registry);
+            m_nNameId    = encodeArgument(m_constName, registry);
             m_anArgValue = encodeArguments(m_aArgValue, registry);
             }
 

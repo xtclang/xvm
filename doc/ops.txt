@@ -97,8 +97,8 @@
 +VAR_SN     TYPE, STRING, #values:(rvalue)          ; initialized ("N"=) named ("S"=) Sequence variable
 +VAR_T      TYPE. #values:(rvalue)                  ; initialized anonymous ("T"=) Tuple variable
 +VAR_TN     TYPE, STRING, #values:(rvalue)          ; initialized ("N"=) named ("T"=) Tuple variable
- VAR_M      TYPE, #entries:(rvalue, rvalue)         ; initialized anonymous ("M"=) Map variable
- VAR_MN     TYPE, STRING, #entries:(rvalue, rvalue) ; initialized ("N"=) named ("M"=) Map variable
++VAR_M      TYPE, #entries:(rvalue, rvalue)         ; initialized anonymous ("M"=) Map variable
++VAR_MN     TYPE, STRING, #entries:(rvalue, rvalue) ; initialized ("N"=) named ("M"=) Map variable
 
 // "move" operations
 // - rvalues do NOT support "local property" mode;
