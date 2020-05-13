@@ -174,9 +174,13 @@ const Class<PublicType, ProtectedType extends PublicType,
                 {
                 // compute a relative path from the root of the primary module
                 String relPath = path.substring(colon+1);
-                return True, modPath == ""
-                        ? relPath
-                        : modPath + '.' + relPath;
+                return True, switch (modPath, relPath)
+                        {
+                        case ("", ""): typesys.primaryModule.qualifiedName + ':';
+                        case ("", _ ): relPath;
+                        case (_ , ""): modPath;
+                        case (_ , _ ): modPath + '.' + relPath;
+                        };
                 }
             else
                 {
@@ -235,7 +239,11 @@ const Class<PublicType, ProtectedType extends PublicType,
         }
 
     /**
-     * @return the canonical form of this class
+     * Add, remove, or replace type parameters on this class.
+     *
+     * @param paramTypes  a sequence of types
+     *
+     * @return the corresponding parameterized class
      */
     Class!<> parameterize(Type... paramTypes)
         {
