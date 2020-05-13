@@ -646,7 +646,7 @@ public class ConstantPool
      * @param constType  the type of the array
      * @param aconst     an array of constant values
      *
-     * @return a constant representing the tuple value
+     * @return a constant representing the Array value
      */
     public ArrayConstant ensureArrayConstant(TypeConstant constType, Constant[] aconst)
         {
@@ -661,7 +661,7 @@ public class ConstantPool
      * @param constType  the type of the set
      * @param aconst     an array of constant values
      *
-     * @return a constant representing the tuple value
+     * @return a constant representing the Set value
      */
     public ArrayConstant ensureSetConstant(TypeConstant constType, Constant[] aconst)
         {
