@@ -15,7 +15,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Jump;
@@ -25,7 +24,6 @@ import org.xvm.asm.op.JumpNull;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
-import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -683,7 +681,7 @@ public class AssignmentStatement
                 if (lvalueExpr.isSingle()
                         && lvalue instanceof VariableDeclarationStatement
                         && !((VariableDeclarationStatement) lvalue).hasRefAnnotations()
-                        && rvalue.supportsCompactInit())
+                        && rvalue.supportsCompactInit((VariableDeclarationStatement) lvalue))
                     {
                     assert lvalueExpr.isCompletable();
                     rvalue.generateCompactInit(ctx, code, (VariableDeclarationStatement) lvalue,  errs);

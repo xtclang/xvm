@@ -480,7 +480,7 @@ public class TupleExpression
         }
 
     @Override
-    public boolean supportsCompactInit()
+    public boolean supportsCompactInit(VariableDeclarationStatement lvalue)
         {
         return true;
         }

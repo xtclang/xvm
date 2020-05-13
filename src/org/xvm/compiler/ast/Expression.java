@@ -1090,9 +1090,11 @@ public abstract class Expression
      * This method should be overridden by any expression that can produce better code than the
      * default lvalue assignment code.
      *
+     * @param lvalue  the lvalue declaration statement
+     *
      * @return true iff the expression can generate a compact var initialization
      */
-    public boolean supportsCompactInit()
+    public boolean supportsCompactInit(VariableDeclarationStatement lvalue)
         {
         return isConstant();
         }
@@ -1179,7 +1181,7 @@ public abstract class Expression
      * Generate the necessary code that initializes an lvalue variable.
      * <p/>
      * This method should be overridden by any expression that overrides
-     * {@link #supportsCompactInit()} method.
+     * {@link #supportsCompactInit} method.
      *
      * @param ctx     the compilation context for the statement
      * @param code    the code block
@@ -1189,7 +1191,7 @@ public abstract class Expression
     public void generateCompactInit(
             Context ctx, Code code, VariableDeclarationStatement lvalue, ErrorListener errs)
         {
-        assert supportsCompactInit();
+        assert supportsCompactInit(lvalue);
 
         StringConstant idName = pool().ensureStringConstant(lvalue.getName());
         code.add(new Var_IN(lvalue.getRegister(), idName, toConstant()));

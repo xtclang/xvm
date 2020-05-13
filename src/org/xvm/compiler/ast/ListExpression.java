@@ -276,9 +276,11 @@ public class ListExpression
         }
 
     @Override
-    public boolean supportsCompactInit()
+    public boolean supportsCompactInit(VariableDeclarationStatement lvalue)
         {
-        return true;
+        // there may be not enough information in the lvalue type to use the VAR_SN op,
+        // for example "Object list = [x, y];"
+        return lvalue.getRegister().getType().resolveGenericType("Element") != null;
         }
 
     @Override
