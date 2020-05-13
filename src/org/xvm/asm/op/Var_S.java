@@ -17,6 +17,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
 
@@ -104,29 +105,32 @@ public class Var_S
             {
             ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
 
-            assert !anyDeferred(ahArg); // TODO GG
-
-            TypeConstant     typeSequence = frame.resolveType(m_nType);
-            ClassComposition clzArray     = m_clzArray;
-
-            if (clzArray == null)
+            if (anyDeferred(ahArg))
                 {
-                TypeConstant typeEl = typeSequence.resolveGenericType("Element");
-                m_clzArray = clzArray = xArray.INSTANCE.
-                    ensureParameterizedClass(frame.poolContext(), typeEl);
+                Frame.Continuation stepNext = frameCaller ->
+                    complete(frameCaller, iPC, ahArg);
+
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            xArray template = (xArray) clzArray.getTemplate();
-            ArrayHandle hArray = template.createArrayHandle(clzArray, ahArg);
-
-            frame.introduceResolvedVar(m_nVar, typeSequence, null, Frame.VAR_STANDARD, hArray);
-
-            return iPC + 1;
+            return complete(frame, iPC, ahArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
+        }
+
+    protected int complete(Frame frame, int iPC, ObjectHandle[] ahArg)
+        {
+        TypeConstant     typeSequence = frame.resolveType(m_nType);
+        ClassComposition clzArray     = getArrayClass(frame, typeSequence);
+
+        ArrayHandle hArray = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahArg);
+
+        frame.introduceResolvedVar(m_nVar, typeSequence, null, Frame.VAR_STANDARD, hArray);
+
+        return iPC + 1;
         }
 
     @Override
@@ -140,7 +144,4 @@ public class Var_S
     private int[] m_anArgValue;
 
     private Argument[] m_aArgValue;
-
-    // cached ClassComposition for the underlying array
-    private transient ClassComposition m_clzArray;
     }

@@ -8,7 +8,11 @@ import java.io.IOException;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.Frame;
 import org.xvm.runtime.ServiceContext;
+
+import org.xvm.runtime.template.collections.xArray;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -135,6 +139,33 @@ public abstract class OpVar
         }
 
     /**
+     * Helper method to calculate a ClassComposition for a sequence class.
+     *
+     * @param frame         the current frame
+     * @param typeSequence  the sequence type
+     *
+     * @return the corresponding class composition
+     */
+    protected ClassComposition getArrayClass(Frame frame, TypeConstant typeSequence)
+        {
+        ServiceContext   context  = frame.f_context;
+        ClassComposition clzArray = (ClassComposition) context.getOpInfo(this, Category.Composition);;
+        TypeConstant     typePrev = (TypeConstant)     context.getOpInfo(this, Category.Type);
+
+        if (clzArray == null || !typeSequence.equals(typePrev))
+            {
+            TypeConstant typeEl = typeSequence.resolveGenericType("Element");
+
+            clzArray = xArray.INSTANCE.ensureParameterizedClass(frame.poolContext(), typeEl);
+
+            context.setOpInfo(this, Category.Composition, clzArray);
+            context.setOpInfo(this, Category.Type, typeSequence);
+            }
+
+        return clzArray;
+        }
+
+    /**
      * Note: Used only during compilation.
      *
      * @return the type of the register
@@ -223,4 +254,7 @@ public abstract class OpVar
      * The type constant id.
      */
     protected int m_nType;
+
+    // categories for cached info
+    enum Category {Composition, Type};
     }
