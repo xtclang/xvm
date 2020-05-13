@@ -76,8 +76,8 @@ module TestMaps
         console.println($"empty map={map}");
 
         console.println("adding entries...");
-        map.put("k1", "v1");
-        map.put("k2", "v2");
+        map["k1"] = "v1";
+        map["k2"] = "v2";
 
         console.println($"map.size={map.size}, map.empty={map.empty}");
         console.println($"keys.size={map.keys.size}");

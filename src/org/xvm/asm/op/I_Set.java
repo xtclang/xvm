@@ -2,27 +2,32 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
-import org.xvm.asm.OpIndexInPlace;
+import org.xvm.asm.OpIndex;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
+
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * I_SET rvalue-target, rvalue-ix, rvalue ; T[ix] = T
  */
 public class I_Set
-        extends OpIndexInPlace
+        extends OpIndex
     {
     /**
      * Construct an I_SET op for the passed target.
@@ -33,7 +38,9 @@ public class I_Set
      */
     public I_Set(Argument argTarget, Argument argIndex, Argument argValue)
         {
-        super(argTarget, argIndex, argValue);
+        super(argTarget, argIndex);
+
+        m_argValue = argValue;
         }
 
     /**
@@ -46,6 +53,22 @@ public class I_Set
             throws IOException
         {
         super(in, aconst);
+
+        m_nValue = readPackedInt(in);
+        }
+
+    @Override
+    public void write(DataOutput out, ConstantRegistry registry)
+            throws IOException
+        {
+        super.write(out, registry);
+
+        if (m_argValue != null)
+            {
+            m_nValue = encodeArgument(m_argValue, registry);
+            }
+
+        writePackedLong(out, m_nValue);
         }
 
     @Override
@@ -55,13 +78,40 @@ public class I_Set
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex, ObjectHandle hValue)
+    protected boolean isAssignOp()
+        {
+        return false;
+        }
+
+    public int process(Frame frame, int iPC)
+        {
+        try
+            {
+            ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nIndex, m_nValue}, 3);
+
+            if (anyDeferred(ahArg))
+                {
+                Frame.Continuation stepNext = frameCaller ->
+                    complete(frameCaller, ahArg[0], ahArg[1], ahArg[2]);
+
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+                }
+
+            return complete(frame, ahArg[0], ahArg[1], ahArg[2]);
+            }
+        catch (ObjectHandle.ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
+        }
+
+    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hIndex, ObjectHandle hValue)
         {
         ClassTemplate template = hTarget.getTemplate();
         if (template instanceof IndexSupport)
             {
             return ((IndexSupport) template).
-                assignArrayValue(frame, hTarget, hIndex.getValue(), hValue);
+                assignArrayValue(frame, hTarget, ((JavaLong) hIndex).getValue(), hValue);
             }
 
         CallChain chain = getOpChain(frame, hTarget.getType());
@@ -81,4 +131,16 @@ public class I_Set
 
         return chain.invoke(frame, hTarget, ahVar, Op.A_IGNORE);
         }
+
+    @Override
+    public void registerConstants(ConstantRegistry registry)
+        {
+        super.registerConstants(registry);
+
+        m_argValue = registerArgument(m_argValue, registry);
+        }
+
+    protected int m_nValue;
+
+    private Argument m_argValue;
     }

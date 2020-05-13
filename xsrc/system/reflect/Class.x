@@ -216,12 +216,10 @@ const Class<PublicType, ProtectedType extends PublicType,
             assert formalTypes.size == canonicals.size;
             Loop: for (String name : canonicals.keys)
                 {
-                // TODO GG? formals[name] = formalTypes[Loop.count];
-                formals.put(name, formalTypes[Loop.count]);
+                formals[name] = formalTypes[Loop.count];
                 }
             }
-        // TODO immutable
-        return formals;
+        return formals.makeImmutable();
         }
 
     /**
