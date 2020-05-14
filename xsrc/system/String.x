@@ -344,6 +344,44 @@ const String
         }
 
 
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Determine if the string needs to be escaped in order to be displayed.
+     *
+     * @return true iff the string should be escaped in order to be displayed
+     * @return (conditional) the number of characters in the escaped string
+     */
+    conditional Int isEscaped()
+        {
+        Int total = size;
+        for (Char ch : chars)
+            {
+            if (Int n := ch.isEscaped())
+                {
+                total += n - 1;
+                }
+            }
+
+        return total == size
+                ? False
+                : True, total;
+        }
+
+    /**
+     * Append the string to the appender, escaping characters as necessary.
+     *
+     * @param appender  the Appender to append to
+     */
+    void appendEscaped(Appender<Char> appender)
+        {
+        for (Char ch : chars)
+            {
+            ch.appendEscaped(appender);
+            }
+        }
+
+
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override

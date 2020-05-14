@@ -1,5 +1,5 @@
 import ecstasy.reflect.Access;
-import ecstasy.reflect.Annotation;
+import ecstasy.reflect.AnnotationTemplate;
 import ecstasy.reflect.ClassTemplate.Composition;
 import ecstasy.reflect.PropertyTemplate;
 import ecstasy.reflect.TypeTemplate;
@@ -19,7 +19,7 @@ class RTTypeTemplate
     @Override @RO TypeTemplate[] underlyingTypes;
 
     @Override conditional Access accessSpecified();
-    @Override conditional Annotation annotated();
+    @Override conditional AnnotationTemplate annotated();
     @Override conditional TypeTemplate contained();
     @Override conditional Composition fromClass();
     @Override conditional PropertyTemplate fromProperty();

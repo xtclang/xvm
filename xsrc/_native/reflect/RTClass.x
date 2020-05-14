@@ -40,7 +40,7 @@ const RTClass<PublicType, ProtectedType extends PublicType,
     @Override
     Int estimateStringLength()
         {
-        Int size = name.size;
+        Int size = displayName.size;
 
         ListMap<String, Type> params = formalTypes;
         if (!params.empty)
@@ -64,25 +64,7 @@ const RTClass<PublicType, ProtectedType extends PublicType,
         {
         // TODO annotations
 
-        String  path;
-        String? alias = implicitName;
-        if (alias == null)
-            {
-            if (String relative := pathWithin(this:service.typeSystem))
-                {
-                path = relative;
-                }
-            else
-                {
-                // use absolute path
-                path = this.path;
-                }
-            }
-        else
-            {
-            path = alias;
-            }
-        appender.add(path);
+        appender.add(displayName);
 
         ListMap<String, Type> params = formalTypes;
         if (!params.empty)

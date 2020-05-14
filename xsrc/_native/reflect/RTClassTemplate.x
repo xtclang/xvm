@@ -1,4 +1,4 @@
-import ecstasy.reflect.Annotation;
+import ecstasy.reflect.AnnotationTemplate;
 import ecstasy.reflect.ClassTemplate;
 import ecstasy.reflect.ClassTemplate.Composition;
 import ecstasy.reflect.ClassTemplate.Contribution;
@@ -28,7 +28,7 @@ class RTClassTemplate
     @Override @RO TypeParameter[]       typeParams;
     @Override @RO Boolean               virtualChild;
 
-    @Override conditional (Annotation, Composition) deannotate();
+    @Override conditional (AnnotationTemplate, Composition) deannotate();
     @Override Class<> ensureClass(Type... actualTypes);
 
     // natural code (these *could* be optimized if they were made native)
@@ -37,5 +37,5 @@ class RTClassTemplate
     //   Boolean implements(Composition composition)
     //   Boolean derivesFrom(Composition composition)
     //   conditional ClassTemplate hasSuper()
-    //   Composition! annotate(Annotation annotation)
+    //   Composition! annotate(AnnotationTemplate annotation)
     }

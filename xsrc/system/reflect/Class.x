@@ -1,4 +1,3 @@
-import collections.ListMap;
 import reflect.ClassTemplate.Composition;
 
 /**
@@ -146,11 +145,34 @@ const Class<PublicType, ProtectedType extends PublicType,
         }
 
     /**
-     * TODO
+     * The path of a class is composed of its module qualified name followed by a colon, followed
+     * by a dot-delimited sequence of names necessary to identify this class within its module.
      */
     @RO String path.get()
         {
         return composition.template.path;
+        }
+
+    /**
+     * A name intended to be more easily human-readable than a fully qualified path (if possible),
+     * while still being sufficiently descriptive that it would be accepted by
+     * [TypeSystem.classForName], and would result in this class.
+     */
+    @RO String displayName.get()
+        {
+        String? alias = implicitName;
+        if (alias != null)
+            {
+            return alias;
+            }
+
+        if (String relative := pathWithin(this:service.typeSystem))
+            {
+            return relative;
+            }
+
+        // use absolute path
+        return path;
         }
 
     /**

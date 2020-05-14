@@ -234,21 +234,6 @@ const Char
         }
 
 
-    // ----- Stringable methods --------------------------------------------------------------------
-
-    @Override
-    Int estimateStringLength()
-        {
-        return 1;
-        }
-
-    @Override
-    void appendTo(Appender<Char!> appender)
-        {
-        appender.add(this);
-        }
-
-
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
@@ -385,5 +370,160 @@ const Char
             }
 
         return length;
+        }
+
+    /**
+     * Determine if the character needs to be escaped in order to be displayed.
+     *
+     * @return true iff the character should be escaped in order to be displayed
+     * @return (conditional) the number of characters in the escape sequence
+     */
+    conditional Int isEscaped()
+        {
+        return switch (codepoint)
+            {
+            case 0x00           :               // null terminator
+            case 0x08           :               // backspace
+            case 0x09           :               // horizontal tab
+            case 0x0A           :               // line feed
+            case 0x0B           :               // vertical tab
+            case 0x0C           :               // form feed
+            case 0x0D           :               // carriage return
+            case 0x1A           :               // EOF
+            case 0x1B           :               // escape
+            case 0x22           :               // double quotes
+            case 0x27           :               // single quotes
+            case 0x5C           :               // the escaping slash itself requires an explicit escape
+            case 0x7F           : (True, 2);    // DEL
+
+            case 0x00..0x1F     :               // C0 control characters
+            case 0x80..0x9F     :               // C1 control characters
+            case 0x2028..0x2029 : (True, 5);    // line and paragraph separator
+
+            default             : False;
+            };
+        }
+
+    /**
+     * Append the specified character to the StringBuilder, escaping if
+     * necessary.
+     *
+     * @param sb  the StringBuilder to append to
+     * @param ch  the character to escape
+     *
+     * @return the StringBuilder
+     */
+    void appendEscaped(Appender<Char> appender)
+        {
+        switch (codepoint)
+            {
+            case 0x00:
+                // null terminator
+                appender.add('\\')
+                        .add('0');
+                break;
+
+            case 0x08:
+                // backspace
+                appender.add('\\')
+                        .add('b');
+                break;
+
+            case 0x09:
+                // horizontal tab
+                appender.add('\\')
+                        .add('t');
+                break;
+
+            case 0x0A:
+                // line feed
+                appender.add('\\')
+                        .add('n');
+                break;
+
+            case 0x0B:
+                // vertical tab
+                appender.add('\\')
+                        .add('v');
+                break;
+
+            case 0x0C:
+                // form feed
+                appender.add('\\')
+                        .add('f');
+                break;
+
+            case 0x0D:
+                // carriage return
+                appender.add('\\')
+                        .add('r');
+                break;
+
+            case 0x1A:
+                // EOF
+                appender.add('\\')
+                        .add('z');
+                break;
+
+            case 0x1B:
+                // escape
+                appender.add('\\')
+                        .add('e');
+                break;
+
+            case 0x22:
+                // double quotes
+                appender.add('\\')
+                        .add('\"');
+                break;
+
+            case 0x27:
+                // single quotes
+                appender.add('\\')
+                        .add('\'');
+                break;
+
+            case 0x5C:
+                // the escaping slash itself requires an explicit escape
+                appender.add('\\')
+                        .add('\\');
+                break;
+
+            case 0x7F:
+               // DEL
+                appender.add('\\')
+                        .add('d');
+               break;
+
+            case 0x00..0x1F     :       // C0 control characters
+            case 0x80..0x9F     :       // C1 control characters
+            case 0x2028..0x2029 :       // line and paragraph separator
+                appender.add('\\')
+                        .add('u')
+                        .add((codepoint & 0xF000 >>> 24).toHexit())
+                        .add((codepoint & 0x0F00 >>> 16).toHexit())
+                        .add((codepoint & 0x00F0 >>>  8).toHexit())
+                        .add((codepoint & 0x000F >>>  0).toHexit());
+                break;
+
+            default:
+                appender.add(this);
+                break;
+            }
+        }
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return 1;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        appender.add(this);
         }
     }

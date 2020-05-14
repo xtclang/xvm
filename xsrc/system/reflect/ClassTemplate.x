@@ -105,7 +105,7 @@ interface ClassTemplate
                 }
 
             // unwrap any annotations from the composition that we are testing extension of
-            while ((Annotation annotation, composition) := composition.deannotate())
+            while ((AnnotationTemplate annotation, composition) := composition.deannotate())
                 {
                 if (!this.incorporates(annotation.template))
                     {
@@ -194,7 +194,7 @@ interface ClassTemplate
                 }
 
             // unwrap any annotations from the composition that we are testing extension of
-            while ((Annotation annotation, composition) := composition.deannotate())
+            while ((AnnotationTemplate annotation, composition) := composition.deannotate())
                 {
                 if (Boolean fCond := this.incorporates(annotation.template))
                     {
@@ -325,7 +325,7 @@ interface ClassTemplate
          *
          * @return the newly annotated composition
          */
-        Composition! annotate(Annotation annotation)
+        Composition! annotate(AnnotationTemplate annotation)
             {
             return new AnnotatingComposition(annotation, this);
             }
@@ -338,7 +338,7 @@ interface ClassTemplate
          * @return (conditional) the annotation used to create this annotated composition
          * @return (conditional) the underlying composition that was annotated
          */
-        conditional (Annotation, Composition!) deannotate();
+        conditional (AnnotationTemplate, Composition!) deannotate();
 
         /**
          * Obtain the Class represented by the combination of this composition and the specified
@@ -362,7 +362,7 @@ interface ClassTemplate
     /**
      * Represents an annotated form of an existing composition.
      */
-    static const AnnotatingComposition(Annotation annotation, Composition composition)
+    static const AnnotatingComposition(AnnotationTemplate annotation, Composition composition)
             implements Composition
         {
         @Override
@@ -372,7 +372,7 @@ interface ClassTemplate
             }
 
         @Override
-        conditional (Annotation, Composition!) deannotate()
+        conditional (AnnotationTemplate, Composition!) deannotate()
             {
             return True, annotation, composition;
             }

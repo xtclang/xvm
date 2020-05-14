@@ -299,33 +299,43 @@ public class xRTClass
      */
     public int invokeGetFormalNamesAndTypes(Frame frame, ObjectHandle hTarget, int[] aiReturn)
         {
-        ArrayHandle hNames, hTypes;
         TypeConstant   typeClz = getClassType(hTarget);
         ClassStructure clz     = (ClassStructure) typeClz.getSingleUnderlyingClass(true).getComponent();
-        int            cParams = clz.getTypeParamCount();
+        boolean        fTuple  = typeClz.isTuple();
+
+        int cParams = fTuple
+                ? typeClz.getParamsCount()
+                : clz.getTypeParamCount();
         if (cParams == 0)
             {
-            hNames = xString.ensureEmptyArray();
-            hTypes = xRTType.ensureEmptyArray();
+            return frame.assignValues(aiReturn, xString.ensureEmptyArray(), xRTType.ensureEmptyArray());
+            }
+
+        StringHandle[] ahNames = new StringHandle[cParams];
+        TypeHandle  [] ahTypes = new TypeHandle  [cParams];
+        if (fTuple)
+            {
+            TypeConstant[] atypeParam = typeClz.getParamTypesArray();
+            for (int i = 0; i < cParams; ++i)
+                {
+                ahNames[i] = xString.makeHandle("ElementTypes[" + i + "]");
+                ahTypes[i] = atypeParam[i].getTypeHandle();
+                }
             }
         else
             {
             Iterator<StringConstant> iterNames  = clz.getTypeParams().keySet().iterator();
             TypeConstant[]           atypeParam = clz.normalizeParameters(INSTANCE.pool(), typeClz.getParamTypesArray());
-            StringHandle[]           ahNames    = new StringHandle[cParams];
-            TypeHandle[]             ahTypes    = new TypeHandle[cParams];
             for (int i = 0; i < cParams; ++i)
                 {
                 ahNames[i] = xString.makeHandle(iterNames.next().getValue());
                 ahTypes[i] = atypeParam[i].getTypeHandle();
                 }
-
-            hNames = xString.ensureArrayTemplate().createArrayHandle(
-                    xString.ensureArrayComposition(), ahNames);
-            hTypes = xRTType.ensureArrayTemplate().createArrayHandle(
-                    xRTType.ensureArrayComposition(), ahTypes);
             }
-        return frame.assignValues(aiReturn, hNames, hTypes);
+
+        return frame.assignValues(aiReturn,
+                xString.ensureArrayTemplate().createArrayHandle(xString.ensureArrayComposition(), ahNames),
+                xRTType.ensureArrayTemplate().createArrayHandle(xRTType.ensureArrayComposition(), ahTypes));
         }
 
     /**

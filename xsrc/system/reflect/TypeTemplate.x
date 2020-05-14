@@ -3,7 +3,7 @@ import collections.ListMap;
 import collections.Set;
 
 import reflect.Access;
-import reflect.Annotation;
+import reflect.AnnotationTemplate;
 import reflect.Class;
 import reflect.ClassTemplate.Composition;
 import reflect.InvalidType;
@@ -213,7 +213,7 @@ interface TypeTemplate // TODO move
      * @return True iff there is an unambiguous annotation
      * @return (conditional) the first annotation
      */
-    conditional Annotation annotated();
+    conditional AnnotationTemplate annotated();
 
     /**
      * Determine if the type has non-conflicting type parameter information, and if so, obtain the
@@ -299,7 +299,7 @@ interface TypeTemplate // TODO move
 
             case Class:
                 assert Composition cmp := fromClass();
-                while ((Annotation annotation, cmp) := cmp.deannotate())
+                while ((AnnotationTemplate annotation, cmp) := cmp.deannotate())
                     {
                     appender.add('@')
                             .add(annotation.template.name)

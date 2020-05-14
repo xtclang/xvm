@@ -770,8 +770,17 @@ public class Lexer
                         case '\"':
                             break;
 
+                        case '0':
+                            ch = '\000';
+                            break;
                         case 'b':
                             ch = '\b';
+                            break;
+                        case 'd':
+                            ch = '\177';
+                            break;
+                        case 'e':
+                            ch = '\033';
                             break;
                         case 'f':
                             ch = '\f';
@@ -784,6 +793,12 @@ public class Lexer
                             break;
                         case 't':
                             ch = '\t';
+                            break;
+                        case 'v':
+                            ch = '\013';
+                            break;
+                        case 'z':
+                            ch = '\032';
                             break;
 
                         default:
@@ -941,8 +956,18 @@ public class Lexer
                             case '\"':
                                 sb.append('\"');
                                 break;
+
+                            case '0':
+                                sb.append('\000');
+                                break;
                             case 'b':
                                 sb.append('\b');
+                                break;
+                            case 'd':
+                                sb.append('\177');
+                                break;
+                            case 'e':
+                                sb.append('\033');
                                 break;
                             case 'f':
                                 sb.append('\f');
@@ -955,6 +980,12 @@ public class Lexer
                                 break;
                             case 't':
                                 sb.append('\t');
+                                break;
+                            case 'v':
+                                sb.append('\013');
+                                break;
+                            case 'z':
+                                sb.append('\032');
                                 break;
 
                             case '{':

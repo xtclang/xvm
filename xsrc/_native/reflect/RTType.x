@@ -100,7 +100,7 @@ const RTType<DataType, OuterType>
 
             case Class:
                 assert Class clz := fromClass();
-                return clz.name.size + estimateParameterizedStringLength();
+                return clz.displayName.size + estimateParameterizedStringLength();
 
             case Property:
                 assert Property prop := fromProperty();
@@ -207,7 +207,7 @@ const RTType<DataType, OuterType>
 
             case Class:
                 assert Class clz := fromClass();
-                clz.name.appendTo(appender);
+                clz.displayName.appendTo(appender);
                 appendParameterizedTo(appender);
                 break;
 
