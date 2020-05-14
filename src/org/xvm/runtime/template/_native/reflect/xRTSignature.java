@@ -166,7 +166,7 @@ public class xRTSignature
         {
         int              cParams  = hFunc.getParamCount();
         ObjectHandle[]   ahType   = new ObjectHandle[cParams];
-        ClassComposition clzArray = xRTType.ensureArrayComposition();
+        ClassComposition clzArray = xRTType.ensureTypeArrayComposition();
         for (int i = 0; i < cParams; i++)
             {
             ahType[i] = hFunc.getParamType(i).getTypeHandle();
@@ -181,7 +181,7 @@ public class xRTSignature
         {
         int              cReturns = hFunc.getReturnCount();
         ObjectHandle[]   ahType   = new ObjectHandle[cReturns];
-        ClassComposition clzArray = xRTType.ensureArrayComposition();
+        ClassComposition clzArray = xRTType.ensureTypeArrayComposition();
         for (int i = 0; i < cReturns; i++)
             {
             ahType[i] = hFunc.getReturnType(i).getTypeHandle();

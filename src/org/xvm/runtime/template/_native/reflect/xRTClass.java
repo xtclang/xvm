@@ -308,7 +308,7 @@ public class xRTClass
                 : clz.getTypeParamCount();
         if (cParams == 0)
             {
-            return frame.assignValues(aiReturn, xString.ensureEmptyArray(), xRTType.ensureEmptyArray());
+            return frame.assignValues(aiReturn, xString.ensureEmptyArray(), xRTType.ensureEmptyTypeArray());
             }
 
         StringHandle[] ahNames = new StringHandle[cParams];
@@ -335,7 +335,7 @@ public class xRTClass
 
         return frame.assignValues(aiReturn,
                 xString.ensureArrayTemplate().createArrayHandle(xString.ensureArrayComposition(), ahNames),
-                xRTType.ensureArrayTemplate().createArrayHandle(xRTType.ensureArrayComposition(), ahTypes));
+                xRTType.ensureArrayTemplate().createArrayHandle(xRTType.ensureTypeArrayComposition(), ahTypes));
         }
 
     /**

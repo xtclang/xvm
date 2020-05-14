@@ -83,6 +83,9 @@ public class xRTType
     @Override
     public void initNative()
         {
+        ANNOTATION_TEMPLATE  = f_templates.getTemplate("reflect.Annotation");
+        ANNOTATION_CONSTRUCT = ANNOTATION_TEMPLATE.getStructure().findMethod("construct", 2);
+
         markNativeProperty("childTypes");
         markNativeProperty("constants");
         markNativeProperty("constructors");
@@ -962,7 +965,8 @@ public class xRTType
             ahTypes[i] = aUnderlying[i].getTypeHandle();
             }
 
-        ArrayHandle hArray = ensureArrayTemplate().createArrayHandle(ensureArrayComposition(), ahTypes);
+        ArrayHandle hArray = ensureArrayTemplate().
+                createArrayHandle(ensureTypeArrayComposition(), ahTypes);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -1041,12 +1045,69 @@ public class xRTType
                 typeThis = typeThis.getUnderlyingType();
                 }
 
-            Annotation   annotation  = ((AnnotatedTypeConstant) typeThis).getAnnotation();
-            ObjectHandle hAnnotation = null; // TODO GG: turn an org.xvm.asm.Annotation into an Annotation.x
-            return frame.assignValues(aiReturn, xBoolean.TRUE, hAnnotation);
+            Annotation       annotation = ((AnnotatedTypeConstant) typeThis).getAnnotation();
+            IdentityConstant idClass    = (IdentityConstant) annotation.getAnnotationClass();
+            Constant[]       aconstArg  = annotation.getParams();
+
+            ObjectHandle   hClass = frame.getConstHandle(idClass);
+            int            cArgs  = aconstArg.length;
+            ObjectHandle[] ahArg;
+            if (cArgs == 0)
+                {
+                ahArg = Utils.OBJECTS_NONE;
+                }
+            else
+                {
+                ahArg = new ObjectHandle[cArgs];
+                for (int i = 0; i < cArgs; i++)
+                    {
+                    ahArg[i] = frame.getConstHandle(aconstArg[i]);
+                    }
+                }
+
+            if (Op.isDeferred(hClass))
+                {
+                ObjectHandle[] ahClass = new ObjectHandle[]{hClass};
+                Frame.Continuation stepNext = frameCaller ->
+                        resolveInvokeAnnotatedArgs(frameCaller, ahClass[0], ahArg, aiReturn);
+                return new Utils.GetArguments(ahClass, stepNext).doNext(frame);
+                }
+
+            return resolveInvokeAnnotatedArgs(frame, hClass, ahArg, aiReturn);
             }
 
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        }
+
+    private int resolveInvokeAnnotatedArgs(Frame frame, ObjectHandle hClass,
+                                           ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        if (Op.anyDeferred(ahArg))
+            {
+            Frame.Continuation stepNext = frameCaller ->
+                    completeInvokeAnnotated(frameCaller, hClass, ahArg, aiReturn);
+            return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+            }
+        return completeInvokeAnnotated(frame, hClass, ahArg, aiReturn);
+        }
+
+    private int completeInvokeAnnotated(Frame frame, ObjectHandle hClass,
+                                        ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        ClassTemplate   templateAnno  = ANNOTATION_TEMPLATE;
+        MethodStructure constructAnno = ANNOTATION_CONSTRUCT;
+
+        ArrayHandle hArgs = ahArg.length == 0
+            ? ensureEmptyArgumentArray()
+            : ensureArrayTemplate().createArrayHandle(ensureArgumentArrayComposition(), ahArg);
+
+        ObjectHandle[] ahVar = new ObjectHandle[constructAnno.getMaxVars()];
+        ahVar[0] = hClass;
+        ahVar[1] = hArgs;
+
+        frame.assignValue(aiReturn[0], xBoolean.TRUE);
+        return templateAnno.construct(frame, constructAnno,
+                templateAnno.getCanonicalClass(), null, ahVar, aiReturn[1]);
         }
 
     /**
@@ -1171,7 +1232,8 @@ public class xRTType
             ahTypes[i] = atypes[i].normalizeParameters().getTypeHandle();
             }
 
-        ArrayHandle hArray = ensureArrayTemplate().createArrayHandle(ensureArrayComposition(), ahTypes);
+        ArrayHandle hArray = ensureArrayTemplate().
+                createArrayHandle(ensureTypeArrayComposition(), ahTypes);
         return frame.assignValues(aiReturn, xBoolean.TRUE, hArray);
         }
 
@@ -1413,14 +1475,31 @@ public class xRTType
     /**
      * @return the ClassComposition for an Array of Type
      */
-    public static ClassComposition ensureArrayComposition()
+    public static ClassComposition ensureTypeArrayComposition()
         {
-        ClassComposition clz = ARRAY_CLZCOMP;
+        ClassComposition clz = TYPE_ARRAY_CLZCOMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
-            ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeTypeArray);
+            TYPE_ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeTypeArray);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    /**
+     * @return the ClassComposition for an Array of Arguments
+     */
+    public static ClassComposition ensureArgumentArrayComposition()
+        {
+        ClassComposition clz = ARGUMENT_ARRAY_CLZCOMP;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeArg      = pool.ensureEcstasyTypeConstant("reflect.Argument");
+            TypeConstant typeArgArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeArg);
+            ARGUMENT_ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeArgArray);
             assert clz != null;
             }
         return clz;
@@ -1429,20 +1508,38 @@ public class xRTType
     /**
      * @return the handle for an empty Array of Type
      */
-    public static ArrayHandle ensureEmptyArray()
+    public static ArrayHandle ensureEmptyTypeArray()
         {
-        if (ARRAY_EMPTY == null)
+        if (TYPE_ARRAY_EMPTY == null)
             {
-            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
-                ensureArrayComposition(), new ObjectHandle[0]);
+            TYPE_ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+                ensureTypeArrayComposition(), Utils.OBJECTS_NONE);
             }
-        return ARRAY_EMPTY;
+        return TYPE_ARRAY_EMPTY;
+        }
+
+    /**
+     * @return the handle for an empty Array of Arguments
+     */
+    public static ArrayHandle ensureEmptyArgumentArray()
+        {
+        if (ARGUMENT_ARRAY_EMPTY == null)
+            {
+            ARGUMENT_ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+                ensureArgumentArrayComposition(), Utils.OBJECTS_NONE);
+            }
+        return ARGUMENT_ARRAY_EMPTY;
         }
 
 
     // ----- data members --------------------------------------------------------------------------
 
     private static xArray           ARRAY_TEMPLATE;
-    private static ClassComposition ARRAY_CLZCOMP;
-    private static ArrayHandle      ARRAY_EMPTY;
+    private static ClassComposition TYPE_ARRAY_CLZCOMP;
+    private static ArrayHandle      TYPE_ARRAY_EMPTY;
+
+    private static ClassTemplate    ANNOTATION_TEMPLATE;
+    private static MethodStructure  ANNOTATION_CONSTRUCT;
+    private static ClassComposition ARGUMENT_ARRAY_CLZCOMP;
+    private static ArrayHandle      ARGUMENT_ARRAY_EMPTY;
     }

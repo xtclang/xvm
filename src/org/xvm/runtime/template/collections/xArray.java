@@ -268,7 +268,6 @@ public class xArray
             {
             case 0: // construct(Int capacity = 0)
                 {
-
                 ObjectHandle hCapacity = ahVar[0];
                 long         cCapacity = hCapacity == ObjectHandle.DEFAULT ?
                                             0 : ((JavaLong) hCapacity).getValue();

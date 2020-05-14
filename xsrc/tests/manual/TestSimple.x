@@ -4,12 +4,17 @@ module TestSimple
 
     void run(  )
         {
-        Map<String, Int> m0 = Map:["i"=1, "j"=2];
-        console.println(m0);
+        import ecstasy.reflect.Annotation;
 
-        Int i = 1;
-        Int j = 2;
-        Map<String, Int> m = Map:["i"=i, "i"=j];
-        console.println(m);
+        Type t = @Unchecked Int;
+        assert Annotation anno := t.annotated();
+        assert Type t0 := t.modifying();
+
+        console.println(anno);
+        console.println(t);
+        console.println(t0);
+
+        Type t2 = t0.annotate([anno]);
+        console.println(t2);
         }
     }
