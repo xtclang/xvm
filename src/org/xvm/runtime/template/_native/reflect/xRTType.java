@@ -4,6 +4,7 @@ package org.xvm.runtime.template._native.reflect;
 import java.util.ArrayList;
 import java.util.Map;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -12,6 +13,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
@@ -95,6 +97,7 @@ public class xRTType
         markNativeProperty("underlyingTypes");
 
         markNativeMethod("accessSpecified", null, null);
+        markNativeMethod("annotate"       , null, null);
         markNativeMethod("annotated"      , null, null);
         markNativeMethod("contained"      , null, null);
         markNativeMethod("fromClass"      , null, null);
@@ -221,6 +224,9 @@ public class xRTType
             {
             case "add":
                 return invokeAdd(frame, hType, hArg, iReturn);
+
+            case "annotate":
+                return invokeAnnotate(frame, hType, hArg, iReturn);
 
             case "sub":
                 return invokeSub(frame, hType, hArg, iReturn);
@@ -980,14 +986,67 @@ public class xRTType
         }
 
     /**
+     * Implementation for: {@code Type!<> annotate(Annotation... annotations)}.
+     */
+    public int invokeAnnotate(Frame frame, TypeHandle hType, ObjectHandle hArg, int iReturn)
+        {
+        ObjectHandle[] ahAnnos;
+        if (hArg instanceof GenericArrayHandle)
+            {
+            ahAnnos = ((GenericArrayHandle) hArg).m_ahValue;
+            }
+        else if (hArg == ObjectHandle.DEFAULT)
+            {
+            ahAnnos = Utils.OBJECTS_NONE;
+            }
+        else
+            {
+            // TODO GG return a continuation that turns the sequence into an array and calls this?
+            throw new UnsupportedOperationException();
+            }
+
+        TypeConstant typeThis   = hType.getDataType();
+        TypeConstant typeResult = typeThis;
+        int          cAnnos     = ahAnnos.length;
+        for (int i = 0; i < cAnnos; ++i)
+            {
+            // obtain the annotation
+            // TODO GG: Annotation annotation = ahAnnos[i] ...
+
+            try
+                {
+                // apply the annotation
+                // TODO GG: typeResult = ...
+                }
+            catch (RuntimeException e)
+                {
+                return frame.raiseException(xException.invalidType(frame, e.getMessage()));
+                }
+            }
+
+        return frame.assignValue(iReturn, typeResult.getTypeHandle());
+        }
+
+    /**
      * Implementation for: {@code conditional Annotation annotated()}.
      */
     public int invokeAnnotated(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        ObjectHandle hAnnotation = null; // TODO
-        return hAnnotation == null
-                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                : frame.assignValues(aiReturn, xBoolean.TRUE, hAnnotation);
+        TypeConstant typeThis = hType.getDataType();
+        if (typeThis.isAnnotated())
+            {
+            while (!(typeThis instanceof AnnotatedTypeConstant))
+                {
+                assert typeThis.isModifyingType();
+                typeThis = typeThis.getUnderlyingType();
+                }
+
+            Annotation   annotation  = ((AnnotatedTypeConstant) typeThis).getAnnotation();
+            ObjectHandle hAnnotation = null; // TODO GG: turn an org.xvm.asm.Annotation into an Annotation.x
+            return frame.assignValues(aiReturn, xBoolean.TRUE, hAnnotation);
+            }
+
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
     /**
@@ -1122,7 +1181,6 @@ public class xRTType
     public int invokeParameterize(Frame frame, TypeHandle hType, ObjectHandle hArg, int iReturn)
         {
         ObjectHandle[] ahFormalTypes;
-
         if (hArg instanceof GenericArrayHandle)
             {
             ahFormalTypes = ((GenericArrayHandle) hArg).m_ahValue;

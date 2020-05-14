@@ -220,6 +220,54 @@ const Class<PublicType, ProtectedType extends PublicType,
     Composition composition;
 
     /**
+     * Obtain the deannotated form of this class, and the annotations, if any, that were added to
+     * the original underlying class. Note that the original underlying class may appear in the
+     * source code to be annotated, but the use of the annotation syntax in a class declaration is
+     * used to incorporate mixins into the underling class definition itself, and are not considered
+     * to be annotations; fo example, "MyAnnotation" is incorporated into "MyClass", and is not an
+     * annotation:
+     *
+     *     @MyAnnotation class MyClass {...}
+     *
+     * @return the underlying class
+     * @return an array of the annotations that were applied to the underlying class
+     */
+    (Class!<> deannotated, Annotation[] annotations) deannotate()
+        {
+        Type type = PublicType;
+        if (Annotation annotation := type.annotated())
+            {
+            Annotation[] annotations = new Annotation[];
+            do
+                {
+                annotations.add(annotation);
+                assert type.form == Annotated, type := type.modifying();
+                }
+            while (annotation := type.annotated());
+            assert Class!<> deannotated := type.fromClass();
+            return deannotated, annotations;
+            }
+        else
+            {
+            return this, [];
+            }
+        }
+
+    /**
+     * Add the specified annotation(s) to this class to produce a new, annotated class.
+     *
+     * @param annotations  the annotation(s) to add to this class
+     *
+     * @return the annotated class
+     */
+    Class!<> annotate(Annotation... annotations)
+        {
+        Type type = PublicType.annotate(annotations);
+        assert Class!<> annotated := type.fromClass();
+        return annotated;
+        }
+
+    /**
      * The formal type parameter names and the canonical (constraint) type for each. The order is
      * significant, and matches the type parameters in [PublicType], etc.
      */
@@ -267,6 +315,8 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     Class!<> parameterize(Type... paramTypes)
         {
+        // TODO tuple support
+
         Type[] oldParams = [];
         oldParams := PublicType.parameterized();
         CheckSame: if (paramTypes.size == oldParams.size)
