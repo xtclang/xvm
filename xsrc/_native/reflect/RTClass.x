@@ -1,4 +1,5 @@
 import ecstasy.collections.ListMap;
+import ecstasy.reflect.Annotation;
 import ecstasy.reflect.ClassTemplate.Composition;
 
 /**
@@ -40,7 +41,19 @@ const RTClass<PublicType, ProtectedType extends PublicType,
     @Override
     Int estimateStringLength()
         {
-        Int size = displayName.size;
+        Int size = 0;
+
+        (_, Annotation[] annotations) = deannotate();
+        if (annotations.size > 0)
+            {
+            for (Annotation annotation : annotations)
+                {
+                size += annotation.estimateStringLength();
+                }
+            size += annotations.size; // spaces
+            }
+
+        size += displayName.size;
 
         ListMap<String, Type> params = formalTypes;
         if (!params.empty)
@@ -62,7 +75,15 @@ const RTClass<PublicType, ProtectedType extends PublicType,
     @Override
     void appendTo(Appender<Char> appender)
         {
-        // TODO annotations
+        (_, Annotation[] annotations) = deannotate();
+        if (annotations.size > 0)
+            {
+            for (Annotation annotation : annotations.reverse())
+                {
+                annotation.appendTo(appender);
+                appender.add(' ');
+                }
+            }
 
         appender.add(displayName);
 
