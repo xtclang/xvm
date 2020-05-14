@@ -2103,6 +2103,7 @@ public class ConstantPool
     public TypeConstant      typeIterable()     {TypeConstant      c = m_typeIterable;    if (c == null) {m_typeIterable    = c = ensureTerminalTypeConstant(clzIterable()                   );} return c;}
     public TypeConstant      typeIterator()     {TypeConstant      c = m_typeIterator;    if (c == null) {m_typeIterator    = c = ensureTerminalTypeConstant(clzIterator()                   );} return c;}
     public TypeConstant      typeTuple()        {TypeConstant      c = m_typeTuple;       if (c == null) {m_typeTuple       = c = ensureTerminalTypeConstant(clzTuple()                      );} return c;}
+    public TypeConstant      typeTuple0()       {TypeConstant      c = m_typeTuple0;      if (c == null) {m_typeTuple0      = c = ensureParameterizedTypeConstant(typeTuple()                );} return c;}
     public TypeConstant      typeDate()         {TypeConstant      c = m_typeDate;        if (c == null) {m_typeDate        = c = ensureTerminalTypeConstant(clzDate()                       );} return c;}
     public TypeConstant      typeTime()         {TypeConstant      c = m_typeTime;        if (c == null) {m_typeTime        = c = ensureTerminalTypeConstant(clzTime()                       );} return c;}
     public TypeConstant      typeDateTime()     {TypeConstant      c = m_typeDateTime;    if (c == null) {m_typeDateTime    = c = ensureTerminalTypeConstant(clzDateTime()                   );} return c;}
@@ -2872,6 +2873,7 @@ public class ConstantPool
         m_typeIterable    = null;
         m_typeIterator    = null;
         m_typeTuple       = null;
+        m_typeTuple0      = null;
         m_typeDate        = null;
         m_typeTime        = null;
         m_typeDateTime    = null;
@@ -3652,6 +3654,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeIterable;
     private transient TypeConstant      m_typeIterator;
     private transient TypeConstant      m_typeTuple;
+    private transient TypeConstant      m_typeTuple0;
     private transient TypeConstant      m_typeDate;
     private transient TypeConstant      m_typeTime;
     private transient TypeConstant      m_typeDateTime;

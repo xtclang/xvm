@@ -890,8 +890,11 @@ public class Frame
                 return returnValue(f_aiReturn[0], hValue, fDynamic);
 
             case Op.A_TUPLE:
-                Frame framePrev = f_framePrev;
-                int   iReturn   = f_aiReturn[0];
+                Frame        framePrev = f_framePrev;
+                int          iReturn   = f_aiReturn[0];
+                TypeConstant typeTuple = iReturn < 0
+                        ? poolContext().typeTuple0()
+                        : framePrev.getVarInfo(iReturn).getType();
                 if (fDynamic)
                     {
                     if (framePrev.isDynamicVar(iReturn))
@@ -916,7 +919,7 @@ public class Frame
                             case Op.R_CALL:
                                 framePrev.m_frameNext.addContinuation(frameCaller ->
                                     frameCaller.assignValue(iReturn,
-                                        xTuple.makeCanonicalHandle(frameCaller.popStack())));
+                                        xTuple.makeImmutableHandle(typeTuple, frameCaller.popStack())));
                                 if (m_continuation != null)
                                     {
                                     // transfer the continuation
@@ -932,7 +935,7 @@ public class Frame
                             }
                         }
                     }
-                return returnValue(iReturn, xTuple.makeCanonicalHandle(hValue), false);
+                return returnValue(iReturn, xTuple.makeImmutableHandle(typeTuple, hValue), false);
 
             default:
                 return returnValue(f_iReturn, hValue, fDynamic);

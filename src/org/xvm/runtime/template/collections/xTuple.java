@@ -725,22 +725,23 @@ public class xTuple
     // ----- ObjectHandle helpers ------------------------------------------------------------------
 
     /**
-     * Make an immutable canonical Tuple handle.
+     * Make an immutable Tuple handle.
      *
-     * @param ahValue  the values
+     * @param typeTuple  the tuple type
+     * @param ahValue    the values
      *
      * @return the handle
      */
-    public static TupleHandle makeCanonicalHandle(ObjectHandle... ahValue)
+    public static TupleHandle makeImmutableHandle(TypeConstant typeTuple, ObjectHandle... ahValue)
         {
-        return new TupleHandle(INSTANCE.getCanonicalClass(), ahValue, Mutability.Constant);
+        return makeImmutableHandle(INSTANCE.ensureClass(typeTuple), ahValue);
         }
 
     /**
      * Make an immutable Tuple handle.
      *
      * @param clazz     the tuple class composition
-     * @param ahValue    the values
+     * @param ahValue   the values
      *
      * @return the handle
      */

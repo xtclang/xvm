@@ -22,6 +22,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Return_0;
 
@@ -594,9 +595,34 @@ public class ServiceContext
             }
         }
 
-    // create a "proto"-frame
+    /**
+     * Create a "proto"-frame.
+     *
+     * @param msg        the message to create a frame for
+     * @param cReturns   the number of return values (-1 means a Tuple return)
+     * @param aopNative  the underlying native ops
+     *
+     * @return a new Frame
+     */
     protected Frame createServiceEntryFrame(Message msg, int cReturns, Op[] aopNative)
         {
+        TypeConstant typeReturn;
+        switch (cReturns)
+            {
+            case -1:
+                cReturns   = 1;
+                typeReturn = f_pool.typeTuple0();
+                break;
+
+            case 0:
+                typeReturn = null;
+                break;
+
+            default:
+                typeReturn = f_pool.typeObject();
+                break;
+            }
+
         // create a pseudo frame that has variables to collect the return values
         ObjectHandle[] ahVar = new ObjectHandle[cReturns];
 
@@ -605,7 +631,7 @@ public class ServiceContext
 
         for (int nVar = 0; nVar < cReturns; nVar++)
             {
-            frame.f_aInfo[nVar] = frame.new VarInfo(f_pool.typeObject(), Frame.VAR_STANDARD);
+            frame.f_aInfo[nVar] = frame.new VarInfo(typeReturn, Frame.VAR_STANDARD);
             }
         return frame;
         }
@@ -1182,7 +1208,7 @@ public class ServiceContext
                     }
                 };
 
-            Frame frame0 = context.createServiceEntryFrame(this, Math.abs(f_cReturns),
+            Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                     new Op[] {opCall, Return_0.INSTANCE});
 
             frame0.addContinuation(_null ->
