@@ -433,13 +433,13 @@ interface Type<DataType, OuterType>
     Type!<> parameterize(Type!<>... paramTypes);
 
     /**
-     * Add the specified annotation(s) to this type.
+     * Add the specified annotation to this type.
      *
-     * @param annotations  the annotation(s) to add to this type
+     * @param annotation  the annotation to add to this type
      *
      * @return the annotated type
      */
-    Type!<> annotate(Annotation... annotations);
+    Type!<> annotate(Annotation annotation);
 
     /**
      * Create a type that is the union of this type and another type.

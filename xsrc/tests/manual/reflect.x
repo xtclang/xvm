@@ -518,7 +518,7 @@ module TestReflection
         TypeSystem ts = this:service.typeSystem;
         console.println($"current TypeSystem={ts}");
         console.println($"modules              : {ts.modules              }");
-        console.println($"sharedModules        : {ts.sharedModules        }"); // TODO clean up hashSet toString
+        console.println($"sharedModules        : {ts.sharedModules        }");
         console.println($"moduleBySimpleName   : {ts.moduleBySimpleName   }");
         console.println($"moduleByQualifiedName: {ts.moduleByQualifiedName}");
 
@@ -544,7 +544,7 @@ module TestReflection
                 "TestReflection:",          // just explicit module name
                 "Ecstasy:",
                 "Ecstasy.xtclang.org:",
-                "@Unchecked Int",           // annotation TODO class toString doesn't show annotation!!!
+                 "@Unchecked Int",
                 ];
 
         for (String name : names)

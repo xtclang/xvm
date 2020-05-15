@@ -1054,6 +1054,11 @@ public class ConstantPool
                 throw new IllegalArgumentException("type must have an explicit class identity: " + type);
                 }
 
+            if (type.isImmutabilitySpecified() || type.isAccessSpecified())
+                {
+                throw new IllegalArgumentException("type must not have immutability or access: " + type);
+                }
+
             // try to avoid using the more complicated "decorated" form of the class constant
             boolean      fUseType = false;
             TypeConstant typeCur = type;

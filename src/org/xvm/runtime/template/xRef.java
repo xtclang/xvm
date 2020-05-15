@@ -102,9 +102,16 @@ public class xRef
                     h -> frame.assignValue(iReturn, h.getType().getTypeHandle()));
 
             case "actualClass":
-                return actOnReferent(frame, hRef,
-                    h -> frame.assignDeferredValue(iReturn, frame.getConstHandle(
-                        h.getType().getConstantPool().ensureClassConstant(h.getType()))));
+                return actOnReferent(frame, hRef, h ->
+                    {
+                    TypeConstant type = h.getType();
+                    if (type.isImmutabilitySpecified())
+                        {
+                        type = type.removeImmutable();
+                        }
+                    return frame.assignDeferredValue(iReturn, frame.getConstHandle(
+                            type.getConstantPool().ensureClassConstant(type)));
+                    });
 
             case "assigned":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned()));

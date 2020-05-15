@@ -25,7 +25,7 @@ const RTType<DataType, OuterType>
     @Override @RO Type[]               underlyingTypes                    .get() { TODO("native"); }
 
     @Override conditional Access       accessSpecified()                         { TODO("native"); }
-    @Override             Type!<>      annotate(Annotation... annotations)       { TODO("native"); }
+    @Override             Type!<>      annotate(Annotation annotation)           { TODO("native"); }
     @Override conditional Annotation   annotated()                               { TODO("native"); }
     @Override conditional Type         contained()                               { TODO("native"); }
     @Override conditional Class        fromClass()                               { TODO("native"); }

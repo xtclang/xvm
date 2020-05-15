@@ -621,7 +621,7 @@ public class Frame
                         //      lo = ls;
                         // "add(Object o)" method needs to be wrapped on "lo" reference, to ensure the
                         // run-time type of "String"
-                        if (REPORT_WRAPPING)
+                        if (REPORT_WRAPPING && !typeTo.isTypeOfType())
                             {
                             System.err.println("WARNING: wrapping required from: " + typeFrom.getValueString()
                                 + " to: " + typeTo.getValueString());

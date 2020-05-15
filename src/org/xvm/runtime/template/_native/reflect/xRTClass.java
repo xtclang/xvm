@@ -379,7 +379,7 @@ public class xRTClass
      */
     protected TypeConstant getClassType(ObjectHandle hTarget)
         {
-        return hTarget.getComposition().getType().getParamType(0).getUnderlyingType();
+        return hTarget.getComposition().getType().getParamType(0);
         }
 
 
@@ -406,7 +406,7 @@ public class xRTClass
         @Override
         public int hashCode()
             {
-            return getType().getParamType(0).getUnderlyingType().hashCode();
+            return getType().getParamType(0).hashCode();
             }
 
         @Override
@@ -416,8 +416,8 @@ public class xRTClass
                 {
                 ClassHandle that = (ClassHandle) obj;
 
-                TypeConstant typeThis = this.getType().getParamType(0).getUnderlyingType();
-                TypeConstant typeThat = that.getType().getParamType(0).getUnderlyingType();
+                TypeConstant typeThis = this.getType().getParamType(0);
+                TypeConstant typeThat = that.getType().getParamType(0);
                 return typeThis.equals(typeThat);
                 }
             return false;

@@ -245,7 +245,7 @@ const Class<PublicType, ProtectedType extends PublicType,
                 }
             while (annotation := type.annotated());
             assert Class!<> deannotated := type.fromClass();
-            return deannotated, annotations;
+            return deannotated, annotations.reverse();
             }
         else
             {
@@ -254,15 +254,32 @@ const Class<PublicType, ProtectedType extends PublicType,
         }
 
     /**
-     * Add the specified annotation(s) to this class to produce a new, annotated class.
+     * Add the specified annotations to this class to produce a new, annotated class.
      *
-     * @param annotations  the annotation(s) to add to this class
+     * @param annotations  the annotations to add to this class
      *
      * @return the annotated class
      */
-    Class!<> annotate(Annotation... annotations)
+    Class!<> annotate(Annotation[] | Annotation annotations)
         {
-        Type type = PublicType.annotate(annotations);
+        Type type = PublicType;
+        if (annotations.is(Annotation[]))
+            {
+            if (annotations.size == 0)
+                {
+                return this;
+                }
+
+            for (Annotation annotation : annotations)
+                {
+                type = type.annotate(annotation);
+                }
+            }
+        else
+            {
+            type = type.annotate(annotations);
+            }
+
         assert Class!<> annotated := type.fromClass();
         return annotated;
         }

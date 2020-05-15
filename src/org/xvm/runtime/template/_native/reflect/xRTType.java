@@ -50,6 +50,7 @@ import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xString;
 
+import org.xvm.runtime.template._native.reflect.xRTClass.ClassHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
 import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
@@ -990,45 +991,28 @@ public class xRTType
         }
 
     /**
-     * Implementation for: {@code Type!<> annotate(Annotation... annotations)}.
+     * Implementation for: {@code Type!<> annotate(Annotation annotation)}.
      */
     public int invokeAnnotate(Frame frame, TypeHandle hType, ObjectHandle hArg, int iReturn)
         {
-        ObjectHandle[] ahAnnos;
-        if (hArg instanceof GenericArrayHandle)
+        ConstantPool pool     = frame.poolContext();
+        TypeConstant typeThis = hType.getDataType();
+
+        GenericHandle hAnno   = (GenericHandle) hArg;
+        ClassHandle   hClass  = (ClassHandle) hAnno.getField("mixinClass");
+        ArrayHandle   hArgs   = (ArrayHandle) hAnno.getField("arguments");
+
+        if (hArgs.m_cSize > 0)
             {
-            ahAnnos = ((GenericArrayHandle) hArg).m_ahValue;
-            }
-        else if (hArg == ObjectHandle.DEFAULT)
-            {
-            ahAnnos = Utils.OBJECTS_NONE;
-            }
-        else
-            {
-            // TODO GG return a continuation that turns the sequence into an array and calls this?
+            // TODO args
             throw new UnsupportedOperationException();
             }
+        ClassConstant clzAnno = (ClassConstant) hClass.getType().getParamType(0).getDefiningConstant();
+        Annotation    anno    = pool.ensureAnnotation(clzAnno);
 
-        TypeConstant typeThis   = hType.getDataType();
-        TypeConstant typeResult = typeThis;
-        int          cAnnos     = ahAnnos.length;
-        for (int i = 0; i < cAnnos; ++i)
-            {
-            // obtain the annotation
-            // TODO GG: Annotation annotation = ahAnnos[i] ...
+        TypeConstant typeAnno = pool.ensureAnnotatedTypeConstant(typeThis, anno);
 
-            try
-                {
-                // apply the annotation
-                // TODO GG: typeResult = ...
-                }
-            catch (RuntimeException e)
-                {
-                return frame.raiseException(xException.invalidType(frame, e.getMessage()));
-                }
-            }
-
-        return frame.assignValue(iReturn, typeResult.getTypeHandle());
+        return frame.assignValue(iReturn, typeAnno.getTypeHandle());
         }
 
     /**
@@ -1136,7 +1120,15 @@ public class xRTType
         TypeConstant typeTarget = hType.getDataType();
         if (typeTarget.isExplicitClassIdentity(true))
             {
-            IdentityConstant idClz = typeTarget.getSingleUnderlyingClass(true);
+            if (typeTarget.isAccessSpecified())
+                {
+                typeTarget = typeTarget.removeAccess();
+                }
+            if (typeTarget.isImmutabilitySpecified())
+                {
+                typeTarget = typeTarget.removeImmutable();
+                }
+            IdentityConstant idClz = frame.poolContext().ensureClassConstant(typeTarget);
 
             return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(idClz));
             }
