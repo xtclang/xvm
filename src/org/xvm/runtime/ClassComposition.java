@@ -25,8 +25,8 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
-import org.xvm.runtime.template.xString;
-import org.xvm.runtime.template.xString.StringHandle;
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.ListMap;
 

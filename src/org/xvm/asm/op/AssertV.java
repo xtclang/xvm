@@ -16,8 +16,10 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
+
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
-import org.xvm.runtime.template.xString.StringHandle;
+
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**

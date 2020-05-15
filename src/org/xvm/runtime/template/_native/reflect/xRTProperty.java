@@ -5,7 +5,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -18,13 +17,13 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
-import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.collections.xArray;
+
+import org.xvm.runtime.template.text.xString;
 
 
 /**

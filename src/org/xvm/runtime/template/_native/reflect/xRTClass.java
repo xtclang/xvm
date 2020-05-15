@@ -30,12 +30,13 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xNullable;
-import org.xvm.runtime.template.xString;
-import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import org.xvm.runtime.template.collections.xArray;
+
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**

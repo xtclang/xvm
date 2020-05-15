@@ -29,9 +29,11 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 import org.xvm.runtime.VarSupport;
 
-import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
-
 import org.xvm.runtime.template.numbers.xInt64;
+
+import org.xvm.runtime.template.text.xString;
+
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**

@@ -644,7 +644,7 @@ public class ForEachStatement
                 {
                 case "numbers.Bit":
                 case "numbers.Nibble":
-                case "Char":
+                case "text.Char":
                 case "numbers.Int8":
                 case "numbers.Int16":
                 case "numbers.Int32":

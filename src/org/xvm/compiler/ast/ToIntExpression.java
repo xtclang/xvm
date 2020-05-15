@@ -97,7 +97,7 @@ public class ToIntExpression
 
             case "numbers.Bit":
             case "numbers.Nibble":
-            case "Char":
+            case "text.Char":
                 {
                 // at least one of these does NOT have an @Auto method that converts to<Int>()
                 MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
@@ -158,7 +158,7 @@ public class ToIntExpression
 
             case "numbers.Bit":     // converted by extract
             case "numbers.Nibble":  // converted by extract
-            case "Char":            // converted by extract
+            case "text.Char":       // converted by extract
             case "numbers.Int64":
             default:
                 return pool.ensureIntConstant(pint);
@@ -192,7 +192,7 @@ public class ToIntExpression
 
             case "numbers.Bit":     // converted by extract
             case "numbers.Nibble":  // converted by extract
-            case "Char":            // converted by extract
+            case "text.Char":       // converted by extract
             case "numbers.Int64":   // already the right type
             default:
                 return null;

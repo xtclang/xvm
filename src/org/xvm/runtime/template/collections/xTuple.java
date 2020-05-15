@@ -32,9 +32,11 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
-import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.numbers.xInt64;
+
+import org.xvm.runtime.template.text.xString;
+
 
 /**
  * Native Tuple implementation.

@@ -4,7 +4,7 @@
  */
 class ReifiedEntry<Key, Value>
         implements Map<Key, Value>.Entry
-        incorporates Stringer
+        incorporates text.Stringer
     {
     public construct(Map<Key, Value> map, Key key)
         {

@@ -29,9 +29,6 @@ import org.xvm.asm.op.Return_0;
 import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
-import org.xvm.runtime.template.collections.xTuple;
-import org.xvm.runtime.template.collections.xTuple.TupleHandle;
-
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
@@ -41,10 +38,14 @@ import org.xvm.runtime.template.xService.PropertyOperation10;
 import org.xvm.runtime.template.xService.PropertyOperation01;
 import org.xvm.runtime.template.xService.PropertyOperation11;
 import org.xvm.runtime.template.xService.ServiceHandle;
-import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
+
+import org.xvm.runtime.template.collections.xTuple;
+import org.xvm.runtime.template.collections.xTuple.TupleHandle;
+
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**

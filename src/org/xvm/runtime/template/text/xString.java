@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.text;
 
 
 import java.util.Arrays;
@@ -21,6 +21,12 @@ import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.IndexSupport;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xCharArray;
@@ -65,8 +71,8 @@ public class xString
         markNativeProperty("size");
         markNativeProperty("chars");
 
-        markNativeMethod("construct", new String[]{"collections.Array<Char>"}, VOID);
-        markNativeMethod("indexOf", new String[]{"Char", "numbers.Int64"},
+        markNativeMethod("construct", new String[]{"collections.Array<text.Char>"}, VOID);
+        markNativeMethod("indexOf", new String[]{"text.Char", "numbers.Int64"},
                                     new String[]{"Boolean", "numbers.Int64"});
         markNativeMethod("substring", INT, STRING);
 

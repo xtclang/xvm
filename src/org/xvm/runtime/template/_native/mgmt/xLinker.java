@@ -28,8 +28,9 @@ import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
-import org.xvm.runtime.template.xString;
-import org.xvm.runtime.template.xString.StringHandle;
+
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**

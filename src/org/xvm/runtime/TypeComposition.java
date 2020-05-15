@@ -14,7 +14,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
-import org.xvm.runtime.template.xString.StringHandle;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**

@@ -19,7 +19,8 @@ import org.xvm.runtime.template.collections.xBitArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xString;
+
+import org.xvm.runtime.template.text.xString;
 
 
 /**

@@ -19,9 +19,10 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xChar;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xString.StringHandle;
+
+import org.xvm.runtime.template.text.xChar;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**

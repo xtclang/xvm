@@ -20,15 +20,16 @@ import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xChar;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.collections.BitBasedArray;
 import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
 import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
+
+import org.xvm.runtime.template.text.xChar;
+import org.xvm.runtime.template.text.xString;
 
 import org.xvm.util.PackedInteger;
 
@@ -89,7 +90,7 @@ public abstract class xConstrainedInteger
         markNativeMethod("toVarUInt"     , VOID, new String[]{"numbers.VarUInt"});
         markNativeMethod("toVarFloat"    , VOID, new String[]{"numbers.VarFloat"});
         markNativeMethod("toVarDec"      , VOID, new String[]{"numbers.VarDec"});
-        markNativeMethod("toChar"        , VOID, new String[]{"Char"});
+        markNativeMethod("toChar"        , VOID, new String[]{"text.Char"});
         markNativeMethod("toBooleanArray", VOID, null);
         markNativeMethod("toBitArray"    , VOID, null);
 

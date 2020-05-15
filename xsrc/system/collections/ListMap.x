@@ -18,7 +18,7 @@ class ListMap<Key, Value>
         implements Map<Key, Value>
         implements MutableAble, FixedSizeAble, PersistentAble, ImmutableAble
         incorporates conditional ListMapIndex<Key extends immutable Hashable, Value>
-        incorporates Stringer
+        incorporates text.Stringer
     {
     // ----- constructors --------------------------------------------------------------------------
 

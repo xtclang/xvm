@@ -10,6 +10,8 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.template.text.xString;
+
 /**
  * Native Boolean implementation.
  */

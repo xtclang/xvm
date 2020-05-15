@@ -31,13 +31,15 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum.EnumHandle;
-import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 import org.xvm.runtime.template.collections.xBitArray;
 
 import org.xvm.runtime.template.numbers.xInt64;
+
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**
