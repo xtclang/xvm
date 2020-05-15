@@ -280,18 +280,30 @@ public class AnnotatedTypeExpression
         annotation = exprNew;
 
         resetTypeConstant();
-        typeAnno = ensureTypeConstant(ctx).getType();
+        typeAnno = ensureTypeConstant(ctx);
 
+        TypeConstant typeType   = typeAnno.getType();
+        Constant     constValue = typeType;
         if (typeRequired != null)
             {
-            TypeConstant typeInferred = inferTypeFromRequired(typeAnno, typeRequired);
-            if (typeInferred != null)
+            if (typeRequired.isA(pool.typeClass()))
                 {
-                typeAnno = typeInferred;
+                // class of type conversion
+                IdentityConstant clzAnno = pool.ensureClassConstant(typeAnno);
+                typeType   = clzAnno.getValueType(null);
+                constValue = clzAnno;
+                }
+            else
+                {
+                TypeConstant typeInferred = inferTypeFromRequired(typeType, typeRequired);
+                if (typeInferred != null)
+                    {
+                    constValue = typeType = typeInferred;
+                    }
                 }
             }
 
-        return finishValidation(typeRequired, typeAnno, TypeFit.Fit, typeAnno, errs);
+        return finishValidation(typeRequired, typeType, TypeFit.Fit, constValue, errs);
         }
 
 

@@ -1061,7 +1061,7 @@ public class ConstantPool
 
             // try to avoid using the more complicated "decorated" form of the class constant
             boolean      fUseType = false;
-            TypeConstant typeCur = type;
+            TypeConstant typeCur  = type;
             do
                 {
                 if (typeCur.getParamsCount() > 0 || typeCur.isAnnotated())
