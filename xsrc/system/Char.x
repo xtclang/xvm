@@ -237,14 +237,67 @@ const Char
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
+     * Determine if the specified character is considered to be white-space.
+     *
+     * @return true iff this character is considered to be an Ecstasy whitespace character
+     */
+    Boolean isWhitespace()
+        {
+        // optimize for the ASCII range
+        if (codepoint <= 0x7F)
+            {
+            return codepoint <= 0x20
+                && codepoint >= 0x09
+                                     // 2               1      0
+                                     // 0FEDCBA9876543210FEDCBA9
+                && 1 << codepoint-9 & 0b111110100000000000011111 != 0;
+            }
+
+        return switch (codepoint)
+            {
+         // case 0x0009:        //   U+0009      9  HT      Horizontal Tab
+         // case 0x000A:        //   U+000A     10  LF      Line Feed
+         // case 0x000B:        //   U+000B     11  VT      Vertical Tab
+         // case 0x000C:        //   U+000C     12  FF      Form Feed
+         // case 0x000D:        //   U+000D     13  CR      Carriage Return
+         // case 0x001A:        //   U+001A     26  SUB     End-of-File, or “control-Z”
+         // case 0x001C:        //   U+001C     28  FS      File Separator
+         // case 0x001D:        //   U+001D     29  GS      Group Separator
+         // case 0x001E:        //   U+001E     30  RS      Record Separator
+         // case 0x001F:        //   U+001F     31  US      Unit Separator
+         // case 0x0020:        //   U+0020     32  SP      Space
+            case 0x0085:        //   U+0085    133  NEL     Next Line
+            case 0x00A0:        //   U+00A0    160  &nbsp;  Non-breaking space
+            case 0x1680:        //   U+1680   5760          Ogham Space Mark
+            case 0x2000:        //   U+2000   8192          En Quad
+            case 0x2001:        //   U+2001   8193          Em Quad
+            case 0x2002:        //   U+2002   8194          En Space
+            case 0x2003:        //   U+2003   8195          Em Space
+            case 0x2004:        //   U+2004   8196          Three-Per-Em Space
+            case 0x2005:        //   U+2005   8197          Four-Per-Em Space
+            case 0x2006:        //   U+2006   8198          Six-Per-Em Space
+            case 0x2007:        //   U+2007   8199          Figure Space
+            case 0x2008:        //   U+2008   8200          Punctuation Space
+            case 0x2009:        //   U+2009   8201          Thin Space
+            case 0x200A:        //   U+200A   8202          Hair Space
+            case 0x2028:        //   U+2028   8232   LS     Line Separator
+            case 0x2029:        //   U+2029   8233   PS     Paragraph Separator
+            case 0x202F:        //   U+202F   8239          Narrow No-Break Space
+            case 0x205F:        //   U+205F   8287          Medium Mathematical Space
+            case 0x3000: True;  //   U+3000  12288          Ideographic Space
+
+            default    : False;
+            };
+        }
+
+    /**
      * Determine if the character acts as a line terminator.
      *
-     * @param ch  the character to test
-     *
-     * @return True iff the character acts as a line terminator
+     * @return True iff this character acts as an Ecstasy line terminator
      */
     Boolean isLineTerminator()
         {
+        // optimize for the ASCII range
         if (codepoint <= 0x7F)
             {
             // this handles the following cases:

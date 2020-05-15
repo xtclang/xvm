@@ -2532,7 +2532,7 @@ public class Lexer
             //   U+0020  32  SP   Space
             //                                               2               1      0
             //                                               0FEDCBA9876543210FEDCBA9
-            return ch >= 9 && ch <= 32 && ((1 << (ch-9)) & 0b111110100000000000011111) != 0;
+            return ch <= 32 && ch >= 9 && ((1 << (ch-9)) & 0b111110100000000000011111) != 0;
             }
 
         // this handles the following cases:
