@@ -97,7 +97,7 @@ public class xConst
                 findMethod("construct", 1, pool.typeString());
             DURATION_CONSTRUCT = f_templates.getClassStructure("Duration").
                 findMethod("construct", 1, pool.typeString());
-            VERSION_CONSTRUCT = f_templates.getClassStructure("rt.Version").
+            VERSION_CONSTRUCT = f_templates.getClassStructure("reflect.Version").
                 findMethod("construct", 1, pool.typeString());
 
             PATH_CONSTRUCT = f_templates.getClassStructure("fs.Path").
