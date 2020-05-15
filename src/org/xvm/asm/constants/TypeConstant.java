@@ -226,6 +226,8 @@ public abstract class TypeConstant
      */
     public TypeConstant removeImmutable()
         {
+        assert isImmutabilitySpecified();
+
         ConstantPool pool = getConstantPool();
 
         // replace the TerminalType of the typeActual with the inception type
@@ -260,6 +262,32 @@ public abstract class TypeConstant
     public Access getAccess()
         {
         return getUnderlyingType().getAccess();
+        }
+
+    /**
+     * If this type has access specified, calculate the type without an access modifier.
+     *
+     * @return this TypeConstant without an access modifier
+     */
+    public TypeConstant removeAccess()
+        {
+        assert isAccessSpecified();
+
+        ConstantPool pool = getConstantPool();
+
+        // replace the TerminalType of the typeActual with the inception type
+        Function<TypeConstant, TypeConstant> transformer = new Function<>()
+            {
+            public TypeConstant apply(TypeConstant type)
+                {
+                return type instanceof TerminalTypeConstant
+                        ? type
+                        : type instanceof AccessTypeConstant
+                            ? type.getUnderlyingType()
+                            : type.replaceUnderlying(pool, this);
+                }
+            };
+        return transformer.apply(this);
         }
 
     /**
@@ -4627,7 +4655,54 @@ public abstract class TypeConstant
         Relation relation = mapRelations.get(typeLeft);
         if (relation == null)
             {
-            // first check immutability modifiers
+            // check the access modifier first
+            if (typeLeft.isAccessSpecified() || typeRight.isAccessSpecified())
+                {
+                Access accessLeft  = typeLeft.getAccess();
+                Access accessRight = typeRight.getAccess();
+                switch (accessRight)
+                    {
+                    case STRUCT:
+                        if (typeLeft.equals(getConstantPool().typeStruct()))
+                            {
+                            relation = Relation.IS_A;
+                            }
+                        else if (accessLeft != Access.STRUCT)
+                            {
+                            // struct is not assignable to anything but a struct
+                            relation = Relation.INCOMPATIBLE;
+                            }
+                        break;
+
+                    case PUBLIC:
+                    case PROTECTED:
+                    case PRIVATE:
+                        if (accessLeft == Access.STRUCT ||
+                                accessLeft.isLessAccessibleThan(accessRight))
+                            {
+                            // for now, disallow any access widening
+                            relation = Relation.INCOMPATIBLE;
+                            }
+                        break;
+                    }
+
+                if (relation == null)
+                    {
+                    if (typeLeft.isAccessSpecified())
+                        {
+                        typeLeft = typeLeft.removeAccess();
+                        }
+                    if (typeRight.isAccessSpecified())
+                        {
+                        typeRight = typeRight.removeAccess();
+                        }
+                    relation = typeRight.calculateRelation(typeLeft);
+                    }
+                mapRelations.put(typeLeft, relation);
+                return relation;
+                }
+
+            // then check immutability modifiers
             if (typeLeft.isImmutabilitySpecified())
                 {
                 relation = typeRight.isImmutable()
@@ -4740,35 +4815,6 @@ public abstract class TypeConstant
 
         Constant constIdLeft  = typeLeft.getDefiningConstant();
         Constant constIdRight = typeRight.getDefiningConstant();
-
-        // check the access modifier first
-        Access accessLeft  = typeLeft.getAccess();
-        Access accessRight = typeRight.getAccess();
-        switch (accessRight)
-            {
-            case STRUCT:
-                if (typeLeft.equals(getConstantPool().typeStruct()))
-                    {
-                    return Relation.IS_A;
-                    }
-                if (accessLeft != Access.STRUCT)
-                    {
-                    // struct is not assignable to anything but a struct
-                    return Relation.INCOMPATIBLE;
-                    }
-                break;
-
-            case PUBLIC:
-            case PROTECTED:
-            case PRIVATE:
-                if (accessLeft == Access.STRUCT ||
-                        accessLeft.isLessAccessibleThan(accessRight))
-                    {
-                    // for now, disallow any access widening
-                    return Relation.INCOMPATIBLE;
-                    }
-                break;
-            }
 
         Format format;
         switch (format = constIdRight.getFormat())

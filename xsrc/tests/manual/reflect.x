@@ -517,7 +517,7 @@ module TestReflection
 
         TypeSystem ts = this:service.typeSystem;
         console.println($"current TypeSystem={ts}");
-        console.println($"modules              : {ts.modules              }"); // TODO clean up module toString
+        console.println($"modules              : {ts.modules              }");
         console.println($"sharedModules        : {ts.sharedModules        }"); // TODO clean up hashSet toString
         console.println($"moduleBySimpleName   : {ts.moduleBySimpleName   }");
         console.println($"moduleByQualifiedName: {ts.moduleByQualifiedName}");
@@ -533,7 +533,7 @@ module TestReflection
                 "String",                   // should use "implicit.x" to find it
                 "ecstasy.String",           // should find it via package import
                 "ecstasy.ecstasy.String",   // should find it via package import (x2)
-                "Map<String, Int>",         // type parameters (and implicit.x) TODO toString is missing the package name on Map, but has it on Int
+                "Map<String, Int>",         // type parameters (and implicit.x)
                 "",                         // == test module
                 "Point",                    // in test module
                 "bob",                      // shouldn't find it
