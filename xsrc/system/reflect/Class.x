@@ -530,5 +530,71 @@ const Class<PublicType, ProtectedType extends PublicType,
         return PublicType;
         }
 
-    // TODO Stringable support
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        Int size = 0;
+
+        (_, Annotation[] annotations) = deannotate();
+        if (annotations.size > 0)
+            {
+            for (Annotation annotation : annotations)
+                {
+                size += annotation.estimateStringLength();
+                }
+            size += annotations.size; // spaces
+            }
+
+        size += displayName.size;
+
+        ListMap<String, Type> params = formalTypes;
+        if (!params.empty)
+            {
+            size += 2;
+            Params: for (Type type : params.values)
+                {
+                if (!Params.first)
+                    {
+                    size += 2;
+                    }
+                size += type.estimateStringLength();
+                }
+            }
+
+        return size;
+        }
+
+    @Override
+    void appendTo(Appender<Char> appender)
+        {
+        (_, Annotation[] annotations) = deannotate();
+        if (annotations.size > 0)
+            {
+            for (Annotation annotation : annotations.reverse())
+                {
+                annotation.appendTo(appender);
+                appender.add(' ');
+                }
+            }
+
+        appender.add(displayName);
+
+        ListMap<String, Type> params = formalTypes;
+        if (!params.empty)
+            {
+            appender.add('<');
+            Params: for (Type type : params.values)
+                {
+                if (!Params.first)
+                    {
+                    appender.add(", ");
+                    }
+                type.appendTo(appender);
+                }
+            appender.add('>');
+            }
+        }
     }
