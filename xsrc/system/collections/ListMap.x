@@ -406,7 +406,11 @@ class ListMap<Key, Value>
             return this;
             }
 
-        // TODO implement toArray to clone array of keys (or return array of keys if it is immutable)
+        @Override
+        Key[] toArray(VariablyMutable.Mutability mutability = Persistent)
+            {
+            return listKeys.toArray(mutability);
+            }
         }
 
 
@@ -794,6 +798,10 @@ class ListMap<Key, Value>
             return this;
             }
 
-        // TODO implement toArray to clone array of values (or return array of values if it is immutable)
+        @Override
+        Value[] toArray(VariablyMutable.Mutability mutability = Persistent)
+            {
+            return listVals.toArray(mutability);
+            }
         }
     }
