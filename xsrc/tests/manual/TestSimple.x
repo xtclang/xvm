@@ -4,7 +4,12 @@ module TestSimple
 
     void run()
         {
-        Class c1 = @Unchecked Int;
-        console.println(c1);
+        Map<String, Int> m = Map:["answer"=answer];
+        console.println(m);
+        }
+
+    @Lazy Int answer.calc()
+        {
+        return 42;
         }
     }

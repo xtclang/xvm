@@ -19,6 +19,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
 
 
 /**
@@ -114,6 +115,15 @@ public class xListMap
         ObjectHandle[] ahArg = new ObjectHandle[CONSTRUCTOR.getMaxVars()];
         ahArg[0] = haKeys;
         ahArg[1] = haVals;
+
+        if (fDeferredKey || fDeferredVal)
+            {
+            Frame.Continuation stepNext = frameCaller ->
+                construct(frameCaller, CONSTRUCTOR, clzMap, null, ahArg, iReturn);
+
+            return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+            }
+
         return construct(frame, CONSTRUCTOR, clzMap, null, ahArg, iReturn);
         }
 
