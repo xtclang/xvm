@@ -83,12 +83,11 @@ import ecstasy.collections.Set;
 import ecstasy.collections.Tuple;
 import ecstasy.collections.UniformIndexed;
 
-import ecstasy.rt.Version;
-
 import ecstasy.reflect.Class;
 import ecstasy.reflect.Function;
 import ecstasy.reflect.Property;
 import ecstasy.reflect.Method;
+import ecstasy.reflect.Version;
 
 import ecstasy.annotations.Abstract;
 import ecstasy.annotations.AtomicVar as Atomic;

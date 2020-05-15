@@ -1,7 +1,5 @@
 module TestLiterals
     {
-    import ecstasy.rt.Version;
-
     @Inject Console console;
 
     void run()
