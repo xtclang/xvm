@@ -6,7 +6,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -22,9 +21,11 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xNullable;
-import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.collections.xArray;
+
+import org.xvm.runtime.template.text.xString;
+
 
 /**
  * Native ComponentTemplate (abstract base class) implementation.

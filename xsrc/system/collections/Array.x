@@ -34,7 +34,7 @@ class Array<Element>
         implements List<Element>
         implements MutableAble, FixedSizeAble, PersistentAble, ImmutableAble
         implements Stringable
-        incorporates Stringer
+        incorporates text.Stringer
         incorporates conditional BitArray<Element extends Bit>
         incorporates conditional ByteArray<Element extends Byte>
         incorporates conditional Orderer<Element extends Orderable>

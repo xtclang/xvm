@@ -19,7 +19,9 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
-import org.xvm.runtime.template.xString.StringHandle;
+
+import org.xvm.runtime.template.text.xString.StringHandle;
+
 
 /**
  * PropertyComposition represents a "custom" property class.

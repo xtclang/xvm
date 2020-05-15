@@ -6,7 +6,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -28,9 +27,10 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xNullable;
-import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.collections.xArray;
+
+import org.xvm.runtime.template.text.xString;
 
 
 /**

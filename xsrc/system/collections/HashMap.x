@@ -12,7 +12,7 @@ class HashMap<Key, Value>
         implements Map<Key, Value>
         // TODO conditional incorporation of ... HashMap<Key extends immutable Hashable, Value>
         // TODO VariablyMutable interfaces
-        incorporates Stringer
+        incorporates text.Stringer
     {
     // ----- constructors --------------------------------------------------------------------------
 

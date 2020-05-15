@@ -5563,7 +5563,7 @@ public abstract class TypeConstant
             {
             case "numbers.Bit":
             case "numbers.Nibble":
-            case "numbers.Char":
+            case "text.Char":
             case "numbers.Int8":
             case "numbers.Int16":
             case "numbers.Int32":
@@ -5599,7 +5599,7 @@ public abstract class TypeConstant
             case "numbers.Nibble":
                 return 0x10;
 
-            case "Char":
+            case "text.Char":
                 // unicode goes from 0 to 10FFFF
                 return 0x10FFFF + 1;
 

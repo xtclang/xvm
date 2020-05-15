@@ -20,8 +20,9 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
-import org.xvm.runtime.template.xString;
-import org.xvm.runtime.template.xString.StringHandle;
+
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;

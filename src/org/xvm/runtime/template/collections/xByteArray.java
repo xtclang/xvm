@@ -21,10 +21,11 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xChar;
 import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.numbers.xUInt8;
+
+import org.xvm.runtime.template.text.xChar;
 
 
 /**

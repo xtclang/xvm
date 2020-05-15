@@ -25,7 +25,8 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xService.ServiceHandle;
-import org.xvm.runtime.template.xString.StringHandle;
+
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**

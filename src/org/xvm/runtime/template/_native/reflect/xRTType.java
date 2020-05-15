@@ -48,7 +48,6 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTClass.ClassHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
@@ -58,6 +57,8 @@ import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 import org.xvm.runtime.template.collections.xTuple;
+
+import org.xvm.runtime.template.text.xString;
 
 import org.xvm.util.ListMap;
 

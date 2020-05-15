@@ -35,9 +35,10 @@ import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.xString.StringHandle;
-
 import org.xvm.runtime.template.collections.xArray;
+
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**

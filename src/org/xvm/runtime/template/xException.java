@@ -13,6 +13,8 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.template.text.xString;
+
 
 /**
  * Native Exception implementation.

@@ -22,13 +22,14 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
-import org.xvm.runtime.template.xString;
-import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.numbers.xInt64;
+
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**

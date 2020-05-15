@@ -33,6 +33,8 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
+import org.xvm.runtime.template.text.xString;
+
 
 /**
  * Native Service implementation.

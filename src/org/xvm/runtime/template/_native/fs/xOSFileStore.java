@@ -15,9 +15,9 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.template.xString.StringHandle;
-
 import org.xvm.runtime.template.numbers.xInt64;
+
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**

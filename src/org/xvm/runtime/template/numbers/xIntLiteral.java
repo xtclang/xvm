@@ -6,7 +6,6 @@ import java.math.BigInteger;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -21,8 +20,9 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xString;
-import org.xvm.runtime.template.xString.StringHandle;
+
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.PackedInteger;
 

@@ -31,13 +31,14 @@ import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xPackage;
 import org.xvm.runtime.template.xRef.RefHandle;
-import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**

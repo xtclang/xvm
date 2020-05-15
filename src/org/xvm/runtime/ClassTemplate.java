@@ -40,14 +40,12 @@ import org.xvm.runtime.Utils.InPlacePropertyUnary;
 import org.xvm.runtime.Utils.UnaryAction;
 
 import org.xvm.runtime.template.InterfaceProxy;
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
-import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xVar;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
@@ -55,6 +53,8 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
+
+import org.xvm.runtime.template.text.xString;
 
 import org.xvm.util.Handy;
 
@@ -2162,7 +2162,7 @@ public abstract class ClassTemplate
     public static String[] THIS    = new String[] {"this"};
     public static String[] OBJECT  = new String[] {"Object"};
     public static String[] INT     = new String[] {"numbers.Int64"};
-    public static String[] STRING  = new String[] {"String"};
+    public static String[] STRING  = new String[] {"text.String"};
     public static String[] BOOLEAN = new String[] {"Boolean"};
 
     /**

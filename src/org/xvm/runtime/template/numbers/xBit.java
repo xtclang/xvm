@@ -5,7 +5,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -21,7 +20,8 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xString;
+
+import org.xvm.runtime.template.text.xString;
 
 
 /**

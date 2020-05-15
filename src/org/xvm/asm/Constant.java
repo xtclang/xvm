@@ -208,10 +208,10 @@ public abstract class Constant
             case "Boolean.True":
                 return pool.valTrue();
 
-            case "Char":
+            case "text.Char":
                 return pool.ensureCharConstant('?');
 
-            case "String":
+            case "text.String":
                 return pool.ensureStringConstant("");
 
             case "numbers.IntLiteral":
@@ -797,31 +797,31 @@ public abstract class Constant
         Dec64     ("numbers"),
         Dec128    ("numbers"),
         VarDec    ("numbers"),
-        Char,
-        String,
+        Char      ("text"),
+        String    ("text"),
         Date,               // ISO8601 YYYY-MM-DD date format
         Time,               // ISO8601 HH:MM[:SS[.sssssssss]]['Z' | ('+'|'-')hh[:mm]] format
         TimeZone,           // ISO8601 ['Z' | ('+'|'-')hh[:mm]] format
         DateTime,           // ISO8601 date ['T' time] format
         Duration,           // ISO8601 P[n]Y[n]M[n]DT[n]H[n]M[n]S | P[n]W format
-        Version,
+        Version   ("reflect"),
         SingletonConst,     // identity constant for a Module, Package, an enum value or a static const
         SingletonService,   // identity constant of a Service class
-        Tuple,
-        Array,
+        Tuple     ("collections"),
+        Array     ("collections"),
         UInt8Array,         // byte[]
-        Set,
-        MapEntry,
-        Map,
+        Set       ("collections"),
+        MapEntry  ("collections"),
+        Map       ("collections"),
         Range,
         RangeInclusive,
         RangeExclusive,
         Any,
-        Path,
-        FileStore,
-        FSDir,
-        FSFile,
-        FSLink,
+        Path      ("fs"),
+        FileStore ("fs"),
+        FSDir     ("fs"),
+        FSFile    ("fs"),
+        FSLink    ("fs"),
 
         /*
          * Structural identifiers.

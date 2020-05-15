@@ -28,6 +28,8 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
+import org.xvm.runtime.template.text.xString;
+
 
 /**
  * A template for the base of all Enum classes

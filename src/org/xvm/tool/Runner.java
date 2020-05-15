@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -20,8 +19,9 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.xString;
-import org.xvm.runtime.template.xString.StringHandle;
+
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.Severity;
 

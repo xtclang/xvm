@@ -12,9 +12,10 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.numbers.xIntLiteral.VarIntHandle;
+
+import org.xvm.runtime.template.text.xString;
 
 import org.xvm.util.PackedInteger;
 

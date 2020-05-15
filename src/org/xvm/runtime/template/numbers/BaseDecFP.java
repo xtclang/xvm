@@ -4,7 +4,6 @@ package org.xvm.runtime.template.numbers;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.DecimalConstant;
 
@@ -20,7 +19,8 @@ import org.xvm.runtime.template.collections.xBitArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xString;
+
+import org.xvm.runtime.template.text.xString;
 
 import org.xvm.type.Decimal;
 

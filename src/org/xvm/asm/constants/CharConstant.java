@@ -192,7 +192,7 @@ public class CharConstant
         {
         switch (typeOut.getEcstasyClassName())
             {
-            case "String":
+            case "text.String":
                 {
                 int ch = m_chVal;
                 if (ch >= Character.MIN_VALUE && ch <= Character.MAX_VALUE)
