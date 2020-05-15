@@ -14,7 +14,6 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -83,16 +82,12 @@ public class L_Set
 
             PropertyConstant idProp = (PropertyConstant) frame.getConstant(m_nPropId);
 
-            if (isDeferred(hValue))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
-                Frame.Continuation stepNext = frameCaller -> hTarget.getTemplate().
-                    setPropertyValue(frameCaller, hTarget, idProp, ahValue[0]);
-
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-
-            return hTarget.getTemplate().setPropertyValue(frame, hTarget, idProp, hValue);
+            return isDeferred(hValue)
+                    ? hValue.proceed(frame, frameCaller ->
+                        hTarget.getTemplate().
+                            setPropertyValue(frameCaller, hTarget, idProp, frameCaller.popStack()))
+                    : hTarget.getTemplate().
+                        setPropertyValue(frame, hTarget, idProp, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

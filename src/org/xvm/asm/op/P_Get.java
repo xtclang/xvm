@@ -17,7 +17,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -109,17 +108,15 @@ public class P_Get
                     }
                 }
 
-            if (isDeferred(hTarget))
-                {
-                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepNext = frameCaller ->
-                    ahTarget[0].getTemplate().getPropertyValue(
-                        frame, ahTarget[0], constProperty, m_nRetValue);
-
-                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
-                }
-            return hTarget.getTemplate().getPropertyValue(
-                    frame, hTarget, constProperty, m_nRetValue);
+            return isDeferred(hTarget)
+                    ? hTarget.proceed(frame, frameCaller ->
+                        {
+                        ObjectHandle hT = frameCaller.popStack();
+                        return hT.getTemplate().getPropertyValue(
+                            frameCaller, hT, constProperty, m_nRetValue);
+                        })
+                    : hTarget.getTemplate().getPropertyValue(
+                            frame, hTarget, constProperty, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

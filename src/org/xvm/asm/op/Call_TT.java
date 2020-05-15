@@ -101,15 +101,12 @@ public class Call_TT
 
                 checkReturnTupleRegister(frame, chain.getSuper(frame));
 
-                if (isDeferred(hArg))
-                    {
-                    ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                    Frame.Continuation stepNext = frameCaller ->
-                        chain.callSuperN1(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue, m_nRetValue, true);
-
-                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                    }
-                return chain.callSuperN1(frame, ((TupleHandle) hArg).m_ahValue, m_nRetValue, true);
+                return isDeferred(hArg)
+                        ? hArg.proceed(frame, frameCaller ->
+                            chain.callSuperN1(frameCaller,
+                                ((TupleHandle) frameCaller.popStack()).m_ahValue, m_nRetValue, true))
+                        : chain.callSuperN1(frame,
+                            ((TupleHandle) hArg).m_ahValue, m_nRetValue, true);
                 }
 
             if (m_nFunctionId <= CONSTANT_OFFSET)
@@ -120,16 +117,10 @@ public class Call_TT
                     return R_EXCEPTION;
                     }
 
-                if (isDeferred(hArg))
-                    {
-                    ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                    Frame.Continuation stepNext = frameCaller ->
-                        complete(frameCaller, function, (TupleHandle) ahArg[0]);
-
-                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                    }
-
-                return complete(frame, function, (TupleHandle) hArg);
+                return isDeferred(hArg)
+                        ? hArg.proceed(frame, frameCaller ->
+                            complete(frameCaller, function, (TupleHandle) frameCaller.popStack()))
+                        : complete(frame, function, (TupleHandle) hArg);
                 }
 
             ObjectHandle hFunction = frame.getArgument(m_nFunctionId);

@@ -81,15 +81,10 @@ public class Invoke_0T
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
 
-            if (isDeferred(hTarget))
-                {
-                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepNext = frameCaller -> complete(frameCaller, ahTarget[0]);
-
-                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
-                }
-
-            return complete(frame, hTarget);
+            return isDeferred(hTarget)
+                    ? hTarget.proceed(frame, frameCaller ->
+                        complete(frameCaller, frameCaller.popStack()))
+                    : complete(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {

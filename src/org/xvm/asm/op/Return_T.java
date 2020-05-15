@@ -12,7 +12,6 @@ import org.xvm.asm.OpReturn;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
@@ -85,16 +84,10 @@ public class Return_T
             return frame.raiseException(e);
             }
 
-        if (isDeferred(hArg))
-            {
-            ObjectHandle[] ahValue = new ObjectHandle[]{hArg};
-            Frame.Continuation stepNext =
-                frameCaller -> complete(frameCaller, (TupleHandle) ahValue[0]);
-
-            return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-            }
-
-        return complete(frame, (TupleHandle) hArg);
+        return isDeferred(hArg)
+                ? hArg.proceed(frame, frameCaller ->
+                    complete(frameCaller, (TupleHandle) frameCaller.popStack()))
+                :  complete(frame, (TupleHandle) hArg);
         }
 
     protected int complete(Frame frame, TupleHandle hValue)

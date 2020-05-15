@@ -99,16 +99,10 @@ public class NewC_N
 
             ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
 
-            if (isDeferred(hParent))
-                {
-                ObjectHandle[] ahHolder = new ObjectHandle[] {hParent};
-                Frame.Continuation stepNext = frameCaller ->
-                        collectArgs(frameCaller, constructor, ahHolder[0], ahVar);
-
-                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
-                }
-
-            return constructChild(frame, constructor, hParent, ahVar);
+            return isDeferred(hParent)
+                    ? hParent.proceed(frame, frameCaller ->
+                        collectArgs(frameCaller, constructor, frameCaller.popStack(), ahVar))
+                    : collectArgs(frame, constructor, hParent, ahVar);
             }
         catch (ExceptionHandle.WrapperException e)
             {

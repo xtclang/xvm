@@ -88,16 +88,10 @@ public class JumpVal
             {
             ObjectHandle hValue = frame.getArgument(m_nArgCond);
 
-            if (isDeferred(hValue))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
-                Frame.Continuation stepNext = frameCaller ->
-                    collectCaseConstants(frame, iPC, ahValue[0]);
-
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-
-            return collectCaseConstants(frame, iPC, hValue);
+            return isDeferred(hValue)
+                    ? hValue.proceed(frame, frameCaller ->
+                         collectCaseConstants(frame, iPC, frameCaller.popStack()))
+                    : collectCaseConstants(frame, iPC, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

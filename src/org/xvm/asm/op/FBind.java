@@ -135,11 +135,8 @@ public class FBind
 
                 if (isDeferred(hFn))
                     {
-                    ObjectHandle[] ahFn = new ObjectHandle[] {hFn};
-                    Frame.Continuation stepNext = frameCaller ->
-                        resolveArguments(frameCaller, (FunctionHandle) ahFn[0]);
-
-                    return new Utils.GetArguments(ahFn, stepNext).doNext(frame);
+                    return hFn.proceed(frame, frameCaller ->
+                        resolveArguments(frameCaller, (FunctionHandle) frameCaller.popStack()));
                     }
                 hFunction = (FunctionHandle) hFn;
                 }

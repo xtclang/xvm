@@ -103,25 +103,12 @@ public class NewCG_1
                 return reportMissingConstructor(frame, hParent);
                 }
 
-            ObjectHandle[] ahVar = frame.getArguments(
-                    new int[]{m_nArgValue}, constructor.getMaxVars());
+            ObjectHandle hArg = frame.getArgument(m_nArgValue);
 
-            ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
-
-            if (frame.isNextRegister(m_nRetValue))
-                {
-                frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
-                }
-
-            if (isDeferred(hParent))
-                {
-                ObjectHandle[] ahHolder = new ObjectHandle[] {hParent};
-                Frame.Continuation stepNext = frameCaller ->
-                        collectArgs(frame, constructor, clzTarget, ahHolder[0], ahVar);
-                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
-                }
-
-            return collectArgs(frame, constructor, clzTarget, hParent, ahVar);
+            return isDeferred(hParent)
+                    ? hParent.proceed(frame, frameCaller ->
+                        collectArgs(frameCaller, constructor, frameCaller.popStack(), hArg))
+                    : collectArgs(frame, constructor, hParent, hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -129,25 +116,30 @@ public class NewCG_1
             }
         }
 
-    protected int collectArgs(Frame frame, MethodStructure constructor, ClassComposition clzTarget,
-                              ObjectHandle hParent, ObjectHandle[] ahVar)
+    protected int collectArgs(Frame frame, MethodStructure constructor,
+                              ObjectHandle hParent, ObjectHandle hArg)
         {
-        if (anyDeferred(ahVar))
-            {
-            Frame.Continuation stepNext = frameCaller ->
-                constructChild(frameCaller, constructor, clzTarget, hParent, ahVar);
-
-            return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
-            }
-
-        return constructChild(frame, constructor, clzTarget, hParent, ahVar);
+        return isDeferred(hArg)
+                ? hArg.proceed(frame, frameCaller ->
+                    constructChild(frameCaller, constructor, hParent, frameCaller.popStack()))
+                : constructChild(frame, constructor, hParent, hArg);
         }
 
-    protected int constructChild(Frame frame, MethodStructure constructor, ClassComposition clzTarget,
-                                 ObjectHandle hParent, ObjectHandle[] ahVar)
+    protected int constructChild(Frame frame, MethodStructure constructor,
+                                 ObjectHandle hParent, ObjectHandle hArg)
         {
+        ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
+        ahVar[0] = hArg;
+
         return clzTarget.getTemplate().
-            construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
+                construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
         }
 
     @Override

@@ -12,7 +12,6 @@ import org.xvm.asm.Op;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -75,16 +74,11 @@ public class Throw
         {
         try
             {
-            ExceptionHandle hException = (ExceptionHandle) frame.getArgument(m_nArgValue);
-            if (isDeferred(hException))
-                {
-                ExceptionHandle[] ahVar = new ExceptionHandle[] {hException};
-                Frame.Continuation stepNext = frameCaller -> frame.raiseException(ahVar[0]);
-
-                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
-                }
-
-            return frame.raiseException(hException);
+            ObjectHandle hException = frame.getArgument(m_nArgValue);
+            return isDeferred(hException)
+                    ? hException.proceed(frame, frameCaller ->
+                        frameCaller.raiseException((ExceptionHandle) frameCaller.popStack()))
+                    : frame.raiseException((ExceptionHandle) hException);
             }
         catch (ExceptionHandle.WrapperException e)
             {

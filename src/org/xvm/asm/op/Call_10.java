@@ -90,16 +90,10 @@ public class Call_10
                     throw new IllegalStateException();
                     }
 
-                if (isDeferred(hArg))
-                    {
-                    ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                    Frame.Continuation stepNext = frameCaller ->
-                        chain.callSuper10(frame, ahArg[0]);
-
-                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                    }
-
-                return chain.callSuper10(frame, hArg);
+                return isDeferred(hArg)
+                        ? hArg.proceed(frame, frameCaller ->
+                            chain.callSuper10(frameCaller, frameCaller.popStack()))
+                        : chain.callSuper10(frame, hArg);
                 }
 
             if (m_nFunctionId <= CONSTANT_OFFSET)
@@ -110,16 +104,10 @@ public class Call_10
                     return R_EXCEPTION;
                     }
 
-                if (isDeferred(hArg))
-                    {
-                    ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                    Frame.Continuation stepNext = frameCaller ->
-                        complete(frameCaller, ahArg[0], function);
-
-                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                    }
-
-                return complete(frame, hArg, function);
+                return isDeferred(hArg)
+                        ? hArg.proceed(frame, frameCaller ->
+                            complete(frameCaller, frameCaller.popStack(), function))
+                        : complete(frame, hArg, function);
                 }
 
             ObjectHandle hFunction = frame.getArgument(m_nFunctionId);

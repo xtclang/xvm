@@ -813,8 +813,8 @@ public class Frame
     public int assignDeferredValue(int nVar, ObjectHandle hValue)
         {
         return hValue instanceof DeferredCallHandle
-                ? ((DeferredCallHandle) hValue).proceed(this, frame ->
-                    frame.assignValue(nVar, frame.popStack()))
+                ? hValue.proceed(this, frameCaller ->
+                    frameCaller.assignValue(nVar, frameCaller.popStack()))
                 : assignValue(nVar, hValue);
         }
 
@@ -830,8 +830,8 @@ public class Frame
     public int assignConditionalDeferredValue(int[] anVar, ObjectHandle hValue)
         {
         return hValue instanceof DeferredCallHandle
-                ? ((DeferredCallHandle) hValue).proceed(this, frame ->
-                    frame.assignValues(anVar, xBoolean.TRUE, frame.popStack()))
+                ? hValue.proceed(this, frameCaller ->
+                    frameCaller.assignValues(anVar, xBoolean.TRUE, frameCaller.popStack()))
                 : assignValues(anVar, xBoolean.TRUE, hValue);
         }
 
@@ -845,7 +845,7 @@ public class Frame
     public int pushDeferredValue(ObjectHandle hValue)
         {
         return hValue instanceof DeferredCallHandle
-                ? ((DeferredCallHandle) hValue).proceed(this, frame -> Op.R_NEXT)
+                ? hValue.proceed(this, frameCaller -> Op.R_NEXT)
                 : pushStack(hValue);
         }
 
@@ -1339,7 +1339,7 @@ public class Frame
      * {@link org.xvm.compiler.ast.InvocationExpression}, {@link org.xvm.compiler.ast.NewExpression}
      * and {@link org.xvm.compiler.ast.RelOpExpression} to use stack collecting the arguments.
      *
-     * @return the array of handles (can contain DeferredHandle objects)
+     * @return the array of handles (can contain DeferredCallHandle objects)
      *
      * @throws ExceptionHandle.WrapperException if the async assignment has failed
      */

@@ -14,7 +14,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -81,15 +80,10 @@ public class Invoke_01
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
 
-            if (isDeferred(hTarget))
-                {
-                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepNext = frameCaller -> complete(frameCaller, ahTarget[0]);
-
-                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
-                }
-
-            return complete(frame, hTarget);
+            return isDeferred(hTarget)
+                    ? hTarget.proceed(frame, frameCaller ->
+                        complete(frameCaller, frameCaller.popStack()))
+                    : complete(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {

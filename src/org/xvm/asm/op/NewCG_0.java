@@ -17,7 +17,6 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -109,15 +108,10 @@ public class NewCG_0
 
             ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
 
-            if (isDeferred(hParent))
-                {
-                ObjectHandle[] ahHolder = new ObjectHandle[] {hParent};
-                Frame.Continuation stepNext = frameCaller ->
-                        template.construct(frame, constructor, clzTarget, ahHolder[0], ahVar, m_nRetValue);
-                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
-                }
-
-            return template.construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
+            return isDeferred(hParent)
+                    ? hParent.proceed(frame, frameCaller ->
+                        template.construct(frame, constructor, clzTarget, frameCaller.popStack(), ahVar, m_nRetValue))
+                    : template.construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

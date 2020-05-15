@@ -84,15 +84,10 @@ public abstract class OpInPlaceAssign
 
                     ObjectHandle hValue = frame.getArgument(m_nArgValue);
 
-                    if (isDeferred(hValue))
-                        {
-                        ObjectHandle[] ahArg = new ObjectHandle[] {hValue};
-                        Frame.Continuation stepNext = frameCaller ->
-                            completeWithVar(frameCaller, hVar, ahArg[0]);
-
-                        return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                        }
-                    return completeWithVar(frame, hVar, hValue);
+                    return isDeferred(hValue)
+                            ? hValue.proceed(frame, frameCaller ->
+                                completeWithVar(frameCaller, hVar, frameCaller.popStack()))
+                            : completeWithVar(frame, hVar, hValue);
                     }
                 else
                     {
@@ -103,7 +98,7 @@ public abstract class OpInPlaceAssign
                         {
                         ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hValue};
                         Frame.Continuation stepNext = frameCaller ->
-                            completeWithRegister(frameCaller, ahArg[1], ahArg[0]);
+                            completeWithRegister(frameCaller, ahArg[0], ahArg[1]);
 
                         return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                         }
@@ -117,15 +112,10 @@ public abstract class OpInPlaceAssign
                 ObjectHandle hTarget = frame.getThis();
                 ObjectHandle hValue  = frame.getArgument(m_nArgValue);
 
-                if (isDeferred(hValue))
-                    {
-                    ObjectHandle[] ahArg = new ObjectHandle[] {hValue};
-                    Frame.Continuation stepNext = frameCaller ->
-                        completeWithProperty(frameCaller, hTarget, idProp, ahArg[0]);
-
-                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                    }
-                return completeWithProperty(frame, hTarget, idProp, hValue);
+                return isDeferred(hValue)
+                        ? hValue.proceed(frame, frameCaller ->
+                            completeWithProperty(frameCaller, hTarget, idProp, frameCaller.popStack()))
+                        : completeWithProperty(frame, hTarget, idProp, hValue);
                 }
             }
         catch (ExceptionHandle.WrapperException e)

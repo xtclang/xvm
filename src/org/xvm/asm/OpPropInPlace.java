@@ -10,7 +10,6 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -119,16 +118,10 @@ public abstract class OpPropInPlace
                 frame.introduceVarCopy(m_nRetValue, m_nPropId);
                 }
 
-            if (isDeferred(hTarget))
-                {
-                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepNext = frameCaller ->
-                    processProperty(frameCaller, ahTarget[0]);
-
-                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
-                }
-
-            return processProperty(frame, hTarget);
+            return isDeferred(hTarget)
+                    ? hTarget.proceed(frame, frameCaller ->
+                        processProperty(frameCaller, frameCaller.popStack()))
+                    : processProperty(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {

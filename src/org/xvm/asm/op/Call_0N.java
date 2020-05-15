@@ -116,24 +116,24 @@ public class Call_0N
 
         try
             {
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
+            ObjectHandle hFunction = frame.getArgument(m_nFunctionId);
 
-            checkReturnRegisters(frame, hFunction.getMethod());
-
-            if (isDeferred(hFunction))
-                {
-                FunctionHandle[] ahArg = new FunctionHandle[] {hFunction};
-                Frame.Continuation stepNext = frameCaller ->
-                    ahArg[0].callN(frame, null, Utils.OBJECTS_NONE, m_anRetValue);
-
-                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                }
-            return hFunction.callN(frame, null, Utils.OBJECTS_NONE, m_anRetValue);
+            return isDeferred(hFunction)
+                    ? hFunction.proceed(frame, frameCaller ->
+                        complete(frameCaller, (FunctionHandle) frameCaller.popStack()))
+                    : complete(frame, (FunctionHandle) hFunction);
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
+        }
+
+    private int complete(Frame frame, FunctionHandle hFunction)
+        {
+        checkReturnRegisters(frame, hFunction.getMethod());
+
+        return hFunction.callN(frame, null, Utils.OBJECTS_NONE, m_anRetValue);
         }
 
     @Override

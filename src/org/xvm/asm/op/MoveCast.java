@@ -14,7 +14,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xException;
 
@@ -82,15 +81,10 @@ public class MoveCast
             {
             ObjectHandle hValue = frame.getArgument(m_nFromValue);
 
-            if (isDeferred(hValue))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
-                Frame.Continuation stepNext = frameCaller -> complete(frameCaller, ahValue[0]);
-
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-
-            return complete(frame, hValue);
+            return isDeferred(hValue)
+                    ? hValue.proceed(frame, frameCaller ->
+                        complete(frameCaller, frameCaller.popStack()))
+                    : complete(frame, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

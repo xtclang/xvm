@@ -100,16 +100,16 @@ public class Call_1T
 
                 checkReturnTupleRegister(frame, chain.getSuper(frame));
 
+                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                 if (isDeferred(hArg))
                     {
-                    ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
                         chain.callSuperN1(frame, ahArg, m_nRetValue, true);
 
                     return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                     }
 
-                return chain.callSuperN1(frame, new ObjectHandle[]{hArg}, m_nRetValue, true);
+                return chain.callSuperN1(frame, ahArg, m_nRetValue, true);
                 }
 
             if (m_nFunctionId <= CONSTANT_OFFSET)
@@ -120,16 +120,10 @@ public class Call_1T
                     return R_EXCEPTION;
                     }
 
-                if (isDeferred(hArg))
-                    {
-                    ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                    Frame.Continuation stepNext = frameCaller ->
-                        complete(frameCaller, ahArg[0], function);
-
-                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                    }
-
-                return complete(frame, hArg, function);
+                return isDeferred(hArg)
+                        ? hArg.proceed(frame, frameCaller ->
+                            complete(frameCaller, frameCaller.popStack(), function))
+                        : complete(frame, hArg, function);
                 }
 
             ObjectHandle hFunction = frame.getArgument(m_nFunctionId);

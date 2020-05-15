@@ -92,15 +92,10 @@ public class NewC_0
                 return reportMissingConstructor(frame, hParent);
                 }
 
-            if (isDeferred(hParent))
-                {
-                ObjectHandle[] ahHolder = new ObjectHandle[] {hParent};
-                Frame.Continuation stepNext = frameCaller ->
-                    constructChild(frameCaller, constructor, ahHolder[0], Utils.OBJECTS_NONE);
-
-                return new Utils.GetArguments(ahHolder, stepNext).doNext(frame);
-                }
-            return constructChild(frame, constructor, hParent, Utils.OBJECTS_NONE);
+            return isDeferred(hParent)
+                    ? hParent.proceed(frame, frameCaller ->
+                        constructChild(frameCaller, constructor, frameCaller.popStack(), Utils.OBJECTS_NONE))
+                    : constructChild(frame, constructor, hParent, Utils.OBJECTS_NONE);
             }
         catch (ExceptionHandle.WrapperException e)
             {

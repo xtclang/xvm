@@ -128,24 +128,24 @@ public class Call_0T
 
         try
             {
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
+            ObjectHandle hFunction = frame.getArgument(m_nFunctionId);
 
-            checkReturnTupleRegister(frame, hFunction.getMethod());
-
-            if (isDeferred(hFunction))
-                {
-                FunctionHandle[] ahArg = new FunctionHandle[] {hFunction};
-                Frame.Continuation stepNext = frameCaller ->
-                    ahArg[0].callT(frame, null, Utils.OBJECTS_NONE, m_nRetValue);
-
-                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                }
-            return hFunction.callT(frame, null, Utils.OBJECTS_NONE, m_nRetValue);
+            return isDeferred(hFunction)
+                    ? hFunction.proceed(frame, frameCaller ->
+                        complete(frameCaller, (FunctionHandle) frameCaller.popStack()))
+                    : complete(frame, (FunctionHandle) hFunction);
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
+        }
+
+    private int complete(Frame frame, FunctionHandle hFunction)
+        {
+        checkReturnTupleRegister(frame, hFunction.getMethod());
+
+        return hFunction.callT(frame, null, Utils.OBJECTS_NONE, m_nRetValue);
         }
 
     @Override

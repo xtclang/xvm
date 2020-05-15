@@ -83,16 +83,10 @@ public class Construct_T
             {
             ObjectHandle hArg = frame.getArgument(m_nArgTupleValue);
 
-            if (isDeferred(hArg))
-                {
-                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue);
-
-                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                }
-
-            return complete(frame, ((TupleHandle) hArg).m_ahValue);
+            return isDeferred(hArg)
+                    ? hArg.proceed(frame, frameCaller ->
+                        complete(frameCaller, ((TupleHandle) frameCaller.popStack()).m_ahValue))
+                    : complete(frame, ((TupleHandle) hArg).m_ahValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

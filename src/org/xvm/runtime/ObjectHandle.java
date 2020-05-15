@@ -233,6 +233,20 @@ public abstract class ObjectHandle
         }
 
     /**
+     * If a handle supports deferred call - continue with the processing and place the deferred
+     * value on the caller's stack.
+     *
+     * @param frameCaller   the caller frame
+     * @param continuation  the continuation to resume to
+     *
+     * @return Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION
+     */
+    public int proceed(Frame frameCaller, Frame.Continuation continuation)
+        {
+        throw new IllegalStateException("Not deferred");
+        }
+
+    /**
      * @return the result of comparison (only for isNativeEqual() handles)
      */
     public int compareTo(ObjectHandle that)
@@ -657,7 +671,7 @@ public abstract class ObjectHandle
             f_hException = hException;
             }
 
-        // continue with the processing
+        @Override
         public int proceed(Frame frameCaller, Frame.Continuation continuation)
             {
             if (f_hException == null)

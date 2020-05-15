@@ -134,16 +134,10 @@ public abstract class OpTest
             {
             ObjectHandle hValue = frame.getArgument(m_nValue1);
 
-            if (isDeferred(hValue))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
-                Frame.Continuation stepNext = frameCaller ->
-                    completeUnaryOp(frame, ahValue[0]);
-
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-
-            return completeUnaryOp(frame, hValue);
+            return isDeferred(hValue)
+                    ? hValue.proceed(frame, frameCaller ->
+                        completeUnaryOp(frameCaller, frameCaller.popStack()))
+                    : completeUnaryOp(frame, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

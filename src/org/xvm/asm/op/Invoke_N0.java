@@ -79,17 +79,10 @@ public class Invoke_N0
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
 
-            if (isDeferred(hTarget))
-                {
-                // we won't know the number of method vars until later,
-                // will have to resize the arg array then
-                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepNext = frameCaller -> resolveArgs(frameCaller, ahTarget[0]);
-
-                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
-                }
-
-            return resolveArgs(frame, hTarget);
+            return isDeferred(hTarget)
+                    ? hTarget.proceed(frame, frameCaller ->
+                         resolveArgs(frameCaller, frameCaller.popStack()))
+                    : resolveArgs(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {

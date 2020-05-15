@@ -135,16 +135,11 @@ public abstract class OpCondJump
         try
             {
             ObjectHandle hValue = frame.getArgument(m_nArg);
-            if (isDeferred(hValue))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
-                Frame.Continuation stepNext = frameCaller ->
-                    completeUnaryOp(frame, iPC, ahValue[0]);
 
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-
-            return completeUnaryOp(frame, iPC, hValue);
+            return isDeferred(hValue)
+                    ? hValue.proceed(frame, frameCaller ->
+                        completeUnaryOp(frameCaller, iPC, frameCaller.popStack()))
+                    : completeUnaryOp(frame, iPC, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

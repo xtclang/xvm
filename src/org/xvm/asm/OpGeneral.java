@@ -119,16 +119,10 @@ public abstract class OpGeneral
                 frame.introduceVarCopy(m_nRetValue, m_nTarget);
                 }
 
-            if (isDeferred(hTarget))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepNext = frameCaller ->
-                    completeUnary(frameCaller, ahValue[0]);
-
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-
-            return completeUnary(frame, hTarget);
+            return isDeferred(hTarget)
+                    ? hTarget.proceed(frame, frameCaller ->
+                        completeUnary(frameCaller, frameCaller.popStack()))
+                    : completeUnary(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {

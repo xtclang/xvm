@@ -112,15 +112,10 @@ public class NewCG_N
                 frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
                 }
 
-            if (isDeferred(hParent))
-                {
-                ObjectHandle[] ahHolder = new ObjectHandle[] {hParent};
-                Frame.Continuation stepNext = frameCaller ->
-                        collectArgs(frame, constructor, clzTarget, ahHolder[0], ahVar);
-                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
-                }
-
-            return collectArgs(frame, constructor, clzTarget, hParent, ahVar);
+            return isDeferred(hParent)
+                    ? hParent.proceed(frame, frameCaller ->
+                        collectArgs(frameCaller, constructor, clzTarget, frameCaller.popStack(), ahVar))
+                    : collectArgs(frame, constructor, clzTarget, hParent, ahVar);
             }
         catch (ExceptionHandle.WrapperException e)
             {

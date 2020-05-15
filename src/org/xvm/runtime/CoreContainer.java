@@ -74,17 +74,10 @@ public class CoreContainer
                 {
                 ObjectHandle hModule = frame.getConstHandle(m_idModule);
 
-                if (Op.isDeferred(hModule))
-                    {
-                    ObjectHandle[] ahModule = new ObjectHandle[] {hModule};
-
-                    Frame.Continuation stepNext = frameCaller ->
-                        hFunction.call1(frameCaller, ahModule[0], ahArg, Op.A_IGNORE);
-
-                    return new Utils.GetArguments(ahModule, stepNext).doNext(frame);
-                    }
-
-                return hFunction.call1(frame, hModule, ahArg, Op.A_IGNORE);
+                return Op.isDeferred(hModule)
+                        ? hModule.proceed(frame, frameCaller ->
+                            hFunction.call1(frameCaller, frameCaller.popStack(), ahArg, Op.A_IGNORE))
+                        : hFunction.call1(frame, hModule, ahArg, Op.A_IGNORE);
                 });
 
             m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE);

@@ -14,7 +14,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -87,16 +86,10 @@ public class Invoke_11
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
             ObjectHandle hArg    = frame.getArgument(m_nArgValue);
 
-            if (isDeferred(hTarget))
-                {
-                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepNext = frameCaller ->
-                    resolveArg(frameCaller, ahTarget[0], hArg);
-
-                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
-                }
-
-            return resolveArg(frame, hTarget, hArg);
+            return isDeferred(hTarget)
+                    ? hTarget.proceed(frame, frameCaller ->
+                        resolveArg(frameCaller, frameCaller.popStack(), hArg))
+                    : resolveArg(frame, hTarget, hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -106,15 +99,10 @@ public class Invoke_11
 
     protected int resolveArg(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        if (isDeferred(hArg))
-            {
-            ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-            Frame.Continuation stepNext = frameCaller -> complete(frameCaller, hTarget, ahArg[0]);
-
-            return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-            }
-
-        return complete(frame, hTarget, hArg);
+        return isDeferred(hArg)
+                ? hArg.proceed(frame, frameCaller ->
+                    complete(frameCaller, hTarget, frameCaller.popStack()))
+                : complete(frame, hTarget, hArg);
         }
 
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)

@@ -855,15 +855,12 @@ public abstract class ClassTemplate
                     {
                     if (Op.isDeferred(hValue))
                         {
-                        ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
-                        Frame.Continuation stepNext = frameCaller ->
+                        return hValue.proceed(frame, frameCaller ->
                             {
-                            ObjectHandle hVal = ahValue[0];
+                            ObjectHandle hVal = frameCaller.popStack();
                             hThis.setField(idProp, hVal);
                             return frameCaller.assignValue(iReturn, hVal);
-                            };
-
-                        return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                            });
                         }
 
                     hThis.setField(idProp, hValue);

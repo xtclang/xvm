@@ -87,15 +87,10 @@ public class Invoke_NT
             {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
 
-            if (isDeferred(hTarget))
-                {
-                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepNext = frameCaller -> resolveArgs(frameCaller, ahTarget[0]);
-
-                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
-                }
-
-            return resolveArgs(frame, hTarget);
+            return isDeferred(hTarget)
+                    ? hTarget.proceed(frame, frameCaller ->
+                         resolveArgs(frameCaller, frameCaller.popStack()))
+                    : resolveArgs(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {

@@ -18,7 +18,6 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xString;
@@ -91,16 +90,10 @@ public class Assert
             {
             ObjectHandle hValue = frame.getArgument(m_nTest);
 
-            if (isDeferred(hValue))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
-                Frame.Continuation stepNext = frameCaller ->
-                        evaluate(frameCaller, iPC, (BooleanHandle) ahValue[0]);
-
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-
-            return evaluate(frame, iPC, (BooleanHandle) hValue);
+            return isDeferred(hValue)
+                    ? hValue.proceed(frame, frameCaller ->
+                        evaluate(frameCaller, iPC, (BooleanHandle) frameCaller.popStack()))
+                    : evaluate(frame, iPC, (BooleanHandle) hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

@@ -906,14 +906,11 @@ public class xRTFunction
             if (frame.f_context == hService.f_context)
                 {
                 hTarget = getContextTarget(frame, hService);
-                if (Op.isDeferred(hTarget))
-                    {
-                    ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                        Frame.Continuation stepNext = frameCaller ->
-                            super.call1Impl(frame, ahTarget[0], ahVar, iReturn);
-                        return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
-                    }
-                return super.call1Impl(frame, hTarget, ahVar, iReturn);
+
+                return Op.isDeferred(hTarget)
+                        ? hTarget.proceed(frame, frameCaller ->
+                            super.call1Impl(frame, frameCaller.popStack(), ahVar, iReturn))
+                        : super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))
@@ -938,14 +935,11 @@ public class xRTFunction
             if (frame.f_context == hService.f_context)
                 {
                 hTarget = getContextTarget(frame, hService);
-                if (Op.isDeferred(hTarget))
-                    {
-                    ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                        Frame.Continuation stepNext = frameCaller ->
-                            super.callTImpl(frame, ahTarget[0], ahVar, iReturn);
-                        return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
-                    }
-                return super.callTImpl(frame, hTarget, ahVar, iReturn);
+
+                return Op.isDeferred(hTarget)
+                        ? hTarget.proceed(frame, frameCaller ->
+                            super.callTImpl(frame, frameCaller.popStack(), ahVar, iReturn))
+                        : super.callTImpl(frame, hTarget, ahVar, iReturn);
                 }
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))
@@ -967,14 +961,11 @@ public class xRTFunction
             if (frame.f_context == hService.f_context)
                 {
                 hTarget = getContextTarget(frame, hService);
-                if (Op.isDeferred(hTarget))
-                    {
-                    ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                    Frame.Continuation stepNext = frameCaller ->
-                        super.callNImpl(frame, ahTarget[0], ahVar, aiReturn);
-                    return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
-                    }
-                return super.callNImpl(frame, hTarget, ahVar, aiReturn);
+
+                return Op.isDeferred(hTarget)
+                        ? hTarget.proceed(frame, frameCaller ->
+                            super.callNImpl(frame, frameCaller.popStack(), ahVar, aiReturn))
+                        : super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
 
             if (!validateImmutable(frame.f_context, getMethod(), ahVar))

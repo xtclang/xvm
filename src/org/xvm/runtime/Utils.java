@@ -240,7 +240,7 @@ public abstract class Utils
 
                 if (hArg instanceof DeferredCallHandle)
                     {
-                    return ((DeferredCallHandle) hArg).proceed(frameCaller, this);
+                    return hArg.proceed(frameCaller, this);
                     }
                 }
             return continuation.proceed(frameCaller);

@@ -14,7 +14,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
@@ -89,16 +88,10 @@ public class Invoke_T1
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
             ObjectHandle hArg    = frame.getArgument(m_nArgTupleValue);
 
-            if (isDeferred(hTarget))
-                {
-                ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepNext = frameCaller ->
-                    resolveTuple(frameCaller, ahTarget[0], hArg);
-
-                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
-                }
-
-            return resolveTuple(frame, hTarget, hArg);
+            return isDeferred(hTarget)
+                    ? hTarget.proceed(frame, frameCaller ->
+                         resolveTuple(frameCaller, frameCaller.popStack(), hArg))
+                    : resolveTuple(frame, hTarget, hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -108,17 +101,12 @@ public class Invoke_T1
 
     protected int resolveTuple(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        // Tuple values cannot be local properties
-        if (isDeferred(hArg))
-            {
-            ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-            Frame.Continuation stepNext = frameCaller ->
-                complete(frameCaller, hTarget, ((TupleHandle) ahArg[0]).m_ahValue);
-
-            return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-            }
-
-        return complete(frame, hTarget, ((TupleHandle) hArg).m_ahValue);
+        return isDeferred(hArg)
+                ? hArg.proceed(frame, frameCaller ->
+                     complete(frameCaller, hTarget,
+                         ((TupleHandle) frameCaller.popStack()).m_ahValue))
+                : complete(frame, hTarget,
+                    ((TupleHandle) hArg).m_ahValue);
         }
 
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)

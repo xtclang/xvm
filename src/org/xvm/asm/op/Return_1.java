@@ -12,7 +12,6 @@ import org.xvm.asm.OpReturn;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -69,25 +68,19 @@ public class Return_1
     @Override
     public int process(Frame frame, int iPC)
         {
-        ObjectHandle hArg;
         try
             {
-            hArg = frame.getReturnValue(m_nArg);
+            ObjectHandle hArg = frame.getReturnValue(m_nArg);
+
+            return isDeferred(hArg)
+                    ? hArg.proceed(frame, frameCaller ->
+                        complete(frameCaller, frameCaller.popStack(), false))
+                    : complete(frame, hArg, frame.isDynamicVar(m_nArg));
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
-
-        if (isDeferred(hArg))
-            {
-            ObjectHandle[]     ahValue  = new ObjectHandle[]{hArg};
-            Frame.Continuation stepNext = frameCaller -> complete(frameCaller, ahValue[0], false);
-
-            return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-            }
-
-        return complete(frame, hArg, frame.isDynamicVar(m_nArg));
         }
 
     protected int complete(Frame frame, ObjectHandle hValue, boolean fDynamic)

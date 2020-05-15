@@ -1049,15 +1049,10 @@ public class xRTType
                     }
                 }
 
-            if (Op.isDeferred(hClass))
-                {
-                ObjectHandle[] ahClass = new ObjectHandle[]{hClass};
-                Frame.Continuation stepNext = frameCaller ->
-                        resolveInvokeAnnotatedArgs(frameCaller, ahClass[0], ahArg, aiReturn);
-                return new Utils.GetArguments(ahClass, stepNext).doNext(frame);
-                }
-
-            return resolveInvokeAnnotatedArgs(frame, hClass, ahArg, aiReturn);
+            return Op.isDeferred(hClass)
+                    ? hClass.proceed(frame, frameCaller ->
+                        resolveInvokeAnnotatedArgs(frameCaller, frameCaller.popStack(), ahArg, aiReturn))
+                    : resolveInvokeAnnotatedArgs(frame, hClass, ahArg, aiReturn);
             }
 
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);

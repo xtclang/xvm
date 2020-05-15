@@ -16,7 +16,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
-import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xRef.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -102,18 +101,12 @@ public class Var_CN
         {
         try
             {
-            // the argument could be a deferred RefHandle
             ObjectHandle hRef = frame.getArgument(m_nArgValue);
 
-            if (isDeferred(hRef))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hRef};
-                Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, iPC, (RefHandle) ahValue[0]);
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-
-            return complete(frame, iPC, (RefHandle) hRef);
+            return isDeferred(hRef)
+                    ? hRef.proceed(frame, frameCaller ->
+                        complete(frame, iPC, (RefHandle) frameCaller.popStack()))
+                    :  complete(frame, iPC, (RefHandle) hRef);
             }
         catch (ExceptionHandle.WrapperException e)
             {

@@ -99,28 +99,33 @@ public class NewG_N
 
             ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
 
-            ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
-            ClassTemplate    template  = clzTarget.getTemplate();
-            ObjectHandle     hParent   = clzTarget.isInstanceChild() ? frame.getThis() : null;
-
-            if (frame.isNextRegister(m_nRetValue))
-                {
-                frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
-                }
-
             if (anyDeferred(ahVar))
                 {
                 Frame.Continuation stepNext = frameCaller ->
-                    template.construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
+                    complete(frameCaller, constructor, ahVar);
 
                 return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
-            return template.construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
+            return complete(frame, constructor, ahVar);
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
+        }
+
+    private int complete(Frame frame, MethodStructure constructor, ObjectHandle[] ahVar)
+        {
+        ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
+        ClassTemplate   template   = clzTarget.getTemplate();
+        ObjectHandle     hParent   = clzTarget.isInstanceChild() ? frame.getThis() : null;
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
+            }
+
+        return template.construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
         }
 
     @Override

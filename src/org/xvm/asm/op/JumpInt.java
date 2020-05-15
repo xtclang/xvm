@@ -16,7 +16,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -112,16 +111,10 @@ public class JumpInt
             {
             ObjectHandle hValue = frame.getArgument(m_nArg);
 
-            if (isDeferred(hValue))
-                {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
-                Frame.Continuation stepNext = frameCaller ->
-                    complete(frame, iPC, ahValue[0]);
-
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
-
-            return complete(frame, iPC, hValue);
+            return isDeferred(hValue)
+                    ? hValue.proceed(frame, frameCaller ->
+                        complete(frame, iPC, frameCaller.popStack()))
+                    : complete(frame, iPC, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

@@ -14,7 +14,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xRef;
 
@@ -77,15 +76,12 @@ public class xInjectedRef
 
             if (Op.isDeferred(hValue))
                 {
-                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
-                Frame.Continuation stepNext = frameCaller ->
+                return hValue.proceed(frame, frameCaller ->
                     {
-                    ObjectHandle hVal = ahValue[0];
+                    ObjectHandle hVal = frameCaller.popStack();
                     hInjected.setReferent(hVal);
                     return frameCaller.assignValue(iReturn, hVal);
-                    };
-
-                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                    });
                 }
 
             hInjected.setReferent(hValue);

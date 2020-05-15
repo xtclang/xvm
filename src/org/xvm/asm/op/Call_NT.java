@@ -139,15 +139,10 @@ public class Call_NT
 
             ObjectHandle hFunction = frame.getArgument(m_nFunctionId);
 
-            if (isDeferred(hFunction))
-                {
-                ObjectHandle[] ahFn = new ObjectHandle[] {hFunction};
-                Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, (FunctionHandle) ahFn[0]);
-
-                return new Utils.GetArguments(ahFn, stepNext).doNext(frame);
-                }
-            return complete(frame, (FunctionHandle) hFunction);
+            return isDeferred(hFunction)
+                    ? hFunction.proceed(frame, frameCaller ->
+                        complete(frameCaller, (FunctionHandle) frameCaller.popStack()))
+                    : complete(frame, (FunctionHandle) hFunction);
             }
         catch (ExceptionHandle.WrapperException e)
             {

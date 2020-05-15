@@ -17,7 +17,6 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -89,40 +88,42 @@ public class NewG_1
     @Override
     public int process(Frame frame, int iPC)
         {
+        MethodStructure constructor = getMethodStructure(frame);
+        if (constructor == null)
+            {
+            return R_EXCEPTION;
+            }
+
         try
             {
-            MethodStructure constructor = getMethodStructure(frame);
-            if (constructor == null)
-                {
-                return R_EXCEPTION;
-                }
+            ObjectHandle hArg = frame.getArgument(m_nArgValue);
 
-            ObjectHandle[] ahVar = frame.getArguments(
-                                        new int[]{m_nArgValue}, constructor.getMaxVars());
-
-            ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
-            ClassTemplate    template  = clzTarget.getTemplate();
-            ObjectHandle     hParent   = clzTarget.isInstanceChild() ? frame.getThis() : null;
-
-            if (frame.isNextRegister(m_nRetValue))
-                {
-                frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
-                }
-
-            if (isDeferred(ahVar[0]))
-                {
-                Frame.Continuation stepNext = frameCaller ->
-                    template.construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
-
-                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
-                }
-
-            return template.construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
+            return isDeferred(hArg)
+                    ? hArg.proceed(frame, frameCaller ->
+                        complete(frame, constructor, frameCaller.popStack()))
+                    : complete(frame, constructor, hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
+        }
+
+    private int complete(Frame frame, MethodStructure constructor, ObjectHandle hArg)
+        {
+        ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
+        ClassTemplate    template  = clzTarget.getTemplate();
+        ObjectHandle     hParent   = clzTarget.isInstanceChild() ? frame.getThis() : null;
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
+        ahVar[0] = hArg;
+
+        return template.construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
         }
 
     @Override

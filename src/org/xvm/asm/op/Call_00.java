@@ -86,18 +86,14 @@ public class Call_00
 
         try
             {
-            FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
+            ObjectHandle hFunction = frame.getArgument(m_nFunctionId);
 
-            if (isDeferred(hFunction))
-                {
-                FunctionHandle[] ahArg = new FunctionHandle[] {hFunction};
-                Frame.Continuation stepNext = frameCaller ->
-                    ahArg[0].call1(frame, null, Utils.OBJECTS_NONE, A_IGNORE);
-
-                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                }
-
-            return hFunction.call1(frame, null, Utils.OBJECTS_NONE, A_IGNORE);
+            return isDeferred(hFunction)
+                    ? hFunction.proceed(frame, frameCaller ->
+                        ((FunctionHandle) frameCaller.popStack()).
+                            call1(frameCaller, null, Utils.OBJECTS_NONE, A_IGNORE))
+                    : ((FunctionHandle) hFunction).
+                        call1(frame, null, Utils.OBJECTS_NONE, A_IGNORE);
             }
         catch (ExceptionHandle.WrapperException e)
             {
