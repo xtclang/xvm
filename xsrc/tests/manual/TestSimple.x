@@ -4,34 +4,25 @@ module TestSimple
 
     void run( )
         {
-        console.println(new Argument<Int>(21).check());
-        console.println(new Argument<Int>(21).check(True));
-        console.println(new Argument<Boolean>(True).check());
-        console.println(new Argument<String>("hello").check());
+        assert test(C);
         }
 
-    const Argument<Referent extends immutable Const>(Referent value)
+    Boolean test(Group g)
         {
-        Int check(Boolean flag=False)
+        switch (g)
             {
-            switch (Referent, flag)
-                {
-                case (Boolean, _):
-                    return value | flag ? 1 : -1;
+            case A:
+                return False;
 
-                case (Int, True):
-                    return -value.toInt();
+            case D..B:
+                return True;
 
-                case (IntNumber, _):
-                    return value.toInt();
-
-                case (String, _):
-                    return value.size;
-
-                default:
-                    break;
-                }
-            return 0;
+            case F:
+                return False;
             }
+
+        TODO
         }
+
+    enum Group {A, B, C, D, E, F}
     }

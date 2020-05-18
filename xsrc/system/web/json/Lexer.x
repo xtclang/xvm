@@ -169,8 +169,7 @@ class Lexer
                  + start.lineOffset.estimateStringLength()
                  + switch(id)
                     {
-                    // TODO GG: case NoVal..FPVal: value.estimateStringLength();
-                    case NoVal, BoolVal, IntVal, FPVal: value.estimateStringLength();
+                    case NoVal..FPVal: value.estimateStringLength();
                     case StrVal:       value.estimateStringLength() + 2;
                     default:           3;
                     };
@@ -186,8 +185,7 @@ class Lexer
             "): ".appendTo(appender);
             switch(id)
                 {
-                // TODO GG: case NoVal..FPVal:
-                case NoVal, BoolVal, IntVal, FPVal:
+                case NoVal..FPVal:
                     value.appendTo(appender);
                     break;
                 case StrVal:

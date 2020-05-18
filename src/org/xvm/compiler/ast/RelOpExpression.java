@@ -452,6 +452,13 @@ public class RelOpExpression
             }
 
         TypeConstant type2Req = selectRightType(ctx, typeRequired, type1Act);
+        if (type2Req == null && type1Req != null)
+            {
+            // it's possible we narrowed the first type too aggressively; try to use the wider one
+            type1Act = type1Req;
+            type2Req = selectRightType(ctx, typeRequired, type1Act);
+            }
+
         Expression   expr2New = expr2.validate(ctx, type2Req, errs);
         TypeConstant type2Act = null;
         if (expr2New == null)

@@ -7,8 +7,12 @@ import java.io.IOException;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
+import org.xvm.compiler.Token;
 
 import org.xvm.runtime.ObjectHandle;
 
@@ -167,6 +171,26 @@ public class SingletonConstant
                 ? this
                 : (SingletonConstant) getConstantPool().register(
                         new SingletonConstant(getConstantPool(), m_fmt, constNew));
+        }
+
+    @Override
+    public Constant apply(Token.Id op, Constant that)
+        {
+        if (op.equals(Token.Id.DOTDOT) && that instanceof SingletonConstant)
+            {
+            IdentityConstant idThis     = this.getValue();
+            IdentityConstant idThat     = ((SingletonConstant) that).getValue();
+            ClassStructure   structThis = (ClassStructure) idThis.getComponent();
+            ClassStructure   structThat = (ClassStructure) idThat.getComponent();
+
+            if (structThis.getFormat() == Component.Format.ENUMVALUE &&
+                structThat.getFormat() == Component.Format.ENUMVALUE)
+                {
+                return getConstantPool().ensureRangeConstant(this, that);
+                }
+            }
+
+        return super.apply(op, that);
         }
 
     @Override
