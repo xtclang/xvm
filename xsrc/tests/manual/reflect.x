@@ -530,18 +530,18 @@ module TestReflection
 
         String[] names =
                 [
-                "String",                   // should use "implicit.x" to find it
-                "ecstasy.String",           // should find it via package import
-                "ecstasy.ecstasy.String",   // should find it via package import (x2)
-                "Map<String, Int>",         // type parameters (and implicit.x)
-                "",                         // == test module
-                "Point",                    // in test module
-                "bob",                      // shouldn't find it
-                "Point.Bob",                // shouldn't find it
-                "TestReflection:Point",     // with explicit module name
+                "String",                      // should use "implicit.x" to find it
+                "ecstasy.text.String",         // should find it via package import
+                "ecstasy.ecstasy.text.String", // should find it via package import (x2)
+                "Map<String, Int>",            // type parameters (and implicit.x)
+                "",                            // == test module
+                "Point",                       // in test module
+                "bob",                         // shouldn't find it
+                "Point.Bob",                   // shouldn't find it
+                "TestReflection:Point",        // with explicit module name
                 "Ecstasy:collections.HashMap",
                 "Ecstasy.xtclang.org:collections.HashMap",
-                "TestReflection:",          // just explicit module name
+                "TestReflection:",             // just explicit module name
                 "Ecstasy:",
                 "Ecstasy.xtclang.org:",
                  "@Unchecked Int",
