@@ -302,7 +302,7 @@ public class RangeConstant
         Constant constNew2 = constOld2.resolveTypedefs();
         return constNew1 == constOld1 && constNew2 == constOld2
                 ? this
-                : getConstantPool().ensureIntervalConstant(constNew1, constNew2);
+                : getConstantPool().ensureRangeConstant(constNew1, constNew2);
         }
 
     @Override

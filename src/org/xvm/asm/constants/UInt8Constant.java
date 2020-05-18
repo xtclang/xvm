@@ -202,9 +202,9 @@ public class UInt8Constant
             case "UInt8^UInt8":
                 return validate(this.m_nVal ^ ((UInt8Constant) that).m_nVal);
             case "UInt8..UInt8":
-                return ConstantPool.getCurrentPool().ensureIntervalConstant(this, that);
+                return ConstantPool.getCurrentPool().ensureRangeConstant(this, that);
             case "UInt8..<UInt8":
-                return ConstantPool.getCurrentPool().ensureIntervalConstant(this, false, that, true);
+                return ConstantPool.getCurrentPool().ensureRangeConstant(this, false, that, true);
 
 
             case "UInt8<<Int64":

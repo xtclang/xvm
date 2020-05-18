@@ -1243,7 +1243,7 @@ public class ArrayAccessExpression
                 Constant constHi = fromLiteral(exprInterval.getExpression2());
                 if (constLo != null && constHi != null)
                     {
-                    return pool().ensureIntervalConstant(constLo, constHi);   // TODO CP
+                    return pool().ensureRangeConstant(constLo, constHi);   // TODO CP
                     }
                 }
             }

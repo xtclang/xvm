@@ -130,7 +130,7 @@ public class StringConstant
                 return getConstantPool().valOrd(this.m_sVal.compareTo(((StringConstant) that).m_sVal));
 
             case "..String":
-                return getConstantPool().ensureIntervalConstant(this, that);
+                return getConstantPool().ensureRangeConstant(this, that);
 
             default:
                 return super.apply(op, that);

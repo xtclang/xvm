@@ -46,7 +46,6 @@ import org.xvm.type.Decimal;
 import org.xvm.util.Auto;
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
-import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
@@ -723,9 +722,9 @@ public class ConstantPool
      *
      * @return the RangeConstant representing the range or interval
      */
-    public RangeConstant ensureIntervalConstant(Constant const1, Constant const2)
+    public RangeConstant ensureRangeConstant(Constant const1, Constant const2)
         {
-        return ensureIntervalConstant(const1, false, const2, false);
+        return ensureRangeConstant(const1, false, const2, false);
         }
 
     /**
@@ -738,9 +737,11 @@ public class ConstantPool
      *
      * @return the RangeConstant representing the range or interval
      */
-    public RangeConstant ensureIntervalConstant(Constant const1, boolean fExclude1, Constant const2, boolean fExclude2)
+    public RangeConstant ensureRangeConstant(Constant const1, boolean fExclude1,
+                                             Constant const2, boolean fExclude2)
         {
-        // TODO validations
+        assert const1.getFormat() == const2.getFormat();
+
         return new RangeConstant(this, const1, fExclude1, const2,  fExclude2);
         }
 

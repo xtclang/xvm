@@ -738,7 +738,7 @@ public class IntConstant
             case "UInt64..UInt64":
             case "UInt128..UInt128":
             case "VarUInt..VarUInt":
-                return ConstantPool.getCurrentPool().ensureIntervalConstant(this, that);
+                return ConstantPool.getCurrentPool().ensureRangeConstant(this, that);
 
             case "Int16..>Int16":
             case "Int32..>Int32":
@@ -750,7 +750,7 @@ public class IntConstant
             case "UInt64..>UInt64":
             case "UInt128..>UInt128":
             case "VarUInt..>VarUInt":
-                return ConstantPool.getCurrentPool().ensureIntervalConstant(this, false, that, true);
+                return ConstantPool.getCurrentPool().ensureRangeConstant(this, false, that, true);
 
             case "Int16<<Int64":
             case "Int32<<Int64":

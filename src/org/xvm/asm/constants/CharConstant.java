@@ -181,7 +181,7 @@ public class CharConstant
                 return getConstantPool().valOrd(this.m_chVal - ((CharConstant) that).m_chVal);
 
             case "..Char":
-                return getConstantPool().ensureIntervalConstant(this, that);
+                return getConstantPool().ensureRangeConstant(this, that);
             }
 
         return super.apply(op, that);
