@@ -165,7 +165,7 @@ public class SwitchStatement
                     fInCase = false;
 
                     assert ctxBlock == null;
-                    ctxBlock = ctx.enter();
+                    ctxBlock = m_casemgr.enterBlock(ctx, fValid);
 
                     // associate any previous "fall through" with this pseudo statement block
                     if (m_labelContinue != null)

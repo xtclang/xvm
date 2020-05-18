@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -27,6 +28,8 @@ import org.xvm.asm.op.JumpVal_N;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
+
+import org.xvm.compiler.ast.Context.Branch;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.ListSet;
@@ -334,9 +337,43 @@ public class CaseManager<CookieType>
 
             m_cCondVals = listTypes.size();
             m_atypeCond = listTypes.toArray(TypeConstant.NO_TYPES);
-            if (fValid && fAllConst)
+            if (fValid)
                 {
-                m_aconstCond = listConsts.toArray(Constant.NO_CONSTS);
+                if (fAllConst)
+                    {
+                    m_aconstCond = listConsts.toArray(Constant.NO_CONSTS);
+                    }
+                else
+                    {
+                    // check if any of the conditions are Type based, in which case we can do the
+                    // type inference during validation
+                    List<Integer> listTypeExprIx = null;
+                    for (int i = 0; i < m_cCondVals; i++)
+                        {
+                        if (m_atypeCond[i].isTypeOfType())
+                            {
+                            AstNode nodeCond = listCond.get(i);
+                            if (nodeCond instanceof NameExpression)
+                                {
+                                if (listTypeExprIx == null)
+                                    {
+                                    listTypeExprIx = new ArrayList<>();
+                                    }
+                                listTypeExprIx.add(i);
+                                }
+                            }
+                        }
+                    if (listTypeExprIx != null)
+                        {
+                        // collect indexes of type expressions in the condition list
+                        m_anTypeExpr = new int[listTypeExprIx.size()];
+                        Iterator<Integer> iter = listTypeExprIx.iterator();
+                        for (int i = 0; iter.hasNext(); i++)
+                            {
+                            m_anTypeExpr[i] = iter.next();
+                            }
+                        }
+                    }
                 }
             }
 
@@ -558,6 +595,50 @@ public class CaseManager<CookieType>
         ctx = ctx.exit();
 
         return fValid;
+        }
+
+    /**
+     * Create a nested context used to validate the content of the "case" block.
+     *
+     * @param ctx     the parent context
+     * @param fValid  false if the validation has already failed at some point
+     *
+     * @return the nested context
+     */
+    protected Context enterBlock(Context ctx, boolean fValid)
+        {
+        ctx = ctx.enter();
+
+        if (fValid && m_anTypeExpr != null)
+            {
+            Constant constCase = m_listsetCase.last();
+            if (m_cCondVals == 1)
+                {
+                if (constCase instanceof TypeConstant)
+                    {
+                    NameExpression exprType = (NameExpression) m_listCond.get(0);
+                    TypeConstant   typeCase = (TypeConstant) constCase;
+                    assert typeCase.isTypeOfType();
+
+                    exprType.narrowType(ctx, Branch.Always, typeCase);
+                    }
+                }
+            else if (constCase instanceof ArrayConstant)
+                {
+                Constant[] aConstCase = ((ArrayConstant) constCase).getValue();
+                for (int i = 0, c = m_anTypeExpr.length; i < c; i++)
+                    {
+                    int ix = m_anTypeExpr[i];
+
+                    NameExpression exprType = (NameExpression) m_listCond.get(ix);
+                    TypeConstant   typeCase = (TypeConstant) aConstCase[ix];
+                    assert typeCase.isTypeOfType();
+
+                    exprType.narrowType(ctx, Branch.Always, typeCase);
+                    }
+                }
+            }
+        return ctx;
         }
 
     private void incorporateInt(PackedInteger pint)
@@ -1126,6 +1207,12 @@ public class CaseManager<CookieType>
      * The type of the condition.
      */
     private TypeConstant m_typeCase;
+
+    /**
+     * If the switch contains any Type conditions, this array holds the indexes of corresponding
+     * expressions.
+     */
+    private int[] m_anTypeExpr;
 
     /**
      * The label of the currently active case group.

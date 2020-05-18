@@ -11,14 +11,12 @@ const Argument<Referent extends immutable Const>(Referent value, String? name = 
         {
         switch (Referent)
             {
-            case Type<Char>:
-                assert value.is(Char);                      // TODO GG can we remove this line?
+            case Char:
                 Int n = 1;
                 n := value.as(Char).isEscaped();
                 return 2 + n;
 
-            case Type<String>:
-                assert value.is(String);                    // TODO GG can we remove this line?
+            case String:
                 Int n = value.size;
                 n := value.isEscaped();
                 return 2 + n;
@@ -34,14 +32,12 @@ const Argument<Referent extends immutable Const>(Referent value, String? name = 
         switch (Referent)
             {
             case Char:
-                assert value.is(Char);                      // TODO GG can we remove this line?
                 appender.add('\'');
-                value.as(Char).appendEscaped(appender);     // TODO GG remove .as(Char)
+                value.appendEscaped(appender);
                 appender.add('\'');
                 break;
 
             case String:
-                assert value.is(String);                    // TODO GG can we remove this line?
                 appender.add('\"');
                 value.appendEscaped(appender);
                 appender.add('\"');

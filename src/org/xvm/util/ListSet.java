@@ -88,6 +88,39 @@ public class ListSet<E>
         }
 
 
+    // ----- ListSet methods -----------------------------------------------------------------------
+
+    /**
+     * @return the first item
+     */
+    public E first()
+        {
+        if (isEmpty())
+            {
+            throw new IllegalStateException();
+            }
+
+        Object[] aElem = m_aElem;
+        int      nMask = aElem.length - 1;
+        return toExternal(aElem[m_iTail % nMask]);
+        }
+
+    /**
+     * @return the last added item
+     */
+    public E last()
+        {
+        if (isEmpty())
+            {
+            throw new IllegalStateException();
+            }
+
+        Object[] aElem = m_aElem;
+        int      nMask = aElem.length - 1;
+        return toExternal(aElem[(m_iHead - 1) % nMask]);
+        }
+
+
     // ----- Set interface -------------------------------------------------------------------------
 
     @Override
