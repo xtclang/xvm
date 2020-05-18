@@ -4,12 +4,14 @@ module TestSimple
 
     void run()
         {
-        Map<String, Int> m = Map:["answer"=answer];
-        console.println(m);
+        TestService svc = new TestService();
+        svc.i++;
+        Int j = svc.&i.exchange(2);
+        console.println(j);
         }
 
-    @Lazy Int answer.calc()
+    service TestService
         {
-        return 42;
+        @Atomic Int i = 1;
         }
     }

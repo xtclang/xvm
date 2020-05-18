@@ -20,7 +20,7 @@ import org.xvm.runtime.template.numbers.xInt64;
 
 
 /**
- * TODO:
+ * Native implementation for AtomicIntNumber.
  */
 public class xAtomicIntNumber
         extends xAtomicVar
@@ -40,7 +40,7 @@ public class xAtomicIntNumber
     @Override
     public void initNative()
         {
-        // TODO: do we need to mark the VarOps as native?
+        // TODO: mark the VarOps as native ("increment", "preIncrement", etc.)
         // TODO: how to implement checked/unchecked optimally?
         }
 
@@ -54,26 +54,41 @@ public class xAtomicIntNumber
         }
 
     @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "exchange":
+                {
+                AtomicIntVarHandle hThis = (AtomicIntVarHandle) hTarget;
+
+                long lNew = ((JavaLong) hArg).getValue();
+                long lOld = hThis.m_atomicValue.getAndSet(lNew);
+
+                return frame.assignValue(iReturn, xInt64.makeHandle(lOld));
+                }
+            }
+
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        switch (ahArg.length)
+        switch (method.getName())
             {
-            case 2:
-                switch (method.getName())
-                    {
-                    case "replace":
-                        {
-                        AtomicIntVarHandle hThis = (AtomicIntVarHandle) hTarget;
+            case "replace":
+                {
+                AtomicIntVarHandle hThis = (AtomicIntVarHandle) hTarget;
 
-                        long lExpect = ((JavaLong) ahArg[0]).getValue();
-                        long lNew = ((JavaLong) ahArg[1]).getValue();
-                        AtomicLong atomic = hThis.m_atomicValue;
+                long lExpect = ((JavaLong) ahArg[0]).getValue();
+                long lNew    = ((JavaLong) ahArg[1]).getValue();
 
-                        return frame.assignValue(iReturn, xBoolean.makeHandle(
-                            atomic.compareAndSet(lExpect, lNew)));
-                        }
-                    }
+                return frame.assignValue(iReturn, xBoolean.makeHandle(
+                    hThis.m_atomicValue.compareAndSet(lExpect, lNew)));
+                }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -83,31 +98,28 @@ public class xAtomicIntNumber
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn)
         {
-        switch (ahArg.length)
+        switch (method.getName())
             {
-            case 2:
-                switch (method.getName())
+            case "replaceFailed":
+                {
+                AtomicIntVarHandle hThis  = (AtomicIntVarHandle) hTarget;
+                AtomicLong         atomic = hThis.m_atomicValue;
+
+                long lExpect = ((JavaLong) ahArg[0]).getValue();
+                long lNew    = ((JavaLong) ahArg[1]).getValue();
+
+                long lOld;
+                while ((lOld = atomic.get()) == lExpect)
                     {
-                    case "replaceFailed":
+                    if (atomic.compareAndSet(lExpect, lNew))
                         {
-                        AtomicIntVarHandle hThis = (AtomicIntVarHandle) hTarget;
-
-                        long lExpect = ((JavaLong) ahArg[0]).getValue();
-                        long lNew = ((JavaLong) ahArg[1]).getValue();
-                        AtomicLong atomic = hThis.m_atomicValue;
-
-                        long lOld;
-                        while ((lOld = atomic.get()) == lExpect)
-                            {
-                            if (atomic.compareAndSet(lExpect, lNew))
-                                {
-                                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-                                }
-                            }
-                        return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(lOld));
+                        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                         }
                     }
+                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(lOld));
+                }
             }
+
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 

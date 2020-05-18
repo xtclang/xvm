@@ -61,13 +61,48 @@
  */
 mixin AtomicVar<Referent>
         into Var<Referent>
-        incorporates conditional AtomicIntNumber<Referent extends IntNumber>  // see TODO
+        incorporates conditional AtomicIntNumber<Referent extends IntNumber>
     {
+    /**
+     * Atomically replace the referent for this variable reference.
+     *
+     * @param newValue  the value to set the referent to
+     *
+     * @return the old referent value
+     */
+    Referent exchange(Referent newValue)
+        {
+        Referent curValue = get();
+        set(newValue);
+        return curValue;
+        }
+
+    /**
+     * Atomically replace the referent for this variable reference to the specified value
+     * if and only if the current value matches the specified one.
+     *
+     * @param newValue  the value to set the referent to
+     * @param oldValue  the value the referent is expected to be equal to
+     *
+     * @return true if the value has been successfully changed, false if the current value
+     *         didn't match the `oldValue`
+     */
     Boolean replace(Referent oldValue, Referent newValue)
         {
         return !replaceFailed(oldValue, newValue);
         }
 
+    /**
+     * Atomically replace the referent for this variable reference to the specified value
+     * if and only if the current value matches the specified one.
+     *
+     * @param newValue  the value to set the referent to
+     * @param oldValue  the value the referent is expected to be equal to
+     *
+     * @return True iff the operation failed due to the fact that the current value didn't match
+     *         the specified `oldValue`
+     * @return (optional) the current value
+     */
     conditional Referent replaceFailed(Referent oldValue, Referent newValue)
         {
         Referent curValue = get();

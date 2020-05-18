@@ -21,7 +21,7 @@ import org.xvm.runtime.template.xVar;
 
 
 /**
- * TODO:
+ * Native implementation of AtomicVar.
  */
 public class xAtomicVar
         extends xVar
@@ -41,6 +41,7 @@ public class xAtomicVar
     @Override
     public void initNative()
         {
+        markNativeMethod("exchange", new String[]{"Referent"}, new String[]{"Referent"});
         markNativeMethod("replace", new String[]{"Referent", "Referent"}, BOOLEAN);
         markNativeMethod("replaceFailed", new String[]{"Referent", "Referent"}, new String[] {"Boolean", "Referent"});
 
@@ -57,51 +58,64 @@ public class xAtomicVar
         }
 
     @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "exchange":
+                {
+                AtomicHandle hThis = (AtomicHandle) hTarget;
+
+                return frame.assignValue(iReturn, hThis.f_atomic.getAndSet(hArg));
+                }
+            }
+
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        switch (ahArg.length)
+        switch (method.getName())
             {
-            case 2:
-                switch (method.getName())
+            case "replace":
+                {
+                AtomicHandle hThis = (AtomicHandle) hTarget;
+
+                ObjectHandle hExpect = ahArg[0];
+                ObjectHandle hNew = ahArg[1];
+                AtomicReference<ObjectHandle> atomic = hThis.f_atomic;
+
+                // conceptually, the logic looks like:
+                //
+                //    if (atomic.compareAndSet(hExpect, hNew))
+                //       {
+                //       return true;
+                //       }
+                //    TypeConstant type = hThis.f_clazz.getActualType("Referent");
+                //
+                //    ObjectHandle hCurrent;
+                //    while (type.callEquals(hCurrent = atomic.get(), hExpect))
+                //       {
+                //       if (atomic.compareAndSet(hCurrent, hNew))
+                //           {
+                //           return true;
+                //           }
+                //       nExpect = hCurrent;
+                //       }
+                //    return false;
+
+                if (atomic.compareAndSet(hExpect, hNew))
                     {
-                    case "replace":
-                        {
-                        AtomicHandle hThis = (AtomicHandle) hTarget;
-
-                        ObjectHandle hExpect = ahArg[0];
-                        ObjectHandle hNew = ahArg[1];
-                        AtomicReference<ObjectHandle> atomic = hThis.f_atomic;
-
-                        // conceptually, the logic looks like:
-                        //
-                        //    if (atomic.compareAndSet(hExpect, hNew))
-                        //       {
-                        //       return true;
-                        //       }
-                        //    TypeConstant type = hThis.f_clazz.getActualType("Referent");
-                        //
-                        //    ObjectHandle hCurrent;
-                        //    while (type.callEquals(hCurrent = atomic.get(), hExpect))
-                        //       {
-                        //       if (atomic.compareAndSet(hCurrent, hNew))
-                        //           {
-                        //           return true;
-                        //           }
-                        //       nExpect = hCurrent;
-                        //       }
-                        //    return false;
-
-                        if (atomic.compareAndSet(hExpect, hNew))
-                            {
-                            return frame.assignValue(iReturn, xBoolean.TRUE);
-                            }
-
-                        TypeConstant type = hThis.getType().resolveGenericType("Referent");
-
-                        return new Replace(type, atomic, hExpect, hNew, iReturn).doNext(frame);
-                        }
+                    return frame.assignValue(iReturn, xBoolean.TRUE);
                     }
+
+                TypeConstant type = hThis.getType().resolveGenericType("Referent");
+
+                return new Replace(type, atomic, hExpect, hNew, iReturn).doNext(frame);
+                }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -111,48 +125,45 @@ public class xAtomicVar
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn)
         {
-        switch (ahArg.length)
+        switch (method.getName())
             {
-            case 2:
-                switch (method.getName())
+            case "replaceFailed":
+                {
+                AtomicHandle hThis   = (AtomicHandle) hTarget;
+                ObjectHandle hExpect = ahArg[0];
+                ObjectHandle hNew    = ahArg[1];
+                AtomicReference<ObjectHandle> atomic = hThis.f_atomic;
+
+                // conceptually, the logic looks like:
+                //
+                //    if (atomic.compareAndSet(hExpect, hNew))
+                //       {
+                //       return false;
+                //       }
+                //    TypeConstant type = hThis.f_clazz.getActualType("Referent");
+                //
+                //    ObjectHandle hCurrent;
+                //    while (type.callEquals(hCurrent = atomic.get(), hExpect))
+                //       {
+                //       if (atomic.compareAndSet(hCurrent, hNew))
+                //           {
+                //           return false;
+                //           }
+                //       nExpect = hCurrent;
+                //       }
+                //    return true, hExpect;
+
+                if (atomic.compareAndSet(hExpect, hNew))
                     {
-                    case "replaceFailed":
-                        {
-                        AtomicHandle hThis = (AtomicHandle) hTarget;
-                        ObjectHandle hExpect = ahArg[0];
-                        ObjectHandle hNew = ahArg[1];
-                        AtomicReference<ObjectHandle> atomic = hThis.f_atomic;
-
-                        // conceptually, the logic looks like:
-                        //
-                        //    if (atomic.compareAndSet(hExpect, hNew))
-                        //       {
-                        //       return false;
-                        //       }
-                        //    TypeConstant type = hThis.f_clazz.getActualType("Referent");
-                        //
-                        //    ObjectHandle hCurrent;
-                        //    while (type.callEquals(hCurrent = atomic.get(), hExpect))
-                        //       {
-                        //       if (atomic.compareAndSet(hCurrent, hNew))
-                        //           {
-                        //           return false;
-                        //           }
-                        //       nExpect = hCurrent;
-                        //       }
-                        //    return true, hExpect;
-
-                        if (atomic.compareAndSet(hExpect, hNew))
-                            {
-                            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-                            }
-
-                        TypeConstant type = hThis.getType().resolveGenericType("Referent");
-
-                        return new ReplaceFailed(type, atomic, hExpect, hNew, aiReturn).doNext(frame);
-                        }
+                    return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                     }
+
+                TypeConstant type = hThis.getType().resolveGenericType("Referent");
+
+                return new ReplaceFailed(type, atomic, hExpect, hNew, aiReturn).doNext(frame);
+                }
             }
+
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
@@ -181,7 +192,7 @@ public class xAtomicVar
         }
 
 
-    // ----- handle class -----
+    // ----- ObjectHandle --------------------------------------------------------------------------
 
     public static class AtomicHandle
             extends RefHandle
@@ -219,7 +230,7 @@ public class xAtomicVar
             implements Frame.Continuation
         {
         private final TypeConstant type;
-        private final AtomicReference<ObjectHandle> atomic;
+        private final        AtomicReference<ObjectHandle> atomic;
         private ObjectHandle hExpect;
         private final ObjectHandle hNew;
         private final int iReturn;
@@ -227,10 +238,10 @@ public class xAtomicVar
         public Replace(TypeConstant type, AtomicReference<ObjectHandle> atomic,
                        ObjectHandle hExpect, ObjectHandle hNew, int iReturn)
             {
-            this.type = type;
-            this.atomic = atomic;
+            this.type    = type;
+            this.atomic  = atomic;
             this.hExpect = hExpect;
-            this.hNew = hNew;
+            this.hNew    = hNew;
             this.iReturn = iReturn;
             }
 
@@ -292,19 +303,19 @@ public class xAtomicVar
     protected static class ReplaceFailed
             implements Frame.Continuation
         {
-        private final TypeConstant type;
+        private final TypeConstant                  type;
         private final AtomicReference<ObjectHandle> atomic;
-        private ObjectHandle hExpect;
-        private final ObjectHandle hNew;
-        private final int[] aiReturn;
+        private       ObjectHandle                  hExpect;
+        private final ObjectHandle                  hNew;
+        private final int[]                         aiReturn;
 
         public ReplaceFailed(TypeConstant type, AtomicReference<ObjectHandle> atomic,
                              ObjectHandle hExpect, ObjectHandle hNew, int[] aiReturn)
             {
-            this.type = type;
-            this.atomic = atomic;
-            this.hExpect = hExpect;
-            this.hNew = hNew;
+            this.type     = type;
+            this.atomic   = atomic;
+            this.hExpect  = hExpect;
+            this.hNew     = hNew;
             this.aiReturn = aiReturn;
             }
 
