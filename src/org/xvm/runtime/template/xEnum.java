@@ -107,7 +107,7 @@ public class xEnum
 
                 xEnum templateEnum = (xEnum) getSuper();
 
-                hValue = templateEnum.getEnumByConstant(constValue.getValue());
+                hValue = templateEnum.getEnumByConstant(constValue.getClassConstant());
                 constValue.setHandle(hValue);
 
                 if (hValue.isStruct())

@@ -657,7 +657,7 @@ public abstract class Utils
                 return frame.raiseException("Circular initialization");
                 }
 
-            IdentityConstant constValue = constSingleton.getValue();
+            IdentityConstant constValue = constSingleton.getClassConstant();
             int              iResult;
 
             switch (constValue.getFormat())

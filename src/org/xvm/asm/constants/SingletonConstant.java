@@ -7,12 +7,9 @@ import java.io.IOException;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.compiler.Token;
 
 import org.xvm.runtime.ObjectHandle;
 
@@ -21,7 +18,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent a singleton instance of a const class (such as an enum value) as a constant value.
+ * Represent a singleton instance of a const class as a constant value.
  */
 public class SingletonConstant
         extends ValueConstant
@@ -32,16 +29,22 @@ public class SingletonConstant
      * Construct a constant whose value is a literal.
      *
      * @param pool        the ConstantPool that will contain this Constant
-     * @param format
+     * @param format      the format
      * @param constClass  the class constant for the singleton value
      */
     public SingletonConstant(ConstantPool pool, Format format, IdentityConstant constClass)
         {
         super(pool);
 
-        if (format != Format.SingletonConst && format != Format.SingletonService)
+        switch (format)
             {
-            throw new IllegalArgumentException("format must be SingletonConst or SingletonService");
+            case SingletonConst:
+            case EnumValueConst:
+            case SingletonService:
+                break;
+
+            default:
+                throw new IllegalArgumentException("invalid format " + format);
             }
 
         if (constClass == null)
@@ -87,11 +90,19 @@ public class SingletonConstant
         }
 
     /**
+     * @return  the class constant for the singleton value
+     */
+    public IdentityConstant getClassConstant()
+        {
+        return m_constClass;
+        }
+
+    /**
      * {@inheritDoc}
      * @return  the class constant for the singleton value
      */
     @Override
-    public IdentityConstant getValue()
+    public Constant getValue()
         {
         return m_constClass;
         }
@@ -174,29 +185,9 @@ public class SingletonConstant
         }
 
     @Override
-    public Constant apply(Token.Id op, Constant that)
-        {
-        if (op.equals(Token.Id.DOTDOT) && that instanceof SingletonConstant)
-            {
-            IdentityConstant idThis     = this.getValue();
-            IdentityConstant idThat     = ((SingletonConstant) that).getValue();
-            ClassStructure   structThis = (ClassStructure) idThis.getComponent();
-            ClassStructure   structThat = (ClassStructure) idThat.getComponent();
-
-            if (structThis.getFormat() == Component.Format.ENUMVALUE &&
-                structThat.getFormat() == Component.Format.ENUMVALUE)
-                {
-                return getConstantPool().ensureRangeConstant(this, that);
-                }
-            }
-
-        return super.apply(op, that);
-        }
-
-    @Override
     public Object getLocator()
         {
-        return getValue();
+        return getClassConstant();
         }
 
     @Override
@@ -206,7 +197,7 @@ public class SingletonConstant
             {
             return -1;
             }
-        return this.getValue().compareTo(((SingletonConstant) that).getValue());
+        return this.m_constClass.compareTo(((SingletonConstant) that).m_constClass);
         }
 
     @Override

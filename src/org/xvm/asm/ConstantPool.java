@@ -1094,7 +1094,9 @@ public class ConstantPool
      */
     public SingletonConstant ensureSingletonConstConstant(IdentityConstant constClass)
         {
-        return (SingletonConstant) register(new SingletonConstant(this, Format.SingletonConst, constClass));
+        return constClass.getComponent().getFormat() == Component.Format.ENUMVALUE
+                ? (EnumValueConstant) register(new EnumValueConstant(this, (ClassConstant) constClass))
+                : (SingletonConstant) register(new SingletonConstant(this, Format.SingletonConst, constClass));
         }
 
     /**
@@ -2430,6 +2432,10 @@ public class ConstantPool
                 case SingletonConst:
                 case SingletonService:
                     constant = new SingletonConstant(this, format, in);
+                    break;
+
+                case EnumValueConst:
+                    constant = new EnumValueConstant(this, format, in);
                     break;
 
                 case Array:

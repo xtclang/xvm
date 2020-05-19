@@ -5632,10 +5632,6 @@ public abstract class TypeConstant
                         {
                         ++c;
                         }
-                    else
-                        {
-                        break;
-                        }
                     }
                 return c;
             }

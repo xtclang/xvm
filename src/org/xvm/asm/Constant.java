@@ -805,7 +805,8 @@ public abstract class Constant
         DateTime,           // ISO8601 date ['T' time] format
         Duration,           // ISO8601 P[n]Y[n]M[n]DT[n]H[n]M[n]S | P[n]W format
         Version   ("reflect"),
-        SingletonConst,     // identity constant for a Module, Package, an enum value or a static const
+        SingletonConst,     // identity constant for a Module, Package, or a static const
+        EnumValueConst,     // identity constant for an enum value
         SingletonService,   // identity constant of a Service class
         Tuple     ("collections"),
         Array     ("collections"),
