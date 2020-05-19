@@ -807,6 +807,79 @@ public class PackedInteger
         return readLong(in, in.readByte());
         }
 
+    /**
+     * Extract an integer from a byte array, and report back both the integer value and its size in
+     * terms of the number of bytes.
+     *
+     * @param ab  the byte array to unpack an integer from
+     * @param of  the byte offset at which the integer is located
+     *
+     * @return the int value encoded as bits 0..31, and the number of bytes used by the value
+     *         encoded as bits 32..63
+     */
+    public static long unpackInt(byte[] ab, int of)
+        {
+        int n;
+        int cb;
+
+        int b = ab[of];
+        if ((b & 0x01) != 0)
+            {
+            // Tiny format: the first bit of the first byte is used to indicate a single byte
+            // format, in which the entire value is contained in the 7 MSBs
+            n  = b >> 1;
+            cb = 1;
+            }
+        else if ((b & 0x02) != 0)
+            {
+            // the third bit is used to indicate 0: 1 trailing byte, or 1: 2 trailing bytes
+            if ((b & 0x04) == 0)
+                {
+                // Small format: bits 3..7 of the first byte are bits 8..12 of the result, and the
+                // next byte provides bits 0..7 of the result (note: and then also sign-extend)
+                n  = (b & 0xFFFFFFF8) << 5 | ab[of+1] & 0xFF;
+                cb = 2;
+                }
+            else
+                {
+                // Medium format: bits 3..7 of the first byte are bits 16..20 of the result, and the
+                // next byte provides bits 8..15 of the result, and the next byte provides bits 0..7
+                // of the result (note: and then also sign-extend)
+                n  = (b & 0xFFFFFFF8) << 13 | (ab[of+1] & 0xFF) << 8 | ab[of+2] & 0xFF;
+                cb = 3;
+                }
+            }
+        else
+            {
+            // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
+            // first byte are the trailing number of bytes minus 1
+            int cBytes = 1 + ((b & 0xFC) >>> 2);
+            switch (cBytes)
+                {
+                case 1:
+                    n  = ab[of+1];
+                    cb = 2;
+                    break;
+                case 2:
+                    n  = ab[of+1] << 8 | ab[of+2] & 0xFF;
+                    cb = 3;
+                    break;
+                case 3:
+                    n  = ab[of+1] << 16 | (ab[of+2] & 0xFF) << 8 | ab[of+3] & 0xFF;
+                    cb = 4;
+                    break;
+                case 4:
+                    n  = ab[of+1] << 24 | (ab[of+2] & 0xFF) << 16 | (ab[of+3] & 0xFF) << 8 | ab[of+4] & 0xFF;
+                    cb = 5;
+                    break;
+                default:
+                    throw new IllegalStateException("# trailing bytes=" + cBytes);
+                }
+            }
+
+        return ((long) cb) << 32 | n & 0xFFFFFFFFL;
+        }
+
 
     // ----- internal ------------------------------------------------------------------------------
 
