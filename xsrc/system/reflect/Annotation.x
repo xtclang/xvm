@@ -9,10 +9,9 @@ const Annotation(Class mixinClass, Argument[] arguments = [])
     @Override
     Int estimateStringLength()
         {
-     // return 1 + mixinClass.displayName.size + arguments.size == 0 ? 0 : 2 * arguments.size TODO GG
-        return mixinClass.displayName.size + 1 + arguments.size == 0 ? 0 : 2 * arguments.size
-                + arguments.iterator().map(a -> a.estimateStringLength())
-                                      .reduce(0, (n1, n2) -> n1 + n2);
+        return 1 + mixinClass.displayName.size + (arguments.size == 0 ? 0 : 2 * arguments.size)
+                 + arguments.iterator().map(a -> a.estimateStringLength())
+                                       .reduce(0, (n1, n2) -> n1 + n2);
         }
 
     @Override
