@@ -233,7 +233,7 @@ public class CondOpExpression
             {
             LVal.assign(toConstant(), code, errs);
             }
-        else if (LVal.isNormalVariableOrStack() && LVal.getRegister().isNormal())
+        else if (LVal.isNormalVariable())
             {
             switch (combine(expr1.toConstant(), getOperatorString(), expr1.toConstant()))
                 {
