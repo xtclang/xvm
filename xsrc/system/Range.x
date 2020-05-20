@@ -132,7 +132,6 @@ const Range<Element extends Orderable>
             case (Equal  , Lesser ): !lowerExclusive;                    // at lower bound
             case (Equal  , Equal  ): !lowerExclusive && !upperExclusive; // at both bounds
             case (Greater, Equal  ): !upperExclusive;                    // at upper bound
-            default: assert; // TODO GG this should not be needed
             };
         }
 
@@ -150,7 +149,6 @@ const Range<Element extends Orderable>
             case (Equal  , Equal  ): !this.lowerExclusive | that.lowerExclusive
                                   && !this.upperExclusive | that.upperExclusive;// at both bounds
             case (Greater, Equal  ): !this.upperExclusive | that.upperExclusive;// at upper bound
-            default: assert; // TODO GG this should not be needed
             };
         }
 
@@ -176,7 +174,6 @@ const Range<Element extends Orderable>
             case (Equal  , Greater): !this.upperExclusive & !that.lowerExclusive;// at upper bound
             case (Equal  , Equal  ): !this.lowerExclusive & !this.upperExclusive // zero length!
                                    & !that.lowerExclusive & !that.upperExclusive;
-            default: assert; // TODO GG this should not be needed
             };
         }
 
@@ -252,7 +249,6 @@ const Range<Element extends Orderable>
             case (Lesser , Equal  ): !this.lowerExclusive | !that.upperExclusive;// at lower bound
             case (Equal  , Greater): !this.upperExclusive | !that.lowerExclusive;// at upper bound
             case (Equal  , Equal  ): True;                                       // zero length!
-            default: assert; // TODO GG this should not be needed
             };
         }
 

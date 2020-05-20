@@ -2,26 +2,45 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run( )
+    void run(   )
         {
-        assert test(C);
+        assert test1(C);
+        assert test2(C);
+        assert test3(False, C);
         }
 
-    Boolean test(Group g)
+    Boolean test1(Group g)
         {
         switch (g)
             {
             case A:
                 return False;
-
-            case D..B:
+            case B..D:
                 return True;
-
-            case F:
+            case E..F:
                 return False;
             }
+        }
 
-        TODO
+    Boolean test2(Group g)
+        {
+        return switch (g)
+            {
+            case A:    False;
+            case B..D: True;
+            case E..F: False;
+            };
+        }
+
+    Boolean test3(Boolean flag, Group g)
+        {
+        return switch (flag, g)
+            {
+            case (True,  A): False;
+            case (False, A): False;
+            case (_,  B..D): True;
+            case (_,  E..F): False;
+            };
         }
 
     enum Group {A, B, C, D, E, F}

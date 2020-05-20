@@ -226,7 +226,6 @@ mixin Interval<Element extends immutable Sequential>
             case (Lesser , Equal  ): !this.lowerExclusive | !that.upperExclusive;// at lower bound
             case (Equal  , Greater): !this.upperExclusive | !that.lowerExclusive;// at upper bound
             case (Equal  , Equal  ): True;                                       // zero length!
-            default: assert; // TODO GG this should not be needed
             };
         }
     }

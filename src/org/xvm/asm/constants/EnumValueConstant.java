@@ -113,6 +113,10 @@ public class EnumValueConstant
                 case DOTDOT:
                     return pool.ensureRangeConstant(this, that);
 
+                case SUB:
+                    return pool.ensureIntConstant(this.getPresumedOrdinal() -
+                        ((EnumValueConstant) that).getPresumedOrdinal());
+
                 case COMP_EQ:
                     return pool.valOf(this.getPresumedOrdinal() ==
                         ((EnumValueConstant) that).getPresumedOrdinal());

@@ -190,7 +190,8 @@ public class RangeConstant
      */
     public boolean isInterval()
         {
-        return m_const1.getType().isA(getConstantPool().typeSequential());
+        return m_const1 instanceof EnumValueConstant ||
+               m_const1.getType().isA(getConstantPool().typeSequential());
         }
 
     /**
@@ -209,17 +210,20 @@ public class RangeConstant
         Constant constGT = constLo.apply(Id.COMP_GT, constHi);
         if (constGT.equals(constGT.getConstantPool().valTrue()))
             {
-            return 0;
+            return m_fExclude1 || m_fExclude2 ? 0 : 1;
             }
 
+        int nOff = m_fExclude1 ^ m_fExclude2 ?  0 :
+                   m_fExclude1               ? -1 : // both excluded
+                                                1 ; // both included
         long lSize;
         try
             {
-            lSize = constHi.apply(Id.SUB, constLo).getIntValue().getLong() + 1;
+            lSize = constHi.apply(Id.SUB, constLo).getIntValue().getLong() + nOff;
             }
         catch (RuntimeException e)
             {
-            lSize = constHi.getIntValue().sub(constLo.getIntValue()).getLong() + 1;
+            lSize = constHi.getIntValue().sub(constLo.getIntValue()).getLong() + nOff;
             }
 
         return lSize;

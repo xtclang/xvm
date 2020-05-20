@@ -15,6 +15,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.MatchAnyConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -28,9 +29,11 @@ import org.xvm.asm.op.JumpVal_N;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Context.Branch;
 
+import org.xvm.util.BitCube;
 import org.xvm.util.ListMap;
 import org.xvm.util.ListSet;
 import org.xvm.util.PackedInteger;
@@ -128,7 +131,7 @@ public class CaseManager<CookieType>
         }
 
     /**
-     * @return true iff any of the case expressions use a range or interval value match
+     * @return true iff any of the case expressions use a range value match
      */
     public boolean usesNonExactMatching()
         {
@@ -143,15 +146,6 @@ public class CaseManager<CookieType>
     public boolean usesIfLadder()
         {
         return getConditionCount() == 0;
-        }
-
-    /**
-     * @return true iff the JMP_VAL_N op is required, because the condition is multiple, or because
-     *         wildcards or intervals are used
-     */
-    public boolean usesJmpValN()
-        {
-        return getConditionCount() > 1;
         }
 
     /**
@@ -347,7 +341,6 @@ public class CaseManager<CookieType>
                     {
                     // check if any of the conditions are Type based, in which case we can do the
                     // type inference during validation
-                    List<Integer> listTypeExprIx = null;
                     for (int i = 0; i < m_cCondVals; i++)
                         {
                         if (m_atypeCond[i].isTypeOfType())
@@ -355,22 +348,8 @@ public class CaseManager<CookieType>
                             AstNode nodeCond = listCond.get(i);
                             if (nodeCond instanceof NameExpression)
                                 {
-                                if (listTypeExprIx == null)
-                                    {
-                                    listTypeExprIx = new ArrayList<>();
-                                    }
-                                listTypeExprIx.add(i);
+                                m_lTypeExpr |= 1 << i;
                                 }
-                            }
-                        }
-                    if (listTypeExprIx != null)
-                        {
-                        // collect indexes of type expressions in the condition list
-                        m_anTypeExpr = new int[listTypeExprIx.size()];
-                        Iterator<Integer> iter = listTypeExprIx.iterator();
-                        for (int i = 0; iter.hasNext(); i++)
-                            {
-                            m_anTypeExpr[i] = iter.next();
                             }
                         }
                     }
@@ -455,9 +434,9 @@ public class CaseManager<CookieType>
                         }
                     else if (!exprField.testFit(ctx, m_atypeCond[i], null).isFit())
                         {
-                        TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(
+                        TypeConstant typeRange = pool.ensureParameterizedTypeConstant(
                                 pool.typeRange(), m_atypeCond[i]);
-                        if (exprField.testFit(ctx, typeInterval, null).isFit())
+                        if (exprField.testFit(ctx, typeRange, null).isFit())
                             {
                             lRange |= 1 << i;
 
@@ -465,7 +444,7 @@ public class CaseManager<CookieType>
                                 {
                                 atypeAlt = m_atypeCond.clone();
                                 }
-                            atypeAlt[i] = typeInterval;
+                            atypeAlt[i] = typeRange;
                             }
                         }
                     }
@@ -478,12 +457,12 @@ public class CaseManager<CookieType>
                     }
                 else if (!exprCase.testFit(ctx, m_typeCase, null).isFit())
                     {
-                    TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(
+                    TypeConstant typeRange = pool.ensureParameterizedTypeConstant(
                             pool.typeRange(), m_typeCase);
-                    if (exprCase.testFit(ctx, typeInterval, null).isFit())
+                    if (exprCase.testFit(ctx, typeRange, null).isFit())
                         {
                         lRange    = 1;
-                        typeMatch = typeInterval;
+                        typeMatch = typeRange;
                         }
                     }
                 }
@@ -609,7 +588,7 @@ public class CaseManager<CookieType>
         {
         ctx = ctx.enter();
 
-        if (fValid && m_anTypeExpr != null)
+        if (fValid && m_lTypeExpr != 0L)
             {
             Constant constCase = m_listsetCase.last();
             if (m_cCondVals == 1)
@@ -626,15 +605,16 @@ public class CaseManager<CookieType>
             else if (constCase instanceof ArrayConstant)
                 {
                 Constant[] aConstCase = ((ArrayConstant) constCase).getValue();
-                for (int i = 0, c = m_anTypeExpr.length; i < c; i++)
+                for (int i = 0, c = 64 - Long.numberOfLeadingZeros(m_lTypeExpr); i < c; i++)
                     {
-                    int ix = m_anTypeExpr[i];
+                    if ((m_lTypeExpr & (1 << i)) != 0)
+                        {
+                        NameExpression exprType = (NameExpression) m_listCond.get(i);
+                        TypeConstant   typeCase = (TypeConstant) aConstCase[i];
+                        assert typeCase.isTypeOfType();
 
-                    NameExpression exprType = (NameExpression) m_listCond.get(ix);
-                    TypeConstant   typeCase = (TypeConstant) aConstCase[ix];
-                    assert typeCase.isTypeOfType();
-
-                    exprType.narrowType(ctx, Branch.Always, typeCase);
+                        exprType.narrowType(ctx, Branch.Always, typeCase);
+                        }
                     }
                 }
             }
@@ -705,8 +685,7 @@ public class CaseManager<CookieType>
             {
             m_labelConstant = m_labelDefault;
             }
-        else if (m_labelDefault == null
-                && (!isCardinal() || m_listsetCase.size() < m_typeCase.getIntCardinality()))
+        else if (m_labelDefault == null && !areAllCasesCovered())
             {
             m_fCompletes = true;
             if (m_nodeSwitch instanceof Expression)
@@ -737,7 +716,7 @@ public class CaseManager<CookieType>
             int     cVals       = m_listsetCase.size();
             int     cRange      = 0;
             boolean fUseJumpInt = false;
-            if (fValid && m_pintMin != null && !usesJmpValN())
+            if (fValid && m_pintMin != null && getConditionCount() == 1)
                 {
                 PackedInteger pintRange = m_pintMax.sub(m_pintMin);
                 if (!pintRange.isBig())
@@ -848,6 +827,17 @@ public class CaseManager<CookieType>
             if (m_mapWild == null)
                 {
                 m_mapWild = new ListMap<>();
+
+                // Important note: we intentionally don't check already existing values for being
+                // "covered" by the new range, allowing exact matches to be processed first and
+                // ranges with potential unreachable values later without generating compilation
+                // errors; for example:
+                //  switch (i)
+                //    {
+                //    case 7:     {...}
+                //    case 1..10: {...} // any value between 1 and 10 except 7
+                //    }
+                //
                 }
             m_mapWild.put(constCase, lRange);
             }
@@ -985,7 +975,8 @@ public class CaseManager<CookieType>
             return false;
             }
 
-        // TODO this will work for types that have a corresponding Java type, like Int, but not enums etc.
+        // this automatically works for ValueConstant types that have a corresponding Java type,
+        // like Int, String, etc., while enums use their ordinal values (see EnumValueConstant).
         Comparable cmpThisLo = (Comparable) oThisLo;
         Comparable cmpThisHi = (Comparable) oThisHi;
         Comparable cmpThatLo = (Comparable) oThatLo;
@@ -1005,14 +996,200 @@ public class CaseManager<CookieType>
                 cmpThatHi = cmpOops;
                 }
 
-            return  cmpThisLo.compareTo(cmpThatLo) <= 0 &&
-                    cmpThisLo.compareTo(cmpThatHi) <= 0 &&
-                    cmpThisHi.compareTo(cmpThatLo) >= 0 &&
-                    cmpThisHi.compareTo(cmpThatHi) >= 0;
+            // ranges *do not* intersect if thisHi < thatLo || thisLo > thatHi
+            return cmpThisHi.compareTo(cmpThatLo) >= 0 &&
+                   cmpThisLo.compareTo(cmpThatHi) <= 0;
             }
         catch (Exception e)
             {
             return false;
+            }
+        }
+
+    /**
+     * Check if all the possible values of the condition are covered. This method is called only
+     * after all the cases are processed (validated) and the default label is not present.
+     *
+     * @return true iff all the possible values are covered and the "default" is not necessary
+     */
+    private boolean areAllCasesCovered()
+        {
+        int cCondVals = m_cCondVals;
+        if (cCondVals == 0)
+            {
+            // if-ladder
+            return false;
+            }
+
+        int cCases = m_listsetCase.size();
+        if (cCondVals == 1)
+            {
+            TypeConstant typeCase = m_typeCase;
+            if (!typeCase.isIntConvertible())
+                {
+                return false;
+                }
+
+            int cCardinality = typeCase.getIntCardinality();
+            if (cCardinality == Integer.MAX_VALUE)
+                {
+                // the value domain doesn't support the full coverage
+                return false;
+                }
+
+            int cCovered = 0;
+            if (m_mapWild == null)
+                {
+                // without a wildcard or ranges (since we know that the simple cases don't
+                // intersect) the answer is simple
+                cCovered = cCases;
+                }
+            else
+                {
+                // we know that the ranges don't intersect, but there is a possibility that some
+                // former values intersect with later ranges; so we need to account for those
+                for (Constant constCase : m_listsetCase)
+                    {
+                    if (constCase instanceof MatchAnyConstant)
+                        {
+                        return true;
+                        }
+
+                    if (constCase instanceof RangeConstant)
+                        {
+                        cCovered += ((RangeConstant) constCase).size();
+
+                        // compensate for all previous intersections with this range
+                        for (Constant constPrev : m_listsetCase)
+                            {
+                            if (constPrev == constCase)
+                                {
+                                break;
+                                }
+
+                            if (!(constPrev instanceof RangeConstant) &&
+                                    covers(constCase, true, constPrev, false))
+                                {
+                                cCovered--;
+                                }
+                            }
+                        }
+                    else
+                        {
+                        cCovered++;
+                        }
+                    }
+                }
+
+            assert cCardinality >= cCovered;
+            return cCardinality == cCovered;
+            }
+
+        // there are multiple columns; be reasonable on the number of possible combinations
+        TypeConstant[] atype = m_typeCase.getParamTypesArray();
+        assert atype.length == cCondVals;
+
+        int[]      aiCardinals = new int[cCondVals];
+        Constant[] aconstBase  = new Constant[cCondVals];
+        int        cTotal      = 1;
+        for (int i = 0; i < cCondVals; i++)
+            {
+            TypeConstant typeCase = atype[i];
+            if (!typeCase.isIntConvertible())
+                {
+                return false;
+                }
+
+            int cCardinality = typeCase.getIntCardinality();
+            if (cCardinality == Integer.MAX_VALUE)
+                {
+                return false;
+                }
+
+            Constant constBase = typeCase.getCardinalBase();
+            if (constBase == null)
+                {
+                return false;
+                }
+
+            cTotal *= cCardinality;
+            if (cTotal >= 32000)
+                {
+                // too many; get out
+                return false;
+                }
+            aiCardinals[i] = cCardinality;
+            aconstBase[i]  = constBase;
+            }
+
+        BitCube cube    = new BitCube(aiCardinals);
+        int[]   anPoint = new int[cCondVals];
+
+        Iterator<Constant> iter = m_listsetCase.iterator();
+        for (int iCase = 0; iCase < cCases; iCase++)
+            {
+            Constant constTuple = iter.next();
+            if (constTuple.getFormat() != Format.Tuple)
+                {
+                continue;
+                }
+
+            Constant[] aconstCase = ((ArrayConstant) constTuple).getValue();
+            assert aconstCase.length == cCondVals;
+
+            processCondition(cube, 0, anPoint, cCondVals, aconstCase, aconstBase);
+            }
+        return cube.isFull();
+        }
+
+    /**
+     * Recursively process conditions starting at index "iCond".
+     */
+    private static void processCondition(BitCube cube, int iCond, int[] anPoint,
+                                         int cCondVals, Constant[] aconstCase, Constant[] aconstBase)
+        {
+        if (iCond == cCondVals)
+            {
+            cube.set(anPoint);
+            return;
+            }
+
+        Constant constCase = aconstCase[iCond];
+
+        if (constCase instanceof MatchAnyConstant)
+            {
+            for (int i = 0, c = cube.getSize(iCond); i < c; i++)
+                {
+                anPoint[iCond] = i;
+                processCondition(cube, iCond + 1, anPoint, cCondVals, aconstCase, aconstBase);
+                }
+            }
+        else if (constCase instanceof RangeConstant)
+            {
+            RangeConstant constRange = (RangeConstant) constCase;
+            Constant      constFirst = constRange.getFirst();
+            Constant      constLast  = constRange.getLast();
+            boolean       fReverse   = constRange.isReverse();
+            Constant      constBase  = aconstBase[iCond];
+
+            IntConstant constMin = (IntConstant)
+                (fReverse ? constLast : constFirst).apply(Token.Id.SUB, constBase);
+            IntConstant constMax = (IntConstant)
+                (fReverse ? constFirst : constLast).apply(Token.Id.SUB, constBase);
+            int nMin = constMin.getValue().getInt();
+            int nMax = constMax.getValue().getInt();
+
+            for (int i = nMin; i <= nMax; i++)
+                {
+                anPoint[iCond] = i;
+                processCondition(cube, iCond + 1, anPoint, cCondVals, aconstCase, aconstBase);
+                }
+            }
+        else
+            {
+            IntConstant constOrdinal = (IntConstant) constCase.apply(Token.Id.SUB, aconstBase[iCond]);
+            anPoint[iCond] = constOrdinal.getValue().getInt();
+            processCondition(cube, iCond + 1, anPoint, cCondVals, aconstCase, aconstBase);
             }
         }
 
@@ -1028,12 +1205,6 @@ public class CaseManager<CookieType>
     public Argument[] generateConditionArguments(Context ctx, Code code, ErrorListener errs)
         {
         assert m_listCond != null && !m_listCond.isEmpty();
-
-        Label labelDefault = getDefaultLabel();
-        if (labelDefault == null)
-            {
-            labelDefault = new Label("default_assert");
-            }
 
         Argument[] aArgVal = new Argument[getConditionCount()];
         int ofArgVal = 0;
@@ -1093,7 +1264,7 @@ public class CaseManager<CookieType>
     public void generateJumpTable(Context ctx, Code code, ErrorListener errs)
         {
         boolean fDefaultAssert = false;
-        Label   labelDefault   = getDefaultLabel();
+        Label   labelDefault   = m_labelDefault;
         if (labelDefault == null)
             {
             labelDefault   = new Label("default_assert");
@@ -1101,16 +1272,17 @@ public class CaseManager<CookieType>
             }
 
         Argument[] aArgVal    = generateConditionArguments(ctx, code, errs);
-        Label[]    alabelCase = getCaseLabels();
+        Label[]    alabelCase = m_alabelCase;
+        int        cCondVals  = m_cCondVals;
         if (usesJmpInt())
             {
-            assert getConditionCount() == 1 && aArgVal.length == 1;
+            assert cCondVals == 1 && aArgVal.length == 1;
             code.add(new JumpInt(aArgVal[0], alabelCase, labelDefault));
             }
         else
             {
-            Constant[] aconstCase = getCaseConstants();
-            code.add(usesJmpValN()
+            Constant[] aconstCase = m_aconstCase;
+            code.add(cCondVals > 1
                     ? new JumpVal_N(aArgVal, aconstCase, alabelCase, labelDefault)
                     : new JumpVal(aArgVal[0], aconstCase, alabelCase, labelDefault));
             }
@@ -1154,7 +1326,7 @@ public class CaseManager<CookieType>
                 }
             }
 
-        Label labelDefault = getDefaultLabel();
+        Label labelDefault = m_labelDefault;
         assert labelDefault != null;
         code.add(new Jump(labelDefault));
         }
@@ -1209,10 +1381,10 @@ public class CaseManager<CookieType>
     private TypeConstant m_typeCase;
 
     /**
-     * If the switch contains any Type conditions, this array holds the indexes of corresponding
-     * expressions.
+     * If the switch contains any Type conditions, this value is the bitmask indicating which fields
+     * hold corresponding expressions.
      */
-    private int[] m_anTypeExpr;
+    private long m_lTypeExpr;
 
     /**
      * The label of the currently active case group.

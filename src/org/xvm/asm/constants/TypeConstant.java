@@ -57,6 +57,7 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
+import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
 
@@ -5635,6 +5636,61 @@ public abstract class TypeConstant
                     }
                 return c;
             }
+        }
+
+    /**
+     * @return the constant representing the minimum value for this cardinal type; null if the
+     *         range is too large to express with an int
+     */
+    public Constant getCardinalBase()
+        {
+        assert isIntConvertible();
+
+        ConstantPool pool = getConstantPool();
+        switch (getEcstasyClassName())
+            {
+            case "numbers.Bit":
+                return pool.ensureBitConstant(0);
+
+            case "numbers.Nibble":
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.Nibble);
+
+            case "text.Char":
+                return pool.ensureCharConstant(0);
+
+            case "numbers.Int8":
+                return pool.ensureIntConstant(PackedInteger.valueOf(-255), Format.Int8);
+
+            case "numbers.UInt8":
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt8);
+
+            case "numbers.Int16":
+                return pool.ensureIntConstant(PackedInteger.valueOf(Short.MIN_VALUE), Format.Int16);
+
+            case "numbers.UInt16":
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt16);
+
+            case "numbers.Int32":
+            case "numbers.UInt32":
+            case "numbers.Int64":
+            case "numbers.UInt64":
+            case "numbers.Int128":
+            case "numbers.UInt128":
+            case "numbers.VarInt":
+            case "numbers.VarUInt":
+                return null;
+
+            default:
+                ClassStructure clzEnum = (ClassStructure) getSingleUnderlyingClass(false).getComponent();
+                for (Component child : clzEnum.children())
+                    {
+                    if (child.getFormat() == Component.Format.ENUMVALUE)
+                        {
+                        return pool.ensureSingletonConstConstant(child.getIdentityConstant());
+                        }
+                    }
+            }
+        return null;
         }
 
     /**
