@@ -279,7 +279,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                                 + $" \"{this.pointer}\" is not supported");
                         }
 
-                    Char ch = pointer[cur];
+                    Char ch = pointer[cur++];
                     if (Int n := ch.isDigit())
                         {
                         steps = steps * 10 + n;
