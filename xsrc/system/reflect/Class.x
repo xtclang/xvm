@@ -120,7 +120,7 @@ const Class<PublicType, ProtectedType extends PublicType,
         this.composition     = composition;
         this.canonicalParams = canonicalParams ?: new ListMap();
         this.allocateStruct  = allocateStruct;
-        // TODO GG this.implicitName    = implicitName;
+        this.implicitName    = implicitName;
         }
 
 
@@ -139,10 +139,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      * subset of classes in the core Ecstasy module; for example, `numbers.Int64` has the implicit
      * name `Int`.
      */
-    @RO String? implicitName.get()
-        {
-        return null; // TODO GG - if this is a field, we can't override it with a native get() method on RTClass
-        }
+    String? implicitName;
 
     /**
      * The path of a class is composed of its module qualified name followed by a colon, followed

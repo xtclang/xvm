@@ -834,20 +834,7 @@ public class PropertyInfo
      */
     public boolean hasField()
         {
-        if (m_fRequireField)
-            {
-            return true;
-            }
-
-        for (PropertyBody body : m_aBody)
-            {
-            if (body.hasField())
-                {
-                return true;
-                }
-            }
-
-        return false;
+        return m_fRequireField;
         }
 
     /**
@@ -1046,11 +1033,14 @@ public class PropertyInfo
      */
     public boolean isCustomLogic()
         {
-        for (PropertyBody body : m_aBody)
+        if (!isNative())
             {
-            if (body.hasCustomCode())
+            for (PropertyBody body : m_aBody)
                 {
-                return true;
+                if (body.hasCustomCode())
+                    {
+                    return true;
+                    }
                 }
             }
         return false;
@@ -1247,7 +1237,7 @@ public class PropertyInfo
                 chain = MethodBody.NO_BODIES;
                 }
             }
-        else if (hasField())
+        else if (hasField() && !isNative())
             {
             int cBodies = chain.length;
             int ixTail  = cBodies - 1;

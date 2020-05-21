@@ -199,7 +199,9 @@ public class xRTClass
             {
             String sAlias = pool().getImplicitImportName("ecstasy." + idClz.getPathString());
             if (sAlias != null)
-            return frame.assignValue(iReturn, xString.makeHandle(sAlias));
+                {
+                return frame.assignValue(iReturn, xString.makeHandle(sAlias));
+                }
             }
         return frame.assignValue(iReturn, xNullable.NULL);
         }
