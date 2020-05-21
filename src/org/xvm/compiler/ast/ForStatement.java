@@ -8,8 +8,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
 import java.util.Map.Entry;
+
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -441,13 +441,17 @@ public class ForStatement
         // leaving the scope of the for() statement
         ctx = ctx.exit();
 
+        if (fAlwaysTrue)
+            {
+            // doesn't complete normally; the breaks will be processed by Statement.validate()
+            ctx.setReachable(false);
+            }
+
         // lazily created loop vars are only created inside the validation of this statement
         m_ctxLabelVars  = null;
         m_errsLabelVars = null;
 
-        return fValid
-                ? this
-                : null;
+        return fValid ? this : null;
         }
 
     @Override

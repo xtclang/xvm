@@ -464,6 +464,12 @@ public class WhileStatement
                     ctx = ctx.exit();
                     }
 
+                if (fAlwaysTrue)
+                    {
+                    // doesn't complete normally; the breaks will be processed by
+                    // Statement.validate()
+                    ctx.setReachable(false);
+                    }
                 errs.merge();
                 return fValid ? this : null;
                 }

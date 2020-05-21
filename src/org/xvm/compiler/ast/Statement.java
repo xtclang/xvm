@@ -153,6 +153,12 @@ public abstract class Statement
                     ctx.merge(entry.getValue());
                     }
                 }
+
+            if (!ctx.isReachable())
+                {
+                // since we do have reachable breaks, the statement is completable
+                ctx.setReachable(true);
+                }
             }
 
         return stmt;
