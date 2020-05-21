@@ -362,9 +362,20 @@ public class WhileStatement
                     // assignment from the condition to the body of the loop
                     if (!fDoWhile)
                         {
-                        ctx = fAlwaysTrue
-                                ? ctx.enterInfiniteLoop()
-                                : ctx.enterFork(true);
+                        if (fAlwaysTrue)
+                            {
+                            if (block.getStatements().isEmpty())
+                                {
+                                log(errs, Severity.ERROR, Compiler.INFINITE_LOOP);
+                                errs.merge();
+                                return null;
+                                }
+                            ctx = ctx.enterInfiniteLoop();
+                            }
+                        else
+                            {
+                            ctx = ctx.enterFork(true);
+                            }
                         }
 
                     // validate the block

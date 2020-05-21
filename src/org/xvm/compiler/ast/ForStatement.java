@@ -26,8 +26,11 @@ import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.Var_IN;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -373,9 +376,21 @@ public class ForStatement
             }
 
         // the statement block is equivalent to "if ... then"
-        ctx = fAlwaysTrue
-                ? ctx.enterInfiniteLoop()
-                : ctx.enterFork(true);
+
+        if (fAlwaysTrue)
+            {
+            if (init.isEmpty() && conds.isEmpty() &&
+                    block.getStatements().isEmpty() && update.isEmpty())
+                {
+                log(errs, Severity.ERROR, Compiler.INFINITE_LOOP);
+                return null;
+                }
+            ctx = ctx.enterInfiniteLoop();
+            }
+        else
+            {
+            ctx = ctx.enterFork(true);
+            }
 
         StatementBlock blockOld = block;
         StatementBlock blockNew = (StatementBlock) blockOld.validate(ctx, errs);

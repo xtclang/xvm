@@ -1221,6 +1221,10 @@ public class Compiler
      */
     public static final String MAP_KEYS_DUPLICATE                  = "COMPILER-154";
     /**
+     * Non-terminating loop.
+     */
+    public static final String INFINITE_LOOP                       = "COMPILER-155";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";
