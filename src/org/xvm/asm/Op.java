@@ -150,6 +150,11 @@ public abstract class Op
         return (m_lStruct & REACHABLE_BIT) != 0;
         }
 
+    /**
+     * Mark the op as reachable.
+     *
+     * @param aop  the ops of the current method
+     */
     public void markReachable(Op[] aop)
         {
         m_lStruct |= REACHABLE_BIT;
@@ -164,6 +169,9 @@ public abstract class Op
         return (m_lStruct & NECESSARY_BIT) != 0;
         }
 
+    /**
+     * Mark the op as necessary.
+     */
     public void markNecessary()
         {
         m_lStruct |= NECESSARY_BIT;
