@@ -59,6 +59,7 @@ import static org.xvm.util.PackedInteger.writeLong;
  *          last node in the bit set (i.e. EOF);
  * </li><li>The number of bytes of bit-encoded data in this node (which may be 0 in the first node);
  * </li><li>The sequence of bytes of bit-encoded data.
+ * </li></ul>
  * <p/>
  * The encoding of the "skip" information is designed to achieve O(log(n)) behavior, by allowing a
  * skip forward of approximately half of the remaining nodes. For example, in a bit set that is
@@ -261,7 +262,7 @@ public class ConstBitSet
                 }
 
             // three possibilities for the bit's position at this point:
-            // 1) between the current point and the the end of bytes present in this node
+            // 1) between the current point and the end of bytes present in this node
             // 2) after this node but before the next node (or there is no next node)
             // 3) somewhere after the start of the next node (i.e. only if there is a next node)
             lIntVal    = unpackInt(m_ab, ofCur);
