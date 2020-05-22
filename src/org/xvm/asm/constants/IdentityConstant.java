@@ -13,6 +13,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.TypedefStructure;
+import org.xvm.asm.XvmStructure;
 
 import org.xvm.util.Handy;
 
@@ -563,8 +564,13 @@ public abstract class IdentityConstant
      */
     public Component getComponent()
         {
-        Component parent = getParentConstant().getComponent();
-        return parent == null ? null : parent.getChild(this);
+        Component component = m_component;
+        if (component == null)
+            {
+            Component parent = getParentConstant().getComponent();
+            m_component = component = parent == null ? null : parent.getChild(this);
+            }
+        return component;
         }
 
     /**
@@ -674,6 +680,14 @@ public abstract class IdentityConstant
         throw new IllegalStateException("not a class type: " + this);
         }
 
+    /**
+     * Reset any of the cached info.
+     */
+    public void resetCachedInfo()
+        {
+        m_component = null;
+        }
+
 
     // ----- constant methods ----------------------------------------------------------------------
 
@@ -719,6 +733,14 @@ public abstract class IdentityConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    protected void setContaining(XvmStructure xsParent)
+        {
+        super.setContaining(xsParent);
+
+        resetCachedInfo();
+        }
+
+    @Override
     protected void registerConstants(ConstantPool pool)
         {
         // this protected method must be present here to make it accessible to other classes in this
@@ -734,4 +756,12 @@ public abstract class IdentityConstant
         // package
         super.assemble(out);
         }
+
+
+    // ----- data fields ---------------------------------------------------------------------------
+
+    /**
+     * Cached component this identity points to.
+     */
+    public transient Component m_component;
     }

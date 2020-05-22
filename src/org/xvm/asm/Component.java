@@ -141,9 +141,15 @@ public abstract class Component
         assert (constId == null) == (this instanceof FileStructure);    // file doesn't have constid
         assert condition == null || !(this instanceof FileStructure);   // file can't be conditional
 
+        if (constId != null)
+            {
+            constId = (IdentityConstant) constId.resolveTypedefs();
+            constId.resetCachedInfo();
+            }
+
         m_nFlags  = (short) nFlags;
-        m_constId = constId == null ? null : (IdentityConstant) constId.resolveTypedefs();
         m_cond    = condition;
+        m_constId = constId;
         }
 
     /**

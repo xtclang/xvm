@@ -55,8 +55,6 @@
 
 - generic type resolution for a turtle type should be Tuple<Type<A>,Type<B>, ...> instead of Tuple<A, B, ...>
 
-- optimize out Object.construct() calls
-
 - When we resolve CompileType.Key (where CompileType is known to be Map), we produce
     FormalTypeChildConstant based on the CompileType formal property.
   When we resolve PublicType.OuterType formal type, we produce that same FormalTypeChildConstant even

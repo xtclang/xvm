@@ -36,6 +36,7 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
+import org.xvm.asm.XvmStructure;
 
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody.Implementation;
@@ -813,7 +814,13 @@ public abstract class TypeConstant
      */
     public TypeConstant normalizeParameters()
         {
-        return adoptParameters(getConstantPool(), (TypeConstant[]) null);
+        TypeConstant typeNormalized = m_typeNormalized;
+        if (typeNormalized == null)
+            {
+            m_typeNormalized = typeNormalized =
+                    adoptParameters(getConstantPool(), (TypeConstant[]) null);
+            }
+        return typeNormalized;
         }
 
     /**
@@ -5815,28 +5822,22 @@ public abstract class TypeConstant
         }
 
     @Override
-    protected TypeConstant adoptedBy(ConstantPool pool)
-        {
-        TypeConstant that = (TypeConstant) super.adoptedBy(pool);
-        that.m_cInvalidations = 0;
-        return that;
-        }
-
-    @Override
-    protected void setPosition(int iPos)
-        {
-        super.setPosition(iPos);
-
-        // clear any cached constants
-        m_typeinfo     = null;
-        m_mapRelations = null;
-        }
-
-    @Override
     protected abstract int compareDetails(Constant that);
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    protected void setContaining(XvmStructure pool)
+        {
+        super.setContaining(pool);
+
+        // clear any cached constants
+        m_cInvalidations = 0;
+        m_typeinfo       = null;
+        m_mapRelations   = null;
+        m_typeNormalized = null;
+        }
 
     @Override
     protected abstract void registerConstants(ConstantPool pool);
@@ -6174,4 +6175,9 @@ public abstract class TypeConstant
      * Cached TypeHandle.
      */
     private transient xRTType.TypeHandle m_handle;
+
+    /**
+     * Cached normalized representation.
+     */
+    private transient TypeConstant m_typeNormalized;
     }
