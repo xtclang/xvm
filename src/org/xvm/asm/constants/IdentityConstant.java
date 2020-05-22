@@ -763,5 +763,5 @@ public abstract class IdentityConstant
     /**
      * Cached component this identity points to.
      */
-    public transient Component m_component;
+    private transient Component m_component;
     }
