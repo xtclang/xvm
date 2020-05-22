@@ -450,10 +450,12 @@ public abstract class Constant
 
     /**
      * This marks that the Constant is referred to by another XvmStructure.
+     *
+     * @return true iff the very first reference has been registered
      */
-    void addRef()
+    boolean addRef()
         {
-        ++m_cRefs;
+        return m_cRefs++ == 0;
         }
 
     /**

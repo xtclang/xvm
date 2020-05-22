@@ -128,26 +128,27 @@ public class ConstantPool
             return null;
             }
 
-        // before registering the constant, see if there is a simpler alternative to use; for
-        // example, this allows a type constant that refers to a typedef constant to be replaced
-        // with the type constant that the typedef refers to, removing a level of indirection
-        constant = constant.resolveTypedefs();
-
-        // constants that contain unresolved information need to be resolved before they are
-        // registered; note that if m_fRecurseReg is true, we could be in a compile phase that has already
-        // experienced one or more name resolution errors, and so there could still be unresolved
-        // constants (just ignore them here; they should have been logged as errors already)
-        if (constant.containsUnresolved())
-            {
-            return constant;
-            }
-
         // check if the Constant is already registered
-        final Map<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
-        final Constant constantOld = mapConstants.get(constant);
+        Map<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
+        Constant                constantOld  = mapConstants.get(constant);
+
         boolean fRegisterRecursively = false;
         if (constantOld == null)
             {
+            // before registering the constant, see if there is a simpler alternative to use; for
+            // example, this allows a type constant that refers to a typedef constant to be replaced
+            // with the type constant that the typedef refers to, removing a level of indirection
+            constant = constant.resolveTypedefs();
+
+            // constants that contain unresolved information need to be resolved before they are
+            // registered; note that if m_fRecurseReg is true, we could be in a compile phase that has already
+            // experienced one or more name resolution errors, and so there could still be unresolved
+            // constants (just ignore them here; they should have been logged as errors already)
+            if (constant.containsUnresolved())
+                {
+                return constant;
+                }
+
             if (constant.getContaining() != this)
                 {
                 constant = constant.adoptedBy(this);
@@ -155,19 +156,21 @@ public class ConstantPool
 
             synchronized (this)
                 {
-                // add the Constant
-                constant.setPosition(m_listConst.size());
-                m_listConst.add(constant);
-                mapConstants.put(constant, constant);
-
-                // also allow the constant to be looked up by a locator
-                Object oLocator = constant.getLocator();
-                if (oLocator != null)
+                if (!mapConstants.containsKey(constant))
                     {
-                    Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
-                    if (constOld != null && constOld != constant)
+                    constant.setPosition(m_listConst.size());
+                    m_listConst.add(constant);
+                    mapConstants.put(constant, constant);
+
+                    // also allow the constant to be looked up by a locator
+                    Object oLocator = constant.getLocator();
+                    if (oLocator != null)
                         {
-                        throw new IllegalStateException("locator collision: old=" + constOld + ", new=" + constant);
+                        Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
+                        if (constOld != null && !constOld.equals(constant))
+                            {
+                            throw new IllegalStateException("locator collision: old=" + constOld + ", new=" + constant);
+                            }
                         }
                     }
                 }
@@ -183,13 +186,12 @@ public class ConstantPool
 
         if (m_fRecurseReg)
             {
+            // this can happen only in a single-thread scenario at the end of the compilation;
             // the first time that this constant is registered, the constant has to recursively
             // register any constants that it refers to
-            fRegisterRecursively = !constant.hasRefs();
-
             // .. and each time the constant is registered, we tally that registration so that we
             // can later order the constants from most to least referenced
-            constant.addRef();
+            fRegisterRecursively = constant.addRef();
             }
 
         if (fRegisterRecursively)
@@ -1665,13 +1667,12 @@ public class ConstantPool
             return ((ChildClassConstant) constClass).getParent();
             }
 
-        if (((Constant) constClass).getLocator() != null)
+        // the ParentClassConstant's locator is the underlying constClass
+        ParentClassConstant constant = (ParentClassConstant)
+                ensureLocatorLookup(Format.ParentClass).get(constClass);
+        if (constant != null)
             {
-            ParentClassConstant constant = (ParentClassConstant) ensureLocatorLookup(Format.ParentClass).get(constClass);
-            if (constant != null)
-                {
-                return constant;
-                }
+            return constant;
             }
 
         return (ParentClassConstant) register(new ParentClassConstant(this, constClass));
@@ -1856,14 +1857,9 @@ public class ConstantPool
         {
         assert constId != null && !(constId instanceof TypeConstant);
 
-        TypeConstant constType = null;
-
-        Object locator = constId.getLocator();
-        if (locator != null)
-            {
-            constType = (TerminalTypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);
-            }
-
+        // the TerminalClassConstant's locator is the underlying constId
+        TypeConstant constType = (TerminalTypeConstant)
+                ensureLocatorLookup(Format.TerminalType).get(constId);
         if (constType == null)
             {
             constType = (TypeConstant) register(new TerminalTypeConstant(this, constId));

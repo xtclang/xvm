@@ -265,6 +265,15 @@ public class TypeParameterConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    protected void registerConstants(ConstantPool pool)
+        {
+        super.registerConstants(pool);
+
+        // invalidate cached type
+        m_typeConstraint = null;
+        }
+
+    @Override
     protected void assemble(DataOutput out)
             throws IOException
         {
