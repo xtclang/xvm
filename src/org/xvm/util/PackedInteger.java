@@ -808,6 +808,34 @@ public class PackedInteger
         }
 
     /**
+     * Determine the number of bytes of the packed integer at the specified offset in the provided
+     * byte array.
+     *
+     * @param ab  the byte array containing a packed integer
+     * @param of  the byte offset at which the packed integer is located
+     *
+     * @return the number of bytes used to encode the packed integer
+     */
+    public static int packedLength(byte[] ab, int of)
+        {
+        int b = ab[of];
+        if ((b & 0x01) != 0)
+            {
+            // Tiny format
+            return 1;
+            }
+
+        if ((b & 0x02) != 0)
+            {
+            // Small or Medium format
+            return ((b & 0x04) == 0) ? 2 : 3;
+            }
+
+        // Large format
+        return 2 + ((b & 0xFC) >>> 2);
+        }
+
+    /**
      * Extract an integer from a byte array, and report back both the integer value and its size in
      * terms of the number of bytes.
      *
