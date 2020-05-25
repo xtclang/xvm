@@ -2,30 +2,20 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run( )
         {
-        Root root = new Root();
-        console.println(root);
+        import ecstasy.io.CharArrayReader;
+        import ecstasy.io.TextPosition;
 
-        ElementInputStream s = new ElementInputStream(Null);
+        Reader r = new CharArrayReader("abcde".toCharArray());
+
+        TextPosition p0 = r.position;
+
+        r.nextChar();
+
+        TextPosition p1 = r.position;
+
+        String s = r[p0..p1];
         console.println(s);
-        }
-
-
-    class Root
-            extends ElementInputStream<Nullable>
-        {
-        construct()
-            {
-            construct ElementInputStream(Null);
-            }
-        }
-
-    class ElementInputStream<ParentInput extends ElementInputStream?>
-        {
-        construct(ParentInput parent)
-            {
-            console.println(parent);
-            }
         }
     }

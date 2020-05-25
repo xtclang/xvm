@@ -461,7 +461,18 @@ public class ParameterizedTypeConstant
                 return constResolved;
                 }
 
-            return pool.ensureParameterizedTypeConstant(constResolved, m_atypeParams);
+            // scenario 3a; see below
+            if (constResolved.isExplicitClassIdentity(true))
+                {
+                IdentityConstant idClz = constResolved.getSingleUnderlyingClass(true);
+                ClassStructure   clz   = (ClassStructure) idClz.getComponent();
+
+                if (clz.isParameterized())
+                    {
+                    return pool.ensureParameterizedTypeConstant(constResolved, m_atypeParams);
+                    }
+                }
+            return constResolved;
             }
 
         if (constOriginal == constResolved)

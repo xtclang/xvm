@@ -523,9 +523,7 @@ public class ArrayAccessExpression
                 SignatureConstant sigGet = infoGet.getSignature();
                 aIndexTypes = sigGet.getRawParams();
                 m_idGet     = infoGet.getIdentity();
-                typeResult  = fSlice
-                        ? typeArray // TODO GG: resolveAutoNarrowing() should produce the same
-                        : sigGet.getRawReturns()[0].resolveAutoNarrowing(pool, true, typeArray);
+                typeResult  = sigGet.getRawReturns()[0].resolveAutoNarrowing(pool, true, typeArray);
                 }
             }
 

@@ -172,7 +172,6 @@ interface Reader
      * @throws IOException  represents the general category of input/output exceptions
      * @throws OutOfBounds  if the range indicates a slice that would contains illegal indexes
      */
-    // TODO GG this will break due to assumption in ArrayAccessExpression that assumes return type is same as this target type
     @Op("[[..]]") String sliceInclusive(Range<TextPosition> indexes)
         {
         return slice(indexes.ensureInclusive());
