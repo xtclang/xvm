@@ -2073,7 +2073,6 @@ public class InvocationExpression
                                 }
                             }
                         infoLeft = idLeft.ensureTypeInfo(access, errs);
-                        typeLeft = infoLeft.getType();
                         }
 
                     MethodKind kind = fConstruct          ? MethodKind.Constructor :
