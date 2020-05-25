@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constants.Access;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -276,7 +278,8 @@ public abstract class OpCallable extends Op
                     function = (MethodStructure) idFunction.getComponent();
                     if (function == null)
                         {
-                        function = typeParent.findCallable(idFunction.getSignature());
+                        function = pool.ensureAccessTypeConstant(typeParent, Access.PRIVATE).
+                            findCallable(idFunction.getSignature().resolveGenericTypes(pool, resolver));
                         }
 
                     if (function == null)

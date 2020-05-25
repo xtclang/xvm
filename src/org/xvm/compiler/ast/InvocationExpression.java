@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -21,6 +22,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
@@ -2039,7 +2041,7 @@ public class InvocationExpression
                         }
 
                     TypeInfo infoLeft;
-
+                    calculateInfo:
                     if (nameLeft.getMeaning() == NameExpression.Meaning.Type)
                         {
                         // "Class" meaning in IdentityMode can only indicate a "type-of-class" scenario
@@ -2054,7 +2056,24 @@ public class InvocationExpression
                         }
                     else
                         {
+                        if (fConstruct && idLeft instanceof ClassConstant)
+                            {
+                            ClassStructure clz = (ClassStructure) idLeft.getComponent();
+                            if (clz.isParameterized())
+                                {
+                                // the class is parameterized; let's attempt to narrow it using
+                                // the constructor's argument types
+                                TypeConstant typeResolved = inferFromConstructor(ctx, clz, access, errs);
+                                if (typeResolved != null)
+                                    {
+                                    typeLeft = typeResolved;
+                                    infoLeft = typeLeft.ensureTypeInfo(errs);
+                                    break calculateInfo;
+                                    }
+                                }
+                            }
                         infoLeft = idLeft.ensureTypeInfo(access, errs);
+                        typeLeft = infoLeft.getType();
                         }
 
                     MethodKind kind = fConstruct          ? MethodKind.Constructor :
@@ -2274,6 +2293,42 @@ public class InvocationExpression
             }
 
         return null;
+        }
+
+    /**
+     * Infer an actual type of the specified class from the constructor arguments.
+     *
+     * @param ctx     the compiler context
+     * @param clz     the class structure
+     * @param access  constructor's accessibility (PROTECTED or PRIVATE)
+     * @param errs    the error listener
+     */
+    private TypeConstant inferFromConstructor(Context ctx, ClassStructure clz,
+                                              Access access, ErrorListener errs)
+        {
+        // we have a parameterizable class that we need to find a constructor for; first find
+        // a matching constructor on the canonical type
+        ConstantPool     pool      = pool();
+        TypeConstant     typeCanon = pool.ensureAccessTypeConstant(clz.getCanonicalType(), access);
+        List<Expression> listExpr  = args;
+        TypeInfo         infoCanon = typeCanon.ensureTypeInfo(errs);
+        MethodConstant   idCtor    = findMethod(ctx, typeCanon, infoCanon, "construct",
+                                        listExpr, MethodKind.Constructor, m_fCall, false,
+                                        TypeConstant.NO_TYPES, ErrorListener.BLACKHOLE);
+        if (idCtor == null)
+            {
+            return null;
+            }
+
+        MethodStructure constructor = infoCanon.getMethodById(idCtor).
+                                        getTopmostMethodStructure(infoCanon);
+
+        // now infer the actual types using the arguments expressions
+        TypeConstant typeInferred = inferTypeFromConstructor(ctx, clz, constructor, listExpr);
+
+        return typeInferred == null
+                ? null
+                : pool.ensureAccessTypeConstant(typeInferred, access);
         }
 
     /**

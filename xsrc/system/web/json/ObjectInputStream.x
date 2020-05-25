@@ -622,7 +622,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         construct()
             {
             assert root == Null;
-            construct ElementInputStream<Nullable>(Null);  // TODO GG: infer <Nullable>
+            construct ElementInputStream(Null);
             }
         finally
             {

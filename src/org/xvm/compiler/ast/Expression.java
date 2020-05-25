@@ -3,7 +3,13 @@ package org.xvm.compiler.ast;
 
 import java.util.Arrays;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.xvm.asm.Argument;
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -14,6 +20,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
@@ -564,6 +571,60 @@ public abstract class Expression
                 }
             }
         return null;
+        }
+
+    /**
+     * Having a parameterizable class and a constructor on that class resolve the generic types
+     * using the arguments expressions for the constructor's arguments.
+     *
+     * @param ctx       the compiler context
+     * @param clz       the class structure
+     * @param ctor      the constructor
+     * @param listExpr  the list of argument expressions
+     *
+     * @return a resolved formal type or null if the resolution was unsuccessful
+     */
+    protected TypeConstant inferTypeFromConstructor(Context ctx, ClassStructure clz,
+                                                    MethodStructure ctor, List<Expression> listExpr)
+        {
+        TypeConstant[] atypeParam = ctor.getParamTypes();
+        int            cArgs      = listExpr.size();
+
+        assert cArgs <= atypeParam.length;
+
+        Map<String, TypeConstant> mapResolve = new HashMap<>();
+        for (Map.Entry<StringConstant, TypeConstant> entry : clz.getTypeParamsAsList())
+            {
+            String sName = entry.getKey().getValue();
+            for (int i = 0; i < cArgs; i++)
+                {
+                TypeConstant typeActual = listExpr.get(i).getImplicitType(ctx);
+                if (typeActual != null)
+                    {
+                    TypeConstant typeResolved = atypeParam[i].
+                            resolveTypeParameter(typeActual, sName);
+                    if (typeResolved != null)
+                        {
+                        // if the expression's type is an enum value, widen it to its parent
+                        // Enumeration; for example, if the argument is Null, widen the type to
+                        // Nullable, if the type is True widen it to Boolean, etc.
+                        if (typeResolved.isExplicitClassIdentity(false))
+                            {
+                            IdentityConstant id = (IdentityConstant) typeResolved.getDefiningConstant();
+                            if (id.getComponent().getFormat() == Component.Format.ENUMVALUE)
+                                {
+                                typeResolved = id.getNamespace().getType();
+                                }
+                            }
+                        mapResolve.put(sName, typeResolved);
+                        }
+                    }
+                }
+            }
+
+        return mapResolve.isEmpty()
+            ? null
+            : clz.getFormalType().resolveGenerics(pool(), mapResolve::get);
         }
 
     /**

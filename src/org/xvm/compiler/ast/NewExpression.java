@@ -711,6 +711,22 @@ public class NewExpression
                     }
 
                 m_constructor = constructor;
+
+                if (!typeResult.isParamsSpecified())
+                    {
+                    ClassStructure clz = (ClassStructure) constructor.getParent().getParent();
+                    if (clz.isParameterized())
+                        {
+                        // the class is parameterized, but the resulting type is not, which means
+                        // that the left is the canonical type; let's attempt to narrow it using
+                        // the constructor's argument types
+                        TypeConstant typeInferred = inferTypeFromConstructor(ctx, clz, constructor, listArgs);
+                        if (typeInferred != null)
+                            {
+                            typeResult = typeInferred;
+                            }
+                        }
+                    }
                 }
             }
 
