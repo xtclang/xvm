@@ -4,9 +4,11 @@ module TestSimple
 
     void run()
         {
-        Class c = String;
+        Root root = new Root();
+        console.println(root);
 
-        console.println(c.implicitName);
+        ElementInputStream s = new ElementInputStream(Null);
+        console.println(s);
         }
 
 
