@@ -667,6 +667,8 @@ public abstract class Expression
             checkShortCircuit(errs);
             }
 
+        ConstantPool pool = pool();
+
         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
         if (atypeActual == null)
             {
@@ -674,7 +676,7 @@ public abstract class Expression
             assert aconstVal == null;
 
             m_fit    = TypeFit.NoFit;
-            m_oType  = atypeRequired == null ? pool().typeObject() : atypeRequired;
+            m_oType  = atypeRequired == null ? pool.typeObject() : atypeRequired;
             m_oConst = null;
 
             return null;
@@ -694,66 +696,76 @@ public abstract class Expression
             {
             for (int i = 0; i < cActual; ++i)
                 {
-                TypeConstant typeOrg = atypeActual[i];
-                TypeConstant typeImm = typeOrg.ensureImmutable();
+                TypeConstant typeActual = atypeActual[i];
+                Constant     constVal   = aconstVal[i];
 
-                if (!typeOrg.equals(typeImm))
+                if (constVal != null
+                        && !constVal.equals(pool.ensureMatchAnyConstant(typeActual))
+                        &&  !typeActual.isA(pool.typeService()))
                     {
-                    if (fCloneActual)
+                    TypeConstant typeImm = typeActual.ensureImmutable();
+
+                    if (!typeActual.equals(typeImm))
                         {
-                        atypeActual  = atypeActual.clone();
-                        fCloneActual = false;
+                        if (fCloneActual)
+                            {
+                            atypeActual  = atypeActual.clone();
+                            fCloneActual = false;
+                            }
+                        atypeActual[i] = typeImm;
                         }
-                    atypeActual[i] = typeImm;
                     }
                 }
             }
 
         MethodConstant[] aIdConv = null;
-        if (cTypeReqs > 0 && fit.isFit() && !fit.isConverting())
+        if (cTypeReqs > 0 && fit.isFit())
             {
             for (int i = 0, c = Math.min(cActual, cTypeReqs); i < c; ++i)
                 {
                 TypeConstant typeActual   = atypeActual[i];
                 TypeConstant typeRequired = atypeRequired[i];
-                if (!typeActual.isA(typeRequired))
+                if (typeActual.isA(typeRequired))
                     {
-                    // look for an @Auto conversion
-                    MethodConstant idConv = typeActual.ensureTypeInfo(errs).findConversion(typeRequired);
-                    if (idConv == null)
-                        {
-                        // cannot provide the required type
-                        log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                                typeRequired.getValueString(), typeActual.getValueString());
-                        fit = TypeFit.NoFit;
-                        }
-                    else
-                        {
-                        Constant constVal = aconstVal == null ? null : aconstVal[i];
-                        if (constVal != null)
-                            {
-                            Constant constConv = convertConstant(constVal, typeRequired, errs);
-                            if (constConv == null)
-                                {
-                                // there is no compile-time conversion available;
-                                // continue with run-time conversion
-                                // TODO: for now it's most likely our omission; remove the soft assert below
-                                System.err.println("No conversion found for " + constVal);
-                                }
-                            else
-                                {
-                                idConv         = null;
-                                atypeActual[i] = constConv.getType().ensureImmutable();
-                                }
-                            aconstVal[i] = constConv;
-                            }
+                    continue;
+                    }
 
-                        if (aIdConv == null && idConv != null)
+                // look for an @Auto conversion, assuming that we haven't already applied it
+                MethodConstant idConv;
+                if (fit.isConverting() ||
+                        (idConv = typeActual.ensureTypeInfo(errs).findConversion(typeRequired)) == null)
+                    {
+                    // cannot provide the required type
+                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                            typeRequired.getValueString(), typeActual.getValueString());
+                    fit = TypeFit.NoFit;
+                    }
+                else
+                    {
+                    Constant constVal = aconstVal == null ? null : aconstVal[i];
+                    if (constVal != null)
+                        {
+                        Constant constConv = convertConstant(constVal, typeRequired, errs);
+                        if (constConv == null)
                             {
-                            aIdConv = new MethodConstant[cActual];
+                            // there is no compile-time conversion available;
+                            // continue with run-time conversion
+                            // TODO: for now it's most likely our omission; remove the soft assert below
+                            System.err.println("No conversion found for " + constVal);
                             }
-                        aIdConv[i] = idConv;
+                        else
+                            {
+                            idConv         = null;
+                            atypeActual[i] = constConv.getType().ensureImmutable();
+                            }
+                        aconstVal[i] = constConv;
                         }
+
+                    if (aIdConv == null && idConv != null)
+                        {
+                        aIdConv = new MethodConstant[cActual];
+                        }
+                    aIdConv[i] = idConv;
                     }
                 }
             }
