@@ -89,7 +89,7 @@ public class NullableTypeExpression
                                         pool.typeNullable(), exprNew.ensureTypeConstant(ctx));
         TypeConstant typeType   = typeActual.getType();
 
-        return finishValidation(typeRequired, typeType, TypeFit.Fit, typeType, errs);
+        return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, typeType, errs);
         }
 
 

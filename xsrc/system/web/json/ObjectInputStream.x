@@ -643,7 +643,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         @Override
-        Nullable close() // TODO GG: ParentInput close() doesn't compile
+        ParentInput close()
             {
             super();
             root = Null;

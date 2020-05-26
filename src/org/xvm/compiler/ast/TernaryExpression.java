@@ -329,7 +329,7 @@ public class TernaryExpression
                 }
             }
 
-        return finishValidations(atypeRequired, atypeResult, fit, null, errs);
+        return finishValidations(ctx, atypeRequired, atypeResult, fit, null, errs);
         }
 
     @Override

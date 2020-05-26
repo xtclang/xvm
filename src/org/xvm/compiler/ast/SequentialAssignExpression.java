@@ -97,7 +97,7 @@ public class SequentialAssignExpression
             exprNew.markAssignment(ctx, false, errs);
             }
 
-        return finishValidation(typeRequired, type, fit, null, errs);
+        return finishValidation(ctx, typeRequired, type, fit, null, errs);
         }
 
     private Assignable ensureTarget(Context ctx, Code code, ErrorListener errs)

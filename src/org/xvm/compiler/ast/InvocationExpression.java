@@ -778,7 +778,7 @@ public class InvocationExpression
                         }
                     atypeResult = new TypeConstant[]{typeFn};
                     }
-                return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+                return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                 }
 
             // handle method or function
@@ -972,7 +972,7 @@ public class InvocationExpression
                         atypeResult = new TypeConstant[] {typeFn};
                         }
 
-                    return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+                    return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                     }
                 }
             else
@@ -1057,7 +1057,7 @@ public class InvocationExpression
                                                 cTypeParams, cDefaults, atypeRequired, errs);
                 if (atypeResult != null)
                     {
-                    return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+                    return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                     }
                 }
             }
@@ -1084,7 +1084,7 @@ public class InvocationExpression
                     TypeConstant[] atypeResult = validateFunction(ctx, typeFn, 0, 0, atypeRequired, errs);
                     if (atypeResult != null)
                         {
-                        return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+                        return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                         }
                     }
                 }

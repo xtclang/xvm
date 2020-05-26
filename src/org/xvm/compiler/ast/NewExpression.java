@@ -768,7 +768,7 @@ public class NewExpression
             m_ctxCapture     = null;
             }
 
-        Expression exprResult = finishValidation(typeRequired, typeResult,
+        Expression exprResult = finishValidation(ctx, typeRequired, typeResult,
                 fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
         clearAnonTypeInfos();
         return exprResult;

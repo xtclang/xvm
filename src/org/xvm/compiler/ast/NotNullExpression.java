@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -124,7 +123,7 @@ public class NotNullExpression
             m_labelShort = getParent().ensureShortCircuitLabel(this, ctx);
             }
 
-        return finishValidation(typeRequired, type, fit, null, errs);
+        return finishValidation(ctx, typeRequired, type, fit, null, errs);
         }
 
     @Override

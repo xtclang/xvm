@@ -225,7 +225,8 @@ public class SwitchExpression
             aconstVal = exprResult.toConstants();
             }
 
-        return finishValidations(atypeRequired, atypeActual, fValid ? TypeFit.Fit : TypeFit.NoFit, aconstVal, errs);
+        return finishValidations(ctx, atypeRequired, atypeActual,
+                fValid ? TypeFit.Fit : TypeFit.NoFit, aconstVal, errs);
         }
 
     @Override

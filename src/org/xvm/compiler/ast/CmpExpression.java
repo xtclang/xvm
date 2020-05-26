@@ -242,7 +242,7 @@ public class CmpExpression
                 }
             }
 
-        return finishValidation(typeRequired, typeResult,
+        return finishValidation(ctx, typeRequired, typeResult,
                 fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
         }
 

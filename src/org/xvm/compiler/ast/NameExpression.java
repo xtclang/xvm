@@ -588,7 +588,7 @@ public class NameExpression
             if (leftNew == null)
                 {
                 // we couldn't resolve the left side; no reason to continue
-                return finishValidation(typeRequired, typeRequired, TypeFit.NoFit, null, errs);
+                return finishValidation(ctx, typeRequired, typeRequired, TypeFit.NoFit, null, errs);
                 }
             left = leftNew;
             }
@@ -626,7 +626,7 @@ public class NameExpression
         if (!fValid)
             {
             // something failed previously, so we can't complete the validation
-            return finishValidation(typeRequired, typeRequired, TypeFit.NoFit, null, errs);
+            return finishValidation(ctx, typeRequired, typeRequired, TypeFit.NoFit, null, errs);
             }
 
         // translate the raw argument into the appropriate contextual meaning
@@ -772,11 +772,11 @@ public class NameExpression
                 {
                 String sLabel = ((NameExpression) left).getName();
                 log(errs, Severity.ERROR, Compiler.LABEL_VARIABLE_ILLEGAL, sVar, sLabel);
-                return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
+                return finishValidation(ctx, typeRequired, null, TypeFit.NoFit, null, errs);
                 }
             }
 
-        return finishValidation(typeRequired, type, fit, constVal, errs);
+        return finishValidation(ctx, typeRequired, type, fit, constVal, errs);
         }
 
     @Override

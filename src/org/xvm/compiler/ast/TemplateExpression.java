@@ -167,7 +167,8 @@ public class TemplateExpression
 
         ctx = ctx.exit();
 
-        return finishValidation(typeRequired, T_STRING, fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
+        return finishValidation(ctx, typeRequired, T_STRING,
+                fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
         }
 
     @Override

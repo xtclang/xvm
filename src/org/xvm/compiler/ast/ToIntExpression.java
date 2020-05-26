@@ -66,7 +66,7 @@ public class ToIntExpression
             }
 
         m_pintOffset = pintOffset;
-        finishValidation(null, expr.pool().typeInt(), expr.getTypeFit().addConversion(), val, errs);
+        finishValidation(null, null, expr.pool().typeInt(), expr.getTypeFit().addConversion(), val, errs);
         }
 
 

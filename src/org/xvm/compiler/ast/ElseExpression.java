@@ -107,7 +107,7 @@ public class ElseExpression
 
         if (!fit.isFit())
             {
-            return finishValidation(typeRequired, null, fit, null, errs);
+            return finishValidation(ctx, typeRequired, null, fit, null, errs);
             }
 
         if (!expr1New.isShortCircuiting())
@@ -129,7 +129,7 @@ public class ElseExpression
             constVal = expr1New.toConstant();
             }
 
-        return finishValidation(typeRequired, typeResult, fit, constVal, errs);
+        return finishValidation(ctx, typeRequired, typeResult, fit, constVal, errs);
         }
 
     @Override

@@ -179,7 +179,7 @@ public class LiteralExpression
         Constant     constVal   = getLiteralConstant();
 
         assert constVal != null;
-        return finishValidation(typeRequired, typeActual, TypeFit.Fit, constVal, errs);
+        return finishValidation(ctx, typeRequired, typeActual, TypeFit.Fit, constVal, errs);
         }
 
 

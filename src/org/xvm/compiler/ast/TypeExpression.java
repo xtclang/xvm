@@ -2,7 +2,6 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -234,14 +233,14 @@ public abstract class TypeExpression
         {
         TypeConstant typeReferent  = ensureTypeConstant(ctx);
         TypeConstant typeReference = typeReferent.getType();
-        return finishValidation(typeRequired, typeReference, TypeFit.Fit, typeReference, errs);
+        return finishValidation(ctx, typeRequired, typeReference, TypeFit.Fit, typeReference, errs);
         }
 
     @Override
-    protected Expression finishValidation(TypeConstant typeRequired, TypeConstant typeActual,
+    protected Expression finishValidation(Context ctx, TypeConstant typeRequired, TypeConstant typeActual,
                                           TypeFit fit, Constant constVal, ErrorListener errs)
         {
-        Expression expr = super.finishValidation(typeRequired, typeActual, fit, constVal, errs);
+        Expression expr = super.finishValidation(ctx, typeRequired, typeActual, fit, constVal, errs);
         if (expr instanceof TypeExpression)
             {
             ((TypeExpression) expr).resetTypeConstant();

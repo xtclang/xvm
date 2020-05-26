@@ -32,7 +32,7 @@ public class PackExpression
             type = pool.ensureImmutableTypeConstant(type);
             val  = pool.ensureTupleConstant(type, expr.toConstants());
             }
-        finishValidation(null, type, expr.getTypeFit().addPack(), val, errs);
+        finishValidation(null, null, type, expr.getTypeFit().addPack(), val, errs);
         }
 
 

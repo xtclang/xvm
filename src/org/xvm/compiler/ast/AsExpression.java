@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -101,7 +100,7 @@ public class AsExpression
                 constVal = expr1.toConstant();
                 }
 
-            return finishValidation(typeRequired, type, TypeFit.Fit, constVal, errs);
+            return finishValidation(ctx, typeRequired, type, TypeFit.Fit, constVal, errs);
             }
         return null;
         }

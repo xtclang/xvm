@@ -56,7 +56,7 @@ public class MultiValueExpression
             fit = fit.combineWith(expr.getTypeFit());
             }
 
-        finishValidations(null, aTypes, fit, aVals, errs);
+        finishValidations(null, null, aTypes, fit, aVals, errs);
         }
 
 

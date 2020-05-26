@@ -243,7 +243,7 @@ public class StatementExpression
                 }
             }
 
-        return finishValidations(atypeRequired, atypeActual, fit, null, errs);
+        return finishValidations(ctx, atypeRequired, atypeActual, fit, null, errs);
         }
 
     @Override

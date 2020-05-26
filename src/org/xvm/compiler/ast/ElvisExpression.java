@@ -112,7 +112,7 @@ public class ElvisExpression
 
         if (!fit.isFit())
             {
-            return finishValidation(typeRequired, null, fit, null, errs);
+            return finishValidation(ctx, typeRequired, null, fit, null, errs);
             }
 
         if (type1.isOnlyNullable())
@@ -156,7 +156,7 @@ public class ElvisExpression
                 }
             }
 
-        return finishValidation(typeRequired, typeResult, fit, constVal, errs);
+        return finishValidation(ctx, typeRequired, typeResult, fit, constVal, errs);
         }
 
     @Override

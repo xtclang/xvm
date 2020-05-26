@@ -30,7 +30,7 @@ public class TraceExpression
 
         assert expr.isValidated();
 
-        finishValidations(null, expr.getTypes(), expr.getTypeFit(), expr.toConstants(),
+        finishValidations(null, null, expr.getTypes(), expr.getTypeFit(), expr.toConstants(),
                 ErrorListener.BLACKHOLE);
         }
 
@@ -46,7 +46,7 @@ public class TraceExpression
         assert m_aArgs != null;
         return m_aArgs;
         }
-    
+
 
     // ----- Expression compilation ----------------------------------------------------------------
 

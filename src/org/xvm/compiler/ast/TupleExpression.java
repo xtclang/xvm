@@ -96,7 +96,7 @@ public class TupleExpression
         setStage(stage);
         if (fValidated)
             {
-            finishValidations(null, aTypes, TypeFit.Fit, aVals, errs);
+            finishValidations(null, null, aTypes, TypeFit.Fit, aVals, errs);
             }
         }
 
@@ -430,7 +430,7 @@ public class TupleExpression
                 constVal   = pool.ensureTupleConstant(typeResult, aFieldVals);
                 }
 
-            Expression exprNew = finishValidation(typeRequired, typeResult, TypeFit.Fit, constVal, errs);
+            Expression exprNew = finishValidation(ctx, typeRequired, typeResult, TypeFit.Fit, constVal, errs);
             if (!fMultiplexing)
                 {
                 assert this == exprNew;

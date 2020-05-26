@@ -474,7 +474,7 @@ public class RelOpExpression
         if (!fit.isFit())
             {
             // bail out
-            return finishValidations(atypeRequired, null, TypeFit.NoFit, null, errs);
+            return finishValidations(ctx, atypeRequired, null, TypeFit.NoFit, null, errs);
             }
 
         boolean        fMulti       = operator.getId() == Id.DIVREM;
@@ -554,7 +554,7 @@ public class RelOpExpression
             TypeConstant[] atypeFake = fMulti
                     ? new TypeConstant[] {type1Act, type2Act}
                     : new TypeConstant[] {type1Act};
-            return finishValidations(atypeRequired, atypeFake, TypeFit.NoFit, null, errs);
+            return finishValidations(ctx, atypeRequired, atypeFake, TypeFit.NoFit, null, errs);
             }
 
         // determine if the result of this expression is itself constant
@@ -573,7 +573,7 @@ public class RelOpExpression
             catch (RuntimeException e) {}
             }
 
-        return finishValidations(atypeRequired, atypeResults, fit, aconstResult, errs);
+        return finishValidations(ctx, atypeRequired, atypeResults, fit, aconstResult, errs);
         }
 
     /**

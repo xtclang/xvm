@@ -109,7 +109,7 @@ public class IsExpression
                 }
             }
 
-        return finishValidation(typeRequired, pool.typeBoolean(), fit, constVal, errs);
+        return finishValidation(ctx, typeRequired, pool.typeBoolean(), fit, constVal, errs);
         }
 
     @Override

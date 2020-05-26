@@ -244,7 +244,7 @@ public class ListExpression
                 }
             }
 
-        return finishValidation(typeRequired, typeActual, fit, constVal, errs);
+        return finishValidation(ctx, typeRequired, typeActual, fit, constVal, errs);
         }
 
     @Override

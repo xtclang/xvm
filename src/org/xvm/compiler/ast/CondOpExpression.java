@@ -169,7 +169,7 @@ public class CondOpExpression
                 break;
             }
 
-        return finishValidation(typeRequired, typeBoolean, fit, constResult, errs);
+        return finishValidation(ctx, typeRequired, typeBoolean, fit, constResult, errs);
         }
 
     @Override

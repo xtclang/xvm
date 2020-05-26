@@ -303,7 +303,7 @@ public class AnnotatedTypeExpression
                 }
             }
 
-        return finishValidation(typeRequired, typeType, TypeFit.Fit, constValue, errs);
+        return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, constValue, errs);
         }
 
 

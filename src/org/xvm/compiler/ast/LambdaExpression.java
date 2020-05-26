@@ -438,7 +438,7 @@ public class LambdaExpression
         {
         if (!ensurePrepared(errs))
             {
-            return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
+            return finishValidation(ctx, typeRequired, null, TypeFit.NoFit, null, errs);
             }
 
         m_errs = errs;
@@ -499,7 +499,7 @@ public class LambdaExpression
 
         if (!fValid)
             {
-            return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
+            return finishValidation(ctx, typeRequired, null, TypeFit.NoFit, null, errs);
             }
 
         m_typeRequired = typeRequired;
@@ -512,7 +512,7 @@ public class LambdaExpression
         if (!new StageMgr(blockTemp, Stage.Validated, errs).fastForward(20))
             {
             blockTemp.discard(true);
-            return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
+            return finishValidation(ctx, typeRequired, null, TypeFit.NoFit, null, errs);
             }
 
         LambdaContext ctxLambda = enterCapture(ctx, blockTemp, atypeParams, asParams);
@@ -588,7 +588,7 @@ public class LambdaExpression
                 }
             }
 
-        return finishValidation(typeRequired, typeActual, fit, constVal, errs);
+        return finishValidation(ctx, typeRequired, typeActual, fit, constVal, errs);
         }
 
     /**

@@ -80,7 +80,7 @@ public class UnaryMinusExpression
             catch (RuntimeException e) {}
             }
 
-        return finishValidation(typeRequired, typeRight, fit, constVal, errs);
+        return finishValidation(ctx, typeRequired, typeRight, fit, constVal, errs);
         }
 
     @Override

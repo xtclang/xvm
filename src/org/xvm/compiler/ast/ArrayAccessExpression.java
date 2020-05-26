@@ -550,7 +550,7 @@ public class ArrayAccessExpression
                 {
                 typeResult = typeRequired == null ? pool().typeObject() : typeRequired;
                 }
-            return finishValidation(typeRequired, typeResult, TypeFit.NoFit, null, errs);
+            return finishValidation(ctx, typeRequired, typeResult, TypeFit.NoFit, null, errs);
             }
 
         if (!fSlice)
@@ -618,7 +618,7 @@ public class ArrayAccessExpression
                 }
             }
 
-        return finishValidation(typeRequired, typeResult, TypeFit.Fit, constVal, errs);
+        return finishValidation(ctx, typeRequired, typeResult, TypeFit.Fit, constVal, errs);
         }
 
     @Override

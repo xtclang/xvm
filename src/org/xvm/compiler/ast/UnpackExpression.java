@@ -27,7 +27,7 @@ public class UnpackExpression
 
         if (exprTuple.isValidated())
             {
-            adoptValidation(exprTuple, errs);
+            adoptValidation(null, exprTuple, errs);
             }
         }
 
@@ -65,7 +65,7 @@ public class UnpackExpression
 
         return exprNew == null
                 ? null
-                : adoptValidation(expr = exprNew, errs);
+                : adoptValidation(ctx, expr = exprNew, errs);
         }
 
 
@@ -101,10 +101,11 @@ public class UnpackExpression
     /**
      * Adopt the type information from a validated expression.
      *
+     * @param ctx        the compiler context
      * @param exprTuple  the validated expression that yields a Tuple type
      * @param errs       the error listener
      */
-    protected Expression adoptValidation(Expression exprTuple, ErrorListener errs)
+    protected Expression adoptValidation(Context ctx, Expression exprTuple, ErrorListener errs)
         {
         TypeConstant typeTuple = exprTuple.getType();
         assert typeTuple.isTuple() && typeTuple.isParamsSpecified();
@@ -119,7 +120,7 @@ public class UnpackExpression
             aconstVal = ((ArrayConstant) constTuple).getValue();
             }
 
-        return finishValidations(null, atypeField, expr.getTypeFit().addUnpack(), aconstVal, errs);
+        return finishValidations(ctx, null, atypeField, expr.getTypeFit().addUnpack(), aconstVal, errs);
         }
 
 

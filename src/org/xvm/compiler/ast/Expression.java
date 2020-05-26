@@ -318,7 +318,7 @@ public abstract class Expression
         // there are two simple cases to consider:
         // 1) it is always a fit for an expression to go "to void"
         // 2) the most common / desired case is that the type-in is compatible with the type-out
-        if (typeOut == null || typeIn.isA(typeOut))
+        if (typeOut == null || isA(ctx, typeIn, typeOut))
             {
             return TypeFit.Fit;
             }
@@ -430,7 +430,7 @@ public abstract class Expression
                 // expected type) so that we get as many errors exposed as possible in the
                 // validate phase
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, atypeRequired.length, 1);
-                finishValidations(atypeRequired, atypeRequired, TypeFit.Fit, null, errs);
+                finishValidations(ctx, atypeRequired, atypeRequired, TypeFit.Fit, null, errs);
                 return null;
                 }
             }
@@ -446,6 +446,7 @@ public abstract class Expression
     /**
      * Store the result of validating the Expression.
      *
+     * @param ctx           the (optional) compiler context
      * @param typeRequired  the type that the expression must yield (optional)
      * @param typeActual    the type of the expression at this point (optional, in case of error)
      * @param fit           the fit of that type that was determined by the validation (required);
@@ -461,6 +462,7 @@ public abstract class Expression
      *         compilation should halt as soon as is practical
      */
     protected Expression finishValidation(
+            Context       ctx,
             TypeConstant  typeRequired,
             TypeConstant  typeActual,
             TypeFit       fit,
@@ -502,7 +504,7 @@ public abstract class Expression
         // an @Auto conversion can be used, assuming that we haven't already given up on the type
         // or already applied a type conversion
         MethodConstant idConv = null;
-        if (typeRequired != null && fit.isFit() && !typeActual.isA(typeRequired))
+        if (typeRequired != null && fit.isFit() && !isA(ctx, typeActual, typeRequired))
             {
             // a conversion may be necessary to deliver the required type, but only one
             // conversion (per expression value) is allowed
@@ -633,6 +635,7 @@ public abstract class Expression
      * Important note: the array of actual types comes from the actual signature and
      * must be cloned if it's to be changed.
      *
+     * @param ctx            the (optional) compiler context
      * @param atypeRequired  the (optional) types required from the Expression (both the array and
      *                       any of its elements can be null)
      * @param atypeActual    the types that result from the Expression (neither the array nor its
@@ -651,6 +654,7 @@ public abstract class Expression
      * @return this or null
      */
     protected Expression finishValidations(
+            Context        ctx,
             TypeConstant[] atypeRequired,
             TypeConstant[] atypeActual,
             TypeFit        fit,
@@ -725,7 +729,7 @@ public abstract class Expression
                 {
                 TypeConstant typeActual   = atypeActual[i];
                 TypeConstant typeRequired = atypeRequired[i];
-                if (typeActual.isA(typeRequired))
+                if (isA(ctx, typeActual, typeRequired))
                     {
                     continue;
                     }
@@ -808,6 +812,25 @@ public abstract class Expression
                 }
             }
         return exprResult;
+        }
+
+    /**
+     * @return true iff the "in" type is assignable to the "out" type in the specified context
+     */
+    protected boolean isA(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
+        {
+        if (typeIn.isA(typeOut))
+            {
+            return true;
+            }
+
+        if (ctx == null)
+            {
+            return false;
+            }
+
+        TypeConstant typeOutResolved = typeOut.resolveGenerics(pool(), ctx.getThisType());
+        return typeOutResolved != typeOut && typeIn.isA(typeOutResolved);
         }
 
     /**

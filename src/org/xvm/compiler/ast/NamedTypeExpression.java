@@ -717,7 +717,7 @@ public class NamedTypeExpression
                     (NameExpression) exprOld.validate(ctx, pool().typeType(), errs);
 
             if (exprNew == null ||
-                finishValidation(typeRequired, exprNew.getType(), TypeFit.Fit, null, errs) == null)
+                finishValidation(ctx, typeRequired, exprNew.getType(), TypeFit.Fit, null, errs) == null)
                 {
                 return null;
                 }
@@ -836,7 +836,7 @@ public class NamedTypeExpression
 
         TypeConstant typeType = type.getType();
         return fValid
-                ? finishValidation(typeRequired, typeType, TypeFit.Fit, typeType, errs)
+                ? finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, typeType, errs)
                 : null;
         }
 

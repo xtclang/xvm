@@ -47,7 +47,7 @@ public class ConvertExpression
                 val = convertConstant(expr.toConstant(), type);
                 }
 
-            finishValidation(null, type, expr.getTypeFit().addConversion(), val, errs);
+            finishValidation(null, null, type, expr.getTypeFit().addConversion(), val, errs);
             }
         else
             {
@@ -66,7 +66,7 @@ public class ConvertExpression
                     }
                 }
 
-            finishValidations(null, aTypes, expr.getTypeFit().addConversion(), aVals, errs);
+            finishValidations(null, null, aTypes, expr.getTypeFit().addConversion(), aVals, errs);
             }
         }
 

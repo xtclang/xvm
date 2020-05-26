@@ -62,11 +62,11 @@ public abstract class DelegatingExpression
         Expression exprNew = expr.validate(ctx, typeRequired, errs);
         if (exprNew == null)
             {
-            return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
+            return finishValidation(ctx, typeRequired, null, TypeFit.NoFit, null, errs);
             }
 
         expr = exprNew;
-        return finishValidation(typeRequired, exprNew.getType(), exprNew.getTypeFit(),
+        return finishValidation(ctx, typeRequired, exprNew.getType(), exprNew.getTypeFit(),
                 exprNew.isConstant() ? exprNew.toConstant() : null, errs);
         }
 
@@ -76,11 +76,11 @@ public abstract class DelegatingExpression
         Expression exprNew = expr.validateMulti(ctx, atypeRequired, errs);
         if (exprNew == null)
             {
-            return finishValidations(atypeRequired, null, TypeFit.NoFit, null, errs);
+            return finishValidations(ctx, atypeRequired, null, TypeFit.NoFit, null, errs);
             }
 
         expr = exprNew;
-        return finishValidations(atypeRequired, exprNew.getTypes(), exprNew.getTypeFit(),
+        return finishValidations(ctx, atypeRequired, exprNew.getTypes(), exprNew.getTypeFit(),
                 exprNew.isConstant() ? exprNew.toConstants() : null, errs);
         }
 

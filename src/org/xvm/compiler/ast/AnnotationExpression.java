@@ -337,7 +337,7 @@ public class AnnotationExpression
         if (idAnno.equals(pool.clzInject()) && cArgs == 0)
             {
             // the "resourceName" will come from the variable/property name
-            return finishValidation(typeRequired, typeAnno, TypeFit.Fit, null, errs);
+            return finishValidation(ctx, typeRequired, typeAnno, TypeFit.Fit, null, errs);
             }
 
         if (!typeAnno.isA(typeRequired))
@@ -395,7 +395,7 @@ public class AnnotationExpression
                 }
             typeAnno = pool.ensureAnnotatedTypeConstant(typeInto, anno);
 
-            return finishValidation(typeRequired, typeAnno, TypeFit.Fit, null, errs);
+            return finishValidation(ctx, typeRequired, typeAnno, TypeFit.Fit, null, errs);
             }
 
         return null;
