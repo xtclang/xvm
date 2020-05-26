@@ -1225,6 +1225,14 @@ public class Compiler
      */
     public static final String INFINITE_LOOP                       = "COMPILER-155";
     /**
+     * Construct target {0} is not in the inheritance chain.
+     */
+    public static final String INVALID_CONSTRUCT_CALL              = "COMPILER-156";
+    /**
+     * Super class constructor is skipped.
+     */
+    public static final String SUPER_CONSTRUCTOR_SKIPPED           = "COMPILER-157";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

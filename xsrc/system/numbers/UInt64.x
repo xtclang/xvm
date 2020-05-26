@@ -26,7 +26,7 @@ const UInt64
     construct(Bit[] bits)
         {
         assert bits.size == 64;
-        construct IntNumber(bits);
+        construct UIntNumber(bits);
         }
 
     /**

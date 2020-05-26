@@ -2,20 +2,46 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run( )
+    void run(   )
         {
-        import ecstasy.io.CharArrayReader;
-        import ecstasy.io.TextPosition;
+        Root root = new Root();
+        console.println(root);
 
-        Reader r = new CharArrayReader("abcde".toCharArray());
+        C2 c2 = new C2("h");
+        console.println(c2);
+        }
 
-        TextPosition p0 = r.position;
+    class Root
+            extends ElementInputStream<Nullable>
+        {
+        construct()
+            {
+            construct ElementInputStream(Null);
+            }
+        }
 
-        r.nextChar();
+    class ElementInputStream<ParentInput extends ElementInputStream?>
+        {
+        construct(ParentInput parent)
+            {
+            console.println(parent);
+            }
+        }
 
-        TextPosition p1 = r.position;
+    const C0(Int i);
 
-        String s = r[p0..p1];
-        console.println(s);
+    const C1 extends C0
+        {
+        construct(String s)
+            {
+            construct C0(42);
+            }
+        }
+    const C2 extends C1
+        {
+        construct(String s)
+            {
+            construct C0(41);
+            }
         }
     }
