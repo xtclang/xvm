@@ -1375,15 +1375,21 @@ public class TerminalTypeConstant
                 TypeInfo infoConstraint = typeConstraint.ensureTypeInfoInternal(errs);
                 return isComplete(infoConstraint)
                         ? new TypeInfo(this, infoConstraint, cInvalidations)
-                        : infoConstraint;
+                        : null;
                 }
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return ((PseudoConstant) constant).getDeclarationLevelClass().getType()
-                        .ensureTypeInfoInternal(errs);
+                {
+                TypeConstant typeDeclared   = ((PseudoConstant) constant).getDeclarationLevelClass().getType();
+                int          cInvalidations = getConstantPool().getInvalidationCount();
 
+                TypeInfo infoDeclared = typeDeclared.ensureTypeInfoInternal(errs);
+                return isComplete(infoDeclared)
+                        ? new TypeInfo(this, infoDeclared, cInvalidations)
+                        : null;
+                }
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             }

@@ -248,13 +248,11 @@ public class AnnotatedTypeConstant
     /**
      * Create a TypeInfo for the private access type of this type.
      *
-     * @param idBase  the identity of the class (etc) that is being annotated
-     * @param struct  the structure of the class that this type is based on
-     * @param errs    the error list to log any errors to
+     * @param errs the error list to log any errors to
      *
      * @return a new TypeInfo representing this annotated type (private)
      */
-    TypeInfo buildPrivateInfo(IdentityConstant idBase, ClassStructure struct, ErrorListener errs)
+    TypeInfo buildPrivateInfo(ErrorListener errs)
         {
         // this can only be called from TypeConstant.buildTypeInfoImpl()
         assert getAccess() == Access.PUBLIC;
@@ -271,6 +269,12 @@ public class AnnotatedTypeConstant
             return null;
             }
 
+        if (typeBase.isFormalType())
+            {
+            // replace the base with its constraint
+            typeBase = ((FormalConstant) typeBase.getDefiningConstant()).getConstraintType();
+            }
+
         Annotation[] aAnnoClass      = listClassAnnos.toArray(Annotation.NO_ANNOTATIONS);
         TypeConstant typePrivateBase = pool.ensureAccessTypeConstant(typeBase, Access.PRIVATE);
 
@@ -278,6 +282,18 @@ public class AnnotatedTypeConstant
         if (!isComplete(infoBase))
             {
             return infoBase;
+            }
+
+        IdentityConstant idBase;
+        ClassStructure   struct;
+        try
+            {
+            idBase = (IdentityConstant) typeBase.getDefiningConstant();
+            struct = (ClassStructure)   idBase.getComponent();
+            }
+        catch (RuntimeException e)
+            {
+            throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
             }
 
         if (listMixinAnnos.isEmpty())
@@ -563,6 +579,11 @@ public class AnnotatedTypeConstant
             // an annotated type constant can modify a parameterized or a terminal type constant
             // that refers to a class/interface
             TypeConstant typeBase = m_constType.resolveTypedefs();
+            if (typeBase.isFormalType())
+                {
+                typeBase = ((FormalConstant) typeBase.getDefiningConstant()).getConstraintType();
+                }
+
             if (!(typeBase instanceof AnnotatedTypeConstant || typeBase.isExplicitClassIdentity(true)))
                 {
                 log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL, typeBase.getValueString());

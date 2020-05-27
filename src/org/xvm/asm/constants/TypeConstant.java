@@ -1557,6 +1557,26 @@ public abstract class TypeConstant
                         : info.limitAccess(Access.PUBLIC);
             }
 
+        // annotated types require special handling
+        if (isAnnotated())
+            {
+            TypeConstant typeUnderlying = getUnderlyingType(); // remove "Access:PRIVATE" piece
+            if (typeUnderlying instanceof AnnotatedTypeConstant)
+                {
+                return ((AnnotatedTypeConstant) typeUnderlying).buildPrivateInfo(errs);
+                }
+
+            TypeConstant typeAnno = typeUnderlying;
+            while (!(typeAnno instanceof AnnotatedTypeConstant))
+                {
+                typeAnno = typeAnno.getUnderlyingType();
+                }
+            log(errs, Severity.ERROR, VE_ANNOTATION_UNEXPECTED,
+                    ((AnnotatedTypeConstant) typeAnno).getAnnotation(),
+                    typeUnderlying.getValueString());
+            return null;
+            }
+
         // this implementation only deals with modifying (not including immutable) and terminal type
         // constants (not including typedefs, type parameters, auto-narrowing types, and unresolved
         // names); in other words, there must be an identity constant and a component structure
@@ -1571,19 +1591,6 @@ public abstract class TypeConstant
         catch (RuntimeException e)
             {
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
-            }
-
-        // annotated types require special handling
-        if (isAnnotated())
-            {
-            TypeConstant typeAnno = getUnderlyingType(); // remove "Access:PRIVATE" piece
-            if (typeAnno instanceof AnnotatedTypeConstant)
-                {
-                return ((AnnotatedTypeConstant) typeAnno).buildPrivateInfo(constId, struct, errs);
-                }
-            log(errs, Severity.ERROR, VE_ANNOTATION_UNEXPECTED,
-                    typeAnno.getValueString(), constId.getPathString());
-            return null;
             }
 
         // get a snapshot of the current invalidation count BEFORE building the TypeInfo
