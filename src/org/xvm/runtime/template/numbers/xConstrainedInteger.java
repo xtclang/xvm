@@ -173,7 +173,7 @@ public abstract class xConstrainedInteger
 
                 int cBytes = hBytes.m_cSize;
                 return cBytes == f_cNumBits / 8
-                    ? convertLong(frame, fromByteArray(abVal, cBytes), iReturn)
+                    ? convertLong(frame, fromByteArray(abVal, cBytes), iReturn, f_fChecked)
                     : frame.raiseException(
                         xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
                 }
@@ -186,7 +186,7 @@ public abstract class xConstrainedInteger
 
                 int cBits = hBits.m_cSize;
                 return cBits == f_cNumBits
-                    ? convertLong(frame, fromByteArray(abVal, cBits >>> 3), iReturn)
+                    ? convertLong(frame, fromByteArray(abVal, cBits >>> 3), iReturn, f_fChecked)
                     : frame.raiseException(
                         xException.illegalArgument(frame, "Invalid bit count: " + cBits));
                 }
@@ -372,12 +372,12 @@ public abstract class xConstrainedInteger
                     long                lValue     = ((JavaLong) hTarget).getValue();
 
                     // there is one overflow case that needs to be handled here: UInt64 -> Int*
-                    if (lValue < 0 && this instanceof xUInt64)
+                    if (f_fChecked && lValue < 0 && this instanceof xUInt64)
                         {
                         return templateTo.overflow(frame);
                         }
 
-                    return templateTo.convertLong(frame, lValue, iReturn);
+                    return templateTo.convertLong(frame, lValue, iReturn, f_fChecked);
                     }
 
                 if (template instanceof BaseBinaryFP)
@@ -393,7 +393,7 @@ public abstract class xConstrainedInteger
                     BaseInt128 templateTo = (BaseInt128) template;
                     long        lValue     = ((JavaLong) hTarget).getValue();
 
-                    if (f_fSigned && lValue < 0 && !templateTo.f_fSigned)
+                    if (f_fChecked && f_fSigned && lValue < 0 && !templateTo.f_fSigned)
                         {
                         // cannot assign negative value to the unsigned type
                         return overflow(frame);
@@ -699,23 +699,28 @@ public abstract class xConstrainedInteger
     /**
      * Convert a PackedInteger value into a handle for the type represented by this template.
      *
+     * Note: this method can throw an Overflow even if this type is unchecked since the "source"
+     *       is always IntLiteral.
+     *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
     public int convertLong(Frame frame, PackedInteger piValue, int iReturn)
         {
         return piValue.isBig()
             ? overflow(frame)
-            : convertLong(frame, piValue.getLong(), iReturn);
+            : convertLong(frame, piValue.getLong(), iReturn, f_fChecked);
         }
 
     /**
      * Convert a long value into a handle for the type represented by this template.
      *
+     * @param fCheck false iff the source of the value is "unchecked"
+     *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    public int convertLong(Frame frame, long lValue, int iReturn)
+    public int convertLong(Frame frame, long lValue, int iReturn, boolean fCheck)
         {
-        if (f_cNumBits != 64 && (lValue < f_cMinValue || lValue > f_cMaxValue))
+        if (fCheck && f_cNumBits != 64 && (lValue < f_cMinValue || lValue > f_cMaxValue))
             {
             return overflow(frame);
             }

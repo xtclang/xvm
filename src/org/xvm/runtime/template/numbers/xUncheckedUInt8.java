@@ -7,7 +7,7 @@ import org.xvm.runtime.TemplateRegistry;
 
 
 /**
- * Native unchecked Int8 support.
+ * Native unchecked UInt8 support.
  */
 public class xUncheckedUInt8
         extends xUncheckedConstrainedInt

@@ -93,7 +93,7 @@ public abstract class xUncheckedConstrainedInt
         }
 
     @Override
-    public int convertLong(Frame frame, long lValue, int iReturn)
+    public int convertLong(Frame frame, long lValue, int iReturn, boolean fCheck)
         {
         return frame.assignValue(iReturn, makeJavaLong(lValue));
         }
