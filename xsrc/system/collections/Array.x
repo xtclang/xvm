@@ -1896,6 +1896,57 @@ class Array<Element>
                     return this[size-n .. size);
                 }
             }
+
+        /**
+         * Read a packed integer value from within the byte array at the specified offset, and
+         * return the integer value and the offset immediately following the integer value.
+         *
+         * @param offset  the offset of the packed integer value
+         *
+         * @return the integer value
+         * @return the offset immediately following the packed integer value
+         */
+        (Int value, Int newOffset) readPackedInt(Int offset)
+            {
+            // use a signed byte to get auto sign-extension when converting to an int
+            Int8 b = this[offset].toInt8();
+
+            // Tiny format: the first bit of the first byte is used to indicate a single byte format,
+            // in which the entire value is contained in the 7 MSBs
+            if (b & 0x01 != 0)
+                {
+                return (b >> 1).toInt(), offset + 1;
+                }
+
+            // Small and Medium formats are indicated by the second bit (and differentiated by the
+            // third bit). Small format: bits 3..7 of the first byte are bits 8..12 of the result,
+            // and the next byte provides bits 0..7 of the result. Medium format: bits 3..7 of the
+            // first byte are bits 16..20 of the result, and the next byte provides bits 8..15 of
+            // the result, and the next byte provides bits 0..7 of the result
+            if (b & 0x02 != 0)
+                {
+                Int n = (b >> 3).toInt() << 8 | this[offset+1].toInt();
+
+                // the third bit is used to indicate Medium format (a second trailing byte)
+                return b & 0x04 != 0
+                        ? (n << 8 | this[offset+2].toInt(), offset + 3)
+                        : (n, offset + 2);
+                }
+
+            // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
+            // first byte are the trailing number of bytes minus 1
+            Int size = 1 + (b >>> 2).toInt();
+            assert:bounds size <= 8;
+
+            Int curOffset  = offset + 1;
+            Int nextOffset = curOffset + size;
+            Int n          = this[curOffset++].toUnchecked().toInt8().toInt();  // sign-extend
+            while (curOffset < nextOffset)
+                {
+                n = n << 8 | this[curOffset++].toInt();
+                }
+            return n, nextOffset;
+            }
         }
 
 
