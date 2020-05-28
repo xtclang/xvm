@@ -836,6 +836,33 @@ public class PackedInteger
         }
 
     /**
+     * Determine the number of bytes that the specified value would use if it were packed.
+     *
+     * @param n  the long integer value to estimate a packed length for
+     *
+     * @return the smallest number of bytes necessary to encode the packed integer
+     */
+    public static int packedLength(long n)
+        {
+        // test for Tiny
+        if (n <= 63 && n >= -64)
+            {
+            return 1;
+            }
+
+        // test for Small and Medium
+        final int cBits = 65 - Long.numberOfLeadingZeros(Math.max(n, ~n));
+        if (((1L << cBits) & 0x3E3E00L) != 0)           // test against bits 9-13 and 17-21
+            {
+            return cBits <= 13 ? 2 : 3;
+            }
+
+        // Large format
+        int cBytes = (cBits + 7) >>> 3;
+        return 1 + cBytes;
+        }
+
+    /**
      * Extract an integer from a byte array, and report back both the integer value and its size in
      * terms of the number of bytes.
      *
