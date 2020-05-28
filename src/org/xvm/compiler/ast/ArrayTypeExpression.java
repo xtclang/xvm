@@ -85,6 +85,15 @@ public class ArrayTypeExpression
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        TypeConstant typeEl = type.ensureTypeConstant(ctx);
+        return typeEl.containsUnresolved()
+                ? TypeFit.NoFit
+                : super.testFit(ctx, typeRequired, errs);
+        }
+
+    @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         TypeExpression exprTypeOld = type;
