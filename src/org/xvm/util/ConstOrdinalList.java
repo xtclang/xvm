@@ -19,6 +19,7 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 
 import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.PackedInteger.packedLength;
 import static org.xvm.util.PackedInteger.unpackInt;
 import static org.xvm.util.PackedInteger.writeLong;
 
@@ -919,24 +920,14 @@ public class ConstOrdinalList
         assert iTo > iFrom + 1;
 
         // first we have to skip over the remainder of the "from" node
-        ByteArrayOutputStream outRaw = new ByteArrayOutputStream();
-        DataOutputStream      out    = new DataOutputStream(outRaw);
-        try
-            {
-            writeLong(out, nodeFrom.idNext);
-            writeLong(out, nodeFrom.cVals);
-            if (nodeFrom.cVals < 0)
-                {
-                writeLong(out, nodeFrom.nVal);
-                }
-            }
-        catch (IOException e)
-            {
-            throw new RuntimeException(e);
-            }
+        int cb = packedLength(nodeFrom.idNext)
+               + packedLength(nodeFrom.cVals);
 
-        int cb = outRaw.size();
-        if (nodeFrom.cVals >= 0)
+        if (nodeFrom.cVals < 0)
+            {
+            cb += packedLength(nodeFrom.nVal);
+            }
+        else
             {
             assert nodeFrom.ofVals == 0;
             cb += nodeFrom.abVals.length;
