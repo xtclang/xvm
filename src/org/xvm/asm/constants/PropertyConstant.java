@@ -166,22 +166,22 @@ public class PropertyConstant
         }
 
     /**
-     * @return a TypeConstant representing a formal type represented by this property,
-     *         which must be a type parameter
-     */
-    public TypeConstant getFormalType()
-        {
-        assert isFormalType();
-        return getConstantPool().ensureTerminalTypeConstant(this);
-        }
-
-    /**
-     * @return true iff this property is a type parameter
+     * @return true iff this property is a generic type parameter
      */
     public boolean isFormalType()
         {
         PropertyStructure struct = (PropertyStructure) getComponent();
         return struct != null && struct.isGenericTypeParameter();
+        }
+
+    /**
+     * @return a TypeConstant representing a formal (generic) type represented by this property,
+     *         which must be a generic type parameter
+     */
+    public TypeConstant getFormalType()
+        {
+        assert isFormalType();
+        return getConstantPool().ensureTerminalTypeConstant(this);
         }
 
     /**
