@@ -29,6 +29,7 @@
         this.bytes = bytes;
         }
 
+
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -62,7 +63,7 @@
     @Override
     Int offset.set(Int offset)
         {
-        assert:bounds(offset >= 0 && offset <= size);
+        assert:bounds offset >= 0 && offset <= size;
         super(offset);
         }
 
@@ -83,7 +84,8 @@
             throw new EndOfFile();
             }
 
-        bytes[offset++] = value;
+        bytes[offset] = value;
+        ++offset;
         }
 
     @Override
@@ -128,7 +130,7 @@
 
         // with a fixed size array, once the existing elements are filled up, it is not possible to
         // continue to write any further
-        if (bytes.mutability == Fixed)
+        if (this.bytes.mutability == Fixed)
             {
             throw new EndOfFile();
             }
