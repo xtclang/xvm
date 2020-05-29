@@ -1011,7 +1011,7 @@ public class ConstOrdinalList
 //
 //    public static void main(String[] args)
 //        {
-//        Random rnd = new Random();
+//        var rnd = new java.util.Random();
 //        for (int iTest = 0; iTest < 1000000; ++iTest)
 //            {
 //            if (iTest % 1000 == 0)

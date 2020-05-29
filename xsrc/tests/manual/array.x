@@ -23,6 +23,8 @@ module TestArray
         testComparable();
 
         testIterators();
+
+        testConstOrdinalList();
         }
 
     void testSimple()
@@ -321,5 +323,19 @@ module TestArray
         assert Range<String> range := strs.iterator().range();
         console.println($"min={min}; max={max}");
         console.println($"range={range}");
+        }
+
+    void testConstOrdinalList()
+        {
+        console.println("\n** testConstOrdinalList()");
+
+        Int[] vals = [1, 2, 3, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 7, 8];
+        val col = new ecstasy.collections.ConstOrdinalList(vals);
+        for (Int i : [0..vals.size))
+            {
+            console.println($"col[{i}]={col[i]}");
+            }
+        console.println($"col={col}");
+        console.println($"bytes={col.contents}");
         }
     }

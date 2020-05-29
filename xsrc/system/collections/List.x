@@ -186,8 +186,8 @@ interface List<Element>
         // this implementation should be overridden by any non-mutable implementation of List, and
         // by any implementation that is able to delete multiple elements efficiently
         List result = this;
-        Int  index  = interval.lowerBound;
-        Int  count  = interval.upperBound - index + 1;
+        Int  index  = interval.lowerBound;              // TODO CP effective?
+        Int  count  = interval.upperBound - index + 1;  // TODO CP size?
         while (count-- > 0)
             {
             result = result.delete(index);
@@ -550,6 +550,50 @@ interface List<Element>
                 {
                 list.delete(index);
                 }
+            }
+        }
+
+
+    // ----- Sliceable interface -------------------------------------------------------------------
+
+    @Override
+    @Op("[..]") List!<Element> slice(Range<Int> indexes)
+        {
+        assert indexes.effectiveLowerBound >= 0;
+        assert indexes.effectiveUpperBound < size;
+
+        return new SubList(indexes);
+        }
+
+    /**
+     * An SubList is a simple [List] implementation that delegates all operations back to an
+     * underlying List.
+     */
+    class SubList(Range<Int> indexes)
+            implements List<Element>
+        {
+        @Override
+        Int size.get()
+            {
+            return indexes.size;
+            }
+
+        @Override
+        @Op("[]") Element getElement(Int index)
+            {
+            TODO CP
+            }
+
+        @Override
+        Iterator<Element> iterator()
+            {
+            TODO CP
+            }
+
+        @Override
+        List!<Element> reify()
+            {
+            return toArray();
             }
         }
 

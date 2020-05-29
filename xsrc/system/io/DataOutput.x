@@ -362,6 +362,47 @@ interface DataOutput
     // ----- helper functions ----------------------------------------------------------------------
 
     /**
+     * Calculate the number of bytes required to write an integer to a stream, encoding it using the
+     * packed integer format.
+     *
+     * @param n  the Int value
+     *
+     * @return the number of bytes required to write the value as a packed value
+     */
+    static Int packedIntLength(Int n)
+        {
+        // test for Tiny
+        if (n <= 63 && n >= -64)
+            {
+            return 1;
+            }
+
+        // test for Small and Medium
+        Int bitCount = 65 - n.maxOf(~n).leadingZeroCount;
+        if (1 << bitCount & 0x3E3E00 != 0)              // test against bits 9-13 and 17-21
+            {
+            return bitCount <= 13 ? 2 : 3;
+            }
+
+        return 1 + (bitCount + 7 >>> 3);
+        }
+
+    /**
+     * Calculate the number of bytes required to write an integer to a stream, encoding it using the
+     * packed integer format.
+     *
+     * @param n  the `VarInt` value
+     *
+     * @return the number of bytes required to write the value as a packed value
+     */
+    static Int packedVarIntLength(VarInt n)
+        {
+        return n >= Int.minvalue && n <= Int.maxvalue
+                ? packedIntLength(n.toInt())
+                : 1 + n.toByteArray().size;
+        }
+
+    /**
      * Write an integer to the passed stream, encoding it using the packed integer format.
      *
      * The packed integer format represents a signed, 2's-complement integer of 1-512 bytes in size.
