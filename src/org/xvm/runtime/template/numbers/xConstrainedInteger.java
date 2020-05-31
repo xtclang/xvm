@@ -173,7 +173,7 @@ public abstract class xConstrainedInteger
 
                 int cBytes = hBytes.m_cSize;
                 return cBytes == f_cNumBits / 8
-                    ? convertLong(frame, fromByteArray(abVal, cBytes), iReturn, f_fChecked)
+                    ? convertLong(frame, fromByteArray(abVal, cBytes, f_fSigned), iReturn, f_fChecked)
                     : frame.raiseException(
                         xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
                 }
@@ -186,7 +186,7 @@ public abstract class xConstrainedInteger
 
                 int cBits = hBits.m_cSize;
                 return cBits == f_cNumBits
-                    ? convertLong(frame, fromByteArray(abVal, cBits >>> 3), iReturn, f_fChecked)
+                    ? convertLong(frame, fromByteArray(abVal, cBits >>> 3, f_fSigned), iReturn, f_fChecked)
                     : frame.raiseException(
                         xException.illegalArgument(frame, "Invalid bit count: " + cBits));
                 }
@@ -803,14 +803,15 @@ public abstract class xConstrainedInteger
     /**
      * Produce a long value from the specified byte array.
      *
-     * @param aBytes  the byte array
-     * @param cBytes  the number of bytes to use
+     * @param aBytes   the byte array
+     * @param cBytes   the number of bytes to use
+     * @param fSigned  true if the value is a signed value
      *
      * @return the long value
      */
-    static public long fromByteArray(byte[] aBytes, int cBytes)
+    static public long fromByteArray(byte[] aBytes, int cBytes, boolean fSigned)
         {
-        long l = 0;
+        long l = fSigned & aBytes[cBytes-1] < 0 ? -1 : 0;
         for (int i = 0; i < cBytes; i++)
             {
             l = l << 8 | (aBytes[i] & 0xFF);
