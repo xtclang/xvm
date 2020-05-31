@@ -1,12 +1,15 @@
 module TestIO
     {
     import ecstasy.io.ByteArrayInputStream;
+    import ecstasy.io.ByteArrayOutputStream;
     import ecstasy.io.CharArrayReader;
     import ecstasy.io.DataInputStream;
     import ecstasy.io.InputStream;
     import ecstasy.io.JavaDataInput;
     import ecstasy.io.ObjectInput;
     import ecstasy.io.ObjectOutput;
+    import ecstasy.io.PackedDataInput;
+    import ecstasy.io.PackedDataOutput;
     import ecstasy.io.Reader;
     import ecstasy.io.TextPosition;
     import ecstasy.io.Writer;
@@ -33,6 +36,7 @@ module TestIO
     void run()
         {
         testInputStream();
+        testPacked();
         testJavaUTF();
         testUTF8Reader();
         testJSONLex();
@@ -66,6 +70,33 @@ module TestIO
                 }
             }
         console.println("(eof)");
+        }
+
+    void testPacked()
+        {
+        console.println("\n*** testPacked()");
+
+        @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
+        for (Int i : [-150..+150])
+            {
+            out.writeInt(i);
+            }
+
+        Int[] others = [minvalue, maxvalue, -12341235, -1234151515, +1324153, +1512358723597];
+        for (Int i : others)
+            {
+            out.writeInt(i);
+            }
+
+        @PackedDataInput ByteArrayInputStream in = new @PackedDataInput ByteArrayInputStream(out.bytes);
+        for (Int i : [-150..+150])
+            {
+            assert in.readInt() == i;
+            }
+        for (Int i : others)
+            {
+            assert in.readInt() == i;
+            }
         }
 
     void testJavaUTF()
