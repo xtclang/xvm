@@ -391,7 +391,7 @@ abstract public class BaseDecFP
 
     // ----- handle --------------------------------------------------------------------------------
 
-    protected DecimalHandle makeHandle(double d)
+    public DecimalHandle makeHandle(double d)
         {
         return makeHandle(fromDouble(d));
         }

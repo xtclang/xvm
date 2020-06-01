@@ -415,7 +415,7 @@ abstract public class BaseBinaryFP
         return makeHandle(fromLong(xConstrainedInteger.fromByteArray(aBytes, cBytes, false))); // TODO GG REVIEW CHANGE
         }
 
-    protected FloatHandle makeHandle(double dValue)
+    public FloatHandle makeHandle(double dValue)
         {
         return new FloatHandle(getCanonicalClass(), dValue);
         }

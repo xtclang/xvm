@@ -100,6 +100,7 @@ import ecstasy.numbers.IntLiteral;
 import ecstasy.numbers.IntNumber;
 import ecstasy.numbers.Number;
 import ecstasy.numbers.Number.Signum;
+import ecstasy.numbers.Random;
 import ecstasy.numbers.UInt8         as Byte;
 import ecstasy.numbers.UInt64        as UInt;
 

@@ -16,14 +16,16 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
+import org.xvm.runtime.template._native.xLocalClock;
+import org.xvm.runtime.template._native.xNanosTimer;
+import org.xvm.runtime.template._native.xRTRandom;
+import org.xvm.runtime.template._native.xTerminalConsole;
+
 import org.xvm.runtime.template._native.mgmt.xLinker;
+
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
-
-import org.xvm.runtime.template._native.xLocalClock;
-import org.xvm.runtime.template._native.xNanosTimer;
-import org.xvm.runtime.template._native.xTerminalConsole;
 
 
 /**
@@ -124,6 +126,12 @@ public class CoreContainer
             f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
             }
 
+        // +++ Random
+        TypeConstant typeRandom = pool.ensureEcstasyTypeConstant("numbers.Random");
+
+        f_mapResources.put(new InjectionKey("rnd"   , typeRandom), this::ensureDefaultRandom);
+        f_mapResources.put(new InjectionKey("random", typeRandom), this::ensureDefaultRandom);
+
         // +++ OSFileStore etc.
         TypeConstant typeFileStore = pool.ensureEcstasyTypeConstant("fs.FileStore");
         TypeConstant typeDirectory = pool.ensureEcstasyTypeConstant("fs.Directory");
@@ -206,6 +214,24 @@ public class CoreContainer
             }
 
         return hStorage;
+        }
+
+    protected ObjectHandle ensureDefaultRandom(Frame frame)
+        {
+        ObjectHandle hRnd = m_hRandom;
+        if (hRnd == null)
+            {
+            xRTRandom templateRTRandom = (xRTRandom) f_templates.getTemplate("_native.RTRandom");
+            if (templateRTRandom != null)
+                {
+                TypeConstant typeRandom = frame.poolContext().ensureEcstasyTypeConstant("numbers.Random");
+                m_hRandom = hRnd = templateRTRandom.createServiceHandle(
+                    createServiceContext("Random"),
+                    templateRTRandom.getCanonicalClass(), typeRandom);
+                }
+            }
+
+        return hRnd;
         }
 
     protected ObjectHandle ensureFileStore(Frame frame)
@@ -405,6 +431,7 @@ public class CoreContainer
     // ----- data fields ---------------------------------------------------------------------------
 
     private ObjectHandle m_hLocalClock;
+    private ObjectHandle m_hRandom;
     private ObjectHandle m_hOSStorage;
     private ObjectHandle m_hFileStore;
     private ObjectHandle m_hRootDir;
