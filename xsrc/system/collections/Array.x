@@ -1909,7 +1909,7 @@ class Array<Element>
         (Int value, Int newOffset) readPackedInt(Int offset)
             {
             // use a signed byte to get auto sign-extension when converting to an int
-            Int8 b = this[offset].toInt8();
+            Int8 b = new Int8(this[offset].toBitArray());
 
             // Tiny format: the first bit of the first byte is used to indicate a single byte format,
             // in which the entire value is contained in the 7 MSBs
@@ -1938,9 +1938,9 @@ class Array<Element>
             Int size = 1 + (b >>> 2).toInt();
             assert:bounds size <= 8;
 
-            Int curOffset  = offset + 1;
-            Int nextOffset = curOffset + size;
-            Int n          = this[curOffset++].toUnchecked().toInt8().toInt();  // sign-extend
+            Int  curOffset  = offset + 1;
+            Int  nextOffset = curOffset + size;
+            Int  n          = new Int8(this[curOffset++].toBitArray()).toInt();  // sign-extend
             while (curOffset < nextOffset)
                 {
                 n = n << 8 | this[curOffset++].toInt();

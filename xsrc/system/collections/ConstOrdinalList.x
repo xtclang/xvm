@@ -5,7 +5,7 @@ import ecstasy.io.ByteArrayOutputStream;
 /**
  * The ConstOrdinalList is an immutable List implementation based on a compressed byte array value.
  */
-const ConstOrdinalList(immutable Byte[] contents)
+const ConstOrdinalList
         implements List<Int>
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -233,7 +233,7 @@ const ConstOrdinalList(immutable Byte[] contents)
             private Boolean loadNextNode()
                 {
                 // check if the iterator is exhausted
-                if (curIndex >= size)
+                if (curIndex >= this.ConstOrdinalList.size)
                     {
                     return False;
                     }

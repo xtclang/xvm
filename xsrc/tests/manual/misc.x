@@ -7,6 +7,7 @@ module TestMisc
         console.println("hello world!");
 
         testBools();
+        testChars();
         testInts();
         testIsA();
         testCast();
@@ -89,6 +90,17 @@ module TestMisc
         console.println("!b=" + !b);
         console.println("~a=" + ~a);
         console.println("~b=" + ~b);
+        }
+
+    void testChars()
+        {
+        console.println("\n** testChars()");
+
+        Char[] chars = "1aA!\n$£€".toCharArray();
+        for (Char ch : chars)
+            {
+            console.println($"char \"{ch}\", unicode={ch.unicode}, cat={ch.unicodeCategory}, lower={ch.lowercase}, upper={ch.uppercase}, title={ch.titlecase}, dec={ch.unicodeDecimalValue}, num={ch.unicodeNumericValue}");
+            }
         }
 
     void testIsA()

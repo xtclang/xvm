@@ -88,6 +88,17 @@ module TestIO
             out.writeInt(i);
             }
 
+        for (Int i = 1; i > 0; i = i << 1)
+            {
+            out.writeInt(i);
+            out.writeInt(i+1);
+            out.writeInt(i-1);
+            out.writeInt(-i);
+            out.writeInt(-(i+1));
+            out.writeInt(-(i-1));
+            }
+
+
         @PackedDataInput ByteArrayInputStream in = new @PackedDataInput ByteArrayInputStream(out.bytes);
         for (Int i : [-150..+150])
             {
@@ -96,6 +107,16 @@ module TestIO
         for (Int i : others)
             {
             assert in.readInt() == i;
+            }
+
+        for (Int i = 1; i > 0; i = i << 1)
+            {
+            assert in.readInt() == i;
+            assert in.readInt() == i+1;
+            assert in.readInt() == i-1;
+            assert in.readInt() == -i;
+            assert in.readInt() == -(i+1);
+            assert in.readInt() == -(i-1);
             }
         }
 
