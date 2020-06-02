@@ -228,7 +228,10 @@ public abstract class TypeConstant
      */
     public TypeConstant removeImmutable()
         {
-        assert isImmutabilitySpecified();
+        if (!isImmutabilitySpecified())
+            {
+            return this;
+            }
 
         ConstantPool pool = getConstantPool();
 
@@ -273,7 +276,10 @@ public abstract class TypeConstant
      */
     public TypeConstant removeAccess()
         {
-        assert isAccessSpecified();
+        if (!isAccessSpecified())
+            {
+            return this;
+            }
 
         ConstantPool pool = getConstantPool();
 
@@ -1799,10 +1805,7 @@ public abstract class TypeConstant
                     {
                     // obtain the struct type of the contribution and copy any missing fields from it
                     TypeConstant typeContrib = contrib.getTypeConstant();
-                    if (typeContrib.isAccessSpecified())
-                        {
-                        typeContrib = typeContrib.removeAccess();
-                        }
+                    typeContrib = typeContrib.removeAccess();
                     typeContrib = pool.ensureAccessTypeConstant(typeContrib, Access.STRUCT);
 
                     TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
@@ -4677,15 +4680,8 @@ public abstract class TypeConstant
 
                 if (relation == null)
                     {
-                    if (typeLeft.isAccessSpecified())
-                        {
-                        typeLeft = typeLeft.removeAccess();
-                        }
-                    if (typeRight.isAccessSpecified())
-                        {
-                        typeRight = typeRight.removeAccess();
-                        }
-                    relation = typeRight.calculateRelation(typeLeft);
+                    relation = typeRight.removeAccess().
+                            calculateRelation(typeLeft.removeAccess());
                     }
                 mapRelations.put(typeLeft, relation);
                 return relation;

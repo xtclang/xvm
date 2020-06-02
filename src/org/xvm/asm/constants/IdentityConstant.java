@@ -652,11 +652,7 @@ public abstract class IdentityConstant
             ConstantPool pool = getConstantPool();
             TypeConstant type = getType();
 
-            if (type.isAccessSpecified())
-                {
-                type = type.removeAccess();
-                }
-            type = type.normalizeParameters();
+            type = type.removeAccess().normalizeParameters();
 
             return pool.ensureParameterizedTypeConstant(pool.typeClass(), type,
                     pool.ensureAccessTypeConstant(type, Access.PROTECTED),

@@ -1116,14 +1116,8 @@ public class xRTType
         TypeConstant typeTarget = hType.getDataType();
         if (typeTarget.isExplicitClassIdentity(true))
             {
-            if (typeTarget.isAccessSpecified())
-                {
-                typeTarget = typeTarget.removeAccess();
-                }
-            if (typeTarget.isImmutabilitySpecified())
-                {
-                typeTarget = typeTarget.removeImmutable();
-                }
+            typeTarget = typeTarget.removeAccess().removeImmutable();
+
             IdentityConstant idClz = frame.poolContext().ensureClassConstant(typeTarget);
 
             return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(idClz));
