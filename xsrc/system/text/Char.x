@@ -225,14 +225,36 @@ const Char
         return bytes.makeImmutable();
         }
 
+    /**
+     * @return the integer value of the character's codepoint
+     */
     UInt32 toUInt32()
         {
         return codepoint;
         }
 
+    /**
+     * @return the integer value of the character's codepoint
+     */
     Int toInt()
         {
         return codepoint.toInt();
+        }
+
+    /**
+     * @return the character as it would appear in source code as a character literal
+     */
+    String toSourceString()
+        {
+        Int len = 1;
+        len := isEscaped();
+
+        StringBuffer buf = new StringBuffer(len+2);
+        buf.add('\'');
+        appendEscaped(buf);
+        buf.add('\'');
+
+        return buf.toString();
         }
 
 
@@ -1275,24 +1297,12 @@ const Char
     @Override
     Int estimateStringLength()
         {
-        if (Int len := isEscaped())
-            {
-            return len;
-            }
-
         return 1;
         }
 
     @Override
     void appendTo(Appender<Char> appender)
         {
-        if (isEscaped())
-            {
-            appendEscaped(appender);
-            }
-        else
-            {
-            appender.add(this);
-            }
+        appender.add(this);
         }
     }
