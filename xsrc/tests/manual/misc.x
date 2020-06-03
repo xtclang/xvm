@@ -99,7 +99,7 @@ module TestMisc
         Char[] chars = "1aA!\n$£€".toCharArray();
         for (Char ch : chars)
             {
-            console.println($"char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.unicodeCategory}, lower={ch.lowercase.toSourceString()}, upper={ch.uppercase.toSourceString()}, title={ch.titlecase.toSourceString()}, dec={ch.unicodeDecimalValue}, num={ch.unicodeNumericValue}");
+            console.println($"char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.category}, lower={ch.lowercase.toSourceString()}, upper={ch.uppercase.toSourceString()}, title={ch.titlecase.toSourceString()}, dec={ch.decimalValue}, num={ch.numericValue}");
             }
         }
 

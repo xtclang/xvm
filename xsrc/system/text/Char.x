@@ -597,7 +597,7 @@ const Char
      */
     Boolean unicode.get()
         {
-        return unicodeCategory != Unassigned;
+        return category != Unassigned;
         }
 
     /**
@@ -611,22 +611,21 @@ const Char
      * > [General Category Values](https://www.unicode.org/reports/tr44/#General_Category_Values).
      *
      * This information is stored in the binary file "CharCats.dat" in this package. For a codepoint
-     * `n`, the n-th byte of the file is the ordinal of the `GeneralCategory` enum value for the
-     * character.
+     * `n`, the n-th byte of the file is the ordinal of the `Category` enum value for the character.
      */
-    GeneralCategory unicodeCategory.get()
+    Category category.get()
         {
         static List<Int> categoriesByCodepoint = new ConstOrdinalList(#./CharCats.dat);
 
         return codepoint < categoriesByCodepoint.size
-                ? GeneralCategory.values[categoriesByCodepoint[codepoint]]
+                ? Category.values[categoriesByCodepoint[codepoint]]
                 : Unassigned;
         }
 
     /**
      * Unicode "General Categories".
      */
-    enum GeneralCategory(String code, String description)
+    enum Category(String code, String description)
         {
         UppercaseLetter     ("Lu", "An uppercase letter"),
         LowercaseLetter     ("Ll", "A lowercase letter"),
@@ -696,7 +695,7 @@ const Char
      * > Chapter 4, Character Properties in
      * > [Unicode](https://www.unicode.org/reports/tr41/tr41-26.html#Unicode).
      */
-    Int? unicodeDecimalValue.get()
+    Int? decimalValue.get()
         {
         static List<Int> decsByCodepoint = new ConstOrdinalList(#./CharDecs.dat);
 
@@ -722,7 +721,7 @@ const Char
      * > this field, and fields 6 and 7 are null. This includes fractions such as, for example,
      * > "1/5" for U+2155 VULGAR FRACTION ONE FIFTH.
      */
-    String? unicodeNumericValue.get()
+    String? numericValue.get()
         {
         static List<Int> numsByCodepoint = new ConstOrdinalList(#./CharNums.dat);
         if (codepoint >= numsByCodepoint.size)
@@ -890,20 +889,6 @@ const Char
         }
 
     /**
-     * The Unicode canonical combining class for the character's codepoint.
-     *
-     * > The classes used for the Canonical Ordering Algorithm in the Unicode Standard. This
-     * > property could be considered either an enumerated property or a numeric property: the
-     * > principal use of the property is in terms of the numeric values. For the property value
-     * > names associated with different numeric values, see DerivedCombiningClass.txt and Canonical
-     * > Combining Class Values.
-     */
-    Int? unicodeCanonicalCombiningClass.get()
-        {
-        TODO CharCombineClass.dat
-        }
-
-    /**
      * For characters that have a Unicode lowercase form, this property provides that form;
      * otherwise, this property returns `this`.
      */
@@ -964,7 +949,7 @@ const Char
      * The Unicode Block name for the range of codepoints containing this character, or `Null` if
      * the codepoint for this character does not belong to a Unicode block.
      */
-    String? unicodeBlock.get()
+    String? blockName.get()
         {
         static List<Int> blocksByCodepoint = new ConstOrdinalList(#./CharBlocks.dat);
         if (codepoint >= blocksByCodepoint.size)
@@ -1289,6 +1274,20 @@ const Char
         return index >= blockNames.size
                 ? Null
                 : blockNames[index];
+        }
+
+    /**
+     * The Unicode canonical combining class for the character's codepoint.
+     *
+     * > The classes used for the Canonical Ordering Algorithm in the Unicode Standard. This
+     * > property could be considered either an enumerated property or a numeric property: the
+     * > principal use of the property is in terms of the numeric values. For the property value
+     * > names associated with different numeric values, see DerivedCombiningClass.txt and Canonical
+     * > Combining Class Values.
+     */
+    Int? unicodeCanonicalCombiningClass.get()
+        {
+        TODO CharCombineClass.dat
         }
 
 
