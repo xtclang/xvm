@@ -6,40 +6,41 @@ import io.TextPosition;
 /**
  * A lexical analyzer (tokenizer) for the Ecstasy language.
  */
-interface Error
+@Abstract class Error
+        implements Stringable
     {
     // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The location information for the error.
      */
-    @RO String location;
+    @Abstract @RO String location;
 
     /**
      * The severity of the error information.
      */
-    @RO Severity severity;
+    Severity severity;
 
     /**
      * The error code corresponding to the error.
      */
-    @RO String code;
+    String code;
 
     /**
      * The parameters used to fill in information in the error message related to the error code.
      */
-    @RO Object[] params;
+    Object[] params;
 
     /**
      * The unformatted error message for the error code. (This property encapsulates the resource
      * resolution that provides an unformatted message for an error code.)
      */
-    @RO String unformattedMessage;
+    @Abstract @RO String unformattedMessage;
 
     /**
      * A formatted error message describing the error code, with the parameters included.
      */
-    @RO String message.get()
+    String message.get()
         {
         String message    = unformattedMessage;
         Int    paramCount = this.params.size;
@@ -100,6 +101,7 @@ interface Error
                         buf.add('{')
                            .add(ch);
                         state = Normal;
+                        break;
 
                     case (Number, '0'..'9'):
                         num = num * 10 + ch.decimalValue ?: assert;
@@ -156,7 +158,7 @@ interface Error
     /**
      * A string value that can be used to quickly detect likely-duplicate errors.
      */
-    @RO String uniqueId.get()
+    String uniqueId.get()
         {
         String       location = this.location;
         String       code     = this.code;
@@ -171,10 +173,10 @@ interface Error
      * An optional String that provides some context for the error, such as a snippet of source
      * code.
      */
-    @RO String? context;
+    @Abstract @RO String? context;
 
 
-    // ----- properties ----------------------------------------------------------------------------
+    // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
     Int estimateStringLength()
