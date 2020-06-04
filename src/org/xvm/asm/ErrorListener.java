@@ -72,7 +72,7 @@ public interface ErrorListener
 
     /**
      * Branch this ErrorListener by creating a new one that will collect subsequent errors
-     * in the same manner as this one until is's {@link #merge() merged} or discarded.
+     * in the same manner as this one until it is {@link #merge() merged} or discarded.
      *
      * @return the branched-out ErrorListener
      */
