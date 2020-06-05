@@ -346,10 +346,9 @@ public class InvocationExpression
                 typeLeft = exprLeft.getImplicitType(ctx);
                 if (typeLeft == null)
                     {
-                    // the fact that NameExpression.getImplicitType() returned null can only mean
-                    // that the name was not resolvable; we need to produce a proper error message
-                    TypeFit fit = exprLeft.testFit(ctx, pool.typeObject(), errs);
-                    assert !fit.isFit();
+                    // the fact that getImplicitType() returned null may mean that the "left" name
+                    // is not resolvable; try to produce a proper error message in that case
+                    exprLeft.testFit(ctx, pool.typeObject(), errs);
                     return TypeConstant.NO_TYPES;
                     }
                 }
