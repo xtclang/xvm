@@ -1,12 +1,9 @@
-import io.EndOfFile;
-import io.IOException;
-import io.Reader;
-import io.TextPosition;
-
 /**
- * A lexical analyzer (tokenizer) for the Ecstasy language.
+ * An abstract error representation, for logging errors (instead of throwing exceptions), such as
+ * when one or more errors occur during compilation, and need to be collected for display to a
+ * developer.
  */
-@Abstract class Error
+@Abstract const Error
         implements Stringable
     {
     // ----- properties ----------------------------------------------------------------------------
@@ -93,7 +90,7 @@ import io.TextPosition;
                         break;
 
                     case (Param, '0'..'9'):
-                        num   = ch.decimalValue ?: assert;
+                        assert num := ch.asciiDigit();
                         state = Number;
                         break;
                     case (Param, _):
@@ -104,7 +101,8 @@ import io.TextPosition;
                         break;
 
                     case (Number, '0'..'9'):
-                        num = num * 10 + ch.decimalValue ?: assert;
+                        assert Int digit := ch.asciiDigit();
+                        num = num * 10 + digit;
                         break;
                     case (Number, '}'):
                         // if the parameter index is out of range, then assume it should be blank
@@ -173,7 +171,10 @@ import io.TextPosition;
      * An optional String that provides some context for the error, such as a snippet of source
      * code.
      */
-    @Abstract @RO String? context;
+    @RO String? context.get()
+        {
+        return Null;
+        }
 
 
     // ----- Stringable methods --------------------------------------------------------------------

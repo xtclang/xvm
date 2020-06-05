@@ -590,6 +590,50 @@ const Char
         }
 
 
+    // ----- ASCII support -------------------------------------------------------------------------
+
+    /**
+     * Determine if the character is in the ASCII range.
+     */
+    Boolean ascii.get()
+        {
+        return codepoint <= 0x7F;
+        }
+
+    /**
+     * Determine if the character is an ASCII digit, one of the values '0'..'9'.
+     *
+     * @return True iff the character is an ASCII digit
+     * @return (conditional) a value in the range `[0..9]`
+     */
+    conditional Int asciiDigit()
+        {
+        return switch (this)
+            {
+            case '0'..'9': (True, this - '0');
+            default      : False;
+            };
+        }
+
+    /**
+     * Determine if the character is an ASCII hexit, one of the values `['0'..'9']`, `['A'..'F']`,
+     * or `['a'..'f']`.
+     *
+     * @return True iff the character is an ASCII hexadecimal digit (a "hexit")
+     * @return (conditional) a value in the range `[0..15]`
+     */
+    conditional Int asciiHexit()
+        {
+        return switch (this)
+            {
+            case '0'..'9': (True,       (this - '0'));
+            case 'A'..'F': (True, 0xA + (this - 'A'));
+            case 'a'..'f': (True, 0xa + (this - 'a'));
+            default      : False;
+            };
+        }
+
+
     // ----- Unicode support -----------------------------------------------------------------------
 
     /**
@@ -695,7 +739,7 @@ const Char
      * > Chapter 4, Character Properties in
      * > [Unicode](https://www.unicode.org/reports/tr41/tr41-26.html#Unicode).
      */
-    Int? decimalValue.get()
+    conditional Int decimalValue()
         {
         static List<Int> decsByCodepoint = new ConstOrdinalList(#./CharDecs.dat);
 
@@ -704,11 +748,11 @@ const Char
             Int val = decsByCodepoint[codepoint];
             if (val < 10)
                 {
-                return val;
+                return True, val;
                 }
             }
 
-        return Null;
+        return False;
         }
 
     /**
