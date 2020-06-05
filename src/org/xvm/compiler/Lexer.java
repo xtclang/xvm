@@ -35,7 +35,7 @@ import static org.xvm.util.Handy.quotedChar;
 public class Lexer
         implements Iterator<Token>
     {
-    // ----- constructors ------------------------------------------------------
+    // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct an XTC lexical analyzer.
@@ -69,7 +69,7 @@ public class Lexer
         }
 
 
-    // ----- Iterator methods --------------------------------------------------
+    // ----- Iterator methods ----------------------------------------------------------------------
 
     @Override
     public boolean hasNext()
@@ -87,11 +87,11 @@ public class Lexer
         return token;
         }
 
-    // ----- public API --------------------------------------------------------
+
+    // ----- public API ----------------------------------------------------------------------------
 
     /**
-     * Lexically analyze the source, emitting a stream of tokens to the
-     * specified consumer.
+     * Lexically analyze the source, emitting a stream of tokens to the specified consumer.
      *
      * @param consumer  the Token Consumer
      */
@@ -136,11 +136,11 @@ public class Lexer
         }
 
 
-    // ----- internal ----------------------------------------------------------
+    // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * Eat the characters defined as whitespace, which include line terminators
-     * and the file terminator. Whitespace does not include comments.
+     * Eat the characters defined as whitespace, which include line terminators and the file
+     * terminator. Whitespace does not include comments.
      */
     protected boolean eatWhitespace()
         {
@@ -2328,9 +2328,8 @@ public class Lexer
         }
 
     /**
-     * Get the next character of source code, but do some additional checks
-     * on the character to make sure it's legal, such as checking for an illegal
-     * SUB character.
+     * Get the next character of source code, but do some additional checks on the character to make
+     * sure it's legal, such as checking for an illegal SUB character.
      */
     protected char nextChar()
         {
@@ -2354,9 +2353,8 @@ public class Lexer
         }
 
     /**
-     * Get the next character of source code, but do some additional checks
-     * on the character to make sure it's legal, such as checking for an illegal
-     * SUB character.
+     * Get the next character of source code, but do some additional checks on the character to make
+     * sure it's legal, such as checking for an illegal SUB character.
      */
     protected char needCharOrElse(String sError)
         {
@@ -2609,8 +2607,7 @@ public class Lexer
         }
 
     /**
-     * Determine if the specified character can be used as the first character
-     * of an identifier.
+     * Determine if the specified character can be used as the first character of an identifier.
      *
      * @param ch  the character to evaluate
      *
@@ -2771,7 +2768,7 @@ public class Lexer
         }
 
 
-    // ----- constants ---------------------------------------------------------
+    // ----- constants -----------------------------------------------------------------------------
 
     /**
      * Unicode: Horizontal Tab.
@@ -2904,7 +2901,7 @@ public class Lexer
     public static final String UNEXPECTED_CHAR      = "LEXER-18";
 
 
-    // ----- data members ------------------------------------------------------
+    // ----- data members --------------------------------------------------------------------------
 
     /**
      * The Source to parse.
