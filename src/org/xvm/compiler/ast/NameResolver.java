@@ -297,7 +297,11 @@ public class NameResolver
                     if (structure instanceof PropertyStructure)
                         {
                         PropertyStructure prop = (PropertyStructure) structure;
-                        assert prop.isGenericTypeParameter();
+                        if (!prop.isGenericTypeParameter())
+                            {
+                            m_node.log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, m_sName);
+                            return Result.ERROR;
+                            }
 
                         Result result = resolveFormalDotName(prop.getType(), errs);
                         if (result != Result.RESOLVED)
