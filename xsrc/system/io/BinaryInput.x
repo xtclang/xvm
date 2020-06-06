@@ -95,4 +95,242 @@ interface BinaryInput
     void close()
         {
         }
+
+
+    // ----- helper functions ----------------------------------------------------------------------
+
+    /**
+     * Read a sequence of bytes from the stream corresponding to a single Unicode character that is
+     * encoded in the UTF-8 format. If the character is in the surrogate range, the second codepoint
+     * in the pair will also be read, and joined with the first.
+     *
+     * @param in  the BinaryInput stream
+     *
+     * @return the character read from the stream in UTF-8 format
+     *
+     * @throws IllegalUTF if there is a flaw in the UTF-8 encoding or in the resulting codepoint
+     */
+    static Char readUTF8Char(BinaryInput in)
+        {
+        private static UInt32 trailing(BinaryInput in)
+            {
+            Byte b = in.readByte();
+            if (b & 0b11000000 != 0b10000000)
+                {
+                throw new IllegalUTF("trailing unicode byte does not match 10xxxxxx");
+                }
+            return (b & 0b00111111).toUInt32();
+            }
+
+        // otherwise the format is based on the number of high-order 1-bits:
+        // #1s first byte  trailing  # trailing  bits  code-points
+        // --- ----------  --------  ----------  ----  -----------------------
+        //  0  0xxxxxxx    n/a           0         7   U+0000    - U+007F     (ASCII)
+        //  2  110xxxxx    10xxxxxx      1        11   U+0080    - U+07FF
+        //  3  1110xxxx    10xxxxxx      2        16   U+0800    - U+FFFF
+        //  4  11110xxx    10xxxxxx      3        21   U+10000   - U+1FFFFF
+        //  5  111110xx    10xxxxxx      4        26   U+200000  - U+3FFFFFF
+        //  6  1111110x    10xxxxxx      5        31   U+4000000 - U+7FFFFFFF
+        Byte   b = in.readByte();
+        UInt32 n = b.toUInt32();
+        switch ((~b).leftmostBit)
+            {
+            case 0b10000000:
+                return n.toChar();
+
+            case 0b00100000:
+                return (n & 0b00011111 << 6 | trailing(in)).toChar();
+
+            case 0b00010000:
+                n = n & 0b00001111 << 6
+                    | trailing(in) << 6
+                    | trailing(in);
+                break;
+
+            case 0b00001000:
+                n = n & 0b00000111 << 6
+                    | trailing(in) << 6
+                    | trailing(in) << 6
+                    | trailing(in);
+                break;
+
+            case 0b00000100:
+                n = n & 0b00000011 << 6
+                    | trailing(in) << 6
+                    | trailing(in) << 6
+                    | trailing(in) << 6
+                    | trailing(in);
+                break;
+
+            case 0b00000010:
+                n = n & 0b00000001 << 6
+                    | trailing(in) << 6
+                    | trailing(in) << 6
+                    | trailing(in) << 6
+                    | trailing(in) << 6
+                    | trailing(in);
+                break;
+
+            default:
+                throw new IllegalUTF($"initial byte: {b}");
+            }
+
+        Char ch = n.toChar();
+        return ch.requiresTrailingSurrogate()
+                ? ch.addTrailingSurrogate(readUTF8Char(in))
+                : ch;
+        }
+
+    /**
+     * Read a sequence of either 2 or 4 bytes from the stream corresponding to a single Unicode
+     * character that is encoded in the UTF-16BE format.
+     *
+     * @param in  the BinaryInput stream
+     *
+     * @return the character read from the stream in UTF-16BE format
+     *
+     * @throws IllegalUTF if there is a flaw in the UTF-16 encoding or in the resulting codepoint
+     */
+    static Char readUTF16BEChar(BinaryInput in)
+        {
+        Char ch = readUInt16BE(in).toChar();
+        return ch.requiresTrailingSurrogate()
+                ? ch.addTrailingSurrogate(readUInt16BE(in).toChar())
+                : ch;
+        }
+
+    /**
+     * Read a sequence of either 2 or 4 bytes from the stream corresponding to a single Unicode
+     * character that is encoded in the UTF-16LE format.
+     *
+     * @param in  the BinaryInput stream
+     *
+     * @return the character read from the stream in UTF-16LE format
+     *
+     * @throws IllegalUTF if there is a flaw in the UTF-16 encoding or in the resulting codepoint
+     */
+    static Char readUTF16LEChar(BinaryInput in)
+        {
+        Char ch = readUInt16LE(in).toChar();
+        return ch.requiresTrailingSurrogate()
+                ? ch.addTrailingSurrogate(readUInt16LE(in).toChar())
+                : ch;
+        }
+
+    /**
+     * Read a sequence of bytes from the stream corresponding to a single Unicode character that is
+     * encoded in the UTF-32BE format.
+     *
+     * @param in  the BinaryInput stream
+     *
+     * @return the character read from the stream in UTF-32BE format
+     *
+     * @throws IllegalUTF if there is a flaw in the UTF-32 encoding or in the resulting codepoint
+     */
+    static Char readUTF32BEChar(BinaryInput in)
+        {
+        Char ch = readUInt32BE(in).toChar();
+        return ch.requiresTrailingSurrogate()
+                ? ch.addTrailingSurrogate(readUInt32BE(in).toChar())
+                : ch;
+        }
+
+    /**
+     * Read a sequence of bytes from the stream corresponding to a single Unicode character that is
+     * encoded in the UTF-32LE format.
+     *
+     * @param in  the BinaryInput stream
+     *
+     * @return the character read from the stream in UTF-32LE format
+     *
+     * @throws IllegalUTF if there is a flaw in the UTF-32 encoding or in the resulting codepoint
+     */
+    static Char readUTF32LEChar(BinaryInput in)
+        {
+        Char ch = readUInt32LE(in).toChar();
+        return ch.requiresTrailingSurrogate()
+                ? ch.addTrailingSurrogate(readUInt32LE(in).toChar())
+                : ch;
+        }
+
+    /**
+     * Read a sequence of bytes from the stream corresponding to a big-endian encoded, 16-bit
+     * unsigned integer value.
+     *
+     * @param in  the BinaryInput stream
+     *
+     * @return the UInt16 value read from the stream
+     */
+    static UInt16 readUInt16BE(BinaryInput in)
+        {
+        return in.readByte().toUInt16() << 8
+             | in.readByte().toUInt16();
+        }
+
+    /**
+     * Read a sequence of bytes from the stream corresponding to a little-endian encoded, 16-bit
+     * unsigned integer value.
+     *
+     * @param in  the BinaryInput stream
+     *
+     * @return the UInt16 value read from the stream
+     */
+    static UInt16 readUInt16LE(BinaryInput in)
+        {
+        return in.readByte().toUInt16()
+            | (in.readByte().toUInt16() <<  8);
+        }
+
+    /**
+     * Read a sequence of bytes from the stream corresponding to a big-endian encoded, 32-bit
+     * unsigned integer value.
+     *
+     * @param in  the BinaryInput stream
+     *
+     * @return the UInt32 value read from the stream
+     */
+    static UInt32 readUInt32BE(BinaryInput in)
+        {
+        return in.readByte().toUInt32() << 8
+             | in.readByte().toUInt32() << 8
+             | in.readByte().toUInt32() << 8
+             | in.readByte().toUInt32();
+        }
+
+    /**
+     * Read a sequence of bytes from the stream corresponding to a little-endian encoded, 32-bit
+     * unsigned integer value.
+     *
+     * @param in  the BinaryInput stream
+     *
+     * @return the UInt32 value read from the stream
+     */
+    static UInt32 readUInt32LE(BinaryInput in)
+        {
+        return in.readByte().toUInt32()
+            | (in.readByte().toUInt32() <<  8)
+            | (in.readByte().toUInt32() << 16)
+            | (in.readByte().toUInt32() << 24);
+        }
+
+    /**
+     * Read a sequence of bytes from the stream corresponding to a null-terminated ASCII string.
+     *
+     * @param in            the BinaryInput stream
+     * @param convNonAscii  an optional function that is used to convert non-ASCII values to Unicode
+     *                      characters
+     *
+     * @return the String read from the stream (but not including the closing null terminator)
+     */
+    static String readAsciiStringZ(BinaryInput in, function Char(Byte) convNonAscii = _ -> '?')
+        {
+        StringBuffer buf = new StringBuffer();
+        Byte b = in.readByte();
+        while (b != 0)
+            {
+            buf.add(b <= 0x7F ? b.toChar() : convNonAscii(b));
+            b = in.readByte();
+            }
+        return buf.toString();
+        }
     }

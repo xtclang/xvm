@@ -634,6 +634,97 @@ const Char
         }
 
 
+    // ----- surrogate pair support ----------------------------------------------------------------
+
+    /**
+     * Test this character to determine if it is the first part of a surrogate pair.
+     *
+     * From [the Unicode FAQ](https://unicode.org/faq/utf_bom.html#utf8-4):
+     *
+     * > Surrogates are code points from two special ranges of Unicode values, reserved for use as
+     * > the leading, and trailing values of paired code units in UTF-16. Leading, also called high,
+     * > surrogates are from D80016 to DBFF16, and trailing, or low, surrogates are from DC0016 to
+     * > DFFF16. They are called surrogates, since they do not represent characters directly, but
+     * > only as a pair.
+     *
+     * @return True if this this Char has a surrogate codepoint, and is a leading (first) value of
+     *         a surrogate pair
+     *
+     * @throws IllegalUTF if this Char has a surrogate codepoint, but is not a valid **leading**
+     *                    value for a surrogate pair
+     */
+    Boolean requiresTrailingSurrogate()
+        {
+        if (codepoint < 0xD800 || codepoint >= 0xE000)
+            {
+            return False;
+            }
+
+        // for surrogates, the high ten bits (in the range 0x000–0x3FF) are encoded in the range
+        // 0xD800–0xDBFF, and the low ten bits (in the range 0x000–0x3FF) are encoded in the range
+        // 0xDC00–0xDFFF
+        if (codepoint >= 0xDC00)
+            {
+            throw new IllegalUTF($"leading-surrogate required; trailing-surrogate found: {codepoint}");
+            }
+
+        return True;
+        }
+
+    /**
+     * Combine this leading surrogate with a trailing surrogate to produce a character.
+     *
+     * From [the Unicode FAQ](https://unicode.org/faq/utf_bom.html#utf8-4):
+     *
+     * > There is a much simpler computation that does not try to follow the bit distribution table.
+     *
+     *     // constants
+     *     const UTF32 LEAD_OFFSET = 0xD800 - (0x10000 >> 10);
+     *     const UTF32 SURROGATE_OFFSET = 0x10000 - (0xD800 << 10) - 0xDC00;
+     *
+     *     // computations
+     *     UTF16 lead = LEAD_OFFSET + (codepoint >> 10);
+     *     UTF16 trail = 0xDC00 + (codepoint & 0x3FF);
+     *
+     *     UTF32 codepoint = (lead << 10) + trail + SURROGATE_OFFSET;
+     *
+     * And:
+     *
+     * > Finally, the reverse, where hi and lo are the high and low surrogate, and C the resulting
+     * > character
+     *
+     *     UTF32 X = (hi & ((1 << 6) -1)) << 10 | lo & ((1 << 10) -1);
+     *     UTF32 W = (hi >> 6) & ((1 << 5) - 1);
+     *     UTF32 U = W + 1;
+     *
+     *     UTF32 C = U << 16 | X;
+     *
+     * @param trailing  the trailing portion of the surrogate pair
+     *
+     * @return the resulting Char that the surrogate pair represents
+     *
+     * @throws IllegalUTF if `this` Char is not a leading surrogate, or the `trailing` Char is not a
+     *                    trailing surrogate
+     */
+    Char addTrailingSurrogate(Char trailing)
+        {
+        UInt32 hi = this.codepoint;
+        if (hi < 0xD800 || hi >= 0xDC00)
+            {
+            throw new IllegalUTF($"illegal leading-surrogate: {hi}");
+            }
+
+        UInt32 lo = trailing.codepoint;
+        if (lo < 0xDC00 || codepoint >= 0xE000)
+            {
+            throw new IllegalUTF($"illegal trailing-surrogate: {lo}");
+            }
+
+        static UInt32 SURROGATE_OFFSET = 0x10000 - (0xD800 << 10) - 0xDC00;
+        return new Char((hi << 10) + lo + SURROGATE_OFFSET);
+        }
+
+
     // ----- Unicode support -----------------------------------------------------------------------
 
     /**

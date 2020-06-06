@@ -59,7 +59,29 @@ const Error
     @Override
     String location.get()
         {
-        TODO
+        String?      name = source.file?.name : Null;
+        StringBuffer buf  = new StringBuffer(16 + (name?.size : 0));
+
+        if (name != Null)
+            {
+            name.appendTo(buf);
+            buf.add(' ');
+            }
+
+        buf.add('[');
+        (before.lineNumber + 1).appendTo(buf);
+        buf.add(':');
+        (before.lineOffset + 1).appendTo(buf);
+        if (after != before)
+            {
+            "..".appendTo(buf);
+            (after.lineNumber + 1).appendTo(buf);
+            buf.add(':');
+            (after.lineOffset + 1).appendTo(buf);
+            }
+        buf.add(']');
+
+        return buf.toString();
         }
 
     /**
@@ -77,7 +99,6 @@ const Error
     @Override
     String? context.get()
         {
-        // TODO
-        return null;
+        return before == after ? Null : source.createReader()[before..after];
         }
     }
