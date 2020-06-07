@@ -81,7 +81,7 @@ class Lexer
 
         Boolean      spaceBefore = whitespace;
         TextPosition posBefore   = reader.position;
-        (Id id, Object value)    = eatToken();
+        (Id id, Object value)    = eatToken(posBefore);
         TextPosition posAfter    = reader.position;
         Boolean      spaceAfter  = eatWhitespace();
         return True, new Token(id, posBefore, posAfter, value, spaceBefore, spaceAfter);
@@ -158,6 +158,8 @@ class Lexer
     /**
      * Eat the characters defined as whitespace, which include line terminators and the file
      * terminator. Whitespace does not include comments.
+     *
+     * @return True iff whitespace was found
      */
     protected Boolean eatWhitespace()
         {
@@ -187,7 +189,7 @@ class Lexer
      * @return id     the token id
      * @return value  the token value (usually Null)
      */
-    protected (Id id, Object value) eatToken()
+    protected (Id id, Object value) eatToken(TextPosition before)
         {
         switch (Char next = nextChar())
             {
@@ -236,8 +238,8 @@ class Lexer
                         return CurrentDir, Null;
 
                     case '0'..'9':
-                        rewind(2);
-                        return eatNumericLiteral();
+                        rewind();
+                        return eatNumericLiteral(before, next);
 
                     default:
                         rewind();
@@ -248,10 +250,10 @@ class Lexer
                 switch (nextChar())
                     {
                     case '\"':
-                        return eatTemplateLiteral();
+                        return eatTemplateLiteral(before);
 
                     case '|':
-                        return eatMultilineTemplateLiteral();
+                        return eatMultilineTemplateLiteral(before);
 
                     case '/':
                         // it is a file name starting with "/"
@@ -300,11 +302,11 @@ class Lexer
 
                     case '|':
                         // multi-line binary literal
-                        return eatBinaryLiteral(True);
+                        return eatBinaryLiteral(before, True);
 
                     default:
                         rewind();
-                        return eatBinaryLiteral(False);
+                        return eatBinaryLiteral(before, False);
                     }
 
             case '@':
@@ -389,10 +391,10 @@ class Lexer
                 switch (nextChar())
                     {
                     case '/':
-                        return eatSingleLineComment();
+                        return eatSingleLineComment(before);
 
                     case '*':
-                        return eatEnclosedComment();
+                        return eatEnclosedComment(before);
 
                     case '=':
                         return DivAsn, Null;
@@ -563,88 +565,439 @@ class Lexer
                 return BitNot, Null;
 
             case '0'..'9':
-                rewind();
-                return eatNumericLiteral();
+                return eatNumericLiteral(before, next);
 
             case '\'':
-                return eatCharLiteral();
+                return eatCharLiteral(before);
 
             case '\"':
-                return eatStringLiteral();
+                return eatStringLiteral(before);
 
             case '`':
-                if (nextChar() == '|')
-                    {
-                    return eatMultilineLiteral();
-                    }
-
-                // REVIEW could provide an error like "| expected"
-                rewind();
-                continue;
+                return eatMultilineLiteral(before);
 
             default:
-// TODO
-//                if (!isIdentifierStart(chInit))
-//                    {
-//                    log(Severity.ERROR, ILLEGAL_CHAR, new Object[]{quotedChar(chInit)},
-//                            lInitPos, source.getPosition());
-//                    }
+                if (!isIdentifierStart(next))
+                    {
+                    log(Error, IllegalChar, [next.quoted()], before, reader.position);
+                    }
                 continue;
 
             case 'A'..'Z':
             case 'a'..'z':
             case '_':
-                TODO
+                return eatIdentifierOrKeyword(before, next);
             }
         }
 
     /**
-     * Lex a numeric literal token
+     * Lex a numeric literal token, starting with the second character of the literal (the first
+     * being passed in).
+     *
+     * @param before  the position of the first character of the token
+     * @param first   the first character of the token
      *
      * @return id     the token id
-     * @return value  the token value (usually Null)
+     * @return value  the token value
      */
-    protected (Id id, Object value) eatNumericLiteral()
+    protected (Id id, Object value) eatNumericLiteral(TextPosition before, Char first)
         {
         TODO
         }
 
-    protected (Id id, Object value) eatTemplateLiteral()
+    /**
+     * Lex a template literal, such as `$"x={x}"`. The opening `$"` has already been eaten.
+     *
+     * @param before  the position of the first character of the token
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Object value) eatTemplateLiteral(TextPosition before)
         {
         TODO
         }
 
-    protected (Id id, Object value) eatMultilineTemplateLiteral()
+    /**
+     * Lex a multi-line template literal, such as:
+     *
+     *     $|x={x}
+     *      |y={y}
+     *
+     * The opening `$|` has already been eaten.
+     *
+     * @param before  the position of the first character of the token
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Object value) eatMultilineTemplateLiteral(TextPosition before)
         {
         TODO
         }
 
-    protected (Id id, Object value) eatBinaryLiteral(Boolean multiline)
+    /**
+     * Lex either a single- or multi-line binary literal, such as `#FFAA01234FF`. The opening `#` or
+     * `#|` has already been eaten.
+     *
+     * @param before     the position of the first character of the token
+     * @param multiline  True iff the token began with a `#|`
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Object value) eatBinaryLiteral(TextPosition before, Boolean multiline)
+        {
+        Byte[] nibs = new Byte[];
+        Loop: while (!eof)
+            {
+            Char ch = nextChar();
+            if (Int n := ch.isHexit())
+                {
+                nibs.add(n.toByte());
+                }
+            else if (ch == '_')
+                {
+                if (Loop.first)
+                    {
+                    // it's an error to start with an underscore
+                    log(Error, IllegalHex, [ch.quoted()], before, reader.position);
+                    }
+                // ignore the _ (it's used for spacing within the literal)
+                }
+            else if (!multiline)
+                {
+                // the first non-hexit / non-underscore character indicates an end-of-value
+                rewind();
+                break;
+                }
+            else if (ch.isWhitespace())
+                {
+                // ignore whitespace, unless it's newline
+                if (ch.isLineTerminator() && !isMultilineContinued())
+                    {
+                    rewind();
+                    break;
+                    }
+                }
+            else
+                {
+                // error
+                log(Error, IllegalHex, [ch.quoted()], before, reader.position);
+                rewind();
+                break;
+                }
+            }
+
+        // REVIEW this code needs to be reusable and placed somewhere else (or use Nibble[])
+        Int    bytesLen  = (nibs.size + 1) / 2;
+        Byte[] bytes     = new Byte[bytesLen];
+        Int    nibIndex  = 0;
+        Int    byteIndex = 0;
+        if (nibs.size & 0x1 != 0)
+            {
+            bytes[0]  = nibs[0];
+            nibIndex  = 1;
+            byteIndex = 1;
+            }
+        while (byteIndex < bytesLen)
+            {
+            bytes[byteIndex++] = nibs[nibIndex++] << 4 | nibs[nibIndex++];
+            }
+
+        return LitBinstr, bytes;
+        }
+
+    /**
+     * Peek forward to see if the value is continued on the next line.
+     *
+     * @return True iff the value is continued on the next line, and all of the characters up to the
+     *         value have been eaten and discarded
+     */
+    protected Boolean isMultilineContinued()
+        {
+        TextPosition pos = reader.position;
+        while (!eof)
+            {
+            Char ch = nextChar();
+            if (!ch.isWhitespace())
+                {
+                if (ch == '|')
+                    {
+                    return True;
+                    }
+                break;
+                }
+            }
+
+        reader.position = pos;
+        return False;
+        }
+
+    /**
+     * Eat the remainder of a single line aka end-of-line comment. The opening `//` has already been
+     * eaten.
+     *
+     * @param before  the position of the first character of the token
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Object value) eatSingleLineComment(TextPosition before)
+        {
+        StringBuffer? buf           = Null;
+        Int           trailingSpace = 0;
+        while (!eof)
+            {
+            Char ch = nextChar();
+            if (ch.isLineTerminator())
+                {
+                rewind();
+                break;
+                }
+
+            if (ch.isWhitespace())
+                {
+                ++trailingSpace;
+                }
+            else
+                {
+                buf ?:= new StringBuffer();
+                trailingSpace = 0;
+                }
+
+            buf?.add(ch);
+            }
+
+        String comment = "";
+        if (buf != Null)
+            {
+            if (trailingSpace > 0)
+                {
+                buf = buf[0..buf.size-trailingSpace);
+                }
+            comment = buf.toString();
+            }
+
+        return EolComment, comment;
+        }
+
+    /**
+     * Eat the remainder of a multi-line aka enclosed comment. The opening `/*` has already been
+     * eaten.
+     *
+     * @param before  the position of the first character of the token
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Object value) eatEnclosedComment(TextPosition before)
+        {
+        StringBuffer buf      = new StringBuffer();
+        Boolean      asterisk = False;
+        Boolean      doc      = False;
+        Loop: while (!eof)
+            {
+            Char ch = nextChar();
+            if (ch == '*')
+                {
+                asterisk = True;
+
+                if (Loop.first)
+                    {
+                    doc = True;
+                    continue;
+                    }
+                }
+            else if (asterisk && ch == '/')
+                {
+                // remove trailing asterisk, and remove both leading and trailing whitespace
+                String comment = buf.size > 0 ? buf[0..buf.size-1).toString().trim() : "";
+                return (doc && comment.size > 0 ? DocComment : EncComment), comment;
+                }
+            else
+                {
+                asterisk = False;
+                }
+
+            buf.add(ch);
+            }
+
+        // missing the enclosing "*/"
+        log(Error, ExpectedEndcomment, [], before, reader.position);
+
+        // just pretend that the rest of the file was all one big comment
+        String comment = buf.toString().trim();
+        return (doc && comment.size > 0 ? DocComment : EncComment), comment;
+        }
+
+    /**
+     * Eat the remainder of a character literal. The opening `'` has already been eaten.
+     *
+     * @param before  the position of the first character of the token
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Object value) eatCharLiteral(TextPosition before)
+        {
+        Char    ch   = '?';
+        Boolean term = False;
+        if (!eof)
+            {
+            TextPosition chPos = reader.position;
+            switch (ch = nextChar())
+                {
+                case '\'':
+                    if (!eof)
+                        {
+                        if (nextChar() == '\'')
+                            {
+                            // assume the previous one should have been escaped
+                            rewind();
+                            log(Error, CharBadEsc, [], chPos, reader.position);
+                            }
+                        else
+                            {
+                            // assume the encountered quote that we thought was supposed to be
+                            // the character value was instead supposed to be closing quote
+                            rewind(2);
+                            log(Error, CharNoChar, [], chPos, chPos);
+                            ch   = '?';
+                            term = True;
+                            }
+                        }
+                    break;
+
+                case '\\':
+                    // process escaped char
+                    switch (ch = nextChar())
+                        {
+                        case '\\':
+                        case '\'':
+                        case '\"':
+                            break;
+
+                        case '0':
+                            ch = '\0';
+                            break;
+                        case 'b':
+                            ch = '\b';
+                            break;
+                        case 'd':
+                            ch = '\d';
+                            break;
+                        case 'e':
+                            ch = '\e';
+                            break;
+                        case 'f':
+                            ch = '\f';
+                            break;
+                        case 'n':
+                            ch = '\n';
+                            break;
+                        case 'r':
+                            ch = '\r';
+                            break;
+                        case 't':
+                            ch = '\t';
+                            break;
+                        case 'v':
+                            ch = '\v';
+                            break;
+                        case 'z':
+                            ch = '\z';
+                            break;
+
+                        default:
+                            if (ch.isLineTerminator())
+                                {
+                                // log error: newline in string
+                                rewind();
+                                log(Error, CharNoTerm, [], before, reader.position);
+                                // assume it wasn't supposed to be an escape
+                                ch   = '\\';
+                                term = True;
+                                }
+                            else
+                                {
+                                // log error: bad escape
+                                log(Error, CharBadEsc, [], chPos, reader.position);
+                                }
+                            break;
+                        }
+                    break;
+
+                default:
+                    if (ch.isLineTerminator())
+                        {
+                        // log error: newline in string
+                        rewind();
+                        log(Error, CharNoTerm, [], before, reader.position);
+                        ch   = '?';
+                        term = True;
+                        }
+                    break;
+                }
+
+            if (!eof && !term)
+                {
+                if (nextChar() == '\'')
+                    {
+                    term = True;
+                    }
+                else
+                    {
+                    rewind();
+                    }
+                }
+            }
+
+        if (!term)
+            {
+            // log error: unterminated character literal
+            log(Error, CharNoTerm, [], before, reader.position);
+            }
+
+        return LitChar, ch;
+        }
+
+    /**
+     * Eat the remainder of a string literal. The opening `"` has already been eaten.
+     *
+     * @param before  the position of the first character of the token
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Object value) eatStringLiteral(TextPosition before)
         {
         TODO
         }
 
-    protected (Id id, Object value) eatSingleLineComment()
+    /**
+     * Eat the remainder of a multi-line string literal. The opening tick has already been eaten.
+     *
+     * @param before  the position of the first character of the token
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Object value) eatMultilineLiteral(TextPosition before)
         {
         TODO
         }
 
-    protected (Id id, Object value) eatEnclosedComment()
-        {
-        TODO
-        }
-
-    protected (Id id, Object value) eatCharLiteral()
-        {
-        TODO
-        }
-
-    protected (Id id, Object value) eatStringLiteral()
-        {
-        TODO
-        }
-
-    protected (Id id, Object value) eatMultilineLiteral()
+    /**
+     * Eat a token that may be an identifier or keyword. The first character has already been eaten.
+     *
+     * @param before  the position of the first character of the token
+     * @param first   the first character of the token
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Object value) eatIdentifierOrKeyword(TextPosition before, Char first)
         {
         TODO
         }
@@ -1118,6 +1471,7 @@ class Lexer
         LitPath      (Null             ),               // generated by Parser, not Lexer
         EolComment   (Null             ),
         EncComment   (Null             ),
+        DocComment   (Null             ),
         Template     ("{...}"          , Category.Artificial),
         DotDotEx     ("..<"            , Category.Artificial),
         EnumVal      ("enum-value"     , Category.Artificial);
@@ -1176,5 +1530,51 @@ class Lexer
                 }
             return map.makeImmutable();
             };
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Ecstasty identifiers begin with a letter or an underscore.
+     *
+     * @param ch  the character to test
+     *
+     * @return True iff the character can be used to begin an Ecstasy identifier
+     */
+    static Boolean isIdentifierStart(Char ch)
+        {
+        return ch.category.letter || ch == '_';
+        }
+
+    /**
+     * Ecstasty identifiers can contain letters, marks, number, and currency symbols, as well as
+     * the underscore character.
+     *
+     * @param ch  the character to test
+     *
+     * @return True iff the character can be used to begin an Ecstasy identifier
+     */
+    static Boolean isIdentifierPart(Char ch)
+        {
+        switch (ch.category)
+            {
+            case UppercaseLetter:
+            case LowercaseLetter:
+            case TitlecaseLetter:
+            case ModifierLetter:
+            case OtherLetter:
+            case NonspacingMark:
+            case SpacingMark:
+            case EnclosingMark:
+            case DecimalNumber:
+            case LetterNumber:
+            case OtherNumber:
+            case CurrencySymbol:
+                return True;
+
+            default:
+                return ch == '_';
+            }
         }
     }
