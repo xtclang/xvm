@@ -253,7 +253,9 @@ public class Lexer
                                             {
                                             if (nextChar() == '/')
                                                 {
-                                                // it is a file name
+                                                // it is a file name starting with "../"
+                                                source.rewind();
+                                                source.rewind();
                                                 source.rewind();
                                                 return new Token(lInitPos, source.getPosition(), Id.STR_FILE);
                                                 }
@@ -263,7 +265,8 @@ public class Lexer
                                         break;
 
                                     case '/':
-                                        // it is a file name
+                                        // it is a file name starting with "./"
+                                        source.rewind();
                                         source.rewind();
                                         return new Token(lInitPos, source.getPosition(), Id.STR_FILE);
                                     }
