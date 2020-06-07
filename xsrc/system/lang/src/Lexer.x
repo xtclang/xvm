@@ -132,11 +132,23 @@ class Lexer
 
     // ----- reader behavior -----------------------------------------------------------------------
 
+    /**
+     * True once the stream of characters is exhausted.
+     */
     Boolean eof.get()
         {
         return reader.eof;
         }
 
+    private Boolean containsUnicodeEscapes = False;
+    private Boolean containsCRLFs          = False;
+
+    /**
+     * Obtain the next character, if any is available.
+     *
+     * @return True if there were more characters
+     * @return (conditional) the next character
+     */
     protected conditional Char nextChar()
         {
         Char ch;
@@ -149,11 +161,7 @@ class Lexer
             switch (ch)
                 {
                 case '\z':
-                    if (reader.eof)
-                        {
-                        return False;
-                        }
-                    else
+                    if (!reader.eof)
                         {
                         // back up to get the location of the SUB character
                         reader.rewind();
@@ -168,8 +176,14 @@ class Lexer
                     if (!reader.eof)
                         {
                         assert ch := reader.next();
-                        if (ch != '\n')
+                        if (ch == '\n')
                             {
+                            // use the CRLF as if it were just an LF
+                            containsCRLFs = True;
+                            }
+                        else
+                            {
+                            // pretend that the CR was actually an LF
                             reader.rewind();
                             ch = '\n';
                             }
@@ -177,8 +191,47 @@ class Lexer
                     break;
 
                 case '\\':
-                    // TODO uXXXX
-                    // TODO UXXXXXXXX
+                    if (Char chU := reader.next())
+                        {
+                        Int rewind = 1; // the 'u' or 'U'
+                        Int hexits = switch (chU)
+                            {
+                            case 'u': 4;
+                            case 'U': 8;
+                            default : 0;
+                            };
+
+                        maybeHex: if (hexits > 0)
+                            {
+                            Int codepoint = 0;
+                            while (hexits > 0)
+                                {
+                                if (Char chX := reader.next())
+                                    {
+                                    ++rewind;
+                                    if (Int n := chX.asciiHexit())
+                                        {
+                                        codepoint = codepoint << 4 | n;
+                                        }
+                                    else
+                                        {
+                                        break maybeHex;
+                                        }
+                                    }
+                                }
+
+                            containsUnicodeEscapes = True;
+                            ch                     = codepoint.toChar();
+                            rewind                 = 0;
+                            }
+
+                        // if the value wasn't a properly formed unicode escape, then undo the reads
+                        // of the whatever we read after the first '\\'
+                        while (rewind-- > 0)
+                            {
+                            reader.rewind();
+                            }
+                        }
                     break;
                 }
 
@@ -187,6 +240,106 @@ class Lexer
         else
             {
             return False;
+            }
+        }
+
+    /**
+     * Rewind the specified number of characters, default to one.
+     *
+     * @param count  the number of characters to rewind
+     */
+    protected void rewind(Int count)
+        {
+        Int offset = reader.position.offset;
+        assert count > 0 && count <= offset;
+
+        if (containsUnicodeEscapes || containsCRLFs)
+            {
+            private Boolean matchEscape(Char u, Int count)
+                {
+                scan: if (reader.nextChar() == u)
+                    {
+                    while (count-- > 0)
+                        {
+                        if (!reader.nextChar().asciiHexit())
+                            {
+                            break scan;
+                            }
+                        }
+                    return True;
+                    }
+
+                if (count > 0)
+                    {
+                    reader.skip(count);
+                    }
+
+                return False;
+                }
+
+            offset -= count;
+            while (count-- > 0)
+                {
+                // if the character is an \n and containsCRLFs is true, or if the character is a
+                // hexit and containsUnicodeEscapes, then extra work has to be done to make sure
+                // that the character isn't part of a sequence of characters that was translated to
+                // a single character when we previously read it
+                reader.rewind(1);
+                Char ch = reader.nextChar();
+                reader.rewind(1);
+                if (containsCRLFs && ch == '\n' && offset > 0)
+                    {
+                    reader.rewind(1);
+                    Char ch2 = reader.nextChar();
+                    if (ch2 == '\r')
+                        {
+                        --offset;
+                        reader.rewind(1);
+                        }
+                    }
+                if (containsUnicodeEscapes && ch.asciiHexit() && offset >= 5)
+                    {
+                    // previous 3 or 7 chars need to be hexit, preceded by 'u' or 'U', preceded
+                    // by '\\'; first check for the '\\' + 'u' version
+                    reader.rewind(5);
+                    Char ch2 = reader.nextChar();
+                    if (ch2 == '\\')
+                        {
+                        if (matchEscape('u', 3))
+                            {
+                            reader.rewind(5);
+                            offset -= 5;
+                            }
+                        }
+                    else if (ch2.asciiHexit() && offset >= 9)
+                        {
+                        // it could be the 'U' form
+                        reader.rewind(5);
+                        ch2 = reader.nextChar();
+                        if (ch2 == '\\')
+                            {
+                            if (matchEscape('U', 7))
+                                {
+                                reader.rewind(9);
+                                offset -= 9;
+                                }
+                            }
+                        else
+                            {
+                            reader.skip(8);
+                            }
+                        }
+                    else
+                        {
+                        // oops; it was not a unicode escape
+                        reader.skip(4);
+                        }
+                    }
+                }
+            }
+        else
+            {
+            reader.rewind(count);
             }
         }
 
