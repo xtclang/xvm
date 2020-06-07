@@ -102,6 +102,36 @@ const String
         }
 
     /**
+     * Strip the whitespace off of the front and back of the string.
+     *
+     * @return the contents of this String, but without any leading or trailing whitespace
+     */
+    String trim()
+        {
+        Int leading = 0;
+        val length  = size;
+        while (leading < length && this[leading].isWhitespace())
+            {
+            ++leading;
+            }
+
+        if (leading == length)
+            {
+            return "";
+            }
+
+        Int trailing = 0;
+        while (this[length-trailing-1].isWhitespace())
+            {
+            ++trailing;
+            }
+
+        return leading == 0 && trailing == 0
+                ? this
+                : this[leading..size-trailing);
+        }
+
+    /**
      * Count the number of occurrences of the specified character in this String.
      *
      * @param value  the character to search for
