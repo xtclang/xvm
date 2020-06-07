@@ -26,5 +26,7 @@ interface Markable
      *
      * @param mark  the result from a previous call to [mark()]
      */
-    void unmark(Object mark);
+    void unmark(Object mark)
+        {
+        }
     }

@@ -26,6 +26,16 @@ class Lexer
         eatWhitespace();
         }
 
+    /**
+     * @param parent  a Lexer that this Lexer can delegate to if necessary
+     */
+    protected construct(Lexer parent)
+        {
+        source  = parent.source;
+        errlist = parent.errlist;
+        reader  = source.createReader();
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -93,6 +103,40 @@ class Lexer
         }
 
 
+    // ----- simulated Lexer -----------------------------------------------------------------------
+
+    Lexer! createLexer(Token[] tokens)
+        {
+        return new Lexer(this)
+            {
+            Int index = 0;
+
+            @Override
+            conditional Token next()
+                {
+                if (index >= tokens.size)
+                    {
+                    return False;
+                    }
+
+                return True, tokens[index++];
+                }
+
+            @Override
+            Object mark()
+                {
+                return index;
+                }
+
+            @Override
+            void restore(Object mark, Boolean unmark = False)
+                {
+                index = mark.as(Int);
+                }
+            };
+        }
+
+
     // ----- internal ------------------------------------------------------------------------------
 
     /**
@@ -124,7 +168,7 @@ class Lexer
     /**
      * TODO doc
      */
-    (Id id, Object value) eatToken()
+    protected (Id id, Object value) eatToken()
         {
         TODO
         }
@@ -135,7 +179,7 @@ class Lexer
     /**
      * True once the stream of characters is exhausted.
      */
-    Boolean eof.get()
+    protected Boolean eof.get()
         {
         return reader.eof;
         }
