@@ -1,5 +1,6 @@
 import io.TextPosition;
 
+
 /**
  * A lexical analyzer (tokenizer) for the Ecstasy language.
  */
@@ -27,6 +28,8 @@ class Lexer
         }
 
     /**
+     * Internal use.
+     *
      * @param parent  a Lexer that this Lexer can delegate to if necessary
      */
     protected construct(Lexer parent)
@@ -49,6 +52,11 @@ class Lexer
      * and the lexer.
      */
     protected/private Reader reader;
+
+    /**
+     * The number of characters past the EOF that the lexer has pretended to read.
+     */
+    protected/private Int pastEOF;
 
     /**
      * Keeps track of whether whitespace was encountered.
@@ -85,12 +93,12 @@ class Lexer
     /**
      * A restorable position within the Lexer (Literally, Lex-Mark.)
      */
-    protected class Mark(Reader reader, TextPosition position, Boolean whitespace);
+    protected class Mark(Reader reader, TextPosition position, Int pastEOF, Boolean whitespace);
 
     @Override
     Object mark()
         {
-        return new Mark(reader, reader.position, whitespace);
+        return new Mark(reader, reader.position, pastEOF, whitespace);
         }
 
     @Override
@@ -99,12 +107,20 @@ class Lexer
         assert mark.is(Mark);
         assert mark.reader == reader;
         reader.position = mark.position;
+        this.pastEOF    = mark.pastEOF;
         this.whitespace = mark.whitespace;
         }
 
 
     // ----- simulated Lexer -----------------------------------------------------------------------
 
+    /**
+     * Create a Lexer that pretends to lex the provided array of tokens.
+     *
+     * @param tokens  the tokens to emit
+     *
+     * @return the new Lexer
+     */
     Lexer! createLexer(Token[] tokens)
         {
         return new Lexer(this)
@@ -146,9 +162,9 @@ class Lexer
     protected Boolean eatWhitespace()
         {
         Boolean whitespace = False;
-        Reader  reader     = this.reader;
-        while (Char ch := reader.next())
+        while (!eof)
             {
+            Char ch = nextChar();
             if (ch.isWhitespace())
                 {
                 whitespace = True;
@@ -156,7 +172,7 @@ class Lexer
             else
                 {
                 // put back the non-whitespace character
-                reader.rewind();
+                rewind();
                 break;
                 }
             }
@@ -166,9 +182,469 @@ class Lexer
         }
 
     /**
-     * TODO doc
+     * Lex a single token.
+     *
+     * @return id     the token id
+     * @return value  the token value (usually Null)
      */
     protected (Id id, Object value) eatToken()
+        {
+        switch (Char next = nextChar())
+            {
+            case '{':
+                return LeftCurly, Null;
+
+            case '}':
+                return RightCurly, Null;
+
+            case '(':
+                return LeftParen, Null;
+
+            case ')':
+                return RightParen, Null;
+
+            case '[':
+                return LeftSquare, Null;
+
+            case ']':
+                return RightSquare, Null;
+
+            case ';':
+                return Semicolon, Null;
+
+            case ',':
+                return Comma, Null;
+
+            case '.':
+                switch (nextChar())
+                    {
+                    case '.':
+                        switch (nextChar())
+                            {
+                            case '.':
+                                return Ellipsis, Null;
+
+                            case '/':
+                                return ParentDir, Null;
+
+                            default:
+                                rewind();
+                                return DotDot, Null;
+                            }
+
+                    case '/':
+                        return CurrentDir, Null;
+
+                    case '0'..'9':
+                        rewind(2);
+                        return eatNumericLiteral();
+
+                    default:
+                        rewind();
+                        return Dot, Null;
+                    }
+
+            case '$':
+                switch (nextChar())
+                    {
+                    case '\"':
+                        return eatTemplateLiteral();
+
+                    case '|':
+                        return eatMultilineTemplateLiteral();
+
+                    case '/':
+                        // it is a file name starting with "/"
+                        rewind();
+                        return StrFile, Null;
+
+                    case '.':
+                        switch (nextChar())
+                            {
+                            case '.':
+                                switch (nextChar())
+                                    {
+                                    case '/':
+                                        // it is a file name starting with "../"
+                                        rewind(3);
+                                        return StrFile, Null;
+
+                                    default:
+                                        rewind(3);
+                                        return Identifier, "$";
+                                    }
+
+                            case '/':
+                                // it is a file name starting with "./"
+                                rewind(2);
+                                return StrFile, Null;
+
+                            default:
+                                rewind(2);
+                                return Identifier, "$";
+                            }
+
+                    default:
+                        rewind();
+                        return Identifier, "$";
+                    }
+
+            case '#':
+                switch (nextChar())
+                    {
+                    case '.':
+                    case '/':
+                        // it is a file name
+                        rewind();
+                        return BinFile, Null;
+
+                    case '|':
+                        // multi-line binary literal
+                        return eatBinaryLiteral(True);
+
+                    default:
+                        rewind();
+                        return eatBinaryLiteral(False);
+                    }
+
+            case '@':
+                return At, Null;
+
+            case '?':
+                switch (nextChar())
+                    {
+                    case '=':
+                        return NotNullAsn, Null;
+
+                    case ':':
+                        switch (nextChar())
+                            {
+                            case '=':
+                                return ElvisAsn, Null;
+
+                            default:
+                                rewind();
+                                return Elvis, Null;
+                            }
+
+                    default:
+                        rewind();
+                        return Condition, Null;
+                    }
+
+            case ':':
+                switch (nextChar())
+                    {
+                    case '=':
+                        return CondAsn, Null;
+
+                    default:
+                        rewind();
+                        return Colon, Null;
+                    }
+
+            case '+':
+                switch (nextChar())
+                    {
+                    case '+':
+                        return Increment, Null;
+
+                    case '=':
+                        return AddAsn, Null;
+
+                    default:
+                        rewind();
+                        return Add, Null;
+                    }
+
+            case '-':
+                switch (nextChar())
+                    {
+                    case '-':
+                        return Decrement, Null;
+
+                    case '>':
+                        return Lambda, Null;
+
+                    case '=':
+                        return SubAsn, Null;
+
+                    default:
+                        rewind();
+                        return Sub, Null;
+                    }
+
+            case '*':
+                switch (nextChar())
+                    {
+                    case '=':
+                        return MulAsn, Null;
+
+                    default:
+                        rewind();
+                        return Mul, Null;
+                    }
+
+            case '/':
+                switch (nextChar())
+                    {
+                    case '/':
+                        return eatSingleLineComment();
+
+                    case '*':
+                        return eatEnclosedComment();
+
+                    case '=':
+                        return DivAsn, Null;
+
+                    case '%':
+                        return DivRem, Null;
+
+                    default:
+                        rewind();
+                        return Div, Null;
+                    }
+
+            case '<':
+                switch (nextChar())
+                    {
+                    case '<':
+                        switch (nextChar())
+                            {
+                            case '=':
+                                return ShiftLeftAsn, Null;
+
+                            default:
+                                rewind();
+                                return ShiftLeft, Null;
+                            }
+
+                    case '=':
+                        switch (nextChar())
+                            {
+                            case '>':
+                                return CompareOrder, Null;
+
+                            default:
+                                rewind();
+                                return CompareLTEQ, Null;
+                            }
+
+                    default:
+                        rewind();
+                        return CompareLT, Null;
+                    }
+
+            case '>':
+                switch (nextChar())
+                    {
+                    case '>':
+                        switch (nextChar())
+                            {
+                            case '>':
+                                switch (nextChar())
+                                    {
+                                    case '=':
+                                        return ShiftAllAsn, Null;
+
+                                    default:
+                                        rewind();
+                                        return ShiftAll, Null;
+                                    }
+
+                            case '=':
+                                return ShiftRightAsn, Null;
+
+                            default:
+                                rewind();
+                                return ShiftRight, Null;
+                            }
+
+                    case '=':
+                        return CompareGTEQ, Null;
+
+                    default:
+                        rewind();
+                        return CompareGT, Null;
+                    }
+
+            case '&':
+                switch (nextChar())
+                    {
+                    case '&':
+                        switch (nextChar())
+                            {
+                            case '=':
+                                return BoolAndAsn, Null;
+
+                            default:
+                                rewind();
+                                return BoolAnd, Null;
+                            }
+
+                    case '=':
+                        return BitAndAsn, Null;
+
+                    default:
+                        rewind();
+                        return BitAnd, Null;
+                    }
+
+            case '|':
+                switch (nextChar())
+                    {
+                    case '|':
+                        switch (nextChar())
+                            {
+                            case '=':
+                                return BoolOrAsn, Null;
+
+                            default:
+                                rewind();
+                                return BoolOr, Null;
+                            }
+
+                    case '=':
+                        return BitOrAsn, Null;
+
+                    default:
+                        rewind();
+                        return BitOr, Null;
+                    }
+
+            case '=':
+                switch (nextChar())
+                    {
+                    case '=':
+                        return CompareEQ, Null;
+
+                    default:
+                        rewind();
+                        return Assign, Null;
+                    }
+
+            case '%':
+                switch (nextChar())
+                    {
+                    case '=':
+                        return ModuloAsn, Null;
+
+                    default:
+                        rewind();
+                        return Modulo, Null;
+                    }
+
+            case '!':
+                switch (nextChar())
+                    {
+                    case '=':
+                        return CompareNE, Null;
+
+                    default:
+                        rewind();
+                        return BoolNot, Null;
+                    }
+
+            case '^':
+                switch (nextChar())
+                    {
+                    case '^':
+                        return BoolXor, Null;
+
+                    case '=':
+                        return BitXorAsn, Null;
+
+                    default:
+                        rewind();
+                        return BitXor, Null;
+                    }
+
+            case '~':
+                return BitNot, Null;
+
+            case '0'..'9':
+                rewind();
+                return eatNumericLiteral();
+
+            case '\'':
+                return eatCharLiteral();
+
+            case '\"':
+                return eatStringLiteral();
+
+            case '`':
+                if (nextChar() == '|')
+                    {
+                    return eatMultilineLiteral();
+                    }
+
+                // REVIEW could provide an error like "| expected"
+                rewind();
+                continue;
+
+            default:
+// TODO
+//                if (!isIdentifierStart(chInit))
+//                    {
+//                    log(Severity.ERROR, ILLEGAL_CHAR, new Object[]{quotedChar(chInit)},
+//                            lInitPos, source.getPosition());
+//                    }
+                continue;
+
+            case 'A'..'Z':
+            case 'a'..'z':
+            case '_':
+                TODO
+            }
+        }
+
+    /**
+     * Lex a numeric literal token
+     *
+     * @return id     the token id
+     * @return value  the token value (usually Null)
+     */
+    protected (Id id, Object value) eatNumericLiteral()
+        {
+        TODO
+        }
+
+    protected (Id id, Object value) eatTemplateLiteral()
+        {
+        TODO
+        }
+
+    protected (Id id, Object value) eatMultilineTemplateLiteral()
+        {
+        TODO
+        }
+
+    protected (Id id, Object value) eatBinaryLiteral(Boolean multiline)
+        {
+        TODO
+        }
+
+    protected (Id id, Object value) eatSingleLineComment()
+        {
+        TODO
+        }
+
+    protected (Id id, Object value) eatEnclosedComment()
+        {
+        TODO
+        }
+
+    protected (Id id, Object value) eatCharLiteral()
+        {
+        TODO
+        }
+
+    protected (Id id, Object value) eatStringLiteral()
+        {
+        TODO
+        }
+
+    protected (Id id, Object value) eatMultilineLiteral()
         {
         TODO
         }
@@ -190,10 +666,9 @@ class Lexer
     /**
      * Obtain the next character, if any is available.
      *
-     * @return True if there were more characters
-     * @return (conditional) the next character
+     * @return the next character, or an EOF character ('\z')
      */
-    protected conditional Char nextChar()
+    protected Char nextChar()
         {
         Char ch;
         if (ch := reader.next())
@@ -279,11 +754,12 @@ class Lexer
                     break;
                 }
 
-            return True, ch;
+            return ch;
             }
         else
             {
-            return False;
+            ++pastEOF;
+            return '\z';
             }
         }
 
@@ -292,10 +768,22 @@ class Lexer
      *
      * @param count  the number of characters to rewind
      */
-    protected void rewind(Int count)
+    protected void rewind(Int count = 1)
         {
+        assert count > 0;
+        if (pastEOF > 0)
+            {
+            Int adjust = count.minOf(pastEOF);
+            count   -= adjust;
+            pastEOF -= adjust;
+            if (count == 0)
+                {
+                return;
+                }
+            }
+
         Int offset = reader.position.offset;
-        assert count > 0 && count <= offset;
+        assert count <= offset;
 
         if (containsUnicodeEscapes || containsCRLFs)
             {
@@ -508,7 +996,8 @@ class Lexer
         BoolOr       ("||"             ),
         BoolXor      ("^^"             ),
         BoolNot      ("!"              ),
-        Binary       ("#"              ),
+        BinFile      ("#"              ),
+        StrFile      ("$"              ),
         At           ("@"              ),
         Condition    ("?"              ),
         Elvis        ("?:"             ),
@@ -629,7 +1118,6 @@ class Lexer
         LitPath      (Null             ),               // generated by Parser, not Lexer
         EolComment   (Null             ),
         EncComment   (Null             ),
-        StrFile      ("$"              , Category.Artificial),
         Template     ("{...}"          , Category.Artificial),
         DotDotEx     ("..<"            , Category.Artificial),
         EnumVal      ("enum-value"     , Category.Artificial);
