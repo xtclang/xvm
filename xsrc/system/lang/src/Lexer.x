@@ -630,7 +630,6 @@ class Lexer
             case 'E', 'e':
                 IntLiteral exp = eatIntLiteral();
                 fpBuf ?:= new StringBuffer().add(intVal.toString());
-                assert fpBuf != Null; // TODO GG
                 fpBuf.add(ch);
                 fpBuf.add(exp.toString());
                 break;
