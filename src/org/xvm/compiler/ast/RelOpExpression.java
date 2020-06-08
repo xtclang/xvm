@@ -225,55 +225,38 @@ public class RelOpExpression
             return null;
             }
 
-        Set<MethodConstant> setOps = typeLeft.ensureTypeInfo().findOpMethods(
+        Set<MethodConstant> setOpsLeft = typeLeft.ensureTypeInfo().findOpMethods(
                 getDefaultMethodName(), getOperatorString(), 1);
-        if (setOps.isEmpty())
-            {
-            // if there are no ops, then a type cannot be determined
-            return null;
-            }
 
-        // if there is one op method, then assume that is the one
-        if (setOps.size() == 1)
-            {
-            return setOps.iterator().next();
-            }
+        MethodConstant idBestLeft = setOpsLeft.size() == 1 ? setOpsLeft.iterator().next() : null;
 
-        // multiple ops: use the right hand expression to reduce the potential ops
+        // use the right hand expression to reduce the potential ops
         TypeConstant typeRight = expr2.getImplicitType(ctx);
         if (typeRight == null)
             {
-            return null;
+            // the right expression is no help; if there is just one op method, assume that is it
+            return idBestLeft;
             }
 
-        MethodConstant                         idBest  = null;
-        Map<SignatureConstant, MethodConstant> mapBest = null;
-        for (MethodConstant idMethod : setOps)
+        Map<SignatureConstant, MethodConstant> mapBest = new HashMap<>();
+
+        MethodConstant idBest = chooseBest(setOpsLeft, typeRight, mapBest);
+
+        if (idBest == null && mapBest.isEmpty() && !typeLeft.equals(typeRight) &&
+                 typeLeft.getConverterTo(typeRight) != null)
             {
-            TypeConstant typeParam = idMethod.getRawParams()[0];
-            if (typeRight.isAssignableTo(typeParam))
+            // the left type's ops didn't give us a match, but left type is convertible to the right;
+            // see if we can find something based on the right type ops
+            Set<MethodConstant> setOpsRight = typeRight.ensureTypeInfo().findOpMethods(
+                    getDefaultMethodName(), getOperatorString(), 1);
+            if (!setOpsRight.isEmpty())
                 {
-                if (mapBest != null)
-                    {
-                    mapBest.put(idMethod.getSignature(), idMethod);
-                    }
-                else if (idBest == null || typeParam.isAssignableTo(idBest.getRawParams()[0]))
-                    {
-                    idBest = idMethod;
-                    }
-                else if (!idBest.getRawParams()[0].isA(typeParam))
-                    {
-                    // ambiguous at this point
-                    mapBest = new HashMap<>();
-                    mapBest.put(idBest  .getSignature(), idBest  );
-                    mapBest.put(idMethod.getSignature(), idMethod);
-                    idBest = null;
-                    }
+                idBest = chooseBest(setOpsRight, typeRight, mapBest);
                 }
             }
 
         // if there are multiple possible options, pick the unambiguously best one
-        if (mapBest != null)
+        if (idBest == null && !mapBest.isEmpty())
             {
             SignatureConstant sigBest = typeLeft.selectBest(
                     mapBest.keySet().toArray(new SignatureConstant[0]));
@@ -286,6 +269,44 @@ public class RelOpExpression
             assert idBest != null;
             }
 
+        return idBest == null ? idBestLeft : idBest;
+        }
+
+    /**
+     * Chose the best matching op method.
+     *
+     * @param setOps     the set of all op methods
+     * @param typeParam  the type of the parameter
+     * @param mapBest    the map to put ambiguous methods into
+     *
+     * @return the best matching method or null if either none is found or ambiguous
+     */
+    private MethodConstant chooseBest(Set<MethodConstant> setOps, TypeConstant typeParam,
+                                      Map<SignatureConstant, MethodConstant> mapBest)
+        {
+        MethodConstant idBest = null;
+        for (MethodConstant idMethod : setOps)
+            {
+            TypeConstant type = idMethod.getRawParams()[0];
+            if (typeParam.isAssignableTo(type))
+                {
+                if (!mapBest.isEmpty())
+                    {
+                    mapBest.put(idMethod.getSignature(), idMethod);
+                    }
+                else if (idBest == null || type.isAssignableTo(idBest.getRawParams()[0]))
+                    {
+                    idBest = idMethod;
+                    }
+                else if (!idBest.getRawParams()[0].isA(type))
+                    {
+                    // ambiguous at this point
+                    mapBest.put(idBest  .getSignature(), idBest  );
+                    mapBest.put(idMethod.getSignature(), idMethod);
+                    idBest = null;
+                    }
+                }
+            }
         return idBest;
         }
 
