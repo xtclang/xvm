@@ -1966,7 +1966,7 @@ public class Lexer
                 default:
                     source.rewind();
                     fErr = true;
-                    break;
+                    break Loop;
                 }
 
             if (match('T') || match('t'))

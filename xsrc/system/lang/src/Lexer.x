@@ -158,6 +158,8 @@ class Lexer
     /**
      * Lex a single token.
      *
+     * @param before  the position of the first character of the token
+     *
      * @return id     the token id
      * @return value  the token value (usually Null)
      */
@@ -573,7 +575,603 @@ class Lexer
      */
     protected (Id id, Object value) eatIdentifierOrKeyword(TextPosition before, Char first)
         {
-        TODO
+        StringBuffer nameBuf = new StringBuffer();
+
+        Char next = first;
+        do
+            {
+            nameBuf.add(next);
+            next = nextChar();
+            }
+        while (isIdentifierPart(next));
+        rewind();
+
+        String name = nameBuf.toString();
+        if (name == Id.Todo.text)
+            {
+            // the T0D0 keyword has two different lexical modes: an end-of-line comment mode, and
+            // a looks-like-a-function-call mode
+            if (next == '(')
+                {
+                return Todo, Null;
+                }
+            else
+                {
+                (_, String text) = eatSingleLineComment(before);
+                return Todo, text;
+                }
+            }
+
+        if (next == ':')
+            {
+            TextPosition colon = reader.position;
+            assert nextChar() == ':';
+
+            StringBuffer buf = new StringBuffer();
+            while (!eof)
+                {
+                Char ch = nextChar();
+                if (isIdentifierPart(ch))
+                    {
+                    buf.add(ch);
+                    }
+                else
+                    {
+                    rewind();
+                    break;
+                    }
+                }
+            String suffix = buf.toString();
+
+            // check for a possible keyword that has different suffixed variants
+            if (Id prefixId := Id.prefixes.get(name))
+                {
+                // check for a legal suffix, e.g. "this:private"
+                String full = name + ':' + suffix;
+                if (Id fullId := Id.allKeywords.get(full))
+                    {
+                    return fullId, Null;
+                    }
+
+                reader.position = colon;
+                return prefixId, Null;
+                }
+
+            // check for suffix of private / protected / public / struct (etc.); these will get
+            // lexed in some subsequent call to next()
+            reader.position = colon;
+            if (Id.keywords.contains(suffix))
+                {
+                // check for some specific literal type formats
+                switch (name)
+                    {
+                    case "Date":
+                        return eatDateLiteral(before);
+                    case "Time":
+                        return eatTimeLiteral(before);
+                    case "DateTime":
+                        return eatDateTimeLiteral(before);
+                    case "TimeZone":
+                        return eatTimeZoneLiteral(before);
+                    case "Duration":
+                        return eatDurationLiteral(before);
+                    case "Version":
+                    case "v":
+                        return eatVersionLiteral(before);
+                    }
+                }
+            }
+
+        Id? keyword = Id.keywords[name];
+        return (keyword?, Null) : (Identifier, name);
+        }
+
+    /**
+     * Lex a date literal token, starting with the colon.
+     *
+     * @param before    the position of the first character of the token
+     * @param embedded  True indicates that this literal value is part of a larger datetime value
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Date value) eatDateLiteral(TextPosition before, Boolean embedded = False)
+        {
+        assert embedded || nextChar() == ':';
+        TextPosition start = embedded ? reader.position : before;
+
+        Int year  = 0;
+        Int month = 0;
+        Int day   = 0;
+
+        if (year := eatDigits(4))
+            {
+            Boolean sep = match('-');
+            if (month := eatDigits(2))
+                {
+                if (!sep || expect('-'))
+                    {
+                    day := eatDigits(2);
+                    }
+                }
+            }
+
+        if (year < 1582 || month < 1 || month > 12 || day < 1 || day > Date.daysInMonth(year, month))
+            {
+            TextPosition end  = reader.position;
+            String       date = reader[start..end);
+            log(Error, BadDate, [date], before, end);
+            return LitDate, new Date(1970, 1, 1);
+            }
+
+        if (!embedded)
+            {
+            peekNotIdentifierOrNumber();
+            }
+
+        return LitDate, new Date(year, month, day);
+        }
+
+    /**
+     * Lex a time literal token, starting with the colon.
+     *
+     * @param before    the position of the first character of the token
+     * @param embedded  True indicates that this literal value is part of a larger datetime value
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Time value) eatTimeLiteral(TextPosition before, Boolean embedded = False)
+        {
+        assert embedded || nextChar() == ':';
+        TextPosition start = embedded ? reader.position : before;
+
+        Int hours   = 0;
+        Int minutes = 0;
+        Int seconds = 0;
+        Int picos   = 0;
+
+        if (hours := eatDigits(2))
+            {
+            Boolean colon = match(':');
+            if (minutes := eatDigits(2))
+                {
+                if ((colon && match(':') || !colon && peekDigit()),
+                        seconds := eatDigits(2),
+                        match('.'))
+                    {
+                    Int digits = 0;
+                    while (Char ch := nextDigit())
+                        {
+                        if (++digits <= 12)
+                            {
+                            picos = picos * 10 + (ch - '0');
+                            }
+                        }
+
+                    if (digits == 0)
+                        {
+                        // assume that the '.' is part of the next token
+                        rewind();
+                        }
+                    else
+                        {
+                        // scale the integer value up to picos (trillionths)
+                        while (digits++ <= 12)
+                            {
+                            picos *= 10;
+                            }
+                        }
+                    }
+                }
+            }
+
+        if (!((hours >= 0 && hours <= 23 || hours == 24 && minutes == 0 && seconds == 0)
+                && (minutes >= 0 && minutes <= 59)
+                && (seconds >= 0 && seconds <= 59 || minutes == 59 && seconds == 60)))
+            {
+            TextPosition end  = reader.position;
+            String       time = reader[start..end);
+            log(Error, BadTime, [time], before, end);
+            return LitTime, MIDNIGHT;
+            }
+
+        if (!embedded)
+            {
+            peekNotIdentifierOrNumber();
+            }
+
+        return LitTime, new Time(hours, minutes, seconds, picos);
+        }
+
+    /**
+     * Lex a timezone literal token, starting with the colon.
+     *
+     * @param before    the position of the first character of the token
+     * @param embedded  True indicates that this literal value is part of a larger datetime value
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, TimeZone value) eatTimeZoneLiteral(TextPosition before, Boolean embedded = False)
+        {
+        assert embedded || nextChar() == ':';
+        TextPosition start = embedded ? reader.position : before;
+
+        if (match('Z') || match('z'))
+            {
+            peekNotIdentifierOrNumber();
+            return LitTimezone, UTC;
+            }
+
+        Int     hour   = 0;
+        Int     minute = 0;
+        Boolean minus  = False;
+        Boolean legit  = False;
+        switch (nextChar())
+            {
+            case '-':
+                minus = True;
+                continue;
+            case '+':
+                if (hour := eatDigits(2))
+                    {
+                    if (match(':') || peekDigit())
+                        {
+                        if (minute := eatDigits(2))
+                            {
+                            legit = True;
+                            peekNotIdentifierOrNumber();
+                            }
+                        }
+                    else
+                        {
+                        legit = True;
+                        peekNotIdentifierOrNumber();
+                        }
+                    }
+                break;
+
+            default:
+                rewind();
+                break;
+            }
+
+        if (!legit || hour > 16 || minute > 59)
+            {
+            TextPosition end      = reader.position;
+            String       timezone = reader[start..end);
+            log(Error, BadTime, [timezone], before, end);
+            return LitTimezone, NoTZ;
+            }
+
+        Int offset = hour * Time.PICOS_PER_HOUR + minute * Time.PICOS_PER_MINUTE;
+        return LitTimezone, new TimeZone((minus ? -1 : +1) * offset);
+        }
+
+    /**
+     * Lex a date/time literal token, starting with the colon.
+     *
+     * @param before  the position of the first character of the token
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, DateTime value) eatDateTimeLiteral(TextPosition before)
+        {
+        assert nextChar() == ':';
+
+        (_, Date date)    = eatDateLiteral(before, True);
+        Time     time     = MIDNIGHT;
+        TimeZone timezone = NoTZ;
+
+        if (match('t') || expect('T'))
+            {
+            (_, time) = eatTimeLiteral(before, True);
+
+            switch (peekChar())
+                {
+                case 'Z', 'z':
+                case '+', '-':
+                    (_, timezone) = eatTimeZoneLiteral(before);
+                    break;
+                }
+            }
+        else
+            {
+            log(Error, BadDatetime, [reader[before..reader.position).toString()], before, reader.position);
+            }
+
+        return LitDatetime, new DateTime(date, time, timezone);
+        }
+
+    /**
+     * Lex a time duration literal token, starting with the colon.
+     *
+     * @param before  the position of the first character of the token
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    /* TODO GG protected */ (Id id, Duration value) eatDurationLiteral(TextPosition before)
+        {
+        assert nextChar() == ':';
+
+        enum Stage(Boolean naked=False) {Init(True), Head(True), Day, Sep(True), Hour, Minute, Second, Fraction, Err}
+        Stage prevStage = Init;
+
+        Int128  picos = 0;
+        Boolean any   = False;
+        Boolean err   = False;
+        Loop: while (True)
+            {
+            // read the number
+            static Int MAX    = maxvalue / 10 - 1;
+            Int        value  = 0;
+            Int        digits = 0;
+            while (Char digit := nextDigit())
+                {
+                if (value >= MAX)
+                    {
+                    err = True;
+                    }
+                else
+                    {
+                    value = value * 10 + (digit - '0');
+                    }
+                ++digits;
+                }
+
+            // read the label
+            Char label = nextChar();
+            Stage stage;
+            switch (label)
+                {
+                case 'P', 'p':
+                    // the "P" just indicates a duration value
+                    stage = Head;
+                    break;
+
+                case 'D', 'd':
+                    stage  = Day;
+                    picos += value * Duration.PICOS_PER_DAY;
+                    break;
+
+                case 'T':
+                case 't':
+                    stage = Sep;
+                    break;
+
+                case 'H', 'h':
+                    stage  = Hour;
+                    picos += value * Duration.PICOS_PER_HOUR;
+                    break;
+
+                case 'M', 'm':
+                    stage  = Minute;
+                    picos += value * Duration.PICOS_PER_MINUTE;
+                    break;
+
+                case '.':
+                    stage  = Second;
+                    picos += value * Duration.PICOS_PER_SECOND;
+                    break;
+
+                case 'S', 's':
+                    stage  = Fraction;
+                    picos += value * (prevStage == Second ? 1 : Duration.PICOS_PER_SECOND);
+                    break;
+
+                default:
+                    rewind();
+                    err = True;
+                    break Loop;
+                }
+
+            any |= digits > 0;
+            if (stage.naked == digits > 0)
+                {
+                err = True;
+                }
+
+            if (stage > prevStage)
+                {
+                prevStage = stage;
+                }
+            else
+                {
+                err = True;
+                }
+            }
+
+        if (err || !any)
+            {
+            log(Error, BadDatetime, [reader[before..reader.position).toString()], before, reader.position);
+            return LitDuration, NONE;
+            }
+
+        return LitDuration, new Duration(picos);
+        }
+
+    /**
+     * Lex a version literal token, starting with the colon.
+     *
+     * @param before  the position of the first character of the token
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Version value) eatVersionLiteral(TextPosition before)
+        {
+        assert nextChar() == ':';
+        TextPosition start = reader.position;
+
+        // eat the VersionNumbers
+        Boolean need = True;
+        Boolean err  = False;
+        while (nextDigit())
+            {
+            while (nextDigit())
+                {
+                }
+
+            if (match('.'))
+                {
+                need = True;
+                continue;
+                }
+
+            if (match('-'))
+                {
+                need = True;
+                break;
+                }
+
+            need = False;
+            }
+
+        private Boolean expectCaseInsens(String s)
+            {
+            for (Char ch : s)
+                {
+                if (!match(ch) && !expect(ch.uppercase))
+                    {
+                    return False;
+                    }
+                }
+
+            if (peekChar().category.letter)
+                {
+                TextPosition pos = reader.position;
+                log(Error, UnexpectedChar, [peekChar().quoted()], pos, pos);
+                return False;
+                }
+
+            return True;
+            }
+
+        Boolean nonGA = True;
+        Char    ch    = peekChar();
+        switch (ch)
+            {
+            case 'A', 'a':
+                err = !expectCaseInsens("alpha");
+                break;
+
+            case 'B', 'b':
+                err = !expectCaseInsens("beta");
+                break;
+
+            case 'C', 'c':
+                err = !expectCaseInsens("ci");
+                break;
+
+            case 'D', 'd':
+                err = !expectCaseInsens("dev");
+                break;
+
+            case 'Q', 'q':
+                err = !expectCaseInsens("qa");
+                break;
+
+            case 'R', 'r':
+                err = !expectCaseInsens("rc");
+                break;
+
+            default:
+                nonGA = False;
+                err  |= need;
+                break;
+            }
+
+        if (!err && nonGA)
+            {
+            need = match('.') || match('-');
+            if (nextDigit())
+                {
+                while (nextDigit())
+                    {
+                    }
+                }
+            else
+                {
+                err = need;
+                }
+            }
+
+        if (err || match('+'))
+            {
+            // err: expurgate the remainder of the version string, whatever it is
+            // no err: eat the build metadata
+            Loop: while (!eof)
+                {
+                switch (nextChar())
+                    {
+                    case 'A'..'Z':
+                    case 'a'..'z':
+                    case '0'..'9':
+                    case '+', '-':
+                    case '.':
+                        break;
+
+                    default:
+                        rewind();
+                        break Loop;
+                    }
+                }
+            }
+        else
+            {
+            switch (peekChar())
+                {
+                case 'A'..'Z':
+                case 'a'..'z':
+                case '0'..'9':
+                case '-':
+                case '.':
+                    err = True;
+                    break;
+                }
+            }
+
+        if (err)
+            {
+            log(Error, BadVersion, [], before, reader.position);
+            return LitVersion, new Version("0");
+            }
+
+        return LitVersion, new Version(reader[start..reader.position).toString());
+        }
+
+    /**
+     * Eat a specified number of decimal digits, and convert them to an integer.
+     *
+     * @param digits  the number of digits to eat
+     *
+     * @return True iff the specified number of digits was read
+     * @return (conditional) the parsed integer value
+     */
+    protected conditional Int eatDigits(Int digits)
+        {
+        Int n = 0;
+        for (Int i : 1..digits)
+            {
+            if (Char ch := nextDigit())
+                {
+                n = n * 10 + (ch - '0');
+                }
+            else
+                {
+                Int          actual  = i-1;
+                TextPosition after   = reader.position;
+                rewind(actual);
+                TextPosition before  = reader.position;
+                log(Error, ExpectedDigits, [digits, actual], before, after);
+                reader.position = after;
+                return False;
+                }
+            }
+        return True, n;
         }
 
     /**
@@ -638,7 +1236,8 @@ class Lexer
                 // the next character must be whitespace or some type of operator/separator
                 if (isIdentifierPart(ch))
                     {
-                    log(Error, IllegalNumber, [fpBuf?.add(ch).toString() : intVal.toString() + ch], before, reader.position);
+                    log(Error, IllegalNumber, [fpBuf?.add(ch).toString() : intVal.toString() + ch],
+                            before, reader.position);
                     }
                 rewind();
                 break;
@@ -735,7 +1334,7 @@ class Lexer
      * @return id     the token id
      * @return value  the token value
      */
-    protected (Id id, Object value) eatBinaryLiteral(TextPosition before, Boolean multiline)
+    protected (Id id, Byte[] value) eatBinaryLiteral(TextPosition before, Boolean multiline)
         {
         Byte[] nibs = new Byte[];
         Loop: while (!eof)
@@ -806,7 +1405,7 @@ class Lexer
      * @return id     the token id
      * @return value  the token value
      */
-    protected (Id id, Object value) eatSingleLineComment(TextPosition before)
+    protected (Id id, String value) eatSingleLineComment(TextPosition before)
         {
         StringBuffer? buf           = Null;
         Int           trailingSpace = 0;
@@ -887,7 +1486,7 @@ class Lexer
             }
 
         // missing the enclosing "*/"
-        log(Error, ExpectedEndcomment, [], before, reader.position);
+        log(Error, ExpectedEndComment, [], before, reader.position);
 
         // just pretend that the rest of the file was all one big comment
         String comment = buf.toString().trim();
@@ -1404,6 +2003,18 @@ class Lexer
     private Boolean containsCRLFs          = False;
 
     /**
+     * Obtain the next character without changing the position in the reader.
+     *
+     * @return the next character, or an EOF character ('\z')
+     */
+    protected Char peekChar()
+        {
+        Char ch = nextChar();
+        rewind();
+        return ch;
+        }
+
+    /**
      * Obtain the next character, if any is available.
      *
      * @return the next character, or an EOF character ('\z')
@@ -1516,6 +2127,25 @@ class Lexer
      * @return True iff the next character is a digit of the specified radix
      * @return (conditional) the digit character
      */
+    conditional Char peekDigit(Int radix = 10)
+        {
+        if (Char ch := nextDigit(radix))
+            {
+            rewind();
+            return True, ch;
+            }
+
+        return False;
+        }
+
+    /**
+     * Get the next character of source code if it is a digit of the specified radix.
+     *
+     * @param radix  the radix of the desired digit
+     *
+     * @return True iff the next character is a digit of the specified radix
+     * @return (conditional) the digit character
+     */
     conditional Char nextDigit(Int radix = 10)
         {
         if (!eof)
@@ -1551,6 +2181,19 @@ class Lexer
             }
 
         return False;
+        }
+
+    /**
+     * Verify that the next character is NOT a number or an identifier char.
+     */
+    protected void peekNotIdentifierOrNumber()
+        {
+        Char ch = peekChar();
+        if (ch.asciiDigit() || isIdentifierPart(ch))
+            {
+            TextPosition pos = reader.position;
+            log(Error, UnexpectedChar, [ch.quoted()], pos, pos);
+            }
         }
 
     /**
@@ -1614,6 +2257,11 @@ class Lexer
      */
     protected void rewind(Int count = 1)
         {
+        if (count == 0)
+            {
+            return;
+            }
+
         assert count > 0;
         if (pastEOF > 0)
             {
@@ -1748,7 +2396,7 @@ class Lexer
     enum ErrorMsg(String code, String message)
         {
         UnexpectedEof     ("LEXER-01", "Unexpected End-Of-File (SUB character)."),
-        ExpectedEndcomment("LEXER-02", "Expected a comment-ending \"star slash\" but never found one."),
+        ExpectedEndComment("LEXER-02", "Expected a comment-ending \"star slash\" but never found one."),
         IllegalChar       ("LEXER-03", "Invalid character: \"{0}\"."),
         IllegalNumber     ("LEXER-04", "Illegal number: \"{0}\"."),
         CharNoTerm        ("LEXER-05", "An illegal character literal, missing closing quote: \"{0}\"."),
@@ -1765,7 +2413,8 @@ class Lexer
         BadTimezone       ("LEXER-16", "Invalid ISO-8601 timezone \"{0}\"; timezone must be \"Z\" (for UTC), or in the format \"+hh:mm\" or \"+hhmm\" (using either \"+\" or \"-\", and with minutes optional) with valid values for each."),
         BadDuration       ("LEXER-17", "Invalid ISO-8601 duration \"{0}\"; duration must be in the format \"PnYnMnDTnHnMnS\" (with the year, month, day, and time value optional, and the hours, minutes, and seconds values optional within the time portion), with valid values for each."),
         UnexpectedChar    ("LEXER-18", "Unexpected character: \"{0}\"."),
-        TemplateNoTerm    ("LEXER-19", "Template is not terminated.");
+        TemplateNoTerm    ("LEXER-19", "Template is not terminated."),
+        BadVersion        ("PARSER-04", "Bad version value.");
 
         /**
          * Message  token ids, but not including context-sensitive keywords.
@@ -2028,7 +2677,7 @@ class Lexer
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Ecstasty identifiers begin with a letter or an underscore.
+     * Ecstasy identifiers begin with a letter or an underscore.
      *
      * @param ch  the character to test
      *
