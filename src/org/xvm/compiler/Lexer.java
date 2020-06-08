@@ -903,9 +903,10 @@ public class Lexer
      * Eat the character contents of a string literal, including the string literal portion(s) of a
      * template literal.
      *
-     * @param lInitPos   the location of the start of the literal (the position of the {@code $} or
-     *                   the {@code "})
-     * @param fTemplate  true iff this is a template literal
+     * @param lInitPos    the location of the start of the literal (the position of the {@code $} or
+     *                    the {@code "})
+     * @param fTemplate   true iff this is a template literal
+     * @param fMultiline  true iff this is a multi-line format
      *
      * @return the resulting token
      */

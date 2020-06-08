@@ -156,34 +156,6 @@ class Lexer
     // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * Eat the characters defined as whitespace, which include line terminators and the file
-     * terminator. Whitespace does not include comments.
-     *
-     * @return True iff whitespace was found
-     */
-    protected Boolean eatWhitespace()
-        {
-        Boolean whitespace = False;
-        while (!eof)
-            {
-            Char ch = nextChar();
-            if (ch.isWhitespace())
-                {
-                whitespace = True;
-                }
-            else
-                {
-                // put back the non-whitespace character
-                rewind();
-                break;
-                }
-            }
-
-        this.whitespace = whitespace;
-        return whitespace;
-        }
-
-    /**
      * Lex a single token.
      *
      * @return id     the token id
@@ -591,6 +563,20 @@ class Lexer
         }
 
     /**
+     * Eat a token that may be an identifier or keyword. The first character has already been eaten.
+     *
+     * @param before  the position of the first character of the token
+     * @param first   the first character of the token
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Object value) eatIdentifierOrKeyword(TextPosition before, Char first)
+        {
+        TODO
+        }
+
+    /**
      * Lex a numeric literal token, starting with the second character of the literal (the first
      * being passed in).
      *
@@ -601,37 +587,6 @@ class Lexer
      * @return value  the token value
      */
     protected (Id id, Object value) eatNumericLiteral(TextPosition before, Char first)
-        {
-        TODO
-        }
-
-    /**
-     * Lex a template literal, such as `$"x={x}"`. The opening `$"` has already been eaten.
-     *
-     * @param before  the position of the first character of the token
-     *
-     * @return id     the token id
-     * @return value  the token value
-     */
-    protected (Id id, Object value) eatTemplateLiteral(TextPosition before)
-        {
-        TODO
-        }
-
-    /**
-     * Lex a multi-line template literal, such as:
-     *
-     *     $|x={x}
-     *      |y={y}
-     *
-     * The opening `$|` has already been eaten.
-     *
-     * @param before  the position of the first character of the token
-     *
-     * @return id     the token id
-     * @return value  the token value
-     */
-    protected (Id id, Object value) eatMultilineTemplateLiteral(TextPosition before)
         {
         TODO
         }
@@ -706,32 +661,6 @@ class Lexer
             }
 
         return LitBinstr, bytes;
-        }
-
-    /**
-     * Peek forward to see if the value is continued on the next line.
-     *
-     * @return True iff the value is continued on the next line, and all of the characters up to the
-     *         value have been eaten and discarded
-     */
-    protected Boolean isMultilineContinued()
-        {
-        TextPosition pos = reader.position;
-        while (!eof)
-            {
-            Char ch = nextChar();
-            if (!ch.isWhitespace())
-                {
-                if (ch == '|')
-                    {
-                    return True;
-                    }
-                break;
-                }
-            }
-
-        reader.position = pos;
-        return False;
         }
 
     /**
@@ -972,7 +901,7 @@ class Lexer
      */
     protected (Id id, Object value) eatStringLiteral(TextPosition before)
         {
-        TODO
+        return eatStringChars(before, False, False);
         }
 
     /**
@@ -985,21 +914,345 @@ class Lexer
      */
     protected (Id id, Object value) eatMultilineLiteral(TextPosition before)
         {
-        TODO
+        return eatStringChars(before, False, True);
         }
 
     /**
-     * Eat a token that may be an identifier or keyword. The first character has already been eaten.
+     * Lex a template literal, such as `$"x={x}"`. The opening `$"` has already been eaten.
      *
      * @param before  the position of the first character of the token
-     * @param first   the first character of the token
      *
      * @return id     the token id
      * @return value  the token value
      */
-    protected (Id id, Object value) eatIdentifierOrKeyword(TextPosition before, Char first)
+    protected (Id id, Object value) eatTemplateLiteral(TextPosition before)
         {
-        TODO
+        return eatStringChars(before, True, False);
+        }
+
+    /**
+     * Lex a multi-line template literal, such as:
+     *
+     *     $|x={x}
+     *      |y={y}
+     *
+     * The opening `$|` has already been eaten.
+     *
+     * @param before  the position of the first character of the token
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Object value) eatMultilineTemplateLiteral(TextPosition before)
+        {
+        return eatStringChars(before, True, True);
+        }
+
+    /**
+     * Lex a string or template literal, single- or multi-line.
+     *
+     * The opening delimiter has already been eaten.
+     *
+     * @param before     the position of the first character of the token
+     * @param template   True iff the token is a template
+     * @param multiline  True iff the token is in the multi-line format
+     *
+     * @return id     the token id
+     * @return value  the token value
+     */
+    protected (Id id, Object value) eatStringChars(TextPosition before, Boolean template, Boolean multiline)
+        {
+        StringBuffer buf    = new StringBuffer();
+        Token[]      tokens = template ? new Token[] : [];
+        TextPosition start  = before;
+        Appending: while (True)
+            {
+            if (!eof)
+                {
+                Char ch = nextChar();
+                switch (ch)
+                    {
+                    case '\"':
+                        if (multiline)
+                            {
+                            buf.add(ch);
+                            break;
+                            }
+                        break Appending;
+
+                    case '\\':
+                        if (multiline && !template)
+                            {
+                            buf.add(ch);
+                            break;
+                            }
+
+                        // process escaped char
+                        switch (ch = nextChar())
+                            {
+                            case '\\':
+                                buf.add('\\');
+                                break;
+
+                            case '\'':
+                                buf.add('\'');
+                                break;
+
+                            case '\"':
+                                buf.add('\"');
+                                break;
+
+                            case '0':
+                                buf.add('\0');
+                                break;
+
+                            case 'b':
+                                buf.add('\b');
+                                break;
+
+                            case 'd':
+                                buf.add('\d');
+                                break;
+
+                            case 'e':
+                                buf.add('\e');
+                                break;
+
+                            case 'f':
+                                buf.add('\f');
+                                break;
+
+                            case 'n':
+                                buf.add('\n');
+                                break;
+
+                            case 'r':
+                                buf.add('\r');
+                                break;
+
+                            case 't':
+                                buf.add('\t');
+                                break;
+
+                            case 'v':
+                                buf.add('\v');
+                                break;
+
+                            case 'z':
+                                buf.add('\z');
+                                break;
+
+                            case '{':
+                                if (template)
+                                    {
+                                    buf.add('{');
+                                    break;
+                                    }
+                                continue;
+
+                            default:
+                                if (ch.isLineTerminator())
+                                    {
+                                    // log error: newline in string
+                                    rewind();
+                                    log(Error, StringNoTerm, [], start, reader.position);
+
+                                    // assume it wasn't supposed to be an escape
+                                    buf.add('\\');
+                                    break Appending;
+                                    }
+                                else
+                                    {
+                                    // log error: bad escape
+                                    TextPosition endEscape = reader.position;
+                                    rewind(2);
+                                    log(Error, StringBadEsc, [], reader.position, endEscape);
+                                    reader.position = endEscape;
+
+                                    // assume it wasn't supposed to be an escape:
+                                    // append both the escape char and the escaped char
+                                    buf.add('\\')
+                                       .add(ch);
+                                    break;
+                                    }
+                            }
+                        break;
+
+                    case '{':
+                        if (template)
+                            {
+                            rewind();
+                            if (buf.size > 0)
+                                {
+                                tokens.add(new Token(LitString, start, reader.position, buf.toString()));
+                                buf = new StringBuffer();
+                                }
+
+                            // eat from the opening { to the closing } (inclusive of both)
+                            start = reader.position;
+                            Token[] expression = eatTemplateExpression();
+                            tokens.add(new Token(Template, start, reader.position, expression));
+
+                            // start eating a new string portion of the template from this point
+                            start = reader.position;
+                            break;
+                            }
+                        continue;
+
+                    default:
+                        if (ch.isLineTerminator())
+                            {
+                            if (multiline)
+                                {
+                                // eat whitespace and look for a continuation character
+                                if (isMultilineContinued())
+                                    {
+                                    // it is a multi-line continuation, so include the newline that
+                                    // we just ate in the resulting text
+                                    buf.add(ch);
+                                    break;
+                                    }
+                                else
+                                    {
+                                    // leave the newline in place (it's not part of the multiline)
+                                    rewind();
+                                    }
+                                }
+                            else
+                                {
+                                // not a multi-line literal; log error: newline in string
+                                rewind();
+                                log(Error, StringNoTerm, [], start, reader.position);
+                                }
+                            break Appending;
+                            }
+                        else
+                            {
+                            buf.add(ch);
+                            break;
+                            }
+                    }
+                }
+            else
+                {
+                // log error: unterminated string
+                log(Error, StringNoTerm, [], start, reader.position);
+                }
+            }
+
+        if (template)
+            {
+            if (buf.size > 0)
+                {
+                tokens.add(new Token(LitString, start, reader.position, buf.toString()));
+                }
+            else if (tokens.empty)
+                {
+                return LitString, "";
+                }
+
+            return Template, tokens;
+            }
+
+        return LitString, buf.toString();
+        }
+
+    /**
+     * Eat an inline template expression that begins with a `{` and ends with a `}`. The contents
+     * between the opening and closing curlies are returned as an array of tokens.
+     *
+     * @return the tokens found between the opening and closing curly braces
+     */
+    protected Token[] eatTemplateExpression()
+        {
+        expect('{');
+        Int     depth  = 1;
+        Token[] tokens = new Token[];
+        while (!eof)
+            {
+            assert Token token := next();
+            switch (token.id)
+                {
+                case LeftCurly:
+                    ++depth;
+                    break;
+
+                case RightCurly:
+                    if (--depth <= 0)
+                        {
+                        if (token.spaceAfter)
+                            {
+                            // don't steal the whitespace; we're inside a literal!
+                            reader.position = token.end;
+                            }
+
+                        return tokens;
+                        }
+                    break;
+                }
+
+            tokens.add(token);
+            }
+
+        // fortunately, this is very unlikely to occur; a further error will also be expected since
+        // whatever is parsing the template will be missing its termination as well
+        TextPosition pos = reader.position;
+        log(Error, TemplateNoTerm, [], pos, pos);
+        return tokens;
+        }
+
+    /**
+     * Peek forward to see if the value is continued on the next line.
+     *
+     * @return True iff the value is continued on the next line, and all of the characters up to the
+     *         value have been eaten and discarded
+     */
+    protected Boolean isMultilineContinued()
+        {
+        TextPosition pos = reader.position;
+        while (!eof)
+            {
+            Char ch = nextChar();
+            if (!ch.isWhitespace())
+                {
+                if (ch == '|')
+                    {
+                    return True;
+                    }
+                break;
+                }
+            }
+
+        reader.position = pos;
+        return False;
+        }
+
+    /**
+     * Eat the characters defined as whitespace, which include line terminators and the file
+     * terminator. Whitespace does not include comments.
+     *
+     * @return True iff whitespace was found
+     */
+    protected Boolean eatWhitespace()
+        {
+        Boolean whitespace = False;
+        while (!eof)
+            {
+            Char ch = nextChar();
+            if (ch.isWhitespace())
+                {
+                whitespace = True;
+                }
+            else
+                {
+                // put back the non-whitespace character
+                rewind();
+                break;
+                }
+            }
+
+        this.whitespace = whitespace;
+        return whitespace;
         }
 
 
@@ -1114,6 +1367,60 @@ class Lexer
             ++pastEOF;
             return '\z';
             }
+        }
+
+    /**
+     * Get the next character of source code, making sure that it is the specified character.
+     *
+     * @param ch  the desired character
+     *
+     * @return True iff the next character was matched
+     */
+    protected Boolean match(Char ch)
+        {
+        if (eof)
+            {
+            TextPosition pos = reader.position;
+            log(Error, UnexpectedEof, [], pos, pos);
+            return False;
+            }
+
+        Char actual = nextChar();
+        if (actual != ch)
+            {
+            rewind();
+            return False;
+            }
+
+        return True;
+        }
+
+    /**
+     * Get the next character of source code, making sure that it is the specified character.
+     *
+     * @param ch  the expected character
+     *
+     * @return True iff the expected character was found
+     */
+    protected Boolean expect(Char ch)
+        {
+        if (eof)
+            {
+            TextPosition pos = reader.position;
+            log(Error, UnexpectedEof, [], pos, pos);
+            return False;
+            }
+
+        Char actual = nextChar();
+        if (actual != ch)
+            {
+            TextPosition after = reader.position;
+            rewind();
+            log(Error, ExpectedChar, [ch.quoted(), actual.quoted()], reader.position, after);
+            return False;
+            }
+
+        return True;
         }
 
     /**
@@ -1273,7 +1580,8 @@ class Lexer
         BadDatetime       ("LEXER-15", "Invalid ISO-8601 datetime \"{0}\"; datetime must be in the format date+\"T\"+time+timezone (with timezone optional), with valid values for each."),
         BadTimezone       ("LEXER-16", "Invalid ISO-8601 timezone \"{0}\"; timezone must be \"Z\" (for UTC), or in the format \"+hh:mm\" or \"+hhmm\" (using either \"+\" or \"-\", and with minutes optional) with valid values for each."),
         BadDuration       ("LEXER-17", "Invalid ISO-8601 duration \"{0}\"; duration must be in the format \"PnYnMnDTnHnMnS\" (with the year, month, day, and time value optional, and the hours, minutes, and seconds values optional within the time portion), with valid values for each."),
-        UnexpectedChar    ("LEXER-18", "Unexpected character: \"{0}\".");
+        UnexpectedChar    ("LEXER-18", "Unexpected character: \"{0}\"."),
+        TemplateNoTerm    ("LEXER-19", "Template is not terminated.");
 
         /**
          * Message  token ids, but not including context-sensitive keywords.
