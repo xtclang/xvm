@@ -588,7 +588,142 @@ class Lexer
      */
     protected (Id id, Object value) eatNumericLiteral(TextPosition before, Char first)
         {
-        TODO
+        (IntLiteral intVal, Int radix) = eatIntLiteral();
+        StringBuffer? fpBuf = Null;
+
+        if (match('.'))
+            {
+            // could be ".."
+            if (match('.'))
+                {
+                rewind(2);
+                return LitInt, intVal;
+                }
+
+            // could be a mantissa
+            if (Char digit := nextDigit(radix))
+                {
+                fpBuf = new StringBuffer()
+                        .add(intVal.toString())
+                        .add('.')
+                        .add(digit);
+                while (digit := nextDigit(radix))
+                    {
+                    fpBuf.add(digit);
+                    }
+                }
+            else
+                {
+                // it's something else; spit the dot back out and return the int as the value
+                rewind();
+                return LitInt, intVal;
+                }
+            }
+
+        // parse optional exponent
+        Boolean fpBin = False;
+        switch (Char ch = nextChar())
+            {
+            case 'P', 'p':
+                fpBin = True;
+                continue;
+            case 'E', 'e':
+                IntLiteral exp = eatIntLiteral();
+                fpBuf ?:= new StringBuffer().add(intVal.toString());
+                assert fpBuf != Null; // TODO GG
+                fpBuf.add(ch);
+                fpBuf.add(exp.toString());
+                break;
+
+            default:
+                // the next character must be whitespace or some type of operator/separator
+                if (isIdentifierPart(ch))
+                    {
+                    log(Error, IllegalNumber, [fpBuf?.add(ch).toString() : intVal.toString() + ch], before, reader.position);
+                    }
+                rewind();
+                break;
+            }
+
+        if (fpBuf == Null)
+            {
+            return LitInt, intVal;
+            }
+
+        return (fpBin ? LitFloat : LitDec), new FPLiteral(fpBuf.toString());
+        }
+
+    /**
+     * Eat the IntLiteral that occurs next in the source.
+     *
+     * @return an IntLiteral
+     */
+    protected (IntLiteral value, Int radix) eatIntLiteral()
+        {
+        StringBuffer buf   = new StringBuffer();
+        TextPosition start = reader.position;
+
+        // the first character could be a sign (+ or -)
+        if (match('+'))
+            {
+            buf.add('+');
+            }
+        else if (match('-'))
+            {
+            buf.add('-');
+            }
+
+        // if the next character is '0', it is potentially part of a prefix denoting a radix
+        Boolean legal = False;
+        Int     radix = 10;
+        if (Char ch := nextDigit())
+            {
+            buf.add(ch);
+            legal = True;
+
+            if (ch == '0' && !eof)
+                {
+                radix = switch (ch = nextChar())
+                    {
+                    case 'B':
+                    case 'b': 2;
+
+                    case 'o': 8;
+
+                    case 'X':
+                    case 'x': 16;
+
+                    default : 10;
+                    };
+
+                if (radix == 10)
+                    {
+                    // it wasn't a radix indicator
+                    rewind();
+                    }
+                else
+                    {
+                    buf.add(ch);
+                    legal = False;  // requires at least one more digit
+                    }
+                }
+
+            while (ch := nextDigit(radix))
+                {
+                buf.add(ch);
+                legal = True;
+                }
+            }
+
+        if (legal)
+            {
+            return new IntLiteral(buf.toString()), radix;
+            }
+        else
+            {
+            log(Error, IllegalNumber, [buf.toString()], start, reader.position);
+            return 0, radix;
+            }
         }
 
     /**
@@ -1274,7 +1409,7 @@ class Lexer
      *
      * @return the next character, or an EOF character ('\z')
      */
-    protected Char nextChar()
+    protected Char nextChar(ErrorMsg? eofError = Null)
         {
         Char ch;
         if (ch := reader.next())
@@ -1364,9 +1499,59 @@ class Lexer
             }
         else
             {
+            if (eofError != Null)
+                {
+                TextPosition pos = reader.position;
+                log(Error, eofError, [], pos, pos);
+                }
             ++pastEOF;
             return '\z';
             }
+        }
+
+    /**
+     * Get the next character of source code if it is a digit of the specified radix.
+     *
+     * @param radix  the radix of the desired digit
+     *
+     * @return True iff the next character is a digit of the specified radix
+     * @return (conditional) the digit character
+     */
+    conditional Char nextDigit(Int radix = 10)
+        {
+        if (!eof)
+            {
+            switch (Char ch = nextChar())
+                {
+                case '0'..'1':
+                    return True, ch;
+
+                case '2'..'7':
+                    if (radix >= 8)
+                        {
+                        return True, ch;
+                        }
+                    break;
+
+                case '8'..'9':
+                    if (radix >= 10)
+                        {
+                        return True, ch;
+                        }
+                    break;
+
+                case 'A'..'F':
+                case 'a'..'f':
+                    if (radix >= 16)
+                        {
+                        return True, ch;
+                        }
+                    break;
+                }
+            rewind();
+            }
+
+        return False;
         }
 
     /**
