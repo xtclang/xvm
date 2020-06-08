@@ -622,14 +622,19 @@ public class AssignmentStatement
 
                 BiExpression exprFakeRValue    = createBiExpression(exprLeftCopy, op, exprRight);
                 Expression   exprFakeRValueNew = exprFakeRValue.validate(ctx, typeLeft, errs);
-                if (exprFakeRValueNew == null)
+                if (exprFakeRValueNew instanceof BiExpression)
                     {
-                    fValid = false;
+                    exprRightNew = ((BiExpression) exprFakeRValueNew).getExpression2();
+                    if (getCategory() == Category.CondLeft)
+                        {
+                        atypeRight = exprRightNew.getTypes();
+                        }
                     }
                 else
                     {
-                    exprRightNew = ((BiExpression) exprFakeRValueNew).getExpression2();
-                    atypeRight   = exprRightNew.getTypes();
+                    // this could only happen after an error had been reported
+                    assert errs.hasSeriousErrors();
+                    fValid = false;
                     }
 
                 if (fInfer)

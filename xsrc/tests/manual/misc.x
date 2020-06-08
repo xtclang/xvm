@@ -486,6 +486,10 @@ module TestMisc
         Int? n = null;
         n ?:= 4;
         console.println("n=" + n + " (should be 4)");
+
+        private Int? pretendNullable(Int n) { return n; }
+        n = pretendNullable(n);
+
         n ?:= 7;
         console.println("n=" + n + " (should be 4)");
 
