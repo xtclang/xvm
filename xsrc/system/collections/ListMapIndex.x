@@ -249,6 +249,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
                         hi = mid - 1;
                         break;
                     }
+                mid = (lo + hi) >>> 1;
                 }
             return tree.insert(mid, index);
             }
