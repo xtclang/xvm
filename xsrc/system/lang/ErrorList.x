@@ -41,7 +41,7 @@ class ErrorList(Int maxSize = maxvalue, ErrorList? parent = Null)
     /**
      * The UIDs of previously logged errors.
      */
-    private @Lazy HashSet uniqueIds.calc()
+    private @Lazy HashSet<String> uniqueIds.calc()
         {
         return new HashSet();
         }
