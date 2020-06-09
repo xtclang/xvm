@@ -212,8 +212,8 @@ class Lexer
                         return CurrentDir, Null;
 
                     case '0'..'9':
-                        rewind();
-                        return eatNumericLiteral(before, next);
+                        rewind(2);
+                        return eatNumericLiteral(before);
 
                     default:
                         rewind();
@@ -539,7 +539,8 @@ class Lexer
                 return BitNot, Null;
 
             case '0'..'9':
-                return eatNumericLiteral(before, next);
+                rewind();
+                return eatNumericLiteral(before);
 
             case '\'':
                 return eatCharLiteral(before);
@@ -640,7 +641,7 @@ class Lexer
             // check for suffix of private / protected / public / struct (etc.); these will get
             // lexed in some subsequent call to next()
             reader.position = colon;
-            if (Id.keywords.contains(suffix))
+            if (!Id.keywords.contains(suffix))
                 {
                 // check for some specific literal type formats
                 switch (name)
@@ -757,7 +758,7 @@ class Lexer
                     else
                         {
                         // scale the integer value up to picos (trillionths)
-                        while (digits++ <= 12)
+                        while (++digits <= 12)
                             {
                             picos *= 10;
                             }
@@ -873,7 +874,7 @@ class Lexer
                 {
                 case 'Z', 'z':
                 case '+', '-':
-                    (_, timezone) = eatTimeZoneLiteral(before);
+                    (_, timezone) = eatTimeZoneLiteral(before, True);
                     break;
                 }
             }
@@ -1175,16 +1176,14 @@ class Lexer
         }
 
     /**
-     * Lex a numeric literal token, starting with the second character of the literal (the first
-     * being passed in).
+     * Lex a numeric literal token.
      *
      * @param before  the position of the first character of the token
-     * @param first   the first character of the token
      *
      * @return id     the token id
      * @return value  the token value
      */
-    protected (Id id, Object value) eatNumericLiteral(TextPosition before, Char first)
+    protected (Id id, Object value) eatNumericLiteral(TextPosition before)
         {
         (IntLiteral intVal, Int radix) = eatIntLiteral();
         StringBuffer? fpBuf = Null;
