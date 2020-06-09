@@ -26,6 +26,7 @@ const Error
         this.code     = code;
         this.lookup   = lookup;
         this.params   = params;
+        this.source   = source;
         this.before   = before;
         this.after    = after;
         }
