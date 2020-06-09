@@ -17,6 +17,7 @@ module TestLiterals
         testTimes();
         testDateTimes();
         testDurations();
+//        testLexer();
         }
 
     void testVersions()
@@ -309,6 +310,38 @@ module TestLiterals
 
         duration = new Duration("10.5S");
         console.println($"10.5S duration={duration} or {Duration:10.5S}");
+        }
+
+    void testLexer()
+        {
+        console.println("\n** testLexer()");
+
+        import ecstasy.lang.ErrorList;
+        import ecstasy.lang.src.Lexer;
+        import ecstasy.lang.src.Lexer.Token;
+        import ecstasy.lang.src.Source;
+
+//        String     text   = `|Version v = v:1.0;
+//                             ;
+//        Source     source = new Source(text);
+//        ErrorList  errs   = new ErrorList(100);
+//        Lexer      lexer  = new Lexer(source, errs);
+//        console.println($"lexer={lexer}");
+//        Loop: for (Token token : lexer)
+//            {
+//            console.println($"[{Loop.count}] {token}");
+//            }
+//        }
+
+        File       file   = ./literals.x;
+        Source     source = new Source(file);
+        ErrorList  errs   = new ErrorList(100);
+        Lexer      lexer  = new Lexer(source, errs);
+        console.println($"lexer={lexer}");
+        Loop: for (Token token : lexer)
+            {
+            console.println($"[{Loop.count}] {token}");
+            }
         }
     }
 
