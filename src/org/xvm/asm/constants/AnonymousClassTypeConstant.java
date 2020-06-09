@@ -173,14 +173,14 @@ public class AnonymousClassTypeConstant
         }
 
     @Override
-    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
         {
         if (containsUnresolved())
             {
             return ResolutionResult.POSSIBLE;
             }
 
-        return getChildStructure().resolveName(sName, Access.PUBLIC, collector);
+        return getChildStructure().resolveName(sName, access, collector);
         }
 
     @Override

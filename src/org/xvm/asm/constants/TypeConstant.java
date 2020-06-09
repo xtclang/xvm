@@ -746,13 +746,14 @@ public abstract class TypeConstant
      * for this type.
      *
      * @param sName      the name to resolve
+     * @param access     the required access
      * @param collector  the collector to which the potential name matches will be reported
      *
      * @return the resolution result
      */
-    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
         {
-        return getUnderlyingType().resolveContributedName(sName, collector);
+        return getUnderlyingType().resolveContributedName(sName, access, collector);
         }
 
     @Override

@@ -273,20 +273,20 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
         {
         // for the IntersectionType to contribute a name, both sides need to find exactly
         // the same component
         ErrorListener    errs       = collector.getErrorListener();
         SimpleCollector  collector1 = new SimpleCollector(errs);
-        ResolutionResult result1    = m_constType1.resolveContributedName(sName, collector1);
+        ResolutionResult result1    = m_constType1.resolveContributedName(sName, access, collector1);
         if (result1 != ResolutionResult.RESOLVED)
             {
             return result1;
             }
 
         SimpleCollector  collector2 = new SimpleCollector(errs);
-        ResolutionResult result2    = m_constType2.resolveContributedName(sName, collector2);
+        ResolutionResult result2    = m_constType2.resolveContributedName(sName, access, collector2);
         if (result2 != ResolutionResult.RESOLVED)
             {
             return result2;

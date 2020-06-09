@@ -16,6 +16,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
@@ -26,6 +27,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -2405,7 +2407,28 @@ public class Context
             if (!(arg instanceof TargetInfo))
                 {
                 SimpleCollector collector = new SimpleCollector(errs);
-                if (m_typeLeft.resolveContributedName(sName, collector) == ResolutionResult.RESOLVED)
+                TypeConstant    typeLeft  = m_typeLeft;
+                Access          access    = typeLeft.getAccess();
+
+                if (typeLeft.isSingleDefiningConstant())
+                    {
+                    IdentityConstant idLeft = (IdentityConstant) typeLeft.getDefiningConstant();
+                    if (idLeft.isNestMateOf(getThisClass().getIdentityConstant()))
+                        {
+                        access = Access.PRIVATE;
+                        }
+                    else
+                        {
+                        IdentityConstant idParent = idLeft.getParentConstant();
+                        if (idParent instanceof MethodConstant &&
+                                idParent.equals(getMethod().getIdentityConstant()))
+                            {
+                            // the class is defined inside of the method
+                            access = Access.PRIVATE;
+                            }
+                        }
+                    }
+                if (typeLeft.resolveContributedName(sName, access, collector) == ResolutionResult.RESOLVED)
                     {
                     // inference succeeded
                     return collector.getResolvedConstant();
@@ -2453,7 +2476,7 @@ public class Context
             getOuterContext().replaceGenericType(sName, branch, typeNarrowed);
             }
 
-        TypeConstant m_typeLeft;
+        private TypeConstant m_typeLeft;
         }
 
 

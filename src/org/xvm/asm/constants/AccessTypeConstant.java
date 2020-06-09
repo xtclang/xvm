@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import org.xvm.asm.Component.ResolutionCollector;
+import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -136,6 +138,16 @@ public class AccessTypeConstant
         {
         return pool.ensureAccessTypeConstant(type, m_access);
         }
+
+    @Override
+    public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
+        {
+        access = m_access == Access.STRUCT || access == Access.STRUCT
+                ? Access.PRIVATE
+                : m_access.minOf(access);
+        return super.resolveContributedName(sName, access, collector);
+        }
+
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 

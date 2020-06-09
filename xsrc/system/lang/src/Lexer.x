@@ -893,7 +893,7 @@ class Lexer
      * @return id     the token id
      * @return value  the token value
      */
-    /* TODO GG protected */ (Id id, Duration value) eatDurationLiteral(TextPosition before)
+    protected (Id id, Duration value) eatDurationLiteral(TextPosition before)
         {
         assert nextChar() == ':';
 

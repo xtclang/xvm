@@ -411,13 +411,13 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().resolveContributedName(sName, collector);
+            return constId.getReferredToType().resolveContributedName(sName, access, collector);
             }
 
         Constant constant = getDefiningConstant();
@@ -437,18 +437,18 @@ public class TerminalTypeConstant
                 {
                 ClassConstant constClz = (ClassConstant) constant;
 
-                return constClz.getComponent().resolveName(sName, Access.PUBLIC, collector);
+                return constClz.getComponent().resolveName(sName, access, collector);
                 }
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return ((PseudoConstant) constant).getDeclarationLevelClass().getType()
-                        .resolveContributedName(sName, collector);
+                return ((PseudoConstant) constant).getDeclarationLevelClass().getType().
+                        resolveContributedName(sName, access, collector);
 
             case Typedef:
                 return ((TypedefConstant) constant).getReferredToType().
-                    resolveContributedName(sName, collector);
+                    resolveContributedName(sName, access, collector);
 
             case UnresolvedName:
                 return ResolutionResult.POSSIBLE;

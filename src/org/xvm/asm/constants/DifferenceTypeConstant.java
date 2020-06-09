@@ -148,17 +148,17 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
         {
         // for the DifferenceType to contribute a name, the first side needs to find it,
         // but the second should not
         ErrorListener    errs       = collector.getErrorListener();
         SimpleCollector  collector1 = new SimpleCollector(errs);
-        ResolutionResult result1    = m_constType1.resolveContributedName(sName, collector1);
+        ResolutionResult result1    = m_constType1.resolveContributedName(sName, access, collector1);
 
         if (result1 == ResolutionResult.RESOLVED)
             {
-            ResolutionResult result2 = m_constType2.resolveContributedName(sName, new SimpleCollector(errs));
+            ResolutionResult result2 = m_constType2.resolveContributedName(sName, access, new SimpleCollector(errs));
             if (result2 == ResolutionResult.RESOLVED)
                 {
                 // TODO: if the results are identical we can allow that

@@ -1998,6 +1998,8 @@ public abstract class Component
     protected ResolutionResult resolveContributedName(
             String sName, Access access, ResolutionCollector collector, boolean fAllowInto)
         {
+        assert access != Access.STRUCT;
+
         Component child = getChild(sName);
         if (child != null && child.canBeSeen(access))
             {
@@ -2095,7 +2097,7 @@ public abstract class Component
                 }
             else
                 {
-                return typeContrib.resolveContributedName(sName, collector);
+                return typeContrib.resolveContributedName(sName, access, collector);
                 }
             }
 

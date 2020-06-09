@@ -38,7 +38,7 @@ public class PendingTypeConstant
         }
 
     @Override
-    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
         {
         return ResolutionResult.UNKNOWN;
         }
@@ -77,6 +77,12 @@ public class PendingTypeConstant
     public boolean isAccessSpecified()
         {
         return false;
+        }
+
+    @Override
+    public Access getAccess()
+        {
+        return Access.PUBLIC;
         }
 
     @Override
