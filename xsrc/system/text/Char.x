@@ -286,7 +286,7 @@ const Char
                 && codepoint >= 0x09
                                      // 2               1      0
                                      // 0FEDCBA9876543210FEDCBA9
-                && 1 << codepoint-9 & 0b111110100000000000011111 != 0;
+                && 1.as(Int) << codepoint-9 & 0b111110100000000000011111 != 0;
             }
 
         return switch (codepoint)
