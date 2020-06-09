@@ -168,8 +168,8 @@ public class Mixin
                         List<String> listUnassigned;
                         if ((listUnassigned = hStruct.validateFields()) != null)
                             {
-                            return frameCaller.raiseException(
-                                xException.unassignedFields(frameCaller, listUnassigned));
+                            return frameCaller.raiseException(xException.unassignedFields(
+                                    frameCaller, hStruct.getType().getValueString(), listUnassigned));
                             }
                         ixStep++;
                         // fall through

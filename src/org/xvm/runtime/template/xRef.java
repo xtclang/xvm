@@ -686,7 +686,8 @@ public class xRef
                 List<String> listUnassigned;
                 return (listUnassigned = this.validateFields()) == null
                     ? Op.R_NEXT
-                    : frameCaller.raiseException(xException.unassignedFields(frame, listUnassigned));
+                    : frameCaller.raiseException(xException.unassignedFields(
+                            frame, getType().getValueString(), listUnassigned));
                 });
             return frame.callInitialized(frameID);
             }

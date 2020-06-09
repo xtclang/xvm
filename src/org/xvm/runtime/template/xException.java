@@ -136,9 +136,9 @@ public class xException
         return makeHandle(frame, s_clzTimedOut, sMs);
         }
 
-    public static ExceptionHandle unassignedFields(Frame frame, List<String> listNames)
+    public static ExceptionHandle unassignedFields(Frame frame, String sClass, List<String> listNames)
         {
-        return illegalState(frame, "Unassigned fields: " + listNames);
+        return illegalState(frame, "Unassigned fields for \"" + sClass + "\": " + listNames);
         }
 
     public static ExceptionHandle unassignedReference(Frame frame)
