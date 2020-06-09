@@ -499,6 +499,10 @@ public class ServiceContext
                                 iPC = 0;
                                 continue nextOp;
 
+                            case Op.R_RETURN:
+                                iPC = Op.R_RETURN;
+                                continue nextOp;
+
                             default:
                                 if (iResult < 0)
                                     {
