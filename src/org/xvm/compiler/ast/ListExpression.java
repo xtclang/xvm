@@ -195,8 +195,12 @@ public class ListExpression
                     {
                     type = exprTypeNew;
                     }
-                typeElement = exprTypeNew.ensureTypeConstant(ctx).resolveAutoNarrowingBase().
-                        resolveGenericType("Element");
+                TypeConstant typeElementNew = exprTypeNew.ensureTypeConstant(ctx).
+                    resolveAutoNarrowingBase().resolveGenericType("Element");
+                if (typeElementNew != null)
+                    {
+                    typeElement = typeElementNew;
+                    }
                 }
             }
 
