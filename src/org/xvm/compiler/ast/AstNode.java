@@ -775,28 +775,7 @@ public abstract class AstNode
                 {
                 if (errs.isAbortDesired() || mgrKids.getIterations() > 20)
                     {
-                    List<AstNode> listUnresolved   = mgrKids.takeRevisitList();
-                    boolean       fUnresolvedNames = false;
-
-                    // first, see if there are any unresolved names and log corresponding errors
-                    for (AstNode node : listUnresolved)
-                        {
-                        if (node instanceof NameExpression ||
-                            node instanceof NamedTypeExpression)
-                            {
-                            fUnresolvedNames = true;
-                            node.log(errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP, node.toString());
-                            }
-                        }
-
-                    if (!fUnresolvedNames)
-                        {
-                        // report as is (could be quite undecipherable)
-                        for (AstNode node : listUnresolved)
-                            {
-                            node.log(errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP, node.toString());
-                            }
-                        }
+                    mgrKids.logDeferredAsErrors(errs);
                     return false;
                     }
                 }

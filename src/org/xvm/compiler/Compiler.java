@@ -1,15 +1,11 @@
 package org.xvm.compiler;
 
 
-import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 
-import org.xvm.asm.constants.IdentityConstant;
-
-import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
@@ -334,14 +330,7 @@ public class Compiler
      */
     public void logRemainingDeferredAsErrors()
         {
-        for (AstNode node : m_mgr.takeRevisitList())
-            {
-            Component        component = node.getComponent();
-            IdentityConstant id        = component == null ? null : component.getIdentityConstant();
-            node.log(m_errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP, id == null
-                    ? node.getSource().toString(node.getStartPosition(), node.getEndPosition())
-                    : id.toString());
-            }
+        m_mgr.logDeferredAsErrors(m_errs);
         }
 
     /**

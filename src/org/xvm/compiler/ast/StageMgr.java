@@ -7,11 +7,17 @@ import java.util.List;
 
 import java.util.function.Predicate;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.constants.IdentityConstant;
+
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 
 import org.xvm.compiler.ast.AstNode.ChildIterator;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -416,6 +422,43 @@ public class StageMgr
         }
 
     /**
+     * Log the remaining unresolved nodes as errors.
+     *
+     * @param errs  the error listener to log errors into
+     */
+    public void logDeferredAsErrors(ErrorListener errs)
+        {
+        List<AstNode> listUnresolved   = takeRevisitList();
+        boolean       fUnresolvedNames = false;
+
+        // first, see if there are any unresolved names and log corresponding errors
+        for (AstNode node : listUnresolved)
+            {
+            if (node instanceof NameExpression ||
+                node instanceof NamedTypeExpression)
+                {
+                fUnresolvedNames = true;
+
+                Component        component = node.getComponent();
+                IdentityConstant id        = component == null ? null : component.getIdentityConstant();
+
+                node.log(errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP, id == null
+                    ? node.getSource().toString(node.getStartPosition(), node.getEndPosition())
+                    : id.toString());
+                }
+            }
+
+        if (!fUnresolvedNames)
+            {
+            // report as is (could be quite undecipherable)
+            for (AstNode node : listUnresolved)
+                {
+                node.log(errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP, node.toString());
+                }
+            }
+        }
+
+    /**
      * Obtain the list of nodes that still require processing.
      * <p/>
      * Note: Normally the revisiting is performed by calling {@link #processComplete()} in a loop
@@ -424,7 +467,7 @@ public class StageMgr
      *
      * @return a list of nodes to revisit
      */
-    public List<AstNode> takeRevisitList()
+    private List<AstNode> takeRevisitList()
         {
         List<AstNode> listPrevious = m_listRevisit;
         m_listRevisit = null;
