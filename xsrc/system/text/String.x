@@ -403,11 +403,28 @@ const String
      *
      * @param appender  the Appender to append to
      */
-    void appendEscaped(Appender<Char> appender)
+    Appender<Char> appendEscaped(Appender<Char> appender)
         {
         for (Char ch : chars)
             {
             ch.appendEscaped(appender);
+            }
+        return appender;
+        }
+
+    /**
+     * @return the string as it would appear in source code, in double quotes and escaped as
+     *         necessary
+     */
+    String quoted()
+        {
+        if (Int len := isEscaped())
+            {
+            return appendEscaped(new StringBuffer(len + 2).add('\"')).add('\"').toString();
+            }
+        else
+            {
+            return new StringBuffer(size+2).add('\"').add(this).add('\"').toString();
             }
         }
 
