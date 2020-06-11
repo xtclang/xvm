@@ -228,11 +228,14 @@ public class xEnum
         int i = 0;
         for (Component child : clzThis.children())
             {
-            if (child.getIdentityConstant().equals(id))
+            if (child.getFormat() == Format.ENUMVALUE)
                 {
-                return getEnumByOrdinal(i);
+                if (child.getIdentityConstant().equals(id))
+                    {
+                    return getEnumByOrdinal(i);
+                    }
+                ++i;
                 }
-            ++i;
             }
         return null;
         }
