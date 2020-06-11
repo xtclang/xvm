@@ -1019,6 +1019,10 @@ AnnotatedTypeExpression
     Annotation TypeExpression
 
 NamedTypeExpression
+    NamedTypeExpressionPart
+    NamedTypeExpression '.' Annotations-opt NamedTypeExpressionPart
+
+NamedTypeExpressionPart
     QualifiedName TypeAccessModifier-opt NoAutoNarrowModifier-opt TypeParameterTypeList-opt
 
 TypeAccessModifier
