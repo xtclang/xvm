@@ -13,14 +13,28 @@ class Lexer
     /**
      * Construct an Ecstasy lexical analyzer ("tokenizer") that processes source code from a Reader.
      *
-     * @param source   the Ecstasy source code
-     * @param errs     the ErrorList to log errors to
+     * @param source         the Ecstasy source code
+     * @param errs           the ErrorList to log errors to
+     * @param synthesizeEof  pass True to automatically append a
      */
-    construct(Source source, ErrorList errs)
+    construct(String source, ErrorList? errs = Null, Boolean synthesizeEof = False)
         {
-        this.source  = source;
-        this.errs    = errs;
-        this.reader  = source.createReader();
+        construct Lexer(new Source(source), errs, synthesizeEof);
+        }
+
+    /**
+     * Construct an Ecstasy lexical analyzer ("tokenizer") that processes source code from a Reader.
+     *
+     * @param source         the Ecstasy source code
+     * @param errs           the ErrorList to log errors to
+     * @param synthesizeEof  pass True to automatically append a
+     */
+    construct(Source source, ErrorList? errs = Null, Boolean synthesizeEof = False)
+        {
+        this.source        = source;
+        this.reader        = source.createReader();
+        this.errs          = errs ?: new ErrorList(10);
+        this.synthesizeEof = synthesizeEof;
         }
     finally
         {
@@ -54,9 +68,27 @@ class Lexer
     protected/private Reader reader;
 
     /**
+     * True once the stream of characters is exhausted.
+     */
+    public Boolean eof.get()
+        {
+        return reader.eof;
+        }
+
+    /**
      * The number of characters past the EOF that the lexer has pretended to read.
      */
     protected/private Int pastEOF;
+
+    /**
+     * The number of characters past the EOF that the lexer has pretended to read.
+     */
+    protected/private Boolean synthesizeEof;
+
+    /**
+     * A special "end of file" token.
+     */
+    public/private Token? eofToken;
 
     /**
      * Keeps track of whether whitespace was encountered.
@@ -76,6 +108,17 @@ class Lexer
         {
         if (eof)
             {
+            if (synthesizeEof && eofToken == Null)
+                {
+                // once EOF has been reached, the lexer creates a synthetic (fake) token that
+                // represents the end-of-file condition; this is useful for matching/demand parsers
+                // that don't want to check for an end-of-file condition everywhere
+                TextPosition pos      = reader.position;
+                Token        eofToken = new Token(EndOfFile, pos, pos, Null, True, True);
+                this.eofToken = eofToken;
+                return True, eofToken;
+                }
+
             return False;
             }
 
@@ -1990,14 +2033,6 @@ class Lexer
 
     // ----- reader behavior -----------------------------------------------------------------------
 
-    /**
-     * True once the stream of characters is exhausted.
-     */
-    protected Boolean eof.get()
-        {
-        return reader.eof;
-        }
-
     private Boolean containsUnicodeEscapes = False;
     private Boolean containsCRLFs          = False;
 
@@ -2442,11 +2477,107 @@ class Lexer
     // ----- types ---------------------------------------------------------------------------------
 
     /**
-     * An Ecstasy token has a lexical identity (what the element type is), a location in the text stream
-     * (with the ending position being the position _after_ the token), and an optional value.
+     * An Ecstasy token has a lexical identity (what the element type is), a location in the text
+     * stream (with the ending position being the position _after_ the token), and an optional
+     * value.
      */
-    static const Token(Id id, TextPosition start, TextPosition end, Object value = Null,
-                       Boolean spaceBefore=False, Boolean spaceAfter=False);
+    static const Token
+           (Id           id,
+            TextPosition start,
+            TextPosition end,
+            Object       value,
+            Boolean      spaceBefore = False,
+            Boolean      spaceAfter  = False)
+        {
+        assert()
+            {
+            assert value.is(id.Value);
+            }
+
+        /**
+         * @return the value's text, or if there is no value, then the token id's text
+         */
+        String valueText.get()
+            {
+            return value == Null
+                    ? (id.text? : "")
+                    : value.toString();
+            }
+
+        /**
+         * @return a longer form of the `toString()` output that includes the token's position
+         */
+        public String toDebugString()
+            {
+            String       s   = toString();
+            StringBuffer buf = new StringBuffer(s.size + 18);
+
+            buf.add('[');
+            (start.lineNumber + 1).appendTo(buf);
+            buf.add(',');
+            (start.lineOffset + 1).appendTo(buf);
+            " - ".appendTo(buf);
+            (end.lineNumber + 1).appendTo(buf);
+            buf.add(',');
+            (end.lineOffset + 1).appendTo(buf);
+            "] ".appendTo(buf);
+            s.appendTo(buf);
+
+            return buf.toString();
+            }
+
+        @Override
+        public String toString()
+            {
+            return switch (id)
+                {
+                case LitInt:
+                case LitDec:
+                case LitFloat:
+                case LitPath:       value.toString();
+
+                case LitChar:       value.as(Char).quoted();
+                case LitString:     value.as(String).quoted();
+
+                case LitDate:      "Date:"     + value.toString();
+                case LitTime:      "Time:"     + value.toString();
+                case LitDatetime:  "DateTime:" + value.toString();
+                case LitTimezone:  "TimeZone:" + value.toString();
+                case LitDuration:  "Duration:" + value.toString();
+                case LitVersion:   "Version:"  + value.toString();
+
+                case LitBinstr:
+                    {
+                    // TODO most of this should be on Byte[] or Nibble[]
+                    Byte[]       bytes = value.as(Byte[]);
+                    StringBuffer buf   = new StringBuffer((1+bytes.size * 2).minOf(37));
+                    buf.append('#');
+                    Loop: for (Byte b : bytes)
+                        {
+                        if (Loop.count >= 17)
+                            {
+                            buf.add('.').add('.');
+                            break;
+                            }
+                        buf.add((b >>> 4).toHexit())
+                           .add((b      ).toHexit());
+                        }
+                    return buf.toString();
+                    };
+
+
+                case Identifier:  Id.allKeywords.contains(value.as(String))
+                                          ? '$' + value.toString()
+                                          : value.toString();
+
+                case DocComment:  value.is(String) ? "/** " + (value.size > 35 ? value[0..33]+".. */" : value + " */") : "/** */";
+                case EncComment:  value.is(String) ? "/* "  + (value.size > 35 ? value[0..33]+".. */" : value + " */") : "/* */";
+                case EolComment:  value.is(String) ? "// "  + (value.size > 35 ? value[0..33]+".."    : value        ) : "//";
+
+                default: id.text ?: "???";
+                };
+            }
+        }
 
     /**
      * Token identity categories.
@@ -2456,165 +2587,166 @@ class Lexer
     /**
      * Ecstasy source code is composed of these lexical elements.
      */
-    enum Id(String? text, Category category=Normal)
+    enum Id<Value>(String? text, Category category=Normal)
         {
-        Colon        (":"              ),
-        Semicolon    (";"              ),
-        Comma        (","              ),
-        Dot          ("."              ),
-        DotDot       (".."             ),
-        Ellipsis     ("..."            ),
-        CurrentDir   ("./"             ),
-        ParentDir    ("../"            ),
-        LeftParen    ("("              ),
-        RightParen   (")"              ),
-        LeftCurly    ("{"              ),
-        RightCurly   ("}"              ),
-        LeftSquare   ("["              ),
-        RightSquare  ("]"              ),
-        Add          ("+"              ),
-        Sub          ("-"              ),
-        Mul          ("*"              ),
-        Div          ("/"              ),
-        DivRem       ("/%"             ),
-        Modulo       ("%"              ),
-        ShiftLeft    ("<<"             ),
-        ShiftRight   (">>"             ),
-        ShiftAll     (">>>"            ),
-        BitAnd       ("&"              ),
-        BitOr        ("|"              ),
-        BitXor       ("^"              ),
-        BitNot       ("~"              ),
-        BoolAnd      ("&&"             ),
-        BoolOr       ("||"             ),
-        BoolXor      ("^^"             ),
-        BoolNot      ("!"              ),
-        BinFile      ("#"              ),
-        StrFile      ("$"              ),
-        At           ("@"              ),
-        Condition    ("?"              ),
-        Elvis        ("?:"             ),
-        Asn          ("="              ),
-        AddAsn       ("+="             ),
-        SubAsn       ("-="             ),
-        MulAsn       ("*="             ),
-        DivAsn       ("/="             ),
-        ModuloAsn    ("%="             ),
-        ShiftLeftAsn ("<<="            ),
-        ShiftRightAsn(">>="            ),
-        ShiftAllAsn  (">>>="           ),
-        BitAndAsn    ("&="             ),
-        BitOrAsn     ("|="             ),
-        BitXorAsn    ("^="             ),
-        BoolAndAsn   ("&&="            ),
-        BoolOrAsn    ("||="            ),
-        CondAsn      (":="             ),
-        NotNullAsn   ("?="             ),
-        ElvisAsn     ("?:="            ),
-        CompareEQ    ("=="             ),
-        CompareNE    ("!="             ),
-        CompareLT    ("<"              ),
-        CompareLTEQ  ("<="             ),
-        CompareGT    (">"              ),
-        CompareGTEQ  (">="             ),
-        CompareOrder ("<=>"            ),
-        Increment    ("++"             ),
-        Decrement    ("--"             ),
-        Lambda       ("->"             ),
-        Any          ("_"              ),
-        Allow        ("allow"          , Category.ContextSensitive),  // TODO GG why is "Category." required?
-        As           ("as"             ),
-        Assert       ("assert"         ),
-        AssertRnd    ("assert:rnd"     ),
-        AssertArg    ("assert:arg"     ),
-        AssertBounds ("assert:bounds"  ),
-        AssertTodo   ("assert:TODO"    ),
-        AssertOnce   ("assert:once"    ),
-        AssertTest   ("assert:test"    ),
-        AssertDebug  ("assert:debug"   ),
-        Avoid        ("avoid"          , Category.ContextSensitive),
-        Break        ("break"          ),
-        Case         ("case"           ),
-        Catch        ("catch"          ),
-        Class        ("class"          ),
-        Conditional  ("conditional"    ),
-        Const        ("const"          ),
-        Construct    ("construct"      ),
-        Continue     ("continue"       ),
-        Default      ("default"        ),
-        Delegates    ("delegates"      , Category.ContextSensitive),
-        Do           ("do"             ),
-        Else         ("else"           ),
-        Enum         ("enum"           ),
-        Extends      ("extends"        , Category.ContextSensitive),
-        Finally      ("finally"        ),
-        For          ("for"            ),
-        Function     ("function"       ),
-        If           ("if"             ),
-        Immutable    ("immutable"      ),
-        Implements   ("implements"     , Category.ContextSensitive),
-        Import       ("import"         ),
-        ImportEmbed  ("import:embedded"),
-        ImportRequire("import:required"),
-        ImportDesire ("import:desired" ),
-        ImportOption ("import:optional"),
-        Incorporates ("incorporates"   , Category.ContextSensitive),
-        Interface    ("interface"      ),
-        Into         ("into"           , Category.ContextSensitive),
-        Is           ("is"             ),
-        Mixin        ("mixin"          ),
-        Module       ("module"         ),
-        New          ("new"            ),
-        Outer        ("outer"          , Category.Special),
-        Package      ("package"        ),
-        Prefer       ("prefer"         , Category.ContextSensitive),
-        Private      ("private"        ),
-        Protected    ("protected"      ),
-        Public       ("public"         ),
-        Return       ("return"         ),
-        Service      ("service"        ),
-        Static       ("static"         ),
-        Struct       ("struct"         ),
-        Super        ("super"          , Category.Special),
-        Switch       ("switch"         ),
-        This         ("this"           , Category.Special),
-        ThisClass    ("this:class"     , Category.Special),
-        ThisModule   ("this:module"    , Category.Special),
-        ThisPri      ("this:private"   , Category.Special),
-        ThisPro      ("this:protected" , Category.Special),
-        ThisPub      ("this:public"    , Category.Special),
-        ThisServ     ("this:service"   , Category.Special),
-        ThisStruct   ("this:struct"    , Category.Special),
-        ThisTarget   ("this:target"    , Category.Special),
-        Throw        ("throw"          ),
-        Todo         ("TODO"           ),
-        Try          ("try"            ),
-        Typedef      ("typedef"        ),
-        Using        ("using"          ),
-        Val          ("val"            , Category.ContextSensitive),
-        Var          ("var"            , Category.ContextSensitive),
-        Void         ("void"           ),
-        While        ("while"          ),
-        Identifier   (Null             ),
-        LitChar      (Null             ),
-        LitString    (Null             ),
-        LitBinstr    (Null             ),
-        LitInt       (Null             ),
-        LitDec       (Null             ),
-        LitFloat     (Null             ),
-        LitDate      (Null             ),
-        LitTime      (Null             ),
-        LitDatetime  (Null             ),
-        LitTimezone  (Null             ),
-        LitDuration  (Null             ),
-        LitVersion   (Null             ),
-        LitPath      (Null             ),               // generated by Parser, not Lexer
-        EolComment   (Null             ),
-        EncComment   (Null             ),
-        DocComment   (Null             ),
-        Template     ("{...}"          , Category.Artificial),
-        DotDotEx     ("..<"            , Category.Artificial),
-        EnumVal      ("enum-value"     , Category.Artificial);
+        Colon        <Object    >(":"              ),
+        Semicolon    <Object    >(";"              ),
+        Comma        <Object    >(","              ),
+        Dot          <Object    >("."              ),
+        DotDot       <Object    >(".."             ),
+        Ellipsis     <Object    >("..."            ),
+        CurrentDir   <Object    >("./"             ),
+        ParentDir    <Object    >("../"            ),
+        LeftParen    <Object    >("("              ),
+        RightParen   <Object    >(")"              ),
+        LeftCurly    <Object    >("{"              ),
+        RightCurly   <Object    >("}"              ),
+        LeftSquare   <Object    >("["              ),
+        RightSquare  <Object    >("]"              ),
+        Add          <Object    >("+"              ),
+        Sub          <Object    >("-"              ),
+        Mul          <Object    >("*"              ),
+        Div          <Object    >("/"              ),
+        DivRem       <Object    >("/%"             ),
+        Modulo       <Object    >("%"              ),
+        ShiftLeft    <Object    >("<<"             ),
+        ShiftRight   <Object    >(">>"             ),
+        ShiftAll     <Object    >(">>>"            ),
+        BitAnd       <Object    >("&"              ),
+        BitOr        <Object    >("|"              ),
+        BitXor       <Object    >("^"              ),
+        BitNot       <Object    >("~"              ),
+        BoolAnd      <Object    >("&&"             ),
+        BoolOr       <Object    >("||"             ),
+        BoolXor      <Object    >("^^"             ),
+        BoolNot      <Object    >("!"              ),
+        BinFile      <Object    >("#"              ),
+        StrFile      <Object    >("$"              ),
+        At           <Object    >("@"              ),
+        Condition    <Object    >("?"              ),
+        Elvis        <Object    >("?:"             ),
+        Asn          <Object    >("="              ),
+        AddAsn       <Object    >("+="             ),
+        SubAsn       <Object    >("-="             ),
+        MulAsn       <Object    >("*="             ),
+        DivAsn       <Object    >("/="             ),
+        ModuloAsn    <Object    >("%="             ),
+        ShiftLeftAsn <Object    >("<<="            ),
+        ShiftRightAsn<Object    >(">>="            ),
+        ShiftAllAsn  <Object    >(">>>="           ),
+        BitAndAsn    <Object    >("&="             ),
+        BitOrAsn     <Object    >("|="             ),
+        BitXorAsn    <Object    >("^="             ),
+        BoolAndAsn   <Object    >("&&="            ),
+        BoolOrAsn    <Object    >("||="            ),
+        CondAsn      <Object    >(":="             ),
+        NotNullAsn   <Object    >("?="             ),
+        ElvisAsn     <Object    >("?:="            ),
+        CompareEQ    <Object    >("=="             ),
+        CompareNE    <Object    >("!="             ),
+        CompareLT    <Object    >("<"              ),
+        CompareLTEQ  <Object    >("<="             ),
+        CompareGT    <Object    >(">"              ),
+        CompareGTEQ  <Object    >(">="             ),
+        CompareOrder <Object    >("<=>"            ),
+        Increment    <Object    >("++"             ),
+        Decrement    <Object    >("--"             ),
+        Lambda       <Object    >("->"             ),
+        Any          <Object    >("_"              ),
+        Allow        <Object    >("allow"          , Category.ContextSensitive),  // TODO GG why is "Category." required?
+        As           <Object    >("as"             ),
+        Assert       <Object    >("assert"         ),
+        AssertRnd    <Object    >("assert:rnd"     ),
+        AssertArg    <Object    >("assert:arg"     ),
+        AssertBounds <Object    >("assert:bounds"  ),
+        AssertTodo   <Object    >("assert:TODO"    ),
+        AssertOnce   <Object    >("assert:once"    ),
+        AssertTest   <Object    >("assert:test"    ),
+        AssertDebug  <Object    >("assert:debug"   ),
+        Avoid        <Object    >("avoid"          , Category.ContextSensitive),
+        Break        <Object    >("break"          ),
+        Case         <Object    >("case"           ),
+        Catch        <Object    >("catch"          ),
+        Class        <Object    >("class"          ),
+        Conditional  <Object    >("conditional"    ),
+        Const        <Object    >("const"          ),
+        Construct    <Object    >("construct"      ),
+        Continue     <Object    >("continue"       ),
+        Default      <Object    >("default"        ),
+        Delegates    <Object    >("delegates"      , Category.ContextSensitive),
+        Do           <Object    >("do"             ),
+        Else         <Object    >("else"           ),
+        Enum         <Object    >("enum"           ),
+        Extends      <Object    >("extends"        , Category.ContextSensitive),
+        Finally      <Object    >("finally"        ),
+        For          <Object    >("for"            ),
+        Function     <Object    >("function"       ),
+        If           <Object    >("if"             ),
+        Immutable    <Object    >("immutable"      ),
+        Implements   <Object    >("implements"     , Category.ContextSensitive),
+        Import       <Object    >("import"         ),
+        ImportEmbed  <Object    >("import:embedded"),
+        ImportRequire<Object    >("import:required"),
+        ImportDesire <Object    >("import:desired" ),
+        ImportOption <Object    >("import:optional"),
+        Incorporates <Object    >("incorporates"   , Category.ContextSensitive),
+        Interface    <Object    >("interface"      ),
+        Into         <Object    >("into"           , Category.ContextSensitive),
+        Is           <Object    >("is"             ),
+        Mixin        <Object    >("mixin"          ),
+        Module       <Object    >("module"         ),
+        New          <Object    >("new"            ),
+        Outer        <Object    >("outer"          , Category.Special),
+        Package      <Object    >("package"        ),
+        Prefer       <Object    >("prefer"         , Category.ContextSensitive),
+        Private      <Object    >("private"        ),
+        Protected    <Object    >("protected"      ),
+        Public       <Object    >("public"         ),
+        Return       <Object    >("return"         ),
+        Service      <Object    >("service"        ),
+        Static       <Object    >("static"         ),
+        Struct       <Object    >("struct"         ),
+        Super        <Object    >("super"          , Category.Special),
+        Switch       <Object    >("switch"         ),
+        This         <Object    >("this"           , Category.Special),
+        ThisClass    <Object    >("this:class"     , Category.Special),
+        ThisModule   <Object    >("this:module"    , Category.Special),
+        ThisPri      <Object    >("this:private"   , Category.Special),
+        ThisPro      <Object    >("this:protected" , Category.Special),
+        ThisPub      <Object    >("this:public"    , Category.Special),
+        ThisServ     <Object    >("this:service"   , Category.Special),
+        ThisStruct   <Object    >("this:struct"    , Category.Special),
+        ThisTarget   <Object    >("this:target"    , Category.Special),
+        Throw        <Object    >("throw"          ),
+        Todo         <String?   >("TODO"           ),
+        Try          <Object    >("try"            ),
+        Typedef      <Object    >("typedef"        ),
+        Using        <Object    >("using"          ),
+        Val          <Object    >("val"            , Category.ContextSensitive),
+        Var          <Object    >("var"            , Category.ContextSensitive),
+        Void         <Object    >("void"           ),
+        While        <Object    >("while"          ),
+        Identifier   <String    >(Null             ),
+        LitChar      <Char      >(Null             ),
+        LitString    <String    >(Null             ),
+        LitBinstr    <Byte[]    >(Null             ),
+        LitInt       <IntLiteral>(Null             ),
+        LitDec       <FPLiteral >(Null             ),
+        LitFloat     <FPLiteral >(Null             ),
+        LitDate      <Date      >(Null             ),
+        LitTime      <Time      >(Null             ),
+        LitDatetime  <DateTime  >(Null             ),
+        LitTimezone  <TimeZone  >(Null             ),
+        LitDuration  <Duration  >(Null             ),
+        LitVersion   <Version   >(Null             ),
+        LitPath      <Path      >(Null             ),       // generated by Parser, not Lexer
+        EolComment   <String?   >(Null             ),
+        EncComment   <String?   >(Null             ),
+        DocComment   <String?   >(Null             ),
+        Template     <Object    >("{...}"          , Category.Artificial),
+        DotDotEx     <Object    >("..<"            , Category.Artificial),
+        EnumVal      <Object    >("enum-value"     , Category.Artificial),
+        EndOfFile    <Object    >("<--EOF-->"      , Category.Artificial);
 
         /**
          * Keyword token ids, but not including context-sensitive keywords.
