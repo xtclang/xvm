@@ -2018,8 +2018,8 @@ public abstract class ClassTemplate
         private final int             iReturn;
 
         // internal fields
-        private FullyBoundHandle hfnFinally;
-        private int              ixStep;
+        private Frame frameTop;
+        private int   ixStep;
 
         public Construct(MethodStructure constructor,
                          boolean         fInitStruct,
@@ -2086,18 +2086,13 @@ public abstract class ClassTemplate
                                     constructor, hStruct, ahVar, Op.A_IGNORE);
 
                             FullyBoundHandle hfn = Utils.makeFinalizer(constructor, ahVar);
-                            if (hfn == null)
-                                {
-                                // in case super constructors have their own finalizers
-                                // we need a non-null anchor
-                                frameCD.m_hfnFinally = FullyBoundHandle.NO_OP;
-                                }
-                            else
-                                {
-                                hfnFinally = frameCD.m_hfnFinally = hfn;
-                                }
 
-                            iResult = frameCaller.callInitialized(frameCD);
+                            // in case super constructors have their own finalizers we always need
+                            // a non-null anchor
+                            frameCD.m_hfnFinally = hfn == null ? FullyBoundHandle.NO_OP : hfn;
+
+                            iResult  = frameCaller.callInitialized(frameCD);
+                            frameTop = frameCD;
                             break;
                             }
                         ixStep++;
@@ -2125,8 +2120,12 @@ public abstract class ClassTemplate
 
                     case 6:
                         {
-                        ObjectHandle hPublic = hStruct.ensureAccess(Access.PUBLIC);
-                        return hfnFinally == null
+                        ObjectHandle     hPublic    = hStruct.ensureAccess(Access.PUBLIC);
+                        FullyBoundHandle hfnFinally = frameTop == null
+                                ? FullyBoundHandle.NO_OP
+                                : frameTop.m_hfnFinally;
+
+                        return hfnFinally == FullyBoundHandle.NO_OP
                                 ? frameCaller.assignValue(iReturn, hPublic)
                                 : hfnFinally.callChain(frameCaller, hPublic, frame_ ->
                                         frame_.assignValue(iReturn, hPublic));
