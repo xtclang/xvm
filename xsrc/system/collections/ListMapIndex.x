@@ -232,9 +232,10 @@ mixin ListMapIndex<Key extends Hashable, Value>
             HashTree tree = bucket;
             Int lo  = 0;
             Int hi  = tree.size - 1;
-            Int mid = (lo + hi) >>> 1;
+            Int mid = 0;
             while (lo <= hi)
                 {
+                mid = (lo + hi) >>> 1;
                 OneOrN indexes = tree[mid];
                 switch (hashFor(indexes) <=> keyhash)
                     {
@@ -249,7 +250,6 @@ mixin ListMapIndex<Key extends Hashable, Value>
                         hi = mid - 1;
                         break;
                     }
-                mid = (lo + hi) >>> 1;
                 }
             return tree.insert(mid, index);
             }
