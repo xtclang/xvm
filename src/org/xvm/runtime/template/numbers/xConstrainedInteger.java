@@ -310,6 +310,13 @@ public abstract class xConstrainedInteger
 
             case "shiftAllRight":
                 return invokeShrAll(frame, hTarget, hArg, iReturn);
+
+            case "stepsTo":
+                {
+                long lFrom = ((JavaLong) hTarget ).getValue();
+                long lTo   = ((JavaLong) hArg).getValue();
+                return frame.assignValue(iReturn, makeJavaLong(lTo - lFrom));
+                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -450,13 +457,6 @@ public abstract class xConstrainedInteger
                     }
 
                 return frame.assignValue(iReturn, makeJavaLong(lValue));
-                }
-
-            case "stepsTo":
-                {
-                long lFrom = ((JavaLong) hTarget ).getValue();
-                long lTo   = ((JavaLong) ahArg[0]).getValue();
-                return frame.assignValue(iReturn, makeJavaLong(lTo - lFrom));
                 }
             }
 
