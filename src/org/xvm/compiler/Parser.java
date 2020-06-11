@@ -4300,7 +4300,6 @@ public class Parser
      *     NonBiTypeExpression ArrayDims
      *     NonBiTypeExpression ArrayIndexes
      *     NonBiTypeExpression "..."
-     *     "conditional" NonBiTypeExpression
      *     "immutable" NonBiTypeExpression
      *
      * NamedTypeExpression
@@ -4478,7 +4477,7 @@ public class Parser
             Token name = expect(Id.IDENTIFIER);
             listParam = parseParameterTypeList(true);
 
-            // pretend the name is the next token (as if we didn't eat it
+            // pretend the name is the next token (as if we didn't eat it already)
             putBack(name);
             }
 
@@ -4488,11 +4487,14 @@ public class Parser
     /**
      * Parse a type expression in the form:
      *
-     *   "immutable name.name.name<param, param>.name!<param, param>"
+     *   "name.name.name<param, param>.name!<param, param>"
      *
-     * REVIEW BNF changes for virtual child NamedTypeExpression
      * <p/><code><pre>
      * NamedTypeExpression
+     *     NamedTypeExpressionPart
+     *     NamedTypeExpression '.' Annotations-opt NamedTypeExpressionPart
+     *
+     * NamedTypeExpressionPart
      *     QualifiedName TypeAccessModifier-opt NoAutoNarrowModifier-opt TypeParameterTypeList-opt
      *
      * TypeAccessModifier
@@ -4500,18 +4502,20 @@ public class Parser
      *
      * NoAutoNarrowModifier
      *     NoWhitespace "!"
-     *
      * </pre></code>
      *
      * @return a NamedTypeExpression
      */
     NamedTypeExpression parseNamedTypeExpression()
         {
-        Token immutable = match(Id.IMMUTABLE);
-
         NamedTypeExpression expr = null;
         do
             {
+            if (expr != null)
+                {
+                // TODO check for annotations
+                }
+
             // QualifiedName
             List<Token> names = parseQualifiedName();
 
@@ -4539,7 +4543,7 @@ public class Parser
 
             if (tokAccess != null && expr != null)
                 {
-                log(Severity.ERROR, REPEAT_MODIFIER, tokAccess.getStartPosition(),
+                log(Severity.ERROR, NO_CHILD_ACCESS, tokAccess.getStartPosition(),
                         tokAccess.getEndPosition(), tokAccess);
                 }
 
@@ -4550,8 +4554,8 @@ public class Parser
 
             if (tokNarrow != null && expr != null)
                 {
-                log(Severity.ERROR, REPEAT_MODIFIER, tokNarrow.getStartPosition(),
-                        tokNarrow.getEndPosition(), tokNarrow);
+                log(Severity.ERROR, NONNARROW_CHILD, tokNarrow.getStartPosition(),
+                        tokNarrow.getEndPosition(), null);
                 }
 
             // TypeParameterTypeList
@@ -4559,7 +4563,7 @@ public class Parser
 
             if (expr == null)
                 {
-                expr = new NamedTypeExpression(immutable, names, tokAccess, tokNarrow,
+                expr = new NamedTypeExpression(null, names, tokAccess, tokNarrow,
                         params, prev().getEndPosition());
                 }
             else
@@ -5764,26 +5768,17 @@ public class Parser
      */
     public static final String NO_EMPTY_STMT     = "PARSER-09";
     /**
-     * Illegal assert designation.
+     * Child type cannot be specified as non-narrowing.
      */
-    public static final String BAD_ASSERT        = "PARSER-10";
+    public static final String NONNARROW_CHILD   = "PARSER-10";
     /**
-     * Conditional not allowed in a switch statement.
+     * Child type cannot have an access specifier (\"{0}\").
      */
-    public static final String NO_CONDITIONAL    = "PARSER-11";
+    public static final String NO_CHILD_ACCESS   = "PARSER-11";
     /**
      * Case statement required first in a switch.
      */
     public static final String MISSING_CASE      = "PARSER-12";
-    /**
-     * Assignment not allowed.
-     */
-    public static final String NO_ASSIGNMENT     = "PARSER-13";
-    /**
-     * Multi-conditional for loop requires all statements be conditional, otherwise no conditionals
-     * are allowed.
-     */
-    public static final String ALL_OR_NO_CONDS   = "PARSER-14";
     /**
      * All array dimensions need to be blank or '?', or all need to be expressions; no mixing and
      * matching.

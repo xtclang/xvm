@@ -719,6 +719,8 @@ class Array<Element>
             return this + value;
             }
 
+        assert:bounds index >= 0 && index < size;
+
         switch (mutability)
             {
             case Mutable:

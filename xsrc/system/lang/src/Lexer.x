@@ -14,12 +14,12 @@ class Lexer
      * Construct an Ecstasy lexical analyzer ("tokenizer") that processes source code from a Reader.
      *
      * @param source   the Ecstasy source code
-     * @param errlist  the ErrorList to log errors to
+     * @param errs     the ErrorList to log errors to
      */
-    construct(Source source, ErrorList errlist)
+    construct(Source source, ErrorList errs)
         {
         this.source  = source;
-        this.errlist = errlist;
+        this.errs    = errs;
         this.reader  = source.createReader();
         }
     finally
@@ -34,9 +34,9 @@ class Lexer
      */
     protected construct(Lexer parent)
         {
-        source  = parent.source;
-        errlist = parent.errlist;
-        reader  = source.createReader();
+        source = parent.source;
+        errs   = parent.errs;
+        reader = source.createReader();
         }
 
 
@@ -66,7 +66,7 @@ class Lexer
     /**
      * The ErrorList to log errors to.
      */
-    public/private ErrorList errlist;
+    public/private ErrorList errs;
 
 
     // ----- Iterator methods ----------------------------------------------------------------------
@@ -93,7 +93,7 @@ class Lexer
     /**
      * A restorable position within the Lexer (Literally, Lex-Mark.)
      */
-    protected class Mark(Reader reader, TextPosition position, Int pastEOF, Boolean whitespace);
+    protected static class Mark(Reader reader, TextPosition position, Int pastEOF, Boolean whitespace);
 
     @Override
     Object mark()
@@ -496,7 +496,7 @@ class Lexer
 
                     default:
                         rewind();
-                        return Assign, Null;
+                        return Asn, Null;
                     }
 
             case '%':
@@ -2383,7 +2383,7 @@ class Lexer
      */
     protected Boolean log(Severity severity, ErrorMsg errmsg, Object[] params, TextPosition before, TextPosition after)
         {
-        return errlist.log(new Error(severity, errmsg.code, ErrorMsg.lookup, params, source, before, after));
+        return errs.log(new Error(severity, errmsg.code, ErrorMsg.lookup, params, source, before, after));
         }
 
     /**
@@ -2494,7 +2494,7 @@ class Lexer
         At           ("@"              ),
         Condition    ("?"              ),
         Elvis        ("?:"             ),
-        Assign       ("="              ),
+        Asn          ("="              ),
         AddAsn       ("+="             ),
         SubAsn       ("-="             ),
         MulAsn       ("*="             ),
