@@ -4,9 +4,17 @@ module TestSimple
 
     void run()
         {
+        console.println(Id.Allow);
         }
 
-    const Test extends Junk
+    enum Category {Normal, ContextSensitive, Special, Artificial}
+
+    /**
+     * Ecstasy source code is composed of these lexical elements.
+     */
+    enum Id(String? text, Category category=Normal)
         {
+        Any   ("_"     ),
+        Allow ("allow" , ContextSensitive)
         }
     }

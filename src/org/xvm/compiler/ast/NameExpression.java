@@ -596,8 +596,18 @@ public class NameExpression
         // resolve the name to a "raw" argument, i.e. what does the name refer to, without
         // consideration to read-only vs. read-write, reference vs. de-reference, static vs.
         // virtual, and so on
+        if (typeRequired != null)
+            {
+            ctx = ctx.enterInferring(typeRequired);
+            }
+
         Argument argRaw = resolveRawArgument(ctx, true, errs);
         boolean  fValid = argRaw != null;
+
+        if (typeRequired != null)
+            {
+            ctx = ctx.exit();
+            }
 
         // validate the type parameters
         TypeConstant[] atypeParams = null;
