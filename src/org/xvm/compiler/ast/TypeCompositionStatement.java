@@ -2267,6 +2267,8 @@ public class TypeCompositionStatement
             {
             // parameters that don't exist on the super must be properties on "this"
             // and we need to assign them
+            TypeInfo infoThis = pool().ensureAccessTypeConstant(
+                    component.getFormalType(), Access.PRIVATE).ensureTypeInfo(errs);
 
             List<org.xvm.asm.Parameter> params = constructor.getParams();
             for (int i = 0, c = params.size(); i < c; ++i)
@@ -2279,26 +2281,26 @@ public class TypeCompositionStatement
                         : infoSuper.findProperty(sParam);
                 if (propSuper == null || propSuper.isAbstract())
                     {
-                    // there must be a property by the same name
-                    Component child = component.getChild(sParam);
-                    if (child.getFormat() == Format.PROPERTY)
+                    // there must be a property by the same name on "this"
+                    PropertyInfo propThis = infoThis.findProperty(sParam);
+                    if (propThis == null || !propThis.isVar())
                         {
-                        PropertyStructure prop     = (PropertyStructure) child;
-                        TypeConstant      typeProp = prop.getType();
-                        TypeConstant      typeVal  = param.getType();
-                        if (param.getType().isA(prop.getType()))
-                            {
-                            code.add(new L_Set(prop.getIdentityConstant(), ctxEmit.getVar(sParam)));
-                            }
-                        else
-                            {
-                            log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_WRONG_TYPE,
-                                    sParam, typeVal.getValueString(), typeProp.getValueString());
-                            }
+                        constructorParams.get(i).log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_MISSING,
+                                sParam);
                         }
                     else
                         {
-                        log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_MISSING, sParam);
+                        TypeConstant typeProp = propThis.getType();
+                        TypeConstant typeVal  = param.getType();
+                        if (param.getType().isA(typeProp))
+                            {
+                            code.add(new L_Set(propThis.getIdentity(), ctxEmit.getVar(sParam)));
+                            }
+                        else
+                            {
+                            constructorParams.get(i).log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_WRONG_TYPE,
+                                    sParam, typeVal.getValueString(), typeProp.getValueString());
+                            }
                         }
                     }
                 }

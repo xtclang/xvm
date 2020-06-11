@@ -965,7 +965,11 @@ public abstract class ClassTemplate
 
         GenericHandle hThis = (GenericHandle) hTarget;
 
-        assert hThis.containsField(idProp);
+        if (!hThis.containsField(idProp))
+            {
+            // this should've been caught by the compiler/verifier
+            return frame.raiseException("Property is missing: " + idProp.getValueString());
+            }
 
         if (hThis.isInflated(idProp))
             {

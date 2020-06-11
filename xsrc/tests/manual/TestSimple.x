@@ -1,16 +1,29 @@
 module TestSimple
     {
     @Inject Console console;
-    @Inject Random  random;
 
-    void run(   )
+    void run()
         {
+        Derived d = new Derived([1..5]);
+        console.println(d);
         }
 
-    Char addTrailingSurrogate(Char trailing)
+    @Abstract static const Base
         {
-        UInt32 hi = 2;
-        UInt32 lo = 1;
-        return new Char(0x010000 + (hi - 0xD800 << 10) + lo - 0xDC00);
+        @Abstract @RO Int start;
+        @Abstract @RO Int end;
+        }
+
+    const Derived(Range<Int> range, Int end = 0) // compilation error
+        {
+        Int start.get()
+            {
+            return range.first;
+            }
+
+        Int end.get()
+            {
+            return range.last;
+            }
         }
     }
