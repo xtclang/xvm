@@ -43,11 +43,14 @@ module TestParser
             "@None @Zero() @One(1) Map",
             "@None @Zero() @One(1) @Two(-1, \"hello\") Map",
             "@None @Zero() @One(1) @Two(-1, \"hello\") Map<@Junk('a') String, @Expires(Date:2020-12-25) util.Password>",
+            "Ecstasy.xtclang.org:collections.HashMap",
+            "Ecstasy.xtclang.org:collections.List<Ecstasy.xtclang.org:numbers.Int64>",
+            "@Ecstasy.xtclang.org:annotations.Unchecked Ecstasy.xtclang.org:collections.List<@Ecstasy.xtclang.org:annotations.Unchecked Ecstasy.xtclang.org:numbers.Int64>",
             ];
 
         for (String test : tests)
             {
-            Parser parser = new Parser(test);
+            Parser parser = new Parser(test, allowModuleNames=True);
             val    type   = parser.parseTypeExpression();
             console.println($"serious errs: {parser.errs.seriousCount}, severity={parser.errs.severity}, {test.quoted()}={type}");
             }

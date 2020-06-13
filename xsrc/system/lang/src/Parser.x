@@ -19,25 +19,32 @@ class Parser
     /**
      * Construct an Ecstasy parser.
      *
-     * @param source   the source code to parse
-     * @param listener the error listener (if none is provided, one will be created automatically)
+     * @param source            the source code to parse
+     * @param errs              the error listener (if none is provided, one will be created
+     *                          automatically)
+     * @param allowModuleNames  pass True if the Parser is being used to parse type names that may
+     *                          include explicit module names
      */
-    construct(String source, ErrorList? errs = Null)
+    construct(String source, ErrorList? errs = Null, Boolean allowModuleNames = False)
         {
-        construct Parser(new Source(source), errs);
+        construct Parser(new Source(source), errs, allowModuleNames);
         }
 
     /**
      * Construct an Ecstasy parser.
      *
-     * @param source   the source code to parse
-     * @param listener the error listener (if none is provided, one will be created automatically)
+     * @param source            the source code to parse
+     * @param errs              the error listener (if none is provided, one will be created
+     *                          automatically)
+     * @param allowModuleNames  pass True if the Parser is being used to parse type names that may
+     *                          include explicit module names
      */
-    construct(Source source, ErrorList? errs = Null)
+    construct(Source source, ErrorList? errs = Null, Boolean allowModuleNames = False)
         {
-        this.source = source;
-        this.errs   = errs ?: new ErrorList(10);
-        this.lexer  = new Lexer(source, this.errs, True);
+        this.source           = source;
+        this.errs             = errs ?: new ErrorList(10);
+        this.lexer            = new Lexer(source, this.errs, True);
+        this.allowModuleNames = allowModuleNames;
         }
     finally
         {
@@ -62,6 +69,12 @@ class Parser
      * The Lexer.
      */
     protected/private Lexer lexer;
+
+    /**
+     * True indicates that the parser exists to parse type names, and those type names can include
+     * explicit module names.
+     */
+    public/private Boolean allowModuleNames;
 
 
     // ----- API -----------------------------------------------------------------------------------
@@ -511,7 +524,23 @@ class Parser
 
         // while the annotation is technically a named type expression, it only allows a qualified
         // name (and none of the other things that are normally allowed in a named type expression)
-        NamedTypeExpression type = new NamedTypeExpression(parseQualifiedName(), Null, Null, Null, prev().end);
+        Token[]?     moduleNames = Null;
+        Token[]      names       = parseQualifiedName();
+        TextPosition end         = prev().end;
+        if (allowModuleNames && peek(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter))
+            {
+            (moduleNames, names) = parseModuleQualifiedName(names);
+            if (moduleNames != Null)
+                {
+                end = prev().end;
+                }
+            }
+
+        TypeExpression type = new NamedTypeExpression(names, Null, Null, Null, end);
+        if (moduleNames != Null)
+            {
+            type = new ModuleTypeExpression(moduleNames, type);
+            }
 
         // a trailing argument list is only assumed to be part of the annotation if there is
         // no whitespace separating the annotation from the arguments
@@ -521,8 +550,8 @@ class Parser
             args = parseArgumentList(True, False, False);
             }
 
-        TextPosition end = args == null ? type.end : prev().end;
-        return new AnnotationExpression(type, args, start, end);
+        TextPosition endAnno = args == null ? type.end : prev().end;
+        return new AnnotationExpression(type, args, start, endAnno);
         }
 
 
@@ -583,7 +612,8 @@ class Parser
      */
     TypeExpression parseNamedTypeExpression()
         {
-        TypeExpression? parent = Null;
+        Token[]?        moduleNames = Null;
+        TypeExpression? parent      = Null;
         TypeExpression  type;
         do
             {
@@ -601,6 +631,11 @@ class Parser
 
             // QualifiedName
             Token[] names = parseQualifiedName();
+            if (allowModuleNames && parent == Null
+                    && peek(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter))
+                {
+                (moduleNames, names) = parseModuleQualifiedName(names);
+                }
 
             // TypeAccessModifier
             Token? access = Null;
@@ -639,6 +674,13 @@ class Parser
             type = parent == Null
                     ? new NamedTypeExpression(names, access, noNarrow, params, prev().end)
                     : new ChildTypeExpression(parent, annotations, names, params, prev().end);
+
+            if (moduleNames != Null)
+                {
+                type        = new ModuleTypeExpression(moduleNames, type);
+                moduleNames = Null;
+                }
+
             parent = type;
             }
         while (match(Dot) != Null);
@@ -770,6 +812,69 @@ class Parser
             }
         while (match(Dot) != Null);
         return names;
+        }
+
+    /**
+     * Parse a possible dot-delimited list of names that follows a dot-delimited list of names that
+     * is followed by a colon.
+     *
+     *     name.name.name:name.name.name
+     *                   ^
+     *                   next token is the colon
+     *
+     * @return an array of zero or more identifier tokens
+     */
+    (Token[]? modulesNames, Token[] names) parseModuleQualifiedName(Token[] names)
+        {
+        assert allowModuleNames && peek(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter);
+        assert names.size > 0;
+
+        // eliminate literal types
+        switch (names[names.size-1].valueText)
+            {
+            case "Array":
+            case "Sequence":
+            case "List":
+            case "Range":
+            case "Interval":
+            case "Map":
+            case "Tuple":
+            case "Path":
+            case "File":
+            case "Directory":
+            case "FileStore":
+            // the following are already accounted for the by the Lexer, but they are repeated here
+            // to avoid generating confusing errors
+            case "Date":
+            case "Time":
+            case "DateTime":
+            case "TimeZone":
+            case "Duration":
+            case "Version":
+            case "v":
+                return Null, names;
+            }
+
+        Token colon = expect(Colon);
+        switch (peek().id)
+            {
+            case Public:
+            case Protected:
+            case Private:
+            case Struct:
+                putBack(colon);
+                return Null, names;
+            }
+
+        Token[] moduleNames = names;
+        Token[] localNames  = new Token[];
+        do
+            {
+            localNames.add(expect(Identifier));
+            }
+        while (match(Dot) != Null);
+
+        return moduleNames, localNames;
         }
 
 
@@ -1239,10 +1344,10 @@ class Parser
             }
         }
 
-    static const AnnotationExpression(NamedTypeExpression name,
-                                      Expression[]?       args,
-                                      TextPosition        start,
-                                      TextPosition        end)
+    static const AnnotationExpression(TypeExpression name,
+                                      Expression[]?  args,
+                                      TextPosition   start,
+                                      TextPosition   end)
             extends Expression
         {
         @Override
@@ -1579,6 +1684,50 @@ class Parser
             return type.is(RelationalTypeExpression)
                     ? $"{annotation} ({type})"
                     : $"{annotation} {type}";
+            }
+        }
+
+    /**
+     * Represents a named type, including optional access, non-narrowing designation, and
+     * parameters. For example:
+     *
+     *     ecstasy.collections.HashMap!<String?, IntLiteral>
+     */
+    static const ModuleTypeExpression(Token[]        names,
+                                      TypeExpression type)
+            extends TypeExpression
+        {
+        @Override
+        TextPosition start.get()
+            {
+            return names[0].start;
+            }
+
+        @Override
+        TextPosition end.get()
+            {
+            return type.end;
+            }
+
+        @Override
+        String toString()
+            {
+            StringBuffer buf = new StringBuffer();
+
+            Loop: for (Token token : names)
+                {
+                if (!Loop.first)
+                    {
+                    buf.add('.');
+                    }
+                token.appendTo(buf);
+                }
+
+            buf.add(':');
+
+            type.appendTo(buf);
+
+            return buf.toString();
             }
         }
 
