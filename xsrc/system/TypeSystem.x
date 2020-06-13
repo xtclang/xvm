@@ -146,25 +146,102 @@ const TypeSystem
      */
     conditional Class classForName(String name)
         {
-        // TODO conflict expected with combination of annotations and module spec (':')
-        if (Int moduleSep := name.indexOf(':'))
+        import lang.src.Lexer; // TODO GG should allow static function import ".isIdentifierStart" etc.
+
+        private conditional (Package? pkg, Class clz) resolve(Package? pkg, Class clz, String name)
             {
-            String moduleName = name[0..moduleSep);
-            if (Module _module := moduleByQualifiedName.get(moduleName))
+            try
                 {
-                return _module.classForName(name[moduleSep+1 .. name.size));
+                clz = clz.childForName(name);
+                }
+            catch (Exception e)
+                {
+                return False;
                 }
 
-            if (Module _module := moduleBySimpleName.get(moduleName))
+            if (pkg != Null && clz.PublicType.isA(Package), pkg := clz.as(Class<Package>).isSingleton())
                 {
-                return _module.classForName(name[moduleSep+1 .. name.size));
+                // if the class is a package, that package may actually be an import of another
+                // module, so follow that link
+                if (pkg := pkg.isModuleImport())
+                    {
+                    clz = &pkg.actualClass;
+                    }
+                }
+            else
+                {
+                pkg = Null;
                 }
 
-            return false;
+            return True, pkg, clz;
+            }
+
+        // attempt a quick run first, assuming no whitespace, no annotations, no type parameters
+        Package? pkg = primaryModule;
+        Class    clz = &pkg.actualClass;
+        if (name == "")
+            {
+            return True, clz;
+            }
+
+        Int      start  = 0;
+        Int      end    = name.size - 1;
+        Int      offset = start;
+        while (offset <= end)
+            {
+            Char    ch  = name[offset];
+            Boolean bad = False;
+            if (offset == start ? Lexer.isIdentifierStart(ch) : Lexer.isIdentifierPart(ch))
+                {
+                // this is OK
+                ++offset;
+                }
+            else if (ch == '.')
+                {
+                if (offset > start)
+                    {
+                    if ((pkg, clz) := resolve(pkg, clz, name[start..offset)))
+                        {
+                        start = ++offset;
+                        }
+                    else
+                        {
+                        return False;
+                        }
+                    }
+                else
+                    {
+                    bad = True;
+                    }
+                }
+            else
+                {
+                bad = True;
+                }
+
+            if (bad)
+                {
+                // anything that isn't "Identifer.Identifier" is handled by typeForName()
+                // TODO GGO if (Type type := typeForName(name), clz := type.fromClass())
+                if (Type type := typeForName(name))
+                    {
+                    if (clz := type.fromClass())
+                        {
+                        return True, clz;
+                        }
+                    }
+
+                return False;
+                }
+            }
+
+        if (offset > start, (pkg, clz) := resolve(pkg, clz, name.substring(start)))
+            {
+            return True, clz;
             }
         else
             {
-            return primaryModule.classForName(name);
+            return False;
             }
         }
 
@@ -176,8 +253,27 @@ const TypeSystem
      */
     conditional Type typeForName(String name)
         {
-        // TODO this needs to handle '(..)', '?', '+', '-', '|', and the rest of the type syntax
-        return primaryModule.typeForName(name);
+        import lang.src.Parser;
+        import lang.src.Parser.TypeExpression;
+
+        Parser         parser = new Parser(name, allowModuleNames=True);
+        TypeExpression typeExpr;
+        try
+            {
+            typeExpr = parser.parseTypeExpression();
+            }
+        catch (Exception e)
+            {
+            return False;
+            }
+
+        // if the parser left something unparsed, then the type name is not valid
+        if (!parser.eof)
+            {
+            return False;
+            }
+
+        return typeExpr.resolveType(this);
         }
 
     /**

@@ -43,7 +43,7 @@ class Parser
         {
         this.source           = source;
         this.errs             = errs ?: new ErrorList(10);
-        this.lexer            = new Lexer(source, this.errs, True);
+        this.lexer            = new Lexer(source, this.errs, synthesizeEof = True);
         this.allowModuleNames = allowModuleNames;
         }
     finally
@@ -908,9 +908,9 @@ class Parser
     /**
      * True iff the token stream is exhausted.
      */
-    protected Boolean eof.get()
+    public Boolean eof.get()
         {
-        return nextToken == Null && backToken == Null;
+        return (nextToken?.id == EndOfFile : True) && (backToken?.id == EndOfFile : True);
         }
 
     /**
@@ -1422,7 +1422,13 @@ class Parser
     // ----- AST nodes: TypeExpressions ------------------------------------------------------------
 
     @Abstract static const TypeExpression
-            extends Expression;
+            extends Expression
+        {
+        conditional Type resolveType(TypeSystem typeSystem)
+            {
+            TODO
+            }
+        }
 
     @Abstract static const RelationalTypeExpression(TypeExpression left, Token operator, TypeExpression right)
             extends TypeExpression

@@ -1,11 +1,18 @@
 
 module TestParser
     {
+    @Inject Console console;
+
     void run()
         {
-        @Inject Console console;
         console.println("\n*** TestParser ***\n");
+        testLexer();
+        testParser();
+        testTypeSystem();
+        }
 
+    void testLexer()
+        {
         console.println("\n** Lexer:");
         import ecstasy.lang.src.Lexer;
         import ecstasy.lang.src.Lexer.Token;
@@ -21,7 +28,10 @@ module TestParser
             {
             console.println($"[{Loop.count}] token={t.toDebugString()}");
             }
+        }
 
+    void testParser()
+        {
         import ecstasy.lang.src.Parser;
         console.println("\n** Type parser:");
         String[] tests =
@@ -52,7 +62,35 @@ module TestParser
             {
             Parser parser = new Parser(test, allowModuleNames=True);
             val    type   = parser.parseTypeExpression();
-            console.println($"serious errs: {parser.errs.seriousCount}, severity={parser.errs.severity}, {test.quoted()}={type}");
+            console.println($"serious errs: {parser.errs.seriousCount}, severity={parser.errs.severity}, eof={parser.eof}, {test.quoted()}={type}");
+            }
+        }
+
+    void testTypeSystem()
+        {
+        console.println("\n** TypeSystem:");
+
+        TypeSystem typeSystem = this:service.typeSystem;
+        console.println($"TypeSystem={typeSystem}");
+
+        String[] tests =
+            [
+            "",
+            "ecstasy",
+            "ecstasy.Boolean",
+            "ecstasy.collections.Map",
+            ];
+
+        for (String test : tests)
+            {
+            if (Class clz := typeSystem.classForName(test))
+                {
+                console.println($"class for {test.quoted()}={clz}");
+                }
+            else
+                {
+                console.println($"no class for {test.quoted()}");
+                }
             }
         }
     }
