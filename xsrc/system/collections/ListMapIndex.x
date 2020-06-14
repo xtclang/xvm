@@ -176,6 +176,17 @@ mixin ListMapIndex<Key extends Hashable, Value>
         return super();
         }
 
+    @Override
+    immutable ListMapIndex makeImmutable()
+        {
+        if (size > MINSIZE)
+            {
+            buildIndex();
+            }
+
+        return super();
+        }
+
     /**
      * Create all of the hashing structures that make up the hash index.
      */
