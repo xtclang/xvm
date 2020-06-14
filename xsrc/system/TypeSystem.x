@@ -254,7 +254,7 @@ const TypeSystem
     conditional Type typeForName(String name)
         {
         import lang.src.Parser;
-        import lang.src.Parser.TypeExpression;
+        import lang.src.ast.TypeExpression;
 
         Parser         parser = new Parser(name, allowModuleNames=True);
         TypeExpression typeExpr;
