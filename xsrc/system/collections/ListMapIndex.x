@@ -424,8 +424,6 @@ mixin ListMapIndex<Key extends Hashable, Value>
 
         loop: for (Bucket bucket : buckets?)
             {
-            assert buckets != Null; // TODO CP short circuit assumptions
-
             if (bucket != Null)
                 {
                 if (bucket.is(HashTree))

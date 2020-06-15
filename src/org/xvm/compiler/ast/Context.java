@@ -488,6 +488,39 @@ public class Context
         }
 
     /**
+     * When this context is used by a short-circuiting statement, there are scenarios when a
+     * variable type is known to be narrowed when the evaluation does not short-circuit.
+     * Consider the following example:
+     * <pre><code>
+     *  void foo(Int[]? args)
+     *      {
+     *      if (args?.size > 0)
+     *          {
+     *          console.println(args[0]);
+     *          }
+     *      ...
+     *      }
+     * </code></pre>
+     * The "args" var is known to be not-nullable inside of the "then" branch.
+     * <p/>
+     * That same short-circuiting expression, however, would have no impact beyond it's enclosing
+     * statement, like in the following case:
+     * <pre><code>
+     *  void foo(Int[]? args)
+     *      {
+     *      assert args?.size > 0;
+     *      ...
+     *      }
+     * </code></pre>
+     *
+     * @param sName  the var name
+     * @param type   the narrowing type
+     */
+    public void narrowIffBranch(String sName, TypeConstant type)
+        {
+        }
+
+    /**
      * Copy variable assignment information from this scope to the specified outer scope.
      *
      * @param ctxOuter  the context to copy the assignment information into
@@ -1730,6 +1763,23 @@ public class Context
                 m_ctxWhenFalse = ctx;
                 }
             return ctx;
+            }
+
+        @Override
+        public void narrowIffBranch(String sName, TypeConstant type)
+            {
+            Argument arg = getVar(sName);
+            if (arg instanceof Register)
+                {
+                TypeConstant typeCurr = arg.getType();
+
+                if (!typeCurr.isA(type))
+                    {
+                    assert type.isA(typeCurr);
+
+                    narrowLocalRegister(sName, (Register) arg, Branch.WhenTrue, type);
+                    }
+                }
             }
 
         @Override

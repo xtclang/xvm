@@ -325,6 +325,10 @@ public class ForEachStatement
         AssignmentStatement cond = getCondition();
         assert cond.isForEachCondition();
 
+        // create an IfContext in case there are short-circuiting conditions that result in
+        // narrowing inferences (see comment in SwitchStatement.validateImpl)
+        ctx = ctx.enterIf();
+
         // validate the LValue declarations and any LValue sub-expressions
         AstNode condLVal = cond.getLValue();
         if (condLVal instanceof Statement)
@@ -479,6 +483,9 @@ public class ForEachStatement
             }
 
         // leaving the "true" fork of the condition
+        ctx = ctx.exit();
+
+        // leaving the "if" scope
         ctx = ctx.exit();
 
         // leaving the scope of the for() statement

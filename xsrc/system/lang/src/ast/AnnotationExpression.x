@@ -13,19 +13,18 @@ const AnnotationExpression(TypeExpression name,
     @Override
     String toString()
         {
+        Expression[]? args = this.args;
         return switch (args?.size)
             {
             case  0: $"@{name}()";
-            // TODO GG: case  1: $"@{name}({args[0]})";
-            case  1: $"@{name}({args.as(Expression[])[0]})";
+            case  1: $"@{name}({args[0]})";
             default:
                 {
                 StringBuffer buf = new StringBuffer();
                 buf.add('@');
                 name.appendTo(buf);
                 buf.add('(');
-                // TODO GG: Loop: for (Expression arg : args)
-                Loop: for (Expression arg : args.as(Expression[]))
+                Loop: for (Expression arg : args)
                     {
                     if (!Loop.first)
                         {

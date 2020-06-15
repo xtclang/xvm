@@ -57,10 +57,10 @@ const ImportStatement(Token   keyword,
             token.valueText.appendTo(buf);
             }
 
+        Token? alias = this.alias;
         if (alias?.valueText != names[names.size-1].valueText)
             {
             " as ".appendTo(buf);
-            assert alias != Null; // TODO GG should not be necessary
             alias.valueText.appendTo(buf);
             }
 

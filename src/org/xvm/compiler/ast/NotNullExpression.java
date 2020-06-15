@@ -119,8 +119,17 @@ public class NotNullExpression
                 exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ALWAYS_NULL);
                 }
 
-            type         = type.removeNullable();
             m_labelShort = getParent().ensureShortCircuitLabel(this, ctx);
+            type         = type.removeNullable();
+
+            if (exprNew instanceof NameExpression)
+                {
+                NameExpression exprName = (NameExpression) exprNew;
+                if (exprName.left == null)
+                    {
+                    ctx.narrowIffBranch(exprName.getName(), type);
+                    }
+                }
             }
 
         return finishValidation(ctx, typeRequired, type, fit, null, errs);

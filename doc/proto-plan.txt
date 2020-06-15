@@ -72,3 +72,6 @@ $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
     (hence the use of ConcurrentHashMap in TemplateRegistry and synchronization in TypeComposition)
 
 - DelegatingIterator could use delegation, but how to describe the delegating type?
+
+- is there a way to avoid and auto-generate "T x = this.x" in if/for/switch statements that
+  would benefit from type inference; see AnnotationExpression.x#toString(), ImportStatement.x#toString()
