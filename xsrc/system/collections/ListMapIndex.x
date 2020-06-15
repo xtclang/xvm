@@ -25,7 +25,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
     protected typedef OneOrN[] HashTree;
 
     /**
-     * A bucket is either empty (`null`), contains indexes of one or more keys (`OneOrN`) for a
+     * A bucket is either empty (`Null`), contains indexes of one or more keys (`OneOrN`) for a
      * single hash value, or contains one or more keys for multiple different hash values (a
      * `HashTree`).
      */
@@ -46,13 +46,13 @@ mixin ListMapIndex<Key extends Hashable, Value>
     protected conditional Int indexOf(Key key)
         {
         Bucket[]? buckets = this.buckets;
-        if (buckets == null)
+        if (buckets == Null)
             {
             if (size > MINSIZE)
                 {
                 buildIndex();
                 buckets = this.buckets;
-                assert buckets != null;
+                assert buckets != Null;
                 }
             else
                 {
@@ -62,7 +62,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
 
         Int    keyhash = Key.hashCode(key);
         Bucket bucket  = buckets[keyhash % buckets.size];
-        if (bucket == null)
+        if (bucket == Null)
             {
             return False;
             }
@@ -123,11 +123,11 @@ mixin ListMapIndex<Key extends Hashable, Value>
     protected void deleteEntryAt(Int index)
         {
         Bucket[]? buckets = this.buckets;
-        if (buckets != null)
+        if (buckets != Null)
             {
             if (size < MINSIZE)
                 {
-                this.buckets = null;
+                this.buckets = Null;
                 }
             else
                 {
@@ -154,7 +154,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
         super(key, value);
 
         Bucket[]? buckets = this.buckets;
-        if (buckets != null)
+        if (buckets != Null)
             {
             // update the index
             Int keyhash  = Key.hashCode(key);
@@ -172,14 +172,14 @@ mixin ListMapIndex<Key extends Hashable, Value>
     @Override
     ListMapIndex clear()
         {
-        buckets = null;
+        buckets = Null;
         return super();
         }
 
     @Override
     immutable ListMapIndex makeImmutable()
         {
-        if (size > MINSIZE)
+        if (buckets == Null && size > MINSIZE)
             {
             buildIndex();
             }
@@ -221,7 +221,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
 
     /**
      * Given a single bucket (an `Int` key index, an `Int[]` of key indexes, or a binary hash
-     * tree of those, or a null if the bucket is empty), add the specified key index to that
+     * tree of those, or a Null if the bucket is empty), add the specified key index to that
      * bucket.
      *
      * @param bucket   the previous structure for the bucket
@@ -232,7 +232,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
      */
     protected Bucket addKeyTo(Bucket bucket, Int keyhash, Int index)
         {
-        if (bucket == null)
+        if (bucket == Null)
             {
             return index;
             }
@@ -302,7 +302,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
      */
     protected Bucket removeKeyFrom(Bucket bucket, Int keyhash, Int index)
         {
-        assert bucket != null;
+        assert bucket != Null;
 
         if (bucket.is(HashTree))
             {
@@ -318,7 +318,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
                     {
                     case Equal:
                         OneOrN? remainder = removeIndexFrom(indexes, index);
-                        if (remainder == null)
+                        if (remainder == Null)
                             {
                             return removeNodeFrom(tree, mid);
                             }
@@ -351,7 +351,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
      * @param index    the index where the key is located in the map's underlying list of keys
      *
      * @return an `Int` or `Int[]` of key indexes that no longer includes the specified index,
-     *         or `null` if no key indexes remain
+     *         or `Null` if no key indexes remain
      */
     protected OneOrN? removeIndexFrom(OneOrN indexes, Int index)
         {
@@ -374,7 +374,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
             }
 
         assert indexes == index;
-        return null;
+        return Null;
         }
 
     /**
@@ -386,14 +386,14 @@ mixin ListMapIndex<Key extends Hashable, Value>
      * @param n      the array index to remove
      *
      * @return the resulting `Bucket` structure, which may be a `HashTree`, a `OneOrN` (an `Int`
-     *         or `Int[]` of key indexes), or a null
+     *         or `Int[]` of key indexes), or a Null
      */
     protected Bucket removeNodeFrom(HashTree tree, Int n)
         {
         if (tree.size == 1)
             {
             assert n == 0;
-            return null;
+            return Null;
             }
 
         if (tree.size == 2)
@@ -424,9 +424,9 @@ mixin ListMapIndex<Key extends Hashable, Value>
 
         loop: for (Bucket bucket : buckets?)
             {
-            assert buckets != null; // TODO CP short circuit assumptions
+            assert buckets != Null; // TODO CP short circuit assumptions
 
-            if (bucket != null)
+            if (bucket != Null)
                 {
                 if (bucket.is(HashTree))
                     {
