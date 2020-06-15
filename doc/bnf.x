@@ -786,7 +786,7 @@ LambdaParameterName
     Name
 
 LambdaBody
-    ElvisExpression
+    Expression
     StatementBlock
 
 TodoFinish

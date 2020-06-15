@@ -86,7 +86,7 @@ class Array<Element>
         {
         if (size > 0)
             {
-            function Element (Int) valueFor = supply.is(Element) ? (_) -> supply : supply;
+            function Element (Int) valueFor = supply.is(Element) ? (_ -> supply) : supply;
 
             ElementImpl cur = new ElementImpl(valueFor(0));
             head = cur;
@@ -120,7 +120,7 @@ class Array<Element>
         if (size > 0)
             {
             function Element (Element) transform = mutability == Constant
-                    ? e -> (e.is(Const) ? e : e.is(ImmutableAble) ? e.ensureImmutable() : assert)
+                    ? (e -> e.is(Const) ? e : e.is(ImmutableAble) ? e.ensureImmutable() : assert)
                     : e -> e;
 
             Int         index = size - 1;
