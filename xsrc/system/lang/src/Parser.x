@@ -14,10 +14,10 @@ import ast.DifferenceTypeExpression;
 import ast.Expression;
 import ast.FunctionTypeExpression;
 import ast.ImmutableTypeExpression;
+import ast.ImportStatement;
 import ast.IntersectionTypeExpression;
 import ast.LabeledExpression;
 import ast.LiteralExpression;
-import ast.ModuleTypeExpression;
 import ast.NamedTypeExpression;
 import ast.NonBindingExpression;
 import ast.NullableTypeExpression;
@@ -148,6 +148,33 @@ class Parser
         }
 
 
+    // ----- statement parsing ---------------------------------------------------------------------
+
+    /**
+     * Parse an import statement.
+     *
+     *     ImportStatement
+     *         "import" QualifiedName ImportAlias-opt ";"
+     *
+     *     ImportAlias
+     *         "as" Name
+     *
+     * @return an ImportStatement
+     */
+    ImportStatement parseImportStatement()
+        {
+        Token   keyword = expect(Import);
+        Token[] names   = parseQualifiedName();
+        Token?  alias   = Null;
+        if (match(As) != Null)
+            {
+            alias = expect(Identifier);
+            }
+        expect(Semicolon);
+        return new ImportStatement(keyword, names, alias);
+        }
+
+
     // ----- expression parsing --------------------------------------------------------------------
 
     /**
@@ -178,7 +205,7 @@ class Parser
      *
      * @return an array of arguments, or Null if no parenthesis were encountered
      */
-    Expression[]? parseArgumentList(Boolean required       = False,
+    protected Expression[]? parseArgumentList(Boolean required       = False,
                                     Boolean allowCurrying  = False,
                                     Boolean allowArraySize = False)
         {
@@ -291,7 +318,7 @@ class Parser
      *
      * @return an array of `Parameter`
      */
-    Parameter[] parseReturnList()
+    protected Parameter[] parseReturnList()
         {
         if (match(Void) != Null)
             {
@@ -356,7 +383,7 @@ class Parser
      *
      * @return a type expression
      */
-    TypeExpression parseIntersectingTypeExpression()
+    protected TypeExpression parseIntersectingTypeExpression()
         {
         TypeExpression expr = parseNonBiTypeExpression();
         while (True)
@@ -406,7 +433,7 @@ class Parser
      *
      * @return a type expression
      */
-    TypeExpression parseNonBiTypeExpression()
+    protected TypeExpression parseNonBiTypeExpression()
         {
         TypeExpression type;
         switch (peek().id)
@@ -517,7 +544,7 @@ class Parser
      *
      * @return the annotated type expression
      */
-    AnnotatedTypeExpression parseAnnotatedTypeExpression()
+    protected AnnotatedTypeExpression parseAnnotatedTypeExpression()
         {
         AnnotationExpression annotation = parseAnnotation(True) ?: assert;
         TypeExpression type = parseTypeExpression();
@@ -535,7 +562,7 @@ class Parser
      *
      * @return an annotation, or null if no annotation was encountered
      */
-    AnnotationExpression? parseAnnotation(Boolean required)
+    protected AnnotationExpression? parseAnnotation(Boolean required)
         {
         TextPosition start = peek().start;
         if (match(At, required) == Null)
@@ -557,11 +584,7 @@ class Parser
                 }
             }
 
-        TypeExpression type = new NamedTypeExpression(names, Null, Null, Null, end);
-        if (moduleNames != Null)
-            {
-            type = new ModuleTypeExpression(moduleNames, type);
-            }
+        TypeExpression type = new NamedTypeExpression(moduleNames, names, Null, Null, Null, end);
 
         // a trailing argument list is only assumed to be part of the annotation if there is
         // no whitespace separating the annotation from the arguments
@@ -590,7 +613,7 @@ class Parser
      *
      * @return a FunctionTypeExpression
      */
-    FunctionTypeExpression parseFunctionTypeExpression()
+    protected FunctionTypeExpression parseFunctionTypeExpression()
         {
         Token func = expect(Function);
 
@@ -631,7 +654,7 @@ class Parser
      *
      * @return a TypeExpression for the named type
      */
-    TypeExpression parseNamedTypeExpression()
+    protected TypeExpression parseNamedTypeExpression()
         {
         Token[]?        moduleNames = Null;
         TypeExpression? parent      = Null;
@@ -693,16 +716,10 @@ class Parser
             TypeExpression[]? params = parseTypeParameterTypeList();
 
             type = parent == Null
-                    ? new NamedTypeExpression(names, access, noNarrow, params, prev().end)
+                    ? new NamedTypeExpression(moduleNames, names, access, noNarrow, params, prev().end)
                     : new ChildTypeExpression(parent, annotations, names, params, prev().end);
-
-            if (moduleNames != Null)
-                {
-                type        = new ModuleTypeExpression(moduleNames, type);
-                moduleNames = Null;
-                }
-
-            parent = type;
+            moduleNames = Null;
+            parent      = type;
             }
         while (match(Dot) != Null);
 
@@ -718,7 +735,7 @@ class Parser
      *
      * @return an array of TypeExpression
      */
-    TypeExpression[] parseTypeExpressionList(Boolean noSequence = False)
+    protected TypeExpression[] parseTypeExpressionList(Boolean noSequence = False)
         {
         TypeExpression[] types = new TypeExpression[];
         Loop: while (True)
@@ -752,7 +769,7 @@ class Parser
      *
      * @return an array of TypeExpression
      */
-    TypeExpression[]? parseParameterTypeList(Boolean required = False)
+    protected TypeExpression[]? parseParameterTypeList(Boolean required = False)
         {
         if (match(LeftParen, required) == Null)
             {
@@ -786,7 +803,7 @@ class Parser
      *
      * @return an array of zero or more types, or `Null` if there were no angle brackets
      */
-    TypeExpression[]? parseTypeParameterTypeList(Boolean required = False, Boolean noSequence = False)
+    protected TypeExpression[]? parseTypeParameterTypeList(Boolean required = False, Boolean noSequence = False)
         {
         if (match(CompareLT, required) == Null)
             {
@@ -819,7 +836,7 @@ class Parser
      *
      * @return an array of zero or more identifier tokens
      */
-    Token[] parseQualifiedName(Boolean required = True)
+    protected Token[] parseQualifiedName(Boolean required = True)
         {
         if (!required && !peek(Identifier))
             {
@@ -845,7 +862,7 @@ class Parser
      *
      * @return an array of zero or more identifier tokens
      */
-    (Token[]? modulesNames, Token[] names) parseModuleQualifiedName(Token[] names)
+    protected (Token[]? modulesNames, Token[] names) parseModuleQualifiedName(Token[] names)
         {
         assert allowModuleNames && peek(t -> t.id == Colon && !t.spaceBefore && !t.spaceAfter);
         assert names.size > 0;
@@ -889,11 +906,14 @@ class Parser
 
         Token[] moduleNames = names;
         Token[] localNames  = new Token[];
-        do
+        if (peek(Identifier))
             {
-            localNames.add(expect(Identifier));
+            do
+                {
+                localNames.add(expect(Identifier));
+                }
+            while (match(Dot) != Null);
             }
-        while (match(Dot) != Null);
 
         return moduleNames, localNames;
         }

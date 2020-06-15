@@ -70,11 +70,12 @@ public class VirtualChildTypeConstant
         {
         super(pool, typeParent);
 
-        if (typeParent.isAccessSpecified() ||
-            typeParent.isAnnotated())
-            {
-            throw new IllegalArgumentException("parent's immutability, access or annotations cannot be specified");
-            }
+        // TODO GG REVIEW GG - to discuss
+        // if (typeParent.isAccessSpecified() ||
+        //     typeParent.isAnnotated())
+        //     {
+        //     throw new IllegalArgumentException("parent's immutability, access or annotations cannot be specified");
+        //     }
         if (sName == null)
             {
             throw new IllegalArgumentException("name is required");

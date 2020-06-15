@@ -66,6 +66,12 @@ module TestParser
             }
         }
 
+    class Normal<K,V>
+        {
+        static class Child;
+        class VirtualChild;
+        }
+
     void testTypeSystem()
         {
         console.println("\n** TypeSystem:");
@@ -79,6 +85,10 @@ module TestParser
             "ecstasy",
             "ecstasy.Boolean",
             "ecstasy.collections.Map",
+            "Normal",
+            "Normal.Child",
+            "Normal.VirtualChild",
+            "Normal<Normal,Normal>",
             ];
 
         for (String test : tests)

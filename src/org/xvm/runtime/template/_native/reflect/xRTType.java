@@ -1225,13 +1225,17 @@ public class xRTType
     public int invokeParameterize(Frame frame, TypeHandle hType, ObjectHandle hArg, int iReturn)
         {
         ObjectHandle[] ahFormalTypes;
+        int            cFormalTypes;
         if (hArg instanceof GenericArrayHandle)
             {
-            ahFormalTypes = ((GenericArrayHandle) hArg).m_ahValue;
+            GenericArrayHandle hArray = (GenericArrayHandle) hArg;
+            ahFormalTypes = hArray.m_ahValue;
+            cFormalTypes  = hArray.m_cSize;
             }
         else if (hArg == ObjectHandle.DEFAULT)
             {
             ahFormalTypes = Utils.OBJECTS_NONE;
+            cFormalTypes  = 0;
             }
         else
             {
@@ -1240,7 +1244,6 @@ public class xRTType
             }
 
         TypeConstant   typeThis     = hType.getDataType();
-        int            cFormalTypes = ahFormalTypes.length;
         TypeConstant[] atypeParams  = new TypeConstant[cFormalTypes];
         for (int i = 0; i < cFormalTypes; ++i)
             {

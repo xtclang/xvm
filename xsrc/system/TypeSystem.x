@@ -89,6 +89,47 @@ const TypeSystem
     static String MackPackage = "ecstasy";
 
     /**
+     * The implicitly-imported types from the Ecstasy core library.
+     */
+    static Map<String, Type> implicitTypes =
+        {
+@Inject Console console;
+        import lang.src.Lexer.Token;
+        import lang.src.Parser;
+        import lang.src.ast.ImportStatement;
+console.println("*** BUILDING IMPLICIT TYPES ***");
+@Inject Timer timer;
+timer.start();
+
+        String                source     = $../../resources/implicit.x;
+        Parser                parser     = new Parser(source);
+        // TODO GG - this should not have compiled (accessing non-static field from static context)
+        // assert Module         mackModule := moduleByQualifiedName.get(MackKernel);
+        Module                mackModule = this:module;
+        ListMap<String, Type> implicits  = new ListMap();
+        NextImport: while (!parser.eof)
+            {
+            ImportStatement stmt = parser.parseImportStatement();
+            Package?        pkg  = mackModule;
+            Class           clz  = &pkg.actualClass;
+            for (Token name : stmt.names)
+                {
+                if ((pkg, clz) := resolveChild(pkg, clz, name.valueText))
+                    {
+                    }
+                else
+                    {
+console.println($"Unable to resolve {name} as class in: {stmt}"); // TODO GG -> only ecstasy.Ref cannot be resolved!
+                    continue NextImport;
+                    }
+                }
+            implicits.put(stmt.aliasName, clz);
+            }
+console.println($"*** IMPLICIT TYPES in {timer.elapsed}: {implicits}"); // TODO GG -> 1.5m :(
+        return implicits.makeImmutable();
+        };
+
+    /**
      * The modules that make up the type system.
      */
     Module[] modules;
@@ -148,33 +189,6 @@ const TypeSystem
         {
         import lang.src.Lexer; // TODO GG should allow static function import ".isIdentifierStart" etc.
 
-        private conditional (Package? pkg, Class clz) resolve(Package? pkg, Class clz, String name)
-            {
-            try
-                {
-                clz = clz.childForName(name);
-                }
-            catch (Exception e)
-                {
-                return False;
-                }
-
-            if (pkg != Null && clz.PublicType.isA(Package), pkg := clz.as(Class<Package>).isSingleton())
-                {
-                // if the class is a package, that package may actually be an import of another
-                // module, so follow that link
-                if (pkg := pkg.isModuleImport())
-                    {
-                    clz = &pkg.actualClass;
-                    }
-                }
-            else
-                {
-                pkg = Null;
-                }
-
-            return True, pkg, clz;
-            }
 
         // attempt a quick run first, assuming no whitespace, no annotations, no type parameters
         Package? pkg = primaryModule;
@@ -184,13 +198,13 @@ const TypeSystem
             return True, clz;
             }
 
-        Int      start  = 0;
-        Int      end    = name.size - 1;
-        Int      offset = start;
-        while (offset <= end)
+        Int     start   = 0;
+        Int     end     = name.size - 1;
+        Int     offset  = start;
+        Boolean useType = False;
+        Loop: while (offset <= end)
             {
             Char    ch  = name[offset];
-            Boolean bad = False;
             if (offset == start ? Lexer.isIdentifierStart(ch) : Lexer.isIdentifierPart(ch))
                 {
                 // this is OK
@@ -200,9 +214,15 @@ const TypeSystem
                 {
                 if (offset > start)
                     {
-                    if ((pkg, clz) := resolve(pkg, clz, name[start..offset)))
+                    if ((pkg, clz) := resolveChild(pkg, clz, name[start..offset)))
                         {
                         start = ++offset;
+                        }
+                    else if (start == 0)
+                        {
+                        // defer to the type lookup so that it can use the implicit names
+                        useType == True;
+                        break;
                         }
                     else
                         {
@@ -211,38 +231,54 @@ const TypeSystem
                     }
                 else
                     {
-                    bad = True;
+                    useType == True;
+                    break;
                     }
                 }
             else
                 {
-                bad = True;
+                useType == True;
+                break;
+                }
+            }
+
+        if (!useType)
+            {
+            // attempt to resolve the last name in the sequence (which might be the first one)
+            if (offset > start, (pkg, clz) := resolveChild(pkg, clz, name.substring(start)))
+                {
+                return True, clz;
                 }
 
-            if (bad)
+            // multi-name, at least one previous resolved
+            if (start > 0)
                 {
-                // anything that isn't "Identifer.Identifier" is handled by typeForName()
-                // TODO GGO if (Type type := typeForName(name), clz := type.fromClass())
-                if (Type type := typeForName(name))
-                    {
-                    if (clz := type.fromClass())
-                        {
-                        return True, clz;
-                        }
-                    }
-
                 return False;
                 }
             }
 
-        if (offset > start, (pkg, clz) := resolve(pkg, clz, name.substring(start)))
+        // single name optimization for implicit types
+        if (start == 0 && offset > end)
             {
-            return True, clz;
-            }
-        else
-            {
+            if (Type type := implicitTypes.get(name))
+                {
+                assert clz := type.fromClass();
+                return True, clz;
+                }
             return False;
             }
+
+        // anything that isn't "Identifer.Identifier" is handled by typeForName()
+        // TODO GG if (Type type := typeForName(name), clz := type.fromClass())
+        if (Type type := typeForName(name))
+            {
+            if (clz := type.fromClass())
+                {
+                return True, clz;
+                }
+            }
+
+        return False;
         }
 
     /**
@@ -253,8 +289,14 @@ const TypeSystem
      */
     conditional Type typeForName(String name)
         {
+        if (name == "")
+            {
+            return True, &primaryModule.actualType;
+            }
+
         import lang.src.Parser;
         import lang.src.ast.TypeExpression;
+        import lang.src.ast.NamedTypeExpression;
 
         Parser         parser = new Parser(name, allowModuleNames=True);
         TypeExpression typeExpr;
@@ -273,7 +315,12 @@ const TypeSystem
             return False;
             }
 
-        return typeExpr.resolveType(this);
+        if (Type result := typeExpr.resolveType(this))
+            {
+            return True, result;
+            }
+
+        return False;
         }
 
     /**
@@ -338,5 +385,47 @@ const TypeSystem
             }
 
         appender.add('}');
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Resolve the specified child name against the provided package/class.
+     *
+     * @param pkg   the package, iff the class is a packge
+     * @param clz   the class to search for a child of
+     * @param name  the child class name
+     *
+     * @return True iff the name was resolved to a child class
+     * @return (conditional) the package, if the child class is a package; otherwise `Null`
+     * @return (conditional) the child class
+     */
+    static conditional (Package? pkg, Class clz) resolveChild(Package? pkg, Class clz, String name)
+        {
+        try
+            {
+            clz = clz.childForName(name);
+            }
+        catch (Exception e)
+            {
+            return False;
+            }
+
+        if (pkg != Null && clz.PublicType.isA(Package), pkg := clz.as(Class<Package>).isSingleton())
+            {
+            // if the class is a package, that package may actually be an import of another
+            // module, so follow that link
+            if (pkg := pkg.isModuleImport())
+                {
+                clz = &pkg.actualClass;
+                }
+            }
+        else
+            {
+            pkg = Null;
+            }
+
+        return True, pkg, clz;
         }
     }

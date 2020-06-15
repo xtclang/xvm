@@ -6,6 +6,7 @@
     {
     conditional Type resolveType(TypeSystem typeSystem)
         {
-        TODO
+        Class clz = &this.actualClass;
+        TODO($"clz={clz}");
         }
     }
