@@ -393,7 +393,7 @@ console.println($"*** IMPLICIT TYPES in {timer.elapsed}: {implicits}"); // TODO 
     /**
      * Resolve the specified child name against the provided package/class.
      *
-     * @param pkg   the package, iff the class is a packge
+     * @param pkg   the package, iff the class is a package
      * @param clz   the class to search for a child of
      * @param name  the child class name
      *
