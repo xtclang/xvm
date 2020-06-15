@@ -113,7 +113,7 @@ const RTType<DataType, OuterType>
 
             case Intersection:
                 assert (Type t1, Type t2) := relational();
-                return t1 == Type<Nullable>
+                return t1 == Nullable
                         ? t2.estimateStringLength() + (t2.relational() ? 3 : 1)
                         : t1.estimateStringLength() + 3 + t2.estimateStringLength();
 
@@ -229,7 +229,7 @@ const RTType<DataType, OuterType>
 
             case Intersection:
                 assert (Type t1, Type t2) := relational();
-                if (t1 == Type<Nullable>)
+                if (t1 == Nullable)
                     {
                     if (t2.relational())
                         {
@@ -247,23 +247,49 @@ const RTType<DataType, OuterType>
                     {
                     t1   .appendTo(appender);
                     " | ".appendTo(appender);
-                    t2   .appendTo(appender);
+                    if (t2.relational())
+                        {
+                        appender.add('(');
+                        t2.appendTo(appender);
+                        appender.add(')');
+                        }
+                    else
+                        {
+                        t2.appendTo(appender);
+                        }
                     }
                 break;
-
 
             case Union:
                 assert (Type t1, Type t2) := relational();
                 t1   .appendTo(appender);
                 " + ".appendTo(appender);
-                t2   .appendTo(appender);
+                if (t2.relational())
+                    {
+                    appender.add('(');
+                    t2.appendTo(appender);
+                    appender.add(')');
+                    }
+                else
+                    {
+                    t2.appendTo(appender);
+                    }
                 break;
 
             case Difference:
                 assert (Type t1, Type t2) := relational();
                 t1   .appendTo(appender);
                 " - ".appendTo(appender);
-                t2   .appendTo(appender);
+                if (t2.relational())
+                    {
+                    appender.add('(');
+                    t2.appendTo(appender);
+                    appender.add(')');
+                    }
+                else
+                    {
+                    t2.appendTo(appender);
+                    }
                 break;
 
             case Immutable:
