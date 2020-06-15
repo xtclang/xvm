@@ -1,4 +1,5 @@
 import reflect.ClassTemplate;
+import reflect.InvalidType;
 import reflect.TypeTemplate;
 
 
@@ -93,13 +94,9 @@ const TypeSystem
      */
     static Map<String, Type> implicitTypes =
         {
-@Inject Console console;
         import lang.src.Lexer.Token;
         import lang.src.Parser;
         import lang.src.ast.ImportStatement;
-console.println("*** BUILDING IMPLICIT TYPES ***");
-@Inject Timer timer;
-timer.start();
 
         String                source     = $../../resources/implicit.x;
         Parser                parser     = new Parser(source);
@@ -119,13 +116,12 @@ timer.start();
                     }
                 else
                     {
-console.println($"Unable to resolve {name} as class in: {stmt}"); // TODO GG -> only ecstasy.Ref cannot be resolved!
                     continue NextImport;
                     }
                 }
             implicits.put(stmt.aliasName, clz);
             }
-console.println($"*** IMPLICIT TYPES in {timer.elapsed}: {implicits}"); // TODO GG -> 1.5m :(
+
         return implicits.makeImmutable();
         };
 
@@ -182,13 +178,18 @@ console.println($"*** IMPLICIT TYPES in {timer.elapsed}: {implicits}"); // TODO 
     /**
      * Obtain a [Class] that exists within this `TypeSystem`, based on its class string.
      *
+     * @param name            the class name to obtain, which may include annotations, type
+     *                        parameters, and other valid class identifier syntax
+     * @param hideExceptions  pass True to catch type exceptions and return them as `False` instead
+     *
      * @return True iff the name identifies a `Class` that exists in this `TypeSystem`
      * @return (conditional) the specified `Class`
+     *
+     * @throws InvalidType  if a type exception occurs and `hideExceptions` is not specified
      */
-    conditional Class classForName(String name)
+    conditional Class classForName(String name, Boolean hideExceptions = False)
         {
         import lang.src.Lexer; // TODO GG should allow static function import ".isIdentifierStart" etc.
-
 
         // attempt a quick run first, assuming no whitespace, no annotations, no type parameters
         Package? pkg = primaryModule;
@@ -270,7 +271,7 @@ console.println($"*** IMPLICIT TYPES in {timer.elapsed}: {implicits}"); // TODO 
 
         // anything that isn't "Identifer.Identifier" is handled by typeForName()
         // TODO GG if (Type type := typeForName(name), clz := type.fromClass())
-        if (Type type := typeForName(name))
+        if (Type type := typeForName(name, hideExceptions))
             {
             if (clz := type.fromClass())
                 {
@@ -284,10 +285,16 @@ console.println($"*** IMPLICIT TYPES in {timer.elapsed}: {implicits}"); // TODO 
     /**
      * Obtain a [Type] that exists within this `TypeSystem`, based on its type string.
      *
+     * @param name            the type name to obtain, which may include annotations, type
+     *                        parameters, relational operators, and other valid type syntax
+     * @param hideExceptions  pass True to catch type exceptions and return them as `False` instead
+     *
      * @return True iff the name identifies a `Type` that exists in this `TypeSystem`
      * @return (conditional) the specified `Type`
+     *
+     * @throws InvalidType  if a type exception occurs and `hideExceptions` is not specified
      */
-    conditional Type typeForName(String name)
+    conditional Type typeForName(String name, Boolean hideExceptions = False)
         {
         if (name == "")
             {
@@ -306,7 +313,12 @@ console.println($"*** IMPLICIT TYPES in {timer.elapsed}: {implicits}"); // TODO 
             }
         catch (Exception e)
             {
-            return False;
+            if (hideExceptions)
+                {
+                return False;
+                }
+
+            throw new InvalidType(cause = e);
             }
 
         // if the parser left something unparsed, then the type name is not valid
@@ -315,7 +327,7 @@ console.println($"*** IMPLICIT TYPES in {timer.elapsed}: {implicits}"); // TODO 
             return False;
             }
 
-        if (Type result := typeExpr.resolveType(this))
+        if (Type result := typeExpr.resolveType(this, hideExceptions))
             {
             return True, result;
             }

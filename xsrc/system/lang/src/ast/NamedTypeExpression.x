@@ -1,6 +1,8 @@
 import io.TextPosition;
 
-import Lexer.Token;
+import reflect.InvalidType;
+
+import src.Lexer.Token;
 
 
 /**
@@ -33,7 +35,7 @@ const NamedTypeExpression(Token[]?          moduleNames,
         }
 
     @Override
-    conditional Type resolveType(TypeSystem typeSystem)
+    conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False)
         {
         Package? pkg = Null; // TODO GG - this should not need to be initialized to Null
         if (moduleNames == Null)
@@ -120,7 +122,7 @@ const NamedTypeExpression(Token[]?          moduleNames,
             Type[] paramTypes = new Type[];
             for (Int i : [0..params.size))
                 {
-                if (Type paramType := params[i].resolveType(typeSystem))
+                if (Type paramType := params[i].resolveType(typeSystem, hideExceptions))
                     {
                     // TODO GG paramTypes[i] = paramType;
                     //java.lang.NullPointerException
@@ -135,7 +137,19 @@ const NamedTypeExpression(Token[]?          moduleNames,
                     return False;
                     }
                 }
-            type = type.parameterize(paramTypes);
+            try
+                {
+                type = type.parameterize(paramTypes);
+                }
+            catch (InvalidType e)
+                {
+                if (hideExceptions)
+                    {
+                    return False;
+                    }
+
+                throw e;
+                }
             }
 
         return True, type;

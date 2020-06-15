@@ -1,6 +1,9 @@
 import io.TextPosition;
 
-import Lexer.Token;
+import reflect.Annotation;
+import reflect.InvalidType;
+
+import src.Lexer.Token;
 
 
 /**
@@ -19,6 +22,88 @@ const ChildTypeExpression(TypeExpression          parent,
     TextPosition start.get()
         {
         return parent.start;
+        }
+
+    @Override
+    conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False)
+        {
+        Type  parentType  = Object; // TODO GG these should not need to be pre-declared / init'd
+        Class parentClass = Object;
+        if (parentType  := parent.resolveType(typeSystem, hideExceptions),
+            parentClass := parentType.fromClass())
+            {
+            // resolve names
+            Type type = parentClass;
+            assert !names.empty;
+            for (Token name : names)
+                {
+                if (type := type.childTypes.get(name.valueText))
+                    {
+                    }
+                else
+                    {
+                    return False;
+                    }
+                }
+
+            // resolve type parameters
+            if (params != Null)
+                {
+                Type[] paramTypes = new Type[];
+                for (Int i : [0..params.size))
+                    {
+                    if (Type paramType := params[i].resolveType(typeSystem, hideExceptions))
+                        {
+                        paramTypes.add(paramType);
+                        }
+                    else
+                        {
+                        return False;
+                        }
+                    }
+
+                try
+                    {
+                    type = type.parameterize(paramTypes);
+                    }
+                catch (InvalidType e)
+                    {
+                    if (hideExceptions)
+                        {
+                        return False;
+                        }
+                    throw e;
+                    }
+                }
+
+            // resolve annotations
+            for (AnnotationExpression expr : annotations?)
+                {
+                if (Annotation annotation := expr.resolveAnnotation(typeSystem, hideExceptions))
+                    {
+                    try
+                        {
+                        type = type.annotate(annotation);
+                        }
+                    catch (InvalidType e)
+                        {
+                        if (hideExceptions)
+                            {
+                            return False;
+                            }
+                        throw e;
+                        }
+                    }
+                else
+                    {
+                    return False;
+                    }
+                }
+
+            return True, type;
+            }
+
+        return False;
         }
 
     @Override

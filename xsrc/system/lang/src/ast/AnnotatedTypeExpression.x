@@ -1,5 +1,8 @@
 import io.TextPosition;
 
+import reflect.Annotation;
+import reflect.InvalidType;
+
 
 /**
  * Represents an annotated type, for example:
@@ -20,6 +23,31 @@ const AnnotatedTypeExpression(AnnotationExpression annotation,
     TextPosition end.get()
         {
         return type.end;
+        }
+
+    @Override
+    conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False)
+        {
+        // determine the type that is going to be annotated
+        if (Type       annotatee  := type.resolveType(typeSystem, hideExceptions),
+            Annotation annotation := this.annotation.resolveAnnotation(typeSystem, hideExceptions))
+            {
+            try
+                {
+                return True, annotatee.annotate(annotation);
+                }
+            catch (InvalidType e)
+                {
+                if (hideExceptions)
+                    {
+                    return False;
+                    }
+
+                throw e;
+                }
+            }
+
+        return False;
         }
 
     @Override
