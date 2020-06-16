@@ -20,6 +20,7 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 
@@ -1985,6 +1986,30 @@ public class InvocationExpression
                     {
                     throw new IllegalStateException("unsupported constant format: " + id);
                     }
+                }
+
+            // an import name can specify a PropertyConstant
+            // TODO GG these same changes will probably also need to be in NameExpression
+            if (arg instanceof PropertyConstant)
+                {
+                PropertyStructure prop = (PropertyStructure) ((PropertyConstant) arg).getComponent();
+                if (prop != null && prop.isConstant() && prop.getType().isA(pool.typeFunction()))
+                    {
+                    // TODO GG
+                    System.err.println("found property to call for " + sName + ": " + prop);
+                    }
+                else
+                    {
+                    // TODO GG log error "property <name> is not callable"
+                    System.err.println("found property to call for " + sName + ", but not callable: " + prop);
+                    }
+                }
+
+            // an import name can specify a MultiMethodConstant
+            if (arg instanceof MultiMethodConstant)
+                {
+                // TODO GG - find a function that matches
+                System.err.println("found probable function to call for " + sName + ": " + arg);
                 }
 
             // must NOT have resolved the name to a method constant (that should be impossible)

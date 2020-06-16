@@ -4,17 +4,30 @@ module TestSimple
 
     void run()
         {
-        console.println(Id.Allow);
+        @Inject Console console;
+        console.println("Hello World!");
+
+        import stuff.*;
+        console.println($"point={new Point(1,2)}");
+
+        import stuff.Point.ping;
+        import stuff.Point.pong;
+// TODO GG
+        ping();
+        pong();
         }
 
-    enum Category {Normal, ContextSensitive, Special, Artificial}
-
-    /**
-     * Ecstasy source code is composed of these lexical elements.
-     */
-    enum Id(String? text, Category category=Normal)
+    package stuff
         {
-        Any   ("_"     ),
-        Allow ("allow" , ContextSensitive)
+        const Point(Int x, Int y)
+            {
+            static void ping()
+                {
+                @Inject Console console;
+                console.println("ping!");
+                }
+
+            static function void() pong = ping;
+            }
         }
     }

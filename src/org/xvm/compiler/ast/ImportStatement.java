@@ -29,12 +29,43 @@ public class ImportStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
+    /**
+     * Construct an import statement.
+     *
+     * @param cond
+     * @param keyword        the "import" keyword
+     * @param alias          the simple name that represents the qualified name
+     * @param qualifiedName  the qualified name as a list of identifier tokens
+     */
     public ImportStatement(Expression cond, Token keyword, Token alias, List<Token> qualifiedName)
         {
+        assert alias != null;
+
         this.cond          = cond;
         this.keyword       = keyword;
         this.alias         = alias;
         this.qualifiedName = qualifiedName;
+
+        // the qualified name will have to be resolved
+        this.resolver = new NameResolver(this, qualifiedName.stream().map(token -> (String) token.getValue()).iterator());
+        }
+
+    /**
+     * Construct an import statement for an "import all" style statement.
+     *
+     * @param cond
+     * @param keyword        the "import" keyword
+     * @param qualifiedName  the qualified name as a list of identifier tokens
+     * @param star           the "*" token
+     */
+    public ImportStatement(Expression cond, Token keyword, List<Token> qualifiedName, Token star)
+        {
+        assert star != null;
+
+        this.cond          = cond;
+        this.keyword       = keyword;
+        this.qualifiedName = qualifiedName;
+        this.star          = star;
 
         // the qualified name will have to be resolved
         this.resolver = new NameResolver(this, qualifiedName.stream().map(token -> (String) token.getValue()).iterator());
@@ -48,7 +79,15 @@ public class ImportStatement
      */
     public String getAliasName()
         {
-        return (String) alias.getValue();
+        return alias == null ? null : alias.getValueText();
+        }
+
+    /**
+     * @return true iff the import is of the ".*" form
+     */
+    public boolean isWildcard()
+        {
+        return star != null;
         }
 
     /**
@@ -114,7 +153,7 @@ public class ImportStatement
     @Override
     public long getEndPosition()
         {
-        return alias.getEndPosition();
+        return (alias == null ? star : alias).getEndPosition();
         }
 
     @Override
@@ -187,19 +226,22 @@ public class ImportStatement
         {
         // make sure that the name is not taken (or if it is, that it is hideable)
         String sName = getAliasName();
-        if (ctx.getVar(sName) != null && !ctx.isVarHideable(sName))
+        if (sName != null)
             {
-            log(errs, Severity.ERROR, Compiler.IMPORT_NAME_COLLISION, sName);
-            }
-        else
-            {
-            // resolve what the qualified name is in reference to
-            NameResolver resolver = getNameResolver();
-            assert resolver.getResult() == Result.RESOLVED;
-            Constant constant = resolver.getConstant();
+            if (ctx.getVar(sName) != null && !ctx.isVarHideable(sName))
+                {
+                log(errs, Severity.ERROR, Compiler.IMPORT_NAME_COLLISION, sName);
+                }
+            else
+                {
+                // resolve what the qualified name is in reference to
+                NameResolver resolver = getNameResolver();
+                assert resolver.getResult() == Result.RESOLVED;
+                Constant constant = resolver.getConstant();
 
-            // register the import into the context
-            ctx.ensureNameMap().put(sName, constant);
+                // register the import into the context
+                ctx.ensureNameMap().put(sName, constant);
+                }
             }
 
         return this;
@@ -249,6 +291,10 @@ public class ImportStatement
             sb.append(" as ")
               .append(alias.getValue());
             }
+        else if (star != null)
+            {
+            sb.append(".*");
+            }
 
         sb.append(';');
 
@@ -267,6 +313,7 @@ public class ImportStatement
     protected Token       keyword;
     protected Token       alias;
     protected List<Token> qualifiedName;
+    protected Token       star;
 
     private NameResolver  resolver;
 

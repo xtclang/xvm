@@ -172,8 +172,17 @@ public class NameResolver
                         switch (resolver.resolve(errs))
                             {
                             case RESOLVED:
-                                m_constant  = resolver.m_constant;
-                                m_component = resolver.m_component;
+                                if (m_stmtImport.isWildcard())
+                                    {
+                                    m_component = ((IdentityConstant) resolver.getConstant()).getComponent().getChild(m_sName);
+                                    assert m_component instanceof ClassStructure;
+                                    m_constant  = m_component.getIdentityConstant();
+                                    }
+                                else
+                                    {
+                                    m_constant  = resolver.m_constant;
+                                    m_component = resolver.m_component;
+                                    }
                                 break WalkUpToTheRoot;
 
                             case DEFERRED:

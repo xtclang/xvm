@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -166,21 +167,40 @@ public class StatementBlock
      */
     protected void registerImport(ImportStatement stmt, ErrorListener errs)
         {
-        if (imports == null)
+        if (stmt.isWildcard())
             {
-            imports = new HashMap<>();
-            }
+            if (importsWild == null)
+                {
+                importsWild = new ArrayList<>();
+                }
 
-        // make sure that no existing import uses the same alias
-        String sAlias = stmt.getAliasName();
-        if (imports.containsKey(sAlias))
+            // make sure that no existing import uses the same alias
+            String sName = stmt.getQualifiedNameString();
+            if (importsWild.contains(sName))
+                {
+                log(errs, Severity.WARNING, Compiler.DUPLICATE_IMPORT, sName);
+                }
+
+            importsWild.add(stmt);
+            }
+        else
             {
-            log(errs, Severity.ERROR, Compiler.DUPLICATE_IMPORT, sAlias);
-            // fall through; don't stop compilation at this point, and just use the new import to
-            // overwrite the old
-            }
+            if (imports == null)
+                {
+                imports = new HashMap<>();
+                }
 
-        imports.put(stmt.getAliasName(), stmt);
+            // make sure that no existing import uses the same alias
+            String sAlias = stmt.getAliasName();
+            if (imports.containsKey(sAlias))
+                {
+                log(errs, Severity.ERROR, Compiler.DUPLICATE_IMPORT, sAlias);
+                // fall through; don't stop compilation at this point, and just use the new import to
+                // overwrite the old
+                }
+
+            imports.put(stmt.getAliasName(), stmt);
+            }
         }
 
     /**
@@ -201,9 +221,36 @@ public class StatementBlock
      */
     public ImportStatement getImport(String sName)
         {
-        return imports == null
-                ? null
-                : imports.get(sName);
+        if (imports != null)
+            {
+            ImportStatement stmt = imports.get(sName);
+            if (stmt != null)
+                {
+                return stmt;
+                }
+            }
+
+        if (importsWild != null)
+            {
+            for (int i = importsWild.size()-1; i >= 0; --i)
+                {
+                ImportStatement stmt     = importsWild.get(i);
+                Constant        constant = stmt.getNameResolver().getConstant();
+                if (constant instanceof IdentityConstant && constant.isClass())
+                    {
+                    ClassStructure clz = (ClassStructure) ((IdentityConstant) constant).getComponent();
+                    if (clz != null)
+                        {
+                        if (clz.getChild(sName) instanceof ClassStructure)
+                            {
+                            return stmt;
+                            }
+                        }
+                    }
+                }
+            }
+
+        return null;
         }
 
     @Override
@@ -1664,6 +1711,7 @@ public class StatementBlock
     protected boolean         containsEnclosed;
 
     protected Map<String, ImportStatement> imports;
+    protected List<ImportStatement>        importsWild;
 
     private transient boolean m_fSuppressScope;
 
