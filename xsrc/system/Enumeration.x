@@ -126,7 +126,6 @@ mixin Enumeration<EnumType extends Enum>
                 assert Class<> clz := type.fromClass();
                 assert EnumType instance := clz.as(Class<EnumType>).isSingleton();
                 assert instance.ordinal == map.size;
-                assert !map.contains(name);
                 map.put(name, instance);
                 }
             }

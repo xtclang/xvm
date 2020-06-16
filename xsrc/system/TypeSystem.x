@@ -269,7 +269,7 @@ const TypeSystem
             return False;
             }
 
-        // anything that isn't "Identifer.Identifier" is handled by typeForName()
+        // anything that isn't "Identifier.Identifier" is handled by typeForName()
         // TODO GG if (Type type := typeForName(name), clz := type.fromClass())
         if (Type type := typeForName(name, hideExceptions))
             {

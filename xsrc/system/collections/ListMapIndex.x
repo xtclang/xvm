@@ -249,12 +249,11 @@ mixin ListMapIndex<Key extends Hashable, Value>
 
         // binary search the hash tree (which is stored in an array)
         HashTree tree = bucket;
-        Int lo  = 0;
-        Int hi  = tree.size - 1;
-        Int mid = 0;
+        Int      lo   = 0;
+        Int      hi   = tree.size - 1;
         while (lo <= hi)
             {
-            mid = (lo + hi) >>> 1;
+            Int    mid     = (lo + hi) >>> 1;
             OneOrN indexes = tree[mid];
             switch (hashFor(indexes) <=> keyhash)
                 {
@@ -270,7 +269,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
                     break;
                 }
             }
-        return tree.ensureMutable().insert(mid, index);
+        return tree.ensureMutable().insert(lo, index);
         }
 
     /**

@@ -611,8 +611,8 @@ class HashMap<Key, Value>
         {
         assert capacity >= 0;
 
-        // shoot for 20% empty buckets (i.e. 25% oversize)
-        Int target = capacity + (capacity >>> 2) + 1;
+        // shoot for 20% empty buckets (i.e. 50% oversize)
+        Int target = capacity + (capacity >>> 1) + 15;
 
         // round up to a prime number by performing a binary search for the target size through an
         // array of prime values
@@ -621,7 +621,7 @@ class HashMap<Key, Value>
         Search: do
             {
             Int midpoint = (first + last) >>> 1;
-            switch (capacity <=> PRIMES[midpoint])
+            switch (target <=> PRIMES[midpoint])
                 {
                 case Lesser:
                     last = midpoint - 1;
