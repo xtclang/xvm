@@ -49,6 +49,23 @@ public class PropertyComposition
         f_mapMethods = new ConcurrentHashMap<>();
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();
+
+        assert !clzParent.isStruct();
+        }
+
+    /**
+     * Construct a PropertyComposition clone for the specified parent's clone.
+     */
+    private PropertyComposition(PropertyComposition clzInception, ClassComposition clzParent)
+        {
+        f_clzParent    = clzParent;
+        f_infoProp     = clzInception.f_infoProp;
+        f_clzRef       = clzInception.f_clzRef;
+        f_infoParent   = clzInception.f_infoParent;
+        f_mapMethods   = clzInception.f_mapMethods;
+        f_mapGetters   = clzInception.f_mapGetters;
+        f_mapSetters   = clzInception.f_mapSetters;
+        m_clzInception = clzInception;
         }
 
 
@@ -110,7 +127,19 @@ public class PropertyComposition
             {
             return this;
             }
-        return new PropertyComposition(clzParent, f_infoProp);
+
+        if (access == Access.STRUCT)
+            {
+            PropertyComposition clzStruct = m_clzStruct;
+            if (clzStruct == null)
+                {
+                m_clzStruct = clzStruct = new PropertyComposition(this, clzParent);
+                }
+            return clzStruct;
+            }
+
+        // for any other access return the inception composition
+        return isStruct() ? m_clzInception : this;
         }
 
     @Override
@@ -319,4 +348,10 @@ public class PropertyComposition
 
     // cached property setter call chain by property id (the top-most method first)
     private final Map<PropertyConstant, CallChain> f_mapSetters;
+
+    // cached PropertyComposition for the inception class
+    private PropertyComposition m_clzInception;
+
+    // cached PropertyComposition for the struct class
+    private PropertyComposition m_clzStruct;
     }
