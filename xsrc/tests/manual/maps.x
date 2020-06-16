@@ -111,6 +111,39 @@ module TestMaps
             {
             console.println($"[{loop.count}]:{entry}");
             }
+
+        // test very bad hashing
+        const Point(Int x)
+            {
+            static <CompileType extends Point> Int hashCode(CompileType value)
+                {
+                return 100 + value.x % 3;
+                }
+            }
+
+        ListMap<Point, Int> map2 = new ListMap();
+        for (Int i : [0..12))
+            {
+            map2.put(new Point(i), i);
+            }
+
+        for (Int i : [0..12))
+            {
+            assert Int v := map2.get(new Point(i));
+            assert v == i;
+            }
+
+        for (Int i : [0..12))
+            {
+            map2.remove(new Point(i));
+            map2.put(new Point(12 + i), 12 + i);
+            }
+
+        for (Int i : [12..24))
+            {
+            assert Int v := map2.get(new Point(i));
+            assert v == i;
+            }
         }
 
     void testMapIteration()

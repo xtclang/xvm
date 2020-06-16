@@ -140,8 +140,16 @@ public class xIntArray
             hArray.m_cSize++;
             }
 
-        alValue[(int) lIndex] = ((JavaLong) hValue).getValue();
-        return Op.R_NEXT;
+        try
+            {
+            alValue[(int) lIndex] = ((JavaLong) hValue).getValue();
+            return Op.R_NEXT;
+            }
+        catch (ClassCastException e)
+            {
+            return frame.raiseException(
+                xException.illegalCast(frame, hValue.getType().getValueString()));
+            }
         }
 
     public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
@@ -183,19 +191,28 @@ public class xIntArray
         }
 
     @Override
-    protected void addElement(ArrayHandle hTarget, ObjectHandle hElement)
+    protected void insertElement(ArrayHandle hTarget, ObjectHandle hElement, int nIndex)
         {
         IntArrayHandle hArray  = (IntArrayHandle) hTarget;
-        int            ixNext  = hArray.m_cSize;
+        int cSize = hArray.m_cSize;
         long[]         alValue = hArray.m_alValue;
 
-        if (ixNext == alValue.length)
+        if (cSize == alValue.length)
             {
-            alValue = hArray.m_alValue = grow(hArray.m_alValue, ixNext + 1);
+            alValue = hArray.m_alValue = grow(hArray.m_alValue, cSize + 1);
             }
         hArray.m_cSize++;
 
-        alValue[ixNext] = ((JavaLong) hElement).getValue();
+        if (nIndex == -1 || nIndex == cSize)
+            {
+            alValue[cSize] = ((JavaLong) hElement).getValue();
+            }
+        else
+            {
+            // insert
+            System.arraycopy(alValue, nIndex, alValue, nIndex+1, cSize-nIndex);
+            alValue[nIndex] = ((JavaLong) hElement).getValue();
+            }
         }
 
     @Override

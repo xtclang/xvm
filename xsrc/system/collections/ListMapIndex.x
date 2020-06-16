@@ -67,55 +67,54 @@ mixin ListMapIndex<Key extends Hashable, Value>
             return False;
             }
 
-        OneOrN indexes = 0; // TODO CP "=0" is required due to def asn bug
-        search: if (bucket.is(HashTree))
+        private conditional Int indexOf(Key key, OneOrN indexes)
             {
-            // binary search the hash tree
-            HashTree tree = bucket;
-            Int lo = 0;
-            Int hi = tree.size - 1;
-            while (lo <= hi)
+            if (indexes.is(Int[]))
                 {
-                Int mid = (lo + hi) >>> 1;
-                indexes = tree[mid];
-                switch (hashFor(indexes) <=> keyhash)
+                for (Int index : indexes)
                     {
-                    case Equal:
-                        break search;
-                    case Lesser:
-                        lo = mid + 1;
-                        break;
-                    case Greater:
-                        hi = mid - 1;
-                        break;
+                    if (listKeys[index] == key)
+                        {
+                        return True, index;
+                        }
                     }
                 }
-            return False;
-            }
-        else
-            {
-            indexes = bucket;
-            }
-
-        if (indexes.is(Int[]))
-            {
-            for (Int index : indexes)
+            else
                 {
+                Int index = indexes;
                 if (listKeys[index] == key)
                     {
                     return True, index;
                     }
                 }
-            }
-        else
-            {
-            Int index = indexes;
-            if (listKeys[index] == key)
-                {
-                return True, index;
-                }
+            return False;
             }
 
+        if (bucket.is(OneOrN))
+            {
+            return indexOf(key, bucket);
+            }
+
+        // binary search the hash tree
+        HashTree tree = bucket;
+        Int      lo   = 0;
+        Int      hi   = tree.size - 1;
+        while (lo <= hi)
+            {
+            Int mid = (lo + hi) >>> 1;
+            OneOrN indexes = tree[mid];
+            switch (hashFor(indexes) <=> keyhash)
+                {
+                case Equal:
+                    return indexOf(key, indexes);
+                case Lesser:
+                    lo = mid + 1;
+                    break;
+                case Greater:
+                    hi = mid - 1;
+                    break;
+                }
+            }
         return False;
         }
 
@@ -237,41 +236,41 @@ mixin ListMapIndex<Key extends Hashable, Value>
             return index;
             }
 
-        if (bucket.is(HashTree))
+        if (bucket.is(OneOrN))
             {
-            // binary search the hash tree (which is stored in an array)
-            HashTree tree = bucket;
-            Int lo  = 0;
-            Int hi  = tree.size - 1;
-            Int mid = 0;
-            while (lo <= hi)
+            OneOrN indexes = bucket;
+            return switch (keyhash <=> hashFor(indexes))
                 {
-                mid = (lo + hi) >>> 1;
-                OneOrN indexes = tree[mid];
-                switch (hashFor(indexes) <=> keyhash)
-                    {
-                    case Equal:
-                        tree[mid] = addIndexTo(indexes, index);
-                        return tree;
-
-                    case Lesser:
-                        lo = mid + 1;
-                        break;
-                    case Greater:
-                        hi = mid - 1;
-                        break;
-                    }
-                }
-            return tree.insert(mid, index);
+                case Lesser : new Array<OneOrN>(2, i -> {return i == 0 ? index : indexes;});
+                case Equal  : addIndexTo(indexes, index);
+                case Greater: new Array<OneOrN>(2, i -> {return i == 0 ? indexes : index;});
+                };
             }
 
-        OneOrN indexes = bucket;
-        return switch (keyhash <=> hashFor(indexes))
+        // binary search the hash tree (which is stored in an array)
+        HashTree tree = bucket;
+        Int lo  = 0;
+        Int hi  = tree.size - 1;
+        Int mid = 0;
+        while (lo <= hi)
             {
-            case Lesser : [index, indexes];
-            case Equal  : addIndexTo(indexes, index);
-            case Greater: [indexes, index];
-            };
+            mid = (lo + hi) >>> 1;
+            OneOrN indexes = tree[mid];
+            switch (hashFor(indexes) <=> keyhash)
+                {
+                case Equal:
+                    tree[mid] = addIndexTo(indexes, index);
+                    return tree;
+
+                case Lesser:
+                    lo = mid + 1;
+                    break;
+                case Greater:
+                    hi = mid - 1;
+                    break;
+                }
+            }
+        return tree.ensureMutable().insert(mid, index);
         }
 
     /**
@@ -304,42 +303,42 @@ mixin ListMapIndex<Key extends Hashable, Value>
         {
         assert bucket != Null;
 
-        if (bucket.is(HashTree))
+        if (bucket.is(OneOrN))
             {
-            // binary search the hash tree
-            HashTree tree = bucket;
-            Int lo = 0;
-            Int hi = tree.size - 1;
-            while (lo <= hi)
-                {
-                Int mid = (lo + hi) >>> 1;
-                OneOrN indexes = tree[mid];
-                switch (hashFor(indexes) <=> keyhash)
-                    {
-                    case Equal:
-                        OneOrN? remainder = removeIndexFrom(indexes, index);
-                        if (remainder == Null)
-                            {
-                            return removeNodeFrom(tree, mid);
-                            }
-                        else
-                            {
-                            tree[mid] = remainder;
-                            return tree;
-                            }
-
-                    case Lesser:
-                        lo = mid + 1;
-                        break;
-                    case Greater:
-                        hi = mid - 1;
-                        break;
-                    }
-                }
-            assert;
+            return removeIndexFrom(bucket, index);
             }
 
-        return removeIndexFrom(bucket, index);
+        // binary search the hash tree
+        HashTree tree = bucket;
+        Int      lo   = 0;
+        Int      hi   = tree.size - 1;
+        while (lo <= hi)
+            {
+            Int    mid     = (lo + hi) >>> 1;
+            OneOrN indexes = tree[mid];
+            switch (hashFor(indexes) <=> keyhash)
+                {
+                case Equal:
+                    OneOrN? remainder = removeIndexFrom(indexes, index);
+                    if (remainder == Null)
+                        {
+                        return removeNodeFrom(tree, mid);
+                        }
+                    else
+                        {
+                        tree[mid] = remainder;
+                        return tree;
+                        }
+
+                case Lesser:
+                    lo = mid + 1;
+                    break;
+                case Greater:
+                    hi = mid - 1;
+                    break;
+                }
+            }
+        assert;
         }
 
     /**
@@ -426,13 +425,13 @@ mixin ListMapIndex<Key extends Hashable, Value>
             {
             if (bucket != Null)
                 {
-                if (bucket.is(HashTree))
+                if (bucket.is(OneOrN))
                     {
-                    buckets[loop.count] = decrementAllInHashTreeAbove(bucket, deleted);
+                    buckets[loop.count] = decrementOneOrNAbove(bucket, deleted);
                     }
                 else
                     {
-                    buckets[loop.count] = decrementOneOrNAbove(bucket, deleted);
+                    buckets[loop.count] = decrementAllInHashTreeAbove(bucket, deleted);
                     }
                 }
             }
@@ -453,6 +452,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
                 {
                 if (index > deleted)
                     {
+                    indexes = indexes.ensureMutable();
                     indexes[loop.count] = index - 1;
                     }
                 }

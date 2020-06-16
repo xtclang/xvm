@@ -184,19 +184,28 @@ public class xCharArray
         }
 
     @Override
-    protected void addElement(ArrayHandle hTarget, ObjectHandle hElement)
+    protected void insertElement(ArrayHandle hTarget, ObjectHandle hElement, int nIndex)
         {
         CharArrayHandle hArray   = (CharArrayHandle) hTarget;
-        int             ixNext   = hArray.m_cSize;
+        int cSize = hArray.m_cSize;
         char[]          achValue = hArray.m_achValue;
 
-        if (ixNext == achValue.length)
+        if (cSize == achValue.length)
             {
-            achValue = hArray.m_achValue = grow(hArray.m_achValue, ixNext + 1);
+            achValue = hArray.m_achValue = grow(hArray.m_achValue, cSize + 1);
             }
         hArray.m_cSize++;
 
-        achValue[ixNext] = (char) ((JavaLong) hElement).getValue();
+        if (nIndex == -1 || nIndex == cSize)
+            {
+            achValue[cSize] = (char) ((JavaLong) hElement).getValue();
+            }
+        else
+            {
+            // insert
+            System.arraycopy(achValue, nIndex, achValue, nIndex+1, cSize-nIndex);
+            achValue[nIndex] = (char) ((JavaLong) hElement).getValue();
+            }
         }
 
     @Override

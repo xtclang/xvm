@@ -621,7 +621,7 @@ class HashMap<Key, Value>
         Search: do
             {
             Int midpoint = (first + last) >>> 1;
-            switch (capacity <=> midpoint)
+            switch (capacity <=> PRIMES[midpoint])
                 {
                 case Lesser:
                     last = midpoint - 1;

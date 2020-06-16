@@ -201,19 +201,28 @@ public class xByteArray
         }
 
     @Override
-    protected void addElement(ArrayHandle hTarget, ObjectHandle hElement)
+    protected void insertElement(ArrayHandle hTarget, ObjectHandle hElement, int nIndex)
         {
         ByteArrayHandle hArray  = (ByteArrayHandle) hTarget;
-        int             ixNext  = hArray.m_cSize;
+        int             cSize   = hArray.m_cSize;
         byte[]          abValue = hArray.m_abValue;
 
-        if (ixNext == abValue.length)
+        if (cSize == abValue.length)
             {
-            abValue = hArray.m_abValue = grow(hArray.m_abValue, ixNext + 1);
+            abValue = hArray.m_abValue = grow(hArray.m_abValue, cSize + 1);
             }
         hArray.m_cSize++;
 
-        abValue[ixNext] = (byte) ((JavaLong) hElement).getValue();
+        if (nIndex == -1 || nIndex == cSize)
+            {
+            abValue[cSize] = (byte) ((JavaLong) hElement).getValue();
+            }
+        else
+            {
+            // insert
+            System.arraycopy(abValue, nIndex, abValue, nIndex+1, cSize-nIndex);
+            abValue[nIndex] = (byte) ((JavaLong) hElement).getValue();
+            }
         }
 
     @Override

@@ -150,8 +150,12 @@ public class xArray
         markNativeMethod("elementAt", INT, new String[] {"Var<Element>"});
         markNativeMethod("add", ELEMENT_TYPE, ARRAY);
         markNativeMethod("addAll", new String[] {"Iterable<Element>"}, ARRAY);
+        markNativeMethod("insert", new String[] {"numbers.Int64", "Element"}, ARRAY);
+        markNativeMethod("insertAll", new String[] {"numbers.Int64", "Iterable<Element>"}, ARRAY);
+        markNativeMethod("addAll", new String[] {"Iterable<Element>"}, ARRAY);
         markNativeMethod("delete", new String[] {"numbers.Int64"}, null);
         markNativeMethod("slice", new String[] {"Range<numbers.Int64>"}, ARRAY);
+        markNativeMethod("ensureMutable", VOID, null);
         markNativeMethod("ensureImmutable", BOOLEAN, null);
         markNativeMethod("ensurePersistent", BOOLEAN, null);
 
@@ -528,10 +532,28 @@ public class xArray
         }
 
     @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
         {
         switch (method.getName())
             {
+            case "insert":
+                return insertElement(frame, hTarget, (JavaLong) ahArg[0], ahArg[1], iReturn);
+
+            case "insertAll":
+                return insertElements(frame, hTarget, (JavaLong) ahArg[0], ahArg[1], iReturn);
+
+            case "ensureMutable": // Array ensureMutable()
+                {
+                ArrayHandle hArray = (ArrayHandle) hTarget;
+
+                if (hArray.m_mutability != Mutability.Mutable)
+                    {
+                    hArray = createCopy(hArray, Mutability.Mutable);
+                    }
+                return frame.assignValue(iReturn, hArray);
+                }
+
             case "setElement":
                 return assignArrayValue(frame, hTarget, ((JavaLong) ahArg[0]).getValue(), ahArg[1]);
             }
@@ -597,7 +619,7 @@ public class xArray
         }
 
     /**
-     * addElement(TypeElement) implementation
+     * add(Element) implementation
      */
     protected int addElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
@@ -616,7 +638,15 @@ public class xArray
                 break;
             }
 
-        addElement(hArray, hValue);
+        try
+            {
+            insertElement(hArray, hValue, -1);
+            }
+        catch (ClassCastException e)
+            {
+            return frame.raiseException(
+                xException.illegalCast(frame, hValue.getType().getValueString()));
+            }
 
         if (mutability != null)
             {
@@ -627,29 +657,7 @@ public class xArray
         }
 
     /**
-     * Add an element to the array.
-     *
-     * @param hTarget   the array
-     * @param hElement  the element to add
-     *
-     */
-    protected void addElement(ArrayHandle hTarget, ObjectHandle hElement)
-        {
-        GenericArrayHandle hArray  = (GenericArrayHandle) hTarget;
-        int                ixNext  = hArray.m_cSize;
-        ObjectHandle[]     ahValue = hArray.m_ahValue;
-
-        if (ixNext == ahValue.length)
-            {
-            ahValue = hArray.m_ahValue = grow(ahValue, ixNext + 1);
-            }
-        hArray.m_cSize++;
-
-        ahValue[ixNext] = hElement;
-        }
-
-    /**
-     * addElements(Element[]) implementation
+     * addAll(Iterable<Element> values) implementation
      */
     protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
@@ -668,7 +676,15 @@ public class xArray
                 break;
             }
 
-        addElements(hArray, hValue);
+        try
+            {
+            addElements(hArray, hValue);
+            }
+        catch (ClassCastException e)
+            {
+            return frame.raiseException(
+                xException.illegalCast(frame, hValue.getType().getValueString()));
+            }
 
         if (mutability != null)
             {
@@ -679,7 +695,87 @@ public class xArray
         }
 
     /**
-     * Add an array of elements to the array.
+     * insert(Int, Element) implementation
+     */
+    protected int insertElement(Frame frame, ObjectHandle hTarget,
+                                JavaLong hIndex, ObjectHandle hValue, int iReturn)
+        {
+        ArrayHandle hArray    = (ArrayHandle) hTarget;
+        Mutability mutability = null;
+
+        switch (hArray.m_mutability)
+            {
+            case FixedSize:
+                return frame.raiseException(xException.readOnly(frame));
+
+            case Constant:
+            case Persistent:
+                mutability = hArray.m_mutability;
+                hArray     = createCopy(hArray, Mutability.Mutable);
+                break;
+            }
+
+        try
+            {
+            insertElement(hArray, hValue, (int) hIndex.getValue());
+            }
+        catch (ClassCastException e)
+            {
+            return frame.raiseException(
+                xException.illegalCast(frame, hValue.getType().getValueString()));
+            }
+
+        if (mutability != null)
+            {
+            hArray.m_mutability = mutability;
+            }
+
+        return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
+     * insertAll(Int, Iterable<Element>) implementation
+     */
+    protected int insertElements(Frame frame, ObjectHandle hTarget,
+                                 JavaLong hIndex, ObjectHandle hValue, int iReturn)
+        {
+        throw new UnsupportedOperationException("TODO");
+        }
+
+    /**
+     * Add or insert an element to the array (must be overridden by specialized classes).
+     *
+     * @param hTarget   the array
+     * @param hElement  the element to add
+     * @param nIndex    the index (-1 for add)
+     */
+    protected void insertElement(ArrayHandle hTarget, ObjectHandle hElement, int nIndex)
+        {
+        GenericArrayHandle hArray  = (GenericArrayHandle) hTarget;
+        int                cSize   = hArray.m_cSize;
+        ObjectHandle[]     ahValue = hArray.m_ahValue;
+
+        if (cSize == ahValue.length)
+            {
+            ahValue = hArray.m_ahValue = grow(ahValue, cSize + 1);
+            }
+        hArray.m_cSize++;
+
+        if (nIndex == -1 || nIndex == cSize)
+            {
+            // append
+            ahValue[cSize] = hElement;
+            }
+        else
+            {
+            // insert
+            System.arraycopy(ahValue, nIndex, ahValue, nIndex+1, cSize-nIndex);
+            ahValue[nIndex] = hElement;
+            }
+        }
+
+    /**
+     * Add an array of elements to the array (must be overridden by specialized classes).
      *
      * @param hTarget    the array
      * @param hElements  the array of values to add
@@ -803,7 +899,7 @@ public class xArray
         }
 
 
-    // ----- IndexSupport methods -----
+    // ----- IndexSupport methods ------------------------------------------------------------------
 
     @Override
     public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)

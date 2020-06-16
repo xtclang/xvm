@@ -10,7 +10,6 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
-import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
@@ -179,19 +178,26 @@ public abstract class BitBasedArray
         }
 
     @Override
-    protected void addElement(ArrayHandle hTarget, ObjectHandle hElement)
+    protected void insertElement(ArrayHandle hTarget, ObjectHandle hElement, int nIndex)
         {
         BitArrayHandle hArray  = (BitArrayHandle) hTarget;
-        int            ixNext  = hArray.m_cSize;
+        int            cSize   = hArray.m_cSize;
         byte[]         abValue = hArray.m_abValue;
 
-        if (ixNext == abValue.length)
+        if (cSize == abValue.length)
             {
-            abValue = hArray.m_abValue = grow(hArray.m_abValue, ixNext + 1);
+            abValue = hArray.m_abValue = grow(hArray.m_abValue, cSize + 1);
             }
         hArray.m_cSize++;
 
-        setBit(abValue, ixNext, isSet(hElement));
+        if (nIndex == -1 || nIndex == cSize)
+            {
+            setBit(abValue, cSize, isSet(hElement));
+            }
+        else
+            {
+            throw new UnsupportedOperationException("TODO"); // move the bits
+            }
         }
 
     @Override
