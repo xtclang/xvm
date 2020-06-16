@@ -1983,10 +1983,12 @@ public class Parser
      *
      * <p/><code><pre>
      * ImportStatement
-     *     "import" QualifiedName ImportAlias-opt ";"
+     *     "import" QualifiedName ImportFinish
      *
-     * ImportAlias
-     *     "as" Name
+     * ImportFinish
+     *     ";"
+     *     "as" Name ";"
+     *     NoWhitespace ".*" ";"
      * </pre></code>
      *
      * @return an ImportStatement
@@ -2001,13 +2003,20 @@ public class Parser
         boolean first = true;
         while (first || (match(Id.DOT) != null))
             {
+            if (!first && match(Id.MUL) != null)
+                {
+                Token star = prev();
+                expect(Id.SEMICOLON);
+                return new ImportStatement(exprCond, keyword, qualifiedName, star);
+                }
+
             simpleName = expect(Id.IDENTIFIER);
             qualifiedName.add(simpleName);
             first = false;
             }
 
         // optional alias override
-        if (match(Id.AS) != null)
+        if (simpleName != null && match(Id.AS) != null)
             {
             // parse simple name
             simpleName = expect(Id.IDENTIFIER);
