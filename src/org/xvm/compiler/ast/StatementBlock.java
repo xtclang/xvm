@@ -881,7 +881,7 @@ public class StatementBlock
             // start with the current node, and one by one walk up to the root, asking at
             // each level for the node to resolve the name
             ConstantPool     pool      = pool();
-            AstNode          node      = getParent();
+            AstNode          node      = StatementBlock.this;
             boolean          fSameFile = true;
             boolean          fHasThis  = isMethod() || isConstructor();
             TypeConstant     typeThis  = fHasThis ? ctxFrom.getVar("this").getType() : null;
@@ -1120,7 +1120,11 @@ public class StatementBlock
                             // report an unresolvable import name below
                             break;
                             }
-                        return resolver.getConstant();
+                        Constant constant = resolver.getConstant();
+                        return stmtImport.isWildcard()
+                                ? ((IdentityConstant) constant).getComponent().
+                                        getChild(sName).getIdentityConstant()
+                                : constant;
                         }
 
                     // see if we're crossing a source file boundary (because imports are only used

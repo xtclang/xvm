@@ -985,6 +985,10 @@ public class InvocationExpression
                 TypeConstant typeFn;
                 if (argMethod instanceof PropertyConstant)
                     {
+                    if (m_typeTarget != null)
+                        {
+                        typeLeft = m_typeTarget;
+                        }
                     TypeInfo     infoLeft = getTypeInfo(ctx, typeLeft, errs);
                     PropertyInfo infoProp = infoLeft.findProperty((PropertyConstant) argMethod);
 
@@ -1988,32 +1992,39 @@ public class InvocationExpression
                     }
                 }
 
-            // an import name can specify a PropertyConstant
-            // TODO GG these same changes will probably also need to be in NameExpression
-            if (arg instanceof PropertyConstant)
-                {
-                PropertyStructure prop = (PropertyStructure) ((PropertyConstant) arg).getComponent();
-                if (prop != null && prop.isConstant() && prop.getType().isA(pool.typeFunction()))
-                    {
-                    // TODO GG
-                    System.err.println("found property to call for " + sName + ": " + prop);
-                    }
-                else
-                    {
-                    // TODO GG log error "property <name> is not callable"
-                    System.err.println("found property to call for " + sName + ", but not callable: " + prop);
-                    }
-                }
-
-            // an import name can specify a MultiMethodConstant
-            if (arg instanceof MultiMethodConstant)
-                {
-                // TODO GG - find a function that matches
-                System.err.println("found probable function to call for " + sName + ": " + arg);
-                }
-
             // must NOT have resolved the name to a method constant (that should be impossible)
             assert !(arg instanceof MethodConstant);
+
+            // TODO GG the same logic below for imports probably also need to be in NameExpression
+            if (arg instanceof MultiMethodConstant)
+                {
+                // an import name can specify a MultiMethodConstant;
+                // we only allow functions (not methods or constructors)
+                IdentityConstant idClz      = ((MultiMethodConstant) arg).getParentConstant();
+                TypeConstant     typeTarget = idClz.getType();
+                TypeInfo         info       = getTypeInfo(ctx, typeTarget, errs);
+                IdentityConstant idCallable = findMethod(ctx, typeTarget, info, sName,
+                        args, MethodKind.Any, !fNoCall, false, atypeReturn, errs);
+                if (idCallable != null)
+                    {
+                    MethodStructure method = getMethod(info, idCallable);
+                    if (!method.isFunction())
+                        {
+                        exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY,
+                                sName, idCallable.getParentConstant().getValueString());
+                        return null;
+                        }
+                    m_method      = method;
+                    m_argMethod   = idCallable;
+                    m_fBindTarget = false;
+                    return idCallable;
+                    }
+                }
+            else if (arg instanceof PropertyConstant)
+                {
+                // an import name can specify a static PropertyConstant
+                return testStaticProperty(ctx, (PropertyConstant) arg, atypeReturn, errs);
+                }
 
             if (sName.equals("construct"))
                 {
@@ -2130,6 +2141,15 @@ public class InvocationExpression
                     ErrorListener errsTemp = errs.branch();
                     Argument      arg      = findCallable(ctx, infoLeft.getType(), infoLeft, sName,
                             kind, false, atypeReturn, errsTemp);
+
+                    if (arg == null && kind == MethodKind.Function &&
+                            findCallable(ctx, infoLeft.getType(), infoLeft, sName,
+                                MethodKind.Any, false, atypeReturn, ErrorListener.BLACKHOLE) != null)
+                        {
+                        exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
+                                sName, infoLeft.getType().getValueString());
+                        return null;
+                        }
                     if (arg instanceof MethodConstant)
                         {
                         errsTemp.merge();
@@ -2148,6 +2168,11 @@ public class InvocationExpression
                         m_argMethod = idMethod;
                         m_method    = infoMethod.getTopmostMethodStructure(infoLeft);
                         return idMethod;
+                        }
+                    else if (arg instanceof PropertyConstant)
+                        {
+                        errsTemp.merge();
+                        return testStaticProperty(ctx, (PropertyConstant) arg, atypeReturn, errs);
                         }
                     }
 
@@ -2395,6 +2420,43 @@ public class InvocationExpression
 
         return findMethod(ctx, typeParent, infoParent, sName, args, kind,
                     m_fCall, fAllowNested, aRedundant, errs);
+        }
+
+    /**
+     * Check if the specified property is a static function that matches the specified return types.
+     * This method also sets up the {@link #m_typeTarget} value.
+     *
+     * @param ctx         the compiler context
+     * @param idProp      the property id
+     * @param atypeReturn (optional) an array of required return types
+     * @param errs        the error listener to log errors to
+     *
+     * @return the property id or null if an error has been reported
+     */
+    protected Argument testStaticProperty(Context ctx, PropertyConstant idProp,
+                                        TypeConstant[] atypeReturn, ErrorListener errs)
+        {
+        ConstantPool      pool  = pool();
+        String            sName = idProp.getName();
+        PropertyStructure prop  = (PropertyStructure) idProp.getComponent();
+
+        if (!prop.isConstant())
+            {
+            expr.log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY,
+                    sName, idProp.getParentConstant().getValueString());
+            return null;
+            }
+
+        if (testFunction(ctx, prop.getType(), 0, 0, atypeReturn, errs) == null)
+            {
+            expr.log(errs, Severity.ERROR, Compiler.NOT_TYPE_OF_TYPE,
+                    sName, pool.typeFunction().getValueString());
+            return null;
+            }
+
+        m_typeTarget = idProp.getParentConstant().getType();
+        m_argMethod  = idProp;
+        return idProp;
         }
 
     /**
@@ -2798,6 +2860,10 @@ public class InvocationExpression
     private transient Argument        m_argMethod;
     private transient MethodStructure m_method;          // if m_argMethod is a MethodConstant,
                                                          // this holds the corresponding structure
+    private transient TypeConstant    m_typeTarget;      // if m_argMethod is a PropertyConstant,
+                                                         // referring to a function and the target
+                                                         // is not "this context", it holds the
+                                                         // target type
     private transient boolean         m_fCondResult;     // indicates that the invocation expression
                                                          // produces a conditional result
     private transient boolean         m_fBjarne;         // indicates that the invocation expression

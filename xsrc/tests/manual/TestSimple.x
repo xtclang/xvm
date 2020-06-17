@@ -2,17 +2,19 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run( )
         {
         @Inject Console console;
-        console.println("Hello World!");
 
         import stuff.*;
         console.println($"point={new Point(1,2)}");
 
+        Point.ping();
+        Point.pong();
+
         import stuff.Point.ping;
         import stuff.Point.pong;
-// TODO GG
+
         ping();
         pong();
         }
