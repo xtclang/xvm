@@ -107,18 +107,13 @@ const TypeSystem
         NextImport: while (!parser.eof)
             {
             ImportStatement stmt = parser.parseImportStatement();
-            Package?        pkg  = mackModule;
-            Class           clz  = &pkg.actualClass;
+            Module?         mod  = mackModule;
+            Type            type = &mod.actualType;
             for (Token name : stmt.names)
                 {
-                if ((pkg, clz) := resolveChild(pkg, clz, name.valueText))
-                    {
-                    }
-                else
-                    {
-                    continue NextImport;
-                    }
+                assert type := type.childTypes.get(name.valueText);
                 }
+            assert Class clz := type.fromClass();
             implicits.put(stmt.aliasName, clz);
             }
 
@@ -189,94 +184,10 @@ const TypeSystem
      */
     conditional Class classForName(String name, Boolean hideExceptions = False)
         {
-        import lang.src.Lexer; // TODO GG should allow static function import ".isIdentifierStart" etc.
-
-        // attempt a quick run first, assuming no whitespace, no annotations, no type parameters
-        Package? pkg = primaryModule;
-        Class    clz = &pkg.actualClass;
-        if (name == "")
-            {
-            return True, clz;
-            }
-
-        Int     start   = 0;
-        Int     end     = name.size - 1;
-        Int     offset  = start;
-        Boolean useType = False;
-        Loop: while (offset <= end)
-            {
-            Char    ch  = name[offset];
-            if (offset == start ? Lexer.isIdentifierStart(ch) : Lexer.isIdentifierPart(ch))
-                {
-                // this is OK
-                ++offset;
-                }
-            else if (ch == '.')
-                {
-                if (offset > start)
-                    {
-                    if ((pkg, clz) := resolveChild(pkg, clz, name[start..offset)))
-                        {
-                        start = ++offset;
-                        }
-                    else if (start == 0)
-                        {
-                        // defer to the type lookup so that it can use the implicit names
-                        useType == True;
-                        break;
-                        }
-                    else
-                        {
-                        return False;
-                        }
-                    }
-                else
-                    {
-                    useType == True;
-                    break;
-                    }
-                }
-            else
-                {
-                useType == True;
-                break;
-                }
-            }
-
-        if (!useType)
-            {
-            // attempt to resolve the last name in the sequence (which might be the first one)
-            if (offset > start, (pkg, clz) := resolveChild(pkg, clz, name.substring(start)))
-                {
-                return True, clz;
-                }
-
-            // multi-name, at least one previous resolved
-            if (start > 0)
-                {
-                return False;
-                }
-            }
-
-        // single name optimization for implicit types
-        if (start == 0 && offset > end)
-            {
-            if (Type type := implicitTypes.get(name))
-                {
-                assert clz := type.fromClass();
-                return True, clz;
-                }
-            return False;
-            }
-
-        // anything that isn't "Identifier.Identifier" is handled by typeForName()
-        // TODO GG if (Type type := typeForName(name), clz := type.fromClass())
+        // delegate to the typeForName() implementation
         if (Type type := typeForName(name, hideExceptions))
             {
-            if (clz := type.fromClass())
-                {
-                return True, clz;
-                }
+            return type.fromClass();
             }
 
         return False;
@@ -298,12 +209,15 @@ const TypeSystem
         {
         if (name == "")
             {
-            return True, &primaryModule.actualType;
+//            java.lang.IllegalStateException: Unknown property: (TypeSystem).Property{property=primaryModule}
+//                at org.xvm.runtime.ClassTemplate.createPropertyRef(ClassTemplate.java:1386)
+//            return True, &primaryModule.actualType;
+            Module mod = primaryModule;
+            return True, &mod.actualType;
             }
 
         import lang.src.Parser;
         import lang.src.ast.TypeExpression;
-        import lang.src.ast.NamedTypeExpression;
 
         Parser         parser = new Parser(name, allowModuleNames=True);
         TypeExpression typeExpr;
@@ -397,47 +311,5 @@ const TypeSystem
             }
 
         appender.add('}');
-        }
-
-
-    // ----- helpers -------------------------------------------------------------------------------
-
-    /**
-     * Resolve the specified child name against the provided package/class.
-     *
-     * @param pkg   the package, iff the class is a package
-     * @param clz   the class to search for a child of
-     * @param name  the child class name
-     *
-     * @return True iff the name was resolved to a child class
-     * @return (conditional) the package, if the child class is a package; otherwise `Null`
-     * @return (conditional) the child class
-     */
-    static conditional (Package? pkg, Class clz) resolveChild(Package? pkg, Class clz, String name)
-        {
-        try
-            {
-            clz = clz.childForName(name);
-            }
-        catch (Exception e)
-            {
-            return False;
-            }
-
-        if (pkg != Null && clz.PublicType.isA(Package), pkg := clz.as(Class<Package>).isSingleton())
-            {
-            // if the class is a package, that package may actually be an import of another
-            // module, so follow that link
-            if (pkg := pkg.isModuleImport())
-                {
-                clz = &pkg.actualClass;
-                }
-            }
-        else
-            {
-            pkg = Null;
-            }
-
-        return True, pkg, clz;
         }
     }

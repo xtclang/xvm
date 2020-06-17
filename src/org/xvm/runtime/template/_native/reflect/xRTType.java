@@ -11,6 +11,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.PackageStructure;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
@@ -21,6 +22,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.PseudoConstant;
@@ -534,7 +536,21 @@ public class xRTType
      */
     public int getPropertyChildTypes(Frame frame, TypeHandle hType, int iReturn)
         {
-        TypeConstant                      typeTarget  = hType.getDataType();
+        // bridge from one module to another if necessary
+        TypeConstant typeTarget = hType.getDataType();
+        if (typeTarget.isSingleUnderlyingClass(false))
+            {
+            IdentityConstant id = typeTarget.getSingleUnderlyingClass(false);
+            if (id instanceof PackageConstant)
+                {
+                PackageStructure pkg = (PackageStructure) id.getComponent();
+                if (pkg.isModuleImport())
+                    {
+                    typeTarget = pkg.getImportedModule().getIdentityConstant().getType();
+                    }
+                }
+            }
+
         TypeInfo                          infoTarget  = typeTarget.ensureTypeInfo();
         ConstantPool                      poolCtx     = frame.poolContext();
         Map<String, ChildInfo>            mapInfos    = infoTarget.getChildInfosByName();

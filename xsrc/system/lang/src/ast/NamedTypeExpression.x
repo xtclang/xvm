@@ -37,19 +37,19 @@ const NamedTypeExpression(Token[]?          moduleNames,
     @Override
     conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False)
         {
-        Package? pkg = Null; // TODO GG - this should not need to be initialized to Null
+        Module? mod;
         if (moduleNames == Null)
             {
-            pkg = typeSystem.primaryModule;
+            mod = typeSystem.primaryModule;
             }
         else
             {
             // build the module name
             String moduleName = toDotDelimString(moduleNames);
-            if (pkg := typeSystem.moduleByQualifiedName.get(moduleName))
+            if (mod := typeSystem.moduleByQualifiedName.get(moduleName))
                 {
                 }
-            else if (!moduleName.indexOf('.'), pkg := typeSystem.moduleBySimpleName.get(moduleName))
+            else if (!moduleName.indexOf('.'), mod := typeSystem.moduleBySimpleName.get(moduleName))
                 {
                 }
             else
@@ -60,58 +60,43 @@ const NamedTypeExpression(Token[]?          moduleNames,
             }
 
         // process names
-        Class clz = &pkg.actualClass;
+        Type type = &mod.actualType;
         Loop: for (Token name : names)
             {
-            // TODO CP use TypeSystem.resolveChild()
-
-            try
+            if (type := type.childTypes.get(name.valueText))
                 {
-                clz = clz.childForName(name.valueText);
                 }
-            catch (Exception e)
+            // if we are resolving the first name, and no type exists within the module for that
+            // name, then the name may be an implicit import
+            else if (Loop.first && moduleNames == Null,
+                    type := TypeSystem.implicitTypes.get(name.valueText))
                 {
-                if (Loop.first && moduleNames == Null,
-                        Type type := TypeSystem.implicitTypes.get(name.valueText))
-                    {
-                    assert clz := type.fromClass();
-                    }
-                else
-                    {
-                    return False;
-                    }
-                }
-
-            // TODO GG COMPILER-91: The expression type is not nullable: "Ecstasy:Module". ("pkg != Null")
-            private Package? makeNullable(Package? pkg) {return pkg;}
-            pkg = makeNullable(pkg);
-
-            if (pkg != Null && clz.PublicType.isA(Package), pkg := clz.as(Class<Package>).isSingleton())
-                {
-                // if the class is a package, that package may actually be an import of another
-                // module, so follow that link
-                if (pkg := pkg.isModuleImport())
-                    {
-                    clz = &pkg.actualClass;
-                    }
                 }
             else
                 {
-                pkg = Null;
+                return False;
                 }
             }
 
         // process access
-        Type type = access == Null
-                ? clz
-                : switch (access.id)
-                    {
-                    case Public:    clz.PublicType;
-                    case Protected: clz.ProtectedType;
-                    case Private:   clz.PrivateType;
-                    case Struct:    clz.StructType;
-                    default: assert;
-                    };
+        if (access != Null)
+            {
+            if (Class clz := type.fromClass())
+                {
+                type = switch (access.id)
+                        {
+                        case Public:    clz.PublicType;
+                        case Protected: clz.ProtectedType;
+                        case Private:   clz.PrivateType;
+                        case Struct:    clz.StructType;
+                        default: assert;
+                        };
+                }
+            else
+                {
+                return False;
+                }
+            }
 
         // process noNarrow
         // -> noNarrow has no meaning at runtime
