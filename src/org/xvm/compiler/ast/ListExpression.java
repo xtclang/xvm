@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import java.util.Set;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -11,6 +12,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
@@ -166,7 +168,7 @@ public class ListExpression
 
         if (typeRequired != null)
             {
-            typeElement = typeRequired.resolveGenericType("Element");
+            typeElement = calculateElementType(typeRequired);
             }
 
         if (typeElement == null || typeElement.equals(pool.typeObject()))
@@ -314,6 +316,44 @@ public class ListExpression
 
         code.add(new Var_S(getType(), collectArguments(ctx, code, errs)));
         return code.lastRegister();
+        }
+
+    /**
+     * Helper method to calculate the "Element" type for the specified required type.
+     */
+    private TypeConstant calculateElementType(TypeConstant typeRequired)
+        {
+        TypeConstant typeElement = typeRequired.resolveGenericType("Element");
+        if (typeElement == null && typeRequired instanceof IntersectionTypeConstant)
+            {
+            // try to calculate an element type that would probably accommodate the required type
+            Set<TypeConstant> setSeqType = ((IntersectionTypeConstant) typeRequired).
+                collectMatching(pool().typeSequence(), null);
+            if (!setSeqType.isEmpty())
+                {
+                for (TypeConstant typeSeq : setSeqType)
+                    {
+                    TypeConstant typeGuess = typeSeq.resolveGenericType("Element");
+                    if (typeGuess != null)
+                        {
+                        if (typeElement == null)
+                            {
+                            typeElement = typeGuess;
+                            }
+                        else if (typeElement.isA(typeGuess))
+                            {
+                            typeElement = typeGuess;
+                            }
+                        else if (!typeGuess.isA(typeElement))
+                            {
+                            // typeGuess is incompatible with typeElement
+                            return null;
+                            }
+                        }
+                    }
+                }
+            }
+        return typeElement;
         }
 
     /**

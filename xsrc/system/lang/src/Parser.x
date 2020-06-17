@@ -812,9 +812,7 @@ class Parser
 
         if (match(CompareGT) != Null)
             {
-            // TODO GG return [];
-            TypeExpression[] result = [];
-            return result;
+            return [];
             }
 
         TypeExpression[] types = parseTypeExpressionList(noSequence);
