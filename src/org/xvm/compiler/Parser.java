@@ -3394,6 +3394,7 @@ public class Parser
                     case COLON:
                     case R_PAREN:
                     case R_SQUARE:
+                    case R_CURLY:
                         break;
 
                     default:
