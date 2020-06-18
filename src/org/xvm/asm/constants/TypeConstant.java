@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -4642,107 +4644,17 @@ public abstract class TypeConstant
             return calculateRelation(((RecursiveTypeConstant) typeLeft).getReferredToType());
             }
 
-        // WARNING: thread-unsafe
         Map<TypeConstant, Relation> mapRelations = ensureRelationMap();
 
         Relation relation = mapRelations.get(typeLeft);
-        if (relation == null)
+        if (relation != null)
             {
-            // check the access modifier first
-            if (typeLeft.isAccessSpecified() || typeRight.isAccessSpecified())
-                {
-                Access accessLeft  = typeLeft.getAccess();
-                Access accessRight = typeRight.getAccess();
-                switch (accessRight)
-                    {
-                    case STRUCT:
-                        if (typeLeft.equals(getConstantPool().typeStruct()))
-                            {
-                            relation = Relation.IS_A;
-                            }
-                        else if (accessLeft != Access.STRUCT)
-                            {
-                            // struct is not assignable to anything but a struct
-                            relation = Relation.INCOMPATIBLE;
-                            }
-                        break;
-
-                    case PUBLIC:
-                    case PROTECTED:
-                    case PRIVATE:
-                        if (accessLeft == Access.STRUCT ||
-                                accessLeft.isLessAccessibleThan(accessRight))
-                            {
-                            // for now, disallow any access widening
-                            relation = Relation.INCOMPATIBLE;
-                            }
-                        break;
-                    }
-
-                if (relation == null)
-                    {
-                    relation = typeRight.removeAccess().
-                            calculateRelation(typeLeft.removeAccess());
-                    }
-                mapRelations.put(typeLeft, relation);
-                return relation;
-                }
-
-            // then check immutability modifiers
-            if (typeLeft.isImmutabilitySpecified())
-                {
-                relation = typeRight.isImmutable()
-                    ? typeRight.calculateRelation(typeLeft.removeImmutable())
-                    : Relation.INCOMPATIBLE;
-
-                mapRelations.put(typeLeft, relation);
-                return relation;
-                }
-
-            if (typeRight.isImmutabilitySpecified())
-                {
-                relation = typeRight.removeImmutable().calculateRelation(typeLeft);
-
-                mapRelations.put(typeLeft, relation);
-                return relation;
-                }
-
-            // then check various "reserved" scenarios
-            relation = checkReservedCompatibility(typeLeft, typeRight);
-            if (relation != null)
-                {
-                mapRelations.put(typeLeft, relation);
-                return relation;
-                }
-
-            // now -- a long journey
-            mapRelations.put(typeLeft, Relation.IN_PROGRESS);
-            try
-                {
-                relation = typeRight.calculateRelationToLeft(typeLeft);
-
-                if (relation == Relation.INCOMPATIBLE)
-                    {
-                    TypeConstant typeLeftN  = typeLeft.normalizeParameters();
-                    TypeConstant typeRightN = typeRight.normalizeParameters();
-                    if (typeLeftN.isDuckTypeAbleFrom(typeRightN))
-                        {
-                        // left is an interface; check the duck-typing
-                        relation = typeLeftN.isInterfaceAssignableFrom(
-                                        typeRightN, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty()
-                                ? Relation.IS_A : Relation.INCOMPATIBLE;
-                        }
-                    }
-
-                mapRelations.put(typeLeft, relation);
-                }
-            catch (RuntimeException | Error e)
-                {
-                mapRelations.remove(typeLeft);
-                throw e;
-                }
+            return relation;
             }
-        else if (relation == Relation.IN_PROGRESS)
+
+        Set<TypeConstant> setInProgress = m_tloInProgress.get();
+
+        if (setInProgress != null && setInProgress.contains(typeLeft))
             {
             // we are in recursion; this can only happen for duck-typing, for example:
             //
@@ -4765,7 +4677,114 @@ public abstract class TypeConstant
                 System.err.println("rejecting isA() due to a recursion:" +
                     " left=" + typeLeft.getValueString() + "; right=" + typeRight.getValueString());
                 }
-            mapRelations.put(typeLeft, relation = Relation.INCOMPATIBLE);
+            mapRelations.put(typeLeft, Relation.INCOMPATIBLE);
+            return Relation.INCOMPATIBLE;
+            }
+
+        // check the access modifier first
+        if (typeLeft.isAccessSpecified() || typeRight.isAccessSpecified())
+            {
+            Access accessLeft  = typeLeft.getAccess();
+            Access accessRight = typeRight.getAccess();
+            switch (accessRight)
+                {
+                case STRUCT:
+                    if (typeLeft.equals(getConstantPool().typeStruct()))
+                        {
+                        relation = Relation.IS_A;
+                        }
+                    else if (accessLeft != Access.STRUCT)
+                        {
+                        // struct is not assignable to anything but a struct
+                        relation = Relation.INCOMPATIBLE;
+                        }
+                    break;
+
+                case PUBLIC:
+                case PROTECTED:
+                case PRIVATE:
+                    if (accessLeft == Access.STRUCT ||
+                            accessLeft.isLessAccessibleThan(accessRight))
+                        {
+                        // for now, disallow any access widening
+                        relation = Relation.INCOMPATIBLE;
+                        }
+                    break;
+                }
+
+            if (relation == null)
+                {
+                relation = typeRight.removeAccess().
+                        calculateRelation(typeLeft.removeAccess());
+                }
+            mapRelations.put(typeLeft, relation);
+            return relation;
+            }
+
+        // then check immutability modifiers
+        if (typeLeft.isImmutabilitySpecified())
+            {
+            relation = typeRight.isImmutable()
+                ? typeRight.calculateRelation(typeLeft.removeImmutable())
+                : Relation.INCOMPATIBLE;
+
+            mapRelations.put(typeLeft, relation);
+            return relation;
+            }
+
+        if (typeRight.isImmutabilitySpecified())
+            {
+            relation = typeRight.removeImmutable().calculateRelation(typeLeft);
+
+            mapRelations.put(typeLeft, relation);
+            return relation;
+            }
+
+        // then check various "reserved" scenarios
+        relation = checkReservedCompatibility(typeLeft, typeRight);
+        if (relation != null)
+            {
+            mapRelations.put(typeLeft, relation);
+            return relation;
+            }
+
+        // now - a long journey
+        if (setInProgress == null)
+            {
+            m_tloInProgress.set(setInProgress = new HashSet<>());
+            }
+        setInProgress.add(typeLeft);
+        try
+            {
+            relation = typeRight.calculateRelationToLeft(typeLeft);
+
+            if (relation == Relation.INCOMPATIBLE)
+                {
+                TypeConstant typeLeftN  = typeLeft.normalizeParameters();
+                TypeConstant typeRightN = typeRight.normalizeParameters();
+                if (typeLeftN.isDuckTypeAbleFrom(typeRightN))
+                    {
+                    // left is an interface; check the duck-typing
+                    relation = typeLeftN.isInterfaceAssignableFrom(
+                                    typeRightN, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty()
+                            ? Relation.IS_A : Relation.INCOMPATIBLE;
+                    }
+                }
+
+            mapRelations.put(typeLeft, relation);
+            }
+        catch (RuntimeException | Error e)
+            {
+            mapRelations.remove(typeLeft);
+            throw e;
+            }
+        finally
+            {
+            setInProgress.remove(typeLeft);
+            if (setInProgress.isEmpty())
+                {
+                m_tloInProgress.remove();
+                }
             }
         return relation;
         }
@@ -5914,7 +5933,8 @@ public abstract class TypeConstant
         Map<TypeConstant, Relation> mapRelations = m_mapRelations;
         if (mapRelations == null)
             {
-            mapRelations = m_mapRelations = new HashMap<>();
+            s_tloInProgress.compareAndSet(this, null, new ThreadLocal<>());
+            mapRelations = m_mapRelations = new ConcurrentHashMap<>();
             }
         return mapRelations;
         }
@@ -6090,19 +6110,15 @@ public abstract class TypeConstant
      */
     public enum Relation
         {
-        IN_PROGRESS, IS_A, IS_A_WEAK, INCOMPATIBLE;
+        IS_A, IS_A_WEAK, INCOMPATIBLE;
 
         public Relation bestOf(Relation that)
             {
-            assert this != IN_PROGRESS && that != IN_PROGRESS;
-
             return this.ordinal() < that.ordinal() ? this : that;
             }
 
         public Relation worseOf(Relation that)
             {
-            assert this != IN_PROGRESS && that != IN_PROGRESS;
-
             return this.ordinal() < that.ordinal() ? that : this;
             }
         }
@@ -6163,7 +6179,14 @@ public abstract class TypeConstant
     /**
      * A cache of "isA" responses.
      */
-    private transient Map<TypeConstant, Relation> m_mapRelations;
+    private transient volatile Map<TypeConstant, Relation> m_mapRelations;
+
+    /**
+     * The set of "isA() in progress" types.
+     */
+    private transient volatile ThreadLocal<Set> m_tloInProgress;
+    private static final AtomicReferenceFieldUpdater<TypeConstant, ThreadLocal> s_tloInProgress =
+            AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, ThreadLocal.class, "m_tloInProgress");
 
     /**
      * A cache of "consumes" responses.
