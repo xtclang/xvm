@@ -128,6 +128,13 @@ public class ConstantPool
             return null;
             }
 
+        // before registering the constant, see if there is a simpler alternative to use; for
+        // example, this allows a type constant that refers to a typedef constant to be replaced
+        // with the type constant that the typedef refers to, removing a level of indirection;
+        // also it's imperative to avoid a recursive call from TypeConstant.equals() implementation,
+        // which has a possibility of locking up the ConcurrentHashMap.get()
+        constant = constant.resolveTypedefs();
+
         // check if the Constant is already registered
         Map<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
         Constant                constantOld  = mapConstants.get(constant);
@@ -135,11 +142,6 @@ public class ConstantPool
         boolean fRegisterRecursively = false;
         if (constantOld == null)
             {
-            // before registering the constant, see if there is a simpler alternative to use; for
-            // example, this allows a type constant that refers to a typedef constant to be replaced
-            // with the type constant that the typedef refers to, removing a level of indirection
-            constant = constant.resolveTypedefs();
-
             // constants that contain unresolved information need to be resolved before they are
             // registered; note that if m_fRecurseReg is true, we could be in a compile phase that has already
             // experienced one or more name resolution errors, and so there could still be unresolved

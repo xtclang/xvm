@@ -65,6 +65,7 @@
   it would return pool.clzType().getComponent() from getComponent() method, and resolve the
   type according to the content as Type<X>.
 
+- optimize TypeConstant.resolveTypedef()
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
