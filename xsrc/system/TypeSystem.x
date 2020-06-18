@@ -209,45 +209,115 @@ const TypeSystem
         {
         if (name == "")
             {
-//            java.lang.IllegalStateException: Unknown property: (TypeSystem).Property{property=primaryModule}
-//                at org.xvm.runtime.ClassTemplate.createPropertyRef(ClassTemplate.java:1386)
-//            return True, &primaryModule.actualType;
+// java.lang.IllegalStateException: Unknown property: (TypeSystem).Property{property=primaryModule}
+//    at org.xvm.runtime.ClassTemplate.createPropertyRef(ClassTemplate.java:1386)
+// TODO GG
+//          return True, &primaryModule.actualType;
             Module mod = primaryModule;
             return True, &mod.actualType;
+            }
+
+        // TODO GG: if (CacheEntry entry ?= lookupCache[name])
+        if (CacheEntry entry ?= lookupCache.getElement(name))
+            {
+            if (Type type ?= entry.type)
+                {
+                return True, type;
+                }
+
+            if (!hideExceptions, String message ?= entry.failure)
+                {
+                throw new InvalidType(message);
+                }
+
+            return False;
             }
 
         import lang.src.Parser;
         import lang.src.ast.TypeExpression;
 
-        Parser         parser = new Parser(name, allowModuleNames=True);
+        Parser         parser    = new Parser(name, allowModuleNames=True);
+        Exception?     exception = Null;
+        String?        failure   = Null;
         TypeExpression typeExpr;
         try
             {
             typeExpr = parser.parseTypeExpression();
+
+            // if the parser left something unparsed, then the type name is not valid
+            if (!parser.eof)
+                {
+                failure = $"Type name contains unparsable element(s): {name.quoted()}";
+                }
+            else
+                {
+                if (Type result := typeExpr.resolveType(this))
+                    {
+                    lookupCache[name] = new CacheEntry(result);
+                    return True, result;
+                    }
+                }
             }
         catch (Exception e)
             {
-            if (hideExceptions)
+            exception = e;
+            }
+
+        // TODO GG - here it is again
+        private Exception? trustMeItIsNullable(Exception? e) {return e;}
+        exception = trustMeItIsNullable(exception);
+
+        if (failure == Null && exception != Null)
+            {
+            failure = &exception.actualClass.name;
+            if (exception.text != Null)
                 {
-                return False;
+                failure += ": " + exception.text;
                 }
-
-            throw new InvalidType(cause = e);
             }
 
-        // if the parser left something unparsed, then the type name is not valid
-        if (!parser.eof)
-            {
-            return False;
-            }
+        lookupCache[name] = new CacheEntry(failure = failure);
 
-        if (Type result := typeExpr.resolveType(this, hideExceptions))
+        if (!hideExceptions && failure != Null)
             {
-            return True, result;
+            throw (exception?.is(InvalidType) : False)
+                    ? exception
+                    : new InvalidType(failure, cause = exception);
             }
 
         return False;
         }
+
+    /**
+     * A lazily instantiated cache for looking up type information by name.
+     */
+    private @Lazy LookupCache lookupCache.calc()
+        {
+        return new LookupCache();
+        }
+
+    /**
+     * A lightweight caching service implementation for looking up type information by name.
+     */
+    private service LookupCache
+        {
+        private HashMap<String, CacheEntry> cache = new HashMap();
+
+        @Op("[]") CacheEntry? getElement(String typeName)
+            {
+            return cache.getOrNull(typeName);
+            }
+
+        @Op("[]=") void setElement(String typeName, CacheEntry entry)
+            {
+            cache.putIfAbsent(typeName, entry);
+            }
+        }
+
+    /**
+     * A representation of a result from looking up a type by name.
+     */
+    private static const CacheEntry(Type? type = Null, String? failure = Null);
 
     /**
      * The modules in this type system that are shared with the type system of the parent container.
