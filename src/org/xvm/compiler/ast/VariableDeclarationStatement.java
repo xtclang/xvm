@@ -139,16 +139,17 @@ public class VariableDeclarationStatement
     @Override
     public void updateLValueFromRValueTypes(Context ctx, TypeConstant[] aTypes)
         {
-        assert aTypes != null && aTypes.length >= 1;
-
-        TypeExpression exprType = this.type;
-        if (exprType instanceof VariableTypeExpression)
+        if (aTypes != null && aTypes.length >= 1)
             {
-            exprType.setTypeConstant(aTypes[0]);
-
-            if (m_reg != null)
+            TypeExpression exprType = this.type;
+            if (exprType instanceof VariableTypeExpression)
                 {
-                m_reg.specifyActualType(aTypes[0]);
+                exprType.setTypeConstant(aTypes[0]);
+
+                if (m_reg != null)
+                    {
+                    m_reg.specifyActualType(aTypes[0]);
+                    }
                 }
             }
         }

@@ -1222,7 +1222,11 @@ public class Compiler
      */
     public static final String SUPER_CONSTRUCTOR_SKIPPED           = "COMPILER-157";
     /**
+     * An assertion used as an expression must throw (must not complete).
+     */
+    public static final String ASSERT_EXPRESSION_MUST_THROW        = "COMPILER-158";
+    /**
      * {0} is not yet implemented.
      */
-    public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";
+    public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
     }

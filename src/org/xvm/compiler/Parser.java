@@ -3383,7 +3383,26 @@ public class Parser
             case ASSERT_ONCE:
             case ASSERT_TEST:
             case ASSERT_DBG:
-                return new ThrowExpression(current(), null); // REVIEW (does not parse RND(...) or look for expression)
+                {
+                Token keyword = current();
+                Expression expr = null;
+                switch (peek().getId())
+                    {
+                    case SEMICOLON:
+                    case COMMA:
+                    case COND:
+                    case COLON:
+                    case R_PAREN:
+                    case R_SQUARE:
+                        break;
+
+                    default:
+                        expr = parseTernaryExpression();
+                        break;
+                    }
+
+                return new ThrowExpression(keyword, expr);
+                }
 
             case TODO:
                 return parseTodoExpression();

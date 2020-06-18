@@ -11,13 +11,15 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.op.Assert;
 import org.xvm.asm.op.Label;
-import org.xvm.asm.op.New_0;
 import org.xvm.asm.op.Throw;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -143,10 +145,40 @@ public class ThrowExpression
      */
     protected boolean validateThrow(Context ctx, ErrorListener errs)
         {
+        TypeConstant typeRequired;
+        boolean      fAssert      = false;
+        switch (keyword.getId())
+            {
+            case ASSERT:
+            case ASSERT_ARG:
+            case ASSERT_BOUNDS:
+            case ASSERT_TODO:
+                typeRequired = ctx.pool().typeBoolean();
+                fAssert = true;
+                break;
+
+            case ASSERT_RND:
+            case ASSERT_ONCE:
+            case ASSERT_TEST:
+            case ASSERT_DBG:
+                // throw requires an exception, but T0D0 and various asserts do not; make sure that
+                // the asserts are guaranteed to fail, since they do not & can not produce a value
+                log(errs, Severity.ERROR, Compiler.ASSERT_EXPRESSION_MUST_THROW, null);
+                return false;
+
+            case THROW:
+                typeRequired = ctx.pool().typeException();
+                break;
+
+            default:
+                log(errs, Severity.FATAL, Compiler.FATAL_ERROR, "(throw keyword=" + keyword + ")");
+                return false;
+            }
+
         if (expr != null)
             {
             // validate the throw value expressions
-            Expression exprNew = expr.validate(ctx, pool().typeException(), errs);
+            Expression exprNew = expr.validate(ctx, typeRequired, errs);
             if (exprNew != expr)
                 {
                 if (exprNew == null)
@@ -155,7 +187,13 @@ public class ThrowExpression
                     }
                 expr = exprNew;
                 }
+
+            if (fAssert && !exprNew.isConstantFalse())
+                {
+                log(errs, Severity.ERROR, Compiler.ASSERT_EXPRESSION_MUST_THROW, null);
+                }
             }
+
         return true;
         }
 
@@ -225,23 +263,37 @@ public class ThrowExpression
      */
     protected void generateThrow(Context ctx, Code code, ErrorListener errs)
         {
-        Argument arg;
-        if (expr == null)
+        String sThrow;
+        switch (keyword.getId())
             {
-            ConstantPool   pool = pool();
-            TypeConstant   type = pool.ensureEcstasyTypeConstant("Assertion");
-            TypeInfo       info = type.ensureTypeInfo(errs);
-            MethodConstant id   = info.findConstructor(null, null);
-                           arg  = createRegister(type, true);
+            case THROW:
+                Argument arg = expr.generateArgument(ctx, code, true, true, errs);
+                code.add(new Throw(arg));
+                return;
 
-            code.add(new New_0(id, arg));
-            }
-        else
-            {
-            arg = expr.generateArgument(ctx, code, true, true, errs);
+            case ASSERT:
+                sThrow = "IllegalState";
+                break;
+
+            case ASSERT_ARG:
+                sThrow = "IllegalArgument";
+                break;
+
+            case ASSERT_BOUNDS:
+                sThrow = "OutOfBounds";
+                break;
+
+            case ASSERT_TODO:
+                sThrow = "UnsupportedOperation";
+                break;
+
+            default:
+                throw new IllegalStateException("keyword="+keyword);
             }
 
-        code.add(new Throw(arg));
+        ConstantPool   pool   = ctx.pool();
+        MethodConstant constr = AssertStatement.findExceptionConstructor(pool, sThrow, errs);
+        code.add(new Assert(pool.valFalse(), constr));
         }
 
 
