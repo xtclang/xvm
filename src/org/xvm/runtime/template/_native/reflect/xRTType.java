@@ -116,7 +116,7 @@ public class xRTType
         markNativeMethod("purify"         , null, null);
         markNativeMethod("relational"     , null, null);
 
-        final String[] PARAM_TYPE    = new String[] {"Type!<>"};
+        final String[] PARAM_TYPE    = new String[] {"reflect.Type!<>"};
         final String[] PARAM_METHODS = new String[] {"collections.Sequence<reflect.Method>"};
         final String[] PARAM_PROPS   = new String[] {"collections.Sequence<reflect.Property>"};
 
@@ -1342,7 +1342,7 @@ public class xRTType
      */
     protected static EnumHandle makeFormHandle(Frame frame, TypeConstant type)
         {
-        xEnum enumForm = (xEnum) INSTANCE.f_templates.getTemplate("Type.Form");
+        xEnum enumForm = (xEnum) INSTANCE.f_templates.getTemplate("reflect.Type.Form");
 
         switch (type.getFormat())
             {

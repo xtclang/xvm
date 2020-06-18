@@ -12,7 +12,9 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
-import org.xvm.runtime.template.xRef.IndexedRefHandle;
+import org.xvm.runtime.template.reflect.xRef;
+import org.xvm.runtime.template.reflect.xRef.IndexedRefHandle;
+import org.xvm.runtime.template.reflect.xVar;
 
 
 /**

@@ -256,7 +256,7 @@ public class PropertyDeclarationStatement
             {
             if (!(sName.equals("outer")
                     && container.getIdentityConstant().getModuleConstant().isEcstasyModule()
-                    && container.getIdentityConstant().getPathString().equals("Outer.Inner")))
+                    && container.getIdentityConstant().getPathString().equals("reflect.Outer.Inner")))
                 {
                 log(errs, Severity.ERROR, Compiler.NAME_RESERVED, sName);
                 return;

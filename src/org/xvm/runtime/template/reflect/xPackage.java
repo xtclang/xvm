@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.reflect;
 
 
 import java.util.ArrayList;
@@ -27,6 +27,10 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template._native.reflect.xRTClass;
 

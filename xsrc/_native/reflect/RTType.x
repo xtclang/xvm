@@ -1,5 +1,3 @@
-import ecstasy.TypeSystem;
-
 import ecstasy.reflect.Access;
 import ecstasy.reflect.Annotation;
 import ecstasy.reflect.MultiMethod;

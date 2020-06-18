@@ -147,7 +147,7 @@ public class xArray
 
         markNativeMethod("getElement", INT, ELEMENT_TYPE);
         markNativeMethod("setElement", new String[] {"numbers.Int64", "Element"}, VOID);
-        markNativeMethod("elementAt", INT, new String[] {"Var<Element>"});
+        markNativeMethod("elementAt", INT, new String[] {"reflect.Var<Element>"});
         markNativeMethod("add", ELEMENT_TYPE, ARRAY);
         markNativeMethod("addAll", new String[] {"Iterable<Element>"}, ARRAY);
         markNativeMethod("insert", new String[] {"numbers.Int64", "Element"}, ARRAY);

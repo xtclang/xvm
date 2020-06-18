@@ -27,16 +27,17 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
-import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xPackage;
-import org.xvm.runtime.template.xRef.RefHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+
+import org.xvm.runtime.template.reflect.xModule;
+import org.xvm.runtime.template.reflect.xPackage;
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 

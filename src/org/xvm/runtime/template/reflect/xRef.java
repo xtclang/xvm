@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.reflect;
 
 
 import java.util.List;
@@ -29,11 +29,17 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 import org.xvm.runtime.VarSupport;
 
+import org.xvm.runtime.template.Identity;
+import org.xvm.runtime.template.IndexSupport;
+import org.xvm.runtime.template.Mixin;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
+
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
+
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
-
-import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**

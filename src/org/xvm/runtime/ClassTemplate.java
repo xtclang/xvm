@@ -44,15 +44,16 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xRef;
-import org.xvm.runtime.template.xRef.RefHandle;
-import org.xvm.runtime.template.xVar;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
+
+import org.xvm.runtime.template.reflect.xRef;
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
+import org.xvm.runtime.template.reflect.xVar;
 
 import org.xvm.runtime.template.text.xString;
 

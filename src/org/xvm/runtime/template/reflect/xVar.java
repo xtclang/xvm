@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.reflect;
 
 
 import org.xvm.asm.ClassStructure;
@@ -13,12 +13,13 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.VarSupport;
-
 import org.xvm.runtime.Utils.BinaryAction;
 import org.xvm.runtime.Utils.InPlaceVarBinary;
 import org.xvm.runtime.Utils.InPlaceVarUnary;
 import org.xvm.runtime.Utils.UnaryAction;
+import org.xvm.runtime.VarSupport;
+
+import org.xvm.runtime.template.IndexSupport;
 
 
 /**

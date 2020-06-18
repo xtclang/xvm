@@ -17,7 +17,8 @@ import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xVar;
+
+import org.xvm.runtime.template.reflect.xVar;
 
 
 /**

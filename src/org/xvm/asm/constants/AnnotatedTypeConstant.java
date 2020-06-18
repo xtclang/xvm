@@ -23,7 +23,7 @@ import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.xRef;
+import org.xvm.runtime.template.reflect.xRef;
 
 import org.xvm.util.Severity;
 

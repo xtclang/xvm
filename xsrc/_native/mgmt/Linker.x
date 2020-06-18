@@ -1,5 +1,3 @@
-import ecstasy.TypeSystem;
-
 import ecstasy.mgmt.Container;
 import ecstasy.mgmt.Container.ApplicationControl;
 import ecstasy.mgmt.ModuleRepository;

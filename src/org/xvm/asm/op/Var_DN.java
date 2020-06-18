@@ -5,7 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpVar;
@@ -19,7 +18,7 @@ import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template.annotations.xInjectedRef.InjectedHandle;
 
-import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;

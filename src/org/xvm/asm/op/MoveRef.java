@@ -15,8 +15,8 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
-import org.xvm.runtime.template.xRef;
-import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.reflect.xRef;
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 
 /**

@@ -63,7 +63,7 @@ public class xRTFunction
         {
         TO_ARRAY = getStructure().findMethod("toArray", 1);
 
-        markNativeMethod("bind", new String[] {"Type<Object>", "reflect.Parameter", "Object"}, null);
+        markNativeMethod("bind", new String[] {"reflect.Type<Object>", "reflect.Parameter", "Object"}, null);
         markNativeMethod("bind", new String[] {"collections.Map<reflect.Parameter, Object>"}, null);
         markNativeMethod("invoke", null, null);
 

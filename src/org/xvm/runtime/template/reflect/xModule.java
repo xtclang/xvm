@@ -1,4 +1,4 @@
-package org.xvm.runtime.template;
+package org.xvm.runtime.template.reflect;
 
 
 import java.util.HashMap;
@@ -34,6 +34,9 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
 

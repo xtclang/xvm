@@ -1,6 +1,5 @@
 module TestReflection
     {
-    import ecstasy.TypeSystem;
     import ecstasy.reflect.TypeTemplate;
 
     @Inject ecstasy.io.Console console;

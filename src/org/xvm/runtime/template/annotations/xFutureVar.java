@@ -24,9 +24,10 @@ import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
-import org.xvm.runtime.template.xVar;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+
+import org.xvm.runtime.template.reflect.xVar;
 
 
 /**

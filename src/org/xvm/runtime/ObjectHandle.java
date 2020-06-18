@@ -14,9 +14,11 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xObject;
-import org.xvm.runtime.template.xRef.RefHandle;
+
+import org.xvm.runtime.template.collections.xArray;
+
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.util.ListMap;
 

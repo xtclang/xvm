@@ -17,8 +17,8 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
-import org.xvm.runtime.template.xRef;
-import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.reflect.xRef;
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 

@@ -9,10 +9,11 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpInPlaceAssign;
 
 import org.xvm.asm.constants.PropertyConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
-import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 
 /**

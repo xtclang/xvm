@@ -5,6 +5,8 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import java.util.Objects;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -47,7 +49,9 @@ public class ImportStatement
         this.qualifiedName = qualifiedName;
 
         // the qualified name will have to be resolved
-        this.resolver = new NameResolver(this, qualifiedName.stream().map(token -> (String) token.getValue()).iterator());
+        this.resolver = new NameResolver(this, qualifiedName.stream()
+                            .map(t -> (String) t.getValue())
+                            .iterator());
         }
 
     /**
@@ -68,7 +72,10 @@ public class ImportStatement
         this.star          = star;
 
         // the qualified name will have to be resolved
-        this.resolver = new NameResolver(this, qualifiedName.stream().map(token -> (String) token.getValue()).iterator());
+        this.resolver = new NameResolver(this, qualifiedName.stream()
+                            .map(t -> (String) t.getValue())
+                            .filter(Objects::nonNull)
+                            .iterator());
         }
 
 

@@ -27,12 +27,13 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
 
-import org.xvm.runtime.template.collections.xBooleanArray;
-
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
-import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xService;
+
+import org.xvm.runtime.template.collections.xBooleanArray;
+
+import org.xvm.runtime.template.reflect.xModule;
 
 
 /**
@@ -245,7 +246,7 @@ public abstract class Container
                 ++index;
                 }
 
-            ClassTemplate    templateTS  = f_templates.getTemplate("TypeSystem");
+            ClassTemplate    templateTS  = f_templates.getTemplate("reflect.TypeSystem");
             ClassComposition clzTS       = templateTS.getCanonicalClass();
             MethodStructure  constructor = templateTS.getStructure().findMethod("construct", 2);
             ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];

@@ -44,7 +44,7 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.util.ListMap;
 
