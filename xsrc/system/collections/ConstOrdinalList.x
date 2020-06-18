@@ -123,7 +123,7 @@ const ConstOrdinalList
     // ----- List methods --------------------------------------------------------------------------
 
     @Override
-    @Op("[]") Int getElement(Int index)    // TODO GG - issues if I use "Index" instead of "Int"
+    @Op("[]") Int getElement(Int index)
         {
         assert:bounds index >= 0 && index < size;
 
