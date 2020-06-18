@@ -108,6 +108,7 @@ public class IfStatement
 
         ctx = ctx.enterIf();
 
+        int cExits = 0;
         for (int i = 0, c = getConditionCount(); i < c; ++i)
             {
             AstNode cond = getCondition(i);
@@ -116,6 +117,14 @@ public class IfStatement
             // is a multi-value with the first value being a boolean
             if (cond instanceof AssignmentStatement)
                 {
+                if (i > 0)
+                    {
+                    // AssignmentStatement implicitly introduces a new scope that is only applicable
+                    // to the "then" portion of the "if"
+                    ctx = ctx.enterAnd();
+                    cExits++;
+                    }
+
                 AssignmentStatement stmtOld = (AssignmentStatement) cond;
                 AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
                 if (stmtNew == null)
@@ -130,7 +139,7 @@ public class IfStatement
                 }
             else
                 {
-                if (c > 1)
+                if (i > 0)
                     {
                     ctx = ctx.enterAnd();
                     }
@@ -147,7 +156,7 @@ public class IfStatement
                     conds.set(i, cond);
                     }
 
-                if (c > 1)
+                if (i > 0)
                     {
                     ctx = ctx.exit();
                     }
@@ -164,6 +173,11 @@ public class IfStatement
         else
             {
             stmtThen = stmtThenNew;
+            }
+
+        while (cExits-- > 0)
+            {
+            ctx = ctx.exit();
             }
 
         // create a context for "else" even if there is no statement, thus facilitating a merge;

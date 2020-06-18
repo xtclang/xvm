@@ -27,10 +27,8 @@ const ChildTypeExpression(TypeExpression          parent,
     @Override
     conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False)
         {
-        Type  parentType  = Object; // TODO GG these should not need to be pre-declared / init'd
-        Class parentClass = Object;
-        if (parentType  := parent.resolveType(typeSystem, hideExceptions),
-            parentClass := parentType.fromClass())
+        if (Type  parentType  := parent.resolveType(typeSystem, hideExceptions),
+            Class parentClass := parentType.fromClass())
             {
             // resolve names
             Type type = parentClass;
