@@ -1,13 +1,9 @@
 module TestMaps
     {
-    import ecstasy.collections.HashMap;
-    import ecstasy.collections.ListMap;
     import ecstasy.collections.maps.KeyEntries;
 
-    import ecstasy.Duration;
-
-    @Inject ecstasy.io.Console console;
-    @Inject ecstasy.Timer      timer;
+    @Inject Console console;
+    @Inject Timer   timer;
 
     void run()
         {

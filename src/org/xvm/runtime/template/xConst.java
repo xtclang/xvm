@@ -91,13 +91,13 @@ public class xConst
                 findMethod("construct", 1, typeBitArray);
 
             // DateTime support
-            DATETIME_CONSTRUCT = f_templates.getClassStructure("DateTime").
+            DATETIME_CONSTRUCT = f_templates.getClassStructure("temporal.DateTime").
                 findMethod("construct", 1, pool.typeString());
-            DATE_CONSTRUCT     = f_templates.getClassStructure("Date").
+            DATE_CONSTRUCT     = f_templates.getClassStructure("temporal.Date").
                 findMethod("construct", 1, pool.typeString());
-            TIME_CONSTRUCT     = f_templates.getClassStructure("Time").
+            TIME_CONSTRUCT     = f_templates.getClassStructure("temporal.Time").
                 findMethod("construct", 1, pool.typeString());
-            DURATION_CONSTRUCT = f_templates.getClassStructure("Duration").
+            DURATION_CONSTRUCT = f_templates.getClassStructure("temporal.Duration").
                 findMethod("construct", 1, pool.typeString());
             VERSION_CONSTRUCT = f_templates.getClassStructure("reflect.Version").
                 findMethod("construct", 1, pool.typeString());

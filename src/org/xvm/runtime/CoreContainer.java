@@ -16,16 +16,18 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
-import org.xvm.runtime.template._native.xLocalClock;
-import org.xvm.runtime.template._native.xNanosTimer;
-import org.xvm.runtime.template._native.xRTRandom;
 import org.xvm.runtime.template._native.xTerminalConsole;
 
 import org.xvm.runtime.template._native.mgmt.xLinker;
 
+import org.xvm.runtime.template._native.numbers.xRTRandom;
+
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
+
+import org.xvm.runtime.template._native.temporal.xLocalClock;
+import org.xvm.runtime.template._native.temporal.xNanosTimer;
 
 
 /**
@@ -93,17 +95,17 @@ public class CoreContainer
     protected void initResources(ConstantPool pool)
         {
         // +++ LocalClock
-        TypeConstant typeClock = pool.ensureEcstasyTypeConstant("Clock");
+        TypeConstant typeClock = pool.ensureEcstasyTypeConstant("temporal.Clock");
 
         f_mapResources.put(new InjectionKey("clock"     , typeClock), this::ensureDefaultClock);
         f_mapResources.put(new InjectionKey("localClock", typeClock), this::ensureLocalClock);
         f_mapResources.put(new InjectionKey("utcClock"  , typeClock), this::ensureUTCClock);
 
         // +++ NanosTimer
-        xNanosTimer templateRTTimer = (xNanosTimer) f_templates.getTemplate("_native.NanosTimer");
+        xNanosTimer templateRTTimer = (xNanosTimer) f_templates.getTemplate("_native.temporal.NanosTimer");
         if (templateRTTimer != null)
             {
-            TypeConstant typeTimer = pool.ensureEcstasyTypeConstant("Timer");
+            TypeConstant typeTimer = pool.ensureEcstasyTypeConstant("temporal.Timer");
 
             Function<Frame, ObjectHandle> supplierTimer = (frame) ->
                 templateRTTimer.createServiceHandle(
@@ -158,10 +160,10 @@ public class CoreContainer
         ObjectHandle hClock = m_hLocalClock;
         if (hClock == null)
             {
-            xLocalClock templateRTClock = (xLocalClock) f_templates.getTemplate("_native.LocalClock");
+            xLocalClock templateRTClock = (xLocalClock) f_templates.getTemplate("_native.temporal.LocalClock");
             if (templateRTClock != null)
                 {
-                TypeConstant typeClock = frame.poolContext().ensureEcstasyTypeConstant("Clock");
+                TypeConstant typeClock = frame.poolContext().ensureEcstasyTypeConstant("temporal.Clock");
                 m_hLocalClock = hClock = templateRTClock.createServiceHandle(
                     createServiceContext("LocalClock"),
                     templateRTClock.getCanonicalClass(), typeClock);
@@ -221,7 +223,7 @@ public class CoreContainer
         ObjectHandle hRnd = m_hRandom;
         if (hRnd == null)
             {
-            xRTRandom templateRTRandom = (xRTRandom) f_templates.getTemplate("_native.RTRandom");
+            xRTRandom templateRTRandom = (xRTRandom) f_templates.getTemplate("_native.numbers.RTRandom");
             if (templateRTRandom != null)
                 {
                 TypeConstant typeRandom = frame.poolContext().ensureEcstasyTypeConstant("numbers.Random");

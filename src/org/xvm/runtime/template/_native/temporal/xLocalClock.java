@@ -1,4 +1,4 @@
-package org.xvm.runtime.template._native;
+package org.xvm.runtime.template._native.temporal;
 
 
 import java.util.Timer;
@@ -52,7 +52,7 @@ public class xLocalClock
         markNativeProperty("now");
         markNativeProperty("timezone");
 
-        markNativeMethod("schedule", new String[]{"DateTime", "Clock.Alarm"}, null);
+        markNativeMethod("schedule", new String[]{"temporal.DateTime", "temporal.Clock.Alarm"}, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -124,7 +124,7 @@ public class xLocalClock
         if (hTimeZone == null)
             {
             ConstantPool    pool           = pool();
-            ClassStructure  structTimeZone = f_templates.getClassStructure("TimeZone");
+            ClassStructure  structTimeZone = f_templates.getClassStructure("temporal.TimeZone");
             TypeConstant    typeTimeZone   = structTimeZone.getCanonicalType();
             TypeComposition clzTimeZone    = f_templates.resolveClass(typeTimeZone);
 
@@ -151,7 +151,7 @@ public class xLocalClock
         if (clz == null)
             {
             clz = m_clzDateTime =
-                f_templates.getTemplate("DateTime").getCanonicalClass();
+                f_templates.getTemplate("temporal.DateTime").getCanonicalClass();
             }
         return clz;
         }

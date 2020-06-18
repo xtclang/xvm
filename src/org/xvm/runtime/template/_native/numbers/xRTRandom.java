@@ -1,4 +1,4 @@
-package org.xvm.runtime.template._native;
+package org.xvm.runtime.template._native.numbers;
 
 
 import java.util.Random;

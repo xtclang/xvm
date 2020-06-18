@@ -1,4 +1,4 @@
-package org.xvm.runtime.template._native;
+package org.xvm.runtime.template._native.temporal;
 
 
 import java.util.Timer;
@@ -49,14 +49,14 @@ public class xNanosTimer
     @Override
     public void initNative()
         {
-        s_clzDuration = f_templates.getTemplate("Duration").getCanonicalClass();
+        s_clzDuration = f_templates.getTemplate("temporal.Duration").getCanonicalClass();
 
         markNativeProperty("elapsed");
 
         markNativeMethod("start"   , VOID, null);
         markNativeMethod("stop"    , VOID, null);
         markNativeMethod("reset"   , VOID, null);
-        markNativeMethod("schedule", new String[]{"Duration", "Timer.Alarm"}, null);
+        markNativeMethod("schedule", new String[]{"temporal.Duration", "temporal.Timer.Alarm"}, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
