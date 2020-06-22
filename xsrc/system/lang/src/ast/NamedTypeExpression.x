@@ -109,13 +109,7 @@ const NamedTypeExpression(Token[]?          moduleNames,
                 {
                 if (Type paramType := params[i].resolveType(typeSystem, hideExceptions))
                     {
-                    // TODO GG paramTypes[i] = paramType;
-                    //java.lang.NullPointerException
-                    //	at org.xvm.runtime.template._native.reflect.xRTType.invokeParameterize(xRTType.java:1247)
-                    //	at org.xvm.runtime.template._native.reflect.xRTType.invokeNative1(xRTType.java:246)
-                    //	at org.xvm.runtime.CallChain.invoke(CallChain.java:137)
-
-                    paramTypes.add(paramType);
+                    paramTypes[i] = paramType;
                     }
                 else
                     {
