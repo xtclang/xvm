@@ -178,16 +178,21 @@ const Path
      *
      * @param that  another path
      *
-     * @return true iff this path begins with the same sequence of path elements as contained in the
+     * @return True iff this path begins with the same sequence of path elements as contained in the
      *         specified path
      */
     @Override
-    Boolean startsWith(Path! that)
+    Boolean startsWith(Sequence!<Path> that)
         {
+        if (!that.is(Path))
+            {
+            return super(that);
+            }
+
         Int tailSize = this.size - that.size;
         if (tailSize < 0 || this.absolute != that.absolute)
             {
-            return false;
+            return False;
             }
 
         // handle trailing '/'
@@ -213,21 +218,26 @@ const Path
      *
      * @param that  another path
      *
-     * @return true iff this path ends with the same sequence of path elements as contained in the
+     * @return True iff this path ends with the same sequence of path elements as contained in the
      *         specified path
      */
     @Override
-    Boolean endsWith(Path! that)
+    Boolean endsWith(Sequence!<Path> that)
         {
+        if (!that.is(Path))
+            {
+            return super(that);
+            }
+
         switch (this.size <=> that.size)
             {
             case Lesser:
-                return false;
+                return False;
 
             case Greater:
                 if (that.absolute)
                     {
-                    return false;
+                    return False;
                     }
                 continue;
 

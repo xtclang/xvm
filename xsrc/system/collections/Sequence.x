@@ -226,7 +226,7 @@ interface Sequence<Element>
      *
      * @return True iff this sequence starts-with that sequence
      */
-    Boolean startsWith(Sequence that) // TODO GG allow "Sequence!"
+    Boolean startsWith(Sequence! that)
         {
         Int count = that.size;
         if (count == 0)
@@ -260,7 +260,7 @@ interface Sequence<Element>
      *
      * @return True iff this sequence end-with that sequence
      */
-    Boolean endsWith(Sequence that) // TODO GG allow "Sequence!"
+    Boolean endsWith(Sequence! that)
         {
         Int count = that.size;
         if (count == 0)
