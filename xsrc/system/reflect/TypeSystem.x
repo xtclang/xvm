@@ -263,10 +263,6 @@ const TypeSystem
             exception = e;
             }
 
-        // TODO GG - here it is again
-        private Exception? trustMeItIsNullable(Exception? e) {return e;}
-        exception = trustMeItIsNullable(exception);
-
         if (failure == Null && exception != Null)
             {
             failure = &exception.actualClass.name;

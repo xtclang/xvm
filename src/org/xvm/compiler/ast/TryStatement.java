@@ -165,7 +165,7 @@ public class TryStatement
 
         if (cCatches > 0)
             {
-            Context ctxNext = ctxOrig.enterIf();
+            Context ctxNext = ctxOrig.enter();
 
             // now we collect all of the impact from the end of the "try" block, together with all
             // of the impact from the end of each "catch" block, which is semantically the same
@@ -184,6 +184,8 @@ public class TryStatement
             //                            // unreachable else clause
             //                            throw ...
             //                            }
+            // the only difference is that the top context is not an IfContext, which prevents any
+            // narrowing assumptions from "catch" scopes percolating up to the original context
 
             if (ctxTryBlock.isReachable())
                 {
@@ -230,11 +232,9 @@ public class TryStatement
                 ctxNext = ctxNext.enterFork(false);
                 if (i == cCatches - 1)
                     {
-                    // the last one - mark unreachable and exit all the way up
-                    ctxNext.setReachable(false);
                     while (i-- >= 0)
                         {
-                        // exit ForkContext(false); exit IfContext()
+                        // exit enterFork(false); exit enterIf();
                         ctxNext = ctxNext.exit().exit();
                         }
                     break;

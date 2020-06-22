@@ -2,37 +2,43 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run( )
         {
         console.println();
 
-        Boolean flag1 = True;
-        Boolean flag2 = !flag1;
-        Int?    opt   = 42;
-
-        if (Int i := f(1), Int j := f(i))
+        Boolean    flag      = False;
+        Exception? exception = Null;
+        try
             {
-            console.println(j);
+            if (flag)
+                {
+                return;
+                }
+            }
+        catch (Exception e)
+            {
+            exception = e;
             }
 
-        if (flag1 && flag2, Int j := f(1))
+        if (exception != Null)
             {
-            console.println(j);
+            console.println(exception);
             }
 
-        if (flag1, Int j ?= opt)
+        Int lo;
+        try
             {
-            console.println(j);
+            flag = False;
+            }
+        catch (OutOfBounds e)
+            {
+            return;
+            }
+        finally
+            {
+            lo = 2;
             }
 
-        if (flag1, opt != Null)
-            {
-            console.println(opt + 1);
-            }
-        }
-
-     conditional Int f(Int i)
-        {
-        return True, i+1;
+        console.println(lo + 1);
         }
     }
