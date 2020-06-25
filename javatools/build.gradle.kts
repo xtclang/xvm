@@ -19,7 +19,7 @@ tasks.register<Copy>("copyUtils") {
     into(file("$buildDir/classes/java/main"))
 }
 
-tasks.withType(Jar::class) {
+tasks.jar {
     val copyImplicits = tasks["copyImplicits"]
     val copyUtils     = tasks["copyUtils"]
 
