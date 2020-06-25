@@ -12,11 +12,23 @@ tasks.register<Copy>("copyImplicits") {
     into(file("$buildDir/resources/main/"))
 }
 
+tasks.register<Copy>("copyUtils") {
+    description = "Copy the classes from :utils project into the build directory."
+    from(file("${project(":utils").buildDir}/classes/java/main"))
+    include("**/*.class")
+    into(file("$buildDir/classes/java/main"))
+}
+
 tasks.withType(Jar::class) {
     val copyImplicits = tasks["copyImplicits"]
+    val copyUtils     = tasks["copyUtils"]
 
     dependsOn(copyImplicits)
+    dependsOn(copyUtils)
+
     mustRunAfter(copyImplicits)
+    mustRunAfter(copyUtils)
+
     manifest {
         attributes["Manifest-Version"] = "1.0"
         attributes["Sealed"] = "true"
