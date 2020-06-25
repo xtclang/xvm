@@ -12,16 +12,16 @@ ifneq ($(OS_NAME),windows)
     SHARED_IMPL = os_unux.c
 endif
 
+# result executable name
+EXE_DIR  ?= ../../../build/exe/
+EXE_NAME ?= $(EXE_DIR)$(OS_NAME)_launcher
+
 # windows resource linking
 ifeq ($(OS_NAME),windows)
     RC_FILE  ?= resources.rc
-    RES_FILE ?= resources.o
+    RES_FILE ?= $(EXE_DIR)resources.o
 	RESOURCES_TARGET = resfile
 endif
-
-# result executable name
-EXE_NAME ?= $(OS_NAME)_launcher
-
 
 all: compile
 
@@ -39,15 +39,15 @@ ifeq ($(OS_NAME),windows)
 	rm $(RES_FILE) 2>/dev/null || true
 endif
 
-vg:
-	valgrind --track-origins=yes \
-		--leak-check=full \
-		--leak-check=full \
-		--show-reachable=yes \
-		$(EXE_NAME)
-
-run:
-	./$(EXE_NAME)
+# vg:
+# 	valgrind --track-origins=yes \
+# 		--leak-check=full \
+# 		--leak-check=full \
+# 		--show-reachable=yes \
+# 		$(EXE_NAME)
+#
+# run:
+# 	./$(EXE_NAME)
 
 # windows resource linking
 resfile:

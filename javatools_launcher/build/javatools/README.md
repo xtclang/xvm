@@ -1,5 +1,7 @@
-This directory is for testing purposes only. The native launchers in the `../launcher` directory reference the
-`xvm.jar` file in this relative directory. For purposes of testing, the "main class" in the `xvm.jar` is:
+This directory is for testing purposes only. The native launchers in the
+`../exe` directory reference the `javatools.jar` file in this relative
+directory. For purposes of testing, the "main class" in the `javatools.jar`
+is:
 
     class Echo
         {

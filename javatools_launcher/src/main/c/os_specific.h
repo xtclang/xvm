@@ -2,16 +2,16 @@
 
 #define DEFAULT_EXEC "java"
 #define DEFAULT_OPTS "-Xms256m -Xmx1024m -ea"
-#define PROTO_JAR    "xvm.jar"
-#define PROTO_LIB    "xvm.xtc"
+#define PROTO_JAR    "javatools.jar"
+#define PROTO_LIB    "javatools_bridge.xtc"
 
 #ifdef windowsLauncher
 #define FILE_SEPERATOR '\\'
-#define PROTO_DIR      "..\\prototype\\"
+#define PROTO_DIR      "..\\javatools\\"
 #define LIB_DIR        "..\\lib\\"
 #else
 #define FILE_SEPERATOR '/'
-#define PROTO_DIR      "../prototype/"
+#define PROTO_DIR      "../javatools/"
 #define LIB_DIR        "../lib/"
 #endif
 
