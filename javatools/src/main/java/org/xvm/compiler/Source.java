@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
+import java.nio.file.Path;
+
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 
@@ -189,7 +191,11 @@ public class Source
         String[] segments = Handy.parseDelimitedString(sFile, '/');
         for (String segment : segments)
             {
-            assert segment.length() > 0;
+            if (segment.length() == 0)
+                {
+                return null;
+                }
+
             if (segment.equals("."))
                 {
                 // nothing to do
@@ -197,29 +203,89 @@ public class Source
             else if (segment.equals(".."))
                 {
                 file = file.getParentFile();
-                if (file == null || !file.exists() || ++m_cUp > m_cDirDepth)
+                if (file == null || ++m_cUp > m_cDirDepth)
                     {
                     return null;
                     }
                 }
             else
                 {
-                if (!file.isDirectory())
+                if (file.exists() && !file.isDirectory())
                     {
                     return null;
                     }
+
                 file = new File(file, segment);
+                --m_cUp;
+                }
+            }
+
+        if (!file.exists())
+            {
+            // the file may be in the resources directory
+            File fileTop = getTopDir();
+            File fileRes = getResourceDir();
+            if (fileTop != null && fileRes != null)
+                {
+                Path path    = file.toPath().normalize();
+                Path pathTop = fileTop.toPath().normalize();
+                Path pathRes = fileRes.toPath().normalize();
+                Path pathRel = pathTop.relativize(path);
+                file = pathRes.resolve(pathRel).toFile();
                 if (!file.exists())
                     {
                     return null;
                     }
-                --m_cUp;
                 }
             }
 
         return fDir == file.isDirectory() ? file : null;
         }
     private transient int m_cUp;    // Java needs multiple return values. This is a hack.
+
+    /**
+     * @return the directory containing the module, or null if it cannot be determined
+     */
+    private File getTopDir()
+        {
+        if (m_file == null)
+            {
+            return null;
+            }
+
+        File file = m_file.getAbsoluteFile().getParentFile();
+        for (int i = 0, c = m_cDirDepth; i < c; ++i)
+            {
+            file = file.getParentFile();
+            if (file == null)
+                {
+                return null;
+                }
+            }
+        return file;
+        }
+
+    /**
+     * @return the "resources" directory, if one exists
+     */
+    private File getResourceDir()
+        {
+        File file = getTopDir();
+        if (file != null)
+            {
+            file = file.getParentFile();
+            if (file != null)
+                {
+                file = new File(file, "resources");
+                if (file.exists() && file.isDirectory())
+                    {
+                    return file;
+                    }
+                }
+            }
+        return null;
+        }
+
 
     /**
      * Load a file (as text) referenced from inside another source file.

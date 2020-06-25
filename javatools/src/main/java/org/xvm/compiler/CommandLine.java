@@ -512,9 +512,7 @@ public class CommandLine
             File moduleFile = findModule(file);
             if (moduleFile != null && !modulesByFile.containsKey(moduleFile))
                 {
-                // TODO this is a temporary work-around to allow the ../../resource directory to be accessed
-                int cDepth = getModuleName(moduleFile).equals("Ecstasy.xtclang.org") ? 3 : 0;
-                mapModules.putIfAbsent(moduleFile, buildTree(moduleFile, cDepth));
+                mapModules.putIfAbsent(moduleFile, buildTree(moduleFile, 0));
                 }
             }
         if (mapModules.isEmpty())

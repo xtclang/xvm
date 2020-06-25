@@ -98,7 +98,7 @@ const TypeSystem
         import lang.src.Parser;
         import lang.src.ast.ImportStatement;
 
-        String                source     = $../../../resources/implicit.x;
+        String                source     = $/implicit.x;
         Parser                parser     = new Parser(source);
         // TODO GG - this should not have compiled (accessing non-static field from static context)
         // assert Module         mackModule := moduleByQualifiedName.get(MackKernel);
