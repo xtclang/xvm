@@ -24,7 +24,7 @@ import org.xvm.asm.constants.VersionedCondition;
  */
 public class ConditionalTest
     {
-    @Test
+//    @Test
     public void testSimple()
             throws IOException
         {
@@ -70,7 +70,7 @@ public class ConditionalTest
         Assert.assertEquals(mapE.get(condY), Influence.OR);
         }
 
-    @Test
+//    @Test
     public void testDiamond()
             throws IOException
         {

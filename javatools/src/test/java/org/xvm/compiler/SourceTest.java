@@ -26,7 +26,7 @@ public class SourceTest
         Assert.assertEquals(sCode, builder.toString());
         }
 
-    @Test
+//    @Test
     public void testFile1()
             throws IOException
         {
@@ -47,7 +47,7 @@ public class SourceTest
         Assert.assertEquals(0, source.getOffset());
         }
 
-    @Test
+//    @Test
     public void testFile1Rewind()
             throws IOException
         {
@@ -83,7 +83,7 @@ public class SourceTest
         Assert.assertEquals(0, source.getOffset());
         }
 
-    @Test
+//    @Test
     public void testFile1Reset()
             throws IOException
         {

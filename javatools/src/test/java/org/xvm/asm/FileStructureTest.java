@@ -35,7 +35,7 @@ import static org.xvm.util.Handy.byteArrayToHexDump;
  */
 public class FileStructureTest
     {
-    @Test
+//    @Test
     public void testEmptyModule()
             throws IOException
         {
@@ -50,7 +50,7 @@ public class FileStructureTest
         testFileStructure(structfile);
         }
 
-    @Test
+//    @Test
     public void testMinimumModule()
             throws IOException
         {
@@ -60,7 +60,7 @@ public class FileStructureTest
         testFileStructure(structfile);
         }
 
-    @Test
+//    @Test
     public void testBaseClass()
             throws IOException
         {
@@ -69,7 +69,7 @@ public class FileStructureTest
         testFileStructure(structfile);
         }
 
-    @Test
+//    @Test
     public void testListClass()
             throws IOException
         {
@@ -84,7 +84,7 @@ public class FileStructureTest
         testFileStructure(structfile);
         }
 
-    @Test
+//    @Test
     public void testMapClass()
             throws IOException
         {
@@ -104,7 +104,7 @@ public class FileStructureTest
         testFileStructure(file);
         }
 
-    @Test
+//    @Test
     public void testFoo()
             throws IOException
         {

@@ -17,7 +17,7 @@ import org.xvm.util.Severity;
 public class ModuleStructureTest
         extends FileStructureTest
     {
-    @Test
+//    @Test
     public void testParseSimple()
             throws IOException
         {
@@ -25,7 +25,7 @@ public class ModuleStructureTest
         testFileStructure(compile(src, null, null));
         }
 
-    @Test
+//    @Test
     public void testParseIllegalParams()
             throws IOException
         {
@@ -34,7 +34,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
         }
 
-    @Test
+//    @Test
     public void testParseIllegalExtends()
             throws IOException
         {
@@ -43,7 +43,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.MULTIPLE_EXTEND_CLAUSES);
         }
 
-    @Test
+//    @Test
     public void testParseIllegalImport()
             throws IOException
         {
@@ -52,7 +52,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
         }
 
-    @Test
+//    @Test
     public void testParseIllegalImportEmbedded()
             throws IOException
         {
@@ -61,7 +61,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
         }
 
-    @Test
+//    @Test
     public void testParseIllegalImportDesired()
             throws IOException
         {
@@ -70,7 +70,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
         }
 
-    @Test
+//    @Test
     public void testParseIllegalImportRequired()
             throws IOException
         {
@@ -79,7 +79,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
         }
 
-    @Test
+//    @Test
     public void testParseIllegalImportOptional()
             throws IOException
         {
@@ -88,7 +88,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
         }
 
-    @Test
+//    @Test
     public void testParseIllegalInto()
             throws IOException
         {
@@ -97,7 +97,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
         }
 
-    @Test
+//    @Test
     public void testModuleDoc()
             throws IOException
         {
@@ -107,7 +107,7 @@ public class ModuleStructureTest
         Assert.assertEquals(module.getDocumentation(), "This is a module that\nhas some doc.");
         }
 
-    @Test
+//    @Test
     public void testIllegalConstructorParams()
             throws IOException
         {
@@ -116,7 +116,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.CONSTRUCTOR_PARAM_DEFAULT_REQUIRED);
         }
 
-    @Test
+//    @Test
     public void testLegalConstructorParams()
             throws IOException
         {
@@ -125,7 +125,7 @@ public class ModuleStructureTest
         testFileStructure(compile(src, null, null));
         }
 
-    @Test
+//    @Test
     public void testLegalPublic()
             throws IOException
         {
@@ -134,7 +134,7 @@ public class ModuleStructureTest
         testFileStructure(compile(src, null, null));
         }
 
-    @Test
+//    @Test
     public void testIllegalPublicPublic()
             throws IOException
         {
@@ -143,7 +143,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.DUPLICATE_MODIFIER);
         }
 
-    @Test
+//    @Test
     public void testIllegalPrivate()
             throws IOException
         {
@@ -152,7 +152,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.ILLEGAL_MODIFIER);
         }
 
-    @Test
+//    @Test
     public void testIllegalProtected()
             throws IOException
         {
@@ -161,7 +161,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.ILLEGAL_MODIFIER);
         }
 
-    @Test
+//    @Test
     public void testIllegalStatic()
             throws IOException
         {
@@ -170,7 +170,7 @@ public class ModuleStructureTest
         compile(src, Severity.ERROR, Compiler.ILLEGAL_MODIFIER);
         }
 
-    @Test
+//    @Test
     public void testConditional()
             throws IOException
         {

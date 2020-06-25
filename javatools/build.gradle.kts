@@ -48,6 +48,11 @@ java {
     targetCompatibility = JavaVersion.VERSION_11
 }
 
+tasks.test {
+    useJUnit();
+    maxHeapSize = "1G"
+}
+
 dependencies {
     implementation("org.xtclang.xvm:utils:")
 

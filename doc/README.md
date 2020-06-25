@@ -6,3 +6,4 @@ This directory contains documentation.
 * `bnf.txt` - language syntax
 * `ops.txt` - virtual machine instruction set
 
+The License is Creative Commons CC-BY-4.0.

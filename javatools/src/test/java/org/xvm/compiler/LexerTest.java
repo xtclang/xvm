@@ -69,7 +69,7 @@ public class LexerTest
         lexit(source);
         }
 
-    @Test
+//    @Test
     public void testUnsupportedForNowNums()
         {
         Source source = new Source("{1p10, .123p43, -2.5P-99 0x123.ABC 0b001.1001 0o713.415}");
