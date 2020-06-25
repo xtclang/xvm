@@ -4584,7 +4584,7 @@ public class Parser
             if (tokNarrow != null && expr != null)
                 {
                 log(Severity.ERROR, NONNARROW_CHILD, tokNarrow.getStartPosition(),
-                        tokNarrow.getEndPosition(), null);
+                        tokNarrow.getEndPosition());
                 }
 
             // TypeParameterTypeList

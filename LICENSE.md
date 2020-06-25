@@ -1,14 +1,34 @@
 # License Information #
 
-The license for all source code (defined as ./bin/, ./resource/, ./src, ./tests, and ./xsrc) is Apache 2.0, unless explicitly noted. We chose Apache 2.0 for its compatibility with almost every reasonable use, and its compatibility with almost every license, reasonable or otherwise.
+The license for all source code (including all Java and
+Ecstasy source code in the project) is Apache 2.0, unless
+explicitly noted. We chose Apache 2.0 for its compatibility
+with almost every reasonable use, and its compatibility
+with almost every license, reasonable or otherwise.
 
-The license for documentation (defined as ./doc/, and the embedded markdown API documentation and/or derivative forms thereof) is Creative Commons CC-BY-4.0, unless explicitly noted.
+The license for documentationds (including the wiki and any
+embedded API documentation and/or derivative forms thereof)
+is Creative Commons CC-BY-4.0, unless explicitly noted.
 
-To help ensure clean IP (which will help us keep this project free and open source), pull requests require a signed contributor agreement to be submitted in advance. We use the Apache contributor model agreements (modified to identify this specific project), which are located under the ./license directory. Contributors are required to sign and submit an Ecstasy Project Individual Contributor License Agreement (ICLA), or be a named employee on an Ecstasy Project Corporate Contributor License Agreement (CCLA), both derived directly from the Apache agreements of the same name.
+To help ensure clean IP (which will help us keep this
+project free and open source), pull requests require a
+signed contributor agreement to be submitted in advance.
+We use the Apache contributor model agreements (modified
+to identify this specific project), which are located under
+the ./license directory. Contributors are required to sign
+and submit an Ecstasy Project Individual Contributor
+License Agreement (ICLA), or be a named employee on an
+Ecstasy Project Corporate Contributor License Agreement
+(CCLA), both derived directly from the Apache agreements
+of the same name.
 
-The Ecstasy name is a trademark owned and administered by The Ecstasy Project. Unlicensed use of the Ecstasy trademark is prohibited and will constitute infringement.
+The Ecstasy name is a trademark owned and administered by
+The Ecstasy Project. Unlicensed use of the Ecstasy trademark
+is prohibited and will constitute infringement.
 
-All content of the project not covered by the above terms is probably an accident that we need to be made aware of, and remains (c) The Ecstasy Project, all rights reserved.
+All content of the project not covered by the above terms
+is probably an accident that we need to be made aware of,
+and remains (c) The Ecstasy Project, all rights reserved.
 
 ## Apache 2.0
 
@@ -615,4 +635,8 @@ All content of the project not covered by the above terms is probably an acciden
 
 ## Questions?
 
-To submit a contributor agreement, sign up for very hard work, fork over a giant pile of cash, or in case of emergency: "info _at_ xtclang _dot_ org", but please understand if we cannot respond to every question. Thank you.
+To submit a contributor agreement, sign up for very hard
+work, fork over a giant pile of cash, or in case of
+emergency: "info _at_ xtclang _dot_ org", but please
+understand if we cannot respond to every question.
+Thank you.

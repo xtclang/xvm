@@ -2,6 +2,9 @@
  * Main build file for the XVM project, producing the XDK.
  */
 
+group = "org.xvm"
+version = "0.1.0"
+
 plugins {
     java
 }
