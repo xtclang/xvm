@@ -12,7 +12,7 @@ _(Our apologies in advance for the hassle, but we need to be very careful about 
 ## Contribution guidelines ##
 
 * _Cleanliness is next to godliness._ It is very difficult to clean things up, and very easy to make a mess, so we ask that contributions always move us in the direction of cleaning things up, and we will have to respectfully decline contributions that fail to meet that measure.
-* Fixes should include a test, and features should include a working example. We apologize in advance for the lack of having followed this rule in the early stages of the project.
+* Fixes should include a test, and features should include a working example. We apologize in advance for not having followed this rule in the early stages of the project.
 * Until an official style guide is published, please respect the styles already in use.
 * We are attempting to follow the [Git Strict Flow and GitHub Project Guidelines](https://gist.github.com/rsp/057481db4dbd999bb7077f211f53f212)
 
