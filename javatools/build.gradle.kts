@@ -6,32 +6,14 @@ plugins {
     java
 }
 
-sourceSets {
-    create("implicits") {
-        resources {
-            srcDir {
-                "${project(":ecstasy").buildDir}/resources/"
-            }
-        }
-    }
-//    sourceSets.create("integrationTest") {
-//        java.srcDir("src/integrationTest/java")
-//        java.srcDir("build/generated/source/apt/integrationTest")
-//        resources.srcDir("src/integrationTest/resources")
-//    }
-//    sourceSets.getByName("main") {
-//        java.srcDir("src/main/java")
-//        java.srcDir("src/main/kotlin")
-//    }
+val copyImplicits = tasks.register<Copy>("copyImplicits") {
+    from(file("${project(":ecstasy").projectDir}/src/main/resources/implicit.x"))
+    into(file("$buildDir/resources/main/"))
 }
 
-//def implicit = copySpec {
-//    from("${project(":ecstasy").buildDir}/resources/") {
-//        include "**/*.x"
-//    }
-//}
-
 tasks.withType(Jar::class) {
+    dependsOn(copyImplicits)
+    mustRunAfter(copyImplicits)
     manifest {
         attributes["Manifest-Version"] = "1.0"
         attributes["Sealed"] = "true"
@@ -44,7 +26,6 @@ tasks.withType(Jar::class) {
         attributes["Implementation-Version"] = "0.1.0"
         attributes["Implementation-Vendor"] = "xtclang.org"
     }
-    with(implicit)
 }
 
 java {
