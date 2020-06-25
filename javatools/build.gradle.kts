@@ -6,12 +6,15 @@ plugins {
     java
 }
 
-val copyImplicits = tasks.register<Copy>("copyImplicits") {
-    from(file("${project(":ecstasy").projectDir}/src/main/resources/implicit.x"))
+tasks.register<Copy>("copyImplicits") {
+    description = "Copy the implicit.x from :ecstasy project into the build directory."
+    from(file(project(":ecstasy").property("implicit.x")))
     into(file("$buildDir/resources/main/"))
 }
 
 tasks.withType(Jar::class) {
+    val copyImplicits = tasks["copyImplicits"]
+
     dependsOn(copyImplicits)
     mustRunAfter(copyImplicits)
     manifest {

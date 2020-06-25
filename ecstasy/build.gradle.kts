@@ -7,6 +7,8 @@
  * a new `ucd.all.flat.zip`; that is the only time that the Unicode data files have to be updated.
  */
 
+project.ext.set("implicit.x", "${projectDir}/src/main/resources/implicit.x")
+
 tasks.register<Copy>("importUnicodeFiles") {
     description = "Copy the various Unicode data files from :unicode to :ecstasy project."
     from(file("${project(":unicode").buildDir}/resources/"))
