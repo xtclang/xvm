@@ -2,11 +2,13 @@
  * Build file for the XDK.
  */
 
-println("TODO xdk project")
-//tasks.register<Copy>("copyJar") {
-//    description = "Copy the prototype JAR after it is built."
-//    dependsOn("build")
-//    from(file("${buildDir}/lib/xvm.jar"))
-//    into(file("${buildDir}/xdk/prototype"))
-//}
-//
+val copyOutline = tasks.register<Copy>("copyOutline") {
+    from(file("$projectDir/src/main/resources"))
+    include("xdk")
+    into(file("$buildDir"))
+}
+
+val copyJavatools = tasks.register<Copy>("copyJavatools") {
+    from(file("${project(":javatools").buildDir}/lib/javatools.jar"))
+    into(file("$buildDir/xdk/javatools/"))
+}
