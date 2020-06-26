@@ -1,16 +1,22 @@
 This sub-project is used to create native launchers that can be included in the XDK to execute various
 commands.
 
-The prototype runtime is implemented in Java, which makes it a challenge for developers who are not
-used to Java command line execution. Our goal with the launcher was to simplify the use of the Java
-tools from the command line, by making them as simple to use as normal command-line tools. This
-allows us to hide the Java-specific command line options and the complications of invoking the JVM.
+***WARNING: DO NOT DELETE THE BUILD DIRECTORY!*** _The project's `./build/` directory is not disposable; it is actually stored in `git`, with
+the executable artifacts also stored in `git`, etc. More details can be found below._ 
 
-The solution is a native executable that can be replicated to as many different command names as
-necessary (such as `xtc` for the compiler, and `xec` for the runtime). When executed, each command
-executable (which is an identical copy of the original) uses the OS to find out its own name, and
-passes that name to a Java utility inside of the `javatools.jar` file, along with all of the command
-line parameters.
+***WARNING: THIS PROJECT DOES NOT ADHERE TO NORMAL GRADLE BUILD RULES!*** 
+
+The prototype runtime is implemented in Java, which makes it challenging for developers who are not
+used to Java command line execution. Our goal with the launcher was to simplify the use of the Java
+tools from the command line, by making them as simple to use as normal command-line tools are in any
+half-decent operating system. This allows us to hide the Java-specific command line options and the
+complications of invoking the JVM.
+
+The solution is a single native executable (one per hardware/OS combination, e.g. `macos_launcher`)
+that can then be copied to as many different command names as necessary (e.g. `xtc` for the compiler,
+and `xec` for the runtime). When executed, each command executable (which is an identical copy of the
+original) uses the OS to determine its own name (e.g. "xtc" or "xec"), and passes that name to a Java
+utility inside of the `javatools.jar` file, along with all of the command line parameters.
 
 For example:
 
@@ -42,30 +48,50 @@ Which in turn results in an execution of that "main class" in the specified JAR 
 
 Each OS works slightly differently, so the OS-specific functionality is (mostly) encapsuted into the
 source files `os_macos.c`, `os_linux.c`, and `os_windows.c`. The build for each OS must be performed
-on that OS (in lieu of a dependable cross-compiler). The resulting executable files are stored as
-artifacts in GIT; for example `macos_launcher`, `linux_launcher`, and `windows_launcher.exe`.
+on that OS (because we do not have a dependable cross-compiler readily available). The resulting
+executable files are stored as artifacts in GIT; for example `macos_launcher`, `linux_launcher`, and
+`windows_launcher.exe`.
 
-The build for the native module is:
+The build for the native module is the GNU `make` utility, with the `makefile` located in the
+`main/src/c` directory. To execute the `makefile` on macOS, open a terminal, `cd` to the `main/src/c`
+directory, and execute the following command: 
 
-    make
+    make OS_NAME=macos
+    
+or on Linux (**TODO!!!**):
+
+    make OS_NAME=linux
+
+or on Windows:
+
+    make OS_NAME=windows
 
 Details:
 
-* The compiler used is GCC. Even on Windows and Mac.
-* On macos, the build uses the command line tools that are available as part of xCode.
+* Only re-build these files _if and when_ you **need** to. If the `.c` sources have not changed, and
+  if the XDK directory structure has not changed, and if the parameter requirements for the Java
+  command line tools have not changed, and if a launcher already exists for your OS in the
+  `build/exe` directory, and -- _of course!_ -- if things are working, then do **not** rebuild these.
+* The compiler used is GCC. _Even on Windows and Mac._
+* On macOS, the build uses the command line tools that are available as part of xCode.
 * On Linux, the build uses GCC.
-* On Windows, TBD.
+* On Windows, use Cygwin or MinGW to support GCC.
+* When the make command executes successfully, then the resulting executable file is placed into
+  `build/exe`.
+* Each supported OS/hardware combination has an artifact in the `build/exe` directory, **and that
+  artifact is added to `git` and stored in `git` and versioned in `git`.** This approach is _almost
+  always_ the wrong thing to do (!!!), but since it's hard to cross-compile and since these files
+  may be signed, we decided (for now) to store them in `git`.
+* Suggestions for improving this project organization and process are welcome! 
 
-(The `../javatools` directory exists for testing the build result; it contains a fake javatools.jar
-with a "main class" that echos the input.)
+(The `build/javatools` directory exists solely for testing the build result; it contains a **fake**
+`javatools.jar` with a "main class" that echos the command line arguments. Read the README.md in
+that directory for a detailed explanation.)
 
-To override the default behavior of a launcher named `xtc`, for example, create a file in the same
-directory named `xtc.cfg`, which contains up to three key/value pairs, which default to these values:
+Lastly, one can override the default behavior of a launcher named `xtc`, for example, by creating a
+corresponding `.cfg` file (e.g. `xtc.cfg`) in the same directory (e.g. `xdk/bin`), which contains
+(up to) the following key/value pairs, defaulting to the following values:
 
     exec = java
     opts = -Xms256m -Xmx1024m -ea
     jar  = ../javatools/javatools.jar
-
-Note that the "build" directory is not disposable; it is actually stored in git, with the executable
-artifacts. This is necessary, for the time being, because there is no simple way to create these
-executable files, other than to configure build environments on each target OS.
