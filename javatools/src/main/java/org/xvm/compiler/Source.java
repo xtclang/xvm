@@ -163,9 +163,10 @@ public class Source
             return null;
             }
 
-        File file = m_file.getParentFile();
+        File    file  = m_file.getParentFile();
+        boolean fRoot = sFile.startsWith("/");
         m_cUp = 0;
-        if (sFile.startsWith("/"))
+        if (fRoot)
             {
             // it's not absolute; it's relative to the directory containing the module
             while (m_cUp < m_cDirDepth)
@@ -222,16 +223,23 @@ public class Source
 
         if (!file.exists())
             {
-            // the file may be in the resources directory
-            File fileTop = getTopDir();
-            File fileRes = getResourceDir();
-            if (fileTop != null && fileRes != null)
+            // the file may be in the "symmetrical" resources directory
+            File fileSrc = getSubDir("x");
+            File fileRes = getSubDir("resources");
+            if (fileSrc != null && fileRes != null)
                 {
-                Path path    = file.toPath().normalize();
-                Path pathTop = fileTop.toPath().normalize();
-                Path pathRes = fileRes.toPath().normalize();
-                Path pathRel = pathTop.relativize(path);
-                file = pathRes.resolve(pathRel).toFile();
+                if (fRoot)
+                    {
+                    file = new File(fileRes, sFile);
+                    }
+                else
+                    {
+                    Path path    = file.toPath().normalize();
+                    Path pathSrc = fileSrc.toPath().normalize();
+                    Path pathRes = fileRes.toPath().normalize();
+                    Path pathRel = pathSrc.relativize(path);
+                    file = pathRes.resolve(pathRel).toFile();
+                    }
                 if (!file.exists())
                     {
                     return null;
@@ -268,15 +276,15 @@ public class Source
     /**
      * @return the "resources" directory, if one exists
      */
-    private File getResourceDir()
+    private File getSubDir(String sChild)
         {
         File file = getTopDir();
         if (file != null)
             {
-            file = file.getParentFile();
+//            file = file.getParentFile();
             if (file != null)
                 {
-                file = new File(file, "resources");
+                file = new File(file, sChild);
                 if (file.exists() && file.isDirectory())
                     {
                     return file;

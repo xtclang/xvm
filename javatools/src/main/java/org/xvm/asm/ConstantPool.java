@@ -3701,21 +3701,12 @@ public class ConstantPool
         {
         try
             {
-            Source src;
-            File file = new File("ecstasy/src/main/resources/implicit.x");
-            if (file.exists() && file.isFile() && file.canRead())
+            ClassLoader loader = ConstantPool.class.getClassLoader();
+            if (loader == null)
                 {
-                src = new Source(file, 0);
+                loader = ClassLoader.getSystemClassLoader();
                 }
-            else
-                {
-                ClassLoader loader = ConstantPool.class.getClassLoader();
-                if (loader == null)
-                    {
-                    loader = ClassLoader.getSystemClassLoader();
-                    }
-                src = new Source(loader.getResourceAsStream("ecstasy/src/main/resources/implicit.x"));
-                }
+            Source src = new Source(loader.getResourceAsStream("implicit.x"));
 
             ErrorList errs   = new ErrorList(1);
             Parser    parser = new Parser(src, errs);
