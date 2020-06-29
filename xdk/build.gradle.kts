@@ -9,17 +9,23 @@ val ecstasySrc   = "${ecstasy.projectDir}/src/main/x"
 val bridgeSrc    = "${bridge.projectDir}/src/main/x"
 val javatoolsJar = "${javatools.buildDir}/libs/javatools.jar"
 
+tasks.register("clean") {
+    delete("$buildDir")
+}
+
 val copyOutline = tasks.register<Copy>("copyOutline") {
-    from(file("$projectDir/src/main/resources"))
-    include("**/xdk/*")
-    into(file("$buildDir"))
+    from("$projectDir/src/main/resources") {
+        include("xdk/**")
+    }
+    into("$buildDir")
 }
 
 val copyJavatools = tasks.register<Copy>("copyJavatools") {
-    from(file(javatoolsJar))
-    into(file("$buildDir/xdk/javatools/"))
+    from(javatoolsJar)
+    into("$buildDir/xdk/javatools/")
 
     dependsOn(javatools.tasks["build"])
+    dependsOn(copyOutline)
 }
 
 val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
@@ -27,21 +33,35 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
     description = "Build Ecstasy.xtc and _native.xtc modules"
 
     dependsOn(javatools.tasks["build"])
+    dependsOn(copyJavatools)
 
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$buildDir/xdk/lib",
-            "${ecstasySrc}/module.x",
-            "${bridgeSrc}/module.x")
+            "$ecstasySrc/module.x",
+            "$bridgeSrc/module.x")
     main = "org.xvm.tool.Compiler"
+
+    doLast {
+        file("$buildDir/xdk/lib/_native.xtc").
+           renameTo(file("$buildDir/xdk/javatools/javatools_bridge.xtc"))
+    }
 }
 
 tasks.register("build") {
-    group = "Build"
+    group       = "Build"
     description = "Build the jdk"
-    dependsOn(copyOutline)
-    dependsOn(copyJavatools)
-    dependsOn(compileEcstasy) // TODO: how to skip this if not necessary?
 
-    // TODO: move the files around
+    // we assume that the launcher project has been built
+    val launcher         = project(":javatools_launcher")
+    val macos_launcher   = "${launcher.buildDir}/exe/macos_launcher"
+    val windows_launcher = "${launcher.buildDir}/exe/windows_launcher.exe"
+
+    dependsOn(compileEcstasy) // TODO: how to skip this if not necessary?
+    doLast {
+        copy {
+            from(macos_launcher, windows_launcher)
+            into("$buildDir/xdk/bin/")
+            }
+    }
 }
