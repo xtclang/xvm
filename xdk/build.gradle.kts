@@ -50,7 +50,7 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
 
 tasks.register("build") {
     group       = "Build"
-    description = "Build the jdk"
+    description = "Build the XDK"
 
     // we assume that the launcher project has been built
     val launcher         = project(":javatools_launcher")

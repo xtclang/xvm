@@ -22,3 +22,10 @@ allprojects {
         }
     }
 }
+
+tasks.register("build") {
+    group       = "Build"
+    description = "Build all projects"
+
+    dependsOn(project("xdk:").tasks["build"])
+}
