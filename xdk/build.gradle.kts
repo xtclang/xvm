@@ -10,6 +10,8 @@ val bridgeSrc    = "${bridge.projectDir}/src/main/x"
 val javatoolsJar = "${javatools.buildDir}/libs/javatools.jar"
 
 tasks.register("clean") {
+    group       = "Build"
+    description = "Delete previous build results"
     delete("$buildDir")
 }
 
@@ -18,6 +20,9 @@ val copyOutline = tasks.register<Copy>("copyOutline") {
         include("xdk/**")
     }
     into("$buildDir")
+    doLast {
+        println("Finished task: copyOutline")
+    }
 }
 
 val copyJavatools = tasks.register<Copy>("copyJavatools") {
@@ -26,6 +31,9 @@ val copyJavatools = tasks.register<Copy>("copyJavatools") {
 
     dependsOn(javatools.tasks["build"])
     dependsOn(copyOutline)
+    doLast {
+        println("Finished task: copyJavatools")
+    }
 }
 
 val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
@@ -45,6 +53,7 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
     doLast {
         file("$buildDir/xdk/lib/_native.xtc").
            renameTo(file("$buildDir/xdk/javatools/javatools_bridge.xtc"))
+        println("Finished task: compileEcstasy")
     }
 }
 
@@ -63,6 +72,7 @@ tasks.register("build") {
             from(macos_launcher, windows_launcher)
             into("$buildDir/xdk/bin/")
             }
+        println("Finished task: build")
     }
 
 // TODO wiki

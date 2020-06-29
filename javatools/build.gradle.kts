@@ -7,16 +7,25 @@ plugins {
 }
 
 tasks.register<Copy>("copyImplicits") {
+    group       = "Build"
     description = "Copy the implicit.x from :ecstasy project into the build directory."
-    from(file(project(":ecstasy").property("implicit.x")))
+    from(file(project(":ecstasy").property("implicit.x")!!))
     into(file("$buildDir/resources/main/"))
+    doLast {
+        println("Finished task: copyImplicits")
+    }
 }
 
 tasks.register<Copy>("copyUtils") {
+    group       = "Build"
     description = "Copy the classes from :utils project into the build directory."
+    dependsOn(project(":utils").tasks["classes"])
     from(file("${project(":utils").buildDir}/classes/java/main"))
     include("**/*.class")
     into(file("$buildDir/classes/java/main"))
+    doLast {
+        println("Finished task: copyUtils")
+    }
 }
 
 tasks.jar {
