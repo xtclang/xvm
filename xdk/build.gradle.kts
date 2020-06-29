@@ -5,8 +5,8 @@
 val ecstasy      = project(":ecstasy")
 val javatools    = project(":javatools")
 val bridge       = project(":javatools_bridge")
-val ecstasySrc   = "${ecstasy.projectDir}/src/main/x"
-val bridgeSrc    = "${bridge.projectDir}/src/main/x"
+val ecstasyMain  = "${ecstasy.projectDir}/src/main"
+val bridgeMain   = "${bridge.projectDir}/src/main"
 val javatoolsJar = "${javatools.buildDir}/libs/javatools.jar"
 
 tasks.register("clean") {
@@ -46,8 +46,8 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$buildDir/xdk/lib",
-            "$ecstasySrc/module.x",
-            "$bridgeSrc/module.x")
+            "$ecstasyMain/x/module.x",
+            "$bridgeMain/x/module.x")
     main = "org.xvm.tool.Compiler"
 
     doLast {
@@ -66,7 +66,14 @@ tasks.register("build") {
     val macos_launcher   = "${launcher.buildDir}/exe/macos_launcher"
     val windows_launcher = "${launcher.buildDir}/exe/windows_launcher.exe"
 
-    dependsOn(compileEcstasy) // TODO: how to skip this if not necessary?
+    val tsSrc = fileTree(ecstasyMain).getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val tsDest = file("$buildDir/xdk/lib/Ecstasy.xtc").lastModified()
+
+    if (tsSrc > tsDest) {
+        dependsOn(compileEcstasy)
+    }
+
     doLast {
         copy {
             from(macos_launcher, windows_launcher)
@@ -78,5 +85,4 @@ tasks.register("build") {
 // TODO wiki
 // TODO ZIP the resulting xdk directory; e.g. on macOS:
 //    `zip -r xdk.zip ./xdk -x *.DS_Store`
-
 }
