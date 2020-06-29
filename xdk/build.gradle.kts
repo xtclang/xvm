@@ -64,4 +64,9 @@ tasks.register("build") {
             into("$buildDir/xdk/bin/")
             }
     }
+
+// TODO wiki
+// TODO ZIP the resulting xdk directory; e.g. on macOS:
+//    `zip -r xdk.zip ./xdk -x *.DS_Store`
+
 }
