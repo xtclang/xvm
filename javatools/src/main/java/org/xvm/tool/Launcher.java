@@ -34,7 +34,6 @@ import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
-import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
@@ -985,7 +984,7 @@ public abstract class Launcher
             }
 
         /**
-         * Vaidate the options once the options have all been registered successfully.
+         * Validate the options once the options have all been registered successfully.
          *
          * @return null on success, or a String to describe the validation error
          */
@@ -1163,7 +1162,7 @@ public abstract class Launcher
      * Configure the library repository that is used to load module dependencies without compiling
      * them. The library repository is always writable, to allow the repository to cache modules
      * as they are linked together; use {@link #extractBuildRepo(ModuleRepository)} to get the
-     * build repository from thte library repository.
+     * build repository from the library repository.
      *
      * @param path  a previously validated path of module directories and/or files
      *
@@ -1221,7 +1220,7 @@ public abstract class Launcher
      * Configure the repository that is used to store modules  dependencies without compiling
      * them. The library repository is always writable, to allow the repository to cache modules
      * as they are linked together; use {@link #extractBuildRepo(ModuleRepository)} to get the
-     * build repository from thte library repository.
+     * build repository from the library repository.
      *
      * @param fileDest  a previously validated destination for the module(s), or null to use the
      *                  current directory
@@ -1363,6 +1362,16 @@ public abstract class Launcher
             return;
             }
 
+        if (!file.exists())
+            {
+            File fileParent = file.getParentFile();
+            if (fileParent.isDirectory())
+                {
+                // an error will be reported further down
+                file.mkdir();
+                }
+            }
+
         if (file.exists() && file.isDirectory())
             {
             if (!file.canWrite())
@@ -1466,7 +1475,15 @@ public abstract class Launcher
     public static String filePath(File file)
         {
         String sPath = file.getPath();
-        String sAbs  = file.getAbsolutePath();
+        String sAbs;
+        try
+            {
+            sAbs = file.getCanonicalPath();
+            }
+        catch (IOException e)
+            {
+            sAbs = file.getAbsolutePath();
+            }
         return sPath.equals(sAbs)
             ? sPath
             : sPath + " (" + sAbs + ')';
@@ -1617,7 +1634,7 @@ public abstract class Launcher
      *
      * @return true iff the date/time on the compiled module is up to date compared to the source
      */
-    boolean moduleUpToDate(Node nodeSourceTree, File fileModuleLocation)
+    protected boolean moduleUpToDate(Node nodeSourceTree, File fileModuleLocation)
         {
         String sModule    = nodeSourceTree.name();
         File   fileModule = fileModuleLocation.isDirectory()
