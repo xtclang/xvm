@@ -72,6 +72,8 @@ tasks.register("build") {
 
     if (tsSrc > tsDest) {
         dependsOn(compileEcstasy)
+    } else {
+        dependsOn(copyJavatools)
     }
 
     doLast {
