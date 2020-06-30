@@ -337,6 +337,21 @@ public abstract class ObjectHandle
             m_mapFields.put(sProp, hValue);
             }
 
+        public boolean containsMutableFields()
+            {
+            if (m_mapFields != null)
+                {
+                for (ObjectHandle hValue : m_mapFields.values())
+                    {
+                    if (hValue.isMutable())
+                        {
+                        return true;
+                        }
+                    }
+                }
+            return false;
+            }
+
         @Override
         public ObjectHandle cloneAs(TypeComposition clazz)
             {

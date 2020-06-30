@@ -2820,7 +2820,7 @@ class Lexer
         }
 
     /**
-     * Ecstasty identifiers can contain letters, marks, number, and currency symbols, as well as
+     * Ecstasy identifiers can contain letters, marks, number, and currency symbols, as well as
      * the underscore character.
      *
      * @param ch  the character to test

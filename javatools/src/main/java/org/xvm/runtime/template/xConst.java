@@ -208,49 +208,51 @@ public class xConst
         {
         if (hStruct.isMutable())
             {
-            GenericHandle    hConst = (GenericHandle) hStruct;
-            ClassComposition clz    = (ClassComposition) hStruct.getComposition();
-
-            ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
-            if (ahFields.length > 0)
+            GenericHandle hConst = (GenericHandle) hStruct;
+            if (hConst.containsMutableFields())
                 {
-                GenericArrayHandle hValues = (GenericArrayHandle) xArray.makeObjectArrayHandle(ahFields, Mutability.FixedSize);
-
-                ObjectHandle[] ahVars = new ObjectHandle[FN_FREEZE.getMaxVars()];
-                ahVars[0] = hValues;
-
-                Frame frameFreeze = frame.createFrame1(FN_FREEZE, null, ahVars, Op.A_STACK);
-
-                frameFreeze.addContinuation(frameCaller ->
+                ClassComposition clz      = (ClassComposition) hStruct.getComposition();
+                ObjectHandle[]   ahFields = clz.getFieldValueArray(hConst);
+                if (ahFields.length > 0)
                     {
-                    int iResult = (int) ((JavaLong) frameCaller.popStack()).getValue();
-                    switch (iResult)
+                    GenericArrayHandle hValues = (GenericArrayHandle) xArray.makeObjectArrayHandle(ahFields, Mutability.FixedSize);
+
+                    ObjectHandle[] ahVars = new ObjectHandle[FN_FREEZE.getMaxVars()];
+                    ahVars[0] = hValues;
+
+                    Frame frameFreeze = frame.createFrame1(FN_FREEZE, null, ahVars, Op.A_STACK);
+
+                    frameFreeze.addContinuation(frameCaller ->
                         {
-                        case -1: // all objects were immutable
-                            break;
-
-                        case -2: // a copy needs to be made
+                        int iResult = (int) ((JavaLong) frameCaller.popStack()).getValue();
+                        switch (iResult)
                             {
-                            List<String> listNames = clz.getFieldNames();
-                            for (int i = 0, c = listNames.size(); i < c; i++)
+                            case -1: // all objects were immutable
+                                break;
+
+                            case -2: // a copy needs to be made
                                 {
-                                hConst.setField(listNames.get(i), hValues.m_ahValue[i]);
+                                List<String> listNames = clz.getFieldNames();
+                                for (int i = 0, c = listNames.size(); i < c; i++)
+                                    {
+                                    hConst.setField(listNames.get(i), hValues.m_ahValue[i]);
+                                    }
+                                break;
                                 }
-                            break;
+
+                            default: // iResult is an index for a not freezable field
+                                {
+                                String sField = clz.getFieldNames().get(iResult);
+                                return frame.raiseException("field \"" + sField + "\" is not freezable");
+                                }
                             }
 
-                        default: // iResult is an index for a not freezable field
-                            {
-                            String sField = clz.getFieldNames().get(iResult);
-                            return frame.raiseException("field \"" + sField + "\" is not freezable");
-                            }
-                        }
+                        hConst.makeImmutable();
+                        return Op.R_NEXT;
+                        });
 
-                    hConst.makeImmutable();
-                    return Op.R_NEXT;
-                    });
-
-                return frame.callInitialized(frameFreeze);
+                    return frame.callInitialized(frameFreeze);
+                    }
                 }
             hConst.makeImmutable();
             }
