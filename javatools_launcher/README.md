@@ -95,3 +95,33 @@ corresponding `.cfg` file (e.g. `xtc.cfg`) in the same directory (e.g. `xdk/bin`
     exec = java
     opts = -Xms256m -Xmx1024m -ea
     jar  = ../javatools/javatools.jar
+
+### IntelliJ IDEA: Debugging
+
+To create a debugging session in IntelliJ IDEA for a native launcher command, the JVM started by the
+native launcher will need to be started in a debug mode, and then IDEA will need connect to that JVM,
+which will allow you to debug from IDEA:
+  
+* Make a debug copy of the native launcher that you need to debug. For example, to debug the `xec` 
+  command, copy the `xec` file  to `debug_xec`. (The prefix of "debug" or "debug_" is required for
+  this purpose; it is stripped off later by the `org.xvm.tool.Launcher` class.)
+  
+* Create a config file for the new executable. Continuing the above example, that would be a file
+  named `debug_xec.cfg`. Place the necessary JVM options into the configuration file, such as:
+  
+      opts=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005 -Xms256m -Xmx1G -ea   
+  
+* In IDEA, go to the "Run" menu, and select the "Edit configurations..." option. Press the `+`
+  button on the dialog to create a new configuration from an existing template, and choose the
+  "Remote" template. Name the configuration (e.g. `Debug Ecstasy Command`) and for the "Use
+  module classpath:" option, select the `xvm.javatools.main` Gradle project.
+  
+* Now, from the terminal, issue the command that you wish to debug; for example:
+
+      ~/xvm/xdk/bin/debug_xec HelloWorld.xtc 
+      
+* The command will block (because the JVM options specified `suspend=y`).
+
+* In IDEA, use the "Select Run/Debug Configuration" drop-down in the tool-bar to select the name
+  previously configured; for example, `Debug Ecstasy Command`. Then press the "Debug" button
+  (usually `Shift-F9`). At this point, IDEA should connect to the command that you wish to debug.

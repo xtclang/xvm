@@ -77,6 +77,17 @@ public abstract class Launcher
         --argc;
         String[] argv = new String[argc];
         System.arraycopy(asArg, 1, argv, 0, argc);
+
+        // if the command is prefixed with "debug", then strip that off
+        if (cmd.length() > 5 && cmd.toLowerCase().startsWith("debug"))
+            {
+            cmd = cmd.substring("debug".length());
+            if (cmd.charAt(0) == '_')
+                {
+                cmd = cmd.substring(1);
+                }
+            }
+
         switch (cmd)
             {
             case "xtc":
