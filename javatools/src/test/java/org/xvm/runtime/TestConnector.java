@@ -54,7 +54,7 @@ public class TestConnector
         listCompileArgs.add("-L");
         listCompileArgs.add("../xdk/build/xdk/javatools/javatools_bridge.xtc");
         listCompileArgs.add("-o");
-        listCompileArgs.add("../build");
+        listCompileArgs.add("./build");
         listCompileArgs.addAll(Arrays.asList(asArg));
 
         Compiler compiler = new Compiler(listCompileArgs.toArray(Handy.NO_ARGS));
@@ -79,7 +79,7 @@ public class TestConnector
                 : new FileRepository(file, true);
             }
 
-        File dirBuild = new File("../build");
+        File dirBuild = new File("./build");
         assert dirBuild.exists() && dirBuild.isDirectory();
 
         for (int i = 0; i < cModules; ++i)
