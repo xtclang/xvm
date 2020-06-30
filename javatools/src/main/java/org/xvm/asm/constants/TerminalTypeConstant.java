@@ -186,7 +186,10 @@ public class TerminalTypeConstant
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             }
 
-        return ((ClassStructure) idClass.getComponent()).isImmutable();
+        // there is a possibility of this question asked during the constant registration
+        // by resolveTypedefs() method; we need to play safe here
+        ClassStructure clz = (ClassStructure) idClass.getComponent();
+        return clz != null && clz.isImmutable();
         }
 
     @Override

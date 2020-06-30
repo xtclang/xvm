@@ -81,11 +81,11 @@ public class TemplateRegistry
         Map<String, Class> mapTemplateClasses = new HashMap<>();
         if (sRoot.endsWith(".jar"))
             {
-            scanNativeJarDirectory(sRoot, "javatools/src/main/java/xvm/runtime/template", mapTemplateClasses);
+            scanNativeJarDirectory(sRoot, "org/xvm/runtime/template", mapTemplateClasses);
             }
         else
             {
-            File dirTemplates = new File(sRoot, "javatools/src/main/java/xvm/runtime/template");
+            File dirTemplates = new File(sRoot, "org/xvm/runtime/template");
             scanNativeDirectory(dirTemplates, "", mapTemplateClasses);
             }
 
