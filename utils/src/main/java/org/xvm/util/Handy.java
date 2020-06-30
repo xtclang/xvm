@@ -559,7 +559,7 @@ public class Handy
 
         if (s.length() == 0)
             {
-            return EMPTY_STRING_ARRAY;
+            return NO_ARGS;
             }
 
         int of = s.indexOf(chDelim);
@@ -1819,5 +1819,5 @@ public class Handy
     /**
      * A constant empty array of <tt>String</tt>.
      */
-    public static String[] EMPTY_STRING_ARRAY = new String[0];
+    public static String[] NO_ARGS = new String[0];
     }

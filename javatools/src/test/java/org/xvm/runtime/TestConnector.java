@@ -1,14 +1,24 @@
 package org.xvm.runtime;
 
 
+import java.io.File;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import org.xvm.api.Connector;
 
+import org.xvm.asm.DirRepository;
+import org.xvm.asm.FileRepository;
+import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.compiler.CommandLine;
-
+import org.xvm.compiler.BuildRepository;
+import org.xvm.tool.Compiler;
 import org.xvm.tool.Disassembler;
+
+import org.xvm.util.Handy;
 
 
 /**
@@ -42,14 +52,56 @@ public class TestConnector
             asFile[i]   = asArg[2*i + 1];
             }
 
-        CommandLine cmd = new CommandLine(asFile);
+        // let the $prj be the root of the "xvm" project (e.g. ~/Development/xvm);
+        // the working directory is assumed to be:
+        //      $prj/manualTests
+        // the build directory would be:
+        //      $prj/build
+        // and the system libraries then could be found at :
+        //      $prj/xdk/build/xdk/lib,
+        //      $prj/xdk/build/xdk/javatools/javatools_bridge.xtc
 
-        ModuleRepository repository = cmd.build();
-        if (repository == null)
+        List<String> listCompileArgs = new ArrayList<>(6 + cModules);
+        listCompileArgs.add("-L");
+        listCompileArgs.add("../xdk/build/xdk/lib");
+        listCompileArgs.add("-L");
+        listCompileArgs.add("../xdk/build/xdk/javatools/javatools_bridge.xtc");
+        listCompileArgs.add("-o");
+        listCompileArgs.add("../build");
+
+        for (int i = 0; i < cModules; i++)
             {
-            System.out.println("\nBuild failed; exiting.\n");
-            return;
+            listCompileArgs.add(asFile[i]);
             }
+
+        Compiler compiler = new Compiler(listCompileArgs.toArray(Handy.NO_ARGS));
+        compiler.run();
+
+        ModuleRepository[] aRepo = new ModuleRepository[3 + cModules];
+        aRepo[0] = new BuildRepository();
+
+        List<File> listSysPaths = compiler.options().getModulePath();
+        for (int i = 0; i < 2; ++i)
+            {
+            File file = listSysPaths.get(i);
+            aRepo[1 + i] = file.isDirectory()
+                ? new DirRepository(file, true)
+                : new FileRepository(file, true);
+            }
+
+        File dirBuild = new File("../build");
+        assert dirBuild.exists() && dirBuild.isDirectory();
+
+        for (int i = 0; i < cModules; ++i)
+            {
+            File file = new File(dirBuild, asModule[i] + ".xtc");
+
+            aRepo[3 + i] = file.isDirectory()
+                ? new DirRepository(file, true)
+                : new FileRepository(file, true);
+            }
+
+        ModuleRepository repository = new LinkedRepository(true, aRepo);
 
         if (System.getProperties().containsKey("DEBUG"))
             {

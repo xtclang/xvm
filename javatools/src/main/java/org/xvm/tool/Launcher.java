@@ -39,6 +39,7 @@ import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
+import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -295,7 +296,7 @@ public abstract class Launcher
         out("Options:");
         Options options = options();
 
-        String[] asName = options.options().keySet().toArray(new String[0]);
+        String[] asName = options.options().keySet().toArray(Handy.NO_ARGS);
         Arrays.sort(asName, (s1, s2) ->
             {
             if (s1.equals(Trailing))

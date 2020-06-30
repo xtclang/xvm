@@ -23,6 +23,7 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 
@@ -217,7 +218,7 @@ public class Runner
             List<String> listArgs = (List<String>) values().get(ArgV);
             return listArgs == null
                     ? null
-                    : listArgs.toArray(new String[0]);
+                    : listArgs.toArray(Handy.NO_ARGS);
             }
 
         @Override

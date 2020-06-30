@@ -48,7 +48,7 @@ public class LinkedRepository
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
-     * @return a list of the repositories that underly this repository
+     * @return a list of the repositories that underlie this repository
      */
     public List<ModuleRepository> asList()
         {
