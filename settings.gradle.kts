@@ -10,3 +10,5 @@ include(":javatools_launcher")  // produces native (Win, Mac, Linux) executables
 // TODO(":json")
 include(":xdk")         // builds the above modules (ecstasy.xtc, javatools_bridge.xtc, json.xtc)
                         // drags in Java libraries (utils, javatools), native launchers, wiki, etc.
+
+include(":manualTests") // temporary; allowing gradle test execution
