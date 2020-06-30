@@ -1569,7 +1569,7 @@ public abstract class Launcher
      *
      * @return the module's name if the file declares a module; null otherwise
      */
-    protected String getModuleName(File file)
+    public String getModuleName(File file)
         {
         assert file.isFile() && file.canRead();
         log(Severity.INFO, "Parsing file: " + file);

@@ -4,6 +4,7 @@ package org.xvm.runtime;
 import java.io.File;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.xvm.api.Connector;
@@ -24,7 +25,7 @@ import org.xvm.util.Handy;
 /**
  * The connector test.
  *
- * TestConnector [module name] [module path]
+ * TestConnector [module-source-path]+
  */
 public class TestConnector
     {
@@ -32,24 +33,8 @@ public class TestConnector
         {
         if (asArg.length < 1)
             {
-            System.err.println("Application name is missing");
-            return;
-            }
-
-        if (asArg.length < 2)
-            {
             System.err.println("Module location is missing");
             return;
-            }
-
-        int cModules = asArg.length / 2;
-        String[] asModule = new String[cModules];
-        String[] asFile   = new String[cModules];
-
-        for (int i = 0; i < cModules; i++)
-            {
-            asModule[i] = asArg[2*i];
-            asFile[i]   = asArg[2*i + 1];
             }
 
         // let the $prj be the root of the "xvm" project (e.g. ~/Development/xvm);
@@ -61,6 +46,8 @@ public class TestConnector
         //      $prj/xdk/build/xdk/lib,
         //      $prj/xdk/build/xdk/javatools/javatools_bridge.xtc
 
+        int cModules = asArg.length;
+
         List<String> listCompileArgs = new ArrayList<>(6 + cModules);
         listCompileArgs.add("-L");
         listCompileArgs.add("../xdk/build/xdk/lib");
@@ -68,14 +55,17 @@ public class TestConnector
         listCompileArgs.add("../xdk/build/xdk/javatools/javatools_bridge.xtc");
         listCompileArgs.add("-o");
         listCompileArgs.add("../build");
-
-        for (int i = 0; i < cModules; i++)
-            {
-            listCompileArgs.add(asFile[i]);
-            }
+        listCompileArgs.addAll(Arrays.asList(asArg));
 
         Compiler compiler = new Compiler(listCompileArgs.toArray(Handy.NO_ARGS));
         compiler.run();
+
+        String[]   asNames     = new String[cModules];
+        List<File> listSrcFile = compiler.options().getInputLocations();
+        for (int i = 0; i < cModules; i++)
+            {
+            asNames[i] = compiler.getModuleName(listSrcFile.get(i));
+            }
 
         ModuleRepository[] aRepo = new ModuleRepository[3 + cModules];
         aRepo[0] = new BuildRepository();
@@ -94,7 +84,7 @@ public class TestConnector
 
         for (int i = 0; i < cModules; ++i)
             {
-            File file = new File(dirBuild, asModule[i] + ".xtc");
+            File file = new File(dirBuild, asNames[i] + ".xtc");
 
             aRepo[3 + i] = file.isDirectory()
                 ? new DirRepository(file, true)
@@ -114,7 +104,7 @@ public class TestConnector
 
         Connector connector = new Connector(repository);
 
-        for (String sModule : asModule)
+        for (String sModule : asNames)
             {
             System.out.println("\n++++++ Loading module: " + sModule + " +++++++\n");
 
