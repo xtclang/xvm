@@ -24,6 +24,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
+import org.xvm.runtime.ServiceContext.Reentrancy;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
@@ -253,10 +254,10 @@ public class xService
 
             case "reentrancy":
                 {
-                ServiceHandle hService = (ServiceHandle) hTarget;
-                EnumHandle    hStatus  = REENTRANCY.getEnumByName(
+                ServiceHandle hService    = (ServiceHandle) hTarget;
+                EnumHandle    hReentrancy = REENTRANCY.getEnumByName(
                         hService.f_context.m_reentrancy.name());
-                return Utils.assignInitializedEnum(frame, hStatus, iReturn);
+                return Utils.assignInitializedEnum(frame, hReentrancy, iReturn);
                 }
 
             case "contented":
@@ -269,6 +270,23 @@ public class xService
                 return frame.assignValue(iReturn, frame.f_fiber.getAsyncSection());
             }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeNativeSet(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
+        {
+        switch (sPropName)
+            {
+            case "reentrancy":
+                {
+                ServiceHandle hService    = (ServiceHandle) hTarget;
+                EnumHandle    hReentrancy = (EnumHandle) hValue;
+
+                hService.f_context.m_reentrancy = Reentrancy.valueOf(hReentrancy.getName());
+                return Op.R_NEXT;
+                }
+            }
+        return super.invokeNativeSet(frame, hTarget, sPropName, hValue);
         }
 
     @Override

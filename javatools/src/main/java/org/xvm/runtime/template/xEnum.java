@@ -374,6 +374,14 @@ public class xEnum
             return (ClassStructure) templateEnum.getStructure().getChild(sName);
             }
 
+        /**
+         * @return the name for this Enum value
+         */
+        public String getName()
+            {
+            return getTemplate().getNameByOrdinal(m_index);
+            }
+
         @Override
         public xEnum getTemplate()
             {
@@ -383,7 +391,7 @@ public class xEnum
         @Override
         public String toString()
             {
-            return getTemplate().getNameByOrdinal(m_index);
+            return getName();
             }
 
         protected int m_index;
