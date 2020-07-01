@@ -2140,7 +2140,6 @@ public class ConstantPool
     public SingletonConstant valNull()          {SingletonConstant c = m_valNull;         if (c == null) {m_valNull         = c = ensureSingletonConstConstant(clzNull())                     ;} return c;}
 
     public SignatureConstant sigToString()      {SignatureConstant c = m_sigToString;     if (c == null) {m_sigToString     = c = getSignature("Object",    "toString",  0)                   ;} return c;}
-    public SignatureConstant sigConstruct()     {SignatureConstant c = m_sigConstruct;    if (c == null) {m_sigConstruct    = c = getSignature("Object",    "construct", 0)                   ;} return c;}
     public SignatureConstant sigEquals()        {SignatureConstant c = m_sigEquals;       if (c == null) {m_sigEquals       = c = getSignature("Object",    "equals",    3)                   ;} return c;}
     public SignatureConstant sigCompare()       {SignatureConstant c = m_sigCompare;      if (c == null) {m_sigCompare      = c = getSignature("Orderable", "compare",   3)                   ;} return c;}
     public SignatureConstant sigValidator()     {SignatureConstant c = m_sigValidator;    if (c == null) {m_sigValidator    = c = ensureSignatureConstant("assert", NO_TYPES, NO_TYPES)       ;} return c;}
@@ -2905,7 +2904,6 @@ public class ConstantPool
         m_valGreater      = null;
         m_valNull         = null;
         m_sigToString     = null;
-        m_sigConstruct    = null;
         m_sigEquals       = null;
         m_sigCompare      = null;
         m_sigValidator    = null;
@@ -3686,7 +3684,6 @@ public class ConstantPool
     private transient SingletonConstant m_valGreater;
     private transient SingletonConstant m_valNull;
     private transient SignatureConstant m_sigToString;
-    private transient SignatureConstant m_sigConstruct;
     private transient SignatureConstant m_sigEquals;
     private transient SignatureConstant m_sigCompare;
     private transient SignatureConstant m_sigValidator;
