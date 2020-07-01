@@ -140,7 +140,8 @@ public class NewG_N
     @Override
     protected String getParamsString()
         {
-        return getParamsString(m_anArgValue, m_aArgValue);
+        return Argument.toIdString(m_argType, m_nTypeValue) + ": " +
+               getParamsString(m_anArgValue, m_aArgValue);
         }
 
     private int   m_nTypeValue;

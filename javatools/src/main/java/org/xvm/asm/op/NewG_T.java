@@ -136,7 +136,8 @@ public class NewG_T
     @Override
     protected String getParamsString()
         {
-        return Argument.toIdString(m_argValue, m_nArgTupleValue);
+        return Argument.toIdString(m_argType, m_nTypeValue) + ": " +
+               Argument.toIdString(m_argValue, m_nArgTupleValue);
         }
 
     private int m_nTypeValue;
