@@ -202,6 +202,11 @@ public class Fiber
                 f_context.terminateFiber(this);
                 }
             });
+
+        if (getStatus() == FiberStatus.Terminating)
+            {
+            f_context.terminateFiber(this);
+            }
         }
 
     /**
