@@ -112,10 +112,7 @@ public class xEnum
 
                 if (hValue.isStruct())
                     {
-                    MethodStructure ctor  = getStructure().findConstructor(TypeConstant.NO_TYPES);
-                    ObjectHandle[]  ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, ctor.getMaxVars());
-
-                    return proceedConstruction(frame, ctor, true, hValue, ahVar, Op.A_STACK);
+                    return completeConstruction(frame, hValue);
                     }
                 }
 
@@ -123,6 +120,46 @@ public class xEnum
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    /**
+     * Complete the construction of an Enum handle (struct) and place the result on the stack.
+     *
+     * @param frame    the current frame
+     * @param hStruct  the enum struct handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
+     */
+    public int completeConstruction(Frame frame, EnumHandle hStruct)
+        {
+        assert hStruct.isStruct();
+
+        MethodStructure ctor  = hStruct.getStructure().findConstructor(TypeConstant.NO_TYPES);
+        ObjectHandle[]  ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, ctor.getMaxVars());
+
+        switch (proceedConstruction(frame, ctor, true, hStruct, ahVar, Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                hStruct.getTemplate().replaceHandle((EnumHandle) frame.peekStack());
+                return Op.R_NEXT;
+
+            case Op.R_CALL:
+
+                Frame.Continuation contNext = frameCaller ->
+                    {
+                    EnumHandle hEnum = (EnumHandle) frameCaller.peekStack();
+                    hEnum.getTemplate().replaceHandle(hEnum);
+                    return Op.R_NEXT;
+                    };
+                frame.m_frameNext.addContinuation(contNext);
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     @Override
@@ -185,7 +222,7 @@ public class xEnum
         }
 
 
-    // ----- helper method -----
+    // ----- helper methods ------------------------------------------------------------------------
 
     /**
      * Create an EnumHandle for the specified ordinal value.
@@ -248,9 +285,40 @@ public class xEnum
         return m_listNames.get(ix);
         }
 
+    /**
+     * @return a list of enum names
+     */
+    public List<String> getNames()
+        {
+        return m_listNames;
+        }
 
-    // ----- ObjectHandle -----
+    /**
+     * @return a list of enum values
+     */
+    public List<EnumHandle> getValues()
+        {
+        return m_listHandles;
+        }
 
+    /**
+     * Replace a struct handle with a public const one.
+     */
+    private void replaceHandle(EnumHandle hEnum)
+        {
+        assert !hEnum.isStruct();
+
+        m_listHandles.set(hEnum.m_index, hEnum);
+        }
+
+
+    // ----- ObjectHandle --------------------------------------------------------------------------
+
+    /**
+     * The EnumHandle.
+     *
+     * Note: unlike other handles, EnumHandle's template is the Enumeration (not the EnumValue).
+     */
     public static class EnumHandle
                 extends GenericHandle
         {
@@ -296,10 +364,26 @@ public class xEnum
             return false;
             }
 
+        /**
+         * @return the ClassStructure for this Enum value
+         */
+        public ClassStructure getStructure()
+            {
+            xEnum  templateEnum = getTemplate();
+            String sName        = templateEnum.getNameByOrdinal(m_index);
+            return (ClassStructure) templateEnum.getStructure().getChild(sName);
+            }
+
+        @Override
+        public xEnum getTemplate()
+            {
+            return (xEnum) super.getTemplate();
+            }
+
         @Override
         public String toString()
             {
-            return ((xEnum) getTemplate()).getNameByOrdinal(m_index);
+            return getTemplate().getNameByOrdinal(m_index);
             }
 
         protected int m_index;

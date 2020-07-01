@@ -592,7 +592,7 @@ public class xRTType
             }
 
         ArrayHandle hArray = xRTProperty.ensureArrayTemplate().createArrayHandle(
-                xRTProperty.ensureArrayComposition(), listProps.toArray(new ObjectHandle[0]));
+                xRTProperty.ensureArrayComposition(), listProps.toArray(Utils.OBJECTS_NONE));
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -924,7 +924,7 @@ public class xRTType
                 }
             }
         ArrayHandle hArray = xRTProperty.ensureArrayTemplate().createArrayHandle(
-                xRTProperty.ensureArrayComposition(typeTarget), listProps.toArray(new ObjectHandle[0]));
+                xRTProperty.ensureArrayComposition(typeTarget), listProps.toArray(Utils.OBJECTS_NONE));
         return frame.assignValue(iReturn, hArray);
         }
 

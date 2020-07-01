@@ -79,6 +79,21 @@ public class xRTClass
         }
 
     @Override
+    public void registerNativeTemplates()
+        {
+        ClassStructure clzEnum = f_templates.getClassStructure("Enumeration");
+        new xRTEnumeration(f_templates, clzEnum, true).initNative();
+        }
+
+    @Override
+    public ClassTemplate getTemplate(TypeConstant type)
+        {
+        return type.isA(pool().typeEnumeration())
+                ? xRTEnumeration.INSTANCE
+                : this;
+        }
+
+    @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof ClassConstant || constant instanceof DecoratedClassConstant)
@@ -470,7 +485,7 @@ public class xRTClass
         if (ARRAY_EMPTY == null)
             {
             ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
-                ensureArrayComposition(), new ObjectHandle[0]);
+                ensureArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARRAY_EMPTY;
         }

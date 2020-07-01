@@ -21,6 +21,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
@@ -369,7 +370,7 @@ public class xRTMethod
         if (ARRAY_EMPTY == null)
             {
             ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
-                    ensureArrayComposition(), new ObjectHandle[0]);
+                    ensureArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARRAY_EMPTY;
         }

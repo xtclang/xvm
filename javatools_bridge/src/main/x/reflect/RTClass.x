@@ -6,8 +6,8 @@ import ecstasy.reflect.ClassTemplate.Composition;
  * The native Class implementation.
  */
 const RTClass<PublicType, ProtectedType extends PublicType,
-                        PrivateType   extends ProtectedType,
-                        StructType    extends Struct>
+                          PrivateType   extends ProtectedType,
+                          StructType    extends Struct>
         extends Class<PublicType, ProtectedType, PrivateType, StructType>
     {
     construct() {}

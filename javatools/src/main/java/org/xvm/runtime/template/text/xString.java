@@ -568,7 +568,7 @@ public class xString
         if (ARRAY_EMPTY == null)
             {
             ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
-                    ensureArrayComposition(), new ObjectHandle[0]);
+                    ensureArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARRAY_EMPTY;
         }
