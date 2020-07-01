@@ -14,6 +14,7 @@ import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
@@ -576,10 +577,22 @@ public class WhileStatement
             code.add(getRepeatLabel());
             code.add(getContinueLabel());
             emitLabelVarUpdate(code, regFirst, regCount, labelInit);
+
+            Op opLast = code.getLastOp();
+
             block.suppressScope();
             block.completes(ctx, fCompletes, code, errs);
-            code.add(new Jump(getRepeatLabel()));
-            code.add(new Exit());
+
+            if (code.getLastOp() == opLast)
+                {
+                // the block didn't add any ops; this is just an infinite loop
+                log(errs, Severity.ERROR, Compiler.INFINITE_LOOP);
+                }
+            else
+                {
+                code.add(new Jump(getRepeatLabel()));
+                code.add(new Exit());
+                }
             return false;     // while(true) never completes naturally
             }
 

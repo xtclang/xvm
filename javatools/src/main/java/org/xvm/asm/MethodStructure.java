@@ -1854,11 +1854,9 @@ public class MethodStructure
             List<Op> list = m_listOps;
             if (!list.isEmpty())
                 {
-                Op  op = null;
-                int of = 0;
+                Op op;
                 do
                     {
-                    ++of;
                     op = list.get(list.size() - 1);
                     while (op instanceof Op.Prefix)
                         {
@@ -1876,6 +1874,30 @@ public class MethodStructure
                 }
 
             throw new IllegalStateException("no ops");
+            }
+
+        /**
+         * @return the last added Op for this Code
+         */
+        public Op getLastOp()
+            {
+            List<Op> listOps = m_listOps;
+            Op       opLast  = listOps.isEmpty() ? null : listOps.get(listOps.size() - 1);
+
+            if (m_fTrailingPrefix)
+                {
+                do
+                    {
+                    Op opNext = ((Op.Prefix) opLast).getNextOp();
+                    if (opNext == null)
+                        {
+                        break;
+                        }
+                    opLast = opNext;
+                    }
+                while (opLast instanceof Op.Prefix);
+                }
+            return opLast;
             }
 
         /**

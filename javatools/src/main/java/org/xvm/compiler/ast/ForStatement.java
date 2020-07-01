@@ -13,6 +13,7 @@ import java.util.Map.Entry;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
@@ -545,7 +546,6 @@ public class ForStatement
             for (int i = 0, c = getConditionCount(); i < c; ++i)
                 {
                 AstNode cond = getCondition(i);
-                boolean fLast = i == c-1;
                 if (cond instanceof AssignmentStatement)
                     {
                     AssignmentStatement stmtCond = (AssignmentStatement) cond;
@@ -559,6 +559,13 @@ public class ForStatement
                     fBlockReachable &= exprCond.isCompletable();
                     }
                 }
+            }
+
+        Op opLast = null;
+        if (fAlwaysTrue)
+            {
+            opLast = code.getLastOp();
+            block.suppressScope();
             }
 
         fCompletes &= block.completes(ctx, fBlockReachable, code, errs) || !fAlwaysTrue;
@@ -592,9 +599,16 @@ public class ForStatement
             code.add(new IP_Inc(regCount));
             }
 
-        code.add(new Jump(labelRepeat));
-
-        code.add(new Exit());
+        if (fAlwaysTrue && code.getLastOp() == opLast)
+            {
+            // the block didn't add any ops; this is just an infinite loop
+            log(errs, Severity.ERROR, Compiler.INFINITE_LOOP);
+            }
+        else
+            {
+            code.add(new Jump(labelRepeat));
+            code.add(new Exit());
+            }
 
         return fCompletes;
         }
