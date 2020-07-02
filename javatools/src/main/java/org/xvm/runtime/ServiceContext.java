@@ -265,12 +265,34 @@ public class ServiceContext
             }
         }
 
-    public void addRequest(Message msg)
+    /**
+     * Add a message to the service request queue.
+     *
+     * @param msg  the request message
+     *
+     * @return true if the service has become "overwhelmed" - too many outstanding messages
+     */
+    public boolean addRequest(Message msg)
         {
         f_queueMsg.add(msg);
         ensureScheduled();
+        return isOverwhelmed();
         }
 
+    /**
+     * @return true if the service has too many outstanding messages
+     */
+    public boolean isOverwhelmed()
+        {
+        return f_queueMsg.size() + f_queueSuspended.size() > QUEUE_THRESHOLD;
+        }
+
+    /**
+     * Add a message to the service request queue.
+     *
+     * @param response  the response message
+     *
+     */
     public void respond(Response response)
         {
         f_queueResponse.add(response);
@@ -752,6 +774,7 @@ public class ServiceContext
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
+        // TODO: should we reject (throw) if the service overwhelmed?
         addRequest(new CallLaterRequest(hFunction, ahArg, future));
 
         future.whenComplete((r, x) ->
@@ -783,19 +806,25 @@ public class ServiceContext
      * Send and asynchronous "invoke" message with zero or one return value.
      *
      * @param cReturns 1, 0 or -1  for one, zero or tuple return
+     *
+     * @return the corresponding future or null iff the request is "fire and forget" and the
+     *         called service is not overwhelmed
      */
     public CompletableFuture<ObjectHandle> sendInvoke1Request(Frame frameCaller,
             FunctionHandle hFunction, ObjectHandle hTarget, ObjectHandle[] ahArg, int cReturns)
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        addRequest(new Invoke1Request(frameCaller, hFunction, hTarget, ahArg, cReturns, future));
+        boolean fOverwhelmed = addRequest(
+                new Invoke1Request(frameCaller, hFunction, hTarget, ahArg, cReturns, future));
 
         Fiber fiber = frameCaller.f_fiber;
         if (cReturns == 0)
             {
+            // consider not to block the caller if it is *not* the reason of the callee being
+            // overwhelmed, which would require some additional knowledge being retained
             fiber.registerUncapturedRequest(future);
-            return null;
+            return fOverwhelmed ? future : null;
             }
 
         fiber.registerRequest(future);
@@ -804,19 +833,23 @@ public class ServiceContext
 
     /**
      * Send and asynchronous "invoke" message with multiple return values.
+     *
+     * @return the corresponding future or null iff the request is "fire and forget" and the
+     *         called service is not overwhelmed
      */
     public CompletableFuture<ObjectHandle[]> sendInvokeNRequest(Frame frameCaller,
                 FunctionHandle hFunction, ObjectHandle hTarget, ObjectHandle[] ahArg, int cReturns)
         {
         CompletableFuture<ObjectHandle[]> future = new CompletableFuture<>();
 
-        addRequest(new InvokeNRequest(frameCaller, hFunction, hTarget, ahArg, cReturns, future));
+        boolean fOverwhelmed = addRequest(
+                new InvokeNRequest(frameCaller, hFunction, hTarget, ahArg, cReturns, future));
 
         Fiber fiber = frameCaller.f_fiber;
         if (cReturns == 0)
             {
             fiber.registerUncapturedRequest(future);
-            return null;
+            return fOverwhelmed ? future : null;
             }
 
         fiber.registerRequest(future);
@@ -1426,6 +1459,11 @@ public class ServiceContext
 
     public final Container        f_container;
     public final TemplateRegistry f_templates;
+
+    /**
+     * The queue size threshold at which the caller should pushed back.
+     */
+    public final static int QUEUE_THRESHOLD = 256;
 
     /**
      * The container's ConstantPool.

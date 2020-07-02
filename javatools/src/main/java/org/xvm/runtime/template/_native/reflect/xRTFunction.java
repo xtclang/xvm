@@ -918,13 +918,11 @@ public class xRTFunction
                 return frame.raiseException(xException.mutableObject(frame));
                 }
 
-            int cReturns = iReturn == Op.A_IGNORE ? 0 : 1;
-
             CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendInvoke1Request(
-                frame, this, hService, ahVar, cReturns);
+                frame, this, hService, ahVar, iReturn == Op.A_IGNORE ? 0 : 1);
 
-            // in the case of zero returns - fire and forget
-            return cReturns == 0 ? Op.R_NEXT : frame.assignFutureResult(iReturn, cfResult);
+            // in the case of zero returns and underwhelmed queue - fire and forget
+            return cfResult == null ? Op.R_NEXT : frame.assignFutureResult(iReturn, cfResult);
             }
 
         @Override
@@ -1024,13 +1022,11 @@ public class xRTFunction
                 return frame.raiseException(xException.mutableObject(frame));
                 }
 
-            int cReturns = iReturn == Op.A_IGNORE ? 0 : 1;
-
             CompletableFuture<ObjectHandle> cfResult = f_ctx.sendInvoke1Request(
-                frame, this, hTarget, ahVar, cReturns);
+                frame, this, hTarget, ahVar, iReturn == Op.A_IGNORE ? 0 : 1);
 
-            // in the case of zero returns - fire and forget
-            return cReturns == 0 ? Op.R_NEXT : frame.assignFutureResult(iReturn, cfResult);
+            // in the case of zero returns and underwhelmed queue - fire and forget
+            return cfResult == null ? Op.R_NEXT : frame.assignFutureResult(iReturn, cfResult);
             }
 
         @Override

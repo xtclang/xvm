@@ -2,38 +2,50 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run( )
+    void run()
         {
-        console.println();
+        console.println("Starting Dima's test");
 
-        testPerformance();
+        Test one = new Test();
+        Test two = new Test();
+
+        one.test();
+        two.test();
+
+        console.println("done");
         }
 
-    void testPerformance()
+    service Test
         {
-        import ecstasy.lang.src.Lexer.Id;
+        void test()
+            {
+            for (Int i = 0; i < 1000000; i++)
+                {
+                if (i % 1000 == 0)
+                    {
+                    console.println($"-->{i}");
+                    }
+                TestStatic.increment(this);
+                }
+            }
 
-        Map<String, Id> map1 = Id.allKeywords;
+        void incremented(Int i)
+            {
+            }
+        }
 
-        console.println($"allKeywords: {map1.size}");
+    static service TestStatic
+        {
+        Int i = 0;
 
-        Map<String, Id> map2 = Id.keywords;
-
-        console.println($"keywords: {map2.size}");
-
-        Map<String, Id> map3 = Id.prefixes;
-
-        console.println($"keywords: {map3.size}");
-
-        TypeSystem ts = this:service.typeSystem;
-
-        // below is still sub-optimal
-//        Class clz;
-//
-//        assert clz := ts.classForName("Appender");
-//        console.println($"class for Appender={clz}");
-//
-//        assert clz := ts.classForName("String");
-//        console.println($"class for String={clz}");
+        void increment(Test test)
+            {
+            i++;
+            if (i % 1000 == 0)
+                {
+                console.println($"{i}<--");
+                }
+            test.incremented(i);
+            }
         }
     }

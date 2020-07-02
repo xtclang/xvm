@@ -42,6 +42,11 @@ public class FiberQueue
         return m_cSize == 0;
         }
 
+    public int size()
+        {
+        return m_cSize;
+        }
+
     // get the first of the waiting fibers that is either "ready" or timed-out
     public Frame getWaitingReady()
         {
