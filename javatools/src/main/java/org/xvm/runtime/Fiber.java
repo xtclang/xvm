@@ -202,11 +202,6 @@ public class Fiber
                 f_context.terminateFiber(this);
                 }
             });
-
-        if (getStatus() == FiberStatus.Terminating)
-            {
-            f_context.terminateFiber(this);
-            }
         }
 
     /**
@@ -244,7 +239,10 @@ public class Fiber
                 }
 
             m_mapPendingUncaptured.remove(future);
-            m_cPending--;
+            if (--m_cPending == 0 && getStatus() == FiberStatus.Terminating)
+                {
+                f_context.terminateFiber(this);
+                }
             });
         }
 
