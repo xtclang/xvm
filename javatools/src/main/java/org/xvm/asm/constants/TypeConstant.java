@@ -421,6 +421,14 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this type is annotated by the specified annotation class
+     */
+    public boolean containsAnnotation(ClassConstant idAnno)
+        {
+        return isAnnotated() && getUnderlyingType().containsAnnotation(idAnno);
+        }
+
+    /**
      * @return true iff this type represents a virtual child type
      */
     public boolean isVirtualChild()
@@ -4307,14 +4315,15 @@ public abstract class TypeConstant
 
             if (fNative)
                 {
-                // native property;
-                // if there is a natural getter, it never
-                // calls super;
-                // also, the natural code may pretend there is a field, in which case there is no
-                // natural getter;
+                // native property:
+                // - if there is a natural getter, it never calls super;
+                // - also, the natural code may pretend there is a field, in which case there is no
+                //   natural getter;
+                // - if the native property has a Var annotation (e.g. @Lazy), the field needs to
+                //   be there
                 fGetSupers      = false;
                 fGetBlocksSuper = true;
-                fField          = false;
+                fField          = fHasVarAnno;
                 fRO             = fHasRO;
                 fRW             = !fHasRO;
                 }

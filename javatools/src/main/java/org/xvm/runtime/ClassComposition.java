@@ -263,9 +263,15 @@ public class ClassComposition
     @Override
     public boolean isLazy(Object nid)
         {
-        TypeComposition clz = m_mapFields.get(nid);
-        return clz instanceof PropertyComposition &&
-                ((PropertyComposition) clz).isLazy();
+        if (isInflated(nid))
+            {
+            ConstantPool    pool = f_typeInception.getConstantPool();
+            TypeComposition clz  = m_mapFields.get(nid);
+
+            return clz instanceof PropertyComposition && ((PropertyComposition) clz).isLazy()
+                || clz.getType().containsAnnotation(pool.clzLazy());
+            }
+        return false;
         }
 
     @Override

@@ -14,6 +14,8 @@ import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.collections.xListMap;
 
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
+
 import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template.xEnum;
@@ -60,7 +62,8 @@ public class xRTEnumeration
      */
     protected int getPropertyByName(Frame frame, ClassHandle hClass, int iReturn)
         {
-        ObjectHandle hMap = hClass.getField("byName");
+        RefHandle    hByName = (RefHandle) hClass.getField("byName");
+        ObjectHandle hMap    = hByName.getReferent();
         if (hMap == null)
             {
             TypeConstant     typeEnum     = hClass.getType().getParamType(0);
@@ -117,7 +120,7 @@ public class xRTEnumeration
                 case Op.R_NEXT:
                     {
                     hMap = frame.popStack();
-                    hClass.setField("byName", hMap);
+                    hByName.setReferent(hMap);
                     break;
                     }
 
@@ -126,7 +129,7 @@ public class xRTEnumeration
                     Frame.Continuation contNext = frameCaller ->
                         {
                         ObjectHandle hM = frameCaller.popStack();
-                        hClass.setField("byName", hM);
+                        hByName.setReferent(hM);
                         return frameCaller.assignValue(iReturn, hM);
                         };
                     frame.m_frameNext.addContinuation(contNext);

@@ -224,6 +224,12 @@ public class AnnotatedTypeConstant
         }
 
     @Override
+    public boolean containsAnnotation(ClassConstant idAnno)
+        {
+        return getAnnotationClass().equals(idAnno) || super.containsAnnotation(idAnno);
+        }
+
+    @Override
     public boolean isNullable()
         {
         return m_constType.isNullable();
