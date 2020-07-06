@@ -2039,6 +2039,12 @@ public abstract class Op
      */
     public static final int R_YIELD = -9;
 
+    /**
+     * Result from process() method: some registers are not ready for a read; block any other
+     * fibers from execution and repeat the same op-code.
+     */
+    public static final int R_PAUSE = -10;
+
 
     // ----- other constants -----------------------------------------------------------------------
 

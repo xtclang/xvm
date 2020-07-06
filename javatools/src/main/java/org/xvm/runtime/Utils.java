@@ -824,11 +824,18 @@ public abstract class Utils
                     {
                     assert frame.f_aiReturn == null;
 
+                    // the only place where we call the native "wait" frame without using the return
+                    // value is initConstants() method; in that case we don't allow any other fiber
+                    // to interleave until a response comes back
+                    boolean fNoReentrancy = frame.f_iReturn == Op.A_IGNORE;
+
                     FutureHandle hFuture = (FutureHandle) frame.f_ahVar[0];
 
                     return hFuture.isAssigned()
                         ? frame.returnValue(hFuture, true)
-                        : R_REPEAT;
+                        : fNoReentrancy
+                            ? R_PAUSE
+                            : R_REPEAT;
                     }
 
                 assert frame.f_iReturn == A_MULTI;

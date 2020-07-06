@@ -616,6 +616,11 @@ public class ServiceContext
                     fiber.setStatus(FiberStatus.Yielded);
                     return frame;
 
+                case Op.R_PAUSE:
+                    frame.m_iPC = iPCLast;
+                    fiber.setStatus(FiberStatus.Paused);
+                    return frame;
+
                 default:
                     throw new IllegalStateException("Invalid code: " + iPC);
                 }

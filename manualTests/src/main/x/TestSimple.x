@@ -6,46 +6,37 @@ module TestSimple
         {
         console.println("Starting Dima's test");
 
-        Test one = new Test();
-        Test two = new Test();
 
-        one.test();
-        two.test();
+        Test[] svc = new Array<Test>(2, (x) -> new Test());
 
-        console.println("done");
+        for (Test s : svc) {
+                @Future Int i = s.test();
+                console.println(s);
         }
 
-    service Test
-        {
-        void test()
-            {
-            for (Int i = 0; i < 1000000; i++)
-                {
-                if (i % 1000 == 0)
-                    {
-                    console.println($"-->{i}");
-                    }
-                TestStatic.increment(this);
-                }
-            }
-
-        void incremented(Int i)
-            {
-            }
+        console.println("Stopping");
+        svc[0].stopped = True;
+        Stop.stop(svc[1]);
         }
 
-    static service TestStatic
-        {
-        Int i = 0;
+        service Test {
 
-        void increment(Test test)
-            {
-            i++;
-            if (i % 1000 == 0)
-                {
-                console.println($"{i}<--");
+                Boolean stopped = false;
+                Int i = 0;
+
+                Int test() {
+                        console.println("starting service");
+                        while (!stopped) {
+                                i++;
+                        }
+                        console.println($"stopped at {i}");
+                        return i;
                 }
-            test.incremented(i);
-            }
+        }
+
+        static service Stop {
+                void stop(Test test) {
+                        test.stopped = True;
+                }
         }
     }
