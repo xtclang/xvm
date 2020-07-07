@@ -45,20 +45,7 @@ public abstract class OSFileNode
     @Override
     public void initNative()
         {
-        ClassTemplate templateDir    = f_templates.getTemplate("fs.Directory");
-        ClassTemplate templateFile   = f_templates.getTemplate("fs.File");
-        ClassTemplate templateOSDir  = f_templates.getTemplate("_native.fs.OSDirectory");
-        ClassTemplate templateOSFile = f_templates.getTemplate("_native.fs.OSFile");
-
-        s_clzOSDir  = templateOSDir.ensureClass(templateDir.getCanonicalType());
-        s_clzOSFile = templateOSFile.ensureClass(templateFile.getCanonicalType());
-
-        s_clzOSDirStruct  = s_clzOSDir.ensureAccess(Access.STRUCT);
-        s_clzOSFileStruct = s_clzOSFile.ensureAccess(Access.STRUCT);
-
-        s_constructorDir  = templateOSDir.getStructure().findConstructor();
-        s_constructorFile = templateOSFile.getStructure().findConstructor();
-
+        // common native properties between OSFile and OSDirectory
         markNativeProperty("store");
         markNativeProperty("pathString");
         markNativeProperty("exists");
@@ -66,8 +53,6 @@ public abstract class OSFileNode
         markNativeProperty("accessedMillis");
         markNativeProperty("modifiedMillis");
         markNativeProperty("size");
-
-        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override
@@ -154,14 +139,9 @@ public abstract class OSFileNode
      */
     static int createHandle(Frame frame, ObjectHandle hOSStore, Path path, boolean fDir, int iReturn)
         {
-        ClassComposition clzPublic   = fDir ? s_clzOSDir       : s_clzOSFile;
-        ClassComposition clzStruct   = fDir ? s_clzOSDirStruct : s_clzOSFileStruct;
-        MethodStructure  constructor = fDir ? s_constructorDir : s_constructorFile;
-
-        NodeHandle     hStruct = new NodeHandle(clzStruct, path.toAbsolutePath(), hOSStore);
-        ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, constructor.getMaxVars());
-
-        return clzPublic.getTemplate().proceedConstruction(frame, constructor, true, hStruct, ahVar, iReturn);
+        return fDir
+            ? xOSDirectory.INSTANCE.createHandle(frame, hOSStore, path, iReturn)
+            : xOSFile     .INSTANCE.createHandle(frame, hOSStore, path, iReturn);
         }
 
 
@@ -197,14 +177,4 @@ public abstract class OSFileNode
             return f_path;
             }
         }
-
-    // ----- constants -----------------------------------------------------------------------------
-
-    private static ClassComposition s_clzOSDir;
-    private static ClassComposition s_clzOSDirStruct;
-    private static MethodStructure  s_constructorDir;
-
-    private static ClassComposition s_clzOSFile;
-    private static ClassComposition s_clzOSFileStruct;
-    private static MethodStructure  s_constructorFile;
     }

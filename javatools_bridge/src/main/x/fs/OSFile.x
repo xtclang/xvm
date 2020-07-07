@@ -46,11 +46,9 @@ const OSFile
         return dir;
         }
 
+
     // ----- native --------------------------------------------------------------------------------
 
-    @Override
-    @Abstract immutable Byte[] contents;
-
-    @Override
-    @Abstract Int size;
+    @Override immutable Byte[] contents.get() { TODO("native"); }
+    @Override Int size.get()                  { TODO("native"); }
     }

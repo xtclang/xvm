@@ -83,6 +83,7 @@ const OSFileNode
     @Override
     conditional FileNode renameTo(String name);
 
+
     // ----- equality support ----------------------------------------------------------------------
 
     static <CompileType extends OSFileNode> Int hashCode(CompileType value)
@@ -96,18 +97,16 @@ const OSFileNode
                node1.is(OSFile) == node2.is(OSFile);
         }
 
-    // ----- internal -----------------------------------------------------------------------------
-
 
     // ----- native --------------------------------------------------------------------------------
 
-    @Abstract protected OSFileStore store;
-    @Abstract protected String      pathString;
+    @Unassigned protected OSFileStore store;
 
-    @Override
-    @Abstract Int size;
+    @Override Int size.get()          { TODO("native"); }
 
-    @Abstract private Int createdMillis;
-    @Abstract private Int accessedMillis;
-    @Abstract private Int modifiedMillis;
+    protected String pathString.get() { TODO("native"); }
+
+    private Int createdMillis.get()   { TODO("native"); }
+    private Int accessedMillis.get()  { TODO("native"); }
+    private Int modifiedMillis.get()  { TODO("native"); }
     }
