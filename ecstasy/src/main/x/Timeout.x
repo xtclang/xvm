@@ -92,7 +92,7 @@ const Timeout
         }
 
     /**
-     * The clock selected by the runtime to manage timeouts.
+     * The timer selected by the runtime to manage timeouts.
      */
     @Inject Timer timer;
 
@@ -107,11 +107,6 @@ const Timeout
      * governs this service.
      */
     Boolean independent;
-
-    /**
-     * The time at which this Timeout began.
-     */
-    DateTime startTime;
 
     /**
      * The duration of this Timeout.
