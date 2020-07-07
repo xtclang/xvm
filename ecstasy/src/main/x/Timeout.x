@@ -85,6 +85,7 @@ const Timeout
             // that it is replacing
             duration = duration.minOf(previousTimeout.remainingTime);
             }
+        this.independent = independent;
         }
     finally
         {
