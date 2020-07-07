@@ -650,6 +650,7 @@ public class Frame
         switch (nVar)
             {
             case Op.A_IGNORE:
+            case Op.A_BLOCK:
                 return Op.R_NEXT;
 
             case Op.A_STACK:
@@ -860,6 +861,7 @@ public class Frame
         switch (f_iReturn)
             {
             case Op.A_IGNORE:
+            case Op.A_BLOCK:
                 return Op.R_RETURN;
 
             case Op.A_TUPLE:
@@ -884,6 +886,7 @@ public class Frame
         switch (f_iReturn)
             {
             case Op.A_IGNORE:
+            case Op.A_BLOCK:
                 return Op.R_RETURN;
 
             case Op.A_MULTI:
@@ -1017,6 +1020,7 @@ public class Frame
         switch (f_iReturn)
             {
             case Op.A_IGNORE:
+            case Op.A_BLOCK:
                 return Op.R_RETURN;
 
             case Op.A_MULTI:

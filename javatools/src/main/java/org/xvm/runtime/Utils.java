@@ -643,8 +643,9 @@ public abstract class Utils
                     CompletableFuture<ObjectHandle> cfResult =
                         ctxMain.sendConstantRequest(frame, listSingletons);
 
-                    // create a pseudo frame to deal with the wait
-                    Frame frameWait = Utils.createWaitFrame(frame, cfResult, Op.A_IGNORE);
+                    // create a pseudo frame to deal with the wait, but don't allow any other fiber
+                    // to interleave until a response comes back (as in "forbidden" reentrancy)
+                    Frame frameWait = Utils.createWaitFrame(frame, cfResult, Op.A_BLOCK);
                     frameWait.addContinuation(continuation);
 
                     return frame.call(frameWait);
@@ -824,12 +825,8 @@ public abstract class Utils
                     {
                     assert frame.f_aiReturn == null;
 
-                    // the only place where we call the native "wait" frame without using the return
-                    // value is initConstants() method; in that case we don't allow any other fiber
-                    // to interleave until a response comes back
-                    boolean fNoReentrancy = frame.f_iReturn == Op.A_IGNORE;
-
-                    FutureHandle hFuture = (FutureHandle) frame.f_ahVar[0];
+                    boolean      fNoReentrancy = frame.f_iReturn == Op.A_BLOCK;
+                    FutureHandle hFuture       = (FutureHandle) frame.f_ahVar[0];
 
                     return hFuture.isAssigned()
                         ? frame.returnValue(hFuture, true)

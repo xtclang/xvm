@@ -1966,9 +1966,10 @@ public abstract class Op
     public static final int A_SUPER     = -11;
 
     /**
-     * Pre-defined argument: Reserved for future use.
+     * Pre-defined argument: an indicator for a "blocking wait" return value. It's similar to
+     * {@link #A_IGNORE}, but effectively turns on the "forbidden" reentrancy.
      */
-    public static final int A_RSVD_12   = -12;
+    public static final int A_BLOCK     = -12;
 
     /**
      * Pre-defined argument: an indicator for "multiple return values" (internal)

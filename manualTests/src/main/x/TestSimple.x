@@ -4,39 +4,75 @@ module TestSimple
 
     void run()
         {
-        console.println("Starting Dima's test");
+        console.println("Starting");
 
+        Test one = new Test();
+        Test two = new Test();
 
-        Test[] svc = new Array<Test>(2, (x) -> new Test());
+        one.other = two;
+        two.other = one;
 
-        for (Test s : svc) {
-                @Future Int i = s.test();
-                console.println(s);
-        }
+        one.test();
+        two.test();
 
-        console.println("Stopping");
-        svc[0].stopped = True;
-        Stop.stop(svc[1]);
+        console.println("done");
         }
 
         service Test {
 
-                Boolean stopped = false;
+                Test? other;
                 Int i = 0;
 
-                Int test() {
-                        console.println("starting service");
-                        while (!stopped) {
-                                i++;
+                void test() {
+                        for (Int i = 0; i < 10000; i++) {
+                                other?.increment(this);
                         }
-                        console.println($"stopped at {i}");
-                        return i;
+                        console.println($"done - {i}");
+                }
+
+                void increment(Test test) {
+                        i++;
+                        //if (i % 1000 == 0) {
+                        if (True) {
+                                console.println($"{this} - {i}");
+                        }
+                        test.increment2();
+                }
+
+                void increment2() {
+                        i++;
+                        //if (i % 1000 == 0) {
+                        if (True) {
+                                console.println($"2 {this} - {i}");
+                        }
                 }
         }
 
-        static service Stop {
-                void stop(Test test) {
-                        test.stopped = True;
-                }
-        }
+
+//    void run()
+//        {
+//        import ecstasy.Timeout;
+//
+//        console.println();
+//        Test t1 = new Test(1);
+//        console.println(t1.serviceName);
+//        t1.reentrancy = Open;
+//        using (Timeout timeout = new Timeout(Duration:1M, true))
+//            {
+//            t1.runTest();
+//            t1.shutdown();
+//
+//            console.println(t1.stop);
+//            t1.runTest();
+//            }
+//        }
+//
+//    service Test(Int i)
+//        {
+//        Boolean stop;
+//        void runTest()
+//            {
+//            console.println($"running service {i}");
+//            }
+//        }
     }
