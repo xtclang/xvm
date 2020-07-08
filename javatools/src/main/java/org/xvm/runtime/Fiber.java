@@ -126,7 +126,7 @@ public class Fiber
         }
 
     /**
-     * Set tne fiber's status; called only from this fiber's service thread.
+     * Set the fiber's status; called only from this fiber's service thread.
      */
     public void setStatus(FiberStatus status)
         {

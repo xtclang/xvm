@@ -178,7 +178,7 @@ public class xService
             {
             case "callLater":
                 {
-                return hService.f_context.callLater((FunctionHandle) hArg, Utils.OBJECTS_NONE);
+                return hService.f_context.callLater((FunctionHandle) hArg, Utils.OBJECTS_NONE, false);
                 }
 
             case "registerTimeout":
@@ -267,7 +267,7 @@ public class xService
                 return Utils.assignInitializedEnum(frame, hReentrancy, iReturn);
                 }
 
-            case "contented":
+            case "contended":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hService.f_context.isContended()));
 
             case "asyncSection":

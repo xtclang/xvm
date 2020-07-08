@@ -57,6 +57,11 @@ module TestServices
             &result.whenComplete((n, e) ->
                 {
                 console.println($"{tag()} result={(n ?: e ?: "???")}");
+                // when the last result comes back - shut down
+                if (!svc.contended)
+                    {
+                    testShutdown(svc);
+                    }
                 });
             }
 
@@ -87,15 +92,18 @@ module TestServices
             {
             using (Timeout timeout = new Timeout(Duration:0.1S, true))
                 {
-                Int unused = svc.calcSomethingBig(Duration:0.3S);
+                Int unused = svc.calcSomethingBig(Duration:10S);
                 assert;
                 }
             }
         catch (TimedOut e)
             {
             }
+        }
 
-        // test shutdown
+    void testShutdown(TestService svc)
+        {
+        console.println($"{tag()} shutting down");
         svc.shutdown();
         try
             {

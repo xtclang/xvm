@@ -425,7 +425,7 @@ public class xNanosTimer
                     }
 
                 TimerHandle.this.unregister(this);
-                TimerHandle.this.f_context.callLater(f_hFunction, Utils.OBJECTS_NONE);
+                TimerHandle.this.f_context.callLater(f_hFunction, Utils.OBJECTS_NONE, true);
                 }
 
             /**

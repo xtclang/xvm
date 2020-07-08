@@ -84,7 +84,7 @@ public class CoreContainer
                         : hFunction.call1(frame, hModule, ahArg, Op.A_IGNORE);
                 });
 
-            m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE);
+            m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE, false);
             }
         catch (Exception e)
             {

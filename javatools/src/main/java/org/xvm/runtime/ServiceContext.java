@@ -740,21 +740,26 @@ public class ServiceContext
                 qFiber.add(message.createFrame(this));
                 }
 
-            Set<Fiber> setFibers  = f_setFibers;
+            Set<Fiber> setFibers = f_setFibers;
+            Fiber      fiberThis = frame.f_fiber;
+
             while (!qFiber.isEmpty())
                 {
-                Frame frameNext = qFiber.getAnyReady();
+                Frame frameNext = qFiber.getAny();
                 Fiber fiber     = frameNext.f_fiber;
 
-                fiber.setStatus(FiberStatus.Terminating);
+                if (fiber != fiberThis)
+                    {
+                    fiber.setStatus(FiberStatus.Terminating);
 
-                // this will respond immediately with an exception from "Fiber.prepareRun()"
-                execute(frameNext);
+                    // this will respond immediately with an exception from "Fiber.prepareRun()"
+                    execute(frameNext);
 
-                setFibers.remove(fiber);
+                    setFibers.remove(fiber);
+                    }
                 }
 
-            assert setFibers.size() == 1 && setFibers.contains(frame.f_fiber); // just this fiber left
+            assert setFibers.size() == 1 && setFibers.contains(fiberThis); // just this fiber left
             }
 
         return Op.R_NEXT;
@@ -814,7 +819,8 @@ public class ServiceContext
      */
     public boolean isContended()
         {
-        return m_frameCurrent != null || !f_queueMsg.isEmpty() || !f_queueSuspended.isEmpty();
+        return m_frameCurrent != null || !f_queueResponse.isEmpty() ||
+                !f_queueMsg.isEmpty() || !f_queueSuspended.isEmpty();
         }
 
     /**
@@ -834,7 +840,7 @@ public class ServiceContext
      * Unlike any of the "send*" methods below, there is no "originating" fiber in this case and the
      * future registration is done by the request itself.
      */
-    public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
+    public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg, boolean fSilent)
         {
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
@@ -843,7 +849,7 @@ public class ServiceContext
 
         future.whenComplete((r, x) ->
             {
-            if (x != null)
+            if (x != null && !fSilent)
                 {
                 callUnhandledExceptionHandler(
                     ((ExceptionHandle.WrapperException) x).getExceptionHandle());
@@ -1043,7 +1049,7 @@ public class ServiceContext
             }
 
         // ignore any exception coming out of the handler
-        callLater(hFunction, new ObjectHandle[]{hException});
+        callLater(hFunction, new ObjectHandle[]{hException}, true);
         }
 
     /**

@@ -177,7 +177,7 @@ public class xFutureVar
                 else
                     {
                     CompletableFuture cf0 = cf.thenRun(() ->
-                        frame.f_context.callLater(hRun, Utils.OBJECTS_NONE));
+                        frame.f_context.callLater(hRun, Utils.OBJECTS_NONE, false));
                     return frame.assignValue(iReturn, makeHandle(cf0));
                     }
                 }
@@ -222,7 +222,7 @@ public class xFutureVar
                         {
                         ObjectHandle[] ahArg = new ObjectHandle[1];
                         ahArg[0] = r;
-                        frame.f_context.callLater(hConsume, ahArg);
+                        frame.f_context.callLater(hConsume, ahArg, false);
                         });
 
                     return frame.assignValue(iReturn, makeHandle(cf0));
@@ -259,7 +259,7 @@ public class xFutureVar
                 else
                     {
                     cf = cf.whenComplete((r, x) ->
-                        frame.f_context.callLater(hNotify, combineResult(r, x)));
+                        frame.f_context.callLater(hNotify, combineResult(r, x), false));
 
                     return frame.assignValue(iReturn, makeHandle(cf));
                     }
@@ -318,7 +318,9 @@ public class xFutureVar
     protected ObjectHandle[] combineResult(ObjectHandle hResult, Throwable exception)
         {
         ObjectHandle[] ahArg = new ObjectHandle[2];
-        ahArg[0] = hResult;
+        ahArg[0] = hResult == null
+                ? xNullable.NULL
+                : hResult;
         ahArg[1] = exception == null
                 ? xNullable.NULL
                 : ((WrapperException) exception).getExceptionHandle();

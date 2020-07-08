@@ -65,6 +65,12 @@ public class FiberQueue
         return getNext(0);
         }
 
+    // get the first frame (any priority)
+    public Frame getAny()
+        {
+        return getNext(-1);
+        }
+
     // get the next fiber with a priority no less than the specified one
     private Frame getNext(int nPriority)
         {
@@ -137,7 +143,10 @@ public class FiberQueue
                 // we can only allow it to proceed:
                 //  a) in Exclusive mode - only if there are no other fibers in front of it;
                 //  b) in Open or Prioritized mode - only if there are no other fibers
-                //     associated with that same context in front of it
+                //     associated with that same context in front of it.
+                //     NOTE: a native stack frame is exempt from association rules since all the
+                //           natural execution has completed.
+
                 if (frame.f_context.m_reentrancy == Reentrancy.Exclusive)
                     {
                     return ix == getHeadIndex() ? 0 : -1;
@@ -156,7 +165,7 @@ public class FiberQueue
                 for (int i = m_ixHead; i != ix; i = (i+1) % cFrames)
                     {
                     Frame frameOther = aFrame[i];
-                    if (frameOther != null)
+                    if (frameOther != null && !frameOther.isNativeStack())
                         {
                         Fiber fiberOtherCaller = frameOther.f_fiber.f_fiberCaller;
                         if (fiberOtherCaller != null && fiberOtherCaller.isAssociated(ctxCaller))

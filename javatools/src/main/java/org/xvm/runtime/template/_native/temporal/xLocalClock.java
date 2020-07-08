@@ -168,7 +168,7 @@ public class xLocalClock
         @Override
         public void run()
             {
-            f_frame.f_context.callLater(f_hFunction, Utils.OBJECTS_NONE);
+            f_frame.f_context.callLater(f_hFunction, Utils.OBJECTS_NONE, true);
             }
 
         final private Frame          f_frame;

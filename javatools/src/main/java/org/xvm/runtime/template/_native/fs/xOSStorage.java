@@ -374,10 +374,11 @@ public class xOSStorage
                 StringHandle hPathDir  = xString.makeHandle(pathDir.toString());
                 StringHandle hPathNode = xString.makeHandle(pathAbsolute.toString());
 
-                context.hStorage.f_context.callLater(hfnOnEvent, new ObjectHandle[]
+                ObjectHandle[] ahArg = new ObjectHandle[]
                     {
                     hPathDir, hPathNode, xBoolean.TRUE, xInt64.makeHandle(iKind)
-                    });
+                    };
+                context.hStorage.f_context.callLater(hfnOnEvent, ahArg, true);
                 }
             key.reset();
             }

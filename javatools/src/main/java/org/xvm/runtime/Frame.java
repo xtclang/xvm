@@ -219,6 +219,33 @@ public class Frame
         }
 
     /**
+     * @return iff this frame is native
+     */
+    public boolean isNative()
+        {
+        return f_function == null;
+        }
+
+    /**
+     * @return iff this frame and all the previous frames are native
+     */
+    public boolean isNativeStack()
+        {
+        Frame frame = this;
+        do
+            {
+            if (!frame.isNative())
+                {
+                return false;
+                }
+            frame = frame.f_framePrev;
+            }
+        while (frame != null);
+
+        return true;
+        }
+
+    /**
      * Find a caller frame by its id.
      *
      * @return the corresponding frame in the chain or null
