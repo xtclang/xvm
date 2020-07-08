@@ -17,6 +17,7 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
+import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
@@ -63,7 +64,7 @@ public class Fiber
                 }
             else
                 {
-                long cTimeoutMillis = context.m_cTimeoutMillis;
+                long cTimeoutMillis = context.getTimeoutMillis();
                 if (cTimeoutMillis > 0)
                     {
                     m_ldtTimeout = System.currentTimeMillis() + cTimeoutMillis;
@@ -77,6 +78,27 @@ public class Fiber
                 m_status = FiberStatus.InitialAssociated;
                 }
             }
+        }
+
+    /**
+     * @return the Timeout? handle
+     */
+    public ObjectHandle getTimeoutHandle()
+        {
+        return m_hTimeout == null ? xNullable.NULL : m_hTimeout;
+        }
+
+    /**
+     * Set the fiber's timeout based on the specified Timeout? handle.
+     */
+    public void setTimeoutHandle(ObjectHandle hTimeout)
+        {
+        assert hTimeout != null;
+
+        long cDelayMillis = xService.millisFromTimeout(hTimeout);
+
+        m_hTimeout   = hTimeout;
+        m_ldtTimeout = cDelayMillis <= 0 ? 0 : System.currentTimeMillis() + cDelayMillis;
         }
 
     /**
@@ -164,20 +186,28 @@ public class Fiber
             {
             iResult = frame.raiseException(xException.timedOut(frame, "The service has timed-out"));
             }
-        else if (getStatus() == FiberStatus.Waiting)
+        else
             {
-            assert frame == m_frame;
-
-            if (m_resume != null)
+            switch (getStatus())
                 {
-                iResult = m_resume.proceed(frame);
-                if (iResult == Op.R_BLOCK)
-                    {
-                    // we still cannot resume
-                    m_fResponded = false;
-                    return Op.R_BLOCK;
-                    }
-                m_resume = null;
+                case Waiting:
+                    assert frame == m_frame;
+
+                    if (m_resume != null)
+                        {
+                        iResult = m_resume.proceed(frame);
+                        if (iResult == Op.R_BLOCK)
+                            {
+                            // we still cannot resume
+                            m_fResponded = false;
+                            return Op.R_BLOCK;
+                            }
+                        m_resume = null;
+                        }
+                    break;
+
+                case Terminating:
+                    return frame.raiseException(xException.serviceTerminated(frame, f_context.f_sName));
                 }
             }
 
@@ -191,7 +221,7 @@ public class Fiber
      *
      * @param future  the future representing the call
      */
-    public void registerRequest(CompletableFuture<?> future)
+    public void registerRequest(CompletableFuture future)
         {
         m_cPending++;
 
@@ -219,7 +249,7 @@ public class Fiber
      *
      * @param future  the future representing the call
      */
-    public void registerUncapturedRequest(CompletableFuture<?> future)
+    public void registerUncapturedRequest(CompletableFuture future)
         {
         Map<CompletableFuture, ObjectHandle> mapPending = m_mapPendingUncaptured;
         if (mapPending == null)
@@ -446,9 +476,14 @@ public class Fiber
     private long m_nanoStarted;
 
     /**
+     * The timeout that this fiber is subject to (optional).
+     */
+    private ObjectHandle m_hTimeout;
+
+    /**
      * The timeout (timestamp) that this fiber is subject to (optional).
      */
-    public long m_ldtTimeout;
+    private long m_ldtTimeout;
 
     /**
      * Currently active AsyncSection.

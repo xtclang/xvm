@@ -80,6 +80,32 @@ module TestServices
             }
 
         console.println($"{tag()} done {r}");
+
+        // test timeout
+        import ecstasy.Timeout;
+        try
+            {
+            using (Timeout timeout = new Timeout(Duration:0.1S, true))
+                {
+                Int unused = svc.calcSomethingBig(Duration:0.3S);
+                assert;
+                }
+            }
+        catch (TimedOut e)
+            {
+            }
+
+        // test shutdown
+        svc.shutdown();
+        try
+            {
+            Int unused = svc.spin(0);
+            assert;
+            }
+        catch (Exception e)
+            {
+            console.println($"expected: {e}");
+            }
         }
 
     service TestService

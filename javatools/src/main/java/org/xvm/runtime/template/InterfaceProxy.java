@@ -125,10 +125,7 @@ public class InterfaceProxy
             return hTarget.getTemplate().getPropertyValue(frame, hTarget, idProp, iReturn);
             }
 
-        CompletableFuture<ObjectHandle> cfResult = hProxy.f_context.sendProperty01Request(
-                frame, idProp, this::getPropertyValue);
-
-        return frame.assignFutureResult(iReturn, cfResult);
+        return hProxy.f_context.sendProperty01Request(frame, idProp, iReturn, this::getPropertyValue);
         }
 
     @Override
@@ -155,9 +152,7 @@ public class InterfaceProxy
             return hTarget.getTemplate().setPropertyValue(frame, hTarget, idProp, hValue);
             }
 
-        hProxy.f_context.sendProperty10Request(frame, idProp, hValue, this::setPropertyValue);
-
-        return Op.R_NEXT;
+        return hProxy.f_context.sendProperty10Request(frame, idProp, hValue, this::setPropertyValue);
         }
 
     @Override

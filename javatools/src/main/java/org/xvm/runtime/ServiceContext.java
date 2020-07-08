@@ -52,7 +52,6 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * The service context.
  */
 public class ServiceContext
-        implements Runnable
     {
     ServiceContext(Container container, ConstantPool pool, String sName, int nId)
         {
@@ -63,6 +62,7 @@ public class ServiceContext
         f_pool          = pool;
         f_queueMsg      = new ConcurrentLinkedQueue<>();
         f_queueResponse = new ConcurrentLinkedQueue<>();
+        m_hTimeout      = xNullable.NULL;
         }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -91,6 +91,23 @@ public class ServiceContext
         {
         assert m_hService == null;
         m_hService = hService;
+        }
+
+    public long getTimeoutMillis()
+        {
+        return xService.millisFromTimeout(m_hTimeout);
+        }
+
+    public ObjectHandle getTimeoutHandle()
+        {
+        return m_hTimeout;
+        }
+
+    public void setTimeoutHandle(ObjectHandle hTimeout)
+        {
+        assert hTimeout != null;
+
+        m_hTimeout = hTimeout;
         }
 
     /**
@@ -213,26 +230,26 @@ public class ServiceContext
         if (tryAcquireSchedulingLock())
             {
             // try to complete processing locally if possible
-            if (drainWork())
-                {
-                // we've completed all processing
-                releaseSchedulingLock();
-                }
-            else
-                {
-                // continue asynchronously
-                f_container.schedule(this);
-                }
+            execute();
             }
         // else; already scheduled
         }
 
-    @Override
-    public void run()
+    /**
+     * Execute any outstanding work for this service.
+     */
+    public void execute()
         {
         if (drainWork())
             {
-            releaseSchedulingLock();
+            if (getStatus() == ServiceStatus.Terminated)
+                {
+                f_container.terminate(this);
+                }
+            else
+                {
+                releaseSchedulingLock();
+                }
             }
         else
             {
@@ -417,9 +434,9 @@ public class ServiceContext
      */
     public Frame execute(Frame frame)
         {
-        Fiber fiber = frame.f_fiber;
-        int iPC = frame.m_iPC;
-        int iPCLast = iPC;
+        Fiber fiber   = frame.f_fiber;
+        int   iPC     = frame.m_iPC;
+        int   iPCLast = iPC;
 
         m_frameCurrent = frame;
 
@@ -701,6 +718,48 @@ public class ServiceContext
             }
         }
 
+    /**
+     * Shut down all fibers.
+     */
+    public int shutdown(Frame frame)
+        {
+        if (m_hService != null)
+            {
+            // TODO: fire every registered ShuttingDownNotification
+
+            // TODO MF: need a better lock to avoid messages getting into the queue after this point
+            m_hService = null;
+
+            Queue<Message> qMsg   = f_queueMsg;
+            FiberQueue     qFiber = f_queueSuspended;
+
+            // process all outstanding messages
+            Message message;
+            while ((message = qMsg.poll()) != null)
+                {
+                qFiber.add(message.createFrame(this));
+                }
+
+            Set<Fiber> setFibers  = f_setFibers;
+            while (!qFiber.isEmpty())
+                {
+                Frame frameNext = qFiber.getAnyReady();
+                Fiber fiber     = frameNext.f_fiber;
+
+                fiber.setStatus(FiberStatus.Terminating);
+
+                // this will respond immediately with an exception from "Fiber.prepareRun()"
+                execute(frameNext);
+
+                setFibers.remove(fiber);
+                }
+
+            assert setFibers.size() == 1 && setFibers.contains(frame.f_fiber); // just this fiber left
+            }
+
+        return Op.R_NEXT;
+        }
+
 
     // ----- x:Service methods ---------------------------------------------------------------------
 
@@ -795,30 +854,42 @@ public class ServiceContext
 
     /*
      * Send and asynchronous "construct service" message to this context.
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public CompletableFuture<ServiceHandle> sendConstructRequest(Frame frameCaller,
-                MethodStructure constructor, ClassComposition clazz, ObjectHandle hParent, ObjectHandle[] ahArg)
+    public int sendConstructRequest(Frame frameCaller, MethodStructure constructor, ClassComposition clazz,
+                                    ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {
-        CompletableFuture<ServiceHandle> future = new CompletableFuture<>();
+        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
         addRequest(new ConstructRequest(frameCaller, constructor, clazz, future, hParent, ahArg));
 
         frameCaller.f_fiber.registerRequest(future);
-        return future;
+
+        return frameCaller.assignFutureResult(iReturn, future);
         }
 
     /**
      * Send and asynchronous "invoke" message with zero or one return value.
      *
-     * @param cReturns 1, 0 or -1  for one, zero or tuple return
+     * @param fTuple   if true, the tuple is expected as a result of async execution
+     * @param iReturn  a register id ({@link Op#A_IGNORE} for fire and forget)
      *
-     * @return the corresponding future or null iff the request is "fire and forget" and the
-     *         called service is not overwhelmed
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public CompletableFuture<ObjectHandle> sendInvoke1Request(Frame frameCaller,
-            FunctionHandle hFunction, ObjectHandle hTarget, ObjectHandle[] ahArg, int cReturns)
+    public int sendInvoke1Request(Frame frameCaller, FunctionHandle hFunction,
+                                  ObjectHandle hTarget, ObjectHandle[] ahArg, boolean fTuple, int iReturn)
         {
+        if (getStatus() == ServiceStatus.Terminated)
+            {
+            return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
+            }
+
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
+
+        int cReturns = fTuple                 ? -1
+                     : iReturn == Op.A_IGNORE ? 0
+                                              : 1;
 
         boolean fOverwhelmed = addRequest(
                 new Invoke1Request(frameCaller, hFunction, hTarget, ahArg, cReturns, future));
@@ -826,26 +897,36 @@ public class ServiceContext
         Fiber fiber = frameCaller.f_fiber;
         if (cReturns == 0)
             {
+            // in the case of an ignored return and underwhelmed queue - fire and forget
+            fiber.registerUncapturedRequest(future);
+            if (!fOverwhelmed)
+                {
+                return Op.R_NEXT;
+                }
+
             // consider not to block the caller if it is *not* the reason of the callee being
             // overwhelmed, which would require some additional knowledge being retained
-            fiber.registerUncapturedRequest(future);
-            return fOverwhelmed ? future : null;
             }
 
         fiber.registerRequest(future);
-        return future;
+        return frameCaller.assignFutureResult(iReturn, future);
         }
 
     /**
      * Send and asynchronous "invoke" message with multiple return values.
      *
-     * @return the corresponding future or null iff the request is "fire and forget" and the
-     *         called service is not overwhelmed
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public CompletableFuture<ObjectHandle[]> sendInvokeNRequest(Frame frameCaller,
-                FunctionHandle hFunction, ObjectHandle hTarget, ObjectHandle[] ahArg, int cReturns)
+    public int sendInvokeNRequest(Frame frameCaller, FunctionHandle hFunction,
+                                  ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
         {
-        CompletableFuture<ObjectHandle[]> future = new CompletableFuture<>();
+        if (getStatus() == ServiceStatus.Terminated)
+            {
+            return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
+            }
+
+        CompletableFuture<ObjectHandle[]> future   = new CompletableFuture<>();
+        int                               cReturns = aiReturn.length;
 
         boolean fOverwhelmed = addRequest(
                 new InvokeNRequest(frameCaller, hFunction, hTarget, ahArg, cReturns, future));
@@ -854,38 +935,67 @@ public class ServiceContext
         if (cReturns == 0)
             {
             fiber.registerUncapturedRequest(future);
-            return fOverwhelmed ? future : null;
+            return fOverwhelmed
+                ? frameCaller.assignFutureResult(Op.A_IGNORE, (CompletableFuture) future)
+                : Op.R_NEXT;
             }
 
         fiber.registerRequest(future);
-        return future;
+        if (cReturns == 1)
+            {
+            CompletableFuture<ObjectHandle> cfReturn =
+                    future.thenApply(ahResult -> ahResult[0]);
+            return frameCaller.assignFutureResult(aiReturn[0], cfReturn);
+            }
+
+        // TODO replace with: assignFutureResults()
+        return frameCaller.call(Utils.createWaitFrame(frameCaller, future, aiReturn));
         }
 
     /**
      * Send and asynchronous property "read" operation message.
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public CompletableFuture<ObjectHandle> sendProperty01Request(Frame frameCaller,
-                                                                 PropertyConstant idProp, PropertyOperation01 op)
+    public int sendProperty01Request(Frame frameCaller, PropertyConstant idProp, int iReturn,
+                                     PropertyOperation01 op)
         {
+        if (getStatus() == ServiceStatus.Terminated)
+            {
+            return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
+            }
+
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
         addRequest(new PropertyOpRequest(frameCaller, idProp, null, 1, future, op));
 
         frameCaller.f_fiber.registerRequest(future);
-        return future;
+
+        return frameCaller.assignFutureResult(iReturn, future);
         }
 
     /*
      * Send and asynchronous property "update" operation message.
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public void sendProperty10Request(Frame frameCaller,
+    public int sendProperty10Request(Frame frameCaller,
                                       PropertyConstant idProp, ObjectHandle hValue, PropertyOperation10 op)
         {
+        if (getStatus() == ServiceStatus.Terminated)
+            {
+            return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
+            }
+
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
-        addRequest(new PropertyOpRequest(frameCaller, idProp, hValue, 0, future, op));
+        boolean fOverwhelmed = addRequest(new PropertyOpRequest(frameCaller, idProp, hValue, 0, future, op));
 
         frameCaller.f_fiber.registerUncapturedRequest(future);
+
+        return fOverwhelmed
+            ? frameCaller.assignFutureResult(Op.A_IGNORE, future)
+            : Op.R_NEXT;
         }
 
     /*
@@ -1092,14 +1202,14 @@ public class ServiceContext
     public static class ConstructRequest
             extends Message
         {
-        private final MethodStructure                  f_constructor;
-        private final ClassComposition                 f_clazz;
-        private final ObjectHandle                     f_hParent;
-        private final ObjectHandle[]                   f_ahArg;
-        private final CompletableFuture<ServiceHandle> f_future;
+        private final MethodStructure                 f_constructor;
+        private final ClassComposition                f_clazz;
+        private final ObjectHandle                    f_hParent;
+        private final ObjectHandle[]                  f_ahArg;
+        private final CompletableFuture<ObjectHandle> f_future;
 
         public ConstructRequest(Frame frameCaller, MethodStructure constructor, ClassComposition clazz,
-                                CompletableFuture<ServiceHandle> future, ObjectHandle hParent, ObjectHandle[] ahArg)
+                                CompletableFuture future, ObjectHandle hParent, ObjectHandle[] ahArg)
             {
             super(frameCaller);
 
@@ -1503,7 +1613,7 @@ public class ServiceContext
     /**
      * The current Timeout that will be used by the service when it invokes other services.
      */
-    public long m_cTimeoutMillis;
+    private ObjectHandle m_hTimeout;
 
     /**
      * Metrics: the total time (in nanos) this service has been running.

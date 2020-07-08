@@ -64,7 +64,7 @@ public class xException
     @Override
     public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
         {
-        return makeMutableStruct(frame, clazz, null, null);
+        return makeMutableStruct(frame, clazz, null);
         }
 
     @Override
@@ -87,6 +87,11 @@ public class xException
     public static ExceptionHandle immutableObject(Frame frame)
         {
         return makeHandle(frame, "Immutable object");
+        }
+
+    public static ExceptionHandle serviceTerminated(Frame frame, String sService)
+        {
+        return makeHandle(frame, "Service terminated: " + sService);
         }
 
     public static ExceptionHandle illegalArgument(Frame frame, String sMsg)
@@ -156,8 +161,6 @@ public class xException
         return makeHandle(frame, s_clzUnsupportedOperation, sMsg);
         }
 
-    // ---- class specific exceptions
-
     public static ExceptionHandle divisionByZero(Frame frame)
         {
         return makeHandle(frame, s_clzDivisionByZero, null);
@@ -175,26 +178,37 @@ public class xException
         return makeHandle(frame, s_clzIOException, sMsg);
         }
 
-    // ---- ObjectHandle helpers -----
+
+    // ---- ObjectHandle helpers -------------------------------------------------------------------
 
     public static ExceptionHandle makeHandle(Frame frame, String sMessage)
         {
-        return makeHandle(frame, s_clzException, sMessage);
+        return makeHandle(frame, s_clzException, sMessage, null);
+        }
+
+    public static ExceptionHandle makeHandle(Frame frame, String sMessage, ExceptionHandle hCause)
+        {
+        return makeHandle(frame, s_clzException, sMessage, hCause);
         }
 
     public static ExceptionHandle makeHandle(Frame frame, ClassComposition clzEx, String sMessage)
         {
-        ExceptionHandle hException = makeMutableStruct(frame, clzEx, null, null);
+        return makeHandle(frame, clzEx, sMessage, null);
+        }
 
-        hException.setField("text", sMessage == null ? xNullable.NULL : xString.makeHandle(sMessage));
-        hException.setField("cause", xNullable.NULL);
+    public static ExceptionHandle makeHandle(Frame frame, ClassComposition clzEx,
+                                             String sMessage, ExceptionHandle hCause)
+        {
+        ExceptionHandle hException = makeMutableStruct(frame, clzEx, null);
+
+        hException.setField("text",  sMessage == null ? xNullable.NULL : xString.makeHandle(sMessage));
+        hException.setField("cause", hCause == null   ? xNullable.NULL : hCause);
         hException.makeImmutable();
 
         return (ExceptionHandle) hException.ensureAccess(Access.PUBLIC);
         }
 
-    private static ExceptionHandle makeMutableStruct(Frame frame, ClassComposition clxEx,
-                                                     ExceptionHandle hCause, Throwable eCause)
+    private static ExceptionHandle makeMutableStruct(Frame frame, ClassComposition clxEx, Throwable eCause)
         {
         clxEx = clxEx.ensureAccess(Access.STRUCT);
 

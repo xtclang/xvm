@@ -3901,13 +3901,20 @@ public abstract class TypeConstant
             MethodConstant    id           = method.getIdentityConstant();
             SignatureConstant sig          = id.getSignature().resolveGenericTypes(pool,
                                                     method.isFunction() ? null : this);
-            MethodBody        body         = new MethodBody(id, sig,
-                    fRebase & fHasNoCode | fNative ? Implementation.Native   :
-                    fInterface && fHasNoCode       ? Implementation.Declared :
-                    fInterface                     ? Implementation.Default  :
-                    fHasAbstract                   ? Implementation.Abstract :
-                    fHasNoCode                     ? Implementation.SansCode :
-                                                     Implementation.Explicit  );
+            if (fRebase && fHasNoCode && !fNative)
+                {
+                // align the structure with the info (may be used by the runtime)
+                fNative = true;
+                method.markNative();
+                }
+
+            MethodBody body = new MethodBody(id, sig,
+                    fNative                  ? Implementation.Native   :
+                    fInterface && fHasNoCode ? Implementation.Declared :
+                    fInterface               ? Implementation.Default  :
+                    fHasAbstract             ? Implementation.Abstract :
+                    fHasNoCode               ? Implementation.SansCode :
+                                               Implementation.Explicit);
             MethodInfo infoNew = new MethodInfo(body);
             mapMethods.put(id, infoNew);
             }

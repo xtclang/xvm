@@ -126,7 +126,7 @@ public abstract class Container
             {
             try
                 {
-                service.run();
+                service.execute();
                 }
             catch (Throwable e)
                 {
@@ -139,6 +139,18 @@ public abstract class Container
                 f_pendingWorkCount.decrementAndGet();
                 }
             });
+        }
+
+    /**
+     * Terminate the specified ServiceContext.
+     *
+     * @param service the ServiceContext to terminate
+     */
+    public void terminate(ServiceContext service)
+        {
+        f_setServices.remove(service);
+
+        // TODO: should we don something if nothing left?
         }
 
     /**

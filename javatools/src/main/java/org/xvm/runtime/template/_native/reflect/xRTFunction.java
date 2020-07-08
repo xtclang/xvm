@@ -1,8 +1,6 @@
 package org.xvm.runtime.template._native.reflect;
 
 
-import java.util.concurrent.CompletableFuture;
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -918,11 +916,7 @@ public class xRTFunction
                 return frame.raiseException(xException.mutableObject(frame));
                 }
 
-            CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendInvoke1Request(
-                frame, this, hService, ahVar, iReturn == Op.A_IGNORE ? 0 : 1);
-
-            // in the case of zero returns and underwhelmed queue - fire and forget
-            return cfResult == null ? Op.R_NEXT : frame.assignFutureResult(iReturn, cfResult);
+            return hService.f_context.sendInvoke1Request(frame, this, hService, ahVar, false, iReturn);
             }
 
         @Override
@@ -945,10 +939,7 @@ public class xRTFunction
                 return frame.raiseException(xException.mutableObject(frame));
                 }
 
-            CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendInvoke1Request(
-                    frame, this, hService, ahVar, -1);
-
-            return frame.assignFutureResult(iReturn, cfResult);
+            return hService.f_context.sendInvoke1Request(frame, this, hService, ahVar, true, iReturn);
             }
 
         @Override
@@ -971,26 +962,7 @@ public class xRTFunction
                 return frame.raiseException(xException.mutableObject(frame));
                 }
 
-            int cReturns = aiReturn.length;
-
-            CompletableFuture<ObjectHandle[]> cfResult = hService.f_context.sendInvokeNRequest(
-                frame, this, hService, ahVar, cReturns);
-
-            if (cReturns == 0)
-                {
-                // fire and forget
-                return Op.R_NEXT;
-                }
-
-            if (cReturns == 1)
-                {
-                CompletableFuture<ObjectHandle> cfReturn =
-                    cfResult.thenApply(ahResult -> ahResult[0]);
-                return frame.assignFutureResult(aiReturn[0], cfReturn);
-                }
-
-            // TODO replace with: assignFutureResults()
-            return frame.call(Utils.createWaitFrame(frame, cfResult, aiReturn));
+            return hService.f_context.sendInvokeNRequest(frame, this, hService, ahVar, aiReturn);
             }
         }
 
@@ -1022,11 +994,7 @@ public class xRTFunction
                 return frame.raiseException(xException.mutableObject(frame));
                 }
 
-            CompletableFuture<ObjectHandle> cfResult = f_ctx.sendInvoke1Request(
-                frame, this, hTarget, ahVar, iReturn == Op.A_IGNORE ? 0 : 1);
-
-            // in the case of zero returns and underwhelmed queue - fire and forget
-            return cfResult == null ? Op.R_NEXT : frame.assignFutureResult(iReturn, cfResult);
+            return f_ctx.sendInvoke1Request(frame, this, hTarget, ahVar, false, iReturn);
             }
 
         @Override
@@ -1042,16 +1010,7 @@ public class xRTFunction
                 return frame.raiseException(xException.mutableObject(frame));
                 }
 
-            if (true)
-                {
-                // TODO: add a "return a Tuple back" flag
-                throw new UnsupportedOperationException();
-                }
-
-            CompletableFuture<ObjectHandle> cfResult = f_ctx.sendInvoke1Request(
-                    frame, this, hTarget, ahVar, 1);
-
-            return frame.assignFutureResult(iReturn, cfResult);
+            return f_ctx.sendInvoke1Request(frame, this, hTarget, ahVar, true, iReturn);
             }
 
         @Override
@@ -1067,26 +1026,7 @@ public class xRTFunction
                 return frame.raiseException(xException.mutableObject(frame));
                 }
 
-            int cReturns = aiReturn.length;
-
-            CompletableFuture<ObjectHandle[]> cfResult = f_ctx.sendInvokeNRequest(
-                frame, this, hTarget, ahVar, cReturns);
-
-            if (cReturns == 0)
-                {
-                // fire and forget
-                return Op.R_NEXT;
-                }
-
-            if (cReturns == 1)
-                {
-                CompletableFuture<ObjectHandle> cfReturn =
-                    cfResult.thenApply(ahResult -> ahResult[0]);
-                return frame.assignFutureResult(aiReturn[0], cfReturn);
-                }
-
-            // TODO replace with: assignFutureResults()
-            return frame.call(Utils.createWaitFrame(frame, cfResult, aiReturn));
+            return f_ctx.sendInvokeNRequest(frame, this, hTarget, ahVar, aiReturn);
             }
         }
 

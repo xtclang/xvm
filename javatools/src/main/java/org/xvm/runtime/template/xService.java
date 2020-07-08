@@ -4,8 +4,6 @@ package org.xvm.runtime.template;
 import java.util.HashSet;
 import java.util.Set;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -22,12 +20,14 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.ServiceContext.Reentrancy;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.numbers.BaseInt128;
+import org.xvm.runtime.template.numbers.LongLong;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
 
@@ -128,9 +128,7 @@ public class xService
         {
         ServiceContext contextNew = frame.f_context.f_container.createServiceContext(f_sName);
 
-        CompletableFuture cfResult = contextNew.sendConstructRequest(frame, constructor, clazz, hParent, ahArg);
-
-        return frame.assignFutureResult(iReturn, cfResult);
+        return contextNew.sendConstructRequest(frame, constructor, clazz, hParent, ahArg, iReturn);
         }
 
     @Override
@@ -184,19 +182,15 @@ public class xService
                 }
 
             case "registerTimeout":
-                {
-                long cDelayMillis = ((JavaLong) hArg).getValue();
                 if (frame.f_context == hService.f_context)
                     {
-                    frame.f_fiber.m_ldtTimeout = cDelayMillis <= 0 ? 0 :
-                        System.currentTimeMillis() + cDelayMillis;
+                    frame.f_fiber.setTimeoutHandle(hArg);
                     }
                 else
                     {
-                    hService.f_context.m_cTimeoutMillis = Math.max(0, cDelayMillis);
+                    hService.f_context.setTimeoutHandle(hArg);
                     }
                 return Op.R_NEXT;
-                }
 
             case "registerAsyncSection":
                 if (frame.f_context != hService.f_context)
@@ -221,8 +215,15 @@ public class xService
 
         switch (method.getName())
             {
+            case "shutdown":
+                return frame.f_context == hService.f_context
+                    ? hService.f_context.shutdown(frame)
+                    : xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
+
             case "yield":
-                return frame.f_context == hService.f_context ? Op.R_YIELD : Op.R_NEXT;
+                return frame.f_context == hService.f_context
+                    ? Op.R_YIELD
+                    : Op.R_NEXT;
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -231,40 +232,43 @@ public class xService
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
+        ServiceHandle hService = (ServiceHandle) hTarget;
+
         switch (sPropName)
             {
             case "typeSystem":
                 // since typeSystem is NOT atomic, this code always executes within the context of
                 // the service -- within the context of the container (and container == typesystem)
+                assert frame.f_context == hService.f_context;
                 return frame.f_context.f_container.ensureTypeSystemHandle(frame, iReturn);
 
             case "serviceName":
-                {
-                ServiceHandle hService = (ServiceHandle) hTarget;
                 return frame.assignValue(iReturn, xString.makeHandle(hService.f_context.f_sName));
-                }
 
             case "statusIndicator":
                 {
-                ServiceHandle hService = (ServiceHandle) hTarget;
-                EnumHandle    hStatus  = STATUS_INDICATOR.getEnumByName(
+                EnumHandle hStatus = STATUS_INDICATOR.getEnumByName(
                         hService.f_context.getStatus().name());
                 return Utils.assignInitializedEnum(frame, hStatus, iReturn);
                 }
 
+            case "timeout":
+                {
+                ObjectHandle  hTimeout = frame.f_context == hService.f_context
+                    ? frame.f_fiber.getTimeoutHandle()
+                    : hService.f_context.getTimeoutHandle();
+                return frame.assignValue(iReturn, hTimeout);
+                }
+
             case "reentrancy":
                 {
-                ServiceHandle hService    = (ServiceHandle) hTarget;
-                EnumHandle    hReentrancy = REENTRANCY.getEnumByName(
+                EnumHandle hReentrancy = REENTRANCY.getEnumByName(
                         hService.f_context.m_reentrancy.name());
                 return Utils.assignInitializedEnum(frame, hReentrancy, iReturn);
                 }
 
             case "contented":
-                {
-                ServiceHandle hService = (ServiceHandle) hTarget;
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hService.f_context.isContended()));
-                }
 
             case "asyncSection":
                 return frame.assignValue(iReturn, frame.f_fiber.getAsyncSection());
@@ -275,12 +279,13 @@ public class xService
     @Override
     public int invokeNativeSet(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
         {
+        ServiceHandle hService = (ServiceHandle) hTarget;
+
         switch (sPropName)
             {
             case "reentrancy":
                 {
-                ServiceHandle hService    = (ServiceHandle) hTarget;
-                EnumHandle    hReentrancy = (EnumHandle) hValue;
+                EnumHandle hReentrancy = (EnumHandle) hValue;
 
                 hService.f_context.m_reentrancy = Reentrancy.valueOf(hReentrancy.getName());
                 return Op.R_NEXT;
@@ -299,10 +304,7 @@ public class xService
             return super.invokePreInc(frame, hTarget, idProp, iReturn);
             }
 
-        CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendProperty01Request(
-                frame, idProp, this::invokePreInc);
-
-        return frame.assignFutureResult(iReturn, cfResult);
+        return hService.f_context.sendProperty01Request(frame, idProp, iReturn, this::invokePreInc);
         }
 
     @Override
@@ -315,10 +317,7 @@ public class xService
             return super.invokePostInc(frame, hTarget, idProp, iReturn);
             }
 
-        CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendProperty01Request(
-                frame, idProp, this::invokePostInc);
-
-        return frame.assignFutureResult(iReturn, cfResult);
+        return hService.f_context.sendProperty01Request(frame, idProp, iReturn, this::invokePostInc);
         }
 
     @Override
@@ -331,10 +330,7 @@ public class xService
             return super.invokePreDec(frame, hTarget, idProp, iReturn);
             }
 
-        CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendProperty01Request(
-                frame, idProp, this::invokePreDec);
-
-        return frame.assignFutureResult(iReturn, cfResult);
+        return hService.f_context.sendProperty01Request(frame, idProp, iReturn, this::invokePreDec);
         }
 
     @Override
@@ -347,10 +343,7 @@ public class xService
             return super.invokePostDec(frame, hTarget, idProp, iReturn);
             }
 
-        CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendProperty01Request(
-                frame, idProp, this::invokePostDec);
-
-        return frame.assignFutureResult(iReturn, cfResult);
+        return hService.f_context.sendProperty01Request(frame, idProp, iReturn, this::invokePostDec);
         }
 
     @Override
@@ -363,8 +356,7 @@ public class xService
             return super.invokePropertyAdd(frame, hTarget, idProp, hArg);
             }
 
-        hService.f_context.sendProperty10Request(frame, idProp, hArg, this::invokePropertyAdd);
-        return Op.R_NEXT;
+        return hService.f_context.sendProperty10Request(frame, idProp, hArg, this::invokePropertyAdd);
         }
 
     @Override
@@ -377,8 +369,7 @@ public class xService
             return super.invokePropertySub(frame, hTarget, idProp, hArg);
             }
 
-        hService.f_context.sendProperty10Request(frame, idProp, hArg, this::invokePropertySub);
-        return Op.R_NEXT;
+        return hService.f_context.sendProperty10Request(frame, idProp, hArg, this::invokePropertySub);
         }
 
     @Override
@@ -391,10 +382,7 @@ public class xService
             return super.getPropertyValue(frame, hTarget, idProp, iReturn);
             }
 
-        CompletableFuture<ObjectHandle> cfResult = hService.f_context.sendProperty01Request(
-                frame, idProp, this::getPropertyValue);
-
-        return frame.assignFutureResult(iReturn, cfResult);
+        return hService.f_context.sendProperty01Request(frame, idProp, iReturn, this::getPropertyValue);
         }
 
     @Override
@@ -420,9 +408,7 @@ public class xService
             return super.setPropertyValue(frame, hTarget, idProp, hValue);
             }
 
-        hService.f_context.sendProperty10Request(frame, idProp, hValue, this::setPropertyValue);
-
-        return Op.R_NEXT;
+        return hService.f_context.sendProperty10Request(frame, idProp, hValue, this::setPropertyValue);
         }
 
     @Override
@@ -461,6 +447,23 @@ public class xService
         ServiceHandle hService = new ServiceHandle(clz.maskAs(typeMask), context);
         context.setService(hService);
         return hService;
+        }
+
+    /**
+     * Helper method to convert Timeout? handle into milliseconds.
+     */
+    public static long millisFromTimeout(ObjectHandle hTimeout)
+        {
+        if (hTimeout == xNullable.NULL)
+            {
+            return 0;
+            }
+
+        ObjectHandle hRemaining = ((GenericHandle) hTimeout).getField("duration");
+        ObjectHandle hPicos     = ((GenericHandle) hRemaining).getField("picoseconds");
+
+        return ((BaseInt128.LongLongHandle) hPicos).getValue().
+                div(PICOS_PER_MILLI_LL).getLowValue();
         }
 
 
@@ -525,11 +528,14 @@ public class xService
 
     // ----- constants -----------------------------------------------------------------------------
 
+    protected static final long     PICOS_PER_MILLI    = 1_000_000_000;
+    protected static final LongLong PICOS_PER_MILLI_LL = new LongLong(PICOS_PER_MILLI);
+
     /**
      * Enums used by the native properties.
      */
-    public static xEnum STATUS_INDICATOR;
-    public static xEnum REENTRANCY;
+    protected static xEnum STATUS_INDICATOR;
+    protected static xEnum REENTRANCY;
 
     /**
      * Names of atomic properties.

@@ -99,104 +99,111 @@ public class Frame
         {
         assert framePrev != null && function != null;
 
-        f_context = framePrev.f_context;
-        f_iId = f_context.m_iFrameCounter++;
-        f_fiber = framePrev.f_fiber;
-
+        f_context   = framePrev.f_context;
+        f_iId       = f_context.m_iFrameCounter++;
+        f_fiber     = framePrev.f_fiber;
         f_framePrev = framePrev;
-        f_iPCPrev = framePrev.m_iPC;
-
-        f_function = function;
-        f_aOp      = function.getOps();
-
-        f_hTarget = hTarget;
-        f_hThis   = hTarget == null
+        f_iPCPrev   = framePrev.m_iPC;
+        f_function  = function;
+        f_aOp       = function.getOps();
+        f_hTarget   = hTarget;
+        f_hThis     = hTarget == null
                     ? null
                     : hTarget.isStruct()
                         ? hTarget
                         : hTarget.revealOrigin();
-
-        f_ahVar = ahVar;
-        f_aInfo = new VarInfo[ahVar.length];
+        f_ahVar     = ahVar;
+        f_aInfo     = new VarInfo[ahVar.length];
 
         int cScopes = function == null ? 1 : function.getMaxScopes();
         f_anNextVar = new int[cScopes];
         f_anNextVar[0] = function == null ? 0 : function.getParamCount();
 
-        f_iReturn = iReturn;
-        f_aiReturn = aiReturn;
+        f_iReturn   = iReturn;
+        f_aiReturn  = aiReturn;
         }
 
-    // construct an initial (native) frame
+    /**
+     * Construct an initial (native) frame that has no "previous" frame.
+     */
     protected Frame(Fiber fiber, int iCallerPC, Op[] aopNative,
                     ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
-        f_context = fiber.f_context;
-
-        f_iId = f_context.m_iFrameCounter++;
-        f_fiber = fiber;
+        f_context   = fiber.f_context;
+        f_iId       = f_context.m_iFrameCounter++;
+        f_fiber     = fiber;
         f_framePrev = null;
-        f_iPCPrev = iCallerPC;
-        f_function = null;
-        f_aOp = aopNative;
-
-        f_hTarget = f_hThis = null;
-        f_ahVar = ahVar;
-        f_aInfo = new VarInfo[ahVar.length];
-
+        f_iPCPrev   = iCallerPC;
+        f_function  = null;
+        f_aOp       = aopNative;
+        f_hTarget   = f_hThis = null;
+        f_ahVar     = ahVar;
+        f_aInfo     = new VarInfo[ahVar.length];
         f_anNextVar = null;
-
-        f_iReturn = iReturn;
-        f_aiReturn = aiReturn;
+        f_iReturn   = iReturn;
+        f_aiReturn  = aiReturn;
         }
 
-    // construct a native frame with the same target as the caller's target
+    /**
+     * Construct a native frame with the same target as the caller's target.
+     */
     protected Frame(Frame framePrev, Op[] aopNative, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
-        f_context = framePrev.f_context;
-        f_iId = f_context.m_iFrameCounter++;
-        f_fiber = framePrev.f_fiber;
-
+        f_context   = framePrev.f_context;
+        f_iId       = f_context.m_iFrameCounter++;
+        f_fiber     = framePrev.f_fiber;
         f_framePrev = framePrev;
-        f_iPCPrev = framePrev.m_iPC;
-
-        f_function = null;
-        f_aOp = aopNative;
-
-        f_hTarget = framePrev.f_hTarget;
-        f_hThis   = framePrev.f_hThis;
-
-        f_ahVar = ahVar;
-        f_aInfo = new VarInfo[ahVar.length];
-
+        f_iPCPrev   = framePrev.m_iPC;
+        f_function  = null;
+        f_aOp       = aopNative;
+        f_hTarget   = framePrev.f_hTarget;
+        f_hThis     = framePrev.f_hThis;
+        f_ahVar     = ahVar;
+        f_aInfo     = new VarInfo[ahVar.length];
         f_anNextVar = null;
-
-        f_iReturn = iReturn;
-        f_aiReturn = aiReturn;
+        f_iReturn   = iReturn;
+        f_aiReturn  = aiReturn;
         }
 
-    // create a new frame that returns zero or one value into the specified slot
-    // Note: the returned frame needs to be "initialized" before called
+    /**
+     * Create a new frame that returns zero or one value into the specified slot.
+     *
+     * Note: the returned frame needs to be "initialized" before called.
+     */
     public Frame createFrame1(MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
         return new Frame(this, method, hTarget, ahVar, iReturn, null);
         }
 
-    // create a new frame that returns a Tuple value into the specified slot
-    // Note: the returned frame needs to be "initialized" before called
+    /**
+     * Create a new frame that returns a Tuple value into the specified slot.
+     *
+     * Note: the returned frame needs to be "initialized" before called.
+     */
     public Frame createFrameT(MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
         return new Frame(this, method, hTarget, ahVar, Op.A_TUPLE, new int[] {iReturn});
         }
 
-    // create a new frame that returns multiple values into the specified slots
-    // Note: the returned frame needs to be "initialized" before called
+    /**
+     * Create a new frame that returns multiple values into the specified slots.
+     *
+     * Note: the returned frame needs to be "initialized" before called.
+     */
     public Frame createFrameN(MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
         return new Frame(this, method, hTarget, ahVar, Op.A_MULTI, aiReturn);
+        }
+
+    /**
+     * Create a new pseudo-frame on the same target as this frame.
+     */
+    public Frame createNativeFrame(Op[] aop, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
+        {
+        return new Frame(this, aop, ahVar, iReturn, aiReturn);
         }
 
     /**
@@ -211,10 +218,25 @@ public class Frame
         return frameNext.f_function.ensureInitialized(this, frameNext);
         }
 
-    // create a new pseudo-frame on the same target
-    public Frame createNativeFrame(Op[] aop, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
+    /**
+     * Find a caller frame by its id.
+     *
+     * @return the corresponding frame in the chain or null
+     */
+    protected Frame findCallerFrame(int id)
         {
-        return new Frame(this, aop, ahVar, iReturn, aiReturn);
+        Frame frame = this;
+        do
+            {
+            if (frame.f_iId == id)
+                {
+                return frame;
+                }
+            frame = frame.f_framePrev;
+            }
+        while (frame != null);
+
+        return null;
         }
 
     // a convenience method
@@ -1713,7 +1735,11 @@ public class Frame
 
                 sb.append("\n    =========");
 
-                if (frame == null || frame.f_iId != fiber.f_iCallerId)
+                if (frame != null)
+                    {
+                    frame = frame.findCallerFrame(fiber.f_iCallerId);
+                    }
+                if (frame == null)
                     {
                     // the caller's fiber has moved away from the calling frame;
                     // simply show the calling function
