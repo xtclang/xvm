@@ -5830,6 +5830,17 @@ public abstract class TypeConstant
         return ensureTypeInfo().getMethodBySignature(sig);
         }
 
+    /**
+     * @return true iff mutable objects of this type could be proxied across the service boundary
+     */
+    public boolean isProxyable()
+        {
+        return isConstant()
+            || isInterfaceType()
+            || (isSingleUnderlyingClass(false)
+             && getSingleUnderlyingClass(false).getComponent().getFormat() == Component.Format.SERVICE);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

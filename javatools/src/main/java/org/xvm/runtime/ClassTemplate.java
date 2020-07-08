@@ -12,7 +12,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -502,7 +501,7 @@ public abstract class ClassTemplate
                     for (int i = 0, c = method.getParamCount(); i < c; i++)
                         {
                         TypeConstant typeParam = method.getParam(i).getType();
-                        if (!isProxyable(typeParam))
+                        if (!typeParam.isProxyable())
                             {
                             return null;
                             }
@@ -516,7 +515,7 @@ public abstract class ClassTemplate
                 PropertyInfo     infoProp = entry.getValue();
                 if (idProp.getNestedDepth() == 1 && infoProp.isVirtual())
                     {
-                    if (!isProxyable(infoProp.getType()))
+                    if (!infoProp.getType().isProxyable())
                         {
                         return null;
                         }
@@ -529,17 +528,6 @@ public abstract class ClassTemplate
             return InterfaceProxy.makeHandle(clzProxy, ctx, hTarget);
             }
         return null;
-        }
-
-    /**
-     * @return true iff objects of the specified type could be proxied across the service boundary
-     */
-    protected boolean isProxyable(TypeConstant type)
-        {
-        return type.isConstant()
-            || type.isInterfaceType()
-            || (type.isSingleUnderlyingClass(false)
-             && type.getSingleUnderlyingClass(false).getComponent().getFormat() == Format.SERVICE);
         }
 
 
