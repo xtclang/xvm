@@ -832,38 +832,33 @@ public abstract class ClassTemplate
 
         if (hValue == null)
             {
-            String sErr;
             if (hThis.isInjected(idProp))
                 {
-                TypeInfo     info = hThis.getType().ensureTypeInfo();
-                PropertyInfo prop = info.findProperty(idProp);
-
-                hValue = frame.f_context.f_container.getInjectable(
-                        frame, prop.getInjectedResourceName(), prop.getType());
-                if (hValue != null)
+                // there is a possibility of multiple service threads getting here at the same time
+                // (e.g. getting an injected property on a module).
+                synchronized (hThis)
                     {
-                    if (Op.isDeferred(hValue))
+                    hValue = hThis.getField(idProp);
+                    if (hValue == null)
                         {
-                        return hValue.proceed(frame, frameCaller ->
-                            {
-                            ObjectHandle hVal = frameCaller.popStack();
-                            hThis.setField(idProp, hVal);
-                            return frameCaller.assignValue(iReturn, hVal);
-                            });
+                        return getInjectedProperty(frame, hThis, idProp, iReturn);
                         }
-
-                    hThis.setField(idProp, hValue);
-                    return frame.assignValue(iReturn, hValue);
                     }
-                sErr = "Unknown injectable property ";
                 }
             else
                 {
-                sErr = hThis.containsField(idProp) ?
-                        "Un-initialized property \"" : "Invalid property \"";
+                String sErr = hThis.containsField(idProp) ?
+                            "Un-initialized property \"" : "Invalid property \"";
+                return frame.raiseException(xException.illegalState(frame, sErr + idProp + '"'));
                 }
+            }
 
-            return frame.raiseException(xException.illegalState(frame, sErr + idProp + '"'));
+        if (Op.isDeferred(hValue))
+            {
+            // this can only be a deferred injected property construction call
+            // initialized by another service (thread); all we can do is wait...
+            // Note, that we assume that the native deferred injection never throws
+            return waitForInjectedProperty(frame, hThis, idProp, iReturn);
             }
 
         if (hTarget.isInflated(idProp))
@@ -874,6 +869,70 @@ public abstract class ClassTemplate
             }
 
         return frame.assignValue(iReturn, hValue);
+        }
+
+    /**
+     * Get the injected property.
+     */
+    private int getInjectedProperty(Frame frame, GenericHandle hThis, PropertyConstant idProp, int iReturn)
+        {
+        TypeInfo     info = hThis.getType().ensureTypeInfo();
+        PropertyInfo prop = info.findProperty(idProp);
+
+        ObjectHandle hValue = frame.f_context.f_container.getInjectable(
+                frame, prop.getInjectedResourceName(), prop.getType());
+
+        if (hValue == null)
+            {
+            return frame.raiseException(
+                xException.illegalState(frame, "Unknown injectable property \"" + idProp + '"'));
+            }
+
+        // store off the value (even if deferred), so the concurrent operation wouldn't "double dip"
+        hThis.setField(idProp, hValue);
+
+        // native injection can return a deferred handle
+        if (Op.isDeferred(hValue))
+            {
+            return hValue.proceed(frame, frameCaller ->
+                {
+                ObjectHandle hVal = frameCaller.popStack();
+                hThis.setField(idProp, hVal);
+                return frameCaller.assignValue(iReturn, hVal);
+                });
+            }
+
+        return frame.assignValue(iReturn, hValue);
+        }
+
+    /**
+     * A helper method that causes the service to pause until the deferred injected value
+     * is calculated by another service.
+     */
+    private int waitForInjectedProperty(Frame frame, GenericHandle hThis,
+                                        PropertyConstant idProp, int iReturn)
+        {
+        Op[] aOpCheckAndPause = new Op[]
+            {
+            new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    ObjectHandle hValue = hThis.getField(idProp);
+                    return isDeferred(hValue)
+                        ? R_PAUSE
+                        : frame.returnValue(hValue, false);
+                    }
+
+                public String toString()
+                    {
+                    return "CheckAndYield";
+                    }
+                }
+            };
+
+        Frame frameWait = frame.createNativeFrame(aOpCheckAndPause, Utils.OBJECTS_NONE, iReturn, null);
+        return frame.call(frameWait);
         }
 
     /**
