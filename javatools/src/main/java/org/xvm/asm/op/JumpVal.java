@@ -101,10 +101,8 @@ public class JumpVal
 
     protected int collectCaseConstants(Frame frame, int iPC, ObjectHandle hValue)
         {
-        if (m_ahCases == null)
+        if (m_ahCase == null)
             {
-            m_ahCases = new ObjectHandle[m_aofCase.length];
-
             return explodeConstants(frame, iPC, hValue);
             }
         return complete(frame, iPC, hValue);
@@ -112,23 +110,23 @@ public class JumpVal
 
     protected int explodeConstants(Frame frame, int iPC, ObjectHandle hValue)
         {
-        ObjectHandle[] ahCases = m_ahCases;
+        ObjectHandle[] ahCase = new ObjectHandle[m_aofCase.length];
         for (int iRow = 0, cRows = m_aofCase.length; iRow < cRows; iRow++)
             {
-            ahCases[iRow] = frame.getConstHandle(m_anConstCase[iRow]);
+            ahCase[iRow] = frame.getConstHandle(m_anConstCase[iRow]);
             }
 
-        if (Op.anyDeferred(ahCases))
+        if (Op.anyDeferred(ahCase))
             {
             Frame.Continuation stepNext = frameCaller ->
                 {
-                buildJumpMap(hValue);
+                buildJumpMap(hValue, ahCase);
                 return complete(frame, iPC, hValue);
                 };
-            return new Utils.GetArguments(ahCases, stepNext).doNext(frame);
+            return new Utils.GetArguments(ahCase, stepNext).doNext(frame);
             }
 
-        buildJumpMap(hValue);
+        buildJumpMap(hValue, ahCase);
         return complete(frame, iPC, hValue);
         }
 
@@ -186,11 +184,10 @@ public class JumpVal
         throw new UnsupportedOperationException();
         }
 
-    private void buildJumpMap(ObjectHandle hValue)
+    private void buildJumpMap(ObjectHandle hValue, ObjectHandle[] ahCase)
         {
-        ObjectHandle[] ahCase  = m_ahCases;
-        int[]          aofCase = m_aofCase;
-        int            cCases  = ahCase.length;
+        int[] aofCase = m_aofCase;
+        int   cCases  = ahCase.length;
 
         Map<ObjectHandle, Integer> mapJump = new HashMap<>(cCases);
 
@@ -199,7 +196,7 @@ public class JumpVal
 
         for (int i = 0; i < cCases; i++ )
             {
-            ObjectHandle hCase = m_ahCases[i];
+            ObjectHandle hCase = ahCase[i];
 
             assert !hCase.isMutable();
 
@@ -234,6 +231,7 @@ public class JumpVal
                     }
                 }
             }
+        m_ahCase = ahCase;
         }
 
     /**
@@ -280,7 +278,7 @@ public class JumpVal
     /**
      * Cached array of ObjectHandles for cases.
      */
-    private transient ObjectHandle[] m_ahCases;
+    private transient volatile ObjectHandle[] m_ahCase;
 
     // cached jump map
     private Map<ObjectHandle, Integer> m_mapJump;
