@@ -1,8 +1,7 @@
 package org.xvm.runtime;
 
 
-import org.xvm.runtime.ServiceContext.Reentrancy;
-
+import org.xvm.runtime.Fiber.FiberStatus;
 
 /**
  * {@link FiberQueue} represents a queue-like data structure holding all pending Fibers and
@@ -124,72 +123,98 @@ public class FiberQueue
                     }
 
             case InitialAssociated:
-                {
-                // in Exclusive mode only the front fiber is allowed to run
-                if (frame.f_context.m_reentrancy == Reentrancy.Exclusive)
-                    {
-                    if (ix != getHeadIndex())
-                        {
-                        return -1;
-                        }
-                    }
-                // fall through
-                }
             case Yielded:
                 return 1;
 
             case InitialNew:
                 {
-                // we can only allow it to proceed:
-                //  a) in Exclusive mode - only if there are no other fibers in front of it;
-                //  b) in Open or Prioritized mode - only if there are no other fibers
-                //     associated with that same context in front of it.
-                //     NOTE: a native stack frame is exempt from association rules since all the
-                //           natural execution has completed.
+                // we can only allow it to proceed (at priority zero):
+                //  - in Exclusive mode - only if there are no waiting fibers;
+                //  - in Prioritized mode - only if there are no waiting fibers
+                //     associated with that same context
 
-                if (frame.f_context.m_reentrancy == Reentrancy.Exclusive)
+                switch (frame.f_context.m_reentrancy)
                     {
-                    return ix == getHeadIndex() ? 0 : -1;
-                    }
+                    default:
+                    case Forbidden:
+                        // no more than one fiber is allowed
+                        return m_cSize == 1 ? 0 : -1;
 
-                Fiber fiberCaller = frame.f_fiber.f_fiberCaller;
-                if (fiberCaller == null)
-                    {
-                    // independent fiber
-                    return 0;
-                    }
+                    case Exclusive:
+                        return isAssociatedWaiting(null) ? -1 : 0;
 
-                ServiceContext ctxCaller = fiberCaller.f_context;
-                Frame[]        aFrame    = m_aFrame;
-                int            cFrames   = aFrame.length;
-                for (int i = m_ixHead; i != ix; i = (i+1) % cFrames)
-                    {
-                    Frame frameOther = aFrame[i];
-                    if (frameOther != null && !frameOther.isNativeStack())
+                    case Prioritized:
                         {
-                        Fiber fiberOtherCaller = frameOther.f_fiber.f_fiberCaller;
-                        if (fiberOtherCaller != null && fiberOtherCaller.isAssociated(ctxCaller))
+                        Fiber fiberCaller = frame.f_fiber.f_fiberCaller;
+                        if (fiberCaller != null)
                             {
-                            return -1;
+                            ServiceContext ctxCaller = fiberCaller.f_context;
+                            if (isAssociatedWaiting(ctxCaller))
+                                {
+                                return -1;
+                                }
                             }
+                        // break through
                         }
+                    case Open:
+                        return 0;
                     }
-                return 0;
                 }
             }
         }
 
-    private int getHeadIndex()
+    /**
+     * @return true iff there are any waiting frames associated with the specified context
+     */
+    private boolean isAssociatedWaiting(ServiceContext context)
+        {
+        return getFirstAssociatedIndex(FiberStatus.Waiting, context) != -1;
+        }
+
+    /**
+     * Get the index of the first frame of the specified status associated with the specified context.
+     *
+     * NOTE: a waiting frame with a native stack frame is exempt from association rules since all
+     *       the natural execution has completed.
+     *
+     * @param status   the status to check for
+     * @param context  the service context to check association with (null for "any")
+     *
+     * @return the first matching index or -1
+     */
+    private int getFirstAssociatedIndex(FiberStatus status, ServiceContext context)
         {
         Frame[] aFrame  = m_aFrame;
         int     cFrames = aFrame.length;
         int     ixHead  = m_ixHead;
+
         for (int i = 0; i < cFrames; i++)
             {
-            int ix = (ixHead + i) % cFrames;
-            if (aFrame[ix] != null)
+            int   ix    = (ixHead + i) % cFrames;
+            Frame frame = aFrame[ix];
+
+            if (frame != null)
                 {
-                return ix;
+                Fiber fiber = frame.f_fiber;
+                if (fiber.getStatus() == status)
+                    {
+                    if (status == FiberStatus.Waiting && frame.isNativeStack())
+                        {
+                        // waiting native stack is exempt
+                        continue;
+                        }
+
+                    if (context == null)
+                        {
+                        return ix;
+                        }
+
+                    Fiber fiberCaller = fiber.f_fiberCaller;
+                    if (fiberCaller != null && fiberCaller.isAssociated(context))
+                        {
+                        return ix;
+                        }
+                    }
                 }
             }
         return -1;

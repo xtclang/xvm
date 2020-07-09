@@ -1654,7 +1654,7 @@ public class ServiceContext
     /**
      * The reentrancy policy. Must be the same names as in natural Service.Reentrancy.
      */
-    public enum Reentrancy {Prioritized, Open, Exclusive, Forbidden}
+    public enum Reentrancy {Open, Prioritized, Exclusive, Forbidden}
     public Reentrancy m_reentrancy = Reentrancy.Prioritized;
 
     /**

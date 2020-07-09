@@ -104,6 +104,9 @@ module TestServices
     void testShutdown(TestService svc)
         {
         console.println($"{tag()} shutting down");
+
+        @Future Int longWait = svc.calcSomethingBig(Duration.ofMinutes(10));
+
         svc.shutdown();
         try
             {
