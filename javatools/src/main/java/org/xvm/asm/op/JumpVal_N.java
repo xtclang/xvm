@@ -21,7 +21,6 @@ import org.xvm.asm.constants.MatchAnyConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.Utils;
@@ -129,14 +128,13 @@ public class JumpVal_N
         {
         if (m_aahCases == null)
             {
-            m_aahCases = new ObjectHandle[m_aofCase.length][];
-
-            return explodeConstants(frame, iPC, ahValue, 0);
+            return explodeConstants(frame, iPC, ahValue, 0, new ObjectHandle[m_aofCase.length][]);
             }
         return complete(frame, iPC, ahValue);
         }
 
-    protected int explodeConstants(Frame frame, int iPC, ObjectHandle[] ahValue, int iRow)
+    protected int explodeConstants(Frame frame, int iPC, ObjectHandle[] ahValue, int iRow,
+                                   ObjectHandle[][] aahCases)
         {
         for (int cRows = m_aofCase.length; iRow < cRows; iRow++)
             {
@@ -145,7 +143,7 @@ public class JumpVal_N
             Constant[]     aconstValues = contValues.getValue();
             ObjectHandle[] ahCases      = new ObjectHandle[cColumns];
 
-            m_aahCases[iRow] = ahCases;
+            aahCases[iRow] = ahCases;
 
             assert aconstValues.length == cColumns;
 
@@ -170,19 +168,20 @@ public class JumpVal_N
                 {
                 final int iRowNext = iRow + 1;
                 Frame.Continuation stepNext =
-                    frameCaller -> explodeConstants(frame, iPC, ahValue, iRowNext);
+                    frameCaller -> explodeConstants(frame, iPC, ahValue, iRowNext, aahCases);
                 return new Utils.GetArguments(ahCases, stepNext).doNext(frame);
                 }
             }
 
         if (m_aofCase.length < 64)
             {
-            buildSmallJumpMaps(ahValue);
+            buildSmallJumpMaps(ahValue, aahCases);
             }
         else
             {
-            buildLargeJumpMaps(ahValue);
+            buildLargeJumpMaps(ahValue, aahCases);
             }
+        m_aahCases = aahCases;
         return complete(frame, iPC, ahValue);
         }
 
@@ -275,7 +274,7 @@ public class JumpVal_N
         throw new UnsupportedOperationException();
         }
 
-    private void buildSmallJumpMaps(ObjectHandle[] ahValue)
+    private void buildSmallJumpMaps(ObjectHandle[] ahValue, ObjectHandle[][] aahCases)
         {
         int[] anConstCase = m_anConstCase;
         int   cRows       = anConstCase.length;
@@ -313,7 +312,7 @@ public class JumpVal_N
             long lCaseBit = 1 << iR;
             for (int iC = 0; iC < cColumns; iC++)
                 {
-                ObjectHandle hCase = m_aahCases[iR][iC];
+                ObjectHandle hCase = aahCases[iR][iC];
 
                 if (hCase == ObjectHandle.DEFAULT)
                     {
@@ -391,7 +390,7 @@ public class JumpVal_N
         return list;
         }
 
-    private void buildLargeJumpMaps(ObjectHandle[] ahValue)
+    private void buildLargeJumpMaps(ObjectHandle[] ahValue, ObjectHandle[][] aahCases)
         {
         throw new UnsupportedOperationException();
         }
@@ -429,7 +428,7 @@ public class JumpVal_N
     /**
      * Cached array of ObjectHandles for cases. First index is a row; second is a column.
      */
-    private transient ObjectHandle[][] m_aahCases;
+    private transient volatile ObjectHandle[][] m_aahCases;
 
     /**
      * Cached array of jump maps for # cases < 64. The Long represents a bitset of matching cases.
