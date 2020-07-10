@@ -184,15 +184,23 @@ public class JumpVal
         throw new UnsupportedOperationException();
         }
 
-    private void buildJumpMap(ObjectHandle hValue, ObjectHandle[] ahCase)
+    /**
+     * This method is synchronized because it needs to update three different values atomically.
+     */
+    private synchronized void buildJumpMap(ObjectHandle hValue, ObjectHandle[] ahCase)
         {
+        if (m_ahCase != null)
+            {
+            // the jump map was built concurrently
+            return;
+            }
+
         int[] aofCase = m_aofCase;
         int   cCases  = ahCase.length;
 
         Map<ObjectHandle, Integer> mapJump = new HashMap<>(cCases);
 
-        m_mapJump   = mapJump;
-        m_algorithm = Algorithm.NativeSimple;
+        Algorithm algorithm = Algorithm.NativeSimple;
 
         for (int i = 0; i < cCases; i++ )
             {
@@ -209,7 +217,7 @@ public class JumpVal
                 else
                     {
                     // this must be a range of native values
-                    m_algorithm = Algorithm.NativeRange;
+                    algorithm = Algorithm.NativeRange;
 
                     addRange((GenericHandle) hCase, aofCase[i]);
                     }
@@ -218,20 +226,22 @@ public class JumpVal
                 {
                 if (hCase.getType().isAssignableTo(hValue.getType()))
                     {
-                    m_algorithm = m_algorithm.worstOf(Algorithm.NaturalSimple);
+                    algorithm = algorithm.worstOf(Algorithm.NaturalSimple);
 
                     mapJump.put(hCase, Integer.valueOf(aofCase[i]));
                     }
                 else
                     {
                     // this must be a range of native values
-                    m_algorithm = Algorithm.NaturalRange;
+                    algorithm = Algorithm.NaturalRange;
 
                     addRange((GenericHandle) hCase, i);
                     }
                 }
             }
-        m_ahCase = ahCase;
+        m_mapJump   = mapJump;
+        m_algorithm = algorithm;
+        m_ahCase    = ahCase;
         }
 
     /**
@@ -278,10 +288,10 @@ public class JumpVal
     /**
      * Cached array of ObjectHandles for cases.
      */
-    private transient volatile ObjectHandle[] m_ahCase;
+    private transient ObjectHandle[] m_ahCase;
 
     // cached jump map
-    private Map<ObjectHandle, Integer> m_mapJump;
+    private transient Map<ObjectHandle, Integer> m_mapJump;
 
     /**
      * A list of ranges;
