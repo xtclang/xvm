@@ -158,21 +158,24 @@ public class ConstantPool
 
             synchronized (this)
                 {
-                if (!mapConstants.containsKey(constant))
+                if (mapConstants.containsKey(constant))
                     {
-                    constant.setPosition(m_listConst.size());
-                    m_listConst.add(constant);
-                    mapConstants.put(constant, constant);
+                    // it was concurrently inserted
+                    return mapConstants.get(constant);
+                    }
 
-                    // also allow the constant to be looked up by a locator
-                    Object oLocator = constant.getLocator();
-                    if (oLocator != null)
+                constant.setPosition(m_listConst.size());
+                m_listConst.add(constant);
+                mapConstants.put(constant, constant);
+
+                // also allow the constant to be looked up by a locator
+                Object oLocator = constant.getLocator();
+                if (oLocator != null)
+                    {
+                    Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
+                    if (constOld != null && !constOld.equals(constant))
                         {
-                        Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
-                        if (constOld != null && !constOld.equals(constant))
-                            {
-                            throw new IllegalStateException("locator collision: old=" + constOld + ", new=" + constant);
-                            }
+                        throw new IllegalStateException("locator collision: old=" + constOld + ", new=" + constant);
                         }
                     }
                 }
