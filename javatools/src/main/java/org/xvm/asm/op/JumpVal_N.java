@@ -111,12 +111,12 @@ public class JumpVal_N
             if (anyDeferred(ahValue))
                 {
                 Frame.Continuation stepNext = frameCaller ->
-                        collectCaseConstants(frame, iPC, ahValue);
+                        ensureJumpMap(frame, iPC, ahValue);
 
                 return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
 
-            return collectCaseConstants(frame, iPC, ahValue);
+            return ensureJumpMap(frame, iPC, ahValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -124,9 +124,9 @@ public class JumpVal_N
             }
         }
 
-    protected int collectCaseConstants(Frame frame, int iPC, ObjectHandle[] ahValue)
+    protected int ensureJumpMap(Frame frame, int iPC, ObjectHandle[] ahValue)
         {
-        if (m_aahCases == null)
+        if (m_algorithm == null)
             {
             return explodeConstants(frame, iPC, ahValue, 0, new ObjectHandle[m_aofCase.length][]);
             }
@@ -181,7 +181,6 @@ public class JumpVal_N
             {
             buildLargeJumpMaps(ahValue, aahCases);
             }
-        m_aahCases = aahCases;
         return complete(frame, iPC, ahValue);
         }
 
@@ -274,18 +273,25 @@ public class JumpVal_N
         throw new UnsupportedOperationException();
         }
 
-    private void buildSmallJumpMaps(ObjectHandle[] ahValue, ObjectHandle[][] aahCases)
+    /**
+     * This method is synchronized because it needs to update four different values atomically.
+     */
+    private synchronized void buildSmallJumpMaps(ObjectHandle[] ahValue, ObjectHandle[][] aahCases)
         {
+        if (m_algorithm != null)
+            {
+            // the jump map was built concurrently
+            return;
+            }
+
         int[] anConstCase = m_anConstCase;
         int   cRows       = anConstCase.length;
         int   cColumns    = ahValue.length;
 
-        Map<ObjectHandle, Long>[] amapJump  = new Map[cColumns];
-
-        m_amapJumpSmall   = amapJump;
-        m_alWildcardSmall = new long[cColumns];
-        m_aAlgorithm      = new Algorithm[cColumns];
-        m_algorithm       = Algorithm.NativeSimple;
+        Map<ObjectHandle, Long>[] amapJump        = new Map[cColumns];
+        long[]                    alWildcardSmall = new long[cColumns];
+        Algorithm[]               aAlgorithm      = new Algorithm[cColumns];
+        Algorithm                 algorithm       = Algorithm.NativeSimple;
 
         // first check for native vs. natural comparison
         for (int iC = 0; iC < cColumns; iC++)
@@ -293,11 +299,11 @@ public class JumpVal_N
             amapJump[iC] = new HashMap<>(cRows);
             if (ahValue[iC].isNativeEqual())
                 {
-                m_aAlgorithm[iC] = Algorithm.NativeSimple;
+                aAlgorithm[iC] = Algorithm.NativeSimple;
                 }
             else
                 {
-                m_aAlgorithm[iC] = Algorithm.NaturalSimple;
+                aAlgorithm[iC] = Algorithm.NaturalSimple;
                 }
             }
 
@@ -316,13 +322,13 @@ public class JumpVal_N
 
                 if (hCase == ObjectHandle.DEFAULT)
                     {
-                    m_alWildcardSmall[iC] |= lCaseBit;
+                    alWildcardSmall[iC] |= lCaseBit;
                     continue;
                     }
 
                 assert !hCase.isMutable();
 
-                if (m_aAlgorithm[iC].isNative())
+                if (aAlgorithm[iC].isNative())
                     {
                     if (hCase.isNativeEqual())
                         {
@@ -332,7 +338,7 @@ public class JumpVal_N
                     else
                         {
                         // this must be a range of native values
-                        m_aAlgorithm[iC] = Algorithm.NativeRange;
+                        aAlgorithm[iC] = Algorithm.NativeRange;
 
                         addRange((GenericHandle) hCase, lCaseBit, cColumns, iC);
                         }
@@ -347,14 +353,19 @@ public class JumpVal_N
                     else
                         {
                         // this must be a range of native values
-                        m_aAlgorithm[iC] = Algorithm.NaturalRange;
+                        aAlgorithm[iC] = Algorithm.NaturalRange;
 
                         addRange((GenericHandle) hCase, lCaseBit, cColumns, iC);
                         }
                     }
-                m_algorithm = m_algorithm.worstOf(m_aAlgorithm[iC]);
+                algorithm = algorithm.worstOf(aAlgorithm[iC]);
                 }
             }
+
+        m_amapJumpSmall   = amapJump;
+        m_alWildcardSmall = alWildcardSmall;
+        m_aAlgorithm      = aAlgorithm;
+        m_algorithm       = algorithm;
         }
 
     /**
@@ -390,7 +401,7 @@ public class JumpVal_N
         return list;
         }
 
-    private void buildLargeJumpMaps(ObjectHandle[] ahValue, ObjectHandle[][] aahCases)
+    private synchronized void buildLargeJumpMaps(ObjectHandle[] ahValue, ObjectHandle[][] aahCases)
         {
         throw new UnsupportedOperationException();
         }
@@ -424,11 +435,6 @@ public class JumpVal_N
 
     protected int[]      m_anArgCond;
     private   Argument[] m_aArgCond;
-
-    /**
-     * Cached array of ObjectHandles for cases. First index is a row; second is a column.
-     */
-    private transient volatile ObjectHandle[][] m_aahCases;
 
     /**
      * Cached array of jump maps for # cases < 64. The Long represents a bitset of matching cases.

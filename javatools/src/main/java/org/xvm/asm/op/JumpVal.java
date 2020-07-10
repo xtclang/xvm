@@ -90,8 +90,8 @@ public class JumpVal
 
             return isDeferred(hValue)
                     ? hValue.proceed(frame, frameCaller ->
-                         collectCaseConstants(frame, iPC, frameCaller.popStack()))
-                    : collectCaseConstants(frame, iPC, hValue);
+                         ensureJumpMap(frame, iPC, frameCaller.popStack()))
+                    : ensureJumpMap(frame, iPC, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -99,9 +99,9 @@ public class JumpVal
             }
         }
 
-    protected int collectCaseConstants(Frame frame, int iPC, ObjectHandle hValue)
+    protected int ensureJumpMap(Frame frame, int iPC, ObjectHandle hValue)
         {
-        if (m_ahCase == null)
+        if (m_algorithm == null)
             {
             return explodeConstants(frame, iPC, hValue);
             }
@@ -189,7 +189,7 @@ public class JumpVal
      */
     private synchronized void buildJumpMap(ObjectHandle hValue, ObjectHandle[] ahCase)
         {
-        if (m_ahCase != null)
+        if (m_algorithm != null)
             {
             // the jump map was built concurrently
             return;
@@ -239,9 +239,9 @@ public class JumpVal
                     }
                 }
             }
+
         m_mapJump   = mapJump;
         m_algorithm = algorithm;
-        m_ahCase    = ahCase;
         }
 
     /**
@@ -285,13 +285,9 @@ public class JumpVal
     protected int      m_nArgCond;
     private   Argument m_argCond;
 
-    /**
-     * Cached array of ObjectHandles for cases.
-     */
-    private transient ObjectHandle[] m_ahCase;
-
-    // cached jump map
+    // lazily calculated jump map and the algorithm
     private transient Map<ObjectHandle, Integer> m_mapJump;
+    private transient Algorithm m_algorithm;
 
     /**
      * A list of ranges;
@@ -300,6 +296,4 @@ public class JumpVal
      *  a[2] - the case index (Integer)
      */
     private transient List<Object[]> m_listRanges;
-
-    private transient Algorithm m_algorithm;  // the algorithm
     }
