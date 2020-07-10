@@ -7,6 +7,8 @@ import org.xvm.asm.Component.Format;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.template.text.xString;
+
 
 /**
  * Native Ordered.
@@ -33,6 +35,10 @@ public class xOrdered
             LESSER  = getEnumByOrdinal(0);
             EQUAL   = getEnumByOrdinal(1);
             GREATER = getEnumByOrdinal(2);
+
+            LESSER .setField("symbol", xString.makeHandle("<"));
+            EQUAL  .setField("symbol", xString.makeHandle("="));
+            GREATER.setField("symbol", xString.makeHandle(">"));
             }
         }
 
