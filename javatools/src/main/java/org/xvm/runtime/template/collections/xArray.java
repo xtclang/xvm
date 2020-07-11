@@ -21,7 +21,6 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.Mutability;
@@ -314,7 +313,7 @@ public class xArray
                         ObjectHandle hValue = frame.getConstHandle(typeEl.getDefaultValue());
                         if (Op.isDeferred(hValue))
                             {
-                            ((DeferredCallHandle) hValue).proceed(frame, frameCaller ->
+                            hValue.proceed(frame, frameCaller ->
                                 {
                                 fill(hArray, cSize, frameCaller.popStack());
                                 return frameCaller.assignValue(iReturn, hArray);
@@ -363,7 +362,8 @@ public class xArray
                 }
 
             default:
-                throw new IllegalStateException();
+                throw new IllegalStateException("Unknown constructor: " +
+                    idConstruct.getValueString());
             }
         }
 
