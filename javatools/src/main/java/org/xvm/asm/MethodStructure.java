@@ -1122,19 +1122,23 @@ public class MethodStructure
                     : frame.call(frameNext);
             }
 
-        List<SingletonConstant> listSingletons = null;
-        for (Constant constant : getLocalConstants())
+        Constant[] aconstLocal = getLocalConstants();
+        if (aconstLocal != null && aconstLocal.length > 0)
             {
-            listSingletons = addSingleton(constant, listSingletons);
-            }
+            List<SingletonConstant> listSingletons = null;
+            for (Constant constant : aconstLocal)
+                {
+                listSingletons = addSingleton(constant, listSingletons);
+                }
 
-        if (listSingletons != null)
-            {
-            return Utils.initConstants(frame, listSingletons, frameCaller ->
-                    {
-                    m_fInitialized = true;
-                    return frameCaller.call(frameNext);
-                    });
+            if (listSingletons != null)
+                {
+                return Utils.initConstants(frame, listSingletons, frameCaller ->
+                        {
+                        m_fInitialized = true;
+                        return frameCaller.call(frameNext);
+                        });
+                }
             }
 
         // all is done;
@@ -2316,7 +2320,7 @@ public class MethodStructure
             f_method.m_cScopes = scope.getMaxDepth();
             }
 
-        protected void ensureAssembled()
+        protected synchronized void ensureAssembled()
             {
             if (f_method.m_abOps == null)
                 {

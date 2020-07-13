@@ -788,7 +788,7 @@ public abstract class Op
          * Internal: Make sure this ConstantRegistry is no longer being used to register constants,
          * and has settled on an optimized order for the constants that were registered.
          */
-        private void ensureOptimized()
+        private synchronized void ensureOptimized()
             {
             if (m_aconst == null)
                 {
@@ -797,9 +797,9 @@ public abstract class Op
                 // length index encoding uses less bytes for lower indexes, the result is more
                 // compact)
                 Map<Constant, Integer> mapConstants = m_mapConstants;
-                Constant[] aconst = mapConstants.keySet().toArray(new Constant[mapConstants.size()]);
+                Constant[] aconst = mapConstants.keySet().toArray(Constant.NO_CONSTS);
                 Arrays.sort(aconst, Constants.DEBUG
-                        ? Comparator.<Constant>naturalOrder()
+                        ? Comparator.naturalOrder()
                         : (o1, o2) -> mapConstants.get(o2) - mapConstants.get(o1));
                 m_aconst = aconst;
 
