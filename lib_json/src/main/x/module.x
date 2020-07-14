@@ -1,12 +1,12 @@
-import io.IOException;
-import io.ObjectInput;
-import io.ObjectOutput;
-import io.Reader;
-import io.Writer;
-
-package json
-        implements io.TextFormat
+module Json.xtclang.org
+        implements ecstasy.io.TextFormat
     {
+    import ecstasy.io.IOException;
+    import ecstasy.io.ObjectInput;
+    import ecstasy.io.ObjectOutput;
+    import ecstasy.io.Reader;
+    import ecstasy.io.Writer;
+
     /**
      * An IllegalJSON exception is raised when a JSON format error is detected.
      */

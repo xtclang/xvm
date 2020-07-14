@@ -1,5 +1,3 @@
-import collections.ListMap;
-
 /**
  * A "printer" for JSON objects.
  */

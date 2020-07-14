@@ -1,10 +1,10 @@
-import io.EndOfFile;
-import io.IOException;
-import io.Reader;
-import io.TextPosition;
+import ecstasy.Markable;
 
-import numbers.Nibble;
-import numbers.UInt32;
+import ecstasy.io.EndOfFile;
+import ecstasy.io.IOException;
+import ecstasy.io.TextPosition;
+
+import ecstasy.numbers.Nibble;
 
 /**
  * A lexer for a JSON document.

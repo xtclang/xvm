@@ -6,8 +6,8 @@ include(":ecstasy")             // produces *only* a source zip file (no .xtc), 
 include(":javatools_bridge")    // produces *only* a source zip file (no .xtc), and only on request
 include(":javatools")           // produces javatools.jar
 include(":javatools_launcher")  // produces native (Win, Mac, Linux) executables, only on request
+include(":lib_json")            // produces json.xtc
 // TODO(":wiki")
-// TODO(":json")
 include(":xdk")         // builds the above modules (ecstasy.xtc, javatools_bridge.xtc, json.xtc)
                         // drags in Java libraries (utils, javatools), native launchers, wiki, etc.
 

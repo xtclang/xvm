@@ -14,22 +14,25 @@ module TestIO
     import ecstasy.io.TextPosition;
     import ecstasy.io.Writer;
     import ecstasy.io.UTF8Reader;
-    import ecstasy.web.json.Doc;
-    import ecstasy.web.json.ElementInput;
-    import ecstasy.web.json.ElementOutput;
-    import ecstasy.web.json.FieldInput;
-    import ecstasy.web.json.FieldOutput;
-    import ecstasy.web.json.Lexer;
-    import ecstasy.web.json.Lexer.Token;
-    import ecstasy.web.json.Mapping;
-    import ecstasy.web.json.ObjectInputStream;
-    import ecstasy.web.json.ObjectInputStream.ElementInputStream;
-    import ecstasy.web.json.ObjectInputStream.FieldInputStream;
-    import ecstasy.web.json.ObjectOutputStream;
-    import ecstasy.web.json.ObjectOutputStream.ElementOutputStream;
-    import ecstasy.web.json.Parser;
-    import ecstasy.web.json.Printer;
-    import ecstasy.web.json.Schema;
+
+    package json import Json.xtclang.org;
+
+    import json.Doc;
+    import json.ElementInput;
+    import json.ElementOutput;
+    import json.FieldInput;
+    import json.FieldOutput;
+    import json.Lexer;
+    import json.Lexer.Token;
+    import json.Mapping;
+    import json.ObjectInputStream;
+    import json.ObjectInputStream.ElementInputStream;
+    import json.ObjectInputStream.FieldInputStream;
+    import json.ObjectOutputStream;
+    import json.ObjectOutputStream.ElementOutputStream;
+    import json.Parser;
+    import json.Printer;
+    import json.Schema;
 
     @Inject Console console;
 

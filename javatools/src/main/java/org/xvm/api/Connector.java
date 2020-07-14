@@ -99,8 +99,10 @@ public class Connector
             throw new IllegalStateException("Unable to load module \"" + sAppName + "\"");
             }
 
-        FileStructure  structApp = f_templates.createFileStructure(moduleApp);
-        ModuleConstant idApp     = (ModuleConstant) structApp.
+        FileStructure structApp = f_templates.createFileStructure(moduleApp);
+        structApp.linkModules(m_repository);
+
+        ModuleConstant idApp = (ModuleConstant) structApp.
                 getChild(moduleApp.getName()).getIdentityConstant();
 
         m_container = new CoreContainer(f_runtime, f_templates, f_heapGlobal, idApp);

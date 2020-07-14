@@ -188,6 +188,18 @@ public class FileStructure
             {
             pool.setNakedRefType(typeNakedRef);
             }
+
+        // add fingerprints
+        for (Component child : module.getFileStructure().children())
+            {
+            ModuleStructure moduleChild = (ModuleStructure) child;
+            if (moduleChild.isFingerprint() && getModule(moduleChild.getName()) == null)
+                {
+                moduleClone = moduleChild.cloneBody();
+                addChild(moduleClone);
+                moduleClone.registerConstants(pool);
+                }
+            }
         }
 
 
@@ -346,7 +358,11 @@ public class FileStructure
             if (!sModule.equals(getModuleName()))
                 {
                 ModuleStructure structFingerprint = getModule(sModule);
-                assert structFingerprint.isFingerprint();
+                if (!structFingerprint.isFingerprint())
+                    {
+                    continue;
+                    }
+
                 if (structFingerprint.getFingerprintOrigin() == null)
                     {
                     // load the module against which the compilation will occur
@@ -354,6 +370,9 @@ public class FileStructure
                         {
                         ModuleStructure structActual = repository.loadModule(sModule); // TODO versions etc.
                         structFingerprint.setFingerprintOrigin(structActual);
+
+                        structActual.registerConstants(pool);
+                        structActual.registerChildrenConstants(pool);
 
                         FileStructure structToLink = structActual.getFileStructure();
                         if (setVisited.add(structToLink))
@@ -890,13 +909,14 @@ public class FileStructure
         {
         StringBuilder sb = new StringBuilder();
 
+        String sName = getModuleName();
         sb.append("main-module=")
-                .append(getModuleName());
+          .append(sName);
 
         boolean first = true;
         for (String name : moduleNames())
             {
-            if (!name.equals(moduleName))
+            if (!name.equals(sName))
                 {
                 if (first)
                     {

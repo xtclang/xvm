@@ -5,9 +5,12 @@
 val ecstasy      = project(":ecstasy")
 val javatools    = project(":javatools")
 val bridge       = project(":javatools_bridge")
+val json         = project(":lib_json");
+
 val ecstasyMain  = "${ecstasy.projectDir}/src/main"
 val bridgeMain   = "${bridge.projectDir}/src/main"
 val javatoolsJar = "${javatools.buildDir}/libs/javatools.jar"
+val jsonMain     = "${json.projectDir}/src/main";
 
 tasks.register("clean") {
     group       = "Build"
@@ -57,6 +60,23 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
     }
 }
 
+val compileJson = tasks.register<JavaExec>("compileJson") {
+    group       = "Execution"
+    description = "Build Json.xtc module"
+
+    shouldRunAfter(compileEcstasy)
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
+    classpath(javatoolsJar)
+    args("-verbose",
+            "-o", "$buildDir/xdk/lib",
+            "-L", "${buildDir}/xdk/lib/Ecstasy.xtc",
+            "-L", "${buildDir}/xdk/javatools/javatools_bridge.xtc",
+            "$jsonMain/x/module.x")
+    main = "org.xvm.tool.Compiler"
+}
+
 tasks.register("build") {
     group       = "Build"
     description = "Build the XDK"
@@ -66,15 +86,25 @@ tasks.register("build") {
     val macos_launcher   = "${launcher.buildDir}/exe/macos_launcher"
     val windows_launcher = "${launcher.buildDir}/exe/windows_launcher.exe"
 
-    val tsSrc = fileTree(ecstasyMain).getFiles().stream().
+    // compile Ecstasy
+    val coreSrc = fileTree(ecstasyMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val tsDest = file("$buildDir/xdk/lib/Ecstasy.xtc").lastModified()
+    val coreDest = file("$buildDir/xdk/lib/Ecstasy.xtc").lastModified()
 
-    if (tsSrc > tsDest) {
+    if (coreSrc > coreDest) {
         dependsOn(compileEcstasy)
     } else {
         dependsOn(copyJavatools)
     }
+
+    // compile Json
+    val jsonSrc = fileTree(jsonMain).getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val jsonDest = file("$buildDir/xdk/lib/Json.xtc").lastModified()
+
+    if (jsonSrc > jsonDest) {
+        dependsOn(compileJson)
+        }
 
     doLast {
         copy {

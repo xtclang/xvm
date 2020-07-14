@@ -1,3 +1,5 @@
+import ecstasy.numbers;
+
 /**
  * A JSON [Mapping] implementation for Ecstasy integer types.
  */

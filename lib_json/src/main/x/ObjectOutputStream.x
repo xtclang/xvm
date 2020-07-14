@@ -1,7 +1,5 @@
-import collections.HashMap;
-
-import io.Writer;
-import io.ObjectOutput;
+import ecstasy.io.Writer;
+import ecstasy.io.ObjectOutput;
 
 
 /**

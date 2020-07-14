@@ -1,8 +1,5 @@
-import collections.HashMap;
-import collections.ListMap;
-
-import io.Reader;
-import io.ObjectInput;
+import ecstasy.io.Reader;
+import ecstasy.io.ObjectInput;
 
 import Lexer.Token;
 

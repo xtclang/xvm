@@ -1449,6 +1449,7 @@ public class TypeCompositionStatement
                         break;
                     }
                 }
+            compositions.clear(); // no longer of any use
             }
 
         if (m_fVirtChild)

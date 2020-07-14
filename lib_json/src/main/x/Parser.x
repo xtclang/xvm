@@ -1,9 +1,7 @@
-import io.EndOfFile;
-import io.Reader;
-import io.Reader.Position;
+import ecstasy.Markable;
 
-import collections.ListMap;
-import collections.HashSet;
+import ecstasy.io.EndOfFile;
+import ecstasy.io.Reader;
 
 import Lexer.Id;
 import Lexer.Token;

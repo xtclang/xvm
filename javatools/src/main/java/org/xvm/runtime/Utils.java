@@ -739,8 +739,7 @@ public abstract class Utils
      */
     private static int callPropertyInitializer(Frame frame, PropertyConstant idProp)
         {
-        PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
-        ObjectHandle      hValue;
+        PropertyStructure prop = (PropertyStructure) idProp.getComponent();
 
         assert prop.isStatic();
 

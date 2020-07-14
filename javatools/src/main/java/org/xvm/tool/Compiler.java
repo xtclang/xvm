@@ -155,13 +155,13 @@ public class Compiler
         Map<String, org.xvm.compiler.Compiler> mapCompilers = populateNamespace(mapTargets, repo);
         flushAndCheckErrors(allNodes);
 
-        injectNativeTurtle(repo);
-        checkErrors();
-
         log(Severity.INFO, "Resolving names and dependencies");
         org.xvm.compiler.Compiler[] compilers = mapCompilers.values().toArray(new org.xvm.compiler.Compiler[0]);
         resolveNames(compilers);
         flushAndCheckErrors(allNodes);
+
+        injectNativeTurtle(repo);
+        checkErrors();
 
         log(Severity.INFO, "Validating expressions");
         validateExpressions(compilers);
@@ -416,7 +416,7 @@ public class Compiler
                 }
             }
         }
-    
+
 
     // ----- text output and error handling --------------------------------------------------------
 

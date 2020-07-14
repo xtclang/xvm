@@ -1,11 +1,10 @@
-import collections.Hasher;
-import collections.HashMap;
-import collections.ListMap;
+import ecstasy.collections.Hasher;
 
-import io.Reader;
-import io.Writer;
-import io.ObjectInput;
-import io.ObjectOutput;
+import ecstasy.io.Reader;
+import ecstasy.io.Writer;
+import ecstasy.io.ObjectInput;
+import ecstasy.io.ObjectOutput;
+import ecstasy.io.TextFormat;
 
 
 /**
@@ -19,7 +18,7 @@ import io.ObjectOutput;
  * TODO split out JSON library into its own (non-core) module
  */
 const Schema
-        implements io.TextFormat
+        implements TextFormat
     {
     /**
      * Construct a schema for a specified set of Mappings.

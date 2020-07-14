@@ -239,8 +239,11 @@ public class ConstantPool
                 if (moduleFingerprint.isFingerprint())
                     {
                     ModuleStructure moduleUpstream = moduleFingerprint.getFingerprintOrigin();
-                    assert moduleUpstream != null;
-                    moduleUpstream.getConstantPool().contributeToValidPoolSet(set);
+                    // if the module is not there, TypeCompositionStatement will report it
+                    if (moduleUpstream != null)
+                        {
+                        moduleUpstream.getConstantPool().contributeToValidPoolSet(set);
+                        }
                     }
                 }
             }
