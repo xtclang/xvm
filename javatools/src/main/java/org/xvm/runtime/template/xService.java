@@ -135,7 +135,10 @@ public class xService
     public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
         {
         // called via constructSync()
-        return new ServiceHandle(clazz.ensureAccess(Access.STRUCT), frame.f_context);
+        ServiceContext context = frame.f_context;
+        ServiceHandle  hStruct = new ServiceHandle(clazz.ensureAccess(Access.STRUCT), context);
+        context.setService(hStruct);
+        return hStruct;
         }
 
     @Override

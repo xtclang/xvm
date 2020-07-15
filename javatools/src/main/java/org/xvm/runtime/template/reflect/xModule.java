@@ -65,6 +65,11 @@ public class xModule
     @Override
     public void initNative()
         {
+        // while these properties are naturally implementable, they are accessed
+        // by the TypeSystem constructor for modules that belong to the constructed
+        // TypeSystem, creating "the chicken or the egg" problem
+        markNativeProperty("simpleName");
+        markNativeProperty("qualifiedName");
         }
 
     @Override
@@ -88,6 +93,12 @@ public class xModule
         PackageHandle hModule = (PackageHandle) hTarget;
         switch (sPropName)
             {
+            case "qualifiedName":
+                return getPropertyQualifiedName(frame, hModule, iReturn);
+
+            case "simpleName":
+                return getPropertySimpleName(frame, hModule, iReturn);
+
             case "version":
                 return getPropertyVersion(frame, hModule, iReturn);
 
@@ -119,6 +130,24 @@ public class xModule
 
 
     // ----- property implementations --------------------------------------------------------------
+
+    /**
+     * Implements property: simpleName.get()
+     */
+    public int getPropertySimpleName(Frame frame, PackageHandle hModule, int iReturn)
+        {
+        String sName = ((ModuleConstant) hModule.getId()).getUnqualifiedName();
+        return frame.assignValue(iReturn, xString.makeHandle(sName));
+        }
+
+    /**
+     * Implements property: qualifiedName.get()
+     */
+    public int getPropertyQualifiedName(Frame frame, PackageHandle hModule, int iReturn)
+        {
+        String sName = hModule.getId().getName();
+        return frame.assignValue(iReturn, xString.makeHandle(sName));
+        }
 
     /**
      * Implements property: version.get()

@@ -89,7 +89,8 @@ public class ServiceContext
 
     public void setService(ServiceHandle hService)
         {
-        assert m_hService == null;
+        assert m_hService == null ||
+            m_hService.isStruct() && !hService.isStruct();
         m_hService = hService;
         }
 
