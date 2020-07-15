@@ -454,8 +454,7 @@ public class ModuleStructure
         }
 
 
-    // ----- fields --------------------------------------------------------------------------------
-
+    // ----- ModuleType enumeration ----------------------------------------------------------------
 
     /**
      * A module serves one of three primary purposes:
@@ -497,7 +496,10 @@ public class ModuleStructure
          * All of the Format enums.
          */
         private static final ModuleType[] MODULE_TYPES = ModuleType.values();
-        };
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
 
     /**
      * True iff this is a fingerprint module, which is a secondary (not main) module in a file
