@@ -229,10 +229,14 @@ public class ImmutableTypeConstant
                 }
 
             // a service type cannot be immutable
-            if (type.ensureTypeInfo(errs).getFormat() == Component.Format.SERVICE)
+            if (type.isExplicitClassIdentity(true))
                 {
-                log(errs, Severity.ERROR, VE_IMMUTABLE_SERVICE_ILLEGAL, type.getValueString());
-                fHalt = true;
+                IdentityConstant idClz = getSingleUnderlyingClass(true);
+                if (idClz.getComponent().getFormat() == Component.Format.SERVICE)
+                    {
+                    log(errs, Severity.ERROR, VE_IMMUTABLE_SERVICE_ILLEGAL, type.getValueString());
+                    fHalt = true;
+                    }
                 }
 
             if (!fHalt)
