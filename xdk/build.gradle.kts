@@ -66,8 +66,6 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
 
     shouldRunAfter(compileEcstasy)
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$buildDir/xdk/lib",
