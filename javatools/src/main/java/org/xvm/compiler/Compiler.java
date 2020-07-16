@@ -181,7 +181,7 @@ public class Compiler
             {
             // first time through, load any module dependencies
             setStage(Stage.Loading);
-            m_structFile.linkModules(m_repos);
+            m_structFile.linkModules(m_repos, false);
             }
 
         setStage(Stage.Loaded);

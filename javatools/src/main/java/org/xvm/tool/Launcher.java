@@ -1273,7 +1273,7 @@ public abstract class Launcher
         // link the modules
         if (structEcstasy != null)
             {
-            String sMissing = structEcstasy.linkModules(reposLib);
+            String sMissing = structEcstasy.linkModules(reposLib, false);
             if (sMissing != null)
                 {
                 log(Severity.FATAL, "Unable to link module " + Constants.ECSTASY_MODULE
@@ -1283,7 +1283,7 @@ public abstract class Launcher
 
         if (structNative != null)
             {
-            String sMissing = structNative.linkModules(reposLib);
+            String sMissing = structNative.linkModules(reposLib, false);
             if (sMissing != null)
                 {
                 log(Severity.FATAL, "Unable to link module " + Constants.PROTOTYPE_MODULE

@@ -100,7 +100,7 @@ public class Connector
             }
 
         FileStructure structApp = f_templates.createFileStructure(moduleApp);
-        structApp.linkModules(m_repository);
+        structApp.linkModules(m_repository, true);
 
         ModuleConstant idApp = (ModuleConstant) structApp.
                 getChild(moduleApp.getName()).getIdentityConstant();

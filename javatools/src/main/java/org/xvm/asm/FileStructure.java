@@ -196,6 +196,7 @@ public class FileStructure
             if (moduleChild.isFingerprint() && getModule(moduleChild.getName()) == null)
                 {
                 moduleClone = moduleChild.cloneBody();
+                moduleClone.setContaining(this);
                 addChild(moduleClone);
                 moduleClone.registerConstants(pool);
                 }
@@ -340,15 +341,19 @@ public class FileStructure
      * Link the modules in this FileStructure.
      *
      * @param repository  the module repository to load modules from
+     * @param fRuntime    if true, the linked modules need to be adopted by this file structure as
+     *                    part of the linking process; otherwise the modules might still be in the
+     *                    process of compiling, so cloning the current incomplete state would cause
+     *                    the linking to miss the build completion
      *
      * @return null iff success, otherwise the name of the first module that could not be linked to
      */
-    public String linkModules(ModuleRepository repository)
+    public String linkModules(ModuleRepository repository, boolean fRuntime)
         {
-        return linkModules(repository, new HashSet<>());
+        return linkModules(repository, new HashSet<>(), fRuntime);
         }
 
-    protected String linkModules(ModuleRepository repository, Set<FileStructure> setVisited)
+    private String linkModules(ModuleRepository repository, Set<FileStructure> setVisited, boolean fRuntime)
         {
         String sMissing = null;
 
@@ -369,10 +374,22 @@ public class FileStructure
                     if (repository.getModuleNames().contains(sModule))
                         {
                         ModuleStructure structActual = repository.loadModule(sModule); // TODO versions etc.
-                        structFingerprint.setFingerprintOrigin(structActual);
 
-                        structActual.registerConstants(pool);
-                        structActual.registerChildrenConstants(pool);
+                        if (fRuntime)
+                            {
+                            ModuleStructure structClone = structActual.cloneBody();
+                            structFingerprint.setFingerprintOrigin(structClone);
+
+                            structClone.setContaining(this);
+                            structClone.cloneChildren(structActual.children());
+                            structClone.registerConstants(pool);
+                            structClone.registerChildrenConstants(pool);
+                            }
+                        else
+                            {
+                            structFingerprint.setFingerprintOrigin(structActual);
+                            }
+
 
                         FileStructure structToLink = structActual.getFileStructure();
                         if (setVisited.add(structToLink))
@@ -399,7 +416,7 @@ public class FileStructure
             {
             for (FileStructure struct : setLinkLater)
                 {
-                String sMissingDownstream = struct.linkModules(repository, setVisited);
+                String sMissingDownstream = struct.linkModules(repository, setVisited, fRuntime);
                 if (sMissingDownstream != null && sMissing == null)
                     {
                     sMissing = sMissingDownstream;
