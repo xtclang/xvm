@@ -18,10 +18,11 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.SimpleContainer;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
+import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
@@ -39,16 +40,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 public class xLinker
         extends xService
     {
-    public static xLinker INSTANCE;
-
     public xLinker(TemplateRegistry registry, ClassStructure structure, boolean fInstance)
         {
         super(registry, structure, false);
-
-        if (fInstance)
-            {
-            INSTANCE = this;
-            }
         }
 
     @Override
@@ -59,6 +53,7 @@ public class xLinker
         GET_RESOURCE = clz.findMethod("getResource", 2).getIdentityConstant().getSignature();
 
         markNativeMethod("validate", null, null);
+        markNativeMethod("loadFileTemplate", null, null);
         markNativeMethod("resolveAndLink", null, null);
 
         getCanonicalType().invalidateTypeInfo();
@@ -71,6 +66,23 @@ public class xLinker
         {
         switch (method.getName())
             {
+            case "loadFileTemplate":
+                {
+                ByteArrayHandle hBytes = (ByteArrayHandle) hArg;
+                try
+                    {
+                    byte[]        abFile  = hBytes.m_abValue;
+                    FileStructure struct  = new FileStructure(new ByteArrayInputStream(abFile));
+
+                    return frame.assignValue(iReturn, xRTFileTemplate.makeHandle(struct));
+                    }
+                catch (IOException e)
+                    {
+                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
+                    }
+
+                }
+
             case "validate":
                 {
                 ByteArrayHandle hBytes = (ByteArrayHandle) hArg;
@@ -100,28 +112,22 @@ public class xLinker
             {
             case "resolveAndLink":
                 {
-                ByteArrayHandle hBytes      = (ByteArrayHandle) ahArg[0];
-                ObjectHandle    hRepository = ahArg[1];
-                ObjectHandle    hInjector   = ahArg[2];
+                ComponentTemplateHandle hTemplate = (ComponentTemplateHandle) ahArg[0];
+                ObjectHandle            hRepo     = ahArg[1];
+                ObjectHandle            hInjector = ahArg[2];
 
-                try
-                    {
-                    InputStream     stream    = new ByteArrayInputStream(hBytes.m_abValue);
-                    FileStructure   struct    = new FileStructure(stream);
-                    ModuleStructure moduleApp = struct.getModule();
-                    ServiceContext  context   = frame.f_context;
-                    FileStructure   structApp = context.f_templates.createFileStructure(moduleApp);
-                    ModuleConstant  idModule  = (ModuleConstant)
-                            structApp.getChild(moduleApp.getName()).getIdentityConstant();
+                ModuleStructure moduleApp = (ModuleStructure) hTemplate.getComponent();
+                FileStructure   structApp = f_templates.createFileStructure(moduleApp);
 
-                    SimpleContainer container = new SimpleContainer(context, idModule);
+                // TODO GG: this needs to be replaced with linking to the passed in repo
+                structApp.linkModules(f_templates.f_repository, true);
 
-                    return new CollectResources(container, hInjector, aiReturn).doNext(frame);
-                    }
-                catch (IOException e)
-                    {
-                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
-                    }
+                ModuleConstant  idModule = (ModuleConstant)
+                        structApp.getChild(moduleApp.getName()).getIdentityConstant();
+
+                SimpleContainer container = new SimpleContainer(frame.f_context, idModule);
+
+                return new CollectResources(container, hInjector, aiReturn).doNext(frame);
                 }
             }
 

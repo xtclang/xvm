@@ -19,6 +19,7 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.template._native.xTerminalConsole;
 
 import org.xvm.runtime.template._native.mgmt.xLinker;
+import org.xvm.runtime.template._native.mgmt.xRepository;
 
 import org.xvm.runtime.template._native.numbers.xRTRandom;
 
@@ -147,6 +148,10 @@ public class CoreContainer
         // +++ Linker
         TypeConstant typeLinker = pool.ensureEcstasyTypeConstant("mgmt.Container.Linker");
         f_mapResources.put(new InjectionKey("linker" , typeLinker), this::ensureLinker);
+
+        // +++ ModuleRepository
+        TypeConstant typeRepo = pool.ensureEcstasyTypeConstant("mgmt.ModuleRepository");
+        f_mapResources.put(new InjectionKey("repository" , typeRepo), this::ensureModuleRepository);
         }
 
     protected ObjectHandle ensureDefaultClock(Frame frame)
@@ -349,6 +354,21 @@ public class CoreContainer
         return hLinker;
         }
 
+    protected ObjectHandle ensureModuleRepository(Frame frame)
+        {
+        ObjectHandle hRepository = m_hRepository;
+        if (hRepository == null)
+            {
+            xRepository templateRTRepository = (xRepository) f_templates.getTemplate("_native.mgmt.Repository");
+            if (templateRTRepository != null)
+                {
+                m_hRepository = hRepository = templateRTRepository.makeHandle();
+                }
+            }
+
+        return hRepository;
+        }
+
     /**
      * Helper method to get a property on the specified target.
      */
@@ -441,4 +461,5 @@ public class CoreContainer
     private ObjectHandle m_hCurDir;
     private ObjectHandle m_hTmpDir;
     private ObjectHandle m_hLinker;
+    private ObjectHandle m_hRepository;
     }

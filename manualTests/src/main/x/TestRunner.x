@@ -4,7 +4,11 @@ module TestRunner.xtclang.org
 
     import ecstasy.mgmt.Container;
     import ecstasy.mgmt.InstantRepository;
+    import ecstasy.mgmt.ModuleRepository;
     import ecstasy.mgmt.ResourceProvider;
+
+    import ecstasy.reflect.FileTemplate;
+    import ecstasy.reflect.ModuleTemplate;
 
     import Injector.ConsoleBuffer as Buffer;
 
@@ -97,7 +101,12 @@ module TestRunner.xtclang.org
             return Null;
             }
 
-        InstantRepository repo = new InstantRepository(bytes);
+        @Inject Container.Linker linker;
+        @Inject ModuleRepository repository;
+
+        FileTemplate fileTemplate = linker.loadFileTemplate(bytes);
+
+        InstantRepository repo = new InstantRepository(fileTemplate.mainModule, repository);
 
         Injector  injector  = new Injector();
         Container container = new Container(repo.moduleName, repo, injector);

@@ -71,7 +71,8 @@ public class xInjectedRef
             hValue = frame.f_context.f_container.getInjectable(frame, hInjected.getResourceName(), typeEl);
             if (hValue == null)
                 {
-                return frame.raiseException("Unknown injectable property " + hInjected.getResourceName());
+                return frame.raiseException(
+                    "Unknown injectable property \"" + hInjected.getResourceName() +'"');
                 }
 
             if (Op.isDeferred(hValue))

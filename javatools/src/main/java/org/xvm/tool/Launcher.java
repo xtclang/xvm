@@ -369,6 +369,7 @@ public abstract class Launcher
             case Name:
             case Boolean:
             case Int:
+            case AsIs:
                 return String.valueOf(oVal);
 
             case String:

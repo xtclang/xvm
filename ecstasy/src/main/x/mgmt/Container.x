@@ -1,3 +1,4 @@
+import reflect.FileTemplate;
 import reflect.ModuleTemplate;
 
 /**
@@ -82,6 +83,14 @@ service Container
         String validate(Byte[] bytes);
 
         /**
+         * Create the FileTemplate from its serialized content.
+         *
+         * REVIEW: this method will probably be moved; e.g. as a FileTemplate constructor
+         * @throws an Exception if the bytes don't represent a valid module
+         */
+        FileTemplate loadFileTemplate(Byte[] bytes);
+
+        /**
          * Load and verify the specified module.
          *
          * @throws an Exception if the module cannot be loaded for any reason
@@ -97,7 +106,7 @@ service Container
          *
          * @throws an Exception if the module cannot be loaded for any reason
          */
-        (TypeSystem typeSystem, ApplicationControl) resolveAndLink(immutable Byte[] bytes,
+        (TypeSystem typeSystem, ApplicationControl) resolveAndLink(ModuleTemplate template,
                 ModuleRepository repository, ResourceProvider injector, Module[] sharedModules = []);
 
         /**

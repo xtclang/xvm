@@ -115,29 +115,6 @@ public class xRTComponentTemplate
         }
 
 
-    // ----- ComponentTemplateHandle support -------------------------------------------------------
-
-    /**
-     * Inner class: ComponentTemplateHandle. This is a handle to a native Component.
-     */
-    public static class ComponentTemplateHandle
-            extends GenericHandle
-        {
-        protected ComponentTemplateHandle(ClassComposition clz, Component component)
-            {
-            super(clz);
-            m_struct = component;
-            }
-
-        public Component getComponent()
-            {
-            return m_struct;
-            }
-
-        private Component m_struct;
-        }
-
-
     // ----- property implementations --------------------------------------------------------------
 
     /**
@@ -354,5 +331,30 @@ public class xRTComponentTemplate
             default:
                 throw new IllegalStateException("unsupported format: " + format);
             }
+        }
+
+
+    // ----- ObjectHandle --------------------------------------------------------------------------
+
+    /**
+     * Inner class: ComponentTemplateHandle. This is a handle to a native Component.
+     */
+    public static class ComponentTemplateHandle
+            extends GenericHandle
+        {
+        protected ComponentTemplateHandle(ClassComposition clz, Component component)
+            {
+            super(clz);
+
+            m_struct   = component;
+            m_fMutable = false;
+            }
+
+        public Component getComponent()
+            {
+            return m_struct;
+            }
+
+        private Component m_struct;
         }
     }

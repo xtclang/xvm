@@ -400,9 +400,9 @@ public class TemplateRegistry
     public static final String PREF_NATIVE   = "_native.";
     public static final int    PREF_LENGTH   = PREF_NATIVE.length();
 
-    private final ModuleRepository f_repository;
-    private       ModuleStructure m_moduleSystem;
-    private       ModuleStructure  m_moduleNative;
+    public final ModuleRepository f_repository;
+    private      ModuleStructure  m_moduleSystem;
+    private      ModuleStructure  m_moduleNative;
 
     // cache - IdentityConstant by name (only for core classes)
     private final Map<String, IdentityConstant> f_mapIdByName = new ConcurrentHashMap<>();

@@ -5,7 +5,9 @@ import ecstasy.reflect.ModuleTemplate;
  * The native reflected ModuleTemplate implementation.
  */
 class RTModuleTemplate
-        extends RTComponentTemplate
+        extends RTClassTemplate
         implements ModuleTemplate
     {
+    @Override
+    String qualifiedName.get() {TODO("native");}
     }

@@ -1,3 +1,5 @@
+import reflect.ModuleTemplate;
+
 /**
  * Represents the source of compiled module structures.
  */
@@ -9,7 +11,7 @@ interface ModuleRepository
     @RO immutable Set<String> moduleNames;
 
     /**
-     * Obtain a binary image of the specified module.
+     * Obtain a module template for the specified module.
      */
-    immutable Byte[] getModule(String name);
+    ModuleTemplate getModule(String name);
     }

@@ -37,24 +37,30 @@ public class xRTClassTemplate
     @Override
     public void initNative()
         {
-        markNativeProperty("classes");
-        markNativeProperty("contribs");
-        markNativeProperty("mixesInto");
-        markNativeProperty("multimethods");
-        markNativeProperty("properties");
-        markNativeProperty("singleton");
-        markNativeProperty("sourceInfo");
-        markNativeProperty("template");
-        markNativeProperty("type");
-        markNativeProperty("typeParams");
-        markNativeProperty("virtualChild");
+        if (this == INSTANCE)
+            {
+            CLASS_TEMPLATE_COMPOSITION = ensureClass(getCanonicalType(),
+                pool().ensureEcstasyTypeConstant("reflect.ClassTemplate"));
 
-        markNativeMethod("deannotate", null, null);
-        markNativeMethod("ensureClass", null, null);
+            markNativeProperty("classes");
+            markNativeProperty("contribs");
+            markNativeProperty("mixesInto");
+            markNativeProperty("multimethods");
+            markNativeProperty("properties");
+            markNativeProperty("singleton");
+            markNativeProperty("sourceInfo");
+            markNativeProperty("template");
+            markNativeProperty("type");
+            markNativeProperty("typeParams");
+            markNativeProperty("virtualChild");
 
-        // this native implementation explicitly incorporates the native implementation of
-        // RTComponentTemplate
-        super.initNative();
+            markNativeMethod("deannotate", null, null);
+            markNativeMethod("ensureClass", null, null);
+
+            // this native implementation explicitly incorporates the native implementation of
+            // RTComponentTemplate
+            super.initNative();
+            }
         }
 
     @Override
@@ -126,24 +132,6 @@ public class xRTClassTemplate
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
-        }
-
-
-    // ----- ComponentTemplateHandle support -------------------------------------------------------
-
-    /**
-     * Obtain a {@link ComponentTemplateHandle} for the specified component.
-     *
-     * @param component  the {@link Component} to obtain a {@link ComponentTemplateHandle} for
-     *
-     * @return the resulting {@link ComponentTemplateHandle}
-     */
-    public static ComponentTemplateHandle makeHandle(ClassStructure component)
-        {
-        ClassComposition clz = INSTANCE.ensureClass(INSTANCE.getCanonicalType(),
-                INSTANCE.pool().ensureEcstasyTypeConstant("reflect.ClassTemplate"));
-        // note: no need to initialize the struct because there are no natural fields
-        return new ComponentTemplateHandle(clz, component);
         }
 
 
@@ -280,4 +268,25 @@ public class xRTClassTemplate
         // a Composition that is a ClassTemplate is not annotated
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
+
+
+    // ----- ObjectHandle support ------------------------------------------------------------------
+
+    /**
+     * Obtain a {@link ComponentTemplateHandle} for the specified {@link ClassStructure}.
+     *
+     * @param structClz  the {@link ClassStructure} to obtain a {@link ComponentTemplateHandle} for
+     *
+     * @return the resulting {@link ComponentTemplateHandle}
+     */
+    public static ComponentTemplateHandle makeHandle(ClassStructure structClz)
+        {
+        // note: no need to initialize the struct because there are no natural fields
+        return new ComponentTemplateHandle(CLASS_TEMPLATE_COMPOSITION, structClz);
+        }
+
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    private static ClassComposition CLASS_TEMPLATE_COMPOSITION;
     }

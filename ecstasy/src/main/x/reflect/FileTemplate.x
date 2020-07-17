@@ -4,5 +4,8 @@
 interface FileTemplate
         extends ComponentTemplate
     {
-    // TODO
+    /**
+     * The primary module that the FileTemplate represents.
+     */
+    @RO ModuleTemplate mainModule;
     }

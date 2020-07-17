@@ -1,17 +1,17 @@
 import collections.HashSet;
 
+import reflect.ModuleTemplate;
+
 class InstantRepository
         implements ModuleRepository
     {
     /**
      * Construct a repository from an XTC structure and an optional underlying repository.
      */
-    construct(immutable Byte[] moduleBytes, ModuleRepository? repository = Null)
+    construct(ModuleTemplate template, ModuleRepository? repository = Null)
         {
-        @Inject Container.Linker linker;
-
-        this.moduleName  = linker.validate(moduleBytes);
-        this.moduleBytes = moduleBytes;
+        this.template   = template;
+        this.moduleName = template.qualifiedName;
 
         Set<String> names = new HashSet();
         names.add(moduleName);
@@ -26,10 +26,10 @@ class InstantRepository
         }
 
     @Override
-    immutable Byte[] getModule(String name)
+    ModuleTemplate getModule(String name)
         {
         return name == moduleName
-                ? moduleBytes
+                ? template
                 : repository?.getModule(name);
 
         throw new IllegalArgument(name);
@@ -51,6 +51,5 @@ class InstantRepository
     /**
      * The primary module bytes.
      */
-    public/private immutable Byte[] moduleBytes;
+    public/private ModuleTemplate template;
     }
-
