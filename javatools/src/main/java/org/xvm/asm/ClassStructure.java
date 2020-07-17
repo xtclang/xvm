@@ -2462,14 +2462,14 @@ public class ClassStructure
 
         for (Contribution contrib : getContributionsAsList())
             {
-            if (contrib.getComposition() == Composition.Extends)
+            if (contrib.getComposition() == Composition.Implements)
                 {
                 TypeConstant typeResolved = contrib.resolveType(pool, this, listLeft);
 
                 ClassStructure clzSuper = (ClassStructure)
                     typeResolved.getSingleUnderlyingClass(true).getComponent();
 
-                assert (clzSuper.getFormat() == Component.Format.INTERFACE);
+                assert clzSuper.getFormat() == Component.Format.INTERFACE;
 
                 setMiss.addAll(
                     clzSuper.isInterfaceAssignableFrom(typeRight, accessLeft, typeResolved.getParamTypes()));

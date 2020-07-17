@@ -462,6 +462,17 @@ public class AnnotatedTypeConstant
         return Relation.INCOMPATIBLE;
         }
 
+    @Override
+    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
+                                               boolean fFunction, List<TypeConstant> listParams)
+        {
+        TypeConstant typeAnno = getAnnotationType();
+        TypeConstant typeOrig = getUnderlyingType();
+
+        return typeAnno.containsSubstitutableMethod(signature, access, fFunction, listParams)
+            || typeOrig.containsSubstitutableMethod(signature, access, fFunction, listParams);
+        }
+
 
     // ----- run-time support ----------------------------------------------------------------------
 
