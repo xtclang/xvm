@@ -50,27 +50,6 @@ module TestServices
             console.println($"{tag()} 3. expected exception={e.text}");
             });
 
-        for (Int i : 0..4)
-            {
-            console.println($"{tag()} calling service future-style: {i}");
-            @Future Int result = svc.calcSomethingBig(Duration.ofSeconds(i));
-            &result.whenComplete((n, e) ->
-                {
-                console.println($"{tag()} result={(n ?: e ?: "???")}");
-                // when the last result comes back - shut down
-                if (!svc.contended)
-                    {
-                    testShutdown(svc);
-                    }
-                });
-            }
-
-        @Future Boolean r = svc.notify(() ->
-            {
-            console.println($"{tag()} received notification");
-            return False;
-            });
-
         @Inject Timer timer;
         timer.start();
         Loop: for (TestService each : svcs)
@@ -83,8 +62,6 @@ module TestServices
                 console.println($"{tag()} spin {i} yielded {n}; took {timer.elapsed.milliseconds} ms");
                 });
             }
-
-        console.println($"{tag()} done {r}");
 
         // test timeout
         import ecstasy.Timeout;
@@ -99,6 +76,30 @@ module TestServices
         catch (TimedOut e)
             {
             }
+
+        Int responded = 0;
+        for (Int i : 0..4)
+            {
+            console.println($"{tag()} calling service future-style: {i}");
+            @Future Int result = svc.calcSomethingBig(Duration.ofSeconds(i));
+            &result.whenComplete((n, e) ->
+                {
+                console.println($"{tag()} result={(n ?: e ?: "???")}");
+                // when the last result comes back - shut down
+                if (++responded == 5)
+                    {
+                    testShutdown(svc);
+                    }
+                });
+            }
+
+        @Future Boolean r = svc.notify(() ->
+            {
+            console.println($"{tag()} received notification");
+            return False;
+            });
+
+        console.println($"{tag()} done {r}");
         }
 
     void testShutdown(TestService svc)
