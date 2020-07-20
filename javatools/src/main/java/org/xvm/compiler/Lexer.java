@@ -761,6 +761,11 @@ public class Lexer
                         {
                         case '\r':
                         case '\n':
+                        case 0x000B:   //   VT     Vertical Tab
+                        case 0x000C:   //   FF     Form Feed
+                        case 0x0085:   //   NEL    Next Line
+                        case 0x2028:   //   LS     Line Separator
+                        case 0x2029:   //   PS     Paragraph Separator
                             // log error: newline in string
                             source.rewind();
                             log(Severity.ERROR, CHAR_NO_TERM, null, lInitPos, source.getPosition());
@@ -813,6 +818,11 @@ public class Lexer
 
                 case '\r':
                 case '\n':
+                case 0x000B:   //   VT     Vertical Tab
+                case 0x000C:   //   FF     Form Feed
+                case 0x0085:   //   NEL    Next Line
+                case 0x2028:   //   LS     Line Separator
+                case 0x2029:   //   PS     Paragraph Separator
                     // log error: newline in string
                     source.rewind();
                     log(Severity.ERROR, CHAR_NO_TERM, null, lInitPos, source.getPosition());
@@ -933,10 +943,22 @@ public class Lexer
                         break Appending;
 
                     case '\\':
-                        if (fMultiline && !fTemplate)
+                        if (fMultiline)
                             {
-                            sb.append(ch);
-                            break;
+                            if (source.hasNext())
+                                {
+                                if (isLineTerminator(source.next()) && isMultilineContinued())
+                                    {
+                                    continue Appending;
+                                    }
+                                source.rewind();
+                                }
+
+                            if (!fTemplate)
+                                {
+                                sb.append(ch);
+                                break;
+                                }
                             }
 
                         // process escaped char
@@ -944,6 +966,11 @@ public class Lexer
                             {
                             case '\r':
                             case '\n':
+                            case 0x000B:   //   VT     Vertical Tab
+                            case 0x000C:   //   FF     Form Feed
+                            case 0x0085:   //   NEL    Next Line
+                            case 0x2028:   //   LS     Line Separator
+                            case 0x2029:   //   PS     Paragraph Separator
                                 // log error: newline in string
                                 source.rewind();
                                 log(Severity.ERROR, STRING_NO_TERM, null, lInitPos, source.getPosition());
@@ -1019,6 +1046,11 @@ public class Lexer
 
                     case '\r':
                     case '\n':
+                    case 0x000B:   //   VT     Vertical Tab
+                    case 0x000C:   //   FF     Form Feed
+                    case 0x0085:   //   NEL    Next Line
+                    case 0x2028:   //   LS     Line Separator
+                    case 0x2029:   //   PS     Paragraph Separator
                         if (fMultiline)
                             {
                             boolean fCRLF = false;
@@ -1213,7 +1245,7 @@ public class Lexer
             else if (isWhitespace(ch))
                 {
                 // ignore whitespace, unless it's newline
-                if ((ch == '\r' || ch == '\n') && !isMultilineContinued())
+                if (isLineTerminator(ch) && !isMultilineContinued())
                     {
                     source.rewind();
                     break;
