@@ -23,7 +23,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
-import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -61,7 +61,7 @@ public class xContainerControl
         m_clzControl = ensureClass(getCanonicalType(), typeControl);
 
         markNativeMethod("invoke", null, null);
-        markNativeMethod("mainService", null, null);
+        markNativeProperty("mainService");
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -81,22 +81,19 @@ public class xContainerControl
         }
 
     @Override
-    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                              ObjectHandle[] ahArg, int[] aiReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        switch (method.getName())
+        switch (sPropName)
             {
             case "mainService":
                 {
                 ControlHandle  hCtrl = (ControlHandle) hTarget;
                 ServiceContext ctx   = hCtrl.m_container.getServiceContext();
-                return ctx == null
-                    ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                    : frame.assignValues(aiReturn, xBoolean.TRUE, ctx.getService());
+                return frame.assignValue(iReturn, ctx == null ? xNullable.NULL : ctx.getService());
                 }
             }
 
-        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     /**
@@ -153,7 +150,7 @@ public class xContainerControl
             }
 
         /**
-         * The container this ContainerControl instance is responsible for managing.
+         * The container this ControlHandle instance is responsible for managing.
          */
         protected Container m_container;
         }

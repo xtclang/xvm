@@ -64,7 +64,6 @@
  * * * `@Soft` and `@Weak` reference-cleared notifications.
  */
 interface Service
-        extends ServiceControl
     {
     /**
      * A low-level control interface for a Service.
@@ -219,6 +218,11 @@ interface Service
      * diagnose faults, and to provide runtime manageability information.
      */
     @RO String serviceName;
+
+    /**
+     * A low-level control for a Service.
+     */
+    @RO ServiceControl serviceControl;
 
     /**
      * Obtain the named ContextToken using its name.

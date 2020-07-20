@@ -31,6 +31,8 @@ import org.xvm.runtime.template.numbers.LongLong;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
 
+import org.xvm.runtime.template._native.xRTServiceControl;
+
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
@@ -67,18 +69,14 @@ public class xService
     @Override
     public void initNative()
         {
-        STATUS_INDICATOR = (xEnum) f_templates.getTemplate("Service.StatusIndicator");
-        REENTRANCY       = (xEnum) f_templates.getTemplate("Service.Reentrancy");
+        REENTRANCY = (xEnum) f_templates.getTemplate("Service.Reentrancy");
 
         // since Service is an interface, we cannot annotate the properties naturally and need to do
         // an ad-hoc check (the list is to be updated)
         Set<String> setAtomic = new HashSet<>();
         setAtomic.add("serviceName");
-        setAtomic.add("statusIndicator");
+        setAtomic.add("serviceControl");
         setAtomic.add("timeout");
-        setAtomic.add("upTime");
-        setAtomic.add("cpuTime");
-        setAtomic.add("contended");
         s_setAtomicProperties = setAtomic;
         }
 
@@ -219,9 +217,9 @@ public class xService
         switch (method.getName())
             {
             case "shutdown":
-                return frame.f_context == hService.f_context
-                    ? hService.f_context.shutdown(frame)
-                    : xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
+                // this method is called by the ServiceControl; it doesn't even exist on the Service
+                assert frame.f_context == hService.f_context;
+                return hService.f_context.shutdown(frame);
 
             case "yield":
                 return frame.f_context == hService.f_context
@@ -248,12 +246,8 @@ public class xService
             case "serviceName":
                 return frame.assignValue(iReturn, xString.makeHandle(hService.f_context.f_sName));
 
-            case "statusIndicator":
-                {
-                EnumHandle hStatus = STATUS_INDICATOR.getEnumByName(
-                        hService.f_context.getStatus().name());
-                return Utils.assignInitializedEnum(frame, hStatus, iReturn);
-                }
+            case "serviceControl":
+                return frame.assignValue(iReturn, xRTServiceControl.makeHandle(hService.f_context));
 
             case "timeout":
                 {
@@ -269,9 +263,6 @@ public class xService
                         hService.f_context.m_reentrancy.name());
                 return Utils.assignInitializedEnum(frame, hReentrancy, iReturn);
                 }
-
-            case "contended":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(hService.f_context.isContended()));
 
             case "asyncSection":
                 return frame.assignValue(iReturn, frame.f_fiber.getAsyncSection());
@@ -535,9 +526,8 @@ public class xService
     protected static final LongLong PICOS_PER_MILLI_LL = new LongLong(PICOS_PER_MILLI);
 
     /**
-     * Enums used by the native properties.
+     * Enum used by the native properties.
      */
-    protected static xEnum STATUS_INDICATOR;
     protected static xEnum REENTRANCY;
 
     /**
