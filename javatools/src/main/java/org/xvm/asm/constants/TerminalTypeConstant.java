@@ -797,8 +797,17 @@ public class TerminalTypeConstant
                 return false;
             }
 
-        return idClz.equals(getConstantPool().clzTuple()) ||
-             ((ClassStructure) idClz.getComponent()).isTuple();
+        if (idClz.equals(getConstantPool().clzTuple()))
+            {
+            return true;
+            }
+
+        ClassStructure clz = (ClassStructure) idClz.getComponent();
+        if (clz == null)
+            {
+            throw new IllegalStateException("no ClassStructure for " + idClz);
+            }
+        return clz.isTuple();
         }
 
     @Override
