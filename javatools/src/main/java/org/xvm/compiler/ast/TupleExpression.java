@@ -351,7 +351,7 @@ public class TupleExpression
 
         int            cMaxTypes   = Math.max(cFields, Math.max(cSpecTypes, cReqTypes));
         TypeConstant[] aFieldTypes = new TypeConstant[cMaxTypes];
-        Constant[]     aFieldVals  = null;
+        Constant[]     aFieldVals  = cMaxTypes == 0 ? Constant.NO_CONSTS : null;
         for (int i = 0; i < cMaxTypes; ++i)
             {
             TypeConstant typeSpec  = i < cSpecTypes ? aSpecTypes[i] : null;
