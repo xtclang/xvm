@@ -18,7 +18,7 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
 import org.xvm.runtime.template._native.xTerminalConsole;
 
-import org.xvm.runtime.template._native.mgmt.xLinker;
+import org.xvm.runtime.template._native.mgmt.xContainerLinker;
 import org.xvm.runtime.template._native.mgmt.xRepository;
 
 import org.xvm.runtime.template._native.numbers.xRTRandom;
@@ -341,7 +341,7 @@ public class CoreContainer
         ObjectHandle hLinker = m_hLinker;
         if (hLinker == null)
             {
-            xLinker templateRTLinker = (xLinker) f_templates.getTemplate("_native.mgmt.Linker");
+            xContainerLinker templateRTLinker = (xContainerLinker) f_templates.getTemplate("_native.mgmt.ContainerLinker");
             if (templateRTLinker != null)
                 {
                 TypeConstant typeLinker = frame.poolContext().ensureEcstasyTypeConstant("mgmt.Container.Linker");

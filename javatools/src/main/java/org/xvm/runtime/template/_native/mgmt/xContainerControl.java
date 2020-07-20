@@ -30,14 +30,14 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**
- * Native implementation of _native.mgmt.AppControl class.
+ * Native implementation of _native.mgmt.ContainerControl class.
  */
-public class xAppControl
+public class xContainerControl
         extends ClassTemplate
     {
-    public static xAppControl INSTANCE;
+    public static xContainerControl INSTANCE;
 
-    public xAppControl(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xContainerControl(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
 
@@ -56,7 +56,7 @@ public class xAppControl
     @Override
     public void initNative()
         {
-        TypeConstant typeControl = pool().ensureEcstasyTypeConstant("mgmt.Container.ApplicationControl");
+        TypeConstant typeControl = pool().ensureEcstasyTypeConstant("mgmt.Container.Control");
 
         m_clzControl = ensureClass(getCanonicalType(), typeControl);
 
@@ -153,7 +153,7 @@ public class xAppControl
             }
 
         /**
-         * The container this AppControl instance is responsible for managing.
+         * The container this ContainerControl instance is responsible for managing.
          */
         protected Container m_container;
         }

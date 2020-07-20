@@ -63,8 +63,142 @@
  *     may temporarily suppress these notifications within a {@link CriticalSection}.
  * * * `@Soft` and `@Weak` reference-cleared notifications.
  */
-interface Service()
+interface Service
+        extends ServiceControl
     {
+    /**
+     * A low-level control interface for a Service.
+     */
+    static interface ServiceControl
+            extends ServiceStats
+        {
+        /**
+         * Request the service to look for objects that are no longer used and reclaim their memory.
+         *
+         * This method can be invoked from either inside or outside of the service.
+         */
+        void gc();
+
+        /**
+         * Attempt to terminate the Service gracefully by asking it to shut down itself.
+         * A client that has a reference to the Service may shut it down, or the service
+         * can shut itself down, or the service can be shut down by the runtime when the
+         * service is no longer reachable.
+         *
+         * This method can be invoked from either inside or outside of the service.
+         */
+        void shutdown();
+
+        /**
+         * Forcibly terminate the Service without giving it a chance to shut down gracefully.
+         *
+         * This method can be invoked from either inside or outside of the service.
+         */
+        void kill();
+        }
+
+    /**
+     * A service exposes its status through a status indicator:
+     *
+     * * Idle indicates that the service is ready to accept any request and all previous requests
+     *   have been processed;
+     * * IdleWaiting indicates that the service has sent a request to another service and is waiting
+     *   (asynchronously) for a response at which point it will resume the execution;
+     * * Busy indicates that the service is processing a request;
+     * * BusyWaiting indicates that the service has sent a request to another service and the calling
+     *   fiber is now waiting synchronously (blocked) for a response;
+     * * ShuttingDown indicates that the service has received a shutdown request;
+     * * Terminated indicates that the service terminated as a result of either a shutdown or kill
+     *   request.
+     */
+    enum ServiceStatus {Idle, IdleWaiting, Busy, BusyWaiting, ShuttingDown, Terminated}
+
+    /**
+     * The various run-time statistics for a Service, with an ability to produce a snap-shot.
+     */
+    static interface ServiceStats
+        {
+        /**
+         * Determine if the service is still running.
+         */
+        @RO ServiceStatus statusIndicator;
+
+        /**
+         * The wall-clock uptime for the service.
+         */
+        @RO Duration upTime;
+
+        /**
+         * The amount of time that this service has consumed the CPU.
+         *
+         * In some cases, a service may not track CPU time if the runtime calculates that the cost of
+         * tracking the CPU time is too significant to accept in relation to the service's actual CPU
+         * time.
+         */
+        @RO Duration cpuTime;
+
+        /**
+         * Determine if there is currently any _visible_ contention for the service. A service is
+         * considered to be contended if it is running and if any other requests are pending for the
+         * service.
+         *
+         * The use of the term _visible_ is intended to convey the scenario in which minor contention on
+         * the service may exist for such a minuscule period of time that the cost of making the
+         * contention visible exceeds the cost of the contention itself, in which case such contention
+         * may not be visible.
+         */
+        @RO Boolean contended;
+
+        /**
+         * If the service maintains a backlog to manage pending requests, determine the depth of that
+         * backlog (i.e. the length of the queue).
+         *
+         * As a result of the potential for different approaches to managing contention on a service,
+         * it is possible that a service does not maintain a formal backlog, and thus the value of this
+         * property may not correctly reflect the presence and/or amount of contention.
+         */
+        @RO Int backlogDepth;
+
+        /**
+         * This is the memory footprint of the service, including memory that might not be being fully
+         * utilized at the moment.
+         */
+        @RO Int bytesReserved;
+
+        /**
+         * This is the amount of memory that the service currently has allocated for stuff.
+         */
+        @RO Int bytesAllocated;
+
+        /**
+         * Create an immutable snapshot of the current statistics.
+         */
+        ServiceStats snapshotStats()
+            {
+            return new StatsSnapshot(statusIndicator, upTime, cpuTime, contended, backlogDepth,
+                    bytesReserved, bytesAllocated);
+            }
+        }
+
+    /**
+     * A simple, immutable implementation of the [ServiceStats] interface.
+     */
+    static const StatsSnapshot(ServiceStatus statusIndicator,
+                               Duration      upTime,
+                               Duration      cpuTime,
+                               Boolean       contended,
+                               Int           backlogDepth,
+                               Int           bytesReserved,
+                               Int           bytesAllocated)
+            implements ServiceStats
+        {
+        @Override
+        ServiceStats snapshotStats()
+            {
+            return this;
+            }
+        }
+
     /**
      * The TypeSystem of the container that this service is running within.
      *
@@ -87,37 +221,16 @@ interface Service()
     @RO String serviceName;
 
     /**
-     * A service exposes its status through a status indicator:
-     *
-     * * Idle indicates that the service is ready to accept any request and all previous requests
-     *   have been processed;
-     * * IdleWaiting indicates that the service has sent a request to another service and is waiting
-     *   (asynchronously) for a response at which point it will resume the execution;
-     * * Busy indicates that the service is processing a request;
-     * * BusyWaiting indicates that the service has sent a request to another service and the calling
-     *   fiber is now waiting synchronously (blocked) for a response;
-     * * ShuttingDown indicates that the service has received a shutdown request;
-     * * Terminated indicates that the service terminated as a result of either a shutdown or kill
-     *   request.
-     */
-    enum StatusIndicator {Idle, IdleWaiting, Busy, BusyWaiting, ShuttingDown, Terminated}
-
-    /**
-     * Determine if the service is still running.
-     */
-    @RO StatusIndicator statusIndicator;
-
-    /**
      * Obtain the named ContextToken using its name.
      *
      * Normally, a developer would access a ContextToken using injection, such as this example which
      * requires the injection of the token named "customerId":
      *
-     *   @Inject ContextToken<String> customerId;
+     *     @Inject ContextToken<String> customerId;
      *
      * If the token is not guaranteed to exist, then the injection should be made optional, instead:
      *
-     *   @Inject ContextToken<String>? customerId;      // note the Nullable indicator on the type
+     *     @Inject ContextToken<String>? customerId;      // note the Nullable indicator on the type
      */
     ContextToken? findContextToken(String name);
 
@@ -179,42 +292,6 @@ interface Service()
     @RO Timeout? timeout;
 
     /**
-     * The wall-clock uptime for the service.
-     */
-    @RO Duration upTime;
-
-    /**
-     * The amount of time that this service has consumed the CPU.
-     *
-     * In some cases, a service may not track CPU time if the runtime calculates that the cost of
-     * tracking the CPU time is too significant to accept in relation to the service's actual CPU
-     * time.
-     */
-    @RO Duration cpuTime;
-
-    /**
-     * Determine if there is currently any _visible_ contention for the service. A service is
-     * considered to be contended if it is running and if any other requests are pending for the
-     * service.
-     *
-     * The use of the term _visible_ is intended to convey the scenario in which minor contention on
-     * the service may exist for such a minuscule period of time that the cost of making the
-     * contention visible exceeds the cost of the contention itself, in which case such contention
-     * may not be visible.
-     */
-    @RO Boolean contended;
-
-    /**
-     * If the service maintains a backlog to manage pending requests, determine the depth of that
-     * backlog (i.e. the length of the queue).
-     *
-     * As a result of the potential for different approaches to managing contention on a service,
-     * it is possible that a service does not maintain a formal backlog, and thus the value of this
-     * property may not correctly reflect the presence and/or amount of contention.
-     */
-    @RO Int backlogDepth;
-
-    /**
      * Allow the runtime to process pending runtime notifications for this service, or other service
      * requests in the service's backlog -- if the setting of {@link reentrancy} allows it.
      *
@@ -243,39 +320,6 @@ interface Service()
      * Exceptions raised by the `doLater` function are ignored and lost by the runtime.
      */
     void callLater(function void doLater());
-
-    /**
-     * This is the memory footprint of the service, including memory that might not be being fully
-     * utilized at the moment.
-     */
-    @RO Int bytesReserved;
-
-    /**
-     * This is the amount of memory that the service currently has allocated for stuff.
-     */
-    @RO Int bytesAllocated;
-
-    /**
-     * Request the service to look for objects that are no longer used and reclaim their memory.
-     */
-    void gc();
-
-    /**
-     * Attempt to terminate the Service gracefully by asking it to shut down itself.
-     * A client that has a reference to the Service may shut it down, or the service
-     * can shut itself down, or the service can be shut down by the runtime when the
-     * service is no longer reachable.
-     *
-     * This method can be invoked from either inside or outside of the service.
-     */
-    void shutdown();
-
-    /**
-     * Forcibly terminate the Service without giving it a chance to shut down gracefully.
-     *
-     * This method can be invoked from either inside or outside of the service.
-     */
-    void kill();
 
     /**
      * Register a ContextToken, replacing any previously registered ContextToken with the same name.

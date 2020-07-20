@@ -3,7 +3,6 @@ package org.xvm.runtime.template._native.mgmt;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.FileStructure;
@@ -37,10 +36,10 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 /**
  * Native Container functionality.
  */
-public class xLinker
+public class xContainerLinker
         extends xService
     {
-    public xLinker(TemplateRegistry registry, ClassStructure structure, boolean fInstance)
+    public xContainerLinker(TemplateRegistry registry, ClassStructure structure, boolean fInstance)
         {
         super(registry, structure, false);
         }
@@ -202,12 +201,12 @@ public class xLinker
                 {
                 case Op.R_NEXT:
                     return frameCaller.assignValues(aiReturn,
-                        frameCaller.popStack(), xAppControl.INSTANCE.makeHandle(container));
+                        frameCaller.popStack(), xContainerControl.INSTANCE.makeHandle(container));
 
                 case Op.R_CALL:
                     frameCaller.m_frameNext.addContinuation(frameCaller1 ->
                         frameCaller1.assignValues(aiReturn,
-                            frameCaller1.popStack(), xAppControl.INSTANCE.makeHandle(container)));
+                            frameCaller1.popStack(), xContainerControl.INSTANCE.makeHandle(container)));
                     return Op.R_CALL;
 
                 case Op.R_EXCEPTION:
