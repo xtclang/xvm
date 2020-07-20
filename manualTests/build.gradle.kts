@@ -34,9 +34,9 @@ tasks.register("clean") {
     delete("$buildDir")
 }
 
-tasks.register<JavaExec>("compileAll") {
+val compileAll = tasks.register<JavaExec>("compileAll") {
     group       = "Build"
-    description = "Run all tests"
+    description = "Compile all tests"
 
     dependsOn(xdk.tasks["build"])
 
@@ -45,16 +45,15 @@ tasks.register<JavaExec>("compileAll") {
     val opts = listOf<String>(
         "-verbose",
         "-o", "$buildDir",
-        "-L", "${xdk.buildDir}/xdk/lib/Ecstasy.xtc",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
-        "-L", "${xdk.buildDir}/xdk/lib/Json.xtc")
+        "-L", "${xdk.buildDir}/xdk/lib",
+        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc")
 
     args(opts + tests)
     main = "org.xvm.tool.Compiler"
 }
 
 tasks.register<JavaExec>("runAll") {
-    group       = "Execution"
+    group       = "Test"
     description = "Run all tests"
 
     dependsOn(xdk.tasks["build"])
@@ -71,3 +70,90 @@ tasks.register<JavaExec>("runAll") {
     args(tests)
     main = "org.xvm.runtime.TestConnector"
 }
+
+val compileRunner = tasks.register<JavaExec>("compileRunner") {
+    description = "Compile TestRunner"
+
+    dependsOn(xdk.tasks["build"])
+
+    classpath(javatoolsJar)
+
+    args("-verbose",
+         "-o", "$buildDir",
+         "-L", "${xdk.buildDir}/xdk/lib",
+         "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
+         "src/main/x/TestRunner.x")
+    main = "org.xvm.tool.Compiler"
+}
+
+val hostOneRun = tasks.register<JavaExec>("hostOneRun") {
+    description = "Host a \"testName\" test"
+
+    shouldRunAfter(compileRunner)
+
+    val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
+
+    classpath(javatoolsJar)
+
+    val opts = listOf<String>(
+        "-L", "${xdk.buildDir}/xdk/lib/",
+        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
+        "build/TestRunner.xtc")
+
+    args(opts + "build/$name.xtc")
+    main = "org.xvm.tool.Runner"
+}
+
+tasks.register("hostOne") {
+    group       = "Test"
+    description = "Host a single test"
+
+    if (!file("$buildDir/TestRunner.xtc").exists()) {
+        dependsOn(compileRunner)
+    }
+
+    dependsOn(hostOneRun)
+}
+
+tasks.register<JavaExec>("hostAll") {
+    group       = "Test"
+    description = "Host a single test"
+
+    dependsOn(compileAll)
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
+    classpath(javatoolsJar)
+
+    val opts = listOf<String>(
+        "-verbose",
+        "-L", "${xdk.buildDir}/xdk/lib/",
+        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
+        "build/TestRunner.xtc")
+
+    val names = listOf<String>(
+        "build/TestAnnotations.xtc",
+        "build/TestArray.xtc",
+        "build/TestDefAsn.xtc",
+        "build/TestTry.xtc",
+        "build/TestGenerics.xtc",
+        "build/TestInnerOuter.xtc",
+        "build/TestFiles.xtc",
+        "build/TestIO.xtc",
+        "build/TestLambda.xtc",
+        "build/TestLiterals.xtc",
+        "build/TestLoops.xtc",
+        "build/TestNesting.xtc",
+        "build/TestNumbers.xtc",
+        "build/TestProps.xtc",
+        "build/TestMaps.xtc",
+        "build/TestMisc.xtc",
+        "build/TestQueues.xtc",
+        "build/TestServices.xtc",
+        "build/TestReflection.xtc",
+        "build/TestTuples.xtc")
+
+    args(opts + names)
+    main = "org.xvm.tool.Runner"
+}
+
