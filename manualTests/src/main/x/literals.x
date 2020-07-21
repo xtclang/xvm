@@ -166,6 +166,13 @@ module TestLiterals
                     |const char* p = "\xff""f"; // OK: the literal is const char[3] holding {'\xff','f','\0'}
                   ; // semi-colon is the end of the declaration statement
         console.println($"s={s}");
+
+        s = `|This is my string\
+             | which I want to be\
+             | on one line
+             ;
+
+        console.println($"s one-line={s}");
         }
 
     void testMultilineTemplate()
@@ -192,6 +199,16 @@ module TestLiterals
              ;
 
         console.println($"\nJSON=\n{s}");
+
+        s = $|\{\
+             |"person": \{\
+             |  "first": "{person.firstname}"\
+             |  "last": "{person.lastname}"\
+             |  }\
+             |}
+             ;
+
+        console.println($"\nJSON one-line={s}");
         }
 
     void testHex()

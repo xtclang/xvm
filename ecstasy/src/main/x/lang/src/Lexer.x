@@ -1756,10 +1756,22 @@ class Lexer
                         break Appending;
 
                     case '\\':
-                        if (multiline && !template)
+                        if (multiline)
                             {
-                            buf.add(ch);
-                            break;
+                            if (nextChar().isLineTerminator() && isMultilineContinued())
+                                {
+                                continue Appending;
+                                }
+                            else
+                                {
+                                rewind();
+                                }
+
+                            if (!template)
+                                {
+                                buf.add(ch);
+                                break;
+                                }
                             }
 
                         // process escaped char
