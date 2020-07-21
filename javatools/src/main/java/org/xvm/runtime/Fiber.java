@@ -17,9 +17,10 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
-import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+
+import org.xvm.runtime.template._native.temporal.xNanosTimer;
 
 
 /**
@@ -95,7 +96,7 @@ public class Fiber
         {
         assert hTimeout != null;
 
-        long cDelayMillis = xService.millisFromTimeout(hTimeout);
+        long cDelayMillis = xNanosTimer.millisFromTimeout(hTimeout);
 
         m_hTimeout   = hTimeout;
         m_ldtTimeout = cDelayMillis <= 0 ? 0 : System.currentTimeMillis() + cDelayMillis;

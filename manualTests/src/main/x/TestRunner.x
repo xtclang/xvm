@@ -109,7 +109,7 @@ module TestRunner.xtclang.org
         InstantRepository repo = new InstantRepository(fileTemplate.mainModule, repository);
 
         Injector  injector  = new Injector();
-        Container container = new Container(repo.moduleName, repo, injector);
+        Container container = new Container(repo.moduleName, Lightweight, repo, injector);
         Buffer    buffer    = injector.consoleBuffer;
 
         buffer.println($"++++++ Loading module: {repo.moduleName} +++++++\n");

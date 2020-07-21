@@ -19,9 +19,9 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
@@ -95,15 +95,9 @@ public class xNanosTimer
 
             case "schedule": // duration, alarm
                 {
-                if (frame.f_context != hTimer.f_context)
-                    {
-                    return xRTFunction.makeAsyncNativeHandle(method).
-                        call1(frame, hTarget, ahArg, iReturn);
-                    }
-
                 GenericHandle  hDuration = (GenericHandle ) ahArg[0];
                 FunctionHandle hAlarm    = (FunctionHandle) ahArg[1];
-                FunctionHandle hCancel   = hTimer.schedule(hDuration, hAlarm);
+                FunctionHandle hCancel   = hTimer.schedule(hDuration, hAlarm, frame.f_context);
                 return frame.assignValue(iReturn, hCancel);
                 }
             }
@@ -119,13 +113,30 @@ public class xNanosTimer
         return hTimer;
         }
 
+    /**
+     * Helper method to convert Timeout? handle into milliseconds.
+     */
+    public static long millisFromTimeout(ObjectHandle hTimeout)
+        {
+        if (hTimeout == xNullable.NULL)
+            {
+            return 0;
+            }
+
+        ObjectHandle hRemaining = ((GenericHandle) hTimeout).getField("duration");
+        ObjectHandle hPicos     = ((GenericHandle) hRemaining).getField("picoseconds");
+
+        return ((LongLongHandle) hPicos).getValue().
+                div(PICOS_PER_MILLI_LL).getLowValue();
+        }
+
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     public static class TimerHandle
             extends ServiceHandle
         {
-        public TimerHandle(TypeComposition clazz, ServiceContext context)
+        protected TimerHandle(TypeComposition clazz, ServiceContext context)
             {
             super(clazz, context);
 
@@ -205,16 +216,17 @@ public class xNanosTimer
          *
          * @param hDuration  the duration before triggering the alarm
          * @param hAlarm     the runtime function to call when the alarm triggers
+         * @param context    the context to fire the alarm on
          *
          * @return the new Alarm
          */
-        public FunctionHandle schedule(GenericHandle hDuration, FunctionHandle hAlarm)
+        public FunctionHandle schedule(GenericHandle hDuration, FunctionHandle hAlarm, ServiceContext context)
             {
             // note: the Java Timer uses millisecond scheduling, but we're given scheduling
             // instructions in picoseconds
             LongLongHandle llPicos = (LongLongHandle) hDuration.getField("picoseconds");
             long            cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
-            Alarm           alarm   = new Alarm(++s_cAlarms, cNanos, hAlarm);
+            Alarm           alarm   = new Alarm(++s_cAlarms, cNanos, hAlarm, context);
 
             return new NativeFunctionHandle((_frame, _ah, _iReturn) ->
                 {
@@ -284,16 +296,10 @@ public class xNanosTimer
 
         public void register(Alarm alarm)
             {
-            boolean fRegistered;
             synchronized (f_setAlarms)
                 {
-                fRegistered = f_setAlarms.add(alarm);
-                if (fRegistered)
-                    {
-                    f_context.f_container.f_pendingWorkCount.incrementAndGet();
-                    }
+                f_setAlarms.add(alarm);
                 }
-            assert fRegistered;
             }
 
         public void unregister(Alarm alarm)
@@ -304,7 +310,7 @@ public class xNanosTimer
                 fUnregistered = f_setAlarms.remove(alarm);
                 if (fUnregistered)
                     {
-                    f_context.f_container.f_pendingWorkCount.decrementAndGet();
+                    alarm.f_context.unregisterNotification();
                     }
                 }
             assert fUnregistered;
@@ -323,12 +329,14 @@ public class xNanosTimer
              * @param id           a unique id for the alarm
              * @param cNanosDelay  the delay before triggering the alarm
              * @param hFunction    the runtime function to call when the alarm triggers
+             * @param context      the context to fire the alarm on
              */
-            public Alarm(int id, long cNanosDelay, FunctionHandle hFunction)
+            public Alarm(int id, long cNanosDelay, FunctionHandle hFunction, ServiceContext context)
                 {
                 f_id          = id;
                 f_cNanosDelay = cNanosDelay;
                 f_hFunction   = hFunction;
+                f_context     = context;
 
                 TimerHandle timer = TimerHandle.this;
                 timer.register(this);
@@ -352,10 +360,12 @@ public class xNanosTimer
                 m_trigger     = new Trigger();
                 try
                     {
+                    f_context.registerNotification();
                     TIMER.schedule(m_trigger, Math.max(1, (f_cNanosDelay - m_cNanosBurnt) / NANOS_PER_MILLI));
                     }
                 catch (Exception e)
                     {
+                    f_context.unregisterNotification();
                     System.err.println("Exception in xNanosTimer.Alarm.start(): " + e);
                     }
                 }
@@ -425,7 +435,7 @@ public class xNanosTimer
                     }
 
                 TimerHandle.this.unregister(this);
-                TimerHandle.this.f_context.callLater(f_hFunction, Utils.OBJECTS_NONE, true);
+                f_context.callLater(f_hFunction, Utils.OBJECTS_NONE, true);
                 }
 
             /**
@@ -486,6 +496,7 @@ public class xNanosTimer
 
             private final    FunctionHandle f_hFunction;
             private final    int            f_id;
+            private final    ServiceContext f_context;
             private final    long           f_cNanosDelay;
             private          long           m_cNanosStart;
             private          long           m_cNanosBurnt;
@@ -511,15 +522,15 @@ public class xNanosTimer
         private ListSet<Alarm> f_setAlarms = new ListSet<>();
         }
 
-    // ----- constants -----------------------------------------------------------------------------
 
-    protected static final Timer    TIMER             = xLocalClock.TIMER;
-    protected static final long     PICOS_PER_NANO    = 1_000;
-    protected static final LongLong PICOS_PER_NANO_LL = new LongLong(PICOS_PER_NANO);
-    protected static final long     NANOS_PER_MILLI   = 1_000_000;
+    // ----- constants and fields ------------------------------------------------------------------
 
-
-    // ----- constants -----------------------------------------------------------------------------
+    protected static final Timer    TIMER              = xLocalClock.TIMER;
+    protected static final long     PICOS_PER_MILLI    = 1_000_000_000;
+    protected static final long     PICOS_PER_NANO     = 1_000;
+    protected static final LongLong PICOS_PER_MILLI_LL = new LongLong(PICOS_PER_MILLI);
+    protected static final LongLong PICOS_PER_NANO_LL  = new LongLong(PICOS_PER_NANO);
+    protected static final long     NANOS_PER_MILLI    = 1_000_000;
 
     /**
      * Alarm counter.

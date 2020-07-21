@@ -15,6 +15,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.LinkerContext;
 import org.xvm.asm.MethodStructure;
@@ -39,13 +41,15 @@ import org.xvm.runtime.template.xService.PropertyOperation01;
 import org.xvm.runtime.template.xService.PropertyOperation11;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
-
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
+
+import org.xvm.runtime.template._native.temporal.xNanosTimer;
 
 
 /**
@@ -96,7 +100,7 @@ public class ServiceContext
 
     public long getTimeoutMillis()
         {
-        return xService.millisFromTimeout(m_hTimeout);
+        return xNanosTimer.millisFromTimeout(m_hTimeout);
         }
 
     public ObjectHandle getTimeoutHandle()
@@ -829,7 +833,37 @@ public class ServiceContext
      */
     public boolean isIdle()
         {
-        return getStatus() == ServiceStatus.Idle;
+        return getStatus() == ServiceStatus.Idle &&
+            (m_atomicNotifications == null || m_atomicNotifications.get() == 0);
+        }
+
+
+    // ----- support for native notifications (e.g. timers, file listeners, etc. -------------------
+
+    /**
+     * Register a notification for this service.
+     *
+     * Note, that this method must be called on this service thread (fiber).
+     */
+    public void registerNotification()
+        {
+        AtomicLong counter = m_atomicNotifications;
+        if (counter == null)
+            {
+            m_atomicNotifications = counter = new AtomicLong();
+            }
+        counter.getAndIncrement();
+        }
+
+    /**
+     * Unregister a notification for this service. Note, that this method can be
+     * called on on any thread.
+     */
+    public void unregisterNotification()
+        {
+        AtomicLong counter = m_atomicNotifications;
+        assert counter != null;
+        counter.getAndDecrement();
         }
 
 
@@ -843,6 +877,11 @@ public class ServiceContext
      */
     public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg, boolean fSilent)
         {
+        if (getStatus() == ServiceStatus.Terminated)
+            {
+            return Op.R_EXCEPTION;
+            }
+
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
         // TODO: should we reject (throw) if the service overwhelmed?
@@ -1626,6 +1665,11 @@ public class ServiceContext
      * Metrics: the total time (in nanos) this service has been running.
      */
     protected long m_cRuntimeNanos;
+
+    /**
+     * Support for Clock adn Timer: the count of pending timer events.
+     */
+    protected AtomicLong m_atomicNotifications;
 
     /**
      * The current frame.

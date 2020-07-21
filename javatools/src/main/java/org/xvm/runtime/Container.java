@@ -374,7 +374,7 @@ public abstract class Container
      * and the number of registered Alarms. While this count is above zero the container is
      * considered to still have work to do and won't auto-shutdown.
      */
-    public final AtomicLong f_pendingWorkCount = new AtomicLong();
+    protected final AtomicLong f_pendingWorkCount = new AtomicLong();
 
     /**
      * Map of resources that are injectable to this container, keyed by their InjectionKey.

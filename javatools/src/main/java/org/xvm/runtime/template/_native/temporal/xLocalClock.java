@@ -15,6 +15,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.Mutability;
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -73,29 +74,19 @@ public class xLocalClock
         }
 
     @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method,
+                             ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
         {
         switch (method.getName())
             {
-            case "schedule": // alarm, wakeUp
+            case "schedule": // wakeUp, alarm
                 {
                 GenericHandle  hWakeup = (GenericHandle) ahArg[0];
                 FunctionHandle hAlarm  = (FunctionHandle) ahArg[1];
 
-                // assert (hWakeup.timezone == NoTZ) == (this.timezone == NoTZ)
-                LongLongHandle llEpoch = (LongLongHandle) hWakeup.getField("epochPicos");
+                Alarm          alarm   = new Alarm(frame.f_context, hAlarm);
+                FunctionHandle hCancel = alarm.schedule(hWakeup);
 
-                long  ldtNow    = System.currentTimeMillis();
-                long  ldtWakeup = llEpoch.getValue().divUnsigned(PICOS_PER_MILLI).getLowValue();
-                long  cDelay    = Math.max(0, ldtWakeup - ldtNow);
-                Alarm task      = new Alarm(frame, hAlarm);
-                TIMER.schedule(task, cDelay);
-
-                FunctionHandle hCancel = new NativeFunctionHandle((_frame, _ah, _iReturn) ->
-                    {
-                    task.cancel();
-                    return Op.R_NEXT;
-                    });
                 return frame.assignValue(iReturn, hCancel);
                 }
             }
@@ -103,7 +94,8 @@ public class xLocalClock
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
-    // -----  helpers -----
+
+    // -----  helpers ------------------------------------------------------------------------------
 
     protected GenericHandle dateTimeNow()
         {
@@ -159,21 +151,58 @@ public class xLocalClock
     protected static class Alarm
             extends TimerTask
         {
-        public Alarm(Frame frame, FunctionHandle hFunction)
+        public Alarm(ServiceContext ctx, FunctionHandle hFunction)
             {
-            f_frame     = frame;
+            f_context   = ctx;
             f_hFunction = hFunction;
+            }
+
+        protected FunctionHandle schedule(GenericHandle hWakeup)
+            {
+            // assert (hWakeup.timezone == NoTZ) == (this.timezone == NoTZ)
+            LongLongHandle llEpoch = (LongLongHandle) hWakeup.getField("epochPicos");
+
+            long  ldtNow    = System.currentTimeMillis();
+            long  ldtWakeup = llEpoch.getValue().divUnsigned(PICOS_PER_MILLI).getLowValue();
+            long  cDelay    = Math.max(0, ldtWakeup - ldtNow);
+
+            f_context.registerNotification();
+            TIMER.schedule(this, cDelay);
+
+            return new NativeFunctionHandle((_frame, _ah, _iReturn) ->
+                {
+                Alarm.this.cancel();
+                return Op.R_NEXT;
+                });
             }
 
         @Override
         public void run()
             {
-            f_frame.f_context.callLater(f_hFunction, Utils.OBJECTS_NONE, true);
+            f_context.callLater(f_hFunction, Utils.OBJECTS_NONE, true);
+            f_context.unregisterNotification();
             }
 
-        final private Frame          f_frame;
+        @Override
+        public boolean cancel()
+            {
+            if (super.cancel())
+                {
+                f_context.unregisterNotification();
+                return true;
+                }
+            return false;
+            }
+
+        final private ServiceContext f_context;
         final private FunctionHandle f_hFunction;
         }
+
+
+    // ----- constants and fields ------------------------------------------------------------------
+
+    protected static final long     PICOS_PER_MILLI    = xNanosTimer.PICOS_PER_MILLI;
+    protected static final LongLong PICOS_PER_MILLI_LL = xNanosTimer.PICOS_PER_MILLI_LL;
 
     /**
      * Cached DateTime class.
@@ -184,7 +213,4 @@ public class xLocalClock
      * Cached TimeZone handle.
      */
     private GenericHandle m_hTimeZone;
-
-    protected static final long     PICOS_PER_MILLI    = 1_000_000_000;
-    protected static final LongLong PICOS_PER_MILLI_LL = new LongLong(PICOS_PER_MILLI);
     }

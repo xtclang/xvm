@@ -26,9 +26,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.numbers.BaseInt128;
-import org.xvm.runtime.template.numbers.LongLong;
-
 import org.xvm.runtime.template.xEnum.EnumHandle;
 
 import org.xvm.runtime.template._native.xRTServiceControl;
@@ -426,6 +423,9 @@ public class xService
         return frame.assignValue(iReturn, xString.makeHandle(hService.f_context.toString()));
         }
 
+
+    // ----- ObjectHandle --------------------------------------------------------------------------
+
     /**
      * Create a service handle.
      *
@@ -442,26 +442,6 @@ public class xService
         context.setService(hService);
         return hService;
         }
-
-    /**
-     * Helper method to convert Timeout? handle into milliseconds.
-     */
-    public static long millisFromTimeout(ObjectHandle hTimeout)
-        {
-        if (hTimeout == xNullable.NULL)
-            {
-            return 0;
-            }
-
-        ObjectHandle hRemaining = ((GenericHandle) hTimeout).getField("duration");
-        ObjectHandle hPicos     = ((GenericHandle) hRemaining).getField("picoseconds");
-
-        return ((BaseInt128.LongLongHandle) hPicos).getValue().
-                div(PICOS_PER_MILLI_LL).getLowValue();
-        }
-
-
-    // ----- ObjectHandle --------------------------------------------------------------------------
 
     public static class ServiceHandle
             extends GenericHandle
@@ -520,10 +500,8 @@ public class xService
         int invoke(Frame frame, ObjectHandle[] ahArg, int iReturn);
         }
 
-    // ----- constants -----------------------------------------------------------------------------
 
-    protected static final long     PICOS_PER_MILLI    = 1_000_000_000;
-    protected static final LongLong PICOS_PER_MILLI_LL = new LongLong(PICOS_PER_MILLI);
+    // ----- constants -----------------------------------------------------------------------------
 
     /**
      * Enum used by the native properties.
