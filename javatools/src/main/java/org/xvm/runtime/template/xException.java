@@ -116,7 +116,6 @@ public class xException
 
     public static ExceptionHandle mutableObject(Frame frame)
         {
-        frame.getStackTrace();
         return illegalArgument(frame, "mutable object cannot be used for a service call");
         }
 
