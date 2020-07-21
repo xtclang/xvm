@@ -887,10 +887,10 @@ public class MethodDeclarationStatement
     protected MethodStructure findMethod(ConstantPool pool, ClassStructure clz,
             String sMethName, List<Parameter> parameters)
         {
-        MultiMethodStructure mms = (MultiMethodStructure) clz.getChild(sMethName);
-        if (mms != null)
+        Component mms = clz.getChild(sMethName);
+        if (mms instanceof MultiMethodStructure)
             {
-            for (Component c : mms.children())
+            for (Component c : ((MultiMethodStructure) mms).children())
                 {
                 MethodStructure method = (MethodStructure) c;
 
