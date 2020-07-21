@@ -1758,7 +1758,7 @@ public class Frame
                     break;
                     }
 
-                frame = fiberCaller.m_frame;
+                frame = fiberCaller.getFrame();
 
                 sb.append("\n    =========");
 

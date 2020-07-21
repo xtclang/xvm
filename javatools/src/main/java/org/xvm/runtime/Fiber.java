@@ -158,6 +158,29 @@ public class Fiber
             }
         }
 
+    /**
+     * Obtain the current frame for this Fiber.
+     */
+    public Frame getFrame()
+        {
+        switch (m_status)
+            {
+            default:
+            case InitialNew:
+            case InitialAssociated:
+                throw new IllegalArgumentException();
+
+            case Running:
+                return f_context.getCurrentFrame();
+
+            case Waiting:
+            case Paused:
+            case Yielded:
+            case Terminating:
+                return  m_frame;
+            }
+        }
+
     /*
      * The fiber is not ready for execution if it is waiting, not responded and not timed-out.
      */
@@ -460,7 +483,7 @@ public class Fiber
     /**
      * If the fiber is not running, the frame it was suspended at.
      */
-    public Frame m_frame;
+    private Frame m_frame;
 
     /**
      * this flag serves a hint that the execution could possibly be resumed;
