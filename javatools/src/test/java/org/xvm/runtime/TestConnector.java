@@ -95,7 +95,7 @@ public class TestConnector
 
         if (System.getProperties().containsKey("DEBUG"))
             {
-            ModuleStructure module = repository.loadModule(asArg[0]);
+            ModuleStructure module = repository.loadModule(asNames[0]);
             if (module != null)
                 {
                 module.visitChildren(Disassembler::dump, false, true);
