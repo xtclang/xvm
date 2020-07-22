@@ -335,30 +335,6 @@ public class PropertyBody
         }
 
     /**
-     * @return the MethodConstant that will identify the getter (but not necessarily a
-     *         MethodConstant that actually exists, because there may not be a getter, but also
-     *         because the fully resolved type is used in the MethodConstant)
-     */
-    public MethodConstant getGetterId()
-        {
-        PropertyConstant constId = getIdentity();
-        ConstantPool     pool    = constId.getConstantPool();
-        return pool.ensureMethodConstant(constId, "get", ConstantPool.NO_TYPES, new TypeConstant[]{m_type});
-        }
-
-    /**
-     * @return the MethodConstant that will identify the setter (but not necessarily a
-     *         MethodConstant that actually exists, because there may not be a setter, but also
-     *         because the fully resolved type is used in the MethodConstant)
-     */
-    public MethodConstant getSetterId()
-        {
-        PropertyConstant constId = getIdentity();
-        ConstantPool     pool    = constId.getConstantPool();
-        return pool.ensureMethodConstant(constId, "set", new TypeConstant[]{m_type}, ConstantPool.NO_TYPES);
-        }
-
-    /**
      * @return true iff the property has a getter method
      */
     public boolean hasGetter()

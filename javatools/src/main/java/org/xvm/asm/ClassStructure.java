@@ -2739,12 +2739,92 @@ public class ClassStructure
      * Create a synthetic "delegating" method for this class that delegates to the specified
      * method on the specified property.
      *
-     * @param method  the method to delegate to
-     * @param sProp   the delegating property name
+     * @param prop         the property to delegate to
+     * @param sigAccessor  the delegating accessor's signature (getter vs. setter)
+     * @param sDelegate    the delegating property name
      *
      * @return a synthetic MethodStructure that has the auto-generated delegating code
      */
-    public MethodStructure ensureDelegation(MethodStructure method, String sProp)
+    public MethodStructure ensurePropertyDelegation(PropertyStructure prop,
+                                                    SignatureConstant sigAccessor, String sDelegate)
+        {
+        PropertyStructure propHost = (PropertyStructure) getChild(prop.getName());
+        if (propHost == null)
+            {
+            assert !prop.isStatic();
+            propHost = createProperty(false, prop.getAccess(), prop.getVarAccess(),
+                    prop.getType(), prop.getName());
+            }
+
+        MethodStructure methodDelegate = propHost.findMethod(sigAccessor);
+        if (methodDelegate == null)
+            {
+            ConstantPool pool         = getConstantPool();
+            TypeConstant typeFormal   = getFormalType();
+            TypeConstant typePrivate  = pool.ensureAccessTypeConstant(typeFormal, Access.PRIVATE);
+            TypeInfo     infoPrivate  = typePrivate.ensureTypeInfo();
+            PropertyInfo infoDelegate = infoPrivate.findProperty(sDelegate);
+            TypeConstant typeDelegate = infoDelegate.getType();
+            TypeConstant typeProp     = prop.getType();
+
+            boolean      fGet;
+            Parameter[]  aParams;
+            Parameter[]  aReturns;
+            if (sigAccessor.getName().equals("get"))
+                {
+                fGet     = true;
+                aParams  = Parameter.NO_PARAMS;
+                aReturns = new Parameter[] {new Parameter(pool, typeProp, null, null, true, 0, false)};
+                }
+            else
+                {
+                fGet     = false;
+                aParams  = new Parameter[] {new Parameter(pool, typeProp, prop.getName(), null, false, 0, false)};
+                aReturns = Parameter.NO_PARAMS;
+                }
+
+            methodDelegate = createMethod(false, prop.getAccess(), null,
+                    aReturns, sigAccessor.getName(), aParams, true, false);
+
+            assert methodDelegate.getIdentityConstant().getSignature().equals(sigAccessor);
+
+            MethodStructure.Code code       = methodDelegate.createCode();
+            PropertyConstant     idDelegate = prop.getIdentityConstant();
+
+            Register regProp = new Register(typeDelegate);
+
+            code.add(new L_Get(infoDelegate.getIdentity(), regProp));
+
+            if (fGet)
+                {
+                Register regReturn = new Register(typeProp, Op.A_STACK);
+
+                code.add(new P_Get(idDelegate, regProp, regReturn));
+                code.add(new Return_1(regReturn));
+                }
+            else // "set"
+                {
+                Register regArg = new Register(typeProp, 0);
+
+                code.add(new P_Set(idDelegate, regProp, regArg));
+                code.add(new Return_0());
+                }
+
+            code.registerConstants();
+            }
+        return methodDelegate;
+        }
+
+    /**
+     * Create a synthetic "delegating" method for this class that delegates to the specified
+     * method on the specified property.
+     *
+     * @param method     the method to delegate to
+     * @param sDelegate  the delegating property name
+     *
+     * @return a synthetic MethodStructure that has the auto-generated delegating code
+     */
+    public MethodStructure ensureMethodDelegation(MethodStructure method, String sDelegate)
         {
         SignatureConstant sig            = method.getIdentityConstant().getSignature();
         MethodStructure   methodDelegate = findMethod(sig);
@@ -2752,33 +2832,33 @@ public class ClassStructure
             {
             ConstantPool pool         = getConstantPool();
             TypeConstant typeFormal   = getFormalType();
-            TypeConstant typePrivate  = getConstantPool().ensureAccessTypeConstant(typeFormal, Access.PRIVATE);
+            TypeConstant typePrivate  = pool.ensureAccessTypeConstant(typeFormal, Access.PRIVATE);
             TypeInfo     infoPrivate  = typePrivate.ensureTypeInfo();
-            PropertyInfo infoProp     = infoPrivate.findProperty(sProp);
-            TypeConstant typeProp     = infoProp.getType();
+            PropertyInfo infoDelegate = infoPrivate.findProperty(sDelegate);
+            TypeConstant typeDelegate = infoDelegate.getType();
 
             Parameter[]  aParams      = method.getParamArray().clone();
             Parameter[]  aReturns     = method.getReturnArray().clone();
 
-            methodDelegate  = createMethod(false, method.getAccess(), null,
+            methodDelegate = createMethod(false, method.getAccess(), null,
                     aReturns, method.getName(), aParams, true, false);
 
-            MethodStructure.Code code         = methodDelegate.createCode();
-            MethodInfo           infoDelegate = typeProp.ensureTypeInfo().getMethodBySignature(sig);
-            MethodConstant       idDelegate   = infoDelegate.getIdentity();
-            int                  cParams      = method.getParamCount();
-            int                  cReturns     = method.getReturnCount();
-            Register[]           aregParam    = cParams  == 0 ? null : new Register[cParams];
-            boolean              fAtomic      = infoProp.isAtomic();
+            MethodStructure.Code code       = methodDelegate.createCode();
+            MethodInfo           infoMethod = typeDelegate.ensureTypeInfo().getMethodBySignature(sig);
+            MethodConstant       idMethod   = infoMethod.getIdentity();
+            int                  cParams    = method.getParamCount();
+            int                  cReturns   = method.getReturnCount();
+            Register[]           aregParam  = cParams  == 0 ? null : new Register[cParams];
+            boolean              fAtomic    = infoDelegate.isAtomic();
 
             for (int i = 0; i < cParams; i++)
                 {
                 aregParam[i] = new Register(aParams[i].getType(), i);
                 }
 
-            Register regProp = new Register(typeProp);
+            Register regProp = new Register(typeDelegate);
 
-            code.add(new L_Get(infoProp.getIdentity(), regProp));
+            code.add(new L_Get(infoDelegate.getIdentity(), regProp));
 
             switch (cReturns)
                 {
@@ -2791,15 +2871,15 @@ public class ClassStructure
                         switch (cParams)
                             {
                             case 0:
-                                code.add(new Invoke_01(regProp, idDelegate, regReturn));
+                                code.add(new Invoke_01(regProp, idMethod, regReturn));
                                 break;
 
                             case 1:
-                                code.add(new Invoke_11(regProp, idDelegate, aregParam[0], regReturn));
+                                code.add(new Invoke_11(regProp, idMethod, aregParam[0], regReturn));
                                 break;
 
                             default:
-                                code.add(new Invoke_N1(regProp, idDelegate, aregParam, regReturn));
+                                code.add(new Invoke_N1(regProp, idMethod, aregParam, regReturn));
                                 break;
                             }
                         code.add(new Return_1(regReturn));
@@ -2809,15 +2889,15 @@ public class ClassStructure
                         switch (cParams)
                             {
                             case 0:
-                                code.add(new Invoke_00(regProp, idDelegate));
+                                code.add(new Invoke_00(regProp, idMethod));
                                 break;
 
                             case 1:
-                                code.add(new Invoke_10(regProp, idDelegate, aregParam[0]));
+                                code.add(new Invoke_10(regProp, idMethod, aregParam[0]));
                                 break;
 
                             default:
-                                code.add(new Invoke_N0(regProp, idDelegate, aregParam));
+                                code.add(new Invoke_N0(regProp, idMethod, aregParam));
                                 break;
                             }
                         code.add(new Return_0());
@@ -2841,15 +2921,15 @@ public class ClassStructure
                     switch (cParams)
                         {
                         case 0:
-                            code.add(new Invoke_01(regProp, idDelegate, regReturn));
+                            code.add(new Invoke_01(regProp, idMethod, regReturn));
                             break;
 
                         case 1:
-                            code.add(new Invoke_11(regProp, idDelegate, aregParam[0], regReturn));
+                            code.add(new Invoke_11(regProp, idMethod, aregParam[0], regReturn));
                             break;
 
                         default:
-                            code.add(new Invoke_N1(regProp, idDelegate, aregParam, regReturn));
+                            code.add(new Invoke_N1(regProp, idMethod, aregParam, regReturn));
                             break;
                         }
                     code.add(new Return_1(regReturn));
@@ -2877,15 +2957,15 @@ public class ClassStructure
                     switch (cParams)
                         {
                         case 0:
-                            code.add(new Invoke_0N(regProp, idDelegate, aregReturn));
+                            code.add(new Invoke_0N(regProp, idMethod, aregReturn));
                             break;
 
                         case 1:
-                            code.add(new Invoke_1N(regProp, idDelegate, aregParam[0], aregReturn));
+                            code.add(new Invoke_1N(regProp, idMethod, aregParam[0], aregReturn));
                             break;
 
                         default:
-                            code.add(new Invoke_NN(regProp, idDelegate, aregParam, aregReturn));
+                            code.add(new Invoke_NN(regProp, idMethod, aregParam, aregReturn));
                             break;
                         }
                     code.add(new Return_N(aregReturn));

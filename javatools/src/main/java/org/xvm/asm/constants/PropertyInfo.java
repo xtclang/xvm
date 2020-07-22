@@ -8,12 +8,14 @@ import java.util.List;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody.Existence;
@@ -1178,6 +1180,22 @@ public class PropertyInfo
         }
 
     /**
+     * @return true if the property is a delegating one
+     */
+    public boolean isDelegating()
+        {
+        return getHead().getImplementation() == Implementation.Delegating;
+        }
+
+    /**
+     * @return the property that provides the reference to delegate to
+     */
+    public PropertyConstant getDelegate()
+        {
+        return getHead().getDelegate();
+        }
+
+    /**
      * @return the injected resource name
      */
     public String getInjectedResourceName()
@@ -1196,13 +1214,13 @@ public class PropertyInfo
     /**
      * Augment the method chain for a property accessor represented by this property info.
      *
-     * @param chain    the raw method chain
-     * @param type     the enclosing TypeInfo
-     * @param constId  the accessor method constant
+     * @param chain     the raw method chain
+     * @param infoType  the enclosing TypeInfo
+     * @param idMethod  the accessor method constant
      *
      * @return the method chain iff the property exists; otherwise null
      */
-    public MethodBody[] augmentPropertyChain(MethodBody[] chain, TypeInfo type, MethodConstant constId)
+    public MethodBody[] augmentPropertyChain(MethodBody[] chain, TypeInfo infoType, MethodConstant idMethod)
         {
         if (chain == null || chain.length == 0)
             {
@@ -1210,7 +1228,7 @@ public class PropertyInfo
                 {
                 chain = new MethodBody[]
                     {
-                    new MethodBody(constId, constId.getSignature(),
+                    new MethodBody(idMethod, idMethod.getSignature(),
                             Implementation.Native, null)
                     };
                 }
@@ -1218,7 +1236,7 @@ public class PropertyInfo
                 {
                 chain = new MethodBody[]
                     {
-                    new MethodBody(constId, constId.getSignature(),
+                    new MethodBody(idMethod, idMethod.getSignature(),
                             Implementation.Field, getFieldIdentity())
                     };
                 }
@@ -1228,9 +1246,23 @@ public class PropertyInfo
                 // (see ClassTemplate.getFieldValue)
                 chain = new MethodBody[]
                     {
-                    new MethodBody(constId, constId.getSignature(),
+                    new MethodBody(idMethod, idMethod.getSignature(),
                             Implementation.Field, getHead().getIdentity())
                     };
+                }
+            else if (isDelegating())
+                {
+                PropertyStructure prop   = getHead().getStructure();
+                ClassStructure    clz    = infoType.getClassStructure();
+                MethodStructure   method = clz.ensurePropertyDelegation(prop, idMethod.getSignature(),
+                        getDelegate().getName());
+
+                MethodConstant idDelegate = method.getIdentityConstant();
+                MethodBody     body       = new MethodBody(idDelegate,
+                        idDelegate.getSignature(), Implementation.Explicit);
+                body.setMethodStructure(method);
+
+                chain = new MethodBody[]{body};
                 }
             else
                 {
@@ -1257,7 +1289,7 @@ public class PropertyInfo
                     chain = chainNew;
                     ixTail++;
                     }
-                chain[ixTail] = new MethodBody(constId, constId.getSignature(),
+                chain[ixTail] = new MethodBody(idMethod, idMethod.getSignature(),
                         Implementation.Field, getFieldIdentity());
                 }
             }

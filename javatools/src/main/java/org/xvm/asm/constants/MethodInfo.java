@@ -810,7 +810,7 @@ public class MethodInfo
 
                             ClassConstant  idHost  = (ClassConstant) body.getIdentity().getNamespace();
                             ClassStructure clzHost = (ClassStructure) idHost.getComponent();
-                            method = clzHost.ensureDelegation(
+                            method = clzHost.ensureMethodDelegation(
                                     getTopmostMethodStructure(infoType),
                                     body.getPropertyConstant().getName());
                             body.setMethodStructure(method);
