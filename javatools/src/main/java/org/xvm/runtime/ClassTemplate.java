@@ -599,7 +599,7 @@ public abstract class ClassTemplate
     public int invokeNative1(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        throw new IllegalStateException("Unknown method: " + method + " on " + this);
+        return frame.raiseException("Unknown native(1) method: \"" + method + "\" on " + this);
         }
 
     /**
@@ -649,8 +649,7 @@ public abstract class ClassTemplate
                 break;
             }
 
-        throw new IllegalStateException("Compilation failed for method: " + f_sName + "#"
-                + method.getIdentityConstant().getSignature().getValueString());
+        return frame.raiseException("Unknown native(N) method: \"" + method + "\" on " + this);
         }
 
     /**
@@ -757,7 +756,7 @@ public abstract class ClassTemplate
     public int invokeNativeNN(Frame frame, MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
         {
-        throw new IllegalStateException("Unknown method: " + method + " on " + this);
+        return frame.raiseException("Unknown native(NN) method: \"" + method + "\" on " + this);
         }
 
 
@@ -1050,7 +1049,7 @@ public abstract class ClassTemplate
             return frame.assignValue(iReturn, type.getTypeHandle());
             }
 
-        throw new IllegalStateException("Unknown property: " + sPropName + " on " + this);
+        return frame.raiseException("Unknown native property: \"" + sPropName + "\" on " + this);
         }
 
     /**
@@ -1065,7 +1064,7 @@ public abstract class ClassTemplate
      */
     public int invokeNativeSet(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
         {
-        throw new IllegalStateException("Unknown property: " + sPropName + " on " + this);
+        return frame.raiseException("Unknown native property: \"" + sPropName + "\" on " + this);
         }
 
     /**
@@ -1431,7 +1430,7 @@ public abstract class ClassTemplate
         if (!hThis.containsField(idProp) &&
                 !hTarget.getComposition().getPropertyGetterChain(idProp).isNative())
             {
-            throw new IllegalStateException("Unknown property: (" + f_sName + ")." + idProp);
+            return frame.raiseException("Unknown property: \"" + idProp + "\" on " + f_sName);
             }
 
         if (hTarget.isInflated(idProp))
