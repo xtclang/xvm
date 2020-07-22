@@ -947,7 +947,9 @@ public class ServiceContext
             fiber.registerUncapturedRequest(future);
             if (!fOverwhelmed)
                 {
-                return Op.R_NEXT;
+                return future.isDone()
+                    ? frameCaller.assignFutureResult(iReturn, future)
+                    : Op.R_NEXT;
                 }
 
             // consider not to block the caller if it is *not* the reason of the callee being
@@ -981,7 +983,7 @@ public class ServiceContext
         if (cReturns == 0)
             {
             fiber.registerUncapturedRequest(future);
-            return fOverwhelmed
+            return fOverwhelmed || future.isDone()
                 ? frameCaller.assignFutureResult(Op.A_IGNORE, (CompletableFuture) future)
                 : Op.R_NEXT;
             }
@@ -1039,7 +1041,7 @@ public class ServiceContext
 
         frameCaller.f_fiber.registerUncapturedRequest(future);
 
-        return fOverwhelmed
+        return fOverwhelmed || future.isDone()
             ? frameCaller.assignFutureResult(Op.A_IGNORE, future)
             : Op.R_NEXT;
         }

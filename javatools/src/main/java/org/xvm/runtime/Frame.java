@@ -934,10 +934,6 @@ public class Frame
         {
         switch (f_iReturn)
             {
-            case Op.A_IGNORE:
-            case Op.A_BLOCK:
-                return Op.R_RETURN;
-
             case Op.A_MULTI:
                 assert f_function.isConditionalReturn() && hValue.equals(xBoolean.FALSE);
                 return returnValue(f_aiReturn[0], hValue, fDynamic);
