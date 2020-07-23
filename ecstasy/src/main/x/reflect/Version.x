@@ -597,27 +597,27 @@ const Version
         }
 
     @Override
-    void appendTo(Appender<Char> appender, Boolean suppressBuild=false)
+    void appendTo(Appender<Char> buf, Boolean suppressBuild=false)
         {
-        parent?.appendTo(appender, true);
+        parent?.appendTo(buf, true);
 
         if (parent != null && parent.form == Num)
             {
-            appender.add(this.form == Num ? '.' : '-');
+            buf.add(this.form == Num ? '.' : '-');
             }
 
         if (this.form == Num)
             {
-            number.appendTo(appender);
+            number.appendTo(buf);
             }
         else
             {
-            appender.add(form.text);
+            form.text.appendTo(buf);
             }
 
         if (build != null && !suppressBuild)
             {
-            appender.add('+').add(build);
+            buf.add('+').addAll(build);
             }
         }
     }

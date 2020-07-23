@@ -117,19 +117,19 @@ interface Set<Element>
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        &this.actualClass.name.appendTo(appender);
-        appender.add('{');
+        &this.actualClass.name.appendTo(buf);
+        buf.add('{');
         if (Element.is(Type<Stringable>))
             {
             Loop: for (Element e : this)
                 {
                 if (!Loop.first)
                     {
-                    appender.add(", ");
+                    buf.addAll(", ");
                     }
-                e.appendTo(appender);
+                e.appendTo(buf);
                 }
             }
         else
@@ -138,11 +138,11 @@ interface Set<Element>
                 {
                 if (!Loop.first)
                     {
-                    appender.add(", ");
+                    buf.addAll(", ");
                     }
-                appender.add(e.toString());
+                buf.addAll(e.toString());
                 }
             }
-        appender.add('}');
+        buf.add('}');
         }
     }

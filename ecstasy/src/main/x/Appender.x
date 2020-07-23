@@ -26,10 +26,10 @@ interface Appender<Element>
      *
      * @return this
      */
-    Appender add(Iterable<Element> iterable)
+    Appender addAll(Iterable<Element> iterable)
         {
         ensureCapacity(iterable.size);
-        add(iterable.iterator());
+        addAll(iterable.iterator());
         return this;
         }
 
@@ -40,7 +40,7 @@ interface Appender<Element>
      *
      * @return this
      */
-    Appender add(Iterator<Element> iter)
+    Appender addAll(Iterator<Element> iter)
         {
         while (Element v := iter.next())
             {

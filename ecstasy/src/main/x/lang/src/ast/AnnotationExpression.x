@@ -104,7 +104,7 @@ const AnnotationExpression(TypeExpression name,
                         {
                         buf.add(',').add(' ');
                         }
-                    buf.add(arg.toString());
+                    buf.addAll(arg.toString());
                     }
                 buf.add(')');
                 return buf.toString();

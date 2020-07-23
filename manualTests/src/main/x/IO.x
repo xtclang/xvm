@@ -397,10 +397,10 @@ module TestIO
 
         private <Ser> void testSer(Schema schema, String name, Ser val)
             {
-            StringBuffer sb = new StringBuffer();
-            schema.createObjectOutput(sb).write(val);
+            StringBuffer buf = new StringBuffer();
+            schema.createObjectOutput(buf).write(val);
 
-            String s = sb.toString();
+            String s = buf.toString();
             console.println($"JSON {name} written out={s}");
 
             Ser val2 = schema.createObjectInput(new CharArrayReader(s)).read<Ser>();

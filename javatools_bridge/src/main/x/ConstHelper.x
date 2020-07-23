@@ -33,30 +33,31 @@ class ConstHelper
      *
      * (field1=value1, field2=value2, ...)
      */
-    static void appendTo(Appender<Char> appender, immutable String[] names, immutable Object[] fields)
+    static void appendTo(Appender<Char> buf, immutable String[] names, immutable Object[] fields)
         {
-        appender.add('(');
+        buf.add('(');
 
         for (Int i = 0, Int c = names.size; i < c; i++)
             {
             if (i > 0)
                 {
-                appender.add(", ");
+                ", ".appendTo(buf);
                 }
-            appender.add(names[i]).add('=');
+            names[i].appendTo(buf);
+            buf.add('=');
 
             Object field = fields[i];
             if (field.is(Stringable))
                 {
-                field.appendTo(appender);
+                field.appendTo(buf);
                 }
             else
                 {
                 // this should never happen
-                appender.add(field.toString());
+                field.toString().appendTo(buf);
                 }
             }
-        appender.add(')');
+        buf.add(')');
         }
 
     /**

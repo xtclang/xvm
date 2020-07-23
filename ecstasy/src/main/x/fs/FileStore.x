@@ -184,14 +184,14 @@ interface FileStore
     @RO Int bytesFree;
 
     /**
-     * Emit a directory-style hierarchical listing to the specified appender.
+     * Emit a directory-style hierarchical listing to the specified Appender.
      *
-     * @param appender  the Appender to emit the listing to
+     * @param buf        the Appender to emit the listing to
      * @param recursive  True to have the listing recurse through sub-directories
      */
-    void emitListing(Appender<Char> appender, Boolean recursive = True)
+    void emitListing(Appender<Char> buf, Boolean recursive = True)
         {
-        appender.add("FileStore:\n");
-        root.emitListing(appender, recursive, "");
+        buf.addAll("FileStore:\n");
+        root.emitListing(buf, recursive, "");
         }
     }

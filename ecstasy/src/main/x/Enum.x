@@ -83,8 +83,8 @@ interface Enum
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        return appender.add(name);
+        name.appendTo(buf);
         }
     }

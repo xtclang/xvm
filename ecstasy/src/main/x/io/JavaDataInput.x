@@ -34,11 +34,11 @@ mixin JavaDataInput
                 ? this
                 : new @JavaDataInput ByteArrayInputStream(readBytes(length));
 
-        StringBuffer sb = new StringBuffer(length);
+        StringBuffer buf = new StringBuffer(length);
         Int next = in.offset + length;
         while (in.offset < next)
             {
-            sb.append(readUTF8Char(in));
+            buf.append(readUTF8Char(in));
             }
 
         // if the stream isn't corrupted, then the offset will always end in the exact right spot
@@ -47,6 +47,6 @@ mixin JavaDataInput
             throw new IllegalUTF();
             }
 
-        return sb.toString();
+        return buf.toString();
         }
     }

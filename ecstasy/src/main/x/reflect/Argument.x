@@ -27,24 +27,24 @@ const Argument<Referent extends immutable Const>(Referent value, String? name = 
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
         switch (Referent)
             {
             case Char:
-                appender.add('\'');
-                value.appendEscaped(appender);
-                appender.add('\'');
+                buf.add('\'');
+                value.appendEscaped(buf);
+                buf.add('\'');
                 break;
 
             case String:
-                appender.add('\"');
-                value.appendEscaped(appender);
-                appender.add('\"');
+                buf.add('\"');
+                value.appendEscaped(buf);
+                buf.add('\"');
                 break;
 
             default:
-                value.appendTo(appender);
+                value.appendTo(buf);
                 break;
             }
         }

@@ -575,9 +575,9 @@ interface Map<Key, Value>
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        appender.add('[');
+        buf.add('[');
 
         if (Key.is(Type<Stringable>) && Value.is(Type<Stringable>))
             {
@@ -586,11 +586,11 @@ interface Map<Key, Value>
                 {
                 if (!Append.first)
                     {
-                    appender.add(", ");
+                    buf.addAll(", ");
                     }
-                entry.key.appendTo(appender);
-                appender.add('=');
-                entry.value.appendTo(appender);
+                entry.key.appendTo(buf);
+                buf.add('=');
+                entry.value.appendTo(buf);
                 }
             }
         else
@@ -600,31 +600,31 @@ interface Map<Key, Value>
                 {
                 if (!Append.first)
                     {
-                    appender.add(", ");
+                    buf.addAll(", ");
                     }
                 Key key = entry.key;
                 if (key.is(Stringable))
                     {
-                    key.appendTo(appender);
+                    key.appendTo(buf);
                     }
                 else
                     {
-                    appender.add(key.toString());
+                    buf.addAll(key.toString());
                     }
 
-                appender.add('=');
+                buf.add('=');
 
                 Value value = entry.value;
                 if (value.is(Stringable))
                     {
-                    value.appendTo(appender);
+                    value.appendTo(buf);
                     }
                 else
                     {
-                    appender.add(value.toString());
+                    buf.addAll(value.toString());
                     }
                 }
             }
-        appender.add(']');
+        buf.add(']');
         }
     }

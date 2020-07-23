@@ -704,17 +704,17 @@ const ConstOrdinalList
     @Override
     String toString()
         {
-        StringBuffer sb = new StringBuffer(size * 4);
-        sb.add('[');
+        StringBuffer buf = new StringBuffer(size * 4);
+        buf.add('[');
         Loop: for (Int n : this)
             {
             if (!Loop.first)
                 {
-                sb.add(", ");
+                buf.addAll(", ");
                 }
-            n.appendTo(sb);
+            n.appendTo(buf);
             }
-        sb.add(']');
-        return sb.toString();
+        buf.add(']');
+        return buf.toString();
         }
     }

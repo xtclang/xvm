@@ -328,21 +328,21 @@ const Range<Element extends Orderable>
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        appender.add(lowerExclusive ? '(' : '[');
+        buf.add(lowerExclusive ? '(' : '[');
         if (Element.is(Type<Stringable>))
             {
-            lowerBound.appendTo(appender);
-            appender.add("..");
-            upperBound.appendTo(appender);
+            lowerBound.appendTo(buf);
+            "..".appendTo(buf);
+            upperBound.appendTo(buf);
             }
         else
             {
-            (lowerBound.is(Stringable) ? lowerBound : lowerBound.toString()).appendTo(appender);
-            appender.add("..");
-            (upperBound.is(Stringable) ? upperBound : upperBound.toString()).appendTo(appender);
+            (lowerBound.is(Stringable) ? lowerBound : lowerBound.toString()).appendTo(buf);
+            "..".appendTo(buf);
+            (upperBound.is(Stringable) ? upperBound : upperBound.toString()).appendTo(buf);
             }
-        appender.add(upperExclusive ? ')' : ']');
+        buf.add(upperExclusive ? ')' : ']');
         }
     }

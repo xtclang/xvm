@@ -79,22 +79,22 @@ interface Directory
     Cancellable watchRecursively(FileWatcher watcher);
 
     @Override
-    void emitListing(Appender<Char> appender, Boolean recursive = False, String indent = "")
+    void emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "")
         {
         Boolean root = indent == "";
 
-//        created.append(appender);
-//        appender.add("  ");
-//        modified.append(appender);
-//        appender.add("  ");
+//        created.append(buf);
+//        buf.addAll("  ");
+//        modified.append(buf);
+//        buf.addAll("  ");
 //        String bytes = size.toString()
 
         if (recursive || !root)
             {
-            appender.add(indent)
-                    .add(name)
-                    .add('/')
-                    .add('\n');
+            buf.addAll(indent)
+               .addAll(name)
+               .add('/')
+               .add('\n');
             }
 
         if (recursive || root)
@@ -105,12 +105,12 @@ interface Directory
 
             for (Directory dir : dirs())
                 {
-                dir.emitListing(appender, recursive, nextIndent);
+                dir.emitListing(buf, recursive, nextIndent);
                 }
 
             for (File file : files())
                 {
-                file.emitListing(appender, recursive, nextIndent);
+                file.emitListing(buf, recursive, nextIndent);
                 }
             }
         }

@@ -582,33 +582,33 @@ const Class<PublicType, ProtectedType extends PublicType,
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
         (_, Annotation[] annotations) = deannotate();
         if (annotations.size > 0)
             {
             for (Annotation annotation : annotations.reverse())
                 {
-                annotation.appendTo(appender);
-                appender.add(' ');
+                annotation.appendTo(buf);
+                buf.add(' ');
                 }
             }
 
-        appender.add(displayName);
+        buf.addAll(displayName);
 
         ListMap<String, Type> params = formalTypes;
         if (!params.empty)
             {
-            appender.add('<');
+            buf.add('<');
             Params: for (Type type : params.values)
                 {
                 if (!Params.first)
                     {
-                    appender.add(", ");
+                    buf.addAll(", ");
                     }
-                type.appendTo(appender);
+                type.appendTo(buf);
                 }
-            appender.add('>');
+            buf.add('>');
             }
         }
     }

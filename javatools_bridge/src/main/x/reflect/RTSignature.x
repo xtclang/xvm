@@ -70,13 +70,13 @@ const RTSignature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tupl
         }
 
     @Override // note: master copy of this code found on Signature interface
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
         Return[] returns = this.returns;
         Int      count   = returns.size;
         if (count == 0)
             {
-            appender.add("void");
+            "void".appendTo(buf);
             }
         else
             {
@@ -86,7 +86,7 @@ const RTSignature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tupl
                 {
                 if (conditionalResult)
                     {
-                    appender.add("conditional ");
+                    "conditional ".appendTo(buf);
                     first  = 1;
                     parens = count > 2;
                     }
@@ -98,37 +98,37 @@ const RTSignature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tupl
 
             if (parens)
                 {
-                appender.add('(');
+                buf.add('(');
                 }
 
             EachReturn: for (Int i : [first..count))
                 {
                 if (!EachReturn.first)
                     {
-                    appender.add(", ");
+                    ", ".appendTo(buf);
                     }
-                returns[i].appendTo(appender);
+                returns[i].appendTo(buf);
                 }
 
             if (parens)
                 {
-                appender.add(')');
+                buf.add(')');
                 }
             }
 
-        appender.add(' ')
-                .add(name)
-                .add('(');
+        buf.add(' ')
+           .addAll(name)
+           .add('(');
 
         EachParam: for (Parameter param : params)
             {
             if (!EachParam.first)
                 {
-                appender.add(", ");
+                ", ".appendTo(buf);
                 }
-            param.appendTo(appender);
+            param.appendTo(buf);
             }
 
-        appender.add(')');
+        buf.add(')');
         }
     }

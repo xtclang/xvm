@@ -268,9 +268,9 @@ const String
 
                     case Positive:
                         return new StringBuffer(length)
-                            .add(this)
-                            .add(fill * append)
-                            .toString();
+                                .addAll(this)
+                                .addAll(fill * append)
+                                .toString();
                     }
             }
         }
@@ -309,9 +309,9 @@ const String
 
                     case Positive:
                         return new StringBuffer(length)
-                            .add(fill * append)
-                            .add(this)
-                            .toString();
+                                .addAll(fill * append)
+                                .addAll(this)
+                                .toString();
                     }
             }
         }
@@ -399,17 +399,17 @@ const String
         }
 
     /**
-     * Append the string to the appender, escaping characters as necessary.
+     * Append the string to the Appender, escaping characters as necessary.
      *
-     * @param appender  the Appender to append to
+     * @param buf  the Appender to append to
      */
-    Appender<Char> appendEscaped(Appender<Char> appender)
+    Appender<Char> appendEscaped(Appender<Char> buf)
         {
         for (Char ch : chars)
             {
-            ch.appendEscaped(appender);
+            ch.appendEscaped(buf);
             }
-        return appender;
+        return buf;
         }
 
     /**
@@ -424,7 +424,7 @@ const String
             }
         else
             {
-            return new StringBuffer(size+2).add('\"').add(this).add('\"').toString();
+            return new StringBuffer(size+2).add('\"').addAll(this).add('\"').toString();
             }
         }
 
@@ -438,8 +438,8 @@ const String
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        appender.add(chars);
+        buf.addAll(chars);
         }
     }

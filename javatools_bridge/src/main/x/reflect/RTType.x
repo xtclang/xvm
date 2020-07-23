@@ -166,12 +166,12 @@ const RTType<DataType, OuterType>
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
         switch (form)
             {
             case Pure:
-                appender.add("Type[");
+                "Type[".appendTo(buf);
 
                 Boolean first = True;
                 for (Property property : properties)
@@ -182,9 +182,9 @@ const RTType<DataType, OuterType>
                         }
                     else
                         {
-                        appender.add(", ");
+                        ", ".appendTo(buf);
                         }
-                    property.name.appendTo(appender);
+                    property.name.appendTo(buf);
                     }
 
                 for (Method method : methods)
@@ -195,34 +195,34 @@ const RTType<DataType, OuterType>
                         }
                     else
                         {
-                        appender.add(", ");
+                        ", ".appendTo(buf);
                         }
-                    method.name.appendTo(appender);
-                    appender.add("())");
+                    method.name.appendTo(buf);
+                    "())".appendTo(buf);
                     }
 
-                appender.add(']');
+                buf.add(']');
                 break;
 
             case Class:
                 assert Class clz := fromClass();
-                clz.displayName.appendTo(appender);
-                appendParameterizedTo(appender);
+                clz.displayName.appendTo(buf);
+                appendParameterizedTo(buf);
                 break;
 
             case Property:
                 assert Property prop := fromProperty();
-                prop.Target.appendTo(appender);
-                appender.add('.');
-                prop.name.appendTo(appender);
+                prop.Target.appendTo(buf);
+                buf.add('.');
+                prop.name.appendTo(buf);
                 break;
 
             case Child:
-                OuterType.appendTo(appender);
-                appender.add('.');
+                OuterType.appendTo(buf);
+                buf.add('.');
                 assert String name := named();
-                name.appendTo(appender);
-                appendParameterizedTo(appender);
+                name.appendTo(buf);
+                appendParameterizedTo(buf);
                 break;
 
             case Intersection:
@@ -231,99 +231,99 @@ const RTType<DataType, OuterType>
                     {
                     if (t2.relational())
                         {
-                        appender.add('(');
-                        t2  .appendTo(appender);
-                        ")?".appendTo(appender);
+                        buf.add('(');
+                        t2  .appendTo(buf);
+                        ")?".appendTo(buf);
                         }
                     else
                         {
-                        t2.appendTo(appender);
-                        appender.add('?');
+                        t2.appendTo(buf);
+                        buf.add('?');
                         }
                     }
                 else
                     {
-                    t1   .appendTo(appender);
-                    " | ".appendTo(appender);
+                    t1   .appendTo(buf);
+                    " | ".appendTo(buf);
                     if (t2.relational())
                         {
-                        appender.add('(');
-                        t2.appendTo(appender);
-                        appender.add(')');
+                        buf.add('(');
+                        t2.appendTo(buf);
+                        buf.add(')');
                         }
                     else
                         {
-                        t2.appendTo(appender);
+                        t2.appendTo(buf);
                         }
                     }
                 break;
 
             case Union:
                 assert (Type t1, Type t2) := relational();
-                t1   .appendTo(appender);
-                " + ".appendTo(appender);
+                t1   .appendTo(buf);
+                " + ".appendTo(buf);
                 if (t2.relational())
                     {
-                    appender.add('(');
-                    t2.appendTo(appender);
-                    appender.add(')');
+                    buf.add('(');
+                    t2.appendTo(buf);
+                    buf.add(')');
                     }
                 else
                     {
-                    t2.appendTo(appender);
+                    t2.appendTo(buf);
                     }
                 break;
 
             case Difference:
                 assert (Type t1, Type t2) := relational();
-                t1   .appendTo(appender);
-                " - ".appendTo(appender);
+                t1   .appendTo(buf);
+                " - ".appendTo(buf);
                 if (t2.relational())
                     {
-                    appender.add('(');
-                    t2.appendTo(appender);
-                    appender.add(')');
+                    buf.add('(');
+                    t2.appendTo(buf);
+                    buf.add(')');
                     }
                 else
                     {
-                    t2.appendTo(appender);
+                    t2.appendTo(buf);
                     }
                 break;
 
             case Immutable:
-                "immutable ".appendTo(appender);
+                "immutable ".appendTo(buf);
                 assert Type t := modifying();
-                t.appendTo(appender);
+                t.appendTo(buf);
                 break;
 
             case Access:
                 assert Type t := modifying();
-                t.appendTo(appender);
-                appender.add(':');
+                t.appendTo(buf);
+                buf.add(':');
                 assert Access access := accessSpecified();
-                access.keyword.appendTo(appender);
+                access.keyword.appendTo(buf);
                 break;
 
             case Annotated:
                 assert Annotation anno := annotated();
-                anno.appendTo(appender);
-                appender.add(' ');
+                anno.appendTo(buf);
+                buf.add(' ');
                 assert Type t := modifying();
-                t.appendTo(appender);
+                t.appendTo(buf);
                 break;
 
             case Sequence:
                 Type[] types = underlyingTypes;
-                appender.add('<');
+                buf.add('<');
                 Loop: for (Type type : types)
                     {
                     if (!Loop.first)
                         {
-                        ", ".appendTo(appender);
+                        ", ".appendTo(buf);
                         }
-                    type.appendTo(appender);
+                    type.appendTo(buf);
                     }
-                appender.add('>');
+                buf.add('>');
                 break;
 
             case FormalProperty:
@@ -331,25 +331,25 @@ const RTType<DataType, OuterType>
             case FormalChild:
             case Typedef:
                 assert String name := named();
-                name.appendTo(appender);
+                name.appendTo(buf);
                 break;
             }
         }
 
-    private void appendParameterizedTo(Appender<Char> appender)
+    private void appendParameterizedTo(Appender<Char> buf)
         {
         if (Type[] params := parameterized())
             {
-            appender.add('<');
+            buf.add('<');
             Loop: for (Type param : params)
                 {
                 if (!Loop.first)
                     {
-                    ", ".appendTo(appender);
+                    ", ".appendTo(buf);
                     }
-                param.appendTo(appender);
+                param.appendTo(buf);
                 }
-            appender.add('>');
+            buf.add('>');
             }
         }
     }

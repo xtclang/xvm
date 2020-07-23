@@ -127,11 +127,11 @@ interface FileNode
     Cancellable watch(FileWatcher watcher);
 
     /**
-     * Emit a directory-style hierarchical listing to the specified appender.
+     * Emit a directory-style hierarchical listing to the specified Appender.
      *
-     * @param appender   the Appender to emit the listing to
+     * @param buf        the Appender to emit the listing to
      * @param recursive  (optional) True to have the listing recurse through sub-directories
      * @param indent     (optional) indentation for this item in the hierarchical listing
      */
-    void emitListing(Appender<Char> appender, Boolean recursive = False, String indent = "");
+    void emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "");
     }

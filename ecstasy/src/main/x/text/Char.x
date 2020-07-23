@@ -176,7 +176,7 @@ const Char
     @Op("+")
     String add(String s)
         {
-        return new StringBuffer(1 + s.size).add(this).add(s).toString();
+        return new StringBuffer(1 + s.size).add(this).addAll(s).toString();
         }
 
     @Op("-")
@@ -497,92 +497,92 @@ const Char
      * Append the specified character to the StringBuilder, escaping if
      * necessary.
      *
-     * @param sb  the StringBuilder to append to
-     * @param ch  the character to escape
+     * @param buf  the `Appender` to append to
+     * @param ch   the character to escape
      *
      * @return the StringBuilder
      */
-    Appender<Char> appendEscaped(Appender<Char> appender)
+    Appender<Char> appendEscaped(Appender<Char> buf)
         {
         return switch (codepoint)
             {
             case 0x00:
                 // null terminator
-                appender.add('\\')
-                        .add('0');
+                buf.add('\\')
+                   .add('0');
 
             case 0x08:
                 // backspace
-                appender.add('\\')
-                        .add('b');
+                buf.add('\\')
+                   .add('b');
 
             case 0x09:
                 // horizontal tab
-                appender.add('\\')
-                        .add('t');
+                buf.add('\\')
+                   .add('t');
 
             case 0x0A:
                 // line feed
-                appender.add('\\')
-                        .add('n');
+                buf.add('\\')
+                   .add('n');
 
             case 0x0B:
                 // vertical tab
-                appender.add('\\')
-                        .add('v');
+                buf.add('\\')
+                   .add('v');
 
             case 0x0C:
                 // form feed
-                appender.add('\\')
-                        .add('f');
+                buf.add('\\')
+                   .add('f');
 
             case 0x0D:
                 // carriage return
-                appender.add('\\')
-                        .add('r');
+                buf.add('\\')
+                   .add('r');
 
             case 0x1A:
                 // EOF
-                appender.add('\\')
-                        .add('z');
+                buf.add('\\')
+                   .add('z');
 
             case 0x1B:
                 // escape
-                appender.add('\\')
-                        .add('e');
+                buf.add('\\')
+                   .add('e');
 
             case 0x22:
                 // double quotes
-                appender.add('\\')
-                        .add('\"');
+                buf.add('\\')
+                   .add('\"');
 
             case 0x27:
                 // single quotes
-                appender.add('\\')
-                        .add('\'');
+                buf.add('\\')
+                   .add('\'');
 
             case 0x5C:
                 // the escaping slash itself requires an explicit escape
-                appender.add('\\')
-                        .add('\\');
+                buf.add('\\')
+                   .add('\\');
 
             case 0x7F:
                // DEL
-                appender.add('\\')
-                        .add('d');
+                buf.add('\\')
+                   .add('d');
 
             case 0x00..0x1F     :       // C0 control characters
             case 0x80..0x9F     :       // C1 control characters
             case 0x2028..0x2029 :       // line and paragraph separator
-                appender.add('\\')
-                        .add('u')
-                        .add((codepoint & 0xF000 >>> 24).toHexit())
-                        .add((codepoint & 0x0F00 >>> 16).toHexit())
-                        .add((codepoint & 0x00F0 >>>  8).toHexit())
-                        .add((codepoint & 0x000F >>>  0).toHexit());
+                buf.add('\\')
+                   .add('u')
+                   .add((codepoint & 0xF000 >>> 24).toHexit())
+                   .add((codepoint & 0x0F00 >>> 16).toHexit())
+                   .add((codepoint & 0x00F0 >>>  8).toHexit())
+                   .add((codepoint & 0x000F >>>  0).toHexit());
 
             default:
-                appender.add(this);
+                buf.add(this);
             };
         }
 
@@ -1448,8 +1448,8 @@ const Char
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        appender.add(this);
+        buf.add(this);
         }
     }

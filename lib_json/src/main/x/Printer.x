@@ -51,12 +51,12 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
     /**
      * Print the specified JSON document to the provided [Appender].
      *
-     * @param doc       the JSON document to print
-     * @param appender  the [Appender] to render the character data into
+     * @param doc  the JSON document to print
+     * @param buf  the [Appender] to render the character data into
      */
-    void print(Doc doc, Appender<Char> appender)
+    void print(Doc doc, Appender<Char> buf)
         {
-        printInternal(doc, appender, alreadyIndented=True, showNulls=showNulls, pretty=pretty);
+        printInternal(doc, buf, alreadyIndented=True, showNulls=showNulls, pretty=pretty);
         }
 
 
@@ -166,7 +166,7 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
      * Render the specified JSON document into an `Appender`.
      *
      * @param doc              the document to render
-     * @param appender         the appender to render the character data into
+     * @param buf              the Appender to render the character data into
      * @param indent           a level of indent, expressed in a number of spaces
      * @param alreadyIndented  `True` indicates that a value that requires a new line and
      *                         indentation does not have to add the new line and indentation for the
@@ -178,7 +178,7 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
      *                         wherever possible (optional; defaults to False)
      */
     protected void printInternal(Doc            doc,
-                                 Appender<Char> appender,
+                                 Appender<Char> buf,
                                  Int            indent          = 0,
                                  Boolean        alreadyIndented = False,
                                  Boolean        showNulls       = False,
@@ -192,26 +192,26 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
                 case True: "true";
                 case False: "false";
                 default: assert;
-                }).appendTo(appender);
+                }).appendTo(buf);
             }
         else if (doc.is(String))
             {
-            printString(doc, appender);
+            printString(doc, buf);
             }
         else if (doc.is(IntLiteral) || doc.is(FPLiteral))
             {
-            doc.appendTo(appender);
+            doc.appendTo(buf);
             }
         else if (doc.is(Array))
             {
             Doc[] array = doc.as(Doc[]);
             if (pretty && containsObject(array))
                 {
-                printMultiLineArray(array, appender, indent, alreadyIndented, showNulls);
+                printMultiLineArray(array, buf, indent, alreadyIndented, showNulls);
                 }
             else
                 {
-                printSingleLineArray(array, appender, pretty);
+                printSingleLineArray(array, buf, pretty);
                 }
             }
         else
@@ -219,67 +219,67 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
             Map<String, Doc> map = doc.as(Map<String, Doc>);
             if (map.empty || !showNulls && containsOnlyNulls(map))
                 {
-                "{}".appendTo(appender);
+                "{}".appendTo(buf);
                 }
             else if (pretty)
                 {
-                printPrettyObject(map, appender, indent, alreadyIndented, showNulls);
+                printPrettyObject(map, buf, indent, alreadyIndented, showNulls);
                 }
             else
                 {
-                printUglyObject(map, appender, showNulls);
+                printUglyObject(map, buf, showNulls);
                 }
             }
         }
 
-    protected void printSingleLineArray(Doc[] values, Appender<Char> appender, Boolean pretty)
+    protected void printSingleLineArray(Doc[] values, Appender<Char> buf, Boolean pretty)
         {
-        appender.add('[');
+        buf.add('[');
         Loop: for (Doc value : values)
             {
             if (!Loop.first)
                 {
-                appender.add(',');
+                buf.add(',');
                 if (pretty)
                     {
-                    appender.add(' ');
+                    buf.add(' ');
                     }
                 }
-            printInternal(value, appender, pretty=pretty, showNulls=True);
+            printInternal(value, buf, pretty=pretty, showNulls=True);
             }
-        appender.add(']');
+        buf.add(']');
         }
 
     protected void printMultiLineArray(Doc[]          values,
-                                       Appender<Char> appender,
+                                       Appender<Char> buf,
                                        Int            indent,
                                        Boolean        alreadyIndented,
                                        Boolean        showNulls)
         {
         if (!alreadyIndented)
             {
-            indentLine(appender, indent);
+            indentLine(buf, indent);
             }
-        appender.add('[');
+        buf.add('[');
 
         Loop: for (Doc value : values)
             {
             if (!Loop.first)
                 {
-                appender.add(',');
+                buf.add(',');
                 }
 
-            indentLine(appender, indent);
-            printInternal(value, appender, indent=indent, alreadyIndented=True, pretty=True, showNulls=showNulls);
+            indentLine(buf, indent);
+            printInternal(value, buf, indent=indent, alreadyIndented=True, pretty=True, showNulls=showNulls);
             }
 
-        indentLine(appender, indent);
-        appender.add(']');
+        indentLine(buf, indent);
+        buf.add(']');
         }
 
-    protected void printUglyObject(Map<String, Doc> map, Appender<Char> appender, Boolean showNulls)
+    protected void printUglyObject(Map<String, Doc> map, Appender<Char> buf, Boolean showNulls)
         {
-        appender.add('{');
+        buf.add('{');
         Boolean comma = False;
         for ((String name, Doc value) : map)
             {
@@ -287,32 +287,32 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
                 {
                 if (comma)
                     {
-                    appender.add(',');
+                    buf.add(',');
                     }
                 else
                     {
                     comma = True;
                     }
 
-                printString(name, appender);
-                appender.add(':');
-                printInternal(value, appender, showNulls=showNulls);
+                printString(name, buf);
+                buf.add(':');
+                printInternal(value, buf, showNulls=showNulls);
                 }
             }
-        appender.add('}');
+        buf.add('}');
         }
 
     protected void printPrettyObject(Map<String, Doc> map,
-                                     Appender<Char>   appender,
+                                     Appender<Char>   buf,
                                      Int              indent,
                                      Boolean          alreadyIndented,
                                      Boolean          showNulls)
         {
         if (!alreadyIndented)
             {
-            indentLine(appender, indent);
+            indentLine(buf, indent);
             }
-        appender.add('{');
+        buf.add('{');
 
         Boolean comma = False;
         for ((String name, Doc value) : map)
@@ -321,30 +321,30 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
                 {
                 if (comma)
                     {
-                    appender.add(',');
+                    buf.add(',');
                     }
                 else
                     {
                     comma = True;
                     }
 
-                indentLine(appender, indent);
-                printString(name, appender);
-                ": ".appendTo(appender);
-                printInternal(value, appender, indent=indent+2, pretty=True, showNulls=showNulls);
+                indentLine(buf, indent);
+                printString(name, buf);
+                ": ".appendTo(buf);
+                printInternal(value, buf, indent=indent+2, pretty=True, showNulls=showNulls);
                 }
             }
 
-        indentLine(appender, indent);
-        appender.add('}');
+        indentLine(buf, indent);
+        buf.add('}');
         }
 
-    protected static void indentLine(Appender<Char> appender, Int indent)
+    protected static void indentLine(Appender<Char> buf, Int indent)
         {
-        appender.add('\n');
+        buf.add('\n');
         for (Int i = 0; i < indent; ++i)
             {
-            appender.add(' ');
+            buf.add(' ');
             }
         }
 
@@ -397,21 +397,21 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
         return True;
         }
 
-    static void printString(String value, Appender<Char> appender)
+    static void printString(String value, Appender<Char> buf)
         {
-        appender.add('"');
+        buf.add('"');
         for (Char ch : value)
             {
             if (String s := escaped(ch))
                 {
-                s.appendTo(appender);
+                s.appendTo(buf);
                 }
             else
                 {
-                appender.add(ch);
+                buf.add(ch);
                 }
             }
-        appender.add('"');
+        buf.add('"');
         }
 
     /**

@@ -289,7 +289,7 @@ interface TypeTemplate // TODO move
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
         Boolean fParams = False;
         switch (form)
@@ -301,11 +301,11 @@ interface TypeTemplate // TODO move
                 assert Composition cmp := fromClass();
                 while ((AnnotationTemplate annotation, cmp) := cmp.deannotate())
                     {
-                    appender.add('@')
-                            .add(annotation.template.name)
-                            .add(' ');
+                    buf.add('@')
+                       .addAll(annotation.template.name)
+                       .add(' ');
                     }
-                appender.add(cmp.template.name);
+                buf.addAll(cmp.template.name);
                 fParams = True;
                 break;
 
@@ -322,36 +322,36 @@ interface TypeTemplate // TODO move
             case Union:
             case Difference:
                 assert (TypeTemplate t1, TypeTemplate t2) := relational();
-                t1.appendTo(appender);
-                appender.add(switch (form)
+                t1.appendTo(buf);
+                buf.addAll(switch (form)
                         {
                         case Intersection: " | ";
                         case Union:        " + ";
                         case Difference:   " - ";
                         default: assert;
                         });
-                t2.appendTo(appender);
+                t2.appendTo(buf);
                 break;
 
             case Immutable:
                 assert TypeTemplate t1 := modifying();
-                appender.add("immutable ");
-                t1.appendTo(appender);
+                buf.addAll("immutable ");
+                t1.appendTo(buf);
                 break;
 
             case Access:
                 assert val access := accessSpecified();
                 assert TypeTemplate t1 := modifying();
-                t1.appendTo(appender);
-                appender.add(':')
-                        .add(access.keyword);
+                t1.appendTo(buf);
+                buf.add(':')
+                   .addAll(access.keyword);
                 break;
 
             case Annotated:
                 TODO
 
             case Typedef:
-                (name?.as(Stringable) : underlyingTypes[0]).appendTo(appender);
+                (name?.as(Stringable) : underlyingTypes[0]).appendTo(buf);
                 break;
 
             case Sequence:
@@ -363,16 +363,16 @@ interface TypeTemplate // TODO move
 
         if (fParams, TypeTemplate[] params := parameterized())
             {
-            appender.add('<');
+            buf.add('<');
             EachParam: for (TypeTemplate param : params)
                 {
                 if (!EachParam.first)
                     {
-                    appender.add(", ");
+                    buf.addAll(", ");
                     }
-                param.appendTo(appender);
+                param.appendTo(buf);
                 }
-            appender.add('>');
+            buf.add('>');
             }
         }
 

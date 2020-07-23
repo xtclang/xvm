@@ -39,7 +39,7 @@ class StringBuffer
             }
         else
             {
-            add(o.toString());
+            o.toString().appendTo(this);
             }
 
         return this;
@@ -61,9 +61,9 @@ class StringBuffer
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        appender.add(chars);
+        buf.addAll(chars);
         }
 
 
@@ -77,7 +77,7 @@ class StringBuffer
         }
 
     @Override
-    StringBuffer add(Iterable<Char> array)
+    StringBuffer addAll(Iterable<Char> array)
         {
         chars += array;
         return this;
@@ -125,7 +125,7 @@ class StringBuffer
     @Op("[..]") StringBuffer slice(Range<Int> indexes)
         {
         StringBuffer that = new StringBuffer(indexes.size);
-        that.add(chars[indexes]);
+        that.addAll(chars[indexes]);
         return that;
         }
 

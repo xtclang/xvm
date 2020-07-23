@@ -1042,9 +1042,9 @@ class Array<Element>
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        appender.add('[');
+        buf.add('[');
 
         if (Element.is(Type<Stringable>))
             {
@@ -1052,10 +1052,10 @@ class Array<Element>
                 {
                 if (!loop.first)
                     {
-                    appender.add(", ");
+                    buf.addAll(", ");
                     }
 
-                v.appendTo(appender);
+                v.appendTo(buf);
                 }
             }
         else
@@ -1064,21 +1064,21 @@ class Array<Element>
                 {
                 if (!loop.first)
                     {
-                    appender.add(", ");
+                    buf.addAll(", ");
                     }
 
                 if (v.is(Stringable))
                     {
-                    v.appendTo(appender);
+                    v.appendTo(buf);
                     }
                 else
                     {
-                    v.toString().appendTo(appender);
+                    v.toString().appendTo(buf);
                     }
                 }
             }
 
-        appender.add(']');
+        buf.add(']');
         }
 
 

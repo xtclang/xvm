@@ -42,13 +42,13 @@ module TestArray
         {
         console.println("\n** testStrBuf()");
 
-        StringBuffer sb = new StringBuffer();
-        sb.append("hello")
+        StringBuffer buf = new StringBuffer();
+        buf.append("hello")
           .append(' ')
           .append("world")
           .append('!');
 
-        console.println("sb=" + sb);
+        console.println("buf=" + buf);
         }
 
     void testConstElement()

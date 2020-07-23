@@ -24,13 +24,13 @@ interface Reader
             }
 
         @Override
-        void appendTo(Appender<Char> appender)
+        void appendTo(Appender<Char> buf)
             {
-            appender.add('(');
-            lineNumber.appendTo(appender);
-            appender.add(':');
-            lineOffset.appendTo(appender);
-            appender.add(')');
+            buf.add('(');
+            lineNumber.appendTo(buf);
+            buf.add(':');
+            lineOffset.appendTo(buf);
+            buf.add(')');
             }
         }
 
@@ -346,39 +346,39 @@ interface Reader
     // ----- redirection ---------------------------------------------------------------------------
 
     /**
-     * Pipe the remainder of the contents of this reader to the specified appender, such as a
+     * Pipe the remainder of the contents of this reader to the specified Appender, such as a
      * Writer.
      *
-     * @param out  the Writer or other `Appender<Char>` to pipe to
+     * @param buf  the Writer or other `Appender<Char>` to pipe to
      *
      * @throws IOException  represents the general category of input/output exceptions
      */
-    void pipeTo(Appender<Char> out)
+    void pipeTo(Appender<Char> buf)
         {
         while (Char ch := next())
             {
-            out.add(ch);
+            buf.add(ch);
             }
         }
 
     /**
      * Pipe contents from this stream to the specified stream.
      *
-     * @param out  the Writer or other `Appender<Char>` to pipe to
+     * @param buf  the Writer or other `Appender<Char>` to pipe to
      * @param max  the number of characters to pipe
      *
      * @throws IOException  represents the general category of input/output exceptions
      * @throws EndOfFile    if the end of the stream has been reached
      */
-    void pipeTo(Appender<Char> out, Int count)
+    void pipeTo(Appender<Char> buf, Int count)
         {
         assert:arg count >= 0;
 
-        out.ensureCapacity(count);
+        buf.ensureCapacity(count);
 
         while (count > 0)
             {
-            out.add(nextChar());
+            buf.add(nextChar());
             --count;
             }
         }

@@ -16,7 +16,7 @@ interface Stringable
     /**
      * Append the String form of this Stringable object to the provided character Appender.
      *
-     * @param appender  the Appender to append the String form of this object to
+     * @param buf  the Appender to append the String form of this object to
      */
-    void appendTo(Appender<Char> appender);
+    void appendTo(Appender<Char> buf);
     }

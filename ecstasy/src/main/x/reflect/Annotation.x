@@ -15,23 +15,23 @@ const Annotation(Class mixinClass, Argument[] arguments = [])
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        appender.add('@')
-                .add(mixinClass.displayName);
+        buf.add('@')
+           .addAll(mixinClass.displayName);
 
         if (arguments.size > 0)
             {
-            appender.add('(');
+            buf.add('(');
             Args: for (Argument arg : arguments)
                 {
                 if (!Args.first)
                     {
-                    appender.add(", ");
+                    buf.addAll(", ");
                     }
-                arg.appendTo(appender);
+                arg.appendTo(buf);
                 }
-            appender.add(')');
+            buf.add(')');
             }
         }
     }

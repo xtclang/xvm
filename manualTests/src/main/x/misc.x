@@ -596,12 +596,12 @@ module TestMisc
             }
 
         @Override
-        void appendTo(Appender<Char> appender)
+        void appendTo(Appender<Char> buf)
             {
-            name.appendTo(appender.add('('));
-            x.appendTo(appender.add(": x="));
-            y.appendTo(appender.add(", y="));
-            appender.add(')');
+            name.appendTo(buf.add('('));
+            x.appendTo(buf.addAll(": x="));
+            y.appendTo(buf.addAll(", y="));
+            buf.add(')');
             }
         }
 

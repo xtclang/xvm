@@ -88,27 +88,27 @@ class ReifiedEntry<Key, Value>
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
         if (key.is(Stringable))
             {
             // TODO CP remove ".as(Stringable)"
-            key.as(Stringable).appendTo(appender);
+            key.as(Stringable).appendTo(buf);
             }
         else
             {
-            appender.add(key.toString());
+            buf.addAll(key.toString());
             }
 
-        appender.add('=');
+        buf.add('=');
 
         if (value.is(Stringable))
             {
-            value.as(Stringable).appendTo(appender);
+            value.as(Stringable).appendTo(buf);
             }
         else
             {
-            appender.add(value.toString());
+            buf.addAll(value.toString());
             }
         }
     }

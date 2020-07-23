@@ -86,9 +86,9 @@ package reflect
             }
 
         @Override
-        void appendTo(Appender<Char> appender)
+        void appendTo(Appender<Char> buf)
             {
-            &this.actualClass.name.appendTo(appender);
+            &this.actualClass.name.appendTo(buf);
             }
         }
 
@@ -161,9 +161,9 @@ package reflect
             }
 
         @Override
-        void appendTo(Appender<Char> appender)
+        void appendTo(Appender<Char> buf)
             {
-            qualifiedName.appendTo(appender);
+            qualifiedName.appendTo(buf);
             }
         }
 
@@ -217,13 +217,13 @@ package reflect
             }
 
         @Override
-        void appendTo(Appender<Char> appender)
+        void appendTo(Appender<Char> buf)
             {
-            ParamType.appendTo(appender);
+            ParamType.appendTo(buf);
             if (String name := hasName())
                 {
-                appender.add(' ')
-                        .add(name);
+                buf.add(' ')
+                   .addAll(name);
                 }
             }
         }
@@ -259,13 +259,13 @@ package reflect
             }
 
         @Override
-        void appendTo(Appender<Char> appender)
+        void appendTo(Appender<Char> buf)
             {
-            ReturnType.appendTo(appender);
+            ReturnType.appendTo(buf);
             if (String name := hasName())
                 {
-                appender.add(' ')
-                        .add(name);
+                buf.add(' ')
+                   .addAll(name);
                 }
             }
         }

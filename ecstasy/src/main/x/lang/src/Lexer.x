@@ -1244,7 +1244,7 @@ class Lexer
             if (Char digit := nextDigit(radix))
                 {
                 fpBuf = new StringBuffer()
-                        .add(intVal.toString())
+                        .addAll(intVal.toString())
                         .add('.')
                         .add(digit);
                 while (digit := nextDigit(radix))
@@ -1269,9 +1269,9 @@ class Lexer
                 continue;
             case 'E', 'e':
                 IntLiteral exp = eatIntLiteral();
-                fpBuf ?:= new StringBuffer().add(intVal.toString());
+                fpBuf ?:= new StringBuffer().addAll(intVal.toString());
                 fpBuf.add(ch);
-                fpBuf.add(exp.toString());
+                fpBuf.addAll(exp.toString());
                 break;
 
             default:

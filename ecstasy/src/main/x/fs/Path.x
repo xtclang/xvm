@@ -408,19 +408,19 @@ const Path
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
         // prepend the parent path and the path separator; if the parent is the root, then no
         // additional separator is added
         if (parent != null)
             {
-            parent.appendTo(appender);
+            parent.appendTo(buf);
             if (parent.form != Root)
                 {
-                appender.add('/');
+                buf.add('/');
                 }
             }
 
-        appender.add(name);
+        name.appendTo(buf);
         }
     }

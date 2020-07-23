@@ -35,13 +35,13 @@ const RTParameter<ParamType>(Int ordinal, String? name, Boolean formal, Boolean 
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        ParamType.appendTo(appender);
+        ParamType.appendTo(buf);
         if (String name := hasName())
             {
-            appender.add(' ')
-                    .add(name);
+            buf.add(' ');
+            name.appendTo(buf);
             }
         }
     }

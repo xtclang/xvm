@@ -132,13 +132,13 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
         Return[] returns = this.returns;
         Int      count   = returns.size;
         if (count == 0)
             {
-            appender.add("void");
+            buf.addAll("void");
             }
         else
             {
@@ -148,7 +148,7 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
                 {
                 if (conditionalResult)
                     {
-                    appender.add("conditional ");
+                    buf.addAll("conditional ");
                     first  = 1;
                     parens = count > 2;
                     }
@@ -160,37 +160,37 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
 
             if (parens)
                 {
-                appender.add('(');
+                buf.add('(');
                 }
 
             EachReturn: for (Int i : [first..count))
                 {
                 if (!EachReturn.first)
                     {
-                    appender.add(", ");
+                    buf.addAll(", ");
                     }
-                returns[i].appendTo(appender);
+                returns[i].appendTo(buf);
                 }
 
             if (parens)
                 {
-                appender.add(')');
+                buf.add(')');
                 }
             }
 
-        appender.add(' ')
-                .add(name)
-                .add('(');
+        buf.add(' ')
+           .addAll(name)
+           .add('(');
 
         EachParam: for (Parameter param : params)
             {
             if (!EachParam.first)
                 {
-                appender.add(", ");
+                buf.addAll(", ");
                 }
-            param.appendTo(appender);
+            param.appendTo(buf);
             }
 
-        appender.add(')');
+        buf.add(')');
         }
     }

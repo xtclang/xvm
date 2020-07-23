@@ -244,36 +244,36 @@ const Time(Int picos)
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
         Int hour = this.hour;
         if (hour < 10)
             {
-            appender.add('0');
+            buf.add('0');
             }
-        hour.appendTo(appender);
-        appender.add(':');
+        hour.appendTo(buf);
+        buf.add(':');
 
         Int minute = this.minute;
         if (minute < 10)
             {
-            appender.add('0');
+            buf.add('0');
             }
-        minute.appendTo(appender);
-        appender.add(':');
+        minute.appendTo(buf);
+        buf.add(':');
 
         Int second = this.second;
         if (second < 10)
             {
-            appender.add('0');
+            buf.add('0');
             }
-        second.appendTo(appender);
+        second.appendTo(buf);
 
         Int fraction = picoseconds;
         if (fraction != 0)
             {
-            appender.add('.');
-            Duration.picosFractional(fraction).appendTo(appender);
+            buf.add('.');
+            Duration.picosFractional(fraction).appendTo(buf);
             }
         }
     }

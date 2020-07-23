@@ -365,20 +365,20 @@ const UInt8
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
         if (sign == Zero)
             {
-            appender.add('0');
+            buf.add('0');
             }
         else
             {
             (UInt8 left, UInt8 digit) = this /% 10;
             if (left.sign != Zero)
                 {
-                left.appendTo(appender);
+                left.appendTo(buf);
                 }
-            appender.add(DIGITS[digit]);
+            buf.add(DIGITS[digit]);
             }
         }
 

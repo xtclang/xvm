@@ -32,5 +32,5 @@ class RTTypeTemplate
     // natural:
     //   toString()
     //   estimateStringLength()
-    //   appendTo(appender)
+    //   appendTo(buf)
     }

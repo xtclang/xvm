@@ -175,7 +175,7 @@ class ArrayDeque<Element>
         }
 
     /**
-     * An "appender" that prepends to the dequeue; it adds to the head.
+     * An "Appender" that prepends to the dequeue; it adds to the head.
      */
     @Lazy Appender<Element> prepender.calc()
         {
@@ -202,7 +202,7 @@ class ArrayDeque<Element>
         }
 
     @Override
-    ArrayDeque add(Iterable<Element> iterable)
+    ArrayDeque addAll(Iterable<Element> iterable)
         {
         if (piping)
             {

@@ -161,9 +161,9 @@
         String       location = this.location;
         String       code     = this.code;
         StringBuffer buf      = new StringBuffer(location.size + 1 + code.size);
-        buf.add(location)
+        buf.addAll(location)
            .add(':')
-           .add(code);
+           .addAll(code);
         return buf.toString();
         }
 
@@ -188,11 +188,11 @@
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        appender.add(location)
-                .add(' ')
-                .add(message);
+        buf.addAll(location)
+           .add(' ')
+           .addAll(message);
 
         if (String context ?= this.context)
             {
@@ -201,9 +201,9 @@
                 context = context[0..57] + "...";
                 }
 
-            appender.add(" (");
-            context.appendEscaped(appender);
-            appender.add(')');
+            buf.addAll(" (");
+            context.appendEscaped(buf);
+            buf.add(')');
             }
         }
     }

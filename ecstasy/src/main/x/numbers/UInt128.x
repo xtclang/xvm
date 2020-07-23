@@ -373,20 +373,20 @@ const UInt128
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
         if (this == 0)
             {
-            appender.add('0');
+            buf.add('0');
             }
         else
             {
             (UInt128 left, UInt128 digit) = this /% 10;
             if (left != 0)
                 {
-                left.appendTo(appender);
+                left.appendTo(buf);
                 }
-            appender.add(DIGITS[digit]);
+            buf.add(DIGITS[digit]);
             }
         }
 

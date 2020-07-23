@@ -513,14 +513,14 @@ const Duration(UInt128 picoseconds)
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
         Boolean zerofill = false;
 
         if (picoseconds >= PICOS_PER_HOUR)
             {
-            hours.appendTo(appender);
-            appender.add(':');
+            hours.appendTo(buf);
+            buf.add(':');
             zerofill = true;
             }
 
@@ -529,35 +529,35 @@ const Duration(UInt128 picoseconds)
             Int part = minutesPart;
             if (part < 10 && zerofill)
                 {
-                appender.add('0');
+                buf.add('0');
                 }
             else
                 {
                 zerofill = true;
                 }
-            part.appendTo(appender);
-            appender.add(':');
+            part.appendTo(buf);
+            buf.add(':');
             }
 
         Int part = secondsPart;
         if (part < 10 && zerofill)
             {
-            appender.add('0');
+            buf.add('0');
             }
-        part.appendTo(appender);
+        part.appendTo(buf);
 
         Int picos = picosecondsPart;
         if (picos > 0)
             {
-            appender.add('.');
+            buf.add('.');
 
             Int length = picos.estimateStringLength();
             Int fill   = 12 - length;
             while (fill-- > 0)
                 {
-                appender.add('0');
+                buf.add('0');
                 }
-            picosFractional(picos).appendTo(appender);
+            picosFractional(picos).appendTo(buf);
             }
         }
 

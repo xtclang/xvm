@@ -151,12 +151,12 @@ const CPFileStore(String path, Object constRoot)
         }
 
     @Override
-    void emitListing(Appender<Char> appender, Boolean recursive = True)
+    void emitListing(Appender<Char> buf, Boolean recursive = True)
         {
-        appender.add("FileStore:")
-                .add(path)
-                .add('\n');
-        root.emitListing(appender, recursive, "");
+        buf.addAll("FileStore:")
+           .addAll(path)
+           .add('\n');
+        root.emitListing(buf, recursive, "");
         }
 
     // ----- Stringable methods --------------------------------------------------------------------
@@ -168,10 +168,10 @@ const CPFileStore(String path, Object constRoot)
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        "FileStore:".appendTo(appender);
-        path.appendTo(appender);
+        "FileStore:".appendTo(buf);
+        path.appendTo(buf);
         }
 
 

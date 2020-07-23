@@ -345,37 +345,37 @@ const TypeSystem
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        appender.add("TypeSystem{");
+        buf.addAll("TypeSystem{");
 
         Modules: for (Module _module : modules)
             {
             if (!Modules.first)
                 {
-                appender.add(", ");
+                buf.addAll(", ");
                 }
 
-            appender.add(_module.qualifiedName);
+            buf.addAll(_module.qualifiedName);
 
             if (String path := modulePaths.get(_module), path.size > 0)
                 {
-                appender.add(" at \"")
-                        .add(path)
-                        .add('\"');
+                buf.addAll(" at \"")
+                   .addAll(path)
+                   .add('\"');
                 }
 
             if (Modules.first)
                 {
-                appender.add(" (primary)");
+                buf.addAll(" (primary)");
                 }
 
             if (sharedModules.contains(_module))
                 {
-                appender.add(" (shared)");
+                buf.addAll(" (shared)");
                 }
             }
 
-        appender.add('}');
+        buf.add('}');
         }
     }

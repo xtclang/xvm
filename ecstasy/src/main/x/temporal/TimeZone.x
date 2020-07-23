@@ -379,60 +379,60 @@ const TimeZone(Int picos, String? name = null)
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
         Boolean showPicos = resolved;
         String? name      = this.name;
         if (name != null)
             {
-            appender.add(name);
+            name.appendTo(buf);
 
             showPicos &&= picos != 0;
             if (showPicos)
                 {
-                appender.add(" (");
+                buf.addAll(" (");
                 }
             }
 
         if (showPicos)
             {
-            appender.add(picos < 0 ? '-' : '+');
+            buf.add(picos < 0 ? '-' : '+');
             Int hours   = this.hours.abs();
             Int minutes = this.minutes.abs();
             if (hours < 10)
                 {
-                appender.add('0');
+                buf.add('0');
                 }
-            hours.appendTo(appender);
-            appender.add(':');
+            hours.appendTo(buf);
+            buf.add(':');
             if (minutes < 10)
                 {
-                appender.add('0');
+                buf.add('0');
                 }
-            minutes.appendTo(appender);
+            minutes.appendTo(buf);
 
             if (picos % Time.PICOS_PER_MINUTE != 0)
                 {
                 Int remainder = (picos - hours * Time.PICOS_PER_HOUR - minutes * Time.PICOS_PER_MINUTE).abs();
                 Int seconds   = remainder / Time.PICOS_PER_SECOND;
-                appender.add(':');
+                buf.add(':');
                 if (seconds < 10)
                     {
-                    appender.add('0');
+                    buf.add('0');
                     }
-                seconds.appendTo(appender);
+                seconds.appendTo(buf);
                 remainder -= seconds * Time.PICOS_PER_SECOND;
 
                 if (remainder > 0)
                     {
-                    appender.add('.');
-                    Duration.picosFractional(remainder).appendTo(appender);
+                    buf.add('.');
+                    Duration.picosFractional(remainder).appendTo(buf);
                     }
                 }
 
             if (name != null)
                 {
-                appender.add(')');
+                buf.add(')');
                 }
             }
         }

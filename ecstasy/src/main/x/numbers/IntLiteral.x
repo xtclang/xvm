@@ -606,8 +606,8 @@ const IntLiteral(String text)
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        text.appendTo(appender);
+        text.appendTo(buf);
         }
     }

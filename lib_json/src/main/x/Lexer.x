@@ -176,26 +176,26 @@ class Lexer
             }
 
         @Override
-        void appendTo(Appender<Char> appender)
+        void appendTo(Appender<Char> buf)
             {
-            appender.add('(');
-            start.lineNumber.appendTo(appender);
-            appender.add(':');
-            start.lineOffset.appendTo(appender);
-            "): ".appendTo(appender);
+            buf.add('(');
+            start.lineNumber.appendTo(buf);
+            buf.add(':');
+            start.lineOffset.appendTo(buf);
+            "): ".appendTo(buf);
             switch(id)
                 {
                 case NoVal..FPVal:
-                    value.appendTo(appender);
+                    value.appendTo(buf);
                     break;
                 case StrVal:
-                    appender.add('\"');
-                    value.appendTo(appender);
-                    appender.add('\"');
+                    buf.add('\"');
+                    value.appendTo(buf);
+                    buf.add('\"');
                     break;
                 default:
-                    appender.add('\'');
-                    appender.add(switch (id)
+                    buf.add('\'')
+                       .add(switch (id)
                         {
                         case ArrayEnter:  '[';
                         case ArrayExit:   ']';
@@ -204,8 +204,8 @@ class Lexer
                         case Colon:       ':';
                         case Comma:       ',';
                         default:          assert;
-                        });
-                    appender.add('\'');
+                        })
+                       .add('\'');
                     break;
                 }
             }
@@ -532,7 +532,7 @@ class Lexer
                             {
                             TextPosition cur = reader.position;
                             reader.position  = start;
-                            buf.add(reader.nextChars(count));
+                            buf.addAll(reader.nextChars(count));
                             reader.position  = cur;
                             }
                         }

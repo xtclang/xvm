@@ -200,25 +200,25 @@ const Date(Int epochDay)
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        year.appendTo(appender);
-        appender.add('-');
+        year.appendTo(buf);
+        buf.add('-');
 
         Int month = this.month;
         if (month < 10)
             {
-            appender.add('0');
+            buf.add('0');
             }
-        month.appendTo(appender);
-        appender.add('-');
+        month.appendTo(buf);
+        buf.add('-');
 
         Int day = this.day;
         if (day < 10)
             {
-            appender.add('0');
+            buf.add('0');
             }
-        day.appendTo(appender);
+        day.appendTo(buf);
         }
 
     // ----- helpers -------------------------------------------------------------------------------

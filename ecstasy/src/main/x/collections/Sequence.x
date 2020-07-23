@@ -330,9 +330,9 @@ interface Sequence<Element>
         }
 
     @Override
-    void appendTo(Appender<Char> appender)
+    void appendTo(Appender<Char> buf)
         {
-        appender.add('[');
+        buf.add('[');
 
         if (Element.is(Type<Stringable>))
             {
@@ -341,10 +341,10 @@ interface Sequence<Element>
                 {
                 if (!Append.first)
                     {
-                    appender.add(", ");
+                    buf.addAll(", ");
                     }
 
-                v.appendTo(appender);
+                v.appendTo(buf);
                 }
             }
         else
@@ -354,19 +354,19 @@ interface Sequence<Element>
                 {
                 if (!Append.first)
                     {
-                    appender.add(", ");
+                    buf.addAll(", ");
                     }
 
                 if (v.is(Stringable))
                     {
-                    v.appendTo(appender);
+                    v.appendTo(buf);
                     }
                 else
                     {
-                    v.toString().appendTo(appender);
+                    v.toString().appendTo(buf);
                     }
                 }
             }
-        appender.add(']');
+        buf.add(']');
         }
     }
