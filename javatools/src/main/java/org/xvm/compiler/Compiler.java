@@ -1226,6 +1226,14 @@ public class Compiler
      */
     public static final String ASSERT_EXPRESSION_MUST_THROW        = "COMPILER-158";
     /**
+     * An "outer" reference to {0} is required to access the {1} property.
+     */
+    public static final String NO_OUTER_PROPERTY                   = "COMPILER-159";
+    /**
+     * An "outer" reference to {0} is required to access the {1} method.
+     */
+    public static final String NO_OUTER_METHOD                     = "COMPILER-160";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

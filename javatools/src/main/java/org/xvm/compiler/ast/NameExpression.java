@@ -1572,6 +1572,12 @@ public class NameExpression
                             }
                         else
                             {
+                            if (!prop.isConstant() && target.getStepsOut() > 0 && !target.hasThis())
+                                {
+                                log(errs, Severity.ERROR, Compiler.NO_OUTER_PROPERTY,
+                                    target.getTargetType().removeAccess().getValueString(), prop.getName());
+                                return null;
+                                }
                             m_propAccessPlan = PropertyAccess.Outer;
                             }
 

@@ -1935,8 +1935,9 @@ public class InvocationExpression
                             fConstruct                                ? MethodKind.Constructor :
                             (fNoCall && fNoFBind) || target.hasThis() ? MethodKind.Any :
                                                                         MethodKind.Function;
+                    ErrorListener    errsTemp   = errs.branch();
                     IdentityConstant idCallable = findMethod(ctx, typeTarget, info, sName,
-                            args, kind, !fNoCall, id.isNested(), atypeReturn, errs);
+                            args, kind, !fNoCall, id.isNested(), atypeReturn, errsTemp);
                     if (idCallable == null)
                         {
                         // check to see if we would have found something had we included methods in
@@ -1945,7 +1946,20 @@ public class InvocationExpression
                                 findMethod(ctx, typeTarget, info, sName, args, MethodKind.Method,
                                     !fNoCall, id.isNested(), atypeReturn, ErrorListener.BLACKHOLE) != null)
                             {
-                            exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD, sName, target.getTargetType());
+                            if (target.getStepsOut() > 0)
+                                {
+                                exprName.log(errs, Severity.ERROR, Compiler.NO_OUTER_METHOD,
+                                    target.getTargetType().removeAccess().getValueString(), sName);
+                                }
+                            else
+                                {
+                                exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
+                                    sName, target.getTargetType().removeAccess().getValueString());
+                                }
+                            }
+                        else
+                            {
+                            errsTemp.merge();
                             }
                         return null;
                         }
@@ -1955,6 +1969,8 @@ public class InvocationExpression
                         m_argMethod   = idCallable;
                         m_method      = getMethod(info, idCallable);
                         m_fBindTarget = m_method != null && !m_method.isFunction();
+
+                        errsTemp.merge();
                         return idCallable;
                         }
                     }
