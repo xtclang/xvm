@@ -156,23 +156,26 @@ public class ReturnStatement
                 atypeActual = validateExpressions(ctx, listExprs, null, errs);
                 fValid      = atypeActual != null;
 
-                if (cExprs == 1)
+                if (fValid)
                     {
-                    // allow the (strange) use of T0D0, the (strange) return of a void expression
-                    // or an invocation that is not void
-                    Expression expr = listExprs.get(0);
-                    if (expr.isCompletable() && !expr.isVoid() &&
-                            !(expr instanceof InvocationExpression))
+                    if (cExprs == 1)
                         {
-                        // it was supposed to be a void return
-                        log(errs, Severity.ERROR, Compiler.RETURN_VOID);
+                        // allow the (strange) use of T0D0, the (strange) return of a void expression
+                        // or an invocation that is not void
+                        Expression expr = listExprs.get(0);
+                        if (expr.isCompletable() && !expr.isVoid() &&
+                                !(expr instanceof InvocationExpression))
+                            {
+                            // it was supposed to be a void return
+                            log(errs, Severity.ERROR, Compiler.RETURN_VOID);
+                            fValid = false;
+                            }
+                        }
+                    else
+                        {
+                        log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cRets, cExprs);
                         fValid = false;
                         }
-                    }
-                else
-                    {
-                    log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cRets, cExprs);
-                    fValid = false;
                     }
                 }
             else if (cRets > 0) // cExprs == 0
