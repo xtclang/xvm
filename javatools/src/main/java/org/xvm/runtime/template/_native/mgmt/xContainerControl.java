@@ -10,7 +10,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -20,6 +19,8 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+
+import org.xvm.runtime.template._native.xRTServiceControl;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
@@ -33,13 +34,13 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * Native implementation of _native.mgmt.ContainerControl class.
  */
 public class xContainerControl
-        extends ClassTemplate
+        extends xRTServiceControl
     {
     public static xContainerControl INSTANCE;
 
     public xContainerControl(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
 
         if (fInstance)
             {
@@ -88,7 +89,7 @@ public class xContainerControl
             case "mainService":
                 {
                 ControlHandle  hCtrl = (ControlHandle) hTarget;
-                ServiceContext ctx   = hCtrl.m_container.getServiceContext();
+                ServiceContext ctx   = hCtrl.f_container.getServiceContext();
                 return frame.assignValue(iReturn, ctx == null ? xNullable.NULL : ctx.getService());
                 }
             }
@@ -102,7 +103,7 @@ public class xContainerControl
     public int invokeInvoke(Frame frame, ControlHandle hCtrl,
                             StringHandle hName, TupleHandle hTupleArg, int iReturn)
         {
-        Container      container    = hCtrl.m_container;
+        Container      container    = hCtrl.f_container;
         ServiceContext ctxContainer = container.ensureServiceContext();
 
         ObjectHandle[] ahArg    = hTupleArg.m_ahValue;
@@ -139,20 +140,25 @@ public class xContainerControl
         }
 
     protected static class ControlHandle
-            extends ObjectHandle
+            extends xRTServiceControl.ControlHandle
         {
         protected ControlHandle(TypeComposition clazz, Container container)
             {
-            super(clazz);
+            super(clazz, container.getServiceContext());
 
-            m_container = container;
-            m_fMutable  = false;
+            f_container = container;
+            }
+
+        @Override
+        public ServiceContext getContext()
+            {
+            return f_container.getServiceContext();
             }
 
         /**
          * The container this ControlHandle instance is responsible for managing.
          */
-        protected Container m_container;
+        protected final Container f_container;
         }
 
     private ClassComposition m_clzControl;

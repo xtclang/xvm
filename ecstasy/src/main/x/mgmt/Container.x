@@ -135,7 +135,7 @@ service Container
      * Note: this delegating property is marked as Atomic, which creates an asynchronous delegating
      *       stub.
      */
-    private Control control;
+    @Atomic private Control control;
 
 
     // ----- inner types ---------------------------------------------------------------------------
@@ -245,18 +245,6 @@ service Container
          * @throws an Exception if the bytes don't represent a valid module
          */
         FileTemplate loadFileTemplate(Byte[] bytes);
-
-        /**
-         * TODO: remove this temporary method
-         */
-        (TypeSystem typeSystem, Control) resolveAndLink(ModuleTemplate template,
-                ModuleRepository repository, ResourceProvider injector, Module[] sharedModules = []);
-
-        /**
-         * TODO: remove this temporary method
-         */
-        (TypeSystem typeSystem, Control) link(
-                (ModuleTemplate | Module)[] modules, ResourceProvider injector);
         }
 
     /**

@@ -11,15 +11,56 @@ import ecstasy.reflect.ModuleTemplate;
 class ContainerLinker
         implements Container.Linker
     {
-    @Override (TypeSystem typeSystem, Control control) loadAndLink(ModuleSpec primaryModule, Model
-            model, ModuleRepository? repository, ResourceProvider? injector, Module[] sharedModules,
-            ModuleSpec[] additionalModules, String[] namedConditions)              {TODO("Native");}
-
     // TODO remove temporary methods
-    @Override String       validate(Byte[] bytes)                                  {TODO("Native");}
-    @Override FileTemplate loadFileTemplate(Byte[] bytes)                          {TODO("Native");}
-    @Override (TypeSystem, Control) resolveAndLink(ModuleTemplate template, ModuleRepository
-            repository, ResourceProvider injector, Module[] sharedModules)         {TODO("Native");}
-    @Override (TypeSystem typeSystem, Control) link((ModuleTemplate | Module)[] modules,
-            ResourceProvider injector)                                             {TODO("Native");}
+    @Override String       validate(Byte[] bytes)         {TODO("Native");}
+    @Override FileTemplate loadFileTemplate(Byte[] bytes) {TODO("Native");}
+
+    @Override
+    (TypeSystem typeSystem, Control control) loadAndLink(
+            ModuleSpec        primarySpec,
+            Model             model           = Secure,
+            ModuleRepository? repository      = Null,
+            ResourceProvider? injector        = Null,
+            Module[]          sharedModules   = [],
+            ModuleSpec[]      additionalSpecs = [],
+            String[]          namedConditions = [])
+        {
+        ModuleTemplate primaryModule;
+        if (primarySpec.is(ModuleTemplate))
+            {
+            primaryModule = primarySpec;
+            }
+        else
+            {
+            assert:arg repository != Null;
+            primaryModule = repository.getModule(primarySpec);
+            }
+
+        ModuleTemplate[] additionalModules = new Array<ModuleTemplate>(additionalSpecs.size, i ->
+            {
+            ModuleSpec spec = additionalSpecs[i];
+            if (spec.is(ModuleTemplate))
+                {
+                return spec;
+                }
+            assert:arg repository != null;
+            return repository.getModule(spec);
+            });
+
+        return resolveAndLink(primaryModule, model, repository, injector,
+            sharedModules, additionalModules, namedConditions);
+        }
+
+    /**
+     * Native implementation.
+     */
+    (TypeSystem, Control) resolveAndLink(
+            ModuleTemplate    primaryModule,
+            Model             model,
+            ModuleRepository? repository,
+            ResourceProvider? injector,
+            Module[]          sharedModules,
+            ModuleTemplate[]  additionalModules,
+            String[]          namedConditions)
+        {TODO("Native");}
     }

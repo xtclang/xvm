@@ -2,7 +2,7 @@ import collections.HashSet;
 
 import reflect.ModuleTemplate;
 
-class InstantRepository
+const InstantRepository
         implements ModuleRepository
     {
     /**

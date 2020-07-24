@@ -17,6 +17,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.SimpleContainer;
 import org.xvm.runtime.TemplateRegistry;
 
@@ -111,9 +112,13 @@ public class xContainerLinker
             {
             case "resolveAndLink":
                 {
-                ComponentTemplateHandle hTemplate = (ComponentTemplateHandle) ahArg[0];
-                ObjectHandle            hRepo     = ahArg[1];
-                ObjectHandle            hInjector = ahArg[2];
+                ComponentTemplateHandle hTemplate   = (ComponentTemplateHandle) ahArg[0];
+                ObjectHandle            hModel      = ahArg[1];
+                ObjectHandle            hRepo       = ahArg[2];
+                ObjectHandle            hInjector   = ahArg[3];
+                ArrayHandle             hShared     = (ArrayHandle) ahArg[4];
+                ArrayHandle             hAdditional = (ArrayHandle) ahArg[5];
+                ArrayHandle             hConditions = (ArrayHandle) ahArg[6];
 
                 ModuleStructure moduleApp = (ModuleStructure) hTemplate.getComponent();
                 FileStructure   structApp = f_templates.createFileStructure(moduleApp);
@@ -171,15 +176,14 @@ public class xContainerLinker
                 InjectionKey key   = aKeys[index];
                 TypeHandle   hType = key.f_type.getTypeHandle();
                 StringHandle hName = xString.makeHandle(key.f_sName);
+                CallChain    chain = hProvider.getComposition().getMethodCallChain(GET_RESOURCE);
 
-                ObjectHandle[] ahArg = new ObjectHandle[3];
+                ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars()];
                 ahArg[0] = hType;
                 ahArg[1] = hName;
 
-                CallChain chain   = hProvider.getComposition().getMethodCallChain(GET_RESOURCE);
-                int       iResult = hProvider.getTemplate().invoke1(
-                                        frameCaller, chain, hProvider, ahArg, Op.A_STACK);
-                switch (iResult)
+                switch (hProvider.getTemplate().
+                            invoke1(frameCaller, chain, hProvider, ahArg, Op.A_STACK))
                     {
                     case Op.R_NEXT:
                         updateResult(frameCaller);

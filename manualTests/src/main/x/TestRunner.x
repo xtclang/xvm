@@ -118,7 +118,7 @@ module TestRunner.xtclang.org
         return (&result, buffer);
         }
 
-    class Injector
+    const Injector
             implements ResourceProvider
         {
         ConsoleBuffer consoleBuffer = new ConsoleBuffer(new ConsoleBack());

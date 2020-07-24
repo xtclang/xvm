@@ -79,7 +79,7 @@ public class xRTServiceControl
             {
             case "shutdown":
                 {
-                ServiceContext context  = hControl.f_context;
+                ServiceContext context  = hControl.getContext();
                 ServiceHandle  hService = context.getService();
                 if (hService == null)
                     {
@@ -106,12 +106,13 @@ public class xRTServiceControl
         switch (sPropName)
             {
             case "contended":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(hControl.f_context.isContended()));
+                return frame.assignValue(iReturn,
+                        xBoolean.makeHandle(hControl.getContext().isContended()));
 
             case "statusIndicator":
                 {
                 xEnum.EnumHandle hStatus = SERVICE_STATUS.getEnumByName(
-                        hControl.f_context.getStatus().name());
+                        hControl.getContext().getStatus().name());
                 return Utils.assignInitializedEnum(frame, hStatus, iReturn);
                 }
             }
@@ -139,7 +140,15 @@ public class xRTServiceControl
             }
 
         /**
-         * The container this ControlHandle instance is responsible for managing.
+         * @return  the ServiceContext this ControlHandle instance is responsible for managing
+         */
+        public ServiceContext getContext()
+            {
+            return f_context;
+            }
+
+        /**
+         * The ServiceContext this control is managing.
          */
         protected final ServiceContext f_context;
         }
