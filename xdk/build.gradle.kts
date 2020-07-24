@@ -46,6 +46,8 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
     dependsOn(javatools.tasks["build"])
     dependsOn(copyJavatools)
 
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$buildDir/xdk/lib",
