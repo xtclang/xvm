@@ -574,7 +574,7 @@ public class SignatureConstant
         }
 
     @Override
-    protected int compareDetails(Constant obj)
+    protected synchronized int compareDetails(Constant obj)
         {
         if (!(obj instanceof SignatureConstant))
             {
@@ -680,6 +680,9 @@ public class SignatureConstant
         m_constName     = (StringConstant) pool.register(m_constName);
         m_aconstParams  = TypeConstant.registerTypeConstants(pool, m_aconstParams);
         m_aconstReturns = TypeConstant.registerTypeConstants(pool, m_aconstReturns);
+
+        // clear the cache
+        m_sigPrev = null;
         }
 
     @Override

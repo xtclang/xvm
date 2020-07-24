@@ -3,7 +3,6 @@ package org.xvm.asm;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
