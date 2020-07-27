@@ -1055,7 +1055,8 @@ public class PropertyInfo
         {
         ConstantPool pool = pool();
         return containsRefAnnotation(pool.clzUnassigned())
-            || containsRefAnnotation(pool.clzLazy());
+            || containsRefAnnotation(pool.clzLazy())
+            || containsRefAnnotation(pool.clzFuture());
         }
 
     /**
@@ -1063,8 +1064,9 @@ public class PropertyInfo
      */
     public boolean isSimpleUnassigned()
         {
-        return m_annotations != null && m_annotations.length == 1
-            && (m_annotations[0].getAnnotationClass()).equals(pool().clzUnassigned());
+        Annotation[] aAnnos = getRefAnnotations();
+        return aAnnos.length == 1
+            && (aAnnos[0].getAnnotationClass()).equals(pool().clzUnassigned());
         }
 
     /**

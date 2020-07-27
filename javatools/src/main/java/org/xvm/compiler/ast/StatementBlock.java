@@ -1002,7 +1002,7 @@ public class StatementBlock
                             }
                         else
                             {
-                            idResult = prop.getIdentity().ensureNestedIdentity(pool, idProp);
+                            idResult = prop.getIdentity();
                             }
 
                         if (idResult == null)

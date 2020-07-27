@@ -16,6 +16,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.AccessTypeConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -504,6 +505,26 @@ public class ClassComposition
 
             if (infoProp.hasField())
                 {
+                if (idProp.getNestedDepth() > 1)
+                    {
+                    IdentityConstant idParent = idProp.getParentConstant();
+                    switch (idParent.getFormat())
+                        {
+                        case Property:
+                            if (!infoProp.getIdentity().getParentConstant().equals(idParent))
+                                {
+                                // the property is defined by the underlying type; currently those
+                                // nested properties are stored in the corresponding Refs "box"
+                                // REVIEW: consider having this helper at the PropertyInfo
+                                continue;
+                                }
+                            break;
+
+                        case Method:
+                            break;
+                        }
+                    }
+
                 TypeComposition clzRef = null;
                 if (infoProp.isRefAnnotated())
                     {
