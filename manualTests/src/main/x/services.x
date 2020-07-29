@@ -95,15 +95,7 @@ module TestServices
                 });
             }
 
-        Boolean done = False; // TODO GG: must not be needed; fix and remove the try/catch
-        try
-            {
-            done = svc.waitForCompletion();
-            }
-        catch (Exception e)
-            {
-            done = False;
-            }
+        Boolean done = svc.waitForCompletion();
         console.println($"{tag()} done={done}");
 
         console.println($"{tag()} shutting down");

@@ -6,28 +6,20 @@ module TestSimple
         {
         console.println("Starting");
 
-        TestProperty t = new TestProperty();
-        console.println(t.value);
+        Int result;
+        try
+            {
+            result = f();
+            }
+        catch (Exception e)
+            {
+            result = 0;
+            }
+        console.println(result);
         }
 
-    class TestProperty
+    Int f()
         {
-        @Future Int future;
-
-        Int value
-            {
-            Int base = 1;
-            @Override
-            Int get()
-                {
-                return base;
-                }
-            @Override
-            void set(Int i)
-                {
-                base = i + 1;
-                super(i);
-                }
-            }
+        return 42;
         }
     }

@@ -187,7 +187,8 @@ public class TryStatement
             // the only difference is that the top context is not an IfContext, which prevents any
             // narrowing assumptions from "catch" scopes percolating up to the original context
 
-            if (ctxTryBlock.isReachable())
+            boolean fReachable = ctxTryBlock.isReachable();
+            if (fReachable)
                 {
                 ctxNext.merge(mapTryAsn);
                 }
@@ -199,7 +200,8 @@ public class TryStatement
                 CatchStatement catchOld = catches.get(i);
                 CatchStatement catchNew = (CatchStatement) catchOld.validate(ctxCatch, errs);
 
-                ctxNext = ctxCatch.exit();
+                ctxNext     = ctxCatch.exit();
+                fReachable |= ctxNext.isReachable();
 
                 if (catchNew == null)
                     {
@@ -232,6 +234,8 @@ public class TryStatement
                 ctxNext = ctxNext.enterFork(false);
                 if (i == cCatches - 1)
                     {
+                    // the last one - mark unreachable and exit all the way up
+                    ctxNext.setReachable(false);
                     while (i-- >= 0)
                         {
                         // exit enterFork(false); exit enterIf();
@@ -250,6 +254,8 @@ public class TryStatement
                 {
                 ctxOrig.merge(ctxTryBlock.getDefiniteAssignments());
                 }
+
+            ctxOrig.setReachable(fReachable);
             }
         else
             {
