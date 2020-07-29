@@ -194,6 +194,14 @@ public class PropertyConstant
         }
 
     /**
+     * @return true iff the property has a Future annotation
+     */
+    public boolean isFutureVar()
+        {
+        return ((PropertyStructure) getComponent()).isFuture();
+        }
+
+    /**
      * Obtain the TypeConstant that represents the runtime type of a Ref/Var for this property in
      * the context of the specified target.
      *

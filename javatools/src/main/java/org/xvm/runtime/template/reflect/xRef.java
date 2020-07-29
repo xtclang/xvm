@@ -89,13 +89,19 @@ public class xRef
     @Override
     protected ClassConstant getInceptionClassConstant()
         {
-        return this == INSTANCE ? INCEPTION_CLASS : (ClassConstant) getClassConstant();
+        return INCEPTION_CLASS;
         }
 
     @Override
     public ClassTemplate getTemplate(TypeConstant type)
         {
-        return this;
+        // if the type is an annotated Ref and the annotation itself has a native template
+        // (e.g. @Future Var<Int>) then keep it; however in a case of not a native annotation
+        // (e.g. @Lazy Var<Int>) use this template instead
+        ClassTemplate template = super.getTemplate(type);
+        return template instanceof xRef
+                ? template
+                : this;
         }
 
     @Override
@@ -220,7 +226,7 @@ public class xRef
         }
 
     @Override
-    public RefHandle createRefHandle(TypeComposition clazz, String sName)
+    public RefHandle createRefHandle(Frame frame, TypeComposition clazz, String sName)
         {
         return new RefHandle(clazz, sName);
         }
@@ -232,7 +238,7 @@ public class xRef
             {
             // native Ref/Var no need for further initialization
             frame.introduceResolvedVar(iReturn, clazz.getType(), sName,
-                    Frame.VAR_DYNAMIC_REF, createRefHandle(clazz, sName));
+                    Frame.VAR_DYNAMIC_REF, createRefHandle(frame, clazz, sName));
             return Op.R_NEXT;
             }
 
@@ -247,13 +253,13 @@ public class xRef
             TypeConstant          typeMixin = typeAnno.getAnnotationType();
             Mixin                 mixin     = (Mixin) f_templates.getTemplate(typeMixin);
 
-            hRef    = createRefHandle(clazz.ensureAccess(Access.STRUCT), sName);
+            hRef    = createRefHandle(frame, clazz.ensureAccess(Access.STRUCT), sName);
             iResult = mixin.proceedConstruction(frame, null, true, hRef, Utils.OBJECTS_NONE, Op.A_STACK);
             fStack  = true;
             }
         else
             {
-            hRef    = createRefHandle(clazz, sName);
+            hRef    = createRefHandle(frame, clazz, sName);
             iResult = hRef.initializeCustomFields(frame);
             fStack  = false;
             }

@@ -17,12 +17,13 @@ public interface VarSupport
     /**
      * Create an uninitialized Ref or a Var for the specified referent class.
      *
+     * @param frame  the current frame if a register is created; null for properties
      * @param clazz  the referent class
      * @param sName  an optional Ref/Var name
      *
      * @return the uninitialized corresponding {@link RefHandle}
      */
-    RefHandle createRefHandle(TypeComposition clazz, String sName);
+    RefHandle createRefHandle(Frame frame, TypeComposition clazz, String sName);
 
     /**
      * Introduce a Ref or a Var for the specified referent class.

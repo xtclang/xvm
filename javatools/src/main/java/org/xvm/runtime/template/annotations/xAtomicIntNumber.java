@@ -40,7 +40,24 @@ public class xAtomicIntNumber
     @Override
     public void initNative()
         {
-        // TODO: mark the VarOps as native ("increment", "preIncrement", etc.)
+        markNativeMethod("increment", VOID, VOID);
+        markNativeMethod("decrement", VOID, VOID);
+        markNativeMethod("preIncrement", VOID, null);
+        markNativeMethod("preDecrement", VOID, null);
+        markNativeMethod("postIncrement", VOID, null);
+        markNativeMethod("postDecrement", VOID, null);
+        markNativeMethod("addAssign", null, VOID);
+        markNativeMethod("subAssign", null, VOID);
+        markNativeMethod("mulAssign", null, VOID);
+        markNativeMethod("divAssign", null, VOID);
+        markNativeMethod("modAssign", null, VOID);
+        markNativeMethod("andAssign", null, VOID);
+        markNativeMethod("orAssign", null, VOID);
+        markNativeMethod("xorAssign", null, VOID);
+        markNativeMethod("shiftLeftAssign", INT, VOID);
+        markNativeMethod("shiftRightAssign", INT, VOID);
+        markNativeMethod("shiftAllRightAssign", INT, VOID);
+
         // TODO: how to implement checked/unchecked optimally?
         }
 
@@ -48,7 +65,7 @@ public class xAtomicIntNumber
     // ----- ClassTemplate API ---------------------------------------------------------------------
 
     @Override
-    public RefHandle createRefHandle(TypeComposition clazz, String sName)
+    public RefHandle createRefHandle(Frame frame, TypeComposition clazz, String sName)
         {
         return new AtomicIntVarHandle(clazz, sName);
         }
@@ -57,17 +74,53 @@ public class xAtomicIntNumber
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
         {
+        AtomicIntVarHandle hThis = (AtomicIntVarHandle) hTarget;
+
         switch (method.getName())
             {
             case "exchange":
                 {
-                AtomicIntVarHandle hThis = (AtomicIntVarHandle) hTarget;
+                AtomicLong atomic = hThis.m_atomicValue;
+                if (atomic == null)
+                    {
+                    return frame.raiseException(xException.unassignedReference(frame));
+                    }
 
                 long lNew = ((JavaLong) hArg).getValue();
-                long lOld = hThis.m_atomicValue.getAndSet(lNew);
+                long lOld = atomic.getAndSet(lNew);
 
                 return frame.assignValue(iReturn, xInt64.makeHandle(lOld));
                 }
+
+            case "addAssign":
+                return invokeVarAdd(frame, hThis, hArg);
+
+            case "subAssign":
+                return invokeVarSub(frame, hThis, hArg);
+
+            case "divAssign":
+                return invokeVarDiv(frame, hThis, hArg);
+
+            case "modAssign":
+                return invokeVarMod(frame, hThis, hArg);
+
+            case "andAssign":
+                return invokeVarAnd(frame, hThis, hArg);
+
+            case "orAssign":
+                return invokeVarOr(frame, hThis, hArg);
+
+            case "xorAssign":
+                return invokeVarXor(frame, hThis, hArg);
+
+            case "shiftLeftAssign":
+                return invokeVarShl(frame, hThis, hArg);
+
+            case "shiftRightAssign":
+                return invokeVarShr(frame, hThis, hArg);
+
+            case "shiftAllRightAssign":
+                return invokeVarShrAll(frame, hThis, hArg);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -77,18 +130,58 @@ public class xAtomicIntNumber
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
+        AtomicIntVarHandle hThis = (AtomicIntVarHandle) hTarget;
+
         switch (method.getName())
             {
             case "replace":
                 {
-                AtomicIntVarHandle hThis = (AtomicIntVarHandle) hTarget;
-
                 long lExpect = ((JavaLong) ahArg[0]).getValue();
                 long lNew    = ((JavaLong) ahArg[1]).getValue();
 
-                return frame.assignValue(iReturn, xBoolean.makeHandle(
-                    hThis.m_atomicValue.compareAndSet(lExpect, lNew)));
+                AtomicLong atomic = hThis.m_atomicValue;
+                if (atomic == null)
+                    {
+                    return frame.raiseException(xException.unassignedReference(frame));
+                    }
+
+                return frame.assignValue(iReturn,
+                    xBoolean.makeHandle(atomic.compareAndSet(lExpect, lNew)));
                 }
+
+            case "increment":
+                {
+                AtomicLong atomic = hThis.m_atomicValue;
+                if (atomic == null)
+                    {
+                    return frame.raiseException(xException.unassignedReference(frame));
+                    }
+                atomic.getAndIncrement();
+                return Op.R_NEXT;
+                }
+
+            case "decrement":
+                {
+                AtomicLong atomic = hThis.m_atomicValue;
+                if (atomic == null)
+                    {
+                    return frame.raiseException(xException.unassignedReference(frame));
+                    }
+                atomic.getAndDecrement();
+                return Op.R_NEXT;
+                }
+
+            case "preIncrement":
+                return invokeVarPreInc(frame, hThis, iReturn);
+
+            case "preDecrement":
+                return invokeVarPreDec(frame, hThis, iReturn);
+
+            case "postIncrement":
+                return invokeVarPostInc(frame, hThis, iReturn);
+
+            case "postDecrement":
+                return invokeVarPostDec(frame, hThis, iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -104,6 +197,10 @@ public class xAtomicIntNumber
                 {
                 AtomicIntVarHandle hThis  = (AtomicIntVarHandle) hTarget;
                 AtomicLong         atomic = hThis.m_atomicValue;
+                if (atomic == null)
+                    {
+                    return frame.raiseException(xException.unassignedReference(frame));
+                    }
 
                 long lExpect = ((JavaLong) ahArg[0]).getValue();
                 long lNew    = ((JavaLong) ahArg[1]).getValue();
@@ -352,25 +449,25 @@ public class xAtomicIntNumber
     protected int invokeGetReferent(Frame frame, RefHandle hTarget, int iReturn)
         {
         AtomicIntVarHandle hAtomic = (AtomicIntVarHandle) hTarget;
-        AtomicLong atomicValue = hAtomic.m_atomicValue;
+        AtomicLong         atomic  = hAtomic.m_atomicValue;
 
-        return atomicValue == null
+        return atomic == null
             ? frame.raiseException(xException.unassignedReference(frame))
-            : frame.assignValue(iReturn, xInt64.makeHandle(atomicValue.get()));
+            : frame.assignValue(iReturn, xInt64.makeHandle(atomic.get()));
         }
 
     @Override
     protected int invokeSetReferent(Frame frame, RefHandle hTarget, ObjectHandle hValue)
         {
         AtomicIntVarHandle hAtomic = (AtomicIntVarHandle) hTarget;
-        AtomicLong atomicValue = hAtomic.m_atomicValue;
-        long lValue = ((JavaLong) hValue).getValue();
+        AtomicLong         atomic  = hAtomic.m_atomicValue;
+        long               lValue  = ((JavaLong) hValue).getValue();
 
-        if (atomicValue == null)
+        if (atomic == null)
             {
-            hAtomic.m_atomicValue = atomicValue = new AtomicLong(lValue);
+            hAtomic.m_atomicValue = atomic = new AtomicLong(lValue);
             }
-        atomicValue.set(lValue);
+        atomic.set(lValue);
         return Op.R_NEXT;
         }
 

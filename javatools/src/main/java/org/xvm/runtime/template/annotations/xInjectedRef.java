@@ -10,6 +10,7 @@ import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
@@ -42,7 +43,13 @@ public class xInjectedRef
         }
 
     @Override
-    public RefHandle createRefHandle(TypeComposition clazz, String sName)
+    public ClassTemplate getTemplate(TypeConstant type)
+        {
+        return this;
+        }
+
+    @Override
+    public RefHandle createRefHandle(Frame frame, TypeComposition clazz, String sName)
         {
         if (sName == null)
             {

@@ -427,7 +427,7 @@ public class ClassComposition
             ObjectHandle    hValue  = null;
             if (clzRef != null)
                 {
-                hValue = ((VarSupport) clzRef.getSupport()).createRefHandle(clzRef, nidProp.toString());
+                hValue = ((VarSupport) clzRef.getSupport()).createRefHandle(null, clzRef, nidProp.toString());
                 }
             mapFields.put(nidProp, hValue);
             }

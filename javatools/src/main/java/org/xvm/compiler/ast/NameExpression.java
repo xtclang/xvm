@@ -1151,21 +1151,30 @@ public class NameExpression
 
                 PropertyConstant idProp  = (PropertyConstant) argRaw;
                 Register         regTemp = createRegister(getType(), fUsedOnce);
+
                 switch (calculatePropertyAccess())
                     {
                     case SingletonParent:
                         {
                         IdentityConstant  idParent    = idProp.getParentConstant();
                         SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
+
                         code.add(new P_Get(idProp, idSingleton, regTemp));
                         break;
                         }
 
                     case Outer:
                         {
-                        int      cSteps   = m_targetInfo.getStepsOut();
-                        Register regOuter = createRegister(m_targetInfo.getType(), true);
+                        int          cSteps    = m_targetInfo.getStepsOut();
+                        TypeConstant typeOuter = m_targetInfo.getType();
+                        Register     regOuter  = createRegister(typeOuter, true);
+
                         code.add(new MoveThis(cSteps, regOuter));
+                        if (idProp.isFutureVar())
+                            {
+                            code.add(new Var_D(idProp.getRefType(typeOuter)));
+                            regTemp = code.lastRegister();
+                            }
                         code.add(new P_Get(idProp, regOuter, regTemp));
                         break;
                         }
@@ -1177,9 +1186,17 @@ public class NameExpression
                             }
                         else
                             {
-                            if (fLocalPropOk || idProp.getComponent().isStatic())
+                            if (idProp.isFutureVar())
                                 {
-                                return idProp;
+                                code.add(new Var_D(idProp.getRefType(ctx.getThisType())));
+                                regTemp = code.lastRegister();
+                                }
+                            else
+                                {
+                                if (fLocalPropOk || idProp.getComponent().isStatic())
+                                    {
+                                    return idProp;
+                                    }
                                 }
                             code.add(new L_Get(idProp, regTemp));
                             }
@@ -1192,9 +1209,17 @@ public class NameExpression
                             return idProp;
                             }
                         Argument argLeft = left.generateArgument(ctx, code, false, true, errs);
+                        if (idProp.isFutureVar())
+                            {
+                            code.add(new Var_D(idProp.getRefType(argLeft.getType())));
+                            regTemp = code.lastRegister();
+                            }
                         code.add(new P_Get(idProp, argLeft, regTemp));
                         break;
                         }
+
+                    default:
+                        throw new IllegalStateException();
                     }
                 return regTemp;
                 }

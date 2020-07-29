@@ -90,27 +90,27 @@ module TestServices
                 // when the last result comes back - shut down
                 if (++responded == 5)
                     {
-                    testShutdown(svc);
+                    svc.done = True;
                     }
                 });
             }
 
-        @Future Boolean r = svc.notify(() ->
+        Boolean done = False; // TODO GG: must not be needed; fix and remove the try/catch
+        try
             {
-            console.println($"{tag()} received notification");
-            return False;
-            });
+            done = svc.waitForCompletion();
+            }
+        catch (Exception e)
+            {
+            done = False;
+            }
+        console.println($"{tag()} done={done}");
 
-        console.println($"{tag()} done {r}");
-        }
-
-    void testShutdown(TestService svc)
-        {
         console.println($"{tag()} shutting down");
 
         @Future Int longWait = svc.calcSomethingBig(Duration.ofMinutes(10));
-
         svc.serviceControl.shutdown();
+
         try
             {
             Int unused = svc.spin(0);
@@ -129,9 +129,9 @@ module TestServices
             @Inject Console console;
 
             console.println($"{tag()} calculating for: {delay}");
-            @Inject Clock clock;
-            @Future Int result;
-            clock.schedule(delay, () ->
+            @Inject Timer timer;
+            @Future Int   result;
+            timer.schedule(delay, () ->
                 {
                 console.println($"{tag()} setting result {delay.seconds}");
                 result=delay.seconds;
@@ -157,10 +157,11 @@ module TestServices
             throw new Exception(message);
             }
 
-        Boolean notify(function Boolean () notify)
+        @Future Boolean done;
+
+        Boolean waitForCompletion()
             {
-            console.println($"{tag()} notify returned {notify()}");
-            return True;
+            return done;
             }
         }
 

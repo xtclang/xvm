@@ -42,9 +42,9 @@ public class xAtomicVar
     @Override
     public void initNative()
         {
-        markNativeMethod("exchange", new String[]{"Referent"}, new String[]{"Referent"});
-        markNativeMethod("replace", new String[]{"Referent", "Referent"}, BOOLEAN);
-        markNativeMethod("replaceFailed", new String[]{"Referent", "Referent"}, new String[] {"Boolean", "Referent"});
+        markNativeMethod("exchange", null, null);
+        markNativeMethod("replace", null, BOOLEAN);
+        markNativeMethod("replaceFailed", null, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -169,7 +169,7 @@ public class xAtomicVar
         }
 
     @Override
-    public RefHandle createRefHandle(TypeComposition clazz, String sName)
+    public RefHandle createRefHandle(Frame frame, TypeComposition clazz, String sName)
         {
         return new AtomicHandle(clazz, sName, null);
         }

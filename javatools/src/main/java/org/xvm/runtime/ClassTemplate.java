@@ -863,8 +863,11 @@ public abstract class ClassTemplate
         if (hTarget.isInflated(idProp))
             {
             RefHandle hRef = (RefHandle) hValue;
-            assert !(hRef instanceof FutureHandle);
-            return ((xRef) hRef.getTemplate()).getReferent(frame, hRef, iReturn);
+            if (!(hRef instanceof FutureHandle))
+                {
+                return ((xRef) hRef.getTemplate()).getReferent(frame, hRef, iReturn);
+                }
+            // Frame deals with FutureHandle itself
             }
 
         return frame.assignValue(iReturn, hValue);

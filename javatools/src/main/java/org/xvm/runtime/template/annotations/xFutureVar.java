@@ -5,10 +5,13 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
@@ -53,22 +56,39 @@ public class xFutureVar
     @Override
     public void initNative()
         {
-        TYPE       = getCanonicalType();
+        ConstantPool  pool     = pool();
+        ClassConstant idMixin  = (ClassConstant) f_struct.getIdentityConstant();
+        Annotation    anno     = pool.ensureAnnotation(idMixin);
+        TypeConstant  typeVar  = xVar.INSTANCE.getCanonicalType();
+        TYPE = pool.ensureAnnotatedTypeConstant(typeVar, anno);
+
         COMPLETION = (xEnum) f_templates.getTemplate("annotations.FutureVar.Completion");
 
-        markNativeMethod("whenComplete", new String[] {"reflect.Function"}, new String[] {"annotations.FutureVar!<Referent>"});
-        markNativeMethod("thenDo", new String[] {"reflect.Function"}, new String[] {"annotations.FutureVar!<Referent>"});
-        markNativeMethod("passTo", new String[] {"reflect.Function"}, new String[] {"annotations.FutureVar!<Referent>"});
+        markNativeMethod("whenComplete", null, null);
+        markNativeMethod("thenDo", null, null);
+        markNativeMethod("passTo", null, null);
 
-        markNativeMethod("get", VOID, new String[] {"Referent"});
-        markNativeMethod("set", new String[] {"Referent"}, VOID);
+        markNativeMethod("get", VOID, null);
+        markNativeMethod("set", null, VOID);
 
-        markNativeMethod("completeExceptionally", new String[] {"Exception"}, VOID);
+        markNativeMethod("completeExceptionally", null, VOID);
 
         markNativeProperty("assigned");
         markNativeProperty("completion");
 
         getCanonicalType().invalidateTypeInfo();
+        }
+
+    @Override
+    public TypeConstant getCanonicalType()
+        {
+        return TYPE;
+        }
+
+    @Override
+    public boolean isGenericHandle()
+        {
+        return false;
         }
 
     @Override
@@ -328,9 +348,11 @@ public class xFutureVar
         }
 
     @Override
-    public RefHandle createRefHandle(TypeComposition clazz, String sName)
+    public RefHandle createRefHandle(Frame frame, TypeComposition clazz, String sName)
         {
-        return new FutureHandle(clazz, sName, null);
+        // the future for a property needs to be initialized
+        return new FutureHandle(clazz, sName,
+            frame == null ? new CompletableFuture<>() : null);
         }
 
     @Override
@@ -370,13 +392,32 @@ public class xFutureVar
             {
             // this is only possible if this "handle" is a "dynamic ref" and the passed in
             // "handle" is a synthetic or dynamic one (see Frame.assignValue)
-            if (hFuture.m_future != null)
-                {
-                return frame.raiseException("FutureVar has already been assigned");
-                }
 
             FutureHandle that = (FutureHandle) hValue;
-            hFuture.m_future = that.m_future;
+            if (that.m_future == null)
+                {
+                return frame.raiseException(xException.unassignedReference(frame));
+                }
+
+            if (hFuture.m_future == null)
+                {
+                hFuture.m_future = that.m_future;
+                }
+            else
+                {
+                // "connect" the futures
+                hFuture.m_future.whenComplete((r, e) ->
+                    {
+                    if (e == null)
+                        {
+                        that.m_future.complete(r);
+                        }
+                    else
+                        {
+                        that.m_future.completeExceptionally(e);
+                        }
+                    });
+                }
             return Op.R_NEXT;
             }
 

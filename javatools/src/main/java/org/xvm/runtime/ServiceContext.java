@@ -31,6 +31,8 @@ import org.xvm.asm.op.Return_0;
 import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
@@ -1512,11 +1514,25 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    return cReturns == 0
-                            ? ((PropertyOperation10) f_op).invoke(frame, context.m_hService, f_idProp, f_hValue)
-                       : f_hValue == null
-                            ? ((PropertyOperation01) f_op).invoke(frame, context.m_hService, f_idProp, 0)
-                            : ((PropertyOperation11) f_op).invoke(frame, context.m_hService, f_idProp, f_hValue, 0);
+                    if (cReturns == 0)
+                        {
+                        // setter: svc.prop = value;
+                        return ((PropertyOperation10) f_op).invoke(frame, context.m_hService, f_idProp, f_hValue);
+                        }
+
+                    if (f_hValue == null)
+                        {
+                        // getter: value = svc.prop;
+                        int iResult = (((PropertyOperation01) f_op).invoke(frame, context.m_hService, f_idProp, 0));
+
+                        // don't return a FutureHandle, but wait till it's done
+                        return f_idProp.isFutureVar() && iResult == Op.R_NEXT
+                            ? ((FutureHandle) frame.f_ahVar[0]).waitAndAssign(frame, 0)
+                            : iResult;
+                        }
+
+                    // not currently used
+                    return ((PropertyOperation11) f_op).invoke(frame, context.m_hService, f_idProp, f_hValue, 0);
                     }
 
                 public String toString()

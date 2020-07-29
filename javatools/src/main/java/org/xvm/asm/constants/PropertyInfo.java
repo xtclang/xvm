@@ -1273,26 +1273,36 @@ public class PropertyInfo
             }
         else if (hasField() && !isNative())
             {
-            int cBodies = chain.length;
-            int ixTail  = cBodies - 1;
-
-            Implementation implTail = chain[ixTail].getImplementation();
-            if (implTail != Implementation.Field)
+            if (chain[0].isNative())
                 {
-                if (implTail == Implementation.Native)
+                // if a Ref or Var mixin overrides "get" or "set" (e.g. FutureVar), but the
+                // implementation is native, we need to replace it with the field access
+                chain = new MethodBody[] {new MethodBody(idMethod, idMethod.getSignature(),
+                        Implementation.Field, getFieldIdentity())};
+                }
+            else
+                {
+                int cBodies = chain.length;
+                int ixTail  = cBodies - 1;
+
+                Implementation implTail = chain[ixTail].getImplementation();
+                if (implTail != Implementation.Field)
                     {
-                    // replace the "native" method with a field access
-                    chain = chain.clone();
+                    if (implTail == Implementation.Native)
+                        {
+                        // replace the "native" method with a field access
+                        chain = chain.clone();
+                        }
+                    else
+                        {
+                        MethodBody[] chainNew = new MethodBody[cBodies + 1];
+                        System.arraycopy(chain, 0, chainNew, 0, cBodies);
+                        chain = chainNew;
+                        ixTail++;
+                        }
+                    chain[ixTail] = new MethodBody(idMethod, idMethod.getSignature(),
+                            Implementation.Field, getFieldIdentity());
                     }
-                else
-                    {
-                    MethodBody[] chainNew = new MethodBody[cBodies + 1];
-                    System.arraycopy(chain, 0, chainNew, 0, cBodies);
-                    chain = chainNew;
-                    ixTail++;
-                    }
-                chain[ixTail] = new MethodBody(idMethod, idMethod.getSignature(),
-                        Implementation.Field, getFieldIdentity());
                 }
             }
         return chain;

@@ -204,6 +204,14 @@ public class PropertyStructure
         }
 
     /**
+     * @return true iff the property has a Future annotation
+     */
+    public boolean isFuture()
+        {
+        return containsRefAnnotation(getConstantPool().clzFuture());
+        }
+
+    /**
      * @return true iff this property contains the specified annotation
      */
     public boolean containsRefAnnotation(IdentityConstant idAnno)
