@@ -1417,7 +1417,7 @@ public abstract class ClassTemplate
     /**
      * Create a property Ref or Var for the specified target and property.
      *
-     * @param frame    the ConstantPool to place a potentially created new type into
+     * @param frame    the current frame
      * @param hTarget  the target handle
      * @param idProp   the property constant
      * @param fRO      true iff a Ref is required; Var otherwise
@@ -1431,7 +1431,7 @@ public abstract class ClassTemplate
         GenericHandle hThis = (GenericHandle) hTarget;
 
         if (!hThis.containsField(idProp) &&
-                !hTarget.getComposition().getPropertyGetterChain(idProp).isNative())
+                hThis.getComposition().getPropertyGetterChain(idProp) == null)
             {
             return frame.raiseException("Unknown property: \"" + idProp + "\" on " + f_sName);
             }
@@ -1452,6 +1452,7 @@ public abstract class ClassTemplate
         RefHandle hRef = new RefHandle(clzRef, hThis, idProp);
         return frame.assignValue(iReturn, hRef);
         }
+
 
     // ----- support for equality and comparison ---------------------------------------------------
 

@@ -209,12 +209,7 @@ const TypeSystem
         {
         if (name == "")
             {
-// java.lang.IllegalStateException: Unknown property: (TypeSystem).Property{property=primaryModule}
-//    at org.xvm.runtime.ClassTemplate.createPropertyRef(ClassTemplate.java:1386)
-// TODO GG
-//          return True, &primaryModule.actualType;
-            Module mod = primaryModule;
-            return True, &mod.actualType;
+            return True, &primaryModule.actualType;
             }
 
         // TODO GG: if (CacheEntry entry ?= lookupCache[name])
