@@ -1046,8 +1046,6 @@ class Parser
     protected conditional Token peek(Id id)
         {
         if (Token token ?= backToken ?: nextToken, token.id == id)
-        // TODO GG - this should not have compiled because "backToken ?: nextToken?" can't be null:
-        // if (Token token ?= backToken ?: nextToken?, token.id == id)
             {
             return True, token;
             }

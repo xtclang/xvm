@@ -2,19 +2,28 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run( )
         {
         console.println("Starting");
 
-        Int bitCount = 1;
-        if (1 << bitCount & 0x2 != 0)
-            {
-            console.println("yes");
-            }
+        test(7);
+        test(Null);
         }
 
-    Int f()
+    void test(Int? id)
         {
-        return 42;
+        if (Int token ?= id, token == id)
+            {
+            console.println(token);
+            }
+
+        if (id != Null)
+            {
+            // there should be a compiler warning here
+            if (Int token ?= id, token == id)
+                {
+                console.println(token);
+                }
+            }
         }
     }

@@ -556,8 +556,17 @@ public class AssignmentStatement
                         atypeRight = exprRightNew.getTypes();
                         if (atypeRight.length == 1)
                             {
-                            atypeRight = new TypeConstant[]
-                                    { atypeRight[0].removeNullable() };
+                            TypeConstant typeRight = atypeRight[0];
+                            if (typeRight.isNullable())
+                                {
+                                atypeRight = new TypeConstant[]{typeRight.removeNullable()};
+                                }
+                            else
+                                {
+                                // REVIEW CP: make this an error instead?
+                                exprRight.log(errs, Severity.WARNING, Compiler.EXPRESSION_NOT_NULLABLE,
+                                    typeRight.getValueString());
+                                }
                             }
                         }
                     }
