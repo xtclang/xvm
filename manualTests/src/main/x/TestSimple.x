@@ -2,27 +2,38 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run( )
+    void run()
         {
         console.println("Starting");
 
-        test(7);
-        test(Null);
+        TestProperty t = new TestProperty();
+        console.println(t.value);
+        t.value = 6;
+        console.println(t.value);
         }
 
-    void test(Int? id)
+    class TestProperty
         {
-        if (Int token ?= id, token == id)
-            {
-            console.println(token);
-            }
+        @Future Int future;
 
-        if (id != Null)
+        Int value
             {
-            // there should be a compiler warning here
-            if (Int token ?= id, token == id)
+            Int base = 1;
+            @Override
+            Int get()
                 {
-                console.println(token);
+                return base;
+                }
+
+            @Override
+            void set(Int i)
+                {
+                if (assigned)
+                    {
+                    base = i + 1;
+                    }
+
+                super(i);
                 }
             }
         }
