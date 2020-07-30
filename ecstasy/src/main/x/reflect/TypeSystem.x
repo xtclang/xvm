@@ -212,8 +212,7 @@ const TypeSystem
             return True, &primaryModule.actualType;
             }
 
-        // TODO GG: if (CacheEntry entry ?= lookupCache[name])
-        if (CacheEntry entry ?= lookupCache.getElement(name))
+        if (CacheEntry entry ?= lookupCache[name])
             {
             if (Type type ?= entry.type)
                 {

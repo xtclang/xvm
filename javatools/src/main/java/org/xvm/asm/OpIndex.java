@@ -117,7 +117,7 @@ public abstract class OpIndex
             if (anyDeferred(ahArg))
                 {
                 Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, ahArg[0], (JavaLong) ahArg[1]);
+                    complete(frameCaller, ahArg[0], ahArg[1]);
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
