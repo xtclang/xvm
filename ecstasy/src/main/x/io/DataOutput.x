@@ -456,8 +456,7 @@ interface DataOutput
 
         // test for Small and Medium
         Int bitCount = 65 - n.maxOf(~n).leadingZeroCount;
-        if (1.toInt() << bitCount & 0x3E3E00 != 0)      // TODO GG annoying ".toInt()" ... would rather use the following line instead
-     // if (1 << bitCount & 0x3E3E00 != 0)              // test against bits 9-13 and 17-21
+        if (1 << bitCount & 0x3E3E00 != 0)              // test against bits 9-13 and 17-21
             {
             if (bitCount <= 13)
                 {

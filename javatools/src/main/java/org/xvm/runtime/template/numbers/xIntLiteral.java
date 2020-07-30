@@ -15,11 +15,14 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -49,6 +52,19 @@ public class xIntLiteral
     public void initNative()
         {
         markNativeMethod("construct", STRING, VOID);
+
+        markNativeMethod("and",           THIS, THIS);
+        markNativeMethod("or",            THIS, THIS);
+        markNativeMethod("xor",           THIS, THIS);
+        markNativeMethod("shiftLeft",     INT,  THIS);
+        markNativeMethod("shiftRight",    INT,  THIS);
+        markNativeMethod("shiftAllRight", INT,  THIS);
+        markNativeMethod("add",           THIS, THIS);
+        markNativeMethod("sub",           THIS, THIS);
+        markNativeMethod("mul",           THIS, THIS);
+        markNativeMethod("div",           THIS, THIS);
+        markNativeMethod("mod",           THIS, THIS);
+        markNativeMethod("not",           VOID, THIS);
 
         markNativeMethod("toString", VOID, STRING);
 
@@ -166,6 +182,45 @@ public class xIntLiteral
         }
 
     @Override
+    public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        PackedInteger pi    = ((VarIntHandle) hTarget).getValue();
+        long          count = ((JavaLong) hArg).getValue();
+
+        if (count > Integer.MAX_VALUE)
+            {
+            return overflow(frame);
+            }
+        return frame.assignValue(iReturn, makeIntLiteral(pi.shl((int) count)));
+        }
+
+    @Override
+    public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        PackedInteger pi    = ((VarIntHandle) hTarget).getValue();
+        long          count = ((JavaLong) hArg).getValue();
+
+        if (count > Integer.MAX_VALUE)
+            {
+            return overflow(frame);
+            }
+        return frame.assignValue(iReturn, makeIntLiteral(pi.shr((int) count)));
+        }
+
+    @Override
+    public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        PackedInteger pi    = ((VarIntHandle) hTarget).getValue();
+        long          count = ((JavaLong) hArg).getValue();
+
+        if (count > Integer.MAX_VALUE)
+            {
+            return overflow(frame);
+            }
+        return frame.assignValue(iReturn, makeIntLiteral(pi.ushr((int) count)));
+        }
+
+    @Override
     public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
@@ -184,12 +239,83 @@ public class xIntLiteral
         }
 
     @Override
+    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi1.xor(pi2)));
+        }
+
+    @Override
+    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        PackedInteger pi = ((VarIntHandle) hTarget).getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi.negate()));
+        }
+
+    @Override
+    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        PackedInteger pi = ((VarIntHandle) hTarget).getValue();
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi.complement()));
+        }
+
+    @Override
+    public int invokeNative1(Frame frame, MethodStructure method,
+                             ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "and":
+                return invokeAnd(frame, hTarget, hArg, iReturn);
+
+            case "or":
+                return invokeOr(frame, hTarget, hArg, iReturn);
+
+            case "xor":
+                return invokeXor(frame, hTarget, hArg, iReturn);
+
+            case "shiftLeft":
+                return invokeShl(frame, hTarget, hArg, iReturn);
+
+            case "shiftRight":
+                return invokeShl(frame, hTarget, hArg, iReturn);
+
+            case "shiftAllRight":
+                return invokeShrAll(frame, hTarget, hArg, iReturn);
+
+            case "add":
+                return invokeAdd(frame, hTarget, hArg, iReturn);
+
+            case "sub":
+                return invokeSub(frame, hTarget, hArg, iReturn);
+
+            case "mul":
+                return invokeMul(frame, hTarget, hArg, iReturn);
+
+            case "div":
+                return invokeDiv(frame, hTarget, hArg, iReturn);
+
+            case "mod":
+                return invokeMod(frame, hTarget, hArg, iReturn);
+
+            }
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
         VarIntHandle hLiteral = (VarIntHandle) hTarget;
         switch (method.getName())
             {
+            case "not":
+                return invokeCompl(frame, hTarget, iReturn);
+
             case "toInt8":
             case "toInt16":
             case "toInt32":
@@ -245,6 +371,29 @@ public class xIntLiteral
         {
         VarIntHandle hLiteral = (VarIntHandle) hTarget;
         return frame.assignValue(iReturn, hLiteral.getText());
+        }
+
+
+    // ----- comparison support --------------------------------------------------------------------
+
+    @Override
+    public int callEquals(Frame frame, ClassComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        VarIntHandle h1 = (VarIntHandle) hValue1;
+        VarIntHandle h2 = (VarIntHandle) hValue2;
+
+        return frame.assignValue(iReturn, xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
+        }
+
+    @Override
+    public int callCompare(Frame frame, ClassComposition clazz,
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        VarIntHandle h1 = (VarIntHandle) hValue1;
+        VarIntHandle h2 = (VarIntHandle) hValue2;
+
+        return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue().cmp(h2.getValue())));
         }
 
     /**

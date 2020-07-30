@@ -6,16 +6,11 @@ module TestSimple
         {
         console.println("Starting");
 
-        Int result;
-        try
+        Int bitCount = 1;
+        if (1 << bitCount & 0x2 != 0)
             {
-            result = f();
+            console.println("yes");
             }
-        catch (Exception e)
-            {
-            result = 0;
-            }
-        console.println(result);
         }
 
     Int f()

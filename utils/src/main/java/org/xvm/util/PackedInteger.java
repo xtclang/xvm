@@ -473,7 +473,20 @@ public class PackedInteger
      */
     public PackedInteger shl(PackedInteger that)
         {
-        return new PackedInteger(this.getBigInteger().shiftLeft(that.getInt()));
+        return shl(that.getInt());
+        }
+
+    /**
+     * Shift left the bits in the value of this PackedInteger by the specified count,
+     * resulting in a new PackedInteger.
+     *
+     * @param count  the shift count
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger shl(int count)
+        {
+        return new PackedInteger(this.getBigInteger().shiftLeft(count));
         }
 
     /**
@@ -486,9 +499,22 @@ public class PackedInteger
      */
     public PackedInteger shr(PackedInteger that)
         {
-        return that.isNegative()
-                ? this
-                : new PackedInteger(this.getBigInteger().shiftRight(that.getInt()));
+        return shr(that.getInt());
+        }
+
+    /**
+     * Logical shift right the bits in the value of this PackedInteger by the specified count,
+     * resulting in a new PackedInteger.
+     *
+     * @param count  the shift count
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger shr(int count)
+        {
+        return count <= 0
+            ? this
+            : new PackedInteger(this.getBigInteger().shiftRight(count));
         }
 
     /**
@@ -501,9 +527,20 @@ public class PackedInteger
      */
     public PackedInteger ushr(PackedInteger that)
         {
-        return that.isNegative()
-                ? this
-                : new PackedInteger(this.getBigInteger().shiftRight(that.getInt()));
+        return shr(that.getInt());
+        }
+
+    /**
+     * Arithmetic (aka "unsigned") shift right the bits in the value of this PackedInteger by the
+     * specified count, resulting in a new PackedInteger.
+     *
+     * @param count  the shift count
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger ushr(int count)
+        {
+        return shr(count);
         }
 
     /**
