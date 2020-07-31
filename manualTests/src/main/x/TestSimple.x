@@ -12,7 +12,10 @@ module TestSimple
         console.println(t.value);
         }
 
-    class TestProperty
+    // this is a code example that didn't compile prior to the fix
+
+    interface List2<Element>
+            extends Collection2<Element>
         {
         @Future Int future;
 
@@ -37,4 +40,12 @@ module TestSimple
                 }
             }
         }
+
+    interface Collection2<Element>
+        {
+        typedef function Ordered (Element, Element) Orderer;
+
+        @RO Boolean distinct;
+        }
     }
+

@@ -614,9 +614,19 @@ public class NamedTypeExpression
                         m_constUnresolved = null;
                         }
 
-                    if (m_typeUnresolved != null)
+                    UnresolvedTypeConstant typeUnresolved = m_typeUnresolved;
+                    if (typeUnresolved != null)
                         {
-                        m_typeUnresolved.resolve(calculateDefaultType(null, constIdNew, errs));
+                        if (typeUnresolved.containsUnresolved())
+                            {
+                            TypeConstant typeNew = calculateDefaultType(null, constIdNew, errsTemp);
+                            if (typeNew.containsUnresolved())
+                                {
+                                mgr.requestRevisit();
+                                return;
+                                }
+                            typeUnresolved.resolve(typeNew);
+                            }
                         m_typeUnresolved = null;
                         }
                     }

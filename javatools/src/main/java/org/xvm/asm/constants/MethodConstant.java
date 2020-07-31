@@ -468,7 +468,7 @@ public class MethodConstant
 
         MethodConstant idNew = (MethodConstant) getConstantPool().register(new MethodConstant(
                         getConstantPool(), idNewParent, sigNew, m_iLambda));
-        if (sigNew != null)
+        if (sigNew != null && !sigNew.containsUnresolved())
             {
             // it's the responsibility of the MethodConstant to bind all the TypeParameters
             // (see TypeParameterConstant.resolveTypedefs())

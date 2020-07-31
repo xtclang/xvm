@@ -43,7 +43,7 @@ public class TypeParameterConstant
             throw new IllegalArgumentException("register (" + iReg + ") out of range");
             }
 
-        m_iReg = iReg;
+        f_iReg = iReg;
         }
 
     /**
@@ -60,7 +60,7 @@ public class TypeParameterConstant
         {
         super(pool, format, in);
 
-        m_iReg = readMagnitude(in);
+        f_iReg = readMagnitude(in);
         }
 
     @Override
@@ -93,7 +93,7 @@ public class TypeParameterConstant
      */
     public int getRegister()
         {
-        return m_iReg;
+        return f_iReg;
         }
 
 
@@ -173,7 +173,6 @@ public class TypeParameterConstant
 
     // ----- Constant methods ----------------------------------------------------------------------
 
-
     @Override
     public TypeConstant getType()
         {
@@ -189,22 +188,8 @@ public class TypeParameterConstant
     @Override
     public boolean containsUnresolved()
         {
-        if (m_tloResolved.get() || m_tloReEntry.get())
-            {
-            return false;
-            }
-
-        m_tloReEntry.set(Boolean.TRUE);
-        try
-            {
-            boolean fUnresolved = getMethod().containsUnresolved();
-            m_tloResolved.set(!fUnresolved);
-            return fUnresolved;
-            }
-        finally
-            {
-            m_tloReEntry.set(Boolean.FALSE);
-            }
+        // even if the parent method is unresolved, the TypeParameter is not the reason
+        return false;
         }
 
     @Override
@@ -244,20 +229,20 @@ public class TypeParameterConstant
             }
 
         TypeParameterConstant regThat = (TypeParameterConstant) that;
-        int nDif = this.m_iReg - regThat.m_iReg;
-        if (nDif != 0 || m_tloReEntry.get())
+        int nDif = this.f_iReg - regThat.f_iReg;
+        if (nDif != 0 || f_tloReEntry.get())
             {
             return nDif;
             }
 
-        m_tloReEntry.set(Boolean.TRUE);
+        f_tloReEntry.set(Boolean.TRUE);
         try
             {
             return getParentConstant().compareTo(regThat.getParentConstant());
             }
         finally
             {
-            m_tloReEntry.set(Boolean.FALSE);
+            f_tloReEntry.set(Boolean.FALSE);
             }
         }
 
@@ -279,13 +264,13 @@ public class TypeParameterConstant
         {
         super.assemble(out);
 
-        writePackedLong(out, m_iReg);
+        writePackedLong(out, f_iReg);
         }
 
     @Override
     public String getDescription()
         {
-        return "method=" + getMethod().getName() + ", register=" + m_iReg;
+        return "method=" + getMethod().getName() + ", register=" + f_iReg;
         }
 
 
@@ -294,20 +279,7 @@ public class TypeParameterConstant
     @Override
     public int hashCode()
         {
-        if (m_tloReEntry.get())
-            {
-            return m_iReg;
-            }
-
-        m_tloReEntry.set(Boolean.TRUE);
-        try
-            {
-            return getName().hashCode() + m_iReg;
-            }
-        finally
-            {
-            m_tloReEntry.set(Boolean.FALSE);;
-            }
+        return getName().hashCode() + f_iReg;
         }
 
 
@@ -316,13 +288,12 @@ public class TypeParameterConstant
     /**
      * The register index.
      */
-    private int m_iReg;
+    private final int f_iReg;
 
     /**
      * Cached constraint type.
      */
     private transient TypeConstant m_typeConstraint;
 
-    private transient ThreadLocal<Boolean> m_tloReEntry  = ThreadLocal.withInitial(() -> Boolean.FALSE);
-    private transient ThreadLocal<Boolean> m_tloResolved = ThreadLocal.withInitial(() -> Boolean.FALSE);
+    private final ThreadLocal<Boolean> f_tloReEntry = ThreadLocal.withInitial(() -> Boolean.FALSE);
     }
