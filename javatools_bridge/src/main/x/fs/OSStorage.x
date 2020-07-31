@@ -138,15 +138,14 @@ service OSStorage
                     Int index = findWatcher.count;
                     &cancel.whenComplete((cancelled, exception) ->
                         {
-                        assert FileWatcher w ?= watcher;
                         if (cancelled? || exception != null)
                             {
-                            removeWatch(pathStringDir, index, w);
+                            removeWatch(pathStringDir, index, watcher);
                             }
                         else if (!isFile && event == Created)
                             {
                             // we had a request to watch a directory that has just been created
-                            watchDir(new Path(pathStringNode), w);
+                            watchDir(new Path(pathStringNode), watcher);
                             }
                         });
                     }
