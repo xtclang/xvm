@@ -78,10 +78,9 @@ public class ObjectHeap
         // support for the "local property" mode
         if (constValue instanceof PropertyConstant)
             {
-            PropertyConstant  idProp = (PropertyConstant) constValue;
-            PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+            PropertyConstant idProp = (PropertyConstant) constValue;
 
-            assert !prop.isStatic();
+            assert !idProp.isConstant();
 
             return saveConstHandle(constValue, new DeferredPropertyHandle(idProp));
             }

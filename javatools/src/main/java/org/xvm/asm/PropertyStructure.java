@@ -590,9 +590,8 @@ public class PropertyStructure
                 {
                 case Property:
                     {
-                    PropertyConstant  idProp = (PropertyConstant) constant;
-                    PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
-                    if (prop.isConstant())
+                    PropertyConstant idProp = (PropertyConstant) constant;
+                    if (idProp.isConstant())
                         {
                         collector.resolvedConstant(constant);
                         return ResolutionResult.RESOLVED;

@@ -194,11 +194,21 @@ public class PropertyConstant
         }
 
     /**
+     * @return true iff the property is a named constant value
+     */
+    public boolean isConstant()
+        {
+        PropertyStructure prop = (PropertyStructure) getComponent();
+        return prop != null && prop.isConstant();
+        }
+
+    /**
      * @return true iff the property has a Future annotation
      */
     public boolean isFutureVar()
         {
-        return ((PropertyStructure) getComponent()).isFuture();
+        PropertyStructure prop = (PropertyStructure) getComponent();
+        return prop != null && prop.isFuture();
         }
 
     /**

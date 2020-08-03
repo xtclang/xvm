@@ -698,10 +698,11 @@ public class NameExpression
                         // a non-constant property is ONLY a constant in identity mode; a constant
                         // property is only a constant iff the property itself has a compile-time
                         // constant
-                        PropertyConstant  id   = (PropertyConstant) argRaw;
-                        PropertyStructure prop = (PropertyStructure) id.getComponent();
-                        if (prop.isConstant())
+                        PropertyConstant id = (PropertyConstant) argRaw;
+                        if (id.isConstant())
                             {
+                            PropertyStructure prop = (PropertyStructure) id.getComponent();
+
                             if (m_plan == Plan.Singleton || m_plan == Plan.PropertyDeref)
                                 {
                                 constVal = prop.hasInitialValue()
@@ -1277,15 +1278,14 @@ public class NameExpression
                 if (m_mapTypeParams == null)
                     {
                     code.add(new MBind(argTarget, idMethod, regFn));
-                    return regFn;
                     }
                 else
                     {
                     Register regFn0 = createRegister(pool().typeFunction(), false);
                     code.add(new MBind(argTarget, idMethod, regFn0));
                     bindTypeParameters(ctx, code, regFn0, regFn);
-                    return regFn;
                     }
+                return regFn;
                 }
 
             default:
