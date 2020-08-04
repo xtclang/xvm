@@ -4,7 +4,7 @@
  * @see Enumeration
  */
 interface Enum
-        extends Const
+        extends immutable Const
         extends Sequential
     {
     /**

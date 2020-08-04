@@ -523,7 +523,7 @@ interface List<Element>
      *
      * @return the resultant list, which is the same as `this` for a mutable list
      */
-    // TODO GG @Override
+    @Override
     List! sorted(Orderer? orderer = Null, Boolean inPlace = False)
         {
         Int size = this.size;
@@ -569,7 +569,7 @@ interface List<Element>
      */
     List! reversed(Boolean inPlace = False)
         {
-        if (indexed, Int size := knownSize)
+        if (indexed, Int size := knownSize())
             {
             if (size <= 1 && (inPlace || !this.inPlace))
                 {

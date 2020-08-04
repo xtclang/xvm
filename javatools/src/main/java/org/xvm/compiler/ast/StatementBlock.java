@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
@@ -965,7 +966,13 @@ public class StatementBlock
                             {
                             if (info.containsMultiMethod(sName))
                                 {
-                                idResult = pool.ensureMultiMethodConstant(id, sName);
+                                // we need to find a real multimethod structure now
+                                Set<MethodConstant> setMethods = info.findMethods(sName, -1, TypeInfo.MethodKind.Any);
+                                assert !setMethods.isEmpty();
+
+                                MethodConstant idMethod   = setMethods.iterator().next();
+                                MethodInfo     infoMethod = info.getMethodById(idMethod);
+                                idResult = infoMethod.getIdentity().getParentConstant();
                                 }
                             }
                         else
