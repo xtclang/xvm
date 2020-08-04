@@ -16,7 +16,6 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xBoolean;
@@ -24,6 +23,7 @@ import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.BitBasedArray;
 import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
 import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
@@ -423,7 +423,7 @@ public abstract class xConstrainedInteger
                     {
                     long l = ((JavaLong) hTarget).getValue();
                     return frame.assignValue(iReturn, new BitArrayHandle(template.getCanonicalClass(),
-                        toByteArray(l, f_cNumBits >>> 3), f_cNumBits, Mutability.Constant));
+                        toByteArray(l, f_cNumBits >>> 3), f_cNumBits, xArray.Mutability.Constant));
                     }
 
                 break;

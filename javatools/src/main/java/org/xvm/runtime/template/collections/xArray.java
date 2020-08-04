@@ -23,7 +23,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
@@ -36,11 +35,11 @@ import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 
 /**
@@ -1247,6 +1246,8 @@ public class xArray
             return false;
             }
         }
+
+    public enum Mutability {Constant, Persistent, Mutable, FixedSize}
 
     // array of constructors
     private static MethodConstant[] CONSTRUCTORS = new MethodConstant[4];

@@ -16,7 +16,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ConstantHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
@@ -87,7 +86,7 @@ public class xCPFileStore
                 ConstantHandle hNode     = (ConstantHandle) hArg;
                 FSNodeConstant constNode = (FSNodeConstant) hNode.get();
                 ObjectHandle   hBinary   = xByteArray.makeHandle(
-                        constNode.getFileBytes(), Mutability.Constant);
+                        constNode.getFileBytes(), xArray.Mutability.Constant);
                 return frame.assignValue(iReturn, hBinary);
                 }
             }
@@ -135,7 +134,7 @@ public class xCPFileStore
 
                 return frame.assignValues(aiReturn,
                         xArray.makeStringArrayHandle(ahNames),
-                        xArray.makeObjectArrayHandle(ahCookies, Mutability.Constant));
+                        xArray.makeObjectArrayHandle(ahCookies, xArray.Mutability.Constant));
                 }
             }
 

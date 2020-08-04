@@ -218,8 +218,8 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
 
     /**
      * Obtain the same contents of this Tuple, but in a Tuple with the specified mutability. If the
-     * mutability of this Tuple is already the desired mutability, or if [Mutabililty.Persistent]
-     * is requested and the mutability is already [Mutabililty.Constant], then this Tuple is
+     * mutability of this Tuple is already the desired mutability, or if [Mutability.Persistent]
+     * is requested and the mutability is already [Mutability.Constant], then this Tuple is
      * returned. Otherwise, if `inPlace` is `True` and mutability is decreasing from `Fixed` to
      * `Persistent`, then the [mutability] of this Tuple is modified and this Tuple is returned. If
      * the requested mutability is `Constant`, then the Tuple is requested to [freeze]. Otherwise,

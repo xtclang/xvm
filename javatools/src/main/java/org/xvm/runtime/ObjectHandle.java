@@ -285,8 +285,6 @@ public abstract class ObjectHandle
         return "(" + m_clazz + ") ";
         }
 
-    public enum Mutability {Mutable, FixedSize, Persistent, Constant}
-
     public static class GenericHandle
             extends ObjectHandle
         {
@@ -603,14 +601,14 @@ public abstract class ObjectHandle
     public abstract static class ArrayHandle
             extends ObjectHandle
         {
-        public Mutability m_mutability;
+        public xArray.Mutability m_mutability;
         public int m_cSize;
 
-        protected ArrayHandle(TypeComposition clzArray, Mutability mutability)
+        protected ArrayHandle(TypeComposition clzArray, xArray.Mutability mutability)
             {
             super(clzArray);
 
-            m_fMutable   = mutability != Mutability.Constant;
+            m_fMutable   = mutability != xArray.Mutability.Constant;
             m_mutability = mutability;
             }
 
@@ -624,7 +622,7 @@ public abstract class ObjectHandle
             {
             super.makeImmutable();
 
-            m_mutability = Mutability.Constant;
+            m_mutability = xArray.Mutability.Constant;
             }
 
         @Override

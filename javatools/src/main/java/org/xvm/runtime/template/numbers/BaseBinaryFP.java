@@ -11,9 +11,9 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xBitArray;
 
 import org.xvm.runtime.template.xBoolean;
@@ -131,7 +131,7 @@ abstract public class BaseBinaryFP
                 {
                 byte[] abValue = getBits(d);
                 return frame.assignValue(iReturn,
-                    xBitArray.makeHandle(abValue, f_cBits, Mutability.Constant));
+                    xBitArray.makeHandle(abValue, f_cBits, xArray.Mutability.Constant));
                 }
 
             case "toInt":

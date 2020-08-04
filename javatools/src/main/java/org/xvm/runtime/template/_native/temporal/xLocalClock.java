@@ -14,7 +14,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
@@ -23,15 +22,16 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
-
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 
 import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xUInt128;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
 
 /**
@@ -130,7 +130,8 @@ public class xLocalClock
             long lOffset = 0; // TODO
             hTimeZone.setField("picos", xInt64.makeHandle(lOffset));
             hTimeZone.setField("name", xNullable.NULL);
-            hTimeZone.setField("rules", new GenericArrayHandle(clzRuleArray, Utils.OBJECTS_NONE, Mutability.Mutable));
+            hTimeZone.setField("rules", new GenericArrayHandle(
+                    clzRuleArray, Utils.OBJECTS_NONE, xArray.Mutability.Mutable));
             hTimeZone.makeImmutable();
             }
 

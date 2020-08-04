@@ -15,10 +15,10 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.util.Handy;
@@ -71,7 +71,7 @@ public class xOSFile
                 try
                     {
                     byte[] ab = Handy.readFileBytes(path.toFile());
-                    return frame.assignValue(iReturn, xByteArray.makeHandle(ab, Mutability.Constant));
+                    return frame.assignValue(iReturn, xByteArray.makeHandle(ab, xArray.Mutability.Constant));
                     }
                 catch (IOException e)
                     {

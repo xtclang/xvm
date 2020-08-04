@@ -160,8 +160,6 @@ package collections
         immutable ImmutableAble ensureImmutable(Boolean inPlace = false);
         }
 
-    typedef (ImmutableAble | immutable Object) Freezable;
-
     /**
      * An ConstantRequired exception is raised when an attempt is made to change mutability to
      * Constant, and some reference that must be `immutable Const` cannot be made so or converted

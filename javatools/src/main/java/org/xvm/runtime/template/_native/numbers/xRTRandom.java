@@ -13,17 +13,21 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xService;
+
+import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
+import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
+
 import org.xvm.runtime.template.numbers.xBit;
 import org.xvm.runtime.template.numbers.xDec64;
 import org.xvm.runtime.template.numbers.xFloat64;
 import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xUInt64;
 import org.xvm.runtime.template.numbers.xUInt8;
-import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
-import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
+
 
 
 /**
@@ -111,16 +115,13 @@ public class xRTRandom
 
     protected int invokeFill(Frame frame, ObjectHandle hTarget, BitArrayHandle hArray)
         {
-        if (hArray.isMutable() && hArray.m_mutability.compareTo(ObjectHandle.Mutability.FixedSize) <= 0)
+        if (hArray.isMutable() && hArray.m_mutability.compareTo(xArray.Mutability.FixedSize) <= 0)
             {
             // REVIEW GG this may set bits beyond "m_cSize" ... is that a problem?
             rnd(hTarget).nextBytes(hArray.m_abValue);
             return Op.R_NEXT;
             }
-        else
-            {
-            return frame.raiseException(xException.immutableObject(frame));
-            }
+        return frame.raiseException(xException.immutableObject(frame));
         }
 
     protected int invokeFill(Frame frame, ObjectHandle hTarget, ByteArrayHandle hArray)

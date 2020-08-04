@@ -10,7 +10,6 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
-import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
@@ -282,7 +281,7 @@ public abstract class BitBasedArray
                 }
 
             BitArrayHandle hArrayNew = new BitArrayHandle(hTarget.getComposition(),
-                abNew, cBits, ObjectHandle.Mutability.Mutable);
+                abNew, cBits, Mutability.Mutable);
 
             return frame.assignValue(iReturn, hArrayNew);
             }

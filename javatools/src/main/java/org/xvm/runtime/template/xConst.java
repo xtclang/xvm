@@ -24,7 +24,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.ObjectHandle.Mutability;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
@@ -195,7 +194,7 @@ public class xConst
             byte[] abValue = new byte[] {((UInt8Constant) constant).getValue().byteValue()};
 
             ObjectHandle[] ahArg = new ObjectHandle[NIBBLE_CONSTRUCT.getMaxVars()];
-            ahArg[0] = xBitArray.makeHandle(abValue, 4, Mutability.Constant);
+            ahArg[0] = xBitArray.makeHandle(abValue, 4, xArray.Mutability.Constant);
 
             return construct(frame, NIBBLE_CONSTRUCT, ensureClass(constant.getType()), null, ahArg, Op.A_STACK);
             }
@@ -215,7 +214,8 @@ public class xConst
                 ObjectHandle[]   ahFields = clz.getFieldValueArray(hConst);
                 if (ahFields.length > 0)
                     {
-                    GenericArrayHandle hValues = (GenericArrayHandle) xArray.makeObjectArrayHandle(ahFields, Mutability.FixedSize);
+                    GenericArrayHandle hValues = (GenericArrayHandle)
+                        xArray.makeObjectArrayHandle(ahFields, xArray.Mutability.FixedSize);
 
                     ObjectHandle[] ahVars = new ObjectHandle[FN_FREEZE.getMaxVars()];
                     ahVars[0] = hValues;
@@ -353,7 +353,7 @@ public class xConst
         if (ahNames.length > 0)
             {
             ArrayHandle hNames  = xArray.makeStringArrayHandle(ahNames);
-            ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields, Mutability.Constant);
+            ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields, xArray.Mutability.Constant);
 
             // estimateStringLength(String[] names, Object[] fields)
             ObjectHandle[] ahVars = new ObjectHandle[FN_ESTIMATE_LENGTH.getMaxVars()];
@@ -387,7 +387,7 @@ public class xConst
         ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
 
         ArrayHandle hNames  = xArray.makeStringArrayHandle(ahNames);
-        ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields, Mutability.Constant);
+        ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields, xArray.Mutability.Constant);
 
         // appendTo(Appender<Char> appender, String[] names, Object[] fields)
         ObjectHandle[] ahVars = new ObjectHandle[FN_APPEND_TO.getMaxVars()];
