@@ -92,7 +92,7 @@ interface Collection<Element>
      */
     @RO Orderer? naturalOrderer.get()
         {
-        return Element.is(Orderable) ? ((e1, e2) -> el <=> e2) : Null;
+        return Element.is(Type<Orderable>) ? ((Element e1, Element e2) -> e1 <=> e2) : Null;
         }
 
     /**
@@ -180,12 +180,14 @@ interface Collection<Element>
         if (Orderer? thisOrder := this.orderedBy(), Orderer? thatOrder := values.orderedBy(),
                 thisOrder? == thatOrder?)
             {
+            assert thisOrder != Null; // TODO GG - should not be needed
+
             Iterator<Element> iterThat = values.iterator();
             Iterator<Element> iterThis = this  .iterator();
             assert Element    valThis := iterThis.next();
-            for (val valueThat : iterThat)
+            for (val valThat : iterThat)
                 {
-                switch (valThis <=> valueThat)
+                switch (thisOrder(valThis, valThat))
                     {
                     case Lesser:
                         if (valThis := iterThis.next())
@@ -218,11 +220,11 @@ interface Collection<Element>
         // assume that sorted collections have O(N*logN) time with fast e.g. O(logN) look-ups
         // assume that optimizing for small collections is a negative return
         // use hashing as the optimization (requiring elements to be Hashable)
-        if (!this.is(Set) && !this.orderedBy && size > 17 && Element.is(Type<Hashable>))
+        if (!this.is(Set) && this.orderedBy() && size > 17 && Element.is(Type<Hashable>))
             {
             // it's expensive to create a new HashSet for this purpose, but it turns an O(N^2)
             // operation into an O(2*N) problem
-            return new HashSet<Element>(this).containsAll(values);
+            return new HashSet<Element>(this.as(Iterable<Element>)).containsAll(values); // TODO GG .as() not needed
             }
 
         // brute force search for each value from the passed-in values collection
@@ -251,7 +253,7 @@ interface Collection<Element>
      */
     Boolean all(function Boolean(Element) match)
         {
-        return iterator.whileEach(match);
+        return iterator().whileEach(match);
         }
 
     /**
@@ -321,8 +323,8 @@ interface Collection<Element>
      *
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
-    <Result> Collection<Result> map(function Result(Element) transform,
-                                    Collection<Result>?      dest      = Null)
+    <Result> Collection!<Result> map(function Result(Element) transform,
+                                     Collection<Result>?      dest      = Null)
         {
         Iterator<Element> iter = iterator();
 
@@ -330,17 +332,27 @@ interface Collection<Element>
         // implementations of this interface should replace this default behavior
         if (&dest == &this)
             {
-            Result[] results = new Array<Result>(size, _ -> transform(iter.next()));
+            Result[] results = new Array<Result>(size, _ ->
+                {
+                assert Element el := iter.next();
+                return transform(el);
+                });
             // TODO Result[] results = new Result[size](_ -> transform(iter.next()));
             clear();
-            addAll(results);
-            return this;
+            addAll(results.as(List<Element>));
+            assert dest != Null;
+            return dest;
             }
 
         if (dest == Null)
             {
             // TODO replace with deferred-map collection
-            return new Array<Result>(size, _ -> transform(iter.next()));
+            return new Array<Result>(size, _ ->
+                {
+                assert Element el := iter.next();
+                return transform(el);
+                });
+
             // TODO return new Result[size](_ -> transform(iter.next()));
             }
 
@@ -362,8 +374,8 @@ interface Collection<Element>
      *
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
-    <Result> Collection<Result> flatMap(function Iterable<Result>(Element) flatten,
-                                        Collection<Result>?                dest    = Null)
+    <Result> Collection!<Result> flatMap(function Iterable<Result>(Element) flatten,
+                                         Collection<Result>?                dest    = Null)
         {
         assert:arg &dest != &this;
 
@@ -386,12 +398,12 @@ interface Collection<Element>
         {
         if (dest == Null)
             {
-            return this.is(Set)
+            return this.is(Set<Element>)
                     ? this
                     : new ListSet(this); // TODO replace with deferred-distinct set ???
             }
 
-        return dest == this ? this : dest.addAll(this);
+        return &dest == &this ? this : dest.addAll(this);
         }
 
     /**

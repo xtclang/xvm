@@ -1335,7 +1335,7 @@ class Array<Element>
                 bitnum += 4;
                 }
 
-            return nibbles.freeze(True);
+            TODO return nibbles.freeze(True);
             }
 
         /**
@@ -1620,7 +1620,7 @@ class Array<Element>
                     bits[index++] = bit;
                     }
                 }
-            return bits.freeze(True);
+            TODO return bits.freeze(True);
             }
 
         /**
