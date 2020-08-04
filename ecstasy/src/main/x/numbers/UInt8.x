@@ -196,7 +196,7 @@ const UInt8
     @Override
     UInt8 reverseBits()
         {
-        return new UInt8(bits.reverse());
+        return new UInt8(bits.reversed());
         }
 
     @Override

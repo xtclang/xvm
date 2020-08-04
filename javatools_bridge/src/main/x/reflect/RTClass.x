@@ -78,7 +78,7 @@ const RTClass<PublicType, ProtectedType extends PublicType,
         (_, Annotation[] annotations) = deannotate();
         if (annotations.size > 0)
             {
-            for (Annotation annotation : annotations.reverse())
+            for (Annotation annotation : annotations.reversed())
                 {
                 annotation.appendTo(buf);
                 buf.add(' ');

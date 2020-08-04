@@ -214,7 +214,7 @@ const Int8
     @Override
     Int8 reverseBits()
         {
-        return new Int8(bits.reverse());
+        return new Int8(bits.reversed());
         }
 
     @Override

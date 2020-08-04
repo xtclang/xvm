@@ -455,7 +455,7 @@ interface Iterator<Element>
             return this;
             }
 
-        return toArray().sort(order).iterator();
+        return toArray().sorted(order).iterator();
         }
 
     /**
@@ -581,19 +581,19 @@ interface Iterator<Element>
             return this;
             }
 
-        if (Int size := knownSize(), size < interval.lowerBound)
+        if (Int size := knownSize(), size < interval.effectiveLowerBound)
             {
             return new iterators.ExhaustedIterator();
             }
 
         if (interval.descending)
             {
-            return reversed().extract(interval.reverse());
+            return reversed().extract(interval.reversed());
             }
 
         return interval.lowerBound == 0
-                ? limit(interval.upperBound)
-                : skip(interval.lowerBound).limit(interval.size);
+                ? limit(interval.effectiveUpperBound)
+                : skip(interval.effectiveLowerBound).limit(interval.size);
         }
 
     /**

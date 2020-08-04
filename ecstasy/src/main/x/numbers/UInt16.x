@@ -196,13 +196,13 @@ const UInt16
     @Override
     UInt16 reverseBits()
         {
-        return new UInt16(bits.reverse());
+        return new UInt16(bits.reversed());
         }
 
     @Override
     UInt16 reverseBytes()
         {
-        return new UInt16(toByteArray().reverse());
+        return new UInt16(toByteArray().reversed());
         }
 
     @Override

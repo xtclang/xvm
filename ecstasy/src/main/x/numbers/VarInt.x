@@ -205,13 +205,13 @@ const VarInt
     @Override
     VarInt reverseBits()
         {
-        return new VarInt(bits.reverse());
+        return new VarInt(bits.reversed());
         }
 
     @Override
     VarInt reverseBytes()
         {
-        return new VarInt(toByteArray().reverse());
+        return new VarInt(toByteArray().reversed());
         }
 
     @Override

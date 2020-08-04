@@ -214,13 +214,13 @@ const Int16
     @Override
     Int16 reverseBits()
         {
-        return new Int16(bits.reverse());
+        return new Int16(bits.reversed());
         }
 
     @Override
     Int16 reverseBytes()
         {
-        return new Int16(toByteArray().reverse());
+        return new Int16(toByteArray().reversed());
         }
 
     @Override
