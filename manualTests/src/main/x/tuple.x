@@ -117,6 +117,9 @@ module TestTuples
         Tuple<Int, String, Char> t1 = (1, "big", '?');
         console.println($"{t1} - {t1.mutability}");
 
+        Tuple t1a = Tuple:().add(1.toInt()).add("big").add('?');
+        assert t1a == t1;
+
         Tuple<Int, String, Char> t2 = t1.ensureMutability(Fixed);
         t2[1] = "small";
         console.println($"{t2} - {t2.mutability}");
@@ -127,7 +130,7 @@ module TestTuples
         Tuple t4 = t2.slice([1..2]); // "small", ?
         assert t4 == t3;
 
-        Tuple t5 = Tuple:(1.toInt()).add(t4); // 1, "small", ?
+        Tuple t5 = Tuple:(1.toInt()).addAll(t4); // 1, "small", ?
         assert t5 == t2;
         }
     }
