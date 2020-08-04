@@ -3666,7 +3666,7 @@ public abstract class TypeConstant
                             {
                             int cParamsReq = sigCandidate.getParamCount();
                             int cParamsSub = sigSub.getParamCount();
-                            if (cParamsSub - cDefault == cParamsReq)
+                            if (cParamsSub > cParamsReq && cParamsSub - cDefault <= cParamsReq)
                                 {
                                 SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
                                 if (sigSubReq.isSubstitutableFor(sigCandidate, this))
