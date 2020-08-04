@@ -117,7 +117,7 @@ module TestTuples
         Tuple<Int, String, Char> t1 = (1, "big", '?');
         console.println($"{t1} - {t1.mutability}");
 
-        Tuple<Int, String, Char> t2 = t1.ensureFixedSize();
+        Tuple<Int, String, Char> t2 = t1.ensureMutability(Fixed);
         t2[1] = "small";
         console.println($"{t2} - {t2.mutability}");
 

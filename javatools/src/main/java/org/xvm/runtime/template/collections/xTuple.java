@@ -68,18 +68,17 @@ public class xTuple
         H_VOID = new TupleHandle(getCanonicalClass(), Utils.OBJECTS_NONE, Mutability.Constant);
 
         // cache Mutability template
-        MUTABILITY = (xEnum) f_templates.getTemplate("collections.VariablyMutable.Mutability");
+        MUTABILITY = (xEnum) f_templates.getTemplate("collections.Tuple.Mutability");
 
         // Note: all interface properties are implicitly native due to "NativeRebase"
 
         markNativeMethod("add", null, null);
         markNativeMethod("elementAt", INT, null);
-        markNativeMethod("ensureFixedSize", BOOLEAN, null);
-        markNativeMethod("ensureImmutable", BOOLEAN, null);
-        markNativeMethod("ensurePersistent", BOOLEAN, null);
+        markNativeMethod("ensureMutability", null, null);
+        markNativeMethod("freeze", BOOLEAN, null);
         markNativeMethod("getElement", INT, null);
         markNativeMethod("remove", new String[] {"numbers.Int64"}, null);
-        markNativeMethod("remove", new String[] {"Range<numbers.Int64>"}, null);
+        markNativeMethod("removeAll", new String[] {"Range<numbers.Int64>"}, null);
         markNativeMethod("setElement", null, VOID);
         markNativeMethod("slice", new String[] {"Range<numbers.Int64>"}, null);
 
@@ -195,33 +194,19 @@ public class xTuple
             case "elementAt":
                 return makeRef(frame, hTarget, ((JavaLong) hArg).getValue(), false, iReturn);
 
-            case "ensureImmutable": // immutable Tuple ensureImmutable(Boolean inPlace = False)
+            case "freeze": // immutable Tuple freeze(Boolean inPlace = False)
                 {
                 TupleHandle hTuple   = (TupleHandle) hTarget;
                 boolean     fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
-                return ensureImmutable(frame, hTuple, fInPlace, iReturn);
-                }
-
-            case "ensureFixedSize": // Tuple ensureFixedSize(Boolean inPlace = false);
-                {
-                TupleHandle hTuple   = (TupleHandle) hTarget;
-                boolean     fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
-                return ensureFixedSize(frame, hTuple, fInPlace, iReturn);
-                }
-
-            case "ensurePersistent": // Tuple ensurePersistent(Boolean inPlace = False)
-                {
-                TupleHandle hTuple   = (TupleHandle) hTarget;
-                boolean     fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
-
-                return ensurePersistent(frame, hTuple, fInPlace, iReturn);
+                return freeze(frame, hTuple, fInPlace, iReturn);
                 }
 
             case "getElement":
                 return extractArrayValue(frame, hTarget, ((JavaLong) hArg).getValue(), iReturn);
 
             case "remove":
-                // TODO - note that there are two remove() methods that each take one parameter
+            case "removeAll":
+                // TODO
                 throw new UnsupportedOperationException();
 
             case "slice":
@@ -231,7 +216,7 @@ public class xTuple
                 long    ixTo     = ((JavaLong) hInterval.getField("upperBound")).getValue();
                 boolean fExLower = ((BooleanHandle) hInterval.getField("lowerExclusive")).get();
                 boolean fExUpper = ((BooleanHandle) hInterval.getField("upperExclusive")).get();
-                boolean fReverse = ((BooleanHandle) hInterval.getField("reversed")).get();
+                boolean fReverse = ((BooleanHandle) hInterval.getField("descending")).get();
                 return slice(frame, (TupleHandle) hTarget, ixFrom, fExLower, ixTo, fExUpper, fReverse, iReturn);
                 }
             }
@@ -244,6 +229,17 @@ public class xTuple
         {
         switch (method.getName())
             {
+            case "ensureMutability": // Tuple ensureMutability(Tuple.Mutability mutability, Boolean inPlace = false);
+                {
+                TupleHandle hTuple   = (TupleHandle) hTarget;
+                // TODO mutability = ahArg[0]
+                boolean     fInPlace = ahArg[1] != ObjectHandle.DEFAULT && ((BooleanHandle) ahArg[1]).get();
+//                return ensureFixedSize(frame, hTuple, fInPlace, iReturn);
+//                return ensurePersistent(frame, hTuple, fInPlace, iReturn);
+//                return freeze(frame, hTuple, fInPlace, iReturn);
+                throw new UnsupportedOperationException();
+                }
+
             case "replace":
                 // TODO
                 throw new UnsupportedOperationException();
@@ -346,9 +342,9 @@ public class xTuple
         }
 
     /**
-     * immutable Tuple ensureImmutable(Boolean inPlace = False) implementation
+     * immutable Tuple freeze(Boolean inPlace = False) implementation
      */
-    protected int ensureImmutable(Frame frame, TupleHandle hTuple, boolean fInPlace, int iReturn)
+    protected int freeze(Frame frame, TupleHandle hTuple, boolean fInPlace, int iReturn)
         {
         switch (hTuple.m_mutability)
             {
@@ -356,7 +352,7 @@ public class xTuple
                 return frame.assignValue(iReturn, hTuple);
 
             case FixedSize:
-                // TODO: ensure all elements are immutable or ImmutableAble
+                // TODO: ensure all elements are immutable or Freezable
                 if (fInPlace)
                     {
                     hTuple.makeImmutable();

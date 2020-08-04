@@ -20,56 +20,70 @@ mixin ConditionalTuple
         }
 
     @Override
-    @Op("+") Tuple add(Tuple!<> that)
+    @Op("+") <Element> Tuple!<> add(Element value)
+        {
+        assert this[0];
+        return super(value);
+        }
+
+    @Override
+    @Op("+") Tuple!<> addAll(Tuple!<> that)
         {
         assert this[0];
         return super(that);
         }
 
     @Override
-    Tuple replace(Int index, Object value)
+    ConditionalTuple replace(Int index, Object value)
         {
         assert this[0] && index > 0;
         return super(index, value);
         }
 
     @Override
-    @Op("[..]") Tuple slice(Interval<Int> interval)
+    @Op("[..]") Tuple!<> slice(Range<Int> indexes)
         {
-        assert interval.effectiveUpperBound == 0 || this[0] == true;
-        return super(interval);
+        assert indexes.effectiveUpperBound == 0 || this[0] == true;
+        return super(indexes);
         }
 
     @Override
-    Tuple remove(Int index)
+    @Op("[[..]]") Tuple!<> sliceInclusive(Range<Int> indexes)
+        {
+        assert indexes.effectiveUpperBound == 0 || this[0] == true;
+        return super(indexes);
+        }
+
+    @Override
+    @Op("[[..)]") Tuple!<> sliceExclusive(Range<Int> indexes)
+        {
+        assert indexes.effectiveUpperBound == 0 || this[0] == true;
+        return super(indexes);
+        }
+
+    @Override
+    Tuple!<> remove(Int index)
         {
         assert this[0];
         return super(index);
         }
 
     @Override
-    Tuple remove(Interval<Int> interval)
+    Tuple!<> removeAll(Interval<Int> interval)
         {
         assert this[0];
         return super(interval);
         }
 
     @Override
-    Tuple<ElementTypes> ensureFixedSize(Boolean inPlace = false)
+    ConditionalTuple ensureMutability(Mutability mutability, Boolean inPlace = False)
         {
         assert this[0];
-        return super(inPlace);
+        return super(mutability, inPlace);
         }
 
     @Override
-    Tuple<ElementTypes> ensurePersistent(Boolean inPlace = false)
-        {
-        assert this[0];
-        return super(inPlace);
-        }
-
-    @Override
-    immutable Tuple<ElementTypes> ensureImmutable(Boolean inPlace = false)
+    immutable ConditionalTuple freeze(Boolean inPlace = False)
         {
         assert this[0];
         return super(inPlace);
