@@ -366,7 +366,7 @@ class CircularArray<Element>
         }
 
     @Override
-    CircularArray delete(Interval<Int> interval)
+    CircularArray deleteAll(Interval<Int> interval)
         {
         validateIndex(interval.lowerBound);
         validateIndex(interval.upperBound);
