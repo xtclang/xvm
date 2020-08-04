@@ -1,11 +1,14 @@
-import collections.Orderer;
-
 /**
  * An iterator over a sequence of elements.
  */
 interface Iterator<Element>
         extends Closeable
     {
+    /**
+     * An Orderer is a function that compares two objects for order.
+     */
+    typedef function Ordered (Element, Element) Orderer;
+
     /**
      * Get the next element.
      *
@@ -464,14 +467,14 @@ interface Iterator<Element>
      *
      * @return a new iterator representing the same elements from this iterator, but in reverse order
      */
-    Iterator! reverse()
+    Iterator! reversed()
         {
         if (knownEmpty())
             {
             return this;
             }
 
-        return toArray().reverse().iterator();
+        return toArray().reversed().iterator();
         }
 
     /**
@@ -583,9 +586,9 @@ interface Iterator<Element>
             return new iterators.ExhaustedIterator();
             }
 
-        if (interval.reversed)
+        if (interval.descending)
             {
-            return reverse().extract(interval.reverse());
+            return reversed().extract(interval.reverse());
             }
 
         return interval.lowerBound == 0

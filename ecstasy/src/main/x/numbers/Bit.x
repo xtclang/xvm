@@ -100,8 +100,8 @@ const Bit
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
-        buf.add(toBoolean() ? '1' : '0');
+        return buf.add(toBoolean() ? '1' : '0');
         }
     }

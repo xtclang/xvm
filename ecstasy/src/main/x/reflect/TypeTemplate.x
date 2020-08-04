@@ -93,8 +93,6 @@ interface TypeTemplate // TODO move
         /**
          * A type that acts as a sequence _of other types_. It is primarily used by the [Tuple] and
          * [Function] interfaces.
-         *
-         * Note that this term "Sequence" is **not** related to the Ecstasy [Sequence] interface.
          */
         Sequence
         }
@@ -289,7 +287,7 @@ interface TypeTemplate // TODO move
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         Boolean fParams = False;
         switch (form)
@@ -374,6 +372,8 @@ interface TypeTemplate // TODO move
                 }
             buf.add('>');
             }
+
+        return buf;
         }
 
 

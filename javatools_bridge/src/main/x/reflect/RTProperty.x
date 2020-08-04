@@ -29,10 +29,10 @@ const RTProperty<Target, Referent, Implementation extends Ref<Referent>>
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         Referent.appendTo(buf);
         buf.add(' ');
-        name.appendTo(buf);
+        return name.appendTo(buf);
         }
     }

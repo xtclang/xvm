@@ -27,7 +27,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * VAR_SN TYPE, STRING, #values:(rvalue-src) ; next register is an initialized named Sequence variable
+ * VAR_SN TYPE, STRING, #values:(rvalue-src) ; next register is an initialized named Array variable
  */
 public class Var_SN
         extends OpVar
@@ -134,12 +134,12 @@ public class Var_SN
 
     protected int complete(Frame frame, int iPC, ObjectHandle[] ahArg)
         {
-        TypeConstant     typeSequence = frame.resolveType(m_nType);
-        ClassComposition clzArray     = getArrayClass(frame, typeSequence);
+        TypeConstant     typeList = frame.resolveType(m_nType);
+        ClassComposition clzArray     = getArrayClass(frame, typeList);
 
         ArrayHandle hArray = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahArg);
 
-        frame.introduceResolvedVar(m_nVar, typeSequence,
+        frame.introduceResolvedVar(m_nVar, typeList,
                 frame.getString(m_nNameId), Frame.VAR_STANDARD, hArray);
 
         return iPC + 1;

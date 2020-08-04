@@ -64,7 +64,7 @@ module TestInnerOuter
 
         Base b1 = new Base("Hello");
         Base b2 = new Base("World");
-        Base... bases = [b1, b2];
+        Base[] bases = [b1, b2];
 
         for (Base base : bases)
             {

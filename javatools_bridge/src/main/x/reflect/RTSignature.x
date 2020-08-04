@@ -70,7 +70,7 @@ const RTSignature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tupl
         }
 
     @Override // note: master copy of this code found on Signature interface
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         Return[] returns = this.returns;
         Int      count   = returns.size;
@@ -129,6 +129,6 @@ const RTSignature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tupl
             param.appendTo(buf);
             }
 
-        buf.add(')');
+        return buf.add(')');
         }
     }

@@ -2,7 +2,9 @@
  * Path represents a path to a file.
  */
 const Path
-        implements Sequence<Path>
+// TODO CP implements Iterable<Path>
+        implements UniformIndexed<Int, Path>
+        implements Sliceable<Int>
     {
     static Path ROOT    = new Path(null, Root);
     static Path PARENT  = new Path(null, Parent);
@@ -99,7 +101,7 @@ const Path
     /**
      * The number of Path elements that make up this Path.
      */
-    @Override
+// TODO CP @Override
     Int size;
 
     /**
@@ -181,8 +183,7 @@ const Path
      * @return True iff this path begins with the same sequence of path elements as contained in the
      *         specified path
      */
-    @Override
-    Boolean startsWith(Sequence!<Path> that)
+    Boolean startsWith(List!<Path> that)
         {
         if (!that.is(Path))
             {
@@ -221,8 +222,7 @@ const Path
      * @return True iff this path ends with the same sequence of path elements as contained in the
      *         specified path
      */
-    @Override
-    Boolean endsWith(Sequence!<Path> that)
+    Boolean endsWith(List!<Path> that)
         {
         if (!that.is(Path))
             {
@@ -365,7 +365,7 @@ const Path
 
         if (lower == 0)
             {
-            if (indexes.reversed)
+            if (indexes.descending)
                 {
                 assert relative;
                 }
@@ -408,7 +408,7 @@ const Path
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         // prepend the parent path and the path separator; if the parent is the root, then no
         // additional separator is added
@@ -421,6 +421,6 @@ const Path
                 }
             }
 
-        name.appendTo(buf);
+        return name.appendTo(buf);
         }
     }

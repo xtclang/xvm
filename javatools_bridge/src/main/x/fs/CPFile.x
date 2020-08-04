@@ -42,7 +42,7 @@ const CPFile(Object cookie, Path path, DateTime created, DateTime modified, Int 
         }
 
     @Override
-    FileChannel open(ReadOption read=Read, WriteOption... write=[Write])
+    FileChannel open(ReadOption read=Read, WriteOption[] write=[Write])
         {
         TODO
         }

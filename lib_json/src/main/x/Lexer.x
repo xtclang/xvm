@@ -176,7 +176,7 @@ class Lexer
             }
 
         @Override
-        void appendTo(Appender<Char> buf)
+        Appender<Char> appendTo(Appender<Char> buf)
             {
             buf.add('(');
             start.lineNumber.appendTo(buf);
@@ -208,6 +208,8 @@ class Lexer
                        .add('\'');
                     break;
                 }
+
+            return buf;
             }
         }
 

@@ -88,7 +88,7 @@ class ReifiedEntry<Key, Value>
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         if (key.is(Stringable))
             {
@@ -102,13 +102,8 @@ class ReifiedEntry<Key, Value>
 
         buf.add('=');
 
-        if (value.is(Stringable))
-            {
-            value.as(Stringable).appendTo(buf);
-            }
-        else
-            {
-            buf.addAll(value.toString());
-            }
+        return value.is(Stringable)
+                ? value.as(Stringable).appendTo(buf)
+                : buf.addAll(value.toString());
         }
     }

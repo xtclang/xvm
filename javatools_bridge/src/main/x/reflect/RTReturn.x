@@ -27,7 +27,7 @@ const RTReturn<ReturnType>(Int ordinal, String? name)
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         ReturnType.appendTo(buf);
         if (String name := hasName())
@@ -35,5 +35,6 @@ const RTReturn<ReturnType>(Int ordinal, String? name)
             buf.add(' ');
             name.appendTo(buf);
             }
+        return buf;
         }
     }

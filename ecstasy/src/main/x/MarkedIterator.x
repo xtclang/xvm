@@ -1,5 +1,3 @@
-import collections.Orderer;
-
 /**
  * An Iterator that adds [Markable] functionality to another [Iterator].
  */

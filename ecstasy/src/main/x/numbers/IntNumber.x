@@ -254,13 +254,13 @@ const IntNumber
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         if (sign == Negative)
             {
             buf.add('-');
             }
-        magnitude.appendTo(buf);
+        return magnitude.appendTo(buf);
         }
 
     /**

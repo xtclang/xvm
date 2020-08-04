@@ -249,7 +249,7 @@ public class ArrayAccessExpression
                 // test for Sequence<T>, Array<T> (aka T[]), etc.
                 Expression exprTarget = expr;
                 Expression exprIndex  = indexes.get(0);
-                if (testType(ctx, exprTarget, typeTarget, pool.typeSequence()))
+                if (testType(ctx, exprTarget, typeTarget, pool.typeList()))
                     {
                     // Sequence (Array, ...)   - if target is a Sequence (no conv)
                     //     Int -> Element      - if index could be an Int, then test if target
@@ -262,7 +262,7 @@ public class ArrayAccessExpression
                     if (!isExclusiveSlice() && exprIndex.testFit(ctx, pool.typeInt(), null).isFit())
                         {
                         return exprTarget.testFit(ctx, pool.ensureParameterizedTypeConstant(
-                                pool.typeSequence(), typeRequired), errs);
+                                pool.typeList(), typeRequired), errs);
                         }
 
                     // array[index..index] or array[index..index)
@@ -384,9 +384,9 @@ public class ArrayAccessExpression
                     : determineTupleTestType(typeRequired);
             }
         // test for Sequence<T> (aka T...) and Array<T> (aka T[]) etc.
-        else if (testType(ctx, exprArray, typeArray, pool.typeSequence()) && cIndexes == 1)
+        else if (testType(ctx, exprArray, typeArray, pool.typeList()) && cIndexes == 1)
             {
-            typeArrayReq = pool.typeSequence();
+            typeArrayReq = pool.typeList();
             if (typeRequired != null)
                 {
                 // array[index]
@@ -396,7 +396,7 @@ public class ArrayAccessExpression
                     typeElement = typeRequired;
                     }
                 // array[index..index] or array[index..index)
-                else if (typeRequired.isA(pool.typeSequence()) && aexprIndexes[0].testFit(ctx,
+                else if (typeRequired.isA(pool.typeList()) && aexprIndexes[0].testFit(ctx,
                         pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt()), null).isFit())
                     {
                     // REVIEW keep this in sync with testFit()
@@ -487,7 +487,7 @@ public class ArrayAccessExpression
         // first, validate the array expression; there is no way to say "required type is something
         // that has an operator for indexed look-up", since that could be Tuple, or List, or Array,
         // or UniformIndexed, or Matrix, or any custom class; however, the most common case is
-        // some sub-class of Sequence (such as Array, List, etc.), and we can test for that
+        // some sub-class of Sequence (such as Array, etc.), and we can test for that
         boolean        fValid       = true;
         TypeConstant[] aIndexTypes  = null;
         TypeConstant   typeResult   = null;
@@ -582,7 +582,7 @@ public class ArrayAccessExpression
         if (exprArray.isConstant() && aexprIndexes[0].isConstant() &&
                 (cIndexes == 1 || aexprIndexes[1].isConstant()))
             {
-            if ((typeArray.isTuple() || typeArray.isA(pool.typeSequence()) && cIndexes == 1))
+            if ((typeArray.isTuple() || typeArray.isA(pool.typeList()) && cIndexes == 1))
                 {
                 if (fSlice)
                     {

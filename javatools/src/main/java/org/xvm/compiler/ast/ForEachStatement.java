@@ -385,7 +385,7 @@ public class ForEachStatement
                 {
                 case ITERATOR: typeRVal = pool.typeIterator(); break;
                 case RANGE   : typeRVal = pool.typeRange()   ; break;
-                case SEQUENCE: typeRVal = pool.typeSequence(); break;
+                case SEQUENCE: typeRVal = pool.typeList(); break;
                 case MAP     : typeRVal = pool.typeMap()     ; break;
                 case ITERABLE: typeRVal = pool.typeIterable(); break;
 
@@ -760,7 +760,7 @@ public class ForEachStatement
         {
         ConstantPool     pool     = pool();
         TypeConstant     typeElem = getElementType();
-        TypeConstant     typeSeq  = pool.ensureParameterizedTypeConstant(pool.typeSequence(), typeElem);
+        TypeConstant     typeSeq  = pool.ensureParameterizedTypeConstant(pool.typeList(), typeElem);
         TypeInfo         infoSeq  = typeSeq.ensureTypeInfo(errs);
         PropertyConstant idSize   = infoSeq.findProperty("size").getIdentity();
 

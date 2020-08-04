@@ -180,15 +180,6 @@ class CircularArray<Element>
         }
 
 
-    // ----- VariablyMutable interface -------------------------------------------------------------
-
-    @Override
-    Mutability mutability.get()
-        {
-        return Mutable;
-        }
-
-
     // ----- UniformIndexed interface --------------------------------------------------------------
 
     @Override
@@ -214,7 +205,7 @@ class CircularArray<Element>
         }
 
 
-    // ----- Sequence interface --------------------------------------------------------------------
+    // ----- TODO List interface --------------------------------------------------------------------
 
     @Override
     @Op("[..]") CircularArray slice(Range<Int> indexes)

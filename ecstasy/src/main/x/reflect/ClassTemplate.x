@@ -353,7 +353,7 @@ interface ClassTemplate
          * @throws InvalidClass iff the result of the composition and/or formal types would produce
          *         a class that violates the verifier rules
          */
-        Class!<> ensureClass(Type... actualTypes)
+        Class!<> ensureClass(Type[] actualTypes = [])
             {
             TODO("This Composition has not been loaded into a container");
             }

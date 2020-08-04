@@ -26,7 +26,7 @@ const TypeSystem
         assert modules.size > 0;
         if (!modules.is(immutable Object))
             {
-            modules = modules.ensureImmutable();
+            modules = modules.freeze();
             }
 
         HashSet<Module>         sharedModules         = new HashSet();
@@ -339,7 +339,7 @@ const TypeSystem
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         buf.addAll("TypeSystem{");
 
@@ -370,6 +370,6 @@ const TypeSystem
                 }
             }
 
-        buf.add('}');
+        return buf.add('}');
         }
     }

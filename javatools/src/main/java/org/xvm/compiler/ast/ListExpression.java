@@ -28,9 +28,12 @@ import org.xvm.asm.op.Var_SN;
  * <pre>
  * ListLiteral
  *     "[" ExpressionList-opt "]"
- *     "Sequence:{" ExpressionList-opt "}"
- *     "List:{" ExpressionList-opt "}"
- *     "Array:{" ExpressionList-opt "}"
+ *     "Collection:[" ExpressionList-opt "]"
+ *     "List:[" ExpressionList-opt "]"
+ *     "Array:[" ExpressionList-opt "]"
+ *
+ * also TODO:
+ *     "Set:[" ExpressionList-opt "]"
  * </pre>
  */
 public class ListExpression
@@ -120,7 +123,7 @@ public class ListExpression
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         int cElements = exprs.size();
-        if (cElements > 0 && typeRequired != null && typeRequired.isA(pool().typeSequence()))
+        if (cElements > 0 && typeRequired != null && typeRequired.isA(pool().typeList()))
             {
             TypeConstant typeElement = typeRequired.resolveGenericType("Element");
             TypeFit      fit         = TypeFit.Fit;
@@ -147,8 +150,8 @@ public class ListExpression
             }
 
         ConstantPool pool = pool();
-        if (typeOut != null && typeOut.isA(pool.typeSequence()) &&
-            typeIn  != null && typeIn .isA(pool.typeSequence()))
+        if (typeOut != null && typeOut.isA(pool.typeList()) &&
+            typeIn  != null && typeIn .isA(pool.typeList()))
             {
             typeOut = typeOut.resolveGenericType("Element");
             typeIn  = typeIn .resolveGenericType("Element");
@@ -184,7 +187,7 @@ public class ListExpression
         TypeExpression exprTypeOld = type;
         if (exprTypeOld != null)
             {
-            TypeConstant   typeSeqType = pool.typeSequence().getType();
+            TypeConstant   typeSeqType = pool.typeList().getType();
             TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, typeSeqType, errs);
             if (exprTypeNew == null)
                 {
@@ -328,7 +331,7 @@ public class ListExpression
             {
             // try to calculate an element type that would probably accommodate the required type
             Set<TypeConstant> setSeqType = ((IntersectionTypeConstant) typeRequired).
-                collectMatching(pool().typeSequence(), null);
+                collectMatching(pool().typeList(), null);
             if (!setSeqType.isEmpty())
                 {
                 for (TypeConstant typeSeq : setSeqType)

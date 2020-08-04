@@ -22,7 +22,7 @@ class DelegatingIterator<Element>(Iterator<Element> iter)
         }
 
     @Override
-    conditional collections.Orderer knownOrder()
+    conditional Orderer knownOrder()
         {
         return iter.knownOrder();
         }

@@ -244,7 +244,7 @@ const Time(Int picos)
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         Int hour = this.hour;
         if (hour < 10)
@@ -275,5 +275,7 @@ const Time(Int picos)
             buf.add('.');
             Duration.picosFractional(fraction).appendTo(buf);
             }
+
+        return buf;
         }
     }

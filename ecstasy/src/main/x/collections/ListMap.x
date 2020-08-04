@@ -16,8 +16,8 @@ import maps.ReifiedEntry;
  */
 class ListMap<Key, Value>
         implements Map<Key, Value>
-        implements MutableAble, FixedSizeAble, PersistentAble, ImmutableAble
         incorporates conditional ListMapIndex<Key extends immutable Hashable, Value>
+        incorporates conditional MapFreezer<Key extends immutable Object, Value extends ImmutableAble>
         incorporates text.Stringer
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -168,8 +168,9 @@ class ListMap<Key, Value>
 
     // ----- Map interface -------------------------------------------------------------------------
 
-    @Override
-    public/private Mutability mutability = Mutable;
+// TODO CP
+//    @Override
+//    public/private Mutability mutability = Mutable;
 
     @Override
     Int size.get()
@@ -272,41 +273,42 @@ class ListMap<Key, Value>
         return compute(new CursorEntry(key));
         }
 
-    @Override
-    ListMap ensureMutable()
-        {
-        if (mutability == Mutable)
-            {
-            return this;
-            }
-
-        ListMap that = new ListMap(size);
-        that.putAll(this);
-        return that;
-        }
-
-    @Override
-    ListMap ensureFixedSize(Boolean inPlace = False)
-        {
-        TODO
-        }
-
-    @Override
-    ListMap ensurePersistent(Boolean inPlace = False)
-        {
-        TODO
-        }
-
-    @Override
-    immutable ListMap ensureImmutable(Boolean inPlace = False)
-        {
-        immutable Key[]   keys = listKeys.ensureImmutable(inPlace);
-        immutable Value[] vals = listVals.ensureImmutable(inPlace);
-
-        return inPlace
-                ? makeImmutable()
-                : new ListMap(keys, vals).as(immutable ListMap);
-        }
+// TODO CP
+//    @Override
+//    ListMap ensureMutable()
+//        {
+//        if (mutability == Mutable)
+//            {
+//            return this;
+//            }
+//
+//        ListMap that = new ListMap(size);
+//        that.putAll(this);
+//        return that;
+//        }
+//
+//    @Override
+//    ListMap ensureFixedSize(Boolean inPlace = False)
+//        {
+//        TODO
+//        }
+//
+//    @Override
+//    ListMap ensurePersistent(Boolean inPlace = False)
+//        {
+//        TODO
+//        }
+//
+//    @Override
+//    immutable ListMap freeze(Boolean inPlace = False)
+//        {
+//        immutable Key[]   keys = listKeys.freeze(inPlace);
+//        immutable Value[] vals = listVals.freeze(inPlace);
+//
+//        return inPlace
+//                ? makeImmutable()
+//                : new ListMap(keys, vals).as(immutable ListMap);
+//        }
 
     // ----- Keys Set ------------------------------------------------------------------------------
 
@@ -316,12 +318,6 @@ class ListMap<Key, Value>
     class Keys
             implements Set<Key>
         {
-        @Override
-        Mutability mutability.get()
-            {
-            return Mutable;
-            }
-
         @Override
         Int size.get()
             {
@@ -381,7 +377,7 @@ class ListMap<Key, Value>
             }
 
         @Override
-        (Keys, Int) removeIf(function Boolean (Key) shouldRemove)
+        (Keys, Int) removeAll(function Boolean (Key) shouldRemove)
             {
             verifyMutable();
 
@@ -407,7 +403,7 @@ class ListMap<Key, Value>
             }
 
         @Override
-        Key[] toArray(VariablyMutable.Mutability mutability = Persistent)
+        Key[] toArray(Array.Mutability? mutability = Null)
             {
             return listKeys.toArray(mutability);
             }
@@ -578,12 +574,6 @@ class ListMap<Key, Value>
             implements Set<Entry>
         {
         @Override
-        Mutability mutability.get()
-            {
-            return Mutable;
-            }
-
-        @Override
         Int size.get()
             {
             return listKeys.size;
@@ -642,7 +632,7 @@ class ListMap<Key, Value>
             }
 
         @Override
-        (Entries, Int) removeIf(function Boolean (Entry) shouldRemove)
+        (Entries, Int) removeAll(function Boolean (Entry) shouldRemove)
             {
             verifyMutable();
 
@@ -709,12 +699,6 @@ class ListMap<Key, Value>
             implements Collection<Value>
         {
         @Override
-        Mutability mutability.get()
-            {
-            return Mutable;
-            }
-
-        @Override
         Int size.get()
             {
             return listVals.size;
@@ -773,7 +757,7 @@ class ListMap<Key, Value>
             }
 
         @Override
-        (Values, Int) removeIf(function Boolean (Value) shouldRemove)
+        (Values, Int) removeAll(function Boolean (Value) shouldRemove)
             {
             verifyMutable();
 
@@ -799,7 +783,7 @@ class ListMap<Key, Value>
             }
 
         @Override
-        Value[] toArray(VariablyMutable.Mutability mutability = Persistent)
+        Value[] toArray(Array.Mutability? mutability = Null)
             {
             return listVals.toArray(mutability);
             }

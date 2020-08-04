@@ -142,7 +142,7 @@ public abstract class ObjectHandle
         TypeConstant type = m_clazz.getType();
         return isMutable()
                 ? type
-                : type.ensureImmutable();
+                : type.freeze();
         }
 
     public ObjectHandle ensureAccess(Constants.Access access)
@@ -848,7 +848,7 @@ public abstract class ObjectHandle
             TypeConstant type = f_clzArray.getType();
             return isMutable()
                     ? type
-                    : type.ensureImmutable();
+                    : type.freeze();
             }
 
         @Override

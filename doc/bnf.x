@@ -848,7 +848,7 @@ TupleLiteral
 
 CollectionLiteral
     "[" ExpressionList-opt "]"                                  # compile/runtime type is Array
-    TypeExpression ":[" ExpressionList-opt "]"                  # type must be Collection, Sequence, or List
+    TypeExpression ":[" ExpressionList-opt "]"                  # type must be Collection, Set, List, or Array
 
 MapLiteral
     "[" Entries-opt "]"                                         # compile/runtime type is Map

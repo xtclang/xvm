@@ -2,7 +2,9 @@
  * String is a well-known, immutable data type for holding textual information.
  */
 const String
-        implements Sequence<Char>
+        implements UniformIndexed<Int, Char>
+        implements Iterable<Char>
+        implements Sliceable<Int>
         implements Stringable
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -14,7 +16,7 @@ const String
      */
     construct(Char[] chars)
         {
-        this.chars = chars.ensureImmutable();
+        this.chars = chars.freeze();
         }
 
 
@@ -93,8 +95,7 @@ const String
      *
      * @return the reversed form of this String
      */
-    @Override
-    String! reverse()
+    String! reversed()
         {
         return size <= 1
                 ? this
@@ -179,6 +180,34 @@ const String
         results += substring(start);
 
         return results;
+        }
+
+    /**
+     * Look for the specified character starting at the specified index.
+     *
+     * @param value    the character to search for
+     * @param startAt  the first index to search from (optional)
+     *
+     * @return True iff this string contains the character, at or after the `startAt` index
+     * @return (conditional) the index at which the specified character was found
+     */
+    conditional Int indexOf(Char value, Int startAt = 0)
+        {
+        return chars.indexOf(value, startAt);
+        }
+
+    /**
+     * Look for the specified character starting at the specified index and searching backwards.
+     *
+     * @param value    the character to search for
+     * @param startAt  the index to start searching backwards from (optional)
+     *
+     * @return True iff this string contains the character, at or before the `startAt` index
+     * @return (conditional) the index at which the specified character was found
+     */
+    conditional Int lastIndexOf(Char value, Int startAt = Int.maxvalue)
+        {
+        return chars.lastIndexOf(value, startAt);
         }
 
     /**
@@ -317,7 +346,7 @@ const String
         }
 
 
-    // ----- Sequence methods ----------------------------------------------------------------------
+    // ----- Iterable methods ----------------------------------------------------------------------
 
     @Override
     Int size.get()
@@ -326,34 +355,28 @@ const String
         }
 
     @Override
+    Iterator<Char> iterator()
+        {
+        return chars.iterator();
+        }
+
+
+    // ----- UniformIndexed methods ----------------------------------------------------------------
+
+    @Override
     @Op("[]")
     @Op Char getElement(Int index)
         {
         return chars[index];
         }
 
+
+    // ----- Sliceable methods ---------------------------------------------------------------------
+
     @Override
     @Op("[..]") String slice(Range<Int> indexes)
         {
         return new String(chars[indexes]);
-        }
-
-    @Override
-    Iterator<Char> iterator()
-        {
-        return chars.iterator();
-        }
-
-    @Override
-    conditional Int indexOf(Char value, Int startAt = 0)
-        {
-        return chars.indexOf(value, startAt);
-        }
-
-    @Override
-    conditional Int lastIndexOf(Char value, Int startAt = Int.maxvalue)
-        {
-        return chars.lastIndexOf(value, startAt);
         }
 
 
@@ -438,8 +461,8 @@ const String
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
-        buf.addAll(chars);
+        return buf.addAll(chars);
         }
     }

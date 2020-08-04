@@ -188,7 +188,7 @@
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         buf.addAll(location)
            .add(' ')
@@ -205,5 +205,7 @@
             context.appendEscaped(buf);
             buf.add(')');
             }
+
+        return buf;
         }
     }

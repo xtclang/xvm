@@ -4,7 +4,7 @@
  */
 class MapSet<Element>
         implements Set<Element>
-        implements ImmutableAble
+        implements Freezable
     {
     construct(Map<Element, Nullable> map)
         {
@@ -32,15 +32,9 @@ class MapSet<Element>
     protected/private Map<Element, Nullable> map;
 
     @Override
-    Mutability mutability.get()
+    conditional Orderer orderedBy()
         {
-        return map.mutability;
-        }
-
-    @Override
-    conditional Orderer sortedBy()
-        {
-        return map.keys.sortedBy();
+        return map.keys.orderedBy();
         }
 
     @Override
@@ -74,7 +68,7 @@ class MapSet<Element>
         }
 
     @Override
-    Element[] toArray(VariablyMutable.Mutability mutability = Persistent)
+    Element[] toArray(Array.Mutability? mutability = Null)
         {
         return map.keys.toArray(mutability);
         }
@@ -156,7 +150,7 @@ class MapSet<Element>
         }
 
     @Override
-    (MapSet, Int) removeIf(function Boolean (Element) shouldRemove)
+    (MapSet, Int) removeAll(function Boolean (Element) shouldRemove)
         {
         val oldMap = map;
         var newMap = oldMap;
@@ -219,10 +213,10 @@ class MapSet<Element>
         TODO
         }
 
-    // ----- ImmutableAble interface ---------------------------------------------------------------
+    // ----- Freezable interface ---------------------------------------------------------------
 
     @Override
-    immutable MapSet ensureImmutable(Boolean inPlace = False)
+    immutable MapSet freeze(Boolean inPlace = False)
         {
         return inPlace
                 ? makeImmutable()

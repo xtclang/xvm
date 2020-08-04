@@ -24,21 +24,29 @@ import numbers.VarInt;
 import numbers.VarUInt;
 
 /**
- * Array is an implementation of List, an Int-indexed container of elements of a particular type.
+ * Array is the fundamental implementation of List; it is an Int-indexed container of elements of a
+ * particular type.
  *
- * Array implements all four VariablyMutable forms: Mutable, Fixed, Persistent, and Constant.
- * To construct an Array with a specific form of mutability, use the
- * [construct(Mutability, Element...)] constructor.
+ * Some data structures are capable of mutating their data in-place, while others (called
+ * "persistent" data structures) create a new copy (or representation) of the data structure when a
+ * mutating operation is executed. (The use of the term "persistent" in this context is not related
+ * to persistent _storage_, such as in a database or on disk; it refers instead to the "persistence"
+ * of the state of the _old_ data structure, even after a change is made that resulted in the
+ * creation of a _new_ data structure.) Array supports both in-place mutability and persistent data
+ * structure modes, and "freezes" to the persistent mode. There are two in-place mutability options:
+ * A fully mutable mode that allows the array to grow and shrink, and a fixed-size mode for
+ * optimization purposes. To construct an Array with a specific form of mutability, use the
+ * [construct(Mutability, Element[])] constructor.
  */
 class Array<Element>
         implements List<Element>
-        implements MutableAble, FixedSizeAble, PersistentAble, ImmutableAble
+        implements Freezable
         implements Stringable
         incorporates text.Stringer
         incorporates conditional BitArray<Element extends Bit>
         incorporates conditional ByteArray<Element extends Byte>
-        incorporates conditional Orderer<Element extends Orderable>
-        incorporates conditional Hasher<Element extends Hashable>
+        incorporates conditional ArrayOrderer<Element extends Orderable>
+        incorporates conditional ArrayHasher<Element extends Hashable>
         // TODO have to implement Const (at least conditionally if Element extends Const)
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -111,7 +119,7 @@ class Array<Element>
      * @param mutability  the mutability setting for the array
      * @param elements    the elements to use to initialize the contents of the array
      */
-    construct(Mutability mutability, Element... elements)
+    construct(Mutability mutability, Element[] elements = [])
         {
         }
     finally
@@ -120,7 +128,7 @@ class Array<Element>
         if (size > 0)
             {
             function Element (Element) transform = mutability == Constant
-                    ? (e -> e.is(Const) ? e : e.is(ImmutableAble) ? e.ensureImmutable() : assert)
+                    ? (e -> e.is(Const) ? e : e.is(Freezable) ? e.freeze() : assert)
                     : e -> e;
 
             Int         index = size - 1;
@@ -191,7 +199,7 @@ class Array<Element>
             private Int translateIndex(Int index)
                 {
                 assert:bounds index >= 0 && index < section.size;
-                return section.reversed
+                return section.descending
                         ? section.effectiveUpperBound - index
                         : section.effectiveLowerBound + index;
                 }
@@ -299,7 +307,7 @@ class Array<Element>
             {
             Array result = new Array<Element>(size, i -> (interval.contains(i) ? value : this[i]));
             return mutability == Constant
-                    ? result.ensureImmutable(true)
+                    ? result.freeze(true)
                     : result.ensurePersistent(true);
             }
         else
@@ -313,9 +321,54 @@ class Array<Element>
         }
 
 
-    // ----- VariablyMutable interface -------------------------------------------------------------
+    // ----- variable Mutability -------------------------------------------------------------------
 
-    @Override
+    /**
+     * The levels of mutability of an array.
+     */
+    enum Mutability
+        {
+        /*
+         * A _Constant_ array structure is also a persistent data structure, but additionally
+         * it must be immutable, and all of its contents must be immutable.
+         */
+        Constant,
+        /*
+         * A _Persistent_ array structure handles mutation requests by creating a new array
+         * structure with the requested changes. It is common for multiple persistent array
+         * structures to share mutable internal data for efficiency purposes.
+         *
+         * A persistent data structure is a container data type that creates new versions of itself
+         * in response to modification requests, thus avoiding changing its own state. A persistent
+         * data structure behaves like an immutable data structure, except that its contained data
+         * types are not required to be immutable; it acts as if it were "shallow immutable".
+         *
+         * For example, a persistent array data structure cannot be increased in size, nor decreased
+         * in size, nor can any of its elements have their values replaced (i.e. each element has a
+         * referent, and the array will not allow any element to modify which referent it holds).
+         *
+         * The benefit of a persistent data structure is similar to that of a `const` value, in
+         * that it is safe to share. However, only `const` values can be passed across a service
+         * boundary.
+         *
+         * (Note: The term "persistent" is not related to the concept of persistent storage.)
+         */
+        Persistent,
+        /*
+         * A _Fixed-Size_ array structure allows mutations via replacement of its elements, but
+         * not any mutations that would add or remove elements and thus altering its `size`.
+         */
+        Fixed,
+        /*
+         * A _Mutable_  array structure allows mutations, including changes in its `size`. Elements
+         * may be added, removed, and replaced in-place.
+         */
+        Mutable
+        }
+
+    /**
+     * The Mutability of the array structure.
+     */
     public/private Mutability mutability.get()
         {
         if (delegate != null)
@@ -327,60 +380,19 @@ class Array<Element>
         return super();
         }
 
-    @Override
-    Array ensureMutable()
-        {
-        return mutability == Mutable
-                ? this
-                : new Array(Mutable, this);
-        }
-
-    /**
-     * Return a fixed-size array (whose values are mutable) of the same type and with the same
-     * contents as this array. If this array is already a fixed-size array, then _this_ is returned.
-     */
-    @Override
-    Array ensureFixedSize(Boolean inPlace = False)
-        {
-        if (inPlace && mutability == Mutable || mutability == Fixed)
-            {
-            mutability = Fixed;
-            return this;
-            }
-
-        return new Array(Fixed, this);
-        }
-
-    /**
-     * Return a persistent array of the same element types and values as are present in this array.
-     * If this array is already persistent or `const`, then _this_ is returned.
-     *
-     * A _persistent_ array does not support replacing the contents of the elements in this array
-     * using the {@link replace} method; instead, calls to {@link replace} will return a new array.
-     */
-    @Override
-    Array ensurePersistent(Boolean inPlace = False)
-        {
-        if (delegate == null && inPlace && !mutability.persistent || mutability == Persistent)
-            {
-            mutability = Persistent;
-            return this;
-            }
-
-        return new Array(Persistent, this);
-        }
-
     /**
      * Return a `const` array of the same type and contents as this array.
      *
      * All mutating calls to a `const` array will result in the creation of a new
      * `const` array with the requested changes incorporated.
      *
+     * @param inPlace
+     *
      * @throws Exception if any of the values in the array are not `const` and are not
-     *         {@link ImmutableAble}
+     *         {@link Freezable}
      */
     @Override
-    immutable Array ensureImmutable(Boolean inPlace = False)
+    immutable Array freeze(Boolean inPlace = False)
         {
         if (mutability == Constant)
             {
@@ -399,13 +411,13 @@ class Array<Element>
             return new Array(Constant, this).as(immutable Element[]);
             }
 
-        // all elements must be immutable or ImmutableAble
+        // all elements must be immutable or Freezable
         Boolean convert = False;
         loop: for (Element element : this)
             {
             if (!element.is(immutable Object))
                 {
-                if (element.is(ImmutableAble))
+                if (element.is(Freezable))
                     {
                     convert = True;
                     }
@@ -422,8 +434,8 @@ class Array<Element>
                 {
                 if (!element.is(immutable Object))
                     {
-                    assert element.is(ImmutableAble);
-                    this[loop.count] = element.ensureImmutable(True);
+                    assert element.is(Freezable);
+                    this[loop.count] = element.freeze();
                     }
                 }
             }
@@ -494,7 +506,7 @@ class Array<Element>
         }
 
 
-    // ----- Sequence interface --------------------------------------------------------------------
+    // ----- TODO interface --------------------------------------------------------------------
 
     @Override
     Int size.get()
@@ -540,19 +552,93 @@ class Array<Element>
 
     // ----- Collection interface ------------------------------------------------------------------
 
+// TODO?
+//    @Override
+//    List sorted(Orderer? orderer = Null, Array.Mutability? mutability = Null)
+//        {
+//        if (orderer != Null && mutability == Null, Orderer? prev := orderedBy(), prev? == orderer)
+//            {
+//            return this;
+//            }
+//
+//        return super();
+//         toArray().sort(orderer);
+//        if (size <= 1)
+//            {
+//            return this;
+//            }
+//
+//        // eventual to-do is to should pick a better sort impl based on some heuristics, such as
+//        // size of list and how many elements are out-of-order
+//        function void (List<Element>, Orderer?) sortimpl = bubbleSort;
+//
+//        Mutability mutability = this.mutability;
+//        if (!mutability.persistent)
+//            {
+//            sortimpl(this, order);
+//            return this;
+//            }
+//
+//        List!   temp;
+//        Boolean inPlace = True;
+//        if (this.is(FixedSizeAble))
+//            {
+//            temp = ensureFixedSize();
+//            }
+//        else if (this.is(MutableAble))
+//            {
+//            temp = ensureMutable();
+//            }
+//        else
+//            {
+//            temp    = toArray();
+//            inPlace = False;
+//            }
+//
+//        sortimpl(temp, order);
+//
+//        if (inPlace)
+//            {
+//            if (mutability == Persistent && temp.is(PersistentAble))
+//                {
+//                return temp.ensurePersistent(True);
+//                }
+//            else if (mutability == Constant && temp.is(Freezable))
+//                {
+//                return temp.freeze(True);
+//                }
+//            }
+//
+//        return this.clear().addAll(temp);
+//        }
+
     @Override
     Boolean contains(Element value)
         {
-        // use the default implementation from the Sequence interface
+        // use the default implementation from the List interface
         return indexOf(value);
         }
 
     @Override
-    Element[] toArray(VariablyMutable.Mutability? mutability = Null)
+    Array toArray(Mutability? mutability = Null, Boolean inPlace = False)
         {
-        return mutability == null || mutability == this.mutability
-                ? this
-                : new Array(mutability, this);  // create a copy of the desired mutability
+        if (mutability == null || mutability == this.mutability)
+            {
+            return this;
+            }
+
+        if (mutability == Constant)
+            {
+            return freeze(inPlace);
+            }
+
+        if (!inPlace || mutability < this.mutability)
+            {
+            return new Array(mutability, this);  // return a copy that has the desired mutability
+            }
+
+        this.mutability = mutability;
+        return this;
         }
 
     @Override
@@ -581,7 +667,7 @@ class Array<Element>
                 Array result = new Array<Element>(size + 1, i -> (i < size ? this[i] : element));
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
-                        : result.ensureImmutable(true);
+                        : result.freeze(true);
             }
         }
 
@@ -616,12 +702,12 @@ class Array<Element>
                 Element[] result = new Array<Element>(this.size + values.size, supply);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
-                        : result.ensureImmutable(true);
+                        : result.freeze(true);
             }
         }
 
     @Override
-    (Array, Int) removeIf(function Boolean (Element) shouldRemove)
+    (Array, Int) removeAll(function Boolean (Element) shouldRemove)
         {
         Int[]? indexes = null;
         loop: for (Element value : this)
@@ -664,7 +750,7 @@ class Array<Element>
             case Mutable   : result;
             case Fixed     : result.ensureFixedSize (True);
             case Persistent: result.ensurePersistent(True);
-            case Constant  : result.ensureImmutable (True);
+            case Constant  : result.freeze (True);
             }, indexes.size;
         }
 
@@ -702,7 +788,7 @@ class Array<Element>
             Element[] result = new Array(size, i -> (i == index ? value : this[i]));
             return mutability == Persistent
                     ? result.ensurePersistent(true)
-                    : result.ensureImmutable(true);
+                    : result.freeze(true);
             }
         else
             {
@@ -743,7 +829,7 @@ class Array<Element>
                             });
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
-                        : result.ensureImmutable(true);
+                        : result.freeze(true);
             }
         }
 
@@ -830,7 +916,7 @@ class Array<Element>
                 Element[] result = new Array<Element>(this.size + values.size, supply);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
-                        : result.ensureImmutable(true);
+                        : result.freeze(true);
             }
         }
 
@@ -864,12 +950,12 @@ class Array<Element>
                 Element[] result = new Array(size, i -> this[i < index ? i : i+1]);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
-                        : result.ensureImmutable(true);
+                        : result.freeze(true);
             }
         }
 
     @Override
-    Array delete(Interval<Int> interval)
+    Array deleteAll(Interval<Int> interval)
         {
         Int lo = interval.lowerBound;
         Int hi = interval.upperBound;
@@ -912,7 +998,7 @@ class Array<Element>
                 Element[] result = new Array(size, i -> this[i < lo ? i : i+gap]);
                 return mutability == Persistent
                         ? result.ensurePersistent(true)
-                        : result.ensureImmutable(true);
+                        : result.freeze(true);
             }
         }
 
@@ -1008,7 +1094,6 @@ class Array<Element>
      */
     protected static interface ArrayDelegate<Element>
             extends UniformIndexed<Int, Element>
-            extends VariablyMutable
         {
         @RO Int size;
         }
@@ -1042,7 +1127,7 @@ class Array<Element>
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         buf.add('[');
 
@@ -1078,7 +1163,7 @@ class Array<Element>
                 }
             }
 
-        buf.add(']');
+        return buf.add(']');
         }
 
 
@@ -1216,7 +1301,7 @@ class Array<Element>
          */
         immutable Boolean[] toBooleanArray()
             {
-            return new Array<Boolean>(size, i -> this[i].toBoolean()).ensureImmutable(true);
+            return new Array<Boolean>(size, i -> this[i].toBoolean()).freeze(true);
             }
 
         /**
@@ -1250,7 +1335,7 @@ class Array<Element>
                 bitnum += 4;
                 }
 
-            return nibbles.ensureImmutable(true);
+            return nibbles.freeze(true);
             }
 
         /**
@@ -1264,7 +1349,7 @@ class Array<Element>
 //
 //            // not used
 //            class SequenceImpl(Number num)
-//                    implements Sequence<Byte>
+//                    implements List<Byte>
 //                {
 //                @Override
 //                @RO Int size.get()
@@ -1299,7 +1384,7 @@ class Array<Element>
 //                         bits[of-4], bits[of-5], bits[of-6], bits[of-7]].as(Bit[]));
 //                }
 //
-//            return bytes.ensureImmutable(true);
+//            return bytes.freeze(true);
             }
 
         /**
@@ -1535,7 +1620,7 @@ class Array<Element>
                     bits[index++] = bit;
                     }
                 }
-            return bits.ensureImmutable(true);
+            return bits.freeze(true);
             }
 
         /**
@@ -1557,7 +1642,7 @@ class Array<Element>
 //                    }
 //                }
 //
-//            return nibbles.ensureImmutable(true);
+//            return nibbles.freeze(true);
             TODO CP;
             }
 
@@ -1954,7 +2039,7 @@ class Array<Element>
 
     // ----- Orderable mixin -----------------------------------------------------------------------
 
-    static mixin Orderer<Element extends Orderable>
+    static mixin ArrayOrderer<Element extends Orderable>
             into Array<Element>
             extends Comparator<Element>
             implements Orderable
@@ -1962,7 +2047,7 @@ class Array<Element>
         /**
          * Compare two arrays of the same type for purposes of ordering.
          */
-        static <CompileType extends Orderer>
+        static <CompileType extends ArrayOrderer>
                 Ordered compare(CompileType array1, CompileType array2)
             {
             for (Int i = 0, Int c = Int.minOf(array1.size, array2.size); i < c; i++)
@@ -1981,7 +2066,7 @@ class Array<Element>
 
     // ----- Hashable mixin ------------------------------------------------------------------------
 
-    static mixin Hasher<Element extends Hashable>
+    static mixin ArrayHasher<Element extends Hashable>
             into Array<Element>
             extends Comparator<Element>
             implements Hashable
@@ -1989,7 +2074,7 @@ class Array<Element>
         /**
          * Calculate a hash code for a given array.
          */
-        static <CompileType extends Hasher> Int hashCode(CompileType array)
+        static <CompileType extends ArrayHasher> Int hashCode(CompileType array)
             {
             Int hash = 0;
             for (CompileType.Element el : array)

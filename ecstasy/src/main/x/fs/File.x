@@ -159,7 +159,7 @@ interface File
      * @throws FileAlreadyExists  if the file exists, but the WriteOption of Create is specified or
      *                            implied
      */
-    FileChannel open(ReadOption read=Read, WriteOption... write=[Write]);
+    FileChannel open(ReadOption read=Read, WriteOption[] write = [Write]);
 
     @Override
     void emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "")

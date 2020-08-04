@@ -216,7 +216,7 @@ public abstract class TypeConstant
      *
      * @return a type constant that represents an immutable type of this type constant
      */
-    public TypeConstant ensureImmutable()
+    public TypeConstant freeze()
         {
         return isImmutable()
                 ? this
@@ -1028,22 +1028,6 @@ public abstract class TypeConstant
         TypeConstant constThis = resolveTypedefs();
         assert !constThis.containsUnresolved();
         return constThis.isA(getConstantPool().typeArray());
-        }
-
-    /**
-     * @return true iff the type is a Sequence type
-     */
-    public boolean isSequence()
-        {
-        TypeConstant constThis = resolveTypedefs();
-        assert !constThis.containsUnresolved();
-
-        constThis = constThis.resolveAutoNarrowingBase();
-        return     constThis.isEcstasy("String")
-                || constThis.isEcstasy("Array")
-                || constThis.isEcstasy("List")
-                || constThis.isEcstasy("Sequence")
-                || constThis.isA(getConstantPool().typeSequence());
         }
 
     /**

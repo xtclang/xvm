@@ -47,7 +47,7 @@ interface Object
      */
     immutable Object makeImmutable()
         {
-        this:struct.ensureImmutable();
+        this:struct.freeze();
         return this.as(immutable Object);
         }
     }

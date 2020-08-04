@@ -64,7 +64,7 @@ class CompoundIterator<Element>
         }
 
     @Override
-    conditional collections.Orderer knownOrder()
+    conditional Orderer knownOrder()
         {
         return tail == Null
                  ? iter.knownOrder()

@@ -442,7 +442,7 @@ public class xRTSignature
             {
             return isMutable()
                     ? f_type
-                    : f_type.ensureImmutable();
+                    : f_type.freeze();
             }
 
         public MethodConstant getMethodId()

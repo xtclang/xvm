@@ -62,7 +62,6 @@ import ecstasy.collections.ListMap;
 import ecstasy.collections.ListSet;
 import ecstasy.collections.Map;
 import ecstasy.collections.Matrix;
-import ecstasy.collections.Sequence;
 import ecstasy.collections.Set;
 import ecstasy.collections.Tuple;
 import ecstasy.collections.UniformIndexed;

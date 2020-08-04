@@ -242,7 +242,7 @@ const Class<PublicType, ProtectedType extends PublicType,
                 }
             while (annotation := type.annotated());
             assert Class!<> deannotated := type.fromClass();
-            return deannotated, annotations.reverse();
+            return deannotated, annotations.reversed();
             }
         else
             {
@@ -327,7 +327,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @return the corresponding parameterized class
      */
-    Class!<> parameterize(Type... paramTypes)
+    Class!<> parameterize(Type[] paramTypes = [])
         {
         // TODO tuple support
 
@@ -477,7 +477,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @return the child class as specified
      */
-    Class!<> childForName(String name, Type... paramTypes)
+    Class!<> childForName(String name, Type[] paramTypes = [])
         {
         assert Type     childType  := PrivateType.childTypes.get(name);
         assert Class!<> childClass := childType.parameterize(paramTypes).fromClass();
@@ -582,7 +582,7 @@ const Class<PublicType, ProtectedType extends PublicType,
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         (_, Annotation[] annotations) = deannotate();
         if (annotations.size > 0)
@@ -610,5 +610,7 @@ const Class<PublicType, ProtectedType extends PublicType,
                 }
             buf.add('>');
             }
+
+        return buf;
         }
     }

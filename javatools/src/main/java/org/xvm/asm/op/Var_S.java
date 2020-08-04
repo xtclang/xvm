@@ -23,7 +23,7 @@ import org.xvm.runtime.template.collections.xArray;
 
 
 /**
- * VAR_S TYPE, #values:(rvalue-src) ; next register is an initialized anonymous Sequence variable
+ * VAR_S TYPE, #values:(rvalue-src) ; next register is an initialized anonymous Array variable
  */
 public class Var_S
         extends OpVar
@@ -123,12 +123,12 @@ public class Var_S
 
     protected int complete(Frame frame, int iPC, ObjectHandle[] ahArg)
         {
-        TypeConstant     typeSequence = frame.resolveType(m_nType);
-        ClassComposition clzArray     = getArrayClass(frame, typeSequence);
+        TypeConstant     typeList = frame.resolveType(m_nType);
+        ClassComposition clzArray     = getArrayClass(frame, typeList);
 
         ArrayHandle hArray = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahArg);
 
-        frame.introduceResolvedVar(m_nVar, typeSequence, null, Frame.VAR_STANDARD, hArray);
+        frame.introduceResolvedVar(m_nVar, typeList, null, Frame.VAR_STANDARD, hArray);
 
         return iPC + 1;
         }

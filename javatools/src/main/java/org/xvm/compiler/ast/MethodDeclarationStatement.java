@@ -679,36 +679,21 @@ public class MethodDeclarationStatement
                 Parameter    param     = params.get(i);
                 Expression   value     = param.value;
 
-                if (value == null)
+                assert value != null;
+                Expression valueNew;
+                ctx      = ctx.enterInferring(typeParam);
+                valueNew = value.validate(ctx, typeParam, errs);
+                ctx      = ctx.exit();
+
+                if (valueNew != null)
                     {
-                    // the param must be a last one and is a SequenceTypeExpression
-                    // (see buildParameters() method)
-                    ConstantPool pool = pool();
-                    assert i == cParamExprs - 1 && typeParam.isA(pool.typeSequence());
-
-                    TypeConstant typeDefault = pool.ensureParameterizedTypeConstant(
-                            pool.typeArray(), typeParam.getParamType(0));
-
-                    parameter.setDefaultValue(
-                            pool.ensureArrayConstant(typeDefault, Constant.NO_CONSTS));
-                    }
-                else
-                    {
-                    Expression valueNew;
-                    ctx      = ctx.enterInferring(typeParam);
-                    valueNew = value.validate(ctx, typeParam, errs);
-                    ctx      = ctx.exit();
-
-                    if (valueNew != null)
+                    if (valueNew.isConstant())
                         {
-                        if (valueNew.isConstant())
-                            {
-                            parameter.setDefaultValue(value.toConstant());
-                            }
-                        else
-                            {
-                            value.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
-                            }
+                        parameter.setDefaultValue(value.toConstant());
+                        }
+                    else
+                        {
+                        value.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
                         }
                     }
                 }
@@ -780,13 +765,7 @@ public class MethodDeclarationStatement
 
             if (param.value == null)
                 {
-                // if the very last parameter is a SequenceTypeExpression (i.e. "T... param"),
-                // we will generate an implicit default value
-                if (i == cParams - 1 && exprType instanceof SequenceTypeExpression)
-                    {
-                    aParams[i].markDefaultValue();
-                    }
-                else if (fDefaultRequired)
+                if (fDefaultRequired)
                     {
                     param.log(errs, Severity.ERROR, Compiler.DEFAULT_VALUE_REQUIRED, sName);
                     }

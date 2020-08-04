@@ -136,7 +136,7 @@ public class xArray
         LIST_MAP_CONSTRUCT = f_templates.getClassStructure("collections.ListMap").findMethod("construct", 2);
 
         // cache Mutability template
-        MUTABILITY = (xEnum) f_templates.getTemplate("collections.VariablyMutable.Mutability");
+        MUTABILITY = (xEnum) f_templates.getTemplate("collections.Array.Mutability");
 
         // mark native properties and methods
         markNativeProperty("capacity");
@@ -153,9 +153,7 @@ public class xArray
         markNativeMethod("addAll", new String[] {"Iterable<Element>"}, ARRAY);
         markNativeMethod("delete", new String[] {"numbers.Int64"}, null);
         markNativeMethod("slice", new String[] {"Range<numbers.Int64>"}, ARRAY);
-        markNativeMethod("ensureMutable", VOID, null);
-        markNativeMethod("ensureImmutable", BOOLEAN, null);
-        markNativeMethod("ensurePersistent", BOOLEAN, null);
+        markNativeMethod("freeze", BOOLEAN, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -351,7 +349,7 @@ public class xArray
                 JavaLong      hUpper    = (JavaLong) hInterval.getField("upperBound");
                 boolean       fExLower  = ((BooleanHandle) hInterval.getField("lowerExclusive")).get();
                 boolean       fExUpper  = ((BooleanHandle) hInterval.getField("upperExclusive")).get();
-                boolean       fReverse  = ((BooleanHandle) hInterval.getField("reversed")).get();
+                boolean       fReverse  = ((BooleanHandle) hInterval.getField("descending")).get();
 
                 long lLower = hLower.getValue();
                 long lUpper = hUpper.getValue();
@@ -489,42 +487,46 @@ public class xArray
                 long    ixTo     = ((JavaLong) hInterval.getField("upperBound")).getValue();
                 boolean fExLower = ((BooleanHandle) hInterval.getField("lowerExclusive")).get();
                 boolean fExUpper = ((BooleanHandle) hInterval.getField("upperExclusive")).get();
-                boolean fReverse = ((BooleanHandle) hInterval.getField("reversed")).get();
+                boolean fReverse = ((BooleanHandle) hInterval.getField("descending")).get();
 
                 return slice(frame, hTarget, ixFrom, fExLower, ixTo, fExUpper, fReverse, iReturn);
                 }
 
-            case "ensureImmutable": // immutable Array ensureImmutable(Boolean inPlace = False)
+            case "freeze": // immutable Array freeze(Boolean inPlace = False)
                 {
                 ArrayHandle hArray  = (ArrayHandle) hTarget;
                 boolean    fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
 
-                // TODO: ensure all elements are immutable or ImmutableAble
+                // TODO GG ensure all elements are immutable, and if not, they must be Freezeable
+
                 if (fInPlace)
                     {
+                    // TODO call freeze(False) on each element that is not already immutable
                     hArray.makeImmutable();
                     }
                 else
                     {
+                    // TODO call freeze(False) on each element that is not already immutable as part
+                    //      of the creation of the array copy
                     hArray = createCopy(hArray, Mutability.Constant);
                     }
                 return frame.assignValue(iReturn, hArray);
                 }
-
-            case "ensurePersistent": // Array ensurePersistent(Boolean inPlace = False)
-                {
-                ArrayHandle hArray   = (ArrayHandle) hTarget;
-                boolean     fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
-                if (fInPlace)
-                    {
-                    hArray.m_mutability = Mutability.Persistent;
-                    }
-                else
-                    {
-                    hArray = createCopy(hArray, Mutability.Persistent);
-                    }
-                return frame.assignValue(iReturn, hArray);
-                }
+// TODO
+//            case "ensurePersistent": // Array ensurePersistent(Boolean inPlace = False)
+//                {
+//                ArrayHandle hArray   = (ArrayHandle) hTarget;
+//                boolean     fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
+//                if (fInPlace)
+//                    {
+//                    hArray.m_mutability = Mutability.Persistent;
+//                    }
+//                else
+//                    {
+//                    hArray = createCopy(hArray, Mutability.Persistent);
+//                    }
+//                return frame.assignValue(iReturn, hArray);
+//                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -542,16 +544,17 @@ public class xArray
             case "insertAll":
                 return insertElements(frame, hTarget, (JavaLong) ahArg[0], ahArg[1], iReturn);
 
-            case "ensureMutable": // Array ensureMutable()
-                {
-                ArrayHandle hArray = (ArrayHandle) hTarget;
-
-                if (hArray.m_mutability != Mutability.Mutable)
-                    {
-                    hArray = createCopy(hArray, Mutability.Mutable);
-                    }
-                return frame.assignValue(iReturn, hArray);
-                }
+// TODO
+//            case "ensureMutable": // Array ensureMutable()
+//                {
+//                ArrayHandle hArray = (ArrayHandle) hTarget;
+//
+//                if (hArray.m_mutability != Mutability.Mutable)
+//                    {
+//                    hArray = createCopy(hArray, Mutability.Mutable);
+//                    }
+//                return frame.assignValue(iReturn, hArray);
+//                }
 
             case "setElement":
                 return assignArrayValue(frame, hTarget, ((JavaLong) ahArg[0]).getValue(), ahArg[1]);

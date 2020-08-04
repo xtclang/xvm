@@ -61,11 +61,11 @@ class KeyValues<Key, Value>(Map<Key, Value> map)
         }
 
     @Override
-    (KeyValues, Int) removeIf(function Boolean (Value) shouldRemove)
+    (KeyValues, Int) removeAll(function Boolean (Value) shouldRemove)
         {
         verifyMutable();
 
-        (_, Int removed) = map.keys.removeIf(key ->
+        (_, Int removed) = map.keys.removeAll(key ->
                 {
                 assert Value value := map.get(key);
                 return shouldRemove(value);

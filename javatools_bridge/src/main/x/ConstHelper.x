@@ -33,7 +33,7 @@ class ConstHelper
      *
      * (field1=value1, field2=value2, ...)
      */
-    static void appendTo(Appender<Char> buf, immutable String[] names, immutable Object[] fields)
+    static Appender<Char> appendTo(Appender<Char> buf, immutable String[] names, immutable Object[] fields)
         {
         buf.add('(');
 
@@ -57,7 +57,7 @@ class ConstHelper
                 field.toString().appendTo(buf);
                 }
             }
-        buf.add(')');
+        return buf.add(')');
         }
 
     /**
@@ -71,7 +71,7 @@ class ConstHelper
      */
     static Int freeze(Object[] fields)
         {
-        import ecstasy.collections.ImmutableAble;
+        import ecstasy.collections.Freezable;
 
         Int result = -1;
         for (Int i = 0, Int c = fields.size; i < c; i++)
@@ -79,9 +79,9 @@ class ConstHelper
             Object field = fields[i];
             if (!field.is(immutable Object) && !field.is(Service))
                 {
-                if (field.is(ImmutableAble))
+                if (field.is(Freezable))
                     {
-                    fields[i] = field.ensureImmutable(false);
+                    fields[i] = field.freeze(false);
                     result = -2;
                     }
                 else
@@ -98,6 +98,6 @@ class ConstHelper
      */
 //    static <Key, Value> immutable ListMap<Key, Value> crateListMap(Key[] keys, Value[] values)
 //        {
-//        return new ListMap<Key, Value>(keys, values).ensureImmutable(true);
+//        return new ListMap<Key, Value>(keys, values).freeze(true);
 //        }
     }

@@ -85,12 +85,6 @@ const ConstOrdinalList
 
     // ----- properties ----------------------------------------------------------------------------
 
-    @Override
-    Mutability mutability.get()
-        {
-        return Constant;
-        }
-
     /**
      * The `Byte[]` that holds the compressed constant data for this list.
      */

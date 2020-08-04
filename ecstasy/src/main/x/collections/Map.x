@@ -6,33 +6,23 @@
  * easily _related to_ other information.
  */
 interface Map<Key, Value>
-        extends VariablyMutable
         extends Stringable
     {
+    // ----- metadata ------------------------------------------------------------------------------
+
     /**
-     * Describes the mutability of this Map:
+     * Metadata: Are mutating operations on the map processed in place, or do they result in
+     * a new copy of the map that incorporates any mutations? Any data structure that creates
+     * a new copy to perform a mutation is called a _persistent_ data structure; that term is
+     * generally avoided here because of the multiple meanings in software of the term "persistent".
      *
-     * * A **mutable** map is one that allows items to be added and removed, and whose values for
-     *   particular keys can be replaced, and whose contents are generally not required to be
-     *   immutable. If an implementation provides support for more than one mode, including a
-     *   **mutable** mode, then it should implement the [MutableAble] interface.
-     * * A **fixed size** map is one that does not allow items to be added or removed, but whose
-     *   values for particular keys can be replaced, and whose contents are generally not required
-     *   to be immutable. If an implementation provides support for more than one mode, including
-     *   a **fixed size** mode, then it should implement the [FixedSizeAble] interface.
-     * * A **persistent** map is one that does not allow items to be added or removed, whose values
-     *   for particular keys can not be replaced, but whose contents are generally not required to
-     *   be immutable. Requesting a persistent map to add, remove, or modify its contents will
-     *   result in a new persistent map as a result of the request. If an implementation provides
-     *   support for more than one mode, including a **persistent** mode, then it should implement
-     *   the [PersistentAble] interface.
-     * * A **const** map is one that is immutable, whose size and contents are immutable, and which
-     *   provides a new **const** map as the result of any mutating request. If an implementation
-     *   provides support for more than one mode, including a **const** mode, then it should
-     *   implement the {@link ImmutableAble} interface.
+     * It is expected that all mutating operations that do not return a resulting map will
+     * assert that `inPlace` is `True`.
      */
-    @Override
-    @RO Mutability mutability;
+    @RO Boolean inPlace.get()
+        {
+        return True;
+        }
 
 
     // ----- read operations -----------------------------------------------------------------------
@@ -337,7 +327,8 @@ interface Map<Key, Value>
      *                  _mutable_, or to modify an entry in a map that is not _mutable_ or
      *                  _fixed size_
      */
-    <Result> Result process(Key key, function Result (Entry) compute);
+    <Result> Result process(Key                     key,
+                            function Result(Entry) compute);
 
     /**
      * Apply the specified function to the Entry objects for the specified keys.
@@ -352,8 +343,8 @@ interface Map<Key, Value>
      *                  _mutable_, or to modify an entry in a map whose [mutability] is not
      *                  `Mutable` or `Fixed`
      */
-    <Result> Map!<Key, Result> project(Iterable<Key> keys,
-            function Result (Entry) compute)
+    <Result> Map!<Key, Result> project(Iterable<Key>          keys,
+                                       function Result(Entry) compute)
         {
         ListMap<Key, Result> result = new ListMap(keys.size);
         for (Key key : keys)
@@ -377,7 +368,8 @@ interface Map<Key, Value>
      * @throws ReadOnly if an attempt is made to modify an entry in a map that is not
      *                  _mutable_ or _fixed size_
      */
-    <Result> conditional Result processIfPresent(Key key, function Result (Entry) compute)
+    <Result> conditional Result processIfPresent(Key                    key,
+                                                 function Result(Entry) compute)
         {
         // this implementation can be overridden to combine the contains() and process() into
         // a single step
@@ -409,7 +401,8 @@ interface Map<Key, Value>
      *
      * @throws ReadOnly if an attempt is made to add an entry in a map that is not _mutable_
      */
-    Value computeIfAbsent(Key key, function Value () compute)
+    Value computeIfAbsent(Key              key,
+                          function Value() compute)
         {
         return process(key, entry ->
             {
@@ -575,7 +568,7 @@ interface Map<Key, Value>
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         buf.add('[');
 
@@ -625,6 +618,6 @@ interface Map<Key, Value>
                     }
                 }
             }
-        buf.add(']');
+        return buf.add(']');
         }
     }

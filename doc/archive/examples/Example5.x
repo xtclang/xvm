@@ -826,11 +826,11 @@ const Person()
             {
             if (!dependents.is(immutable Object) dependents.is(Freezable))
                 {
-                dependents = dependents.is(Freezable) ? dependents.ensureImmutable(false) : throw new WTF();
+                dependents = dependents.is(Freezable) ? dependents.freeze(false) : throw new WTF();
                 }
             if (!r.is(immutable Object) r.is(Freezable))
                 {
-                r = r.is(Freezable) ? r.ensureImmutable(false) : throw new WTF();
+                r = r.is(Freezable) ? r.freeze(false) : throw new WTF();
                 }
             } // <-- at this point we're done with the internal work and return control to the finally on the constructor
         {

@@ -255,7 +255,7 @@ const UInt64
     @Override
     immutable Boolean[] toBooleanArray()
         {
-        return new Array<Boolean>(bits.size, i -> bits[i].toBoolean()).ensureImmutable(True);
+        return new Array<Boolean>(bits.size, i -> bits[i].toBoolean()).freeze(True);
         }
 
     @Override
@@ -371,7 +371,7 @@ const UInt64
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         if (sign == Zero)
             {
@@ -386,6 +386,7 @@ const UInt64
                 }
             buf.add(DIGITS[digit]);
             }
+        return buf;
         }
 
     // maxvalue = 18_446_744_073_709_551_615 (20 digits)

@@ -142,24 +142,24 @@ public abstract class OpVar
      * Helper method to calculate a ClassComposition for a sequence class.
      *
      * @param frame         the current frame
-     * @param typeSequence  the sequence type
+     * @param typeList  the sequence type
      *
      * @return the corresponding class composition
      */
-    protected ClassComposition getArrayClass(Frame frame, TypeConstant typeSequence)
+    protected ClassComposition getArrayClass(Frame frame, TypeConstant typeList)
         {
         ServiceContext   context  = frame.f_context;
         ClassComposition clzArray = (ClassComposition) context.getOpInfo(this, Category.Composition);;
         TypeConstant     typePrev = (TypeConstant)     context.getOpInfo(this, Category.Type);
 
-        if (clzArray == null || !typeSequence.equals(typePrev))
+        if (clzArray == null || !typeList.equals(typePrev))
             {
-            TypeConstant typeEl = typeSequence.resolveGenericType("Element");
+            TypeConstant typeEl = typeList.resolveGenericType("Element");
 
             clzArray = xArray.INSTANCE.ensureParameterizedClass(frame.poolContext(), typeEl);
 
             context.setOpInfo(this, Category.Composition, clzArray);
-            context.setOpInfo(this, Category.Type, typeSequence);
+            context.setOpInfo(this, Category.Type, typeList);
             }
 
         return clzArray;

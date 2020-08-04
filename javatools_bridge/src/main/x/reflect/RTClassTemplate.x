@@ -29,7 +29,7 @@ class RTClassTemplate
     @Override @RO Boolean               virtualChild;
 
     @Override conditional (AnnotationTemplate, Composition) deannotate();
-    @Override Class<> ensureClass(Type... actualTypes);
+    @Override Class<> ensureClass(Type[] actualTypes = []);
 
     // natural code (these *could* be optimized if they were made native)
     //   Boolean extends(Composition composition)

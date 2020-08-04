@@ -24,7 +24,6 @@ import ast.NullableTypeExpression;
 import ast.Parameter;
 import ast.PrefixTypeExpression;
 import ast.RelationalTypeExpression;
-import ast.SequenceTypeExpression;
 import ast.SuffixTypeExpression;
 import ast.TupleTypeExpression;
 import ast.TypeExpression;
@@ -526,10 +525,6 @@ class Parser
                         }
                     break;
 
-                case Ellipsis:
-                    type = new SequenceTypeExpression(type, expect(Ellipsis));
-                    break;
-
                 default:
                     return type;
                 }
@@ -869,7 +864,6 @@ class Parser
         switch (names[names.size-1].valueText)
             {
             case "Array":
-            case "Sequence":
             case "List":
             case "Range":
             case "Interval":

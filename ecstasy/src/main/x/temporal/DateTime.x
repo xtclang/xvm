@@ -172,12 +172,12 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         date.appendTo(buf);
         buf.add(' ');
         time.appendTo(buf);
         buf.add(' ');
-        timezone.appendTo(buf);
+        return timezone.appendTo(buf);
         }
     }

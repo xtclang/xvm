@@ -24,13 +24,13 @@ interface Reader
             }
 
         @Override
-        void appendTo(Appender<Char> buf)
+        Appender<Char> appendTo(Appender<Char> buf)
             {
             buf.add('(');
             lineNumber.appendTo(buf);
             buf.add(':');
             lineOffset.appendTo(buf);
-            buf.add(')');
+            return buf.add(')');
             }
         }
 
@@ -146,9 +146,9 @@ interface Reader
                 }
 
             result = nextString(count);
-            if (indexes.reversed)
+            if (indexes.descending)
                 {
-                result = result.reverse();
+                result = result.reversed();
                 }
             }
         finally
@@ -255,7 +255,7 @@ interface Reader
         {
         Char[] chars = new Char[count];
         nextChars(chars);
-        return chars.ensureImmutable(True);
+        return chars.freeze(True);
         }
 
     /**

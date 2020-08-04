@@ -275,7 +275,7 @@ mixin FutureVar<Referent>
      *   not already completed, then the new future will complete exceptionally with the same
      *   exception.
      */
-    FutureVar!<Referent> orAny(FutureVar!<Referent> ... others)
+    FutureVar!<Referent> orAny(FutureVar!<Referent>[] others = [])
         {
         FutureVar<Referent> result = this;
         others.iterator().forEach(other -> {result = result.or(other);});

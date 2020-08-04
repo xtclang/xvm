@@ -11,7 +11,7 @@
  * number 0, and each bit of greater significance has a one-higher bit number than the last, with
  * the Most Significant Bit (MSB) of an n-bit number being bit number `n-1`. Since this is the
  * opposite of the order that the bits appear in the array of bits used to create a number, the
- * `Array.reverse()` method can be used to obtain an array in LSB-to-MSB order.
+ * `Array.reversed()` method can be used to obtain an array in LSB-to-MSB order.
  *
  * Numbers can also be instantiated from an array of bytes, in a left-to-right order, as they would
  * appear when communicated over the network, or as they would be stored in a file. To obtain the

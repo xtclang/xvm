@@ -145,7 +145,7 @@ public class TypeSequenceTypeConstant
     @Override
     protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
-        // since the formal type sequence is a Sequence of types (see above).
+        // since the formal type sequence is a sequence of types (see above).
         // we need to report the "Element" formal type
         return sName.equals("Element")
                 ? getConstantPool().typeType()
@@ -165,12 +165,12 @@ public class TypeSequenceTypeConstant
     @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
-        // the formal type sequence is a Sequence of types, a Tuple of types
+        // the formal type sequence is a sequence of types, a Tuple of types
         if (typeLeft.isExplicitClassIdentity(true))
             {
             ConstantPool     pool  = getConstantPool();
             IdentityConstant idClz = typeLeft.getSingleUnderlyingClass(true);
-            if (idClz.equals(pool.clzSequence()))
+            if (idClz.equals(pool.clzList()))
                 {
                 switch (typeLeft.getParamsCount())
                     {
@@ -216,7 +216,7 @@ public class TypeSequenceTypeConstant
         if (typeRight.isExplicitClassIdentity(true))
             {
             IdentityConstant idClz = typeRight.getSingleUnderlyingClass(true);
-            if ((idClz.equals(pool.clzArray()) || idClz.equals(pool.clzSequence())) &&
+            if ((idClz.equals(pool.clzArray()) || idClz.equals(pool.clzList())) &&
                     typeRight.getParamType(0).equals(pool.typeType()))
                 {
                 return Relation.IS_A;

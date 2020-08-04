@@ -26,7 +26,7 @@ mixin Interval<Element extends immutable Sequential>
      */
     Element effectiveFirst.get()
         {
-        return reversed ? effectiveUpperBound : effectiveLowerBound;
+        return descending ? effectiveUpperBound : effectiveLowerBound;
         }
 
     /**
@@ -39,7 +39,7 @@ mixin Interval<Element extends immutable Sequential>
      */
     Element effectiveLast.get()
         {
-        return reversed ? effectiveLowerBound : effectiveUpperBound;
+        return descending ? effectiveLowerBound : effectiveUpperBound;
         }
 
     /**
@@ -133,7 +133,7 @@ mixin Interval<Element extends immutable Sequential>
                 };
             }
 
-        if (reversed)
+        if (descending)
             {
             return new IntervalIterator()
                 {

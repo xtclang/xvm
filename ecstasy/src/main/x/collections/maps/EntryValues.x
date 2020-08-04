@@ -8,12 +8,6 @@ class EntryValues<Key, Value>(Map<Key, Value> map)
     public/private Map<Key, Value> map;
 
     @Override
-    Mutability mutability.get()
-        {
-        return Mutable;
-        }
-
-    @Override
     Int size.get()
         {
         return map.size;
@@ -64,11 +58,11 @@ class EntryValues<Key, Value>(Map<Key, Value> map)
         }
 
     @Override
-    (EntryValues, Int) removeIf(function Boolean (Value) shouldRemove)
+    (EntryValues, Int) removeAll(function Boolean (Value) shouldRemove)
         {
         verifyMutable();
 
-        (_, Int removed) = map.entries.removeIf(entry -> shouldRemove(entry.value));
+        (_, Int removed) = map.entries.removeAll(entry -> shouldRemove(entry.value));
 
         return this, removed;
         }

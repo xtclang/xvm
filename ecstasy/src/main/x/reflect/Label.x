@@ -46,7 +46,7 @@ interface Label<Key, Value>
 
     /**
      * True on the last iteration of the loop. This value is only available on a label for a "for"
-     * loop of the for-each variety iterating over an Interval or Sequence.
+     * loop of the for-each variety iterating over an Interval or List.
      *
      * For a Label that identifies a loop within which the last iteration is detectable, this value
      * will be true after the last iteration has begun.

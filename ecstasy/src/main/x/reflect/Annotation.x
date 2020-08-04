@@ -15,7 +15,7 @@ const Annotation(Class mixinClass, Argument[] arguments = [])
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         buf.add('@')
            .addAll(mixinClass.displayName);
@@ -33,5 +33,6 @@ const Annotation(Class mixinClass, Argument[] arguments = [])
                 }
             buf.add(')');
             }
+        return buf;
         }
     }

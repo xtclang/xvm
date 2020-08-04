@@ -1,9 +1,5 @@
-import collections.VariablyMutable;
-
 /**
- * The Iterable interface allows an object to expose its contents as a series of elements, either
- * for consumption by the caller or by inversion of control by passing an element-consuming
- * function.
+ * The Iterable interface allows an object to expose its contents as a series of elements.
  */
 interface Iterable<Element>
     {
@@ -21,56 +17,19 @@ interface Iterable<Element>
     Iterator<Element> iterator();
 
     /**
-     * Obtain an iterator over a portion of the contents of the Iterable object.
+     * Obtain the contents of this iterable source as an indexed, stably-ordered [List], which is
+     * used as the array type in Ecstasy. Generally, the [Array] class will be used to satisfy this
+     * request.
      *
-     * @param match  a function that filters which items should be exposed through the iterator
+     * @param mutability  the requested [Mutability](Array.Mutability) of the resulting array, or
+     *                    `Null` to allow the iterable source to produce a [List] of its choosing;
+     *                    if mutability is not specified, then the resulting array is not guaranteed
+     *                    to be a stable snapshot until the caller [reifies](Collection.reify()] the
+     *                    result
      *
-     * @return an iterator that produces elements that match the specified predicate
+     * @return a `List` of elements from this iterable source
      */
-    Iterator<Element> iterator(function Boolean (Element) match)
-        {
-        return new Iterator<Element>()
-            {
-            Iterator<Element> iter = iterator();
-
-            @Override
-            conditional Element next()
-                {
-                while (Element value := iter.next())
-                    {
-                    if (match(value))
-                        {
-                        return true, value;
-                        }
-                    }
-
-                return false;
-                }
-            };
-        }
-
-    /**
-     * Determine if the iterable source would emit the specified value via an iterator.
-     *
-     * @param value  the value to search for in this iterable source
-     *
-     * @return `True` iff the specified value exists in this iterable source
-     */
-    Boolean contains(Element value)
-        {
-        // this should be overridden by any implementation that has a structure that can do better
-        // than an O(n) search, such as a sorted structure (binary search) or a hashed structure
-        return iterator().untilAny(element -> element == value);
-        }
-
-    /**
-     * Obtain the contents of this iterable source as an array.
-     *
-     * @param mutability  the requested Mutability of the resulting array
-     *
-     * @return an array of elements from this iterable source
-     */
-    Element[] toArray(VariablyMutable.Mutability mutability = Persistent)
+    Element[] toArray(Array.Mutability? mutability = Null)
         {
         Element[] result = new Array<Element>(size); // mutable
 
@@ -79,12 +38,6 @@ interface Iterable<Element>
             result[loop.count] = element;
             }
 
-        return switch (mutability)
-            {
-            case Mutable   : result;
-            case Fixed     : result.ensureFixedSize (True);
-            case Persistent: result.ensurePersistent(True);
-            case Constant  : result.ensureImmutable (True);
-            };
+        return result.toArray(mutability, True);
         }
     }

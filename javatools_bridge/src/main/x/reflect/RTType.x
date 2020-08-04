@@ -30,17 +30,17 @@ const RTType<DataType, OuterType>
     @Override conditional Property     fromProperty()                            { TODO("native"); }
     @Override conditional Type         modifying()                               { TODO("native"); }
     @Override conditional String       named()                                   { TODO("native"); }
-    @Override             Type         parameterize(Type... paramTypes)          { TODO("native"); }
+    @Override             Type         parameterize(Type[] paramTypes=[])        { TODO("native"); }
     @Override conditional Type[]       parameterized()                           { TODO("native"); }
     @Override             Type         purify()                                  { TODO("native"); }
     @Override conditional (Type, Type) relational()                              { TODO("native"); }
 
     @Override @Op("+") Type add(Type! that)                                      { TODO("native"); }
-    @Override @Op("+") Type add(Method... methods)                               { TODO("native"); }
-    @Override @Op("+") Type add(Property... properties)                          { TODO("native"); }
+    @Override @Op("+") Type add(Method[] methods=[])                             { TODO("native"); }
+    @Override @Op("+") Type add(Property[] properties=[])                        { TODO("native"); }
     @Override @Op("-") Type sub(Type! that)                                      { TODO("native"); }
-    @Override @Op("-") Type sub(Method... methods)                               { TODO("native"); }
-    @Override @Op("-") Type sub(Property... properties)                          { TODO("native"); }
+    @Override @Op("-") Type sub(Method[] methods=[])                             { TODO("native"); }
+    @Override @Op("-") Type sub(Property[] properties=[])                        { TODO("native"); }
     @Override @Op("&") Type and(Type! that)                                      { TODO("native"); }
     @Override @Op("|") Type or(Type! that)                                       { TODO("native"); }
 
@@ -81,7 +81,7 @@ const RTType<DataType, OuterType>
             multis.process(func.name, append(func, _));
             }
 
-        return multis; // .ensureImmutable(True);
+        return multis; // .freeze(True);
         }
 
 
@@ -166,7 +166,7 @@ const RTType<DataType, OuterType>
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         switch (form)
             {
@@ -334,6 +334,8 @@ const RTType<DataType, OuterType>
                 name.appendTo(buf);
                 break;
             }
+
+        return buf;
         }
 
     private void appendParameterizedTo(Appender<Char> buf)

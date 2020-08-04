@@ -1448,8 +1448,8 @@ const Char
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
-        buf.add(this);
+        return buf.add(this);
         }
     }

@@ -255,7 +255,7 @@ const UInt8
     @Override
     immutable Boolean[] toBooleanArray()
         {
-        return new Array<Boolean>(bits.size, i -> bits[i].toBoolean()).ensureImmutable(True);
+        return new Array<Boolean>(bits.size, i -> bits[i].toBoolean()).freeze(True);
         }
 
     @Override
@@ -365,7 +365,7 @@ const UInt8
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         if (sign == Zero)
             {
@@ -380,6 +380,7 @@ const UInt8
                 }
             buf.add(DIGITS[digit]);
             }
+        return buf;
         }
 
     private static UInt8[] sizeArray =

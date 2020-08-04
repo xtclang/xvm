@@ -32,7 +32,7 @@ const RTClass<PublicType, ProtectedType extends PublicType,
     @Lazy ListMap<String, Type> canonicalParams.calc()
         {
         (String[] names, Type[] types) = getFormalNamesAndTypes();
-        return new ListMap<String, Type>(names, types).ensureImmutable(true);
+        return new ListMap<String, Type>(names, types).freeze(true);
         }
 
 
@@ -73,7 +73,7 @@ const RTClass<PublicType, ProtectedType extends PublicType,
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         (_, Annotation[] annotations) = deannotate();
         if (annotations.size > 0)
@@ -101,5 +101,7 @@ const RTClass<PublicType, ProtectedType extends PublicType,
                 }
             buf.add('>');
             }
+
+        return buf;
         }
     }

@@ -27,7 +27,7 @@ const Argument<Referent extends immutable Const>(Referent value, String? name = 
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         switch (Referent)
             {
@@ -47,5 +47,6 @@ const Argument<Referent extends immutable Const>(Referent value, String? name = 
                 value.appendTo(buf);
                 break;
             }
+        return buf;
         }
     }

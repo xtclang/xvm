@@ -159,9 +159,9 @@ module TestRunner.xtclang.org
                 }
 
             @Override
-            void appendTo(Appender<Char> buf)
+            Appender<Char> appendTo(Appender<Char> buf)
                 {
-                buf.addAll("Console");
+                return buf.addAll("Console");
                 }
             }
 

@@ -2436,7 +2436,7 @@ public class Context
         public Context enterList()
             {
             TypeConstant typeCtx = m_typeLeft;
-            TypeConstant typeEl  = typeCtx.isA(pool().typeSequence())
+            TypeConstant typeEl  = typeCtx.isA(pool().typeList())
                     ? typeCtx.resolveGenericType("Element")
                     : null;
             return typeEl == null

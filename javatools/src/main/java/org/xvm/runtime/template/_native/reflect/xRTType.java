@@ -117,8 +117,8 @@ public class xRTType
         markNativeMethod("relational"     , null, null);
 
         final String[] PARAM_TYPE    = new String[] {"reflect.Type!<>"};
-        final String[] PARAM_METHODS = new String[] {"collections.Sequence<reflect.Method>"};
-        final String[] PARAM_PROPS   = new String[] {"collections.Sequence<reflect.Property>"};
+        final String[] PARAM_METHODS = new String[] {"collections.Array<reflect.Method>"};
+        final String[] PARAM_PROPS   = new String[] {"collections.Array<reflect.Property>"};
 
         markNativeMethod("add", PARAM_TYPE   , null);
         markNativeMethod("add", PARAM_METHODS, null);

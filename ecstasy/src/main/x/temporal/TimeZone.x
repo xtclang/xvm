@@ -49,7 +49,7 @@ const TimeZone(Int picos, String? name = null)
      * @param rules  an optional Sequence of Rules to translate information from UTC to other
      *               TimeZones
      */
-    construct(String tz, Rule... rules)
+    construct(String tz, Rule[] rules = [])
         {
         static Int valOf(Char ch)
             {
@@ -379,7 +379,7 @@ const TimeZone(Int picos, String? name = null)
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         Boolean showPicos = resolved;
         String? name      = this.name;
@@ -435,5 +435,7 @@ const TimeZone(Int picos, String? name = null)
                 buf.add(')');
                 }
             }
+
+        return buf;
         }
     }

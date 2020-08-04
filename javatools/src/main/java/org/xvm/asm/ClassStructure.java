@@ -3111,6 +3111,10 @@ public class ClassStructure
             MethodStructure methAppendTo = findMethod("appendTo", 1, typeAppender);
             if (methAppendTo == null)
                 {
+                Parameter[] aRet = new Parameter[]
+                    {
+                    new Parameter(pool, typeAppender, null, null, true, 0, false)
+                    };
                 Parameter[] aParam = new Parameter[]
                     {
                     new Parameter(pool, typeAppender, "appender", null, false, 0, false)
@@ -3121,22 +3125,23 @@ public class ClassStructure
                     };
 
                 methAppendTo = createMethod(/*function*/ false, Constants.Access.PUBLIC, aAnno,
-                        Parameter.NO_PARAMS, "appendTo", aParam, /*hasCode*/ true, /*usesSuper*/ false);
+                        aRet, "appendTo", aParam, /*hasCode*/ true, /*usesSuper*/ false);
                 methAppendTo.markTransient();
 
                 MethodStructure.Code code = methAppendTo.ensureCode();
 
-                // void appendTo(Appender<Char> appender)
+                // Appender<Char> appendTo(Appender<Char> appender)
                 //    {
-                //    this.toString().appendTo(appender);
+                //    return this.toString().appendTo(appender);
                 //    }
                 Register regThis     = new Register(typeAppender, Op.A_TARGET);
                 Register regAppender = new Register(typeAppender, 0);
                 Register regStack    = new Register(typeAppender, Op.A_STACK);
+                Register regResult   = new Register(typeAppender, Op.A_STACK);
 
                 code.add(new Invoke_01(regThis, methToString.getIdentityConstant(), regStack));
-                code.add(new Invoke_10(regStack, methAppendTo.getIdentityConstant(), regAppender));
-                code.add(new Return_0());
+                code.add(new Invoke_11(regStack, methAppendTo.getIdentityConstant(), regAppender, regResult));
+                code.add(new Return_1(regResult));
 
                 if (fRegisterConstants)
                     {

@@ -11,7 +11,7 @@ import maps.ReifiedEntry;
 class HashMap<Key, Value>
         implements Map<Key, Value>
         // TODO conditional incorporation of ... HashMap<Key extends immutable Hashable, Value>
-        // TODO VariablyMutable interfaces
+        // TODO Freezable interfaces
         incorporates text.Stringer
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -358,12 +358,6 @@ class HashMap<Key, Value>
             implements Set<Entry>
         {
         @Override
-        Mutability mutability.get()
-            {
-            return Mutable;
-            }
-
-        @Override
         Iterator<Entry> iterator()
             {
             return new Iterator()
@@ -456,7 +450,7 @@ class HashMap<Key, Value>
             }
 
         @Override
-        (EntrySet, Int) removeIf(function Boolean (Entry) shouldRemove)
+        (EntrySet, Int) removeAll(function Boolean (Entry) shouldRemove)
             {
             Int          removed     = 0;
             HashEntry?[] buckets     = this.HashMap.buckets;

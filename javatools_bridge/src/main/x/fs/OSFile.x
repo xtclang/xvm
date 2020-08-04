@@ -33,7 +33,7 @@ const OSFile
         }
 
     @Override
-    FileChannel open(ReadOption read=Read, WriteOption... write=[Write]);
+    FileChannel open(ReadOption read=Read, WriteOption[] write = [Write]);
 
     /**
      * The parent directory.

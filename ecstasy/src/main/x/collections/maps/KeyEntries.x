@@ -8,12 +8,6 @@ class KeyEntries<Key, Value>(Map<Key, Value> map)
     public/private Map<Key, Value> map;
 
     @Override
-    Mutability mutability.get()
-        {
-        return Mutable;
-        }
-
-    @Override
     Int size.get()
         {
         return map.size;
@@ -55,13 +49,13 @@ class KeyEntries<Key, Value>(Map<Key, Value> map)
         }
 
     @Override
-    (KeyEntries, Int) removeIf(
+    (KeyEntries, Int) removeAll(
             function Boolean (Map<Key, Value>.Entry) shouldRemove)
         {
         verifyMutable();
 
         CursorEntry<Key, Value> entry = new CursorEntry(map);
-        (_, Int removed) = map.keys.removeIf(key -> shouldRemove(entry.advance(key)));
+        (_, Int removed) = map.keys.removeAll(key -> shouldRemove(entry.advance(key)));
 
         return this, removed;
         }

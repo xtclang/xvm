@@ -513,7 +513,7 @@ const Duration(UInt128 picoseconds)
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         Boolean zerofill = false;
 
@@ -559,6 +559,8 @@ const Duration(UInt128 picoseconds)
                 }
             picosFractional(picos).appendTo(buf);
             }
+
+        return buf;
         }
 
     // ----- helpers -------------------------------------------------------------------------------

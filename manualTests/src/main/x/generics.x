@@ -136,7 +136,7 @@ module TestGenerics
             Type getType(Int index)
                 {
                 // TODO GG: the following line generates "suspicious assignment"
-                // Sequence<Type> types = TurtleTypes;
+                // List<Type> types = TurtleTypes;
                 return TurtleTypes[index];
                 }
             }

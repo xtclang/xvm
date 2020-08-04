@@ -1,42 +1,28 @@
 /**
  * A Set is a container data structure that represents a group of _distinct values_. While the Set's
- * interface is identical to that of the Collection, its default behavior is subtly different.
+ * interface is almost identical to that of the [Collection], its behavior is different due to its
+ * requirement to maintain a distinct set of values.
  */
 interface Set<Element>
         extends Collection<Element>
-        extends Stringable
     {
-    // ----- read operations -----------------------------------------------------------------------
-
-    /**
-     * A Set is always composed of distinct values.
-     */
-    @Override
-    @RO Boolean distinct.get()
-        {
-        return true;
-        }
-
     /**
      * The "union" operator.
      */
     @Override
-    @Op("|")
-    Set addAll(Iterable<Element> values);
+    @Op("|") Set addAll(Iterable<Element> values);
 
     /**
      * The "relative complement" operator.
      */
     @Override
-    @Op("-")
-    Set removeAll(Iterable<Element> values);
+    @Op("-") Set removeAll(Iterable<Element> values);
 
     /**
      * The "intersection" operator.
      */
     @Override
-    @Op("&")
-    Set retainAll(Iterable<Element> values);
+    @Op("&") Set retainAll(Iterable<Element> values);
 
     /**
      * The "symmetric difference" operator determines the elements that are present in only this
@@ -51,8 +37,7 @@ interface Set<Element>
      *
      * @return the resultant set, which is the same as `this` for a mutable set
      */
-    @Op("^")
-    Set symmetricDifference(Set!<Element> values)
+    @Op("^") Set symmetricDifference(Set!<Element> values)
         {
         Element[]? remove = null;
         for (Element value : this)
@@ -81,68 +66,26 @@ interface Set<Element>
     /**
      * The "complement" operator.
      *
-     * @return a new set that represents the complement of this set
+     * @param universalSet  the set from which this set is drawn, and within which the complement
+     *                      will be calculated
      *
-     * @throws UnsupportedOperation  if this set is incapable of determining its complement, which
-     *                               may be a reflection of a limitation of the Element itself
+     * @return a new set that represents the complement of this set within the `universalSet`
      */
-    @Op("~")
-    Set! complement()
+    @Op("~") Set! complement(immutable Set!<Element> universalSet)
         {
-        // TODO default implementation should just create a Set that answers the opposite of what
-        //      this set answers for all the "contains" etc. operations
-        throw new UnsupportedOperation();
-        }
-
-
-    // ----- Stringable methods --------------------------------------------------------------------
-
-    @Override
-    Int estimateStringLength()
-        {
-        Int count = &this.actualClass.name.size + 2 + 2 * size;
-        if (Element.is(Type<Stringable>))
-            {
-            for (Element e : this)
-                {
-                count += e.estimateStringLength();
-                }
-            }
-        else
-            {
-            count += 5 * size; // guess poorly
-            }
-
-        return size;
+        return new ComplementSet<Element>(this, universalSet);
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    String toString()
         {
-        &this.actualClass.name.appendTo(buf);
-        buf.add('{');
-        if (Element.is(Type<Stringable>))
+        if (this.is(Stringable))
             {
-            Loop: for (Element e : this)
-                {
-                if (!Loop.first)
-                    {
-                    buf.addAll(", ");
-                    }
-                e.appendTo(buf);
-                }
+            StringBuffer buf = new StringBuffer(estimateStringLength());
+            appendTo(buf);
+            return buf.toString();
             }
-        else
-            {
-            Loop: for (Element e : this)
-                {
-                if (!Loop.first)
-                    {
-                    buf.addAll(", ");
-                    }
-                buf.addAll(e.toString());
-                }
-            }
-        buf.add('}');
+
+        return join(pre=$"{&this.actualClass}\{", post="}").toString();
         }
     }

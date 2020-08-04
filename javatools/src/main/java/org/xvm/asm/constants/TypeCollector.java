@@ -554,7 +554,7 @@ public class TypeCollector
             assert typeCommon != null;
             }
 
-        return fImmutable ? typeCommon.ensureImmutable() : typeCommon;
+        return fImmutable ? typeCommon.freeze() : typeCommon;
         }
 
 

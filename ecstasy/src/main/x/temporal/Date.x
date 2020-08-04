@@ -200,7 +200,7 @@ const Date(Int epochDay)
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         year.appendTo(buf);
         buf.add('-');
@@ -218,7 +218,7 @@ const Date(Int epochDay)
             {
             buf.add('0');
             }
-        day.appendTo(buf);
+        return day.appendTo(buf);
         }
 
     // ----- helpers -------------------------------------------------------------------------------

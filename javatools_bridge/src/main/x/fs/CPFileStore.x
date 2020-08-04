@@ -168,10 +168,10 @@ const CPFileStore(String path, Object constRoot)
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         "FileStore:".appendTo(buf);
-        path.appendTo(buf);
+        return path.appendTo(buf);
         }
 
 

@@ -1,7 +1,7 @@
 /**
  * A range is composed of a "first" and a "last" element. The Range determines which is the lower
  * bound and which is the upper bound, and if the lower bound is the "last" element, then the range
- * is [reversed]. Each bound can be _inclusive_, which means that the value at the bound is included
+ * is [descending]. Each bound can be _inclusive_, which means that the value at the bound is included
  * in the range, or _exclusive_, which means that the value at the bound is excluded from the range.
  */
 const Range<Element extends Orderable>
@@ -23,7 +23,7 @@ const Range<Element extends Orderable>
             lowerExclusive = lastExclusive;
             upperBound     = first;
             upperExclusive = firstExclusive;
-            reversed       = true;
+            descending       = true;
             }
         else
             {
@@ -31,7 +31,7 @@ const Range<Element extends Orderable>
             lowerExclusive = firstExclusive;
             upperBound     = last;
             upperExclusive = lastExclusive;
-            reversed       = false;
+            descending       = false;
             }
         }
 
@@ -40,7 +40,7 @@ const Range<Element extends Orderable>
      */
     Element first.get()
         {
-        return reversed ? upperBound : lowerBound;
+        return descending ? upperBound : lowerBound;
         }
 
     /**
@@ -48,7 +48,7 @@ const Range<Element extends Orderable>
      */
     Boolean firstExclusive.get()
         {
-        return reversed ? upperExclusive : lowerExclusive;
+        return descending ? upperExclusive : lowerExclusive;
         }
 
     /**
@@ -56,7 +56,7 @@ const Range<Element extends Orderable>
      */
     Element last.get()
         {
-        return reversed ? lowerBound : upperBound;
+        return descending ? lowerBound : upperBound;
         }
 
     /**
@@ -64,7 +64,7 @@ const Range<Element extends Orderable>
      */
     Boolean lastExclusive.get()
         {
-        return reversed ? lowerExclusive : upperExclusive;
+        return descending ? lowerExclusive : upperExclusive;
         }
 
     /**
@@ -90,12 +90,12 @@ const Range<Element extends Orderable>
     /**
      * Reversed is true if the range was specified from its upper bound to its lower bound.
      */
-    Boolean reversed;
+    Boolean descending;
 
     /**
      * Create a new range in the reverse order of this range.
      */
-    Range! reverse()
+    Range! reversed()
         {
         return new Range(first=last, firstExclusive=lastExclusive,
                          last=first, lastExclusive=firstExclusive);
@@ -231,7 +231,7 @@ const Range<Element extends Orderable>
                 break;
             }
 
-        return True, (this.reversed & that.reversed
+        return True, (this.descending & that.descending
                 ? new Range(upper, lower, firstExclusive=excludeUpper, lastExclusive=lowerExclusive)
                 : new Range(lower, upper, firstExclusive=excludeLower, lastExclusive=upperExclusive));
         }
@@ -302,7 +302,7 @@ const Range<Element extends Orderable>
                 break;
             }
 
-        return True, (this.reversed & that.reversed
+        return True, (this.descending & that.descending
                 ? new Range(upper, lower, firstExclusive=excludeUpper, lastExclusive=lowerExclusive)
                 : new Range(lower, upper, firstExclusive=excludeLower, lastExclusive=upperExclusive));
         }
@@ -328,7 +328,7 @@ const Range<Element extends Orderable>
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         buf.add(lowerExclusive ? '(' : '[');
         if (Element.is(Type<Stringable>))
@@ -343,6 +343,6 @@ const Range<Element extends Orderable>
             "..".appendTo(buf);
             (upperBound.is(Stringable) ? upperBound : upperBound.toString()).appendTo(buf);
             }
-        buf.add(upperExclusive ? ')' : ']');
+        return buf.add(upperExclusive ? ')' : ']');
         }
     }

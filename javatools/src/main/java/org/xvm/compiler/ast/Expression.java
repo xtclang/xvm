@@ -497,7 +497,7 @@ public abstract class Expression
                 && !constVal.equals(pool.ensureMatchAnyConstant(typeActual))
                 && !typeActual.isA(pool.typeService()))
             {
-            typeActual = typeActual.ensureImmutable();
+            typeActual = typeActual.freeze();
             }
 
         // if a required type is specified and the expression type isn't of the required type, then
@@ -530,7 +530,7 @@ public abstract class Expression
                     }
                 else
                     {
-                    typeActual = constConv.getType().ensureImmutable();
+                    typeActual = constConv.getType().freeze();
                     idConv     = null;
                     }
                 constVal = constConv;
@@ -707,7 +707,7 @@ public abstract class Expression
                         && !constVal.equals(pool.ensureMatchAnyConstant(typeActual))
                         &&  !typeActual.isA(pool.typeService()))
                     {
-                    TypeConstant typeImm = typeActual.ensureImmutable();
+                    TypeConstant typeImm = typeActual.freeze();
 
                     if (!typeActual.equals(typeImm))
                         {
@@ -760,7 +760,7 @@ public abstract class Expression
                         else
                             {
                             idConv         = null;
-                            atypeActual[i] = constConv.getType().ensureImmutable();
+                            atypeActual[i] = constConv.getType().freeze();
                             }
                         aconstVal[i] = constConv;
                         }

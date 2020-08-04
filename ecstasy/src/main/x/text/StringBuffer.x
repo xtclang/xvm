@@ -4,7 +4,9 @@
  */
 class StringBuffer
         implements Appender<Char>
-        implements Sequence<Char>
+        implements UniformIndexed<Int, Char>
+        implements Iterable<Char>
+        implements Sliceable<Int>
         implements Stringable
     {
     /**
@@ -61,9 +63,9 @@ class StringBuffer
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
-        buf.addAll(chars);
+        return buf.addAll(chars);
         }
 
 
@@ -84,13 +86,48 @@ class StringBuffer
         }
 
 
-    // ----- Sequence methods ----------------------------------------------------------------------
+    // ----- Iterable methods ----------------------------------------------------------------------
 
     @Override
     Int size.get()
         {
         return chars.size;
         }
+
+    @Override
+    Iterator<Char> iterator()
+        {
+        return chars.iterator();
+        }
+
+    // ----- UniformIndexed methods ----------------------------------------------------------------------
+
+    @Override
+    @Op("[]")
+    @Op Char getElement(Int index)
+        {
+        return chars[index];
+        }
+
+    @Override
+    @Op("[]=")
+    void setElement(Int index, Char value)
+        {
+        chars[index] = value;
+        }
+
+    // ----- Sliceable methods ----------------------------------------------------------------------
+
+    @Override
+    @Op("[..]") StringBuffer slice(Range<Int> indexes)
+        {
+        StringBuffer that = new StringBuffer(indexes.size);
+        that.addAll(chars[indexes]);
+        return that;
+        }
+
+
+    // -----  methods ----------------------------------------------------------------------
 
     Int capacity
         {
@@ -107,41 +144,11 @@ class StringBuffer
             }
         }
 
-    @Override
-    @Op("[]")
-    @Op Char getElement(Int index)
-        {
-        return chars[index];
-        }
-
-    @Override
-    @Op("[]=")
-    void setElement(Int index, Char value)
-        {
-        chars[index] = value;
-        }
-
-    @Override
-    @Op("[..]") StringBuffer slice(Range<Int> indexes)
-        {
-        StringBuffer that = new StringBuffer(indexes.size);
-        that.addAll(chars[indexes]);
-        return that;
-        }
-
-    @Override
-    Iterator<Char> iterator()
-        {
-        return chars.iterator();
-        }
-
-    @Override
     conditional Int indexOf(Char value, Int startAt = 0)
         {
         return chars.indexOf(value, startAt);
         }
 
-    @Override
     conditional Int lastIndexOf(Char value, Int startAt = Int.maxvalue)
         {
         return chars.lastIndexOf(value, startAt);

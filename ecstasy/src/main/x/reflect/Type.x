@@ -430,7 +430,7 @@ interface Type<DataType, OuterType>
      *
      * @throws InvalidType  if the parameterization would violate the rules of the type system
      */
-    Type!<> parameterize(Type!<>... paramTypes);
+    Type!<> parameterize(Type!<>[] paramTypes = []);
 
     /**
      * Add the specified annotation to this type.
@@ -464,7 +464,7 @@ interface Type<DataType, OuterType>
      *                      type system
      */
     @Op("+")
-    Type!<> add(Method... methods);
+    Type!<> add(Method[] methods = []);
 
     /**
      * Create a type that is the result of adding properties to this type.
@@ -477,7 +477,7 @@ interface Type<DataType, OuterType>
      *                      type system
      */
     @Op("+")
-    Type!<> add(Property... properties);
+    Type!<> add(Property[] properties = []);
 
     /**
      * Create a type that is the intersection of this type and another type. Note that the bitwise
@@ -532,7 +532,7 @@ interface Type<DataType, OuterType>
      *                      type system
      */
     @Op("-")
-    Type!<> sub(Method... methods);
+    Type!<> sub(Method[] methods = []);
 
     /**
      * Create a type that is the result of removing a property from this type.
@@ -545,7 +545,7 @@ interface Type<DataType, OuterType>
      *                      type system
      */
     @Op("-")
-    Type!<> sub(Property... properties);
+    Type!<> sub(Property[] properties = []);
 
 
     // ----- constructor helpers -------------------------------------------------------------------

@@ -241,7 +241,7 @@ const Source
 
                     chars[loop.count] = byte.toChar();
                     }
-                return new String(chars.ensureImmutable(True));
+                return new String(chars.freeze(True));
 
             case Utf8:
                 StringBuffer buf = new StringBuffer(bytesLen);

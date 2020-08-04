@@ -52,7 +52,7 @@ const Exception
         return buf.toString();
         }
 
-    (String /*name*/, String /*stack*/) formatStackTrace()
+    (String name, String stack) formatStackTrace()
         {
         TODO
         }

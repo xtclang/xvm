@@ -98,8 +98,8 @@ const FPLiteral(String text)
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
-        text.appendTo(buf);
+        return text.appendTo(buf);
         }
     }

@@ -60,7 +60,9 @@
  * examples given also include '.', so Ecstasy considers the '.' to be legal in build metadata.
  */
 const Version
-        implements Sequence<Version>
+        implements Iterable<Version>
+        implements UniformIndexed<Int, Version>
+        implements Sliceable<Int>
         implements Sequential
     {
     /**
@@ -493,7 +495,7 @@ const Version
             throw new OutOfBounds(upper.toString() + " >= " + size);
             }
         assert:bounds lower <= upper;
-        assert !indexes.reversed;
+        assert !indexes.descending;
 
         if (lower == 0)
             {
@@ -597,7 +599,7 @@ const Version
         }
 
     @Override
-    void appendTo(Appender<Char> buf, Boolean suppressBuild=false)
+    Appender<Char> appendTo(Appender<Char> buf, Boolean suppressBuild=false)
         {
         parent?.appendTo(buf, true);
 
@@ -619,5 +621,7 @@ const Version
             {
             buf.add('+').addAll(build);
             }
+
+        return buf;
         }
     }

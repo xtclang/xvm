@@ -277,25 +277,18 @@ public class Parser
         // parse modifiers
         while (!eof())
             {
-            if (peek().getId() == Id.ELLIPSIS)
+            expect(Id.L_SQUARE);
+            int cExplicitDims = 0;
+            while (match(Id.R_SQUARE) == null)
                 {
-                exprResult = new SequenceTypeExpression(exprResult, expect(Id.ELLIPSIS));
-                }
-            else
-                {
-                expect(Id.L_SQUARE);
-                int cExplicitDims = 0;
-                while (match(Id.R_SQUARE) == null)
+                if (cExplicitDims > 0)
                     {
-                    if (cExplicitDims > 0)
-                        {
-                        expect(Id.COMMA);
-                        }
-                    expect(Id.COND);
-                    ++cExplicitDims;
+                    expect(Id.COMMA);
                     }
-                exprResult = new ArrayTypeExpression(exprResult, cExplicitDims, prev().getEndPosition());
+                expect(Id.COND);
+                ++cExplicitDims;
                 }
+            exprResult = new ArrayTypeExpression(exprResult, cExplicitDims, prev().getEndPosition());
             }
 
         return exprResult;
@@ -3296,13 +3289,6 @@ public class Parser
                     break;
                     }
 
-                case ELLIPSIS:
-                    {
-                    // Sequence
-                    Token tok = expect(Id.ELLIPSIS);
-                    return new SequenceTypeExpression(expr.toTypeExpression(), tok);
-                    }
-
                 default:
                     return expr;
                 }
@@ -4060,7 +4046,10 @@ public class Parser
      *
      * CollectionLiteral
      *     "[" ExpressionList-opt "]"                               # compile/runtime type is Array
-     *     TypeExpression ":[" ExpressionList-opt "]"               # type must be Collection, Sequence, or List
+     *     TypeExpression ":[" ExpressionList-opt "]"               # type must be Collection, List,
+     *                                                              # Sequence, or Array
+     *
+     * TODO Set
      *
      * MapLiteral
      *     "[" Entries-opt "]"                                      # compile/runtime type is Map
@@ -4087,10 +4076,6 @@ public class Parser
             {
             sType = "Array";
             }
-        else if (type instanceof SequenceTypeExpression)
-            {
-            sType = "Sequence";
-            }
         else
             {
             sType = type.toString();
@@ -4106,9 +4091,9 @@ public class Parser
             case "":
                 // this could be either an array or a range
                 // (fall through)
-            case "Array":
-            case "Sequence":
+            case "Collection":
             case "List":
+            case "Array":
                 {
                 Token tokOpen   = expect(Id.L_SQUARE);
                 long  lStartPos = type == null ? tokOpen.getStartPosition() : type.getStartPosition();
@@ -4446,10 +4431,6 @@ public class Parser
                         {
                         return type;
                         }
-                    break;
-
-                case ELLIPSIS:
-                    type = new SequenceTypeExpression(type, expect(Id.ELLIPSIS));
                     break;
 
                 default:

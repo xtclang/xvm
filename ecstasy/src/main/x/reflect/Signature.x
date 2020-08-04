@@ -132,7 +132,7 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
         }
 
     @Override
-    void appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf)
         {
         Return[] returns = this.returns;
         Int      count   = returns.size;
@@ -191,6 +191,6 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
             param.appendTo(buf);
             }
 
-        buf.add(')');
+        return buf.add(')');
         }
     }

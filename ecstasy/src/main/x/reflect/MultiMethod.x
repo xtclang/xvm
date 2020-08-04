@@ -28,7 +28,7 @@ const MultiMethod<Target>(String name, Callable[] callables)
                 methods.add(callable);
                 }
             }
-        return methods.ensureImmutable(True);
+        return methods.freeze(True);
         }
 
     /**
@@ -44,7 +44,7 @@ const MultiMethod<Target>(String name, Callable[] callables)
                 functions.add(callable);
                 }
             }
-        return functions.ensureImmutable(True);
+        return functions.freeze(True);
         }
 
     /**

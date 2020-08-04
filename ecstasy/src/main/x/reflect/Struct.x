@@ -35,7 +35,7 @@ interface Struct
      * @throws UnsupportedOperation  if the Struct is the structure of a Service; a Service cannot
      *         be made immutable
      */
-    immutable Struct ensureImmutable();
+    immutable Struct freeze();
 
     /**
      * Calculate the actual amount of memory used by this structure (of an object), including the

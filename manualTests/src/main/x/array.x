@@ -277,7 +277,7 @@ module TestArray
 
                 case 8:
                     console.println("\n   --> reverse test");
-                    iter = iter.reverse();
+                    iter = iter.reversed();
                     break;
 
                 case 9:

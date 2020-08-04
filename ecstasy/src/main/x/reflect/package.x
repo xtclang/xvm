@@ -68,7 +68,7 @@ package reflect
          */
         @RO immutable Class[] classes.get()
             {
-            return classByName.values.toArray().ensureImmutable(true);
+            return classByName.values.toArray().freeze(true);
             }
 
         /**
@@ -86,9 +86,9 @@ package reflect
             }
 
         @Override
-        void appendTo(Appender<Char> buf)
+        Appender<Char> appendTo(Appender<Char> buf)
             {
-            &this.actualClass.name.appendTo(buf);
+            return &this.actualClass.name.appendTo(buf);
             }
         }
 
@@ -161,9 +161,9 @@ package reflect
             }
 
         @Override
-        void appendTo(Appender<Char> buf)
+        Appender<Char> appendTo(Appender<Char> buf)
             {
-            qualifiedName.appendTo(buf);
+            return qualifiedName.appendTo(buf);
             }
         }
 
@@ -217,7 +217,7 @@ package reflect
             }
 
         @Override
-        void appendTo(Appender<Char> buf)
+        Appender<Char> appendTo(Appender<Char> buf)
             {
             ParamType.appendTo(buf);
             if (String name := hasName())
@@ -225,6 +225,7 @@ package reflect
                 buf.add(' ')
                    .addAll(name);
                 }
+            return buf;
             }
         }
 
@@ -259,7 +260,7 @@ package reflect
             }
 
         @Override
-        void appendTo(Appender<Char> buf)
+        Appender<Char> appendTo(Appender<Char> buf)
             {
             ReturnType.appendTo(buf);
             if (String name := hasName())
@@ -267,6 +268,7 @@ package reflect
                 buf.add(' ')
                    .addAll(name);
                 }
+            return buf;
             }
         }
 

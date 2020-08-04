@@ -2036,10 +2036,10 @@ public class ConstantPool
     public ClassConstant     clzMethod()        {ClassConstant     c = m_clzMethod;       if (c == null) {m_clzMethod       = c = (ClassConstant) getImplicitlyImportedIdentity("Method"     );} return c;}
     public ClassConstant     clzFunction()      {ClassConstant     c = m_clzFunction;     if (c == null) {m_clzFunction     = c = (ClassConstant) getImplicitlyImportedIdentity("Function"   );} return c;}
     public ClassConstant     clzNullable()      {ClassConstant     c = m_clzNullable;     if (c == null) {m_clzNullable     = c = (ClassConstant) getImplicitlyImportedIdentity("Nullable"   );} return c;}
+    public ClassConstant     clzList()          {ClassConstant     c = m_clzList;         if (c == null) {m_clzList         = c = (ClassConstant) getImplicitlyImportedIdentity("List"       );} return c;}
     public ClassConstant     clzArray()         {ClassConstant     c = m_clzArray;        if (c == null) {m_clzArray        = c = (ClassConstant) getImplicitlyImportedIdentity("Array"      );} return c;}
     public ClassConstant     clzMatrix()        {ClassConstant     c = m_clzMatrix;       if (c == null) {m_clzMatrix       = c = (ClassConstant) getImplicitlyImportedIdentity("Matrix"     );} return c;}
     public ClassConstant     clzMap()           {ClassConstant     c = m_clzMap;          if (c == null) {m_clzMap          = c = (ClassConstant) getImplicitlyImportedIdentity("Map"        );} return c;}
-    public ClassConstant     clzSequence()      {ClassConstant     c = m_clzSequence;     if (c == null) {m_clzSequence     = c = (ClassConstant) getImplicitlyImportedIdentity("Sequence"   );} return c;}
     public ClassConstant     clzSliceable()     {ClassConstant     c = m_clzSliceable;    if (c == null) {m_clzSliceable    = c = (ClassConstant) getImplicitlyImportedIdentity("Sliceable"  );} return c;}
     public ClassConstant     clzOrderable()     {ClassConstant     c = m_clzOrderable;    if (c == null) {m_clzOrderable    = c = (ClassConstant) getImplicitlyImportedIdentity("Orderable"  );} return c;}
     public ClassConstant     clzTuple()         {ClassConstant     c = m_clzTuple;        if (c == null) {m_clzTuple        = c = (ClassConstant) getImplicitlyImportedIdentity("Tuple"      );} return c;}
@@ -2103,7 +2103,6 @@ public class ConstantPool
     public TypeConstant      typeMatrix()       {TypeConstant      c = m_typeMatrix;      if (c == null) {m_typeMatrix      = c = ensureTerminalTypeConstant(clzMatrix()                     );} return c;}
     public TypeConstant      typeList()         {TypeConstant      c = m_typeList;        if (c == null) {m_typeList        = c = ensureTerminalTypeConstant(clzList()                       );} return c;}
     public TypeConstant      typeMap()          {TypeConstant      c = m_typeMap;         if (c == null) {m_typeMap         = c = ensureTerminalTypeConstant(clzMap()                        );} return c;}
-    public TypeConstant      typeSequence()     {TypeConstant      c = m_typeSequence;    if (c == null) {m_typeSequence    = c = ensureTerminalTypeConstant(clzSequence()                   );} return c;}
     public TypeConstant      typeSliceable()    {TypeConstant      c = m_typeSliceable;   if (c == null) {m_typeSliceable   = c = ensureTerminalTypeConstant(clzSliceable()                  );} return c;}
     public TypeConstant      typeOrderable()    {TypeConstant      c = m_typeOrderable;   if (c == null) {m_typeOrderable   = c = ensureTerminalTypeConstant(clzOrderable()                  );} return c;}
     public TypeConstant      typeSequential()   {TypeConstant      c = m_typeSequential;  if (c == null) {m_typeSequential  = c = ensureTerminalTypeConstant(clzSequential()                 );} return c;}
@@ -2174,7 +2173,6 @@ public class ConstantPool
     protected ClassConstant  clzInterval()     {return (ClassConstant) getImplicitlyImportedIdentity("Interval"      );}
     protected ClassConstant  clzIterable()     {return (ClassConstant) getImplicitlyImportedIdentity("Iterable"      );}
     protected ClassConstant  clzIterator()     {return (ClassConstant) getImplicitlyImportedIdentity("Iterator"      );}
-    protected ClassConstant  clzList()         {return (ClassConstant) getImplicitlyImportedIdentity("List"          );}
     protected ClassConstant  clzNumber()       {return (ClassConstant) getImplicitlyImportedIdentity("Number"        );}
     protected ClassConstant  clzRange()        {return (ClassConstant) getImplicitlyImportedIdentity("Range"         );}
     protected ClassConstant  clzSequential()   {return (ClassConstant) getImplicitlyImportedIdentity("Sequential"    );}
@@ -2806,10 +2804,10 @@ public class ConstantPool
         m_clzMethod       = null;
         m_clzFunction     = null;
         m_clzNullable     = null;
+        m_clzList         = null;
         m_clzArray        = null;
         m_clzMatrix       = null;
         m_clzMap          = null;
-        m_clzSequence     = null;
         m_clzOrderable    = null;
         m_clzTuple        = null;
         m_clzAuto         = null;
@@ -2876,7 +2874,6 @@ public class ConstantPool
         m_typeMatrix      = null;
         m_typeList        = null;
         m_typeMap         = null;
-        m_typeSequence    = null;
         m_typeSliceable   = null;
         m_typeOrderable   = null;
         m_typeSequential  = null;
@@ -3585,10 +3582,10 @@ public class ConstantPool
     private transient ClassConstant     m_clzMethod;
     private transient ClassConstant     m_clzFunction;
     private transient ClassConstant     m_clzNullable;
+    private transient ClassConstant     m_clzList;
     private transient ClassConstant     m_clzArray;
     private transient ClassConstant     m_clzMatrix;
     private transient ClassConstant     m_clzMap;
-    private transient ClassConstant     m_clzSequence;
     private transient ClassConstant     m_clzSliceable;
     private transient ClassConstant     m_clzOrderable;
     private transient ClassConstant     m_clzTuple;
@@ -3656,7 +3653,6 @@ public class ConstantPool
     private transient TypeConstant      m_typeMatrix;
     private transient TypeConstant      m_typeList;
     private transient TypeConstant      m_typeMap;
-    private transient TypeConstant      m_typeSequence;
     private transient TypeConstant      m_typeSliceable;
     private transient TypeConstant      m_typeOrderable;
     private transient TypeConstant      m_typeSequential;

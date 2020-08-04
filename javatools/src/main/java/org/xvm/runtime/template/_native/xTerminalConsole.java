@@ -125,7 +125,7 @@ public class xTerminalConsole
         {
         switch (method.getName())
             {
-            case "readLine": // String format, Sequence<Object> args
+            case "readLine": // String format, List<Object> args
                 {
                 StringHandle hLine;
                 try
