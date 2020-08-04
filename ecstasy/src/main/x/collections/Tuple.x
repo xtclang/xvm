@@ -76,8 +76,12 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * If the compile-time types of both _this_ tuple and the value are known, then the
      * compile-time type of the returned tuple is known; otherwise, an explicit cast to a
      * compile-time type is required to regain the compile-time type.
+     *
+     * While it would be desirable to annotate this method with `@Op("+")`, it's not currently
+     * feasible since this method has not one, but two arguments (first being the type parameter),
+     * and it's not possible to pass the necessary type information via the `GP_ADD` op code.
      */
-    @Op("+") <Element> Tuple!<> add(Element value);
+    <Element> Tuple!<> add(Element value);
 
     /**
      * Creates and returns a new tuple that is the concatenation of that tuple to this tuple. The
