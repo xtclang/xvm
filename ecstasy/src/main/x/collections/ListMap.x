@@ -158,9 +158,9 @@ class ListMap<Key, Value>
      */
     protected Boolean verifyNotPersistent()
         {
-        if (mutability.persistent)
+        if (!inPlace)
             {
-            throw new ReadOnly("Map operation requires mutability.persistent==False");
+            throw new ReadOnly("Map operation requires inPlace==True");
             }
         return True;
         }

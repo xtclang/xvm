@@ -181,7 +181,7 @@ interface Map<Key, Value>
     @Op("[]=")
     void putInPlace(Key key, Value value)
         {
-        assert !mutability.persistent;
+        assert inPlace;
         put(key, value);
         }
 

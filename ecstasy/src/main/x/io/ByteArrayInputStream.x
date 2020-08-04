@@ -64,7 +64,7 @@ class ByteArrayInputStream
         {
         if (bytes.size >= 0)
             {
-            assert:arg !bytes.mutability.persistent;
+            assert:arg bytes.inPlace;
             assert:arg offset >= 0 && offset <= bytes.size;
             assert:arg count >= 0 && offset + count <= bytes.size;
 

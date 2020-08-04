@@ -60,11 +60,12 @@
  * examples given also include '.', so Ecstasy considers the '.' to be legal in build metadata.
  */
 const Version
-        implements Iterable<Version>
         implements UniformIndexed<Int, Version>
         implements Sliceable<Int>
         implements Sequential
     {
+    // ----- Version Form --------------------------------------------------------------------------
+
     /**
      * Each part of a version is called a version indicator, and that version indicator has a Form.
      * The overwhelmingly prevalent form of version indicator is the Num (number) form.
@@ -121,6 +122,33 @@ const Version
          */
         Num  ("#"    ,  0)
         }
+
+    /**
+     * Return the Form for a specified name.
+     *
+     * Note: this implementation is purposefully permissive, allowing "1.2-a" instead of "1.2-alpha".
+     */
+    static conditional Form byText(String name)
+        {
+        if (name.size == 0)
+            {
+            return False;
+            }
+
+        return switch (name[0])
+            {
+            case 'c', 'C': (true, CI);
+            case 'd', 'D': (true, Dev);
+            case 'q', 'Q': (true, QC);
+            case 'a', 'A': (true, Alpha);
+            case 'b', 'B': (true, Beta);
+            case 'r', 'R': (true, RC);
+            default      : false;
+            };
+        }
+
+
+    // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct a Version from a String representation.
@@ -217,30 +245,6 @@ const Version
         }
 
     /**
-     * Return the Form for a specified name.
-     *
-     * Note: this implementation is purposefully permissive, allowing "1.2-a" instead of "1.2-alpha".
-     */
-    static conditional Form byText(String name)
-        {
-        if (name.size == 0)
-            {
-            return False;
-            }
-
-        return switch (name[0])
-            {
-            case 'c', 'C': (true, CI);
-            case 'd', 'D': (true, Dev);
-            case 'q', 'Q': (true, QC);
-            case 'a', 'A': (true, Alpha);
-            case 'b', 'B': (true, Beta);
-            case 'r', 'R': (true, RC);
-            default      : false;
-            };
-        }
-
-    /**
      * Construct a Version that is a revision of another Version.
      *
      * @param parent  the version that this is a revision of
@@ -309,6 +313,9 @@ const Version
         this.size   = 1 + (parent?.size : 0);
         }
 
+
+    // ----- properties ----------------------------------------------------------------------------
+
     /**
      * The Version that this Version is a revision of.
      */
@@ -344,7 +351,6 @@ const Version
     /**
      * The number of Version elements that make up this Version.
      */
-    @Override
     Int size;
 
     /**
@@ -354,6 +360,9 @@ const Version
         {
         return form == Num && (parent?.form == Num : true);
         }
+
+
+    // ----- operations ----------------------------------------------------------------------------
 
     /**
      * Simplify the version, if possible, by removing any redundant or ignored information without
@@ -457,7 +466,7 @@ const Version
         }
 
 
-    // ----- Sequence methods ----------------------------------------------------------------------
+    // ----- UniformIndexed methods ----------------------------------------------------------------
 
     @Override
     @Op("[]")
@@ -480,6 +489,9 @@ const Version
             }
         return version;
         }
+
+
+    // ----- Sliceable methods ---------------------------------------------------------------------
 
     @Override
     @Op("[..]") Version slice(Range<Int> indexes)

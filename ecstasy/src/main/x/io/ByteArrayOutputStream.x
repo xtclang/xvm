@@ -24,7 +24,7 @@
      */
     construct(Byte[] bytes)
         {
-        assert:arg !bytes.mutability.persistent;
+        assert:arg bytes.inPlace;
 
         this.bytes = bytes;
         }

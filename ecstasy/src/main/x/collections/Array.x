@@ -303,20 +303,20 @@ class Array<Element>
             interval = [0..size);
             }
 
-        if (mutability.persistent)
-            {
-            Array result = new Array<Element>(size, i -> (interval.contains(i) ? value : this[i]));
-            return mutability == Constant
-                    ? result.freeze(true)
-                    : result.ensurePersistent(true);
-            }
-        else
+        if (inPlace)
             {
             for (Int i : interval)
                 {
                 this[i] = value;
                 }
             return this;
+            }
+        else
+            {
+            Array result = new Array<Element>(size, i -> (interval.contains(i) ? value : this[i]));
+            return mutability == Constant
+                    ? result.freeze(true)
+                    : result.ensurePersistent(true);
             }
         }
 
@@ -476,7 +476,7 @@ class Array<Element>
     @Op("[]=")
     void setElement(Int index, Element value)
         {
-        if (mutability.persistent)
+        if (!inPlace)
             {
             throw new ReadOnly();
             }
@@ -573,7 +573,7 @@ class Array<Element>
 //        function void (List<Element>, Orderer?) sortimpl = bubbleSort;
 //
 //        Mutability mutability = this.mutability;
-//        if (!mutability.persistent)
+//        if (inPlace)
 //            {
 //            sortimpl(this, order);
 //            return this;
@@ -783,17 +783,17 @@ class Array<Element>
     @Override
     Array replace(Int index, Element value)
         {
-        if (mutability.persistent)
+        if (inPlace)
+            {
+            this[index] = value;
+            return this;
+            }
+        else
             {
             Element[] result = new Array(size, i -> (i == index ? value : this[i]));
             return mutability == Persistent
                     ? result.ensurePersistent(true)
                     : result.freeze(true);
-            }
-        else
-            {
-            this[index] = value;
-            return this;
             }
         }
 
@@ -1067,7 +1067,7 @@ class Array<Element>
         @Unassigned
         Element value.set(Element value)
             {
-            if (this.Array.mutability.persistent)
+            if (!inPlace)
                 {
                 throw new ReadOnly();
                 }

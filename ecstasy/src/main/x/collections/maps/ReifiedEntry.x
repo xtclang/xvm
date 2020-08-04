@@ -65,9 +65,9 @@ class ReifiedEntry<Key, Value>
      */
     protected Boolean verifyNotPersistent()
         {
-        if (map.mutability.persistent)
+        if (!map.inPlace)
             {
-            throw new ReadOnly("Map operation requires mutability.persistent==False");
+            throw new ReadOnly("Map operation requires inPlace==True");
             }
         return True;
         }
