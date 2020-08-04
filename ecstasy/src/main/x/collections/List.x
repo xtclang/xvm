@@ -424,6 +424,7 @@ interface List<Element>
                 cur.value = transform(cur.value, cur.index).as(Element);
                 cur.advance();
                 }
+            assert dest != Null;
             return dest;
             }
 
@@ -533,7 +534,7 @@ interface List<Element>
             return this;
             }
 
-        if (Orderer != Null, Orderer? prev := orderedBy(), prev? == orderer)
+        if (orderer != Null, Orderer? prev := orderedBy(), prev? == orderer)
             {
             // already in the right order
             return inPlace
@@ -549,10 +550,10 @@ interface List<Element>
         // TODO functions for different sort implementations; default sort() to pick one based on size etc.
         // eventual to-do is to should pick a better sort impl based on some heuristics, such as
         // size of list and how many elements are out-of-order
-        function void (List<Element>, Orderer?) sortimpl = bubbleSort;
+//        function List<Element> (List<Element>, Orderer?) sortimpl = bubbleSort;
 // TODO
-        sortimpl(temp, order);
-        return super(orderer, mutability);
+//        sortimpl(temp, order);
+        return super(orderer, inPlace);
         }
 
     /**
@@ -579,7 +580,7 @@ interface List<Element>
             if (inPlace && this.inPlace)
                 {
                 // swap the elements in-place to reverse the list
-                for (Int i = 0, swap = size / 2; i < swap; ++i)
+                for (Int i = 0, Int swap = size / 2; i < swap; ++i)
                     {
                     Element e1 = this[i];
                     Element e2 = this[size - i - 1];
@@ -607,7 +608,7 @@ interface List<Element>
      */
     List! shuffled(Boolean inPlace = False)
         {
-        if (Int size := knownSize)
+        if (Int size := knownSize())
             {
             if (size <= 1 && (inPlace || !this.inPlace))
                 {
@@ -643,7 +644,7 @@ interface List<Element>
         {
         // a list can simply return itself, but to fulfill the intent of the contract, it should
         // only do so if it can efficiently implement the array type (i.e. the indexed List API)
-        return mutability == Null && indexed && knownSize
+        return mutability == Null && indexed && knownSize()
                 ? this
                 : new Array<Element>(mutability, this);
         }
@@ -748,7 +749,8 @@ interface List<Element>
             // this returns an array, which is a reasonable default, but unlikely to be desirable
             // if the List implementation is specialized and the result should be similarly
             // specialized
-            return toArray(Mutable).replace(index, value);
+            TODO
+//            return toArray().replace(index, value);
             }
         }
 
@@ -980,12 +982,12 @@ interface List<Element>
             {
             Element get()
                 {
-                return list.get(index);
+                return list.getElement(index);
                 }
 
             void set(Element e)
                 {
-                list.set(index, e);
+                list.setElement(index, e);
                 }
             }
 
@@ -1000,7 +1002,7 @@ interface List<Element>
         Boolean advance()
             {
             Int index = this.index;
-            Int size  = this.size;
+            Int size  = list.size;
             if (index < size)
                 {
                 this.index = ++index;
@@ -1019,7 +1021,7 @@ interface List<Element>
          */
         Boolean rewind()
             {
-            this.prev = index;
+            Int prev = index;
             if (prev > 0)
                 {
                 index = prev - 1;
@@ -1153,7 +1155,7 @@ interface List<Element>
                     // may throw ReadOnly
                     list[index] = value;
                     }
-                else if (mutability == Mutable)
+                else if (inPlace)
                     {
                     add(value);
                     index = size;
@@ -1168,7 +1170,7 @@ interface List<Element>
         @Override
         void insert(Element value)
             {
-            if (mutability != Mutable)
+            if (inPlace)
                 {
                 throw new ReadOnly();
                 }
@@ -1187,7 +1189,7 @@ interface List<Element>
         @Override
         void delete()
             {
-            if (mutability != Mutable)
+            if (!inPlace)
                 {
                 throw new ReadOnly();
                 }
@@ -1264,9 +1266,9 @@ interface List<Element>
 
             if (list1.indexed && list2.indexed)
                 {
-                for (Int i = 0; i < c; ++i)
+                for (Int i = 0; i < size1; ++i)
                     {
-                    if (a1[i] != a2[i])
+                    if (list1[i] != list2[i])
                         {
                         return False;
                         }
@@ -1305,21 +1307,22 @@ interface List<Element>
      *
      * @return the sorted list, which may be a different `List` than the one passed in
      */
-    static <Element> List<Element> bubbleSort(List<Element> list, List<Element>.Orderer? order = Null)
+     // TODO GG: why do we need List! ?
+    static <Element> List!<Element> bubbleSort(List!<Element> list, List<Element>.Orderer? order = Null)
         {
-        order ?:= naturalOrderer ?: throw new TypeMismatch($"Element type {Element} is not Orderable");
+        order ?:= list.naturalOrderer ?: throw new TypeMismatch($"Element type {Element} is not Orderable");
 
         if (list.is(immutable List) || !list.inPlace)
             {
-            list = list.toArray(Mutable);
+            list = list.toArray(Array.Mutability.Mutable); // TODO GG (drop the qualifiers)
             }
-        else if (!list.indexed)
+        else if (list.indexed)
             {
-            // avoid index-based operations during the sort if the list is not indexed
-            sortImpl(list.cursor(0), order);
+            sortImpl(list, order);
             }
         else
             {
+            // avoid index-based operations during the sort if the list is not indexed
             sortImpl(list.cursor(0), order);
             }
 
