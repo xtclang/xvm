@@ -1584,7 +1584,7 @@ public class ConstantPool
 
         TypeConstant typeParent;
         TypeConstant typeTarget;
-        if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent, false))
+        if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent, true))
             {
             // we've reached the "top"
             typeParent = fFormal
