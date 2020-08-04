@@ -3,6 +3,7 @@ package org.xvm.asm;
 
 import java.text.MessageFormat;
 
+import java.util.Arrays;
 import java.util.ResourceBundle;
 
 import org.xvm.compiler.Source;
@@ -351,10 +352,16 @@ public interface ErrorListener
                     .append(':')
                     .append(m_sCode);
 
-            if (m_xs != null && m_xs.getIdentityConstant() != null)
+            if (m_xs != null)
                 {
                 sb.append(':')
-                  .append(m_xs.getIdentityConstant().getPathString());
+                  .append(m_xs.getDescription());
+                }
+
+            if (m_aoParam != null)
+                {
+                sb.append('#')
+                  .append(Arrays.hashCode(m_aoParam));
                 }
 
             if (m_source != null)
