@@ -315,8 +315,8 @@ class Array<Element>
             {
             Array result = new Array<Element>(size, i -> (interval.contains(i) ? value : this[i]));
             return mutability == Constant
-                    ? result.freeze(true)
-                    : result.ensurePersistent(true);
+                    ? result.freeze(True)
+                    : result.toArray(mutability, True);
             }
         }
 
@@ -373,8 +373,9 @@ class Array<Element>
         {
         if (delegate != null)
             {
-            Mutability mutability = delegate?.mutability : assert; // TODO
-            return mutability == Mutable ? Fixed : mutability;
+            TODO CP
+//            Mutability mutability = delegate?.mutability : assert; // TODO
+//            return mutability == Mutable ? Fixed : mutability;
             }
 
         return super();
@@ -403,12 +404,12 @@ class Array<Element>
                 makeImmutable();
                 }
 
-            return this.as(immutable Element[]);
+            return this.as(immutable Array);
             }
 
         if (!inPlace || delegate != null)
             {
-            return new Array(Constant, this).as(immutable Element[]);
+            return new Array(Constant, this).as(immutable Array);
             }
 
         // all elements must be immutable or Freezable
@@ -601,7 +602,7 @@ class Array<Element>
 //            {
 //            if (mutability == Persistent && temp.is(PersistentAble))
 //                {
-//                return temp.ensurePersistent(True);
+//                return temp.toArray(Persistent, True);
 //                }
 //            else if (mutability == Constant && temp.is(Freezable))
 //                {
@@ -666,8 +667,8 @@ class Array<Element>
             case Constant:
                 Array result = new Array<Element>(size + 1, i -> (i < size ? this[i] : element));
                 return mutability == Persistent
-                        ? result.ensurePersistent(true)
-                        : result.freeze(true);
+                        ? result.toArray(Mutability.Persistent, True) // TODO GG - qualifiers
+                        : result.freeze(True);
             }
         }
 
@@ -699,10 +700,10 @@ class Array<Element>
                     assert Element value := iter.next();
                     return value;
                     };
-                Element[] result = new Array<Element>(this.size + values.size, supply);
+                Array<Element> result = new Array(this.size + values.size, supply);
                 return mutability == Persistent
-                        ? result.ensurePersistent(true)
-                        : result.freeze(true);
+                        ? result.toArray(Mutability.Persistent, True)
+                        : result.freeze(True);
             }
         }
 
@@ -747,10 +748,9 @@ class Array<Element>
 
         return switch (mutability)
             {
-            case Mutable   : result;
-            case Fixed     : result.ensureFixedSize (True);
-            case Persistent: result.ensurePersistent(True);
-            case Constant  : result.freeze (True);
+            case Mutable          : result;
+            case Fixed, Persistent: result.toArray(mutability, True);
+            case Constant         : result.freeze (True);
             }, indexes.size;
         }
 
@@ -790,10 +790,10 @@ class Array<Element>
             }
         else
             {
-            Element[] result = new Array(size, i -> (i == index ? value : this[i]));
+            Array<Element> result = new Array(size, i -> (i == index ? value : this[i]));
             return mutability == Persistent
-                    ? result.ensurePersistent(true)
-                    : result.freeze(true);
+                    ? result.toArray(Mutability.Persistent, True)
+                    : result.freeze(True);
             }
         }
 
@@ -820,7 +820,7 @@ class Array<Element>
 
             case Persistent:
             case Constant:
-                Element[] result = new Array(size + 1,
+                Array<Element> result = new Array(size + 1,
                         i -> switch (i <=> index)
                             {
                             case Lesser : this[i];
@@ -828,8 +828,8 @@ class Array<Element>
                             case Greater: this[i-1];
                             });
                 return mutability == Persistent
-                        ? result.ensurePersistent(true)
-                        : result.freeze(true);
+                        ? result.toArray(Mutability.Persistent, True)
+                        : result.freeze(True);
             }
         }
 
@@ -913,10 +913,10 @@ class Array<Element>
                         return this[i-wedge];
                         }
                     };
-                Element[] result = new Array<Element>(this.size + values.size, supply);
+                Array<Element> result = new Array<Element>(this.size + values.size, supply);
                 return mutability == Persistent
-                        ? result.ensurePersistent(true)
-                        : result.freeze(true);
+                        ? result.toArray(Mutability.Persistent, True)
+                        : result.freeze(True);
             }
         }
 
@@ -947,10 +947,10 @@ class Array<Element>
 
             case Persistent:
             case Constant:
-                Element[] result = new Array(size, i -> this[i < index ? i : i+1]);
+                Array<Element> result = new Array(size, i -> this[i < index ? i : i+1]);
                 return mutability == Persistent
-                        ? result.ensurePersistent(true)
-                        : result.freeze(true);
+                        ? result.toArray(Mutability.Persistent, True)
+                        : result.freeze(True);
             }
         }
 
@@ -994,11 +994,11 @@ class Array<Element>
 
             case Persistent:
             case Constant:
-                Int       gap    = interval.size;
-                Element[] result = new Array(size, i -> this[i < lo ? i : i+gap]);
+                Int            gap    = interval.size;
+                Array<Element> result = new Array(size, i -> this[i < lo ? i : i+gap]);
                 return mutability == Persistent
-                        ? result.ensurePersistent(true)
-                        : result.freeze(true);
+                        ? result.toArray(Mutability.Persistent, True)
+                        : result.freeze(True);
             }
         }
 
@@ -1301,7 +1301,7 @@ class Array<Element>
          */
         immutable Boolean[] toBooleanArray()
             {
-            return new Array<Boolean>(size, i -> this[i].toBoolean()).freeze(true);
+            return new Array<Boolean>(size, i -> this[i].toBoolean()).freeze(True);
             }
 
         /**
@@ -1335,7 +1335,7 @@ class Array<Element>
                 bitnum += 4;
                 }
 
-            return nibbles.freeze(true);
+            return nibbles.freeze(True);
             }
 
         /**
@@ -1384,7 +1384,7 @@ class Array<Element>
 //                         bits[of-4], bits[of-5], bits[of-6], bits[of-7]].as(Bit[]));
 //                }
 //
-//            return bytes.freeze(true);
+//            return bytes.freeze(True);
             }
 
         /**
@@ -1620,7 +1620,7 @@ class Array<Element>
                     bits[index++] = bit;
                     }
                 }
-            return bits.freeze(true);
+            return bits.freeze(True);
             }
 
         /**
@@ -1642,7 +1642,7 @@ class Array<Element>
 //                    }
 //                }
 //
-//            return nibbles.freeze(true);
+//            return nibbles.freeze(True);
             TODO CP;
             }
 
@@ -2093,7 +2093,7 @@ class Array<Element>
         /**
          * Compare two arrays of the same type for equality.
          *
-         * @return true iff the arrays are equivalent
+         * @return True iff the arrays are equivalent
          */
         static <CompileType extends Comparator>
                 Boolean equals(CompileType array1, CompileType array2)
