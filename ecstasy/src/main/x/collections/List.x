@@ -978,18 +978,19 @@ interface List<Element>
          * @throws OutOfBounds  if an attempt is made to access the value when the cursor is
          *                      beyond the end of the list
          */
-        Element value
-            {
-            Element get()
-                {
-                return list.getElement(index);
-                }
-
-            void set(Element e)
-                {
-                list.setElement(index, e);
-                }
-            }
+        Element value;
+// TODO GG CP discuss
+//            {
+//            Element get()
+//                {
+//                return list.getElement(index);
+//                }
+//
+//            void set(Element e)
+//                {
+//                list.setElement(index, e);
+//                }
+//            }
 
         /**
          * Move the cursor so that it points to the _next_ element in the list. If there are no more
