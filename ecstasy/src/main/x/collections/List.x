@@ -93,7 +93,7 @@ interface List<Element>
             return True, this[size-1];
             }
 
-        Iterator iter = iterator();
+        Iterator<Element> iter = iterator();
         assert Element value := iter.next();
         while (value := iter.next())
             {
@@ -182,7 +182,7 @@ interface List<Element>
             return False;
             }
 
-        Int offset = this.size - count;
+        Int offset = thisSize - thatSize;
         if (this.indexed && that.indexed)
             {
             for (Int i : [0..thatSize))
@@ -385,7 +385,7 @@ interface List<Element>
             }
         else if (&dest == &this)
             {
-            return this.removeAll(e -> !match(e));
+            return this.removeAll(e -> !match(e, -1)); // TODO CP
             }
 
         Loop: for (Element e : this)
@@ -410,7 +410,7 @@ interface List<Element>
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
     <Result> List!<Result> mapIndexed(function Result(Element, Int) transform,
-                                     List<Result>?                 dest = Null)
+                                      List<Result>?                 dest = Null)
         {
         Iterator<Element> iter = iterator();
 
@@ -421,15 +421,19 @@ interface List<Element>
             Cursor cur = cursor(0);
             while (cur.exists)
                 {
-                cur.value = transform(cur.value, cur.index);
+                cur.value = transform(cur.value, cur.index).as(Element);
                 cur.advance();
                 }
-            return this;
+            return dest;
             }
 
         if (dest == Null)
             {
-            return new Array<Result>(size, i -> transform(iter.next(), i));
+            return new Array<Result>(size, i ->
+                {
+                assert Element el := iter.next();
+                return transform(el, i);
+                });
             // TODO return new Result[size](i -> transform(iter.next(), i));
             }
 
