@@ -412,8 +412,6 @@ interface List<Element>
     <Result> List!<Result> mapIndexed(function Result(Element, Int) transform,
                                       List<Result>?                 dest = Null)
         {
-        Iterator<Element> iter = iterator();
-
         // in place
         if (&dest == &this)
             {
@@ -428,17 +426,8 @@ interface List<Element>
             return dest;
             }
 
-        if (dest == Null)
-            {
-            return new Array<Result>(size, i ->
-                {
-                assert Element el := iter.next();
-                return transform(el, i);
-                });
-            // TODO return new Result[size](i -> transform(iter.next(), i));
-            }
-
-        Loop: for (Element e : iter)
+        dest ?:= new Result[];
+        Loop: for (Element e : this)
             {
             dest.add(transform(e, Loop.count));
             }

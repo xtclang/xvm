@@ -6,8 +6,9 @@
 mixin MapFreezer<Key   extends immutable Object,
                  Value extends ImmutableAble>
         into Map<Key, Value>
+        implements Freezable
     {
-// TODO GG    @Override
+    @Override
     immutable MapFreezer freeze(Boolean inPlace = False)
         {
         if (this.is(immutable MapFreezer))

@@ -5,6 +5,7 @@
  */
 mixin ListFreezer<Element extends ImmutableAble>
         into List<Element>
+        implements Freezable
     {
     @Override
     immutable ListFreezer freeze(Boolean inPlace = False)

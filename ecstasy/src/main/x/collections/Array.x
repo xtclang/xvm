@@ -1310,7 +1310,7 @@ class Array<Element>
         immutable Nibble[] toNibbleArray()
             {
             Int      nibcount = (size+3) / 4;
-            Nibble[] nibbles  = new Nibble[nibcount];
+            Array<Nibble> nibbles  = new Nibble[nibcount];
             Int      nibnum   = 0;
             Int      bitnum   = -((4 - size % 4) % 4);
 
@@ -1611,7 +1611,7 @@ class Array<Element>
             {
             Int   bytecount = size;
             Int   bitcount  = bytecount * 8;
-            Bit[] bits      = new Bit[bitcount];
+            Array<Bit> bits      = new Bit[bitcount];
             Int   index     = 0;
             EachByte: for (Byte byte : this)
                 {

@@ -2456,7 +2456,7 @@ public abstract class Launcher
             ErrorList errs = m_errs;
             if (errs == null)
                 {
-                m_errs = errs = new ErrorList(350);
+                m_errs = errs = new ErrorList(341);
                 }
             return errs;
             }

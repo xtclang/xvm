@@ -229,7 +229,7 @@ const Source
             {
             case Ascii:
                 // quick scan to verify that the contents are ASCII
-                Char[] chars = new Char[bytesLen];
+                Array<Char> chars = new Char[bytesLen];
                 loop: for (Byte byte : bytes)
                     {
                     if (byte > 0x7F)

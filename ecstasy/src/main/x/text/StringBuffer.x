@@ -22,7 +22,7 @@ class StringBuffer
     /**
      * The underlying representation of a StringBuffer is a mutable array of characters.
      */
-    private Char[] chars;
+    private Array<Char> chars;
 
 
     // ----- StringBuffer API ----------------------------------------------------------------------

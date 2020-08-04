@@ -103,14 +103,14 @@ interface Type<DataType, OuterType>
     /**
      * Obtain the raw set of all properties on the type.
      */
-    @RO Property<DataType>[] properties;
+    @RO Array<Property<DataType>> properties;
 
     /**
      * Obtain the raw set of all constants associated with the type. Constants are technically not
      * part of the type definition, but are provided here for convenience, because otherwise it
      * would be relatively difficult to gather this information.
      */
-    @RO Property[] constants;
+    @RO Array<Property> constants;
 
     /**
      * Obtain the methods and functions of the type, collected by name, and represented by
@@ -137,14 +137,14 @@ interface Type<DataType, OuterType>
     /**
      * Obtain the raw set of all methods on the type.
      */
-    @RO Method<DataType>[] methods;
+    @RO Array<Method<DataType>> methods;
 
     /**
      * Obtain the raw set of all functions associated with the type. Functions are technically not
      * part of the type definition, but are provided here for convenience, because otherwise it
      * would be relatively difficult to gather this information.
      */
-    @RO Function[] functions;
+    @RO Array<Function> functions;
 
     /**
      * The constructors for the type. Constructors are technically not part of the type definition,
@@ -154,7 +154,7 @@ interface Type<DataType, OuterType>
      * constructors for a virtual child class require the parent (i.e. outer) reference to be
      * provided as the first parameter of construction.
      */
-    @RO Constructor[] constructors;
+    @RO Array<Constructor> constructors;
 
     /**
      * If this type is a class type, and the class has child classes, then this provides the types

@@ -253,7 +253,7 @@ interface Reader
      */
     immutable Char[] nextChars(Int count)
         {
-        Char[] chars = new Char[count];
+        Array<Char> chars = new Char[count];
         nextChars(chars);
         return chars.freeze(True);
         }

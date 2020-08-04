@@ -22,7 +22,7 @@
      *
      * @param bytes  the mutable or fixed-size byte array to write to
      */
-    construct(Byte[] bytes)
+    construct(Array<Byte> bytes)
         {
         assert:arg bytes.inPlace;
 
@@ -35,7 +35,7 @@
     /**
      * The underlying array of bytes.
      */
-    public/private Byte[] bytes;
+    public/private Array<Byte> bytes;
 
     /**
      * The allocated capacity of the output stream.
