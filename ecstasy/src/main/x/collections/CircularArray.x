@@ -150,6 +150,7 @@ class CircularArray<Element>
      *
      * @return this
      */
+    @Override
     CircularArray ensureCapacity(Int additional)
         {
         Int newSize = size + additional;
@@ -205,18 +206,12 @@ class CircularArray<Element>
         }
 
 
-    // ----- TODO List interface --------------------------------------------------------------------
+    // ----- Sliceable interface -------------------------------------------------------------------
 
     @Override
-    @Op("[..]") CircularArray slice(Range<Int> indexes)
+    @Op("[..]") CircularArray slice(Range<Int> indexes) // TODO this could just return a ListSlice instance
         {
         TODO
-        }
-
-    @Override
-    CircularArray reify()
-        {
-        return this;
         }
 
 
