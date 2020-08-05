@@ -142,27 +142,6 @@ class CircularArray<Element>
         }
 
     /**
-     * Indicate to the CircularArray that a certain number of additional elements are likely to be
-     * added or inserted.
-     *
-     * @param additional  an indicator of an expected required capacity beyond the amount
-     *                    **utilized** thus far
-     *
-     * @return this
-     */
-    @Override
-    CircularArray ensureCapacity(Int additional)
-        {
-        Int newSize = size + additional;
-        if (newSize > capacity)
-            {
-            adjustCapacity(minCapacityFor(newSize));
-            }
-
-        return this;
-        }
-
-    /**
      * If there is unused capacity in the CircularArray, then release as much of that excess capacity
      * as possible.
      *
@@ -521,6 +500,30 @@ class CircularArray<Element>
 
         head = 0;
         tail = 0;
+
+        return this;
+        }
+
+
+    // ----- Appender interface --------------------------------------------------------------------
+
+    /**
+     * Indicate to the CircularArray that a certain number of additional elements are likely to be
+     * added or inserted.
+     *
+     * @param additional  an indicator of an expected required capacity beyond the amount
+     *                    **utilized** thus far
+     *
+     * @return this
+     */
+    @Override
+    CircularArray ensureCapacity(Int additional)
+        {
+        Int newSize = size + additional;
+        if (newSize > capacity)
+            {
+            adjustCapacity(minCapacityFor(newSize));
+            }
 
         return this;
         }

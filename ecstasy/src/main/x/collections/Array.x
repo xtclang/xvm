@@ -119,7 +119,7 @@ class Array<Element>
      * @param mutability  the mutability setting for the array
      * @param elements    the elements to use to initialize the contents of the array
      */
-    construct(Mutability mutability, Element[] elements = [])
+    construct(Mutability mutability, Iterable<Element> elements = [])
         {
         }
     finally
@@ -131,12 +131,22 @@ class Array<Element>
                     ? (e -> e.is(Const) ? e : e.is(Freezable) ? e.freeze() : assert)
                     : e -> e;
 
-            Int         index = size - 1;
-            ElementImpl cur   = new ElementImpl(transform(elements[index]));
-            while (--index >= 0)
+            Int          index = size - 1;
+            ElementImpl? cur   = Null;
+            Loop:
+            for (Element element : elements)
                 {
-                cur = new ElementImpl(transform(elements[index]), cur);
+                if (Loop.first)
+                    {
+                    cur = new ElementImpl(transform(element));
+                    }
+                else
+                    {
+                    assert cur != Null;
+                    cur = new ElementImpl(transform(element), cur);
+                    }
                 }
+            assert cur != Null;
             head = cur;
             }
 
@@ -547,9 +557,12 @@ class Array<Element>
 
     // ----- Collection interface ------------------------------------------------------------------
 
-// TODO?
-//    @Override
-//    List sorted(Orderer? orderer = Null, Array.Mutability? mutability = Null)
+    @Override
+    Array sorted(Orderer? orderer = Null, Boolean inPlace = False)
+        {
+        return super(orderer, inPlace).as(Array);
+        }
+// TODO CP?
 //        {
 //        if (orderer != Null && mutability == Null, Orderer? prev := orderedBy(), prev? == orderer)
 //            {
@@ -775,6 +788,13 @@ class Array<Element>
     // ----- List interface ------------------------------------------------------------------------
 
     @Override
+    Array filterIndexed(function Boolean(Element, Int) match,
+                        Array?                         dest = Null)
+       {
+       return super(match, dest).as(Array);
+       }
+
+    @Override
     Array replace(Int index, Element value)
         {
         if (inPlace)
@@ -994,6 +1014,18 @@ class Array<Element>
                         ? result.toArray(Mutability.Persistent, True)
                         : result.freeze(True);
             }
+        }
+
+    @Override
+    Array reversed(Boolean inPlace = False)
+        {
+        return super(inPlace).as(Array);
+        }
+
+    @Override
+    Array shuffled(Boolean inPlace = False)
+        {
+        return super(inPlace).as(Array);
         }
 
 

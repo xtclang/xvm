@@ -624,21 +624,8 @@ interface List<Element>
         return new Array<Element>(Array.Mutability.Mutable, this).shuffled(inPlace);
         }
 
-    /**
-     * @param inPlace  specifies whether an array should attempt to make the mutability modification
-     *                 to itself, versus always creating a new array instance
-     */
     @Override
-    Element[] toArray(Array.Mutability? mutability = Null, Boolean inPlace = False)
-        {
-        // a list can simply return itself, but to fulfill the intent of the contract, it should
-        // only do so if it can efficiently implement the array type (i.e. the indexed List API)
-        return mutability == Null && indexed && knownSize()
-                ? this
-                : new Array<Element>(mutability, this);
-        }
-
-    Collection reify()
+    List reify()
         {
         // this method must be overridden by any implementing Collection that may return a view of
         // itself as a Collection, such that mutations to one might be visible from the other

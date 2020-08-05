@@ -527,7 +527,8 @@ interface Collection<Element>
     <Key> Map<Key, Element> associateBy(function Key(Element) keyFor,
                                         Map<Key, Element>?    dest = Null)
         {
-        return associate(e -> (keyFor(e), e), dest);
+        TODO GG ("doesn't compile")
+        // return associate((Element e) -> (keyFor(e), e), dest);
         }
 
     /**
@@ -545,7 +546,8 @@ interface Collection<Element>
     <Value> Map<Element, Value> associateWith(function Value(Element) valueFor,
                                               Map<Element, Value>?    dest = Null)
         {
-        return associate(e -> (e, valueFor(e)), dest);
+        TODO GG ("doesn't compile")
+//        return associate(e -> (e, valueFor(e)), dest);
         }
 
     /**
@@ -618,7 +620,7 @@ interface Collection<Element>
      */
     List<Element> sorted(Orderer? orderer = Null)
         {
-        return toArray(Mutable).sorted(orderer, True);
+        return toArray(Array.Mutability.Mutable).sorted(orderer, True); // TODO GG
         }
 
     /**
@@ -881,7 +883,7 @@ interface Collection<Element>
      * @return the resulting `Appender<Char>`
      */
     Appender<Char> join(
-            Appender<Char>?           buf    = Null,
+            Appender<Char>?           bufN   = Null,
             String                    sep    = ", ",
             String                    pre    = "",
             String                    post   = "",
@@ -889,13 +891,13 @@ interface Collection<Element>
             String                    trunc  = "...",
             function String(Element)? render = Null)
         {
-        Appender<Char> buf = buf ?: new StringBuffer();
+        Appender<Char> buf = bufN ?: new StringBuffer();
         pre.appendTo(buf);
 
         function Appender<Char>(Element) appendElement = switch()
             {
             case render != Null              : (e -> render(e).appendTo(buf));
-            case Element.is(Type<Stringable>): (e -> e.appendTo(buf));
+            case Element.is(Type<Stringable>): (e -> e.as(Stringable).appendTo(buf)); // TODO GG - get rid of "as
             default: (e -> e.is(Stringable) ? e.appendTo(buf) : buf.addAll(e.toString()));
             };
 
@@ -929,8 +931,8 @@ interface Collection<Element>
         {
         if (this.is(Stringable))
             {
-            StringBuffer buf = new StringBuffer(estimateStringLength());
-            appendTo(buf);
+            StringBuffer buf = new StringBuffer(this.estimateStringLength()); // TODO GG "this" should not be needed
+            this.appendTo(buf);
             return buf.toString();
             }
 
@@ -962,8 +964,8 @@ interface Collection<Element>
         // check if a once-through zipper algorithm can be used
         Boolean sameOrder = size == 1;
         if (!sameOrder,
-                Orderer? order1 := collection1.orderedBy(),
-                Orderer? order2 := collection2.orderedBy(),
+                Collection<CompileType.Element>.Orderer? order1 := collection1.orderedBy(),
+                Collection<CompileType.Element>.Orderer? order2 := collection2.orderedBy(),
                 order1? == order2?)
             {
             sameOrder = True;
@@ -993,35 +995,38 @@ interface Collection<Element>
         // in theory, sets may execute in O(N) time
         if (collection1.is(Set))
             {
-            return collection1.containsAll(collection2);
+            return collection1.as(CompileType).containsAll(collection2); // TODO GG too much knowledge
             }
         else if (collection2.is(Set))
             {
-            return collection2.containsAll(collection1);
+            return collection2.as(CompileType).containsAll(collection1);
             }
 
         // if the type is hashable, then build a HashSet, and if its size is the same as before,
         // then the contents are unique; it looks expensive, but this optimizes to O(2*N)
         if (CompileType.Element.is(Type<Hashable>))
             {
-            HashMap<CompileType.Element, Int> map = collection1.groupWith(
-                    entry -> {entry.value = entry.exists ? entry.value + 1 : 1;}, new HashMap());
+            Map<CompileType.Element, Int> map = collection1.groupWith(
+                    (_, n) -> (n + 1),
+                    (_) -> 1,
+                    new HashMap<CompileType.Element, Int>());  // TODO GG inference
             if (map.size == size)
                 {
-                return set.containsAll(collection2);
+                return collection1.containsAll(collection2);
                 }
+            // TODO CP else {}
             }
 
         // this is text-book inefficiency; we're comparing two bags of non-Hashable values
         enum NonExistent {NotAValue}
         Iterator<CompileType.Element> iter = collection1.iterator();
-        (CompileType.Element|NonExistent)[] remains = new Array<(CompileType.Element|NonExistent)[]>(
+        (CompileType.Element|NonExistent)[] remains = new Array<(CompileType.Element|NonExistent)>(
                 collection1.size, _ -> {assert val e := iter.next(); return e;});
         for (CompileType.Element value : collection2)
             {
             if (Int i := remains.indexOf(value))
                 {
-                remains[i] = NotAValue;
+                remains[i] = NonExistent.NotAValue; // TODO GG
                 }
             else
                 {

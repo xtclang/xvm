@@ -574,7 +574,7 @@ const ConstOrdinalList
             // drop the extra nodes that we're collapsing into the fast node
             if (span > 1)
                 {
-                nodes.delete([1..span));
+                nodes.deleteAll([1..span));
                 }
 
             // build the fast node and use it in place of the first node
