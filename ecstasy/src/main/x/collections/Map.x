@@ -135,7 +135,7 @@ interface Map<Key, Value>
      *
      *   if (map.keys.contains(name)) {...}
      *
-     * The returned set is expected to support mutation operations iff the map is _mutable_; the
+     * The returned set is expected to support mutation operations iff the map is `inPlace`; the
      * returned set is not expected to support the `add` or `addAll` operations.
      */
     @RO Set<Key> keys;
@@ -143,7 +143,7 @@ interface Map<Key, Value>
     /**
      * Obtain the collection of all values (one for each key) in the map.
      *
-     * The returned collection is expected to support mutation operations iff the map is _mutable_;
+     * The returned collection is expected to support mutation operations iff the map is `inPlace`;
      * the returned collection is _not_ expected to support the `add` or `addAll` operations.
      */
     @RO Collection<Value> values;
@@ -151,7 +151,7 @@ interface Map<Key, Value>
     /**
      * Obtain the set of all entries (key/value pairs) in the map.
      *
-     * The returned set is expected to support mutation operations iff the map is _mutable_.
+     * The returned set is expected to support mutation operations iff the map is `inPlace`.
      */
     @RO Set<Entry> entries;
 
@@ -162,14 +162,13 @@ interface Map<Key, Value>
      * Store a mapping of the specified key to the specified value, regardless of whether that key
      * is already present in the map.
      *
-     * A _mutable_ map will perform the operation in place. A _fixed size_ map will perform the
-     * operation in place iff the key is currently present in the map. A _persistent_ or _const_
-     * map will return a new map reflecting the requested change.
+     * An `inPlace` map will perform the operation in place; otherwise the map will return a new map
+     * reflecting the requested change.
      *
      * @param key    the key to store in the map
      * @param value  the value to associate with the specified key
      *
-     * @return the resultant map, which is the same as `this` for a non-persistent map
+     * @return the resultant map, which is the same as `this` for an in-place map
      *
      * @throws ReadOnly  if the map is _fixed size_ and the key does not already exist in the map
      */
@@ -189,13 +188,12 @@ interface Map<Key, Value>
      * Store in this map each of the mappings of key and values specified in another map, regardless
      * of whether those keys and/or values are already present in this map.
      *
-     * A _mutable_ map will perform the operation in place. A _fixed size_ map will perform the
-     * operation in place iff all of the keys are already present in the map. In all other cases,
-     * including all other modes of map, a new map will be returned reflecting the requested change.
+     * An `inPlace` map will perform the operation in place; otherwise the map will return a new map
+     * reflecting the requested change.
      *
      * @param that  another map containing keys and associated values to put into this map
      *
-     * @return the resultant map, which is the same as `this` for a non-persistent map
+     * @return the resultant map, which is the same as `this` for an in-place map
      *
      * @throws ReadOnly  if the map is _fixed size_ and the keys do not already all exist in the map
      */
@@ -213,15 +211,15 @@ interface Map<Key, Value>
      * Map the specified key to the specified value, iff that key is *not* currently present in the
      * map.
      *
-     * A _mutable_ map will perform the operation in place; all other modes of map will return a
-     * new map that reflects the requested change.
+     * An `inPlace` map will perform the operation in place; otherwise the map will return a new map
+     * reflecting the requested change.
      *
      * @param key    the key to store in the map
      * @param value  the value to associate with the specified key iff the key does not already
      *               exist in the map
      *
      * @return True iff the key did not previously exist in the map and now it does
-     * @return the resultant map, which is the same as `this` for a non-persistent map
+     * @return the resultant map, which is the same as `this` for an in-place map
      *
      * @throws ReadOnly  if the map is _fixed size_
      */
@@ -244,7 +242,7 @@ interface Map<Key, Value>
      * @param valueNew  the value to associate with the specified key
      *
      * @return True iff the key did exist in the map and was associated with `valueOld`
-     * @return the resultant map, which is the same as `this` for a non-persistent map
+     * @return the resultant map, which is the same as `this` for an in-place map
      */
     conditional Map replace(Key key, Value valueOld, Value valueNew)
         {
@@ -264,7 +262,7 @@ interface Map<Key, Value>
      *
      * @param key  the key to remove from this map
      *
-     * @return the resultant map, which is the same as `this` for a non-persistent map
+     * @return the resultant map, which is the same as `this` for an in-place map
      *
      * @throws ReadOnly  if the map is _fixed size_
      */
@@ -281,9 +279,9 @@ interface Map<Key, Value>
      * @param value  the value to verify is currently associated with the specified key
      *
      * @return True iff the key did exist in the map and was associated with `value`
-     * @return the resultant map, which is the same as `this` for a non-persistent map
+     * @return the resultant map, which is the same as `this` for an in-place map
      *
-     * @throws ReadOnly  if the map is _fixed size_
+     * @throws ReadOnly  if the map does not support mutation
      */
     conditional Map remove(Key key, Value value)
         {
@@ -298,12 +296,12 @@ interface Map<Key, Value>
     /**
      * Remove all key/value mappings from the map.
      *
-     * A _mutable_ map will perform the operation in place; all other modes of map will return a
-     * new map that reflects the requested changes.
+     * An `inPlace` map will perform the operation in place; otherwise the map will return a new map
+     * reflecting the requested change.
      *
-     * @return the resultant map, which is the same as `this` for a non-persistent map
+     * @return the resultant map, which is the same as `this` for an in-place map
      *
-     * @throws ReadOnly  if the map is _fixed size_
+     * @throws ReadOnly  if the map does not support mutation
      */
     Map clear();
 
@@ -323,9 +321,8 @@ interface Map<Key, Value>
      *
      * @return the result of the specified function
      *
-     * @throws ReadOnly if an attempt is made to add or remove an entry in a map that is not
-     *                  _mutable_, or to modify an entry in a map that is not _mutable_ or
-     *                  _fixed size_
+     * @throws ReadOnly  if the map does not support in-place mutation and the `compute` function
+     *                   attempts to modify an entry
      */
     <Result> Result process(Key                     key,
                             function Result(Entry) compute);
@@ -339,9 +336,8 @@ interface Map<Key, Value>
      * @return a Map containing the results from the specified function applied against the entries
      *         for the specified keys
      *
-     * @throws ReadOnly if an attempt is made to add or remove an entry in a map that is not
-     *                  _mutable_, or to modify an entry in a map whose [mutability] is not
-     *                  `Mutable` or `Fixed`
+     * @throws ReadOnly  if the map does not support in-place mutation and the `compute` function
+     *                   attempts to modify an entry
      */
     <Result> Map!<Key, Result> project(Iterable<Key>          keys,
                                        function Result(Entry) compute)
@@ -365,8 +361,8 @@ interface Map<Key, Value>
      * @return a conditional True and the result of the specified function iff the entry exists;
      *         otherwise a conditional False
      *
-     * @throws ReadOnly if an attempt is made to modify an entry in a map that is not
-     *                  _mutable_ or _fixed size_
+     * @throws ReadOnly  if the map does not support in-place mutation and the `compute` function
+     *                   attempts to modify an entry
      */
     <Result> conditional Result processIfPresent(Key                    key,
                                                  function Result(Entry) compute)
@@ -399,7 +395,7 @@ interface Map<Key, Value>
      * @return the value for the specified key, which may have already existed in the map, or may
      *         have just been calculated by the specified function and placed into the map
      *
-     * @throws ReadOnly if an attempt is made to add an entry in a map that is not _mutable_
+     * @throws ReadOnly  if the map does not support in-place mutation
      */
     Value computeIfAbsent(Key              key,
                           function Value() compute)
@@ -411,7 +407,7 @@ interface Map<Key, Value>
                 return entry.value;
                 }
 
-            if (mutability != Mutable)
+            if (!inPlace)
                 {
                 throw new ReadOnly();
                 }
@@ -453,25 +449,25 @@ interface Map<Key, Value>
          * The value associated with the entry's key.
          *
          * The value property is not settable and the entry is not removable if the containing map
-         * is _persistent_.
+         * is not `inPlace`.
          *
          * If the entry does not [exist](exists), then the value is not readable; an attempt to get
          * the value of an will raise an `OutOfBounds`
          *
          * @throws OutOfBounds if an attempt is made to read the value of the entry when {@link
          *                     exists} is False
-         * @throws ReadOnly    if an attempt is made to write the value of the entry when
-         *                     the map is _persistent_ or `const`
+         * @throws ReadOnly    if an attempt is made to write the value of the entry and the map
+         *                     is not `inPlace`, or does not support mutation
          */
         Value value;
 
         /**
          * Remove the entry from its map.
          *
-         * The entry is removable if the containing map is _mutable_; it is not removable if the
-         * containing map is _fixed size_, _persistent_, or `const`.
+         * The entry is not removable if the containing map is not `inPlace`.
          *
-         * @throws ReadOnly if the map is _fixed size_, _persistent_, or `const`
+         * @throws ReadOnly    if an attempt is made to write the value of the entry and the map
+         *                     is not `inPlace`, or does not support mutation
          */
         void remove();
 
