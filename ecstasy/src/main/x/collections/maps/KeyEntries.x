@@ -2,21 +2,21 @@
  * An implementation of the Set for the [Map.entries] property that delegates back to the map and
  * to the map's [Map.keys] set.
  */
-class KeyEntries<Key, Value>(Map<Key, Value> map)
+class KeyEntries<Key, Value>(Map<Key, Value> contents)
         implements Set<Map<Key, Value>.Entry>
     {
-    public/private Map<Key, Value> map;
+    public/private Map<Key, Value> contents;
 
     @Override
     Int size.get()
         {
-        return map.size;
+        return contents.size;
         }
 
     @Override
     Boolean empty.get()
         {
-        return map.empty;
+        return contents.empty;
         }
 
     @Override
@@ -24,14 +24,14 @@ class KeyEntries<Key, Value>(Map<Key, Value> map)
         {
         return new Iterator()
             {
-            Iterator<Key> keyIterator = this.KeyEntries.map.keys.iterator();
+            Iterator<Key> keyIterator = this.KeyEntries.contents.keys.iterator();
 
             @Override
             conditional Map<Key, Value>.Entry next()
                 {
                 if (Key key := keyIterator.next())
                     {
-                    private CursorEntry<Key, Value> entry = new CursorEntry(this.KeyEntries.map);
+                    private CursorEntry<Key, Value> entry = new CursorEntry(this.KeyEntries.contents);
                     return true, entry.advance(key);
                     }
 
@@ -44,7 +44,7 @@ class KeyEntries<Key, Value>(Map<Key, Value> map)
     KeyEntries remove(Map<Key, Value>.Entry entry)
         {
         verifyMutable();
-        map.remove(entry.key, entry.value);
+        contents.remove(entry.key, entry.value);
         return this;
         }
 
@@ -54,8 +54,8 @@ class KeyEntries<Key, Value>(Map<Key, Value> map)
         {
         verifyMutable();
 
-        CursorEntry<Key, Value> entry = new CursorEntry(map);
-        (_, Int removed) = map.keys.removeAll(key -> shouldRemove(entry.advance(key)));
+        CursorEntry<Key, Value> entry = new CursorEntry(contents);
+        (_, Int removed) = contents.keys.removeAll(key -> shouldRemove(entry.advance(key)));
 
         return this, removed;
         }
@@ -64,24 +64,24 @@ class KeyEntries<Key, Value>(Map<Key, Value> map)
     KeyEntries clear()
         {
         verifyMutable();
-        map.clear();
+        contents.clear();
         return this;
         }
 
     /**
-     * Some operations require that the containing Map be Mutable; this method throws an exception
-     * if the Map is not Mutable.
+     * Some operations require that the containing Map be mutable; this method throws an exception
+     * if the Map is not mutable.
      *
      * @return True
      *
-     * @throws ReadOnly if the Map is not Mutable
+     * @throws ReadOnly if the Map is not mutable
      */
     protected Boolean verifyMutable()
         {
-        if (map.mutability != Mutable)
+        if (!contents.inPlace)
             {
-            throw new ReadOnly("Map operation requires mutability==Mutable");
+            throw new ReadOnly("Map operation requires inPlace == True");
             }
-        return true;
+        return True;
         }
     }

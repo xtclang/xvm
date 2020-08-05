@@ -568,7 +568,7 @@ interface Collection<Element>
         Map<Key, Collection<Element>> map = dest ?: new ListMap();
         for (Element e : this)
             {
-            map.computeIfAbsent(keyFor(e), () -> new ListSet()).add(e);
+            map.computeIfAbsent(keyFor(e), () -> new ListSet<Element>()).add(e);
             }
         return map;
         }

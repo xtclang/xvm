@@ -187,7 +187,8 @@ const Path
         {
         if (!that.is(Path))
             {
-            return super(that);
+             TODO CP
+//            return super(that);
             }
 
         Int tailSize = this.size - that.size;
@@ -210,7 +211,7 @@ const Path
             parent = parent.parent ?: assert;
             }
 
-        return parent == that;
+        return parent == that.as(Path); // TODO GG "as" not needed
         }
 
     /**
@@ -226,7 +227,8 @@ const Path
         {
         if (!that.is(Path))
             {
-            return super(that);
+             TODO CP
+//            return super(that);
             }
 
         switch (this.size <=> that.size)
