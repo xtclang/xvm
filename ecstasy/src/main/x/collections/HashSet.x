@@ -43,10 +43,4 @@ class HashSet<Element>
         {
         construct MapSet(map);
         }
-
-    @Override
-    protected HashSet setFor(Map<Element, Nullable> map)
-        {
-        return new HashSet(map);
-        }
     }
