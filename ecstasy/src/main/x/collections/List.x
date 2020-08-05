@@ -56,7 +56,30 @@ interface List<Element>
     @Override
     Boolean contains(Element value)
         {
-        // TODO use binary search if there is a Orderer
+        if (Orderer? orderer := orderedBy(), orderer != Null)
+            {
+            // binary search
+            Int lo = 0;
+            Int hi = size - 1;
+            while (lo <= hi)
+                {
+                Int     mid = (lo + hi) >>> 1;
+                Element cur = this[mid];
+                switch (orderer(value, cur))
+                    {
+                    case Lesser:
+                        hi = mid - 1;
+                        break;
+                    case Equal:
+                        return True;
+                    case Greater:
+                        lo = mid + 1;
+                        break;
+                    }
+                }
+            return False;
+            }
+
         return super(value);
         }
 
@@ -224,9 +247,30 @@ interface List<Element>
      */
     conditional Int indexOf(Element value, Int startAt = 0)
         {
-        if (indexed, Int size := this.knownSize())
+        if (Orderer? orderer := orderedBy(), orderer != Null)
             {
-            // TODO use binary search if there is a Orderer
+            // binary search
+            Int lo = startAt;
+            Int hi = size - 1;
+            while (lo <= hi)
+                {
+                Int     mid = (lo + hi) >>> 1;
+                Element cur = this[mid];
+                switch (orderer(value, cur))
+                    {
+                    case Lesser:
+                        hi = mid - 1;
+                        break;
+                    case Equal:
+                        return True, mid;
+                    case Greater:
+                        lo = mid + 1;
+                        break;
+                    }
+                }
+            }
+        else if (indexed, Int size := this.knownSize())
+            {
             for (Int i = startAt.maxOf(0); i < size; ++i)
                 {
                 if (this[i] == value)
@@ -298,9 +342,32 @@ interface List<Element>
      */
     conditional Int lastIndexOf(Element value, Int startAt = Int.maxvalue)
         {
+        if (Orderer? orderer := orderedBy(), orderer != Null)
+            {
+            // binary search
+            Int lo = 0;
+            Int hi = (size-1).minOf(startAt);
+            while (lo <= hi)
+                {
+                Int     mid = (lo + hi) >>> 1;
+                Element cur = this[mid];
+                switch (orderer(value, cur))
+                    {
+                    case Lesser:
+                        hi = mid - 1;
+                        break;
+                    case Equal:
+                        return True, mid;
+                    case Greater:
+                        lo = mid + 1;
+                        break;
+                    }
+                }
+            return False;
+            }
+
         if (indexed)
             {
-            // TODO use binary search if there is a Orderer
             for (Int i = (size-1).minOf(startAt); i >= 0; --i)
                 {
                 if (this[i] == value)
