@@ -141,14 +141,15 @@ public class ArrayTypeExpression
     protected TypeConstant instantiateTypeConstant(Context ctx)
         {
         final ConstantPool pool = pool();
-
-        AstNode parent = getParent();
-        while (parent instanceof TypeExpression)
-            {
-            parent = parent.getParent();
-            }
-        ClassConstant clz = parent instanceof NewExpression ? pool.clzArray() : pool.clzList();
-        return pool.ensureClassTypeConstant(clz, null, type.ensureTypeConstant(ctx));
+        return pool.ensureClassTypeConstant(pool.clzArray(), null, type.ensureTypeConstant(ctx));
+// TODO
+//        AstNode parent = getParent();
+//        while (parent instanceof TypeExpression)
+//            {
+//            parent = parent.getParent();
+//            }
+//        ClassConstant clz = parent instanceof NewExpression ? pool.clzArray() : pool.clzList();
+//        return pool.ensureClassTypeConstant(clz, null, type.ensureTypeConstant(ctx));
         }
 
     @Override

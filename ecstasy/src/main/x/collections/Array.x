@@ -164,12 +164,6 @@ class Array<Element>
                 }
 
             @Override
-            Mutability mutability.get()
-                {
-                return array.mutability;
-                }
-
-            @Override
             @Op("[]")
             Element getElement(Int index)
                 {

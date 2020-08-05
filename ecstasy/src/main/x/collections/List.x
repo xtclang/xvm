@@ -377,7 +377,7 @@ interface List<Element>
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
     List! filterIndexed(function Boolean(Element, Int) match,
-                       List?                          dest = Null)
+                       List?                           dest = Null)
         {
         if (dest == Null)
             {
@@ -412,8 +412,6 @@ interface List<Element>
     <Result> List!<Result> mapIndexed(function Result(Element, Int) transform,
                                       List<Result>?                 dest = Null)
         {
-        Iterator<Element> iter = iterator();
-
         // in place
         if (&dest == &this)
             {
@@ -428,17 +426,8 @@ interface List<Element>
             return dest;
             }
 
-        if (dest == Null)
-            {
-            return new Array<Result>(size, i ->
-                {
-                assert Element el := iter.next();
-                return transform(el, i);
-                });
-            // TODO return new Result[size](i -> transform(iter.next(), i));
-            }
-
-        Loop: for (Element e : iter)
+        dest ?:= new Result[];
+        Loop: for (Element e : this)
             {
             dest.add(transform(e, Loop.count));
             }
@@ -539,12 +528,12 @@ interface List<Element>
             // already in the right order
             return inPlace
                     ? this
-                    : new Array<Element>(Mutable, this); // REVIEW this loses the Orderer for orderedBy()
+                    : new Array<Element>(Array.Mutability.Mutable, this); // REVIEW this loses the Orderer for orderedBy()
             }
 
         if (this.inPlace && inPlace)
             {
-
+            // TODO
             }
 
         // TODO functions for different sort implementations; default sort() to pick one based on size etc.
@@ -553,7 +542,7 @@ interface List<Element>
 //        function List<Element> (List<Element>, Orderer?) sortimpl = bubbleSort;
 // TODO
 //        sortimpl(temp, order);
-        return super(orderer, inPlace);
+        TODO return super(orderer, inPlace);
         }
 
     /**
@@ -594,7 +583,7 @@ interface List<Element>
             return this[size-1..0];
             }
 
-        return new Array<Element>(Mutable, this).reversed(True);
+        return new Array<Element>(Array.Mutability.Mutable, this).reversed(True); // TODO GG drop "Array.Mutability."
         }
 
     /**
@@ -632,7 +621,7 @@ interface List<Element>
                 }
             }
 
-        return new Array<Element>(Mutable, this).shuffled(inPlace);
+        return new Array<Element>(Array.Mutability.Mutable, this).shuffled(inPlace);
         }
 
     /**

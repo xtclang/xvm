@@ -299,9 +299,9 @@ interface Collection<Element>
      * @return trueList   the list of elements that match the provided criteria
      * @return falseList  the list of elements that **do not** match the provided criteria
      */
-    (Element[] trueList, Element[] falseList) partition(function Boolean(Element) match,
-                                                        Element[]? trueList  = Null,
-                                                        Element[]? falseList = Null)
+    (List<Element> trueList, List<Element> falseList) partition(function Boolean(Element) match,
+                                                                List<Element>? trueList  = Null,
+                                                                List<Element>? falseList = Null)
         {
         trueList  ?:= new Element[];
         falseList ?:= new Element[];
@@ -334,7 +334,7 @@ interface Collection<Element>
             {
             Result[] results = new Array<Result>(size, _ ->
                 {
-                assert Element el := iter.next();
+                assert val el := iter.next();
                 return transform(el);
                 });
             // TODO Result[] results = new Result[size](_ -> transform(iter.next()));
@@ -349,7 +349,7 @@ interface Collection<Element>
             // TODO replace with deferred-map collection
             return new Array<Result>(size, _ ->
                 {
-                assert Element el := iter.next();
+                assert val el := iter.next();
                 return transform(el);
                 });
 
@@ -403,7 +403,7 @@ interface Collection<Element>
                     : new ListSet(this); // TODO replace with deferred-distinct set ???
             }
 
-        return &dest == &this ? this : dest.addAll(this);
+        return &dest == &this ? dest : dest.addAll(this);
         }
 
     /**
@@ -437,7 +437,7 @@ interface Collection<Element>
          * Metadata: Is this Reducer capable of being used in parallel? A Reducer that can be used
          * used in parallel should override this to return `True`.
          */
-        Boolean parallel.get()
+        @RO Boolean parallel.get()
             {
             return False;
             }
@@ -616,7 +616,7 @@ interface Collection<Element>
      *
      * @throws Exception  if no [Orderer] is provided and [Element] is not [Orderable]
      */
-    Element[] sorted(Orderer? orderer = Null)
+    List<Element> sorted(Orderer? orderer = Null)
         {
         return toArray(Mutable).sorted(orderer, True);
         }
