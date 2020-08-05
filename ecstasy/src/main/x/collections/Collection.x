@@ -407,7 +407,7 @@ interface Collection<Element>
         }
 
     /**
-     * Reduce this Collection of elements to a result value using the provided function. This
+     * Reduce this collection of elements to a result value using the provided function. This
      * operation is also called a _folding_ operation.
      *
      * @param initial     the initial value to start accumulating from
@@ -428,14 +428,18 @@ interface Collection<Element>
 
     /**
      * A customizable, parallelizable reduction state machine. The design of the API allows the
-     * `Reducer` to be stateless, which allows a reducer to be immutable and passed efficiently to
-     * multiple services, if parallel reduction is desired.
+     * `Reducer` to be stateless, which allows a reducer to be immutable (for example, implemented
+     * as a `const`) and passed efficiently to multiple services, if parallel reduction is desired.
+     *
+     * Implementations designed for parallel reduction should either be a `service` or immutable
+     * (such as a `const`), and should produce Accumulator instances that are immutable or that
+     * implement Freezable.
      */
     static interface Reducer<Element, Result>
         {
         /**
          * Metadata: Is this Reducer capable of being used in parallel? A Reducer that can be used
-         * used in parallel should override this to return `True`.
+         * used in parallel across multiple services should override this to return `True`.
          */
         @RO Boolean parallel.get()
             {
@@ -495,7 +499,7 @@ interface Collection<Element>
      * Create a [Map] from the contents of this `Collection` by transforming each element of the
      * collection into a key and value.
      *
-     * @param transform  the function that transforms an Element into a Key and Value
+     * @param transform  the function that transforms an Element into a Key and a Value
      * @param dest       the optional map to contribute to
      *
      * @return the resulting `Map`
@@ -514,13 +518,13 @@ interface Collection<Element>
 
     /**
      * Create a [Map] from the contents of this `Collection` by using each element as a value in the
-     * resulting map, and obtaining a corresponding key using the provided function. In the case
-     * that the same key is generated for more than one element, then the last element with the
-     * same key will be present in the resulting map, having replaced any previously existing map
-     * entry for the same key.
+     * resulting map, and obtaining a corresponding key for that element using the provided
+     * function. In the case that the same key is generated for more than one element, then the last
+     * element with the same key will be present in the resulting map, having replaced any
+     * previously existing map entry for the same key.
      *
      * @param keyFor  the function that provides a `Key` for each `Element`
-     * @param dest    the optional map to contribute to
+     * @param dest    the optional `Map` to contribute to
      *
      * @return the resulting `Map`
      */
@@ -532,7 +536,7 @@ interface Collection<Element>
 
     /**
      * Create a [Map] from the contents of this `Collection` by using each element as a key in the
-     * resulting map, and obtaining a value corresponding to each element using the provided
+     * resulting map, and obtaining a corresponding value for that element using the provided
      * function. In the case that multiple elements in the collection are identical, then the last
      * encountered identical element and its corresponding value will be present in the resulting
      * map, having replaced any previously existing map entry for the same key.
@@ -549,8 +553,9 @@ interface Collection<Element>
         }
 
     /**
-     * Create a [Map] from the contents of this `Collection` by placing each element into a
-     * collection associated with a key generated using the provided function. In the case that the
+     * Create a [Map] from the contents of this `Collection` by evaluating each element to obtain a
+     * key for that element using the provided function, and then placing that element into a
+     * collection that is associated with that key inside the resulting map. In the case that the
      * same key is generated for more than one element, then **all** of those elements will be
      * added to the collection associated with that key. The behavior of this method is conceptually
      * the inverse of the [flatMap] method.
@@ -558,7 +563,7 @@ interface Collection<Element>
      * @param keyFor  the function that provides a `Key` for each `Element`
      * @param dest    the optional map to contribute to
      *
-     * @return the resulting `Map`
+     * @return the resulting `Map` of collections of elements
      */
     <Key> Map<Key, Collection!<Element>> groupBy(function Key(Element)           keyFor,
                                                  Map<Key, Collection!<Element>>? dest   = Null)
@@ -573,13 +578,14 @@ interface Collection<Element>
 
     /**
      * Create a [Map] from the contents of this `Collection` by using each element as a key, and
-     * applying the specified function against the corresponding [Map.Entry]. For example, to count
-     * the occurrences of each element in a collection, this produces a map keyed by the element
-     * with the corresponding value being the count of occurrences:
+     * using one of the two specified functions to either create an initial value for that key, or
+     * for modifying the value that is already associated with that key.
+     *
+     * For example, to count the occurrences of each element in a collection, this produces a map
+     * keyed by the element, with the corresponding value being the count of occurrences:
      *
      *      Collection<String> bag    = ...
-     *      Map<String, Int>   counts =
-     *              bag.groupWith(entry -> {entry.value = entry.exists ? entry.value + 1 : 1;} );
+     *      Map<String, Int>   counts = bag.groupWith((_, c) -> c+1, (_) -> 1);
      *
      * @param update  a function that affects the entry in the map corresponding to each element
      * @param dest    the optional map to contribute to
@@ -605,16 +611,14 @@ interface Collection<Element>
         }
 
     /**
-     * Create a sorted form of this collection. If the collection is itself a mutable list with
-     * in-place mutating behavior, then the sort is conducted in-place; otherwise, a new list is
-     * created.
+     * Create a sorted `List` from this `Collection`.
      *
      * @param orderer  an optional [Orderer] to control the sort order; `Null` means to use the
      *                 element type's natural order
      *
      * @return a sorted list
      *
-     * @throws Exception  if no [Orderer] is provided and [Element] is not [Orderable]
+     * @throws UnsupportedOperation  if no [Orderer] is provided and [Element] is not [Orderable]
      */
     List<Element> sorted(Orderer? orderer = Null)
         {
@@ -622,24 +626,28 @@ interface Collection<Element>
         }
 
     /**
-     * Obtain a Collection that has the same contents as this Collection, but which has two
+     * Obtain a `Collection` that has the same contents as this `Collection`, but which has two
      * additional attributes:
      *
-     * * First, if this Collection is dependent on another Collection for its storage such that
-     *   the other Collection may contain additional data that is not present in this Collection,
-     *   then the resulting Collection will no longer be dependent on that other Collection for its
-     *   storage (i.e. it will hold its own copy of its data, and release its reference to the other
-     *   collection);
+     * * First, if this `Collection` is dependent on another `Collection` for its storage such that
+     *   the other `Collection` may contain additional data that is not present in this
+     *   `Collection`, then the resulting `Collection` will no longer be dependent on that other
+     *   `Collection` for its storage (i.e. it will hold its own copy of its data, and release its
+     *   reference to the other `Collection`, which may allow memory to be reclaimed);
      *
-     * * Second, if this Collection is dependent on another Collection such that changes to this
-     *   Collection may be visible in the other Collection, and/or that changes to the other
-     *   Collection may be visible in this Collection, then the resulting Collection will no longer
-     *   have that attribute, i.e. changes to the resulting Collection will not be visible in the
-     *   other Collection, nor will changes to the other Collection be visible in the resulting
-     *   Collection.
+     * * Second, if this `Collection` is dependent on another `Collection` such that changes to this
+     *   `Collection` may be visible in the other `Collection`, and/or that changes to the other
+     *   `Collection` may be visible in this `Collection`, then the resulting `Collection` will no
+     *   longer have that attribute, i.e. changes to the resulting `Collection` will not be visible
+     *   in the other `Collection`, nor will changes to the other `Collection` be visible in the
+     *   resulting `Collection`. This guarantee is essential when a `Collection` may have resulted
+     *   from an operation (such as the [map] method) that may defer most of the work of the
+     *   operation by holding onto the original `Collection` -- which may itself be subject to later
+     *   mutation -- and when the result itself is held long enough that subsequent mutation of the
+     *   original `Collection` may occur.
      *
-     * This contract is designed to allow Collections to take advantage of copy-on-write and other
-     * lazy semantics to achieve efficiency for both time and space.
+     * This contract is designed to allow `Collection` implementations to take advantage of lazy
+     * and deferred behavior in order to achieve time and space optimizations.
      *
      * @return a reified Collection, which may be `this`
      */
@@ -895,7 +903,7 @@ interface Collection<Element>
         function Appender<Char>(Element) appendElement = switch()
             {
             case render != Null              : (e -> render(e).appendTo(buf));
-            case Element.is(Type<Stringable>): (e -> e.as(Stringable).appendTo(buf)); // TODO GG - get rid of "as
+            case Element.is(Type<Stringable>): (e -> e.as(Stringable).appendTo(buf)); // TODO GG - get rid of "as"
             default: (e -> e.is(Stringable) ? e.appendTo(buf) : buf.addAll(e.toString()));
             };
 
@@ -1012,19 +1020,44 @@ interface Collection<Element>
                 {
                 return collection1.containsAll(collection2);
                 }
-            // TODO CP else {}
+            else
+                {
+                return collection2.any(e -> map.process(e, entry ->
+                    {
+                    if (!entry.exists)
+                        {
+                        // found no matching element in collection1
+                        return True;
+                        }
+
+                    Int oldValue = entry.value;
+                    if (oldValue <= 1)
+                        {
+                        entry.remove();
+                        }
+                    else
+                        {
+                        entry.value = oldValue-1;
+                        }
+                    return False;
+                    }));
+                }
             }
 
         // this is text-book inefficiency; we're comparing two bags of non-Hashable values
         enum NonExistent {NotAValue}
+        typedef (CompileType.Element | NonExistent) Remnant;
         Iterator<CompileType.Element> iter = collection1.iterator();
-        (CompileType.Element|NonExistent)[] remains = new Array<(CompileType.Element|NonExistent)>(
-                collection1.size, _ -> {assert val e := iter.next(); return e;});
+        Remnant[] remnants = new Array<Remnant>(collection1.size, _ ->
+            {
+            assert val e := iter.next(); return e;
+            });
+        assert !iter.next();
         for (CompileType.Element value : collection2)
             {
-            if (Int i := remains.indexOf(value))
+            if (Int i := remnants.indexOf(value))
                 {
-                remains[i] = NonExistent.NotAValue; // TODO GG
+                remnants[i] = NonExistent.NotAValue; // TODO GG
                 }
             else
                 {
