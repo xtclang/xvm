@@ -88,7 +88,7 @@ const Range<Element extends Orderable>
     Boolean upperExclusive;
 
     /**
-     * Reversed is true if the range was specified from its upper bound to its lower bound.
+     * The value is true if the range was specified from its upper bound to its lower bound.
      */
     Boolean descending;
 

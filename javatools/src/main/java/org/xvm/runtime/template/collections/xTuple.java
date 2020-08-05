@@ -220,7 +220,7 @@ public class xTuple
                 long    ixTo     = ((JavaLong) hInterval.getField("upperBound")).getValue();
                 boolean fExLower = ((BooleanHandle) hInterval.getField("lowerExclusive")).get();
                 boolean fExUpper = ((BooleanHandle) hInterval.getField("upperExclusive")).get();
-                boolean fReverse = ((BooleanHandle) hInterval.getField("reversed")).get();
+                boolean fReverse = ((BooleanHandle) hInterval.getField("descending")).get();
                 return slice(frame, (TupleHandle) hTarget, ixFrom, fExLower, ixTo, fExUpper, fReverse, iReturn);
                 }
             }
