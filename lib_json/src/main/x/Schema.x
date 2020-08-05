@@ -330,7 +330,7 @@ const Schema
         construct()
             {
             // clone the look-up tables from the schema
-            this.mappingByType = this.Schema.mappingByType.ensureMutable();
+            this.mappingByType = this.Schema.mappingByType; // TODO CP add clone
             this.typeByName    = new HashMap<String, Type>().putAll(this.Schema.typeByName);
             }
 
