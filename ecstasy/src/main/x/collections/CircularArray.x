@@ -178,12 +178,6 @@ class CircularArray<Element>
         contents[indexFor(head+index)] = value;
         }
 
-    @Override
-    Var<Element> elementAt(Int index)
-        {
-        TODO
-        }
-
 
     // ----- Sliceable interface -------------------------------------------------------------------
 

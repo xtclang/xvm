@@ -6,7 +6,7 @@
  * * The structure may be able to optimize its implementation if it gets warning in advance about
  *   expected capacity demands.
  *
- * The interface is designed so that only one method add(Element) needs to be implemented.
+ * The interface is designed so that only one method, [add(Element)], needs to be implemented.
  */
 interface Appender<Element>
     {

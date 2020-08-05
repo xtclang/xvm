@@ -1,20 +1,20 @@
 /**
  * UniformIndexed is an interface that allows the square bracket operators to be used with a
  * container data type that contains elements of a specified type, indexed by a specified type.
+ * This is commonly known as "array access", although Ecstasy allows access in this manner, via
+ * this interface, to data structures that are not arrays.
  */
 interface UniformIndexed<Index, Element>
     {
     /**
      * Obtain the value of the specified element.
      */
-    @Op("[]")
-    Element getElement(Index index);
+    @Op("[]") Element getElement(Index index);
 
     /**
      * Modify the value in the specified element.
      */
-    @Op("[]=")
-    void setElement(Index index, Element value)
+    @Op("[]=") void setElement(Index index, Element value)
         {
         throw new ReadOnly();
         }
@@ -36,7 +36,7 @@ interface UniformIndexed<Index, Element>
             @Override
             Boolean assigned.get()
                 {
-                return true;
+                return True;
                 }
 
             @Override

@@ -16,7 +16,7 @@
  *   implementations being the [Array] class and the [LinkedList] property annotation.
  *
  * * A related interface that is **not** derived from this Collection interface is the key/value
- *   (dictionary) interface [Map], which may itself be viewed as a set of [entries](Map.Entry).
+ *   (dictionary) interface [Map], which may itself be viewed as a `Set` of [entries](Map.Entry).
  *
  * The Collection API supports both in-place mutation and _persistent_ data structures; from
  * Wikipedia: "a persistent data structure is a data structure that always preserves the previous
@@ -25,20 +25,19 @@
  * structure." If an implementation uses in-place mutation, then its [inPlace] metadata property
  * will be `True`; if an implementation generates a new Collection to represent the result of a
  * mutation, then its [inPlace] metadata property will be `False`. (Note: The term "persistent" is
- * not related to the concept of persistent storage.)
+ * **not** related to the well-known concept of persistent storage, e.g. "storage on disk"; to avoid
+ * confusion, the term "persistent" is avoided in this API.)
  *
  * Collections should also support true immutability by carefully implementing the [Freezable]
  * interface. The goal of the interface is to efficiently support the transformation of a collection
- * to an immutable form, without accidentally making something immutable (i.e. that needed to remain
- * mutable) whose reference was reachable from the collection.
+ * to an immutable form, without accidentally making something immutable that needed to remain
+ * mutable; in Ecstasy, immutable is _deep_ immutability, so making an object immutable will also
+ * make everything that it can reach immutable as well. Implementations that support both in-place
+ * and persistent modes should switch to the persistent mode when frozen; otherwise, they should
+ * throw [ReadOnly] for mutating operations after the collection becomes immutable.
  *
  * To implement a read-only collection, one must implement at least the [size] property and the
  * [iterator()] method.
- *
- * Collection implementations should consider implementing the [Freezable] interface if they can
- * support immutable collections. Implementations that support both in-place and persistent modes
- * should switch to the persistent mode when frozen; otherwise, they should throw [ReadOnly] for
- * mutating operations after the collection becomes immutable.
  *
  * TODO is it possible to "extends conditional NumericAggregator<Element extends Number>"
  */
@@ -49,16 +48,16 @@ interface Collection<Element>
     // ----- abstract methods ----------------------------------------------------------------------
 
     /**
-     * Determine the size of the Iterable object, which is the number of elements that an iterator
-     * would emit.
+     * Determine the size of the `Collection`, which is the number of elements that are contained in
+     * the `Collection`.
      */
     @Override
     @RO Int size;
 
     /**
-     * Obtain an iterator over the contents of the Iterable object.
+     * Obtain an iterator over the elements in the `Collection`.
      *
-     * @return an Iterator
+     * @return an `Iterator` over each of the collection's elements
      */
     @Override
     Iterator<Element> iterator();
@@ -72,8 +71,9 @@ interface Collection<Element>
      * a new copy to perform a mutation is called a _persistent_ data structure; that term is
      * generally avoided here because of the multiple meanings in software of the term "persistent".
      *
-     * It is expected that all mutating operations that do not return a resulting collecting will
-     * assert that `inPlace` is `True`.
+     * It is expected that all mutating operations that can not return a resulting collection will
+     * check that `inPlace` is `True`, and otherwise throw a [ReadOnly] exception; one example is
+     * when the `value` property on a [List.Cursor] is set.
      */
     @RO Boolean inPlace.get()
         {
@@ -81,7 +81,7 @@ interface Collection<Element>
         }
 
     /**
-     * An Orderer is a function that compares two objects for order.
+     * An Orderer is a function that compares two elements for order.
      */
     typedef function Ordered (Element, Element) Orderer;
 
@@ -96,13 +96,13 @@ interface Collection<Element>
         }
 
     /**
-     * Metadata: Is the collection maintained in an order that is a function of the elements in the
-     * collection? And if so, what is the Orderer that represents that ordering?
+     * Metadata: Is the collection maintained in a specific order? And if that order is a function
+     * of the elements in the collection, what is the [Orderer] that represents that ordering?
      *
      * @return True iff the element order within the collection is significant
      * @return (conditional) the [Orderer] that determines the order between two elements; `Null`
      *         indicates that the order is maintained, but not by comparison of elements, such as
-     *         would occur if elements were stored in the order in which they were added
+     *         when elements are stored in the order in which they are added to the collection
      */
     conditional Orderer? orderedBy()
         {
@@ -119,7 +119,7 @@ interface Collection<Element>
      */
     conditional Int knownSize()
         {
-        // implementations of List that can efficiently determine the size of the list should
+        // implementations of Collection that do not have a cached size of the collection should
         // override this method
         return True, size;
         }
@@ -142,7 +142,7 @@ interface Collection<Element>
         }
 
     /**
-     * Determine if this `Collection` contains the specified value.
+     * Determine if this collection contains the specified value.
      *
      * @param value  the value that may be present in this `Collection`
      *
@@ -234,7 +234,7 @@ interface Collection<Element>
     /**
      * Determine if any elements of the `Collection` match the provided criteria.
      *
-     * @param match  a function that evaluates an element of the `Collection` for inclusion
+     * @param match  a function that evaluates elements of this collection for inclusion
      *
      * @return True if any element matched the specified criteria
      * @return (conditional) the first element that matched the criteria
@@ -266,8 +266,8 @@ interface Collection<Element>
      *
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
-    Collection filter(function Boolean(Element) match,
-                      Collection?               dest  = Null)
+    Collection! filter(function Boolean(Element)  match,
+                       Collection!?               dest  = Null)
         {
         if (dest == Null)
             {
@@ -316,7 +316,7 @@ interface Collection<Element>
      * Build a `Collection` that has one value "mapped from" each value in this `Collection`, using
      * the provided function.
      *
-     * @param transform  a function that creates the "mapped" element from an element in this
+     * @param transform  a function that creates a "mapped" element from each element in this
      *                   `Collection`
      * @param dest       an optional `Collection` to collect the results in; pass `this` collection
      *                   to map the values "in place"
@@ -324,7 +324,7 @@ interface Collection<Element>
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
     <Result> Collection!<Result> map(function Result(Element) transform,
-                                     Collection<Result>?      dest      = Null)
+                                     Collection!<Result>?     dest      = Null)
         {
         Iterator<Element> iter = iterator();
 
@@ -367,7 +367,7 @@ interface Collection<Element>
      * Build a `Collection` that has some number of elements "flattened from" each element of this
      * collection.
      *
-     * @param transform  a function that creates the "flattened" elements from an element in this
+     * @param transform  a function that creates the "flattened" elements from each element in this
      *                   `Collection`
      * @param dest       an optional `Collection` to collect the results in; "in place" flat mapping
      *                   is not supported
@@ -375,11 +375,11 @@ interface Collection<Element>
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
     <Result> Collection!<Result> flatMap(function Iterable<Result>(Element) flatten,
-                                         Collection<Result>?                dest    = Null)
+                                         Collection!<Result>?               dest    = Null)
         {
         assert:arg &dest != &this;
 
-        dest ?:= new Result[]; // TODO replace with deferred-flatMap collection ???
+        dest ?:= new Result[];
         for (Element e : this)
             {
             dest.addAll(flatten(e));
@@ -388,7 +388,7 @@ interface Collection<Element>
         }
 
     /**
-     * Build a [Set] that has the distinct elements from this collection.
+     * Build a distinct [Set] of elements found in this collection.
      *
      * @param dest  an optional `Set` to collect the results in
      *
@@ -562,8 +562,8 @@ interface Collection<Element>
      *
      * @return the resulting `Map`
      */
-    <Key> Map<Key, Collection<Element>> groupBy(function Key(Element)          keyFor,
-                                                Map<Key, Collection<Element>>? dest   = Null)
+    <Key> Map<Key, Collection!<Element>> groupBy(function Key(Element)           keyFor,
+                                                 Map<Key, Collection!<Element>>? dest   = Null)
         {
         Map<Key, Collection<Element>> map = dest ?: new ListMap();
         for (Element e : this)

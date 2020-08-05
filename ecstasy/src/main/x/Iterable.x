@@ -1,5 +1,9 @@
 /**
- * The Iterable interface allows an object to expose its contents as a series of elements.
+ * The Iterable interface allows an object to expose its contents as a series of elements. The two
+ * requirements are that the number of elements be known via the [size] property, and a
+ * representation of the series of elements be provided through the [iterator()] method.
+ *
+ * Among other things, the Iterable interface is the basis for Ecstasy collections.
  */
 interface Iterable<Element>
     {

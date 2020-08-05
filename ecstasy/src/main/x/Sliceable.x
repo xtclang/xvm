@@ -1,5 +1,6 @@
 /**
- * Represents an object that can be "sliced".
+ * Represents an object that can be "sliced" into smaller objects that support the same interface as
+ * the original object.
  */
 interface Sliceable<Index extends Orderable>
     {
