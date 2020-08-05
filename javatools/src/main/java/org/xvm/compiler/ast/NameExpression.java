@@ -1535,7 +1535,11 @@ public class NameExpression
                         m_arg = arg;
                         break;
 
-                    // TODO if multi-method, log an error; it shouldn't cause an Exception!
+                    case MultiMethod:
+                        // TODO figure out what can cause this and adjust the error
+                        log(errs, Severity.ERROR, Compiler.UNEXPECTED_METHOD_NAME, sName);
+                        return null;
+
                     default:
                         throw new IllegalStateException("format=" + constant.getFormat()
                                 + ", constant=" + constant);

@@ -2460,9 +2460,10 @@ public class Context
                 TypeConstant    typeLeft  = m_typeLeft;
                 Access          access    = typeLeft.getAccess();
 
-                if (typeLeft.isSingleDefiningConstant())
+                if (typeLeft.isExplicitClassIdentity(true))
                     {
-                    IdentityConstant idLeft = (IdentityConstant) typeLeft.getDefiningConstant();
+                    IdentityConstant idLeft = (IdentityConstant) typeLeft.
+                            resolveAutoNarrowingBase().getDefiningConstant();
                     if (idLeft.isNestMateOf(getThisClass().getIdentityConstant()))
                         {
                         access = Access.PRIVATE;
