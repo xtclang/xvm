@@ -429,7 +429,16 @@ public class TypeCollector
                     {
                     for (int iRow = 0; iRow < cHeight; ++iRow)
                         {
-                        aColType[iRow++] = listTypes.get(iRow)[iCol];
+                        if (true)
+                            {
+                            TypeConstant[] aType = listTypes.get(iRow);
+                            aColType[iRow++] = aType[iCol];
+                            }
+                        else
+                            {
+                            // JavaC error
+                            aColType[iRow++] = listTypes.get(iRow)[iCol];
+                            }
                         }
                     TypeConstant typeResult = inferFrom(aColType, f_pool);
                     if (typeResult == null)

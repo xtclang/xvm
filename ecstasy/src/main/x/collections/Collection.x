@@ -527,8 +527,7 @@ interface Collection<Element>
     <Key> Map<Key, Element> associateBy(function Key(Element) keyFor,
                                         Map<Key, Element>?    dest = Null)
         {
-        TODO GG ("doesn't compile")
-        // return associate((Element e) -> (keyFor(e), e), dest);
+        return associate(e -> {return keyFor(e), e;}, dest);
         }
 
     /**
@@ -546,8 +545,7 @@ interface Collection<Element>
     <Value> Map<Element, Value> associateWith(function Value(Element) valueFor,
                                               Map<Element, Value>?    dest = Null)
         {
-        TODO GG ("doesn't compile")
-//        return associate(e -> (e, valueFor(e)), dest);
+        return associate(e -> {return e, valueFor(e);}, dest);
         }
 
     /**
