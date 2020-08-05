@@ -40,8 +40,7 @@ class HashMap<Key, Value>
 
         // allocate the initial capacity
         (Int bucketCount, this.growAt) = calcBucketCount(initCapacity);
-        buckets    = new HashEntry?[bucketCount];
-        mutability = Mutable;
+        buckets = new HashEntry?[bucketCount];
         }
 
 
@@ -495,18 +494,18 @@ class HashMap<Key, Value>
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Some operations require that the Map be Mutable; this method throws an exception if the Map
-     * is not Mutable.
+     * Some operations require that the Map be mutable; this method throws an exception if the Map
+     * is not mutable.
      *
      * @return True
      *
-     * @throws ReadOnly if the Map is not Mutable
+     * @throws ReadOnly if the Map is not mutable
      */
     protected Boolean verifyMutable()
         {
-        if (mutability != Mutable)
+        if (!inPlace)
             {
-            throw new ReadOnly("Map operation requires mutability==Mutable");
+            throw new ReadOnly("Map operation requires inPlace==True");
             }
         return True;
         }
@@ -522,7 +521,7 @@ class HashMap<Key, Value>
         {
         if (!inPlace)
             {
-            throw new ReadOnly("Map operation requires inPlace==True");
+            throw new ReadOnly("Map operation requires");
             }
         return True;
         }
