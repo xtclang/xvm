@@ -100,13 +100,44 @@ public class PendingTypeConstant
     @Override
     public Category getCategory()
         {
+        // Note: while we know this type is "formal", it's neither "generic type" nor "type parameter"
         return Category.FORMAL;
+        }
+
+    @Override
+    public boolean isGenericType()
+        {
+        return false;
+        }
+
+    @Override
+    public boolean isTypeParameter()
+        {
+        return false;
         }
 
     @Override
     public boolean containsFormalType(boolean fAllowParams)
         {
         return true;
+        }
+
+    @Override
+    public boolean containsGenericType(boolean fAllowParams)
+        {
+        return false;
+        }
+
+    @Override
+    public boolean containsGenericParam(String sName)
+        {
+        return false;
+        }
+
+    @Override
+    public TypeConstant resolveConstraints()
+        {
+        return m_typeConstraint;
         }
 
     @Override
