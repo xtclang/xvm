@@ -2,21 +2,21 @@
  * An implementation of the Collection for the [Map.values] property that delegates back
  * to the map and to the map's [Map.entries].
  */
-class EntryValues<Key, Value>(Map<Key, Value> map)
+class EntryValues<Key, Value>(Map<Key, Value> contents)
         implements Collection<Value>
     {
-    public/private Map<Key, Value> map;
+    public/private Map<Key, Value> contents;
 
     @Override
     Int size.get()
         {
-        return map.size;
+        return contents.size;
         }
 
     @Override
     Boolean empty.get()
         {
-        return map.empty;
+        return contents.empty;
         }
 
     @Override
@@ -24,7 +24,7 @@ class EntryValues<Key, Value>(Map<Key, Value> map)
         {
         return new Iterator()
             {
-            Iterator<Map<Key, Value>.Entry> entryIterator = map.entries.iterator();
+            Iterator<Map<Key, Value>.Entry> entryIterator = contents.entries.iterator();
 
             @Override
             conditional Value next()
@@ -44,11 +44,11 @@ class EntryValues<Key, Value>(Map<Key, Value> map)
         {
         verifyMutable();
 
-        map.entries.iterator().untilAny(entry ->
+        contents.entries.iterator().untilAny(entry ->
             {
             if (entry.value == value)
                 {
-                map.entries.remove(entry);
+                contents.entries.remove(entry);
                 return True;
                 }
             return False;
@@ -62,7 +62,7 @@ class EntryValues<Key, Value>(Map<Key, Value> map)
         {
         verifyMutable();
 
-        (_, Int removed) = map.entries.removeAll(entry -> shouldRemove(entry.value));
+        (_, Int removed) = contents.entries.removeAll(entry -> shouldRemove(entry.value));
 
         return this, removed;
         }
@@ -71,23 +71,23 @@ class EntryValues<Key, Value>(Map<Key, Value> map)
     EntryValues clear()
         {
         verifyMutable();
-        map.clear();
+        contents.clear();
         return this;
         }
 
     /**
-     * Some operations require that the containing Map be Mutable; this method throws an exception
-     * if the Map is not Mutable.
+     * Some operations require that the containing Map be mutable; this method throws an exception
+     * if the Map is not mutable.
      *
      * @return True
      *
-     * @throws ReadOnly if the Map is not Mutable
+     * @throws ReadOnly if the Map is not mutable
      */
     protected Boolean verifyMutable()
         {
-        if (map.mutability != Mutable)
+        if (!contents.inPlace)
             {
-            throw new ReadOnly("Map operation requires mutability==Mutable");
+            throw new ReadOnly("Map operation requires inPlace == True");
             }
         return True;
         }

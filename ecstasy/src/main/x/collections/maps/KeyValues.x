@@ -2,21 +2,21 @@
  * An implementation of the Collection for the [Map.values] property that delegates back
  * to the map and to the map's [Map.keys].
  */
-class KeyValues<Key, Value>(Map<Key, Value> map)
+class KeyValues<Key, Value>(Map<Key, Value> contents)
         implements Collection<Value>
     {
-    public/private Map<Key, Value> map;
+    public/private Map<Key, Value> contents;
 
     @Override
     Int size.get()
         {
-        return map.size;
+        return contents.size;
         }
 
     @Override
     Boolean empty.get()
         {
-        return map.empty;
+        return contents.empty;
         }
 
     @Override
@@ -24,14 +24,14 @@ class KeyValues<Key, Value>(Map<Key, Value> map)
         {
         return new Iterator()
             {
-            Iterator<Key> keyIterator = this.KeyValues.map.keys.iterator();
+            Iterator<Key> keyIterator = this.KeyValues.contents.keys.iterator();
 
             @Override
             conditional Value next()
                 {
                 if (Key key := keyIterator.next())
                     {
-                    return this.KeyValues.map.get(key);
+                    return this.KeyValues.contents.get(key);
                     }
 
                 return False;
@@ -44,13 +44,13 @@ class KeyValues<Key, Value>(Map<Key, Value> map)
         {
         verifyMutable();
 
-        map.keys.iterator().untilAny(key ->
+        contents.keys.iterator().untilAny(key ->
             {
-            if (Value test := map.get(key))
+            if (Value test := contents.get(key))
                 {
                 if (test == value)
                     {
-                    map.remove(key);
+                    contents.remove(key);
                     return True;
                     }
                 }
@@ -65,9 +65,9 @@ class KeyValues<Key, Value>(Map<Key, Value> map)
         {
         verifyMutable();
 
-        (_, Int removed) = map.keys.removeAll(key ->
+        (_, Int removed) = contents.keys.removeAll(key ->
                 {
-                assert Value value := map.get(key);
+                assert Value value := contents.get(key);
                 return shouldRemove(value);
                 });
         return this, removed;
@@ -77,24 +77,24 @@ class KeyValues<Key, Value>(Map<Key, Value> map)
     KeyValues clear()
         {
         verifyMutable();
-        map.clear();
+        contents.clear();
         return this;
         }
 
     /**
-     * Some operations require that the containing Map be Mutable; this method throws an exception
-     * if the Map is not Mutable.
+     * Some operations require that the containing Map be mutable; this method throws an exception
+     * if the Map is not mutable.
      *
      * @return True
      *
-     * @throws ReadOnly if the Map is not Mutable
+     * @throws ReadOnly if the Map is not mutable
      */
     protected Boolean verifyMutable()
         {
-        if (map.mutability != Mutable)
+        if (!contents.inPlace)
             {
-            throw new ReadOnly("Map operation requires mutability==Mutable");
+            throw new ReadOnly("Map operation requires inPlace == True");
             }
-        return true;
+        return True;
         }
     }

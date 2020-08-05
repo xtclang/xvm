@@ -53,12 +53,7 @@ class ListMap<Key, Value>
         {
         if (listKeys.is(immutable Array) && listVals.is(immutable Array))
             {
-            mutability = Constant;
             makeImmutable();
-            }
-        else
-            {
-            mutability = Persistent;
             }
         }
 
@@ -133,8 +128,8 @@ class ListMap<Key, Value>
         }
 
     /**
-     * Some operations require that the containing Map be Mutable; this method throws an exception
-     * if the Map is not Mutable.
+     * Some operations require that the containing Map be mutable; this method throws an exception
+     * if the Map is not mutable.
      *
      * @return True
      *
@@ -142,9 +137,9 @@ class ListMap<Key, Value>
      */
     protected Boolean verifyMutable()
         {
-        if (mutability != Mutable)
+        if (!inPlace)
             {
-            throw new ReadOnly("Map operation requires mutability==Mutable");
+            throw new ReadOnly("Map operation requires inPlace==True");
             }
         return True;
         }

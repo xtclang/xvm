@@ -81,8 +81,8 @@ interface Set<Element>
         {
         if (this.is(Stringable))
             {
-            StringBuffer buf = new StringBuffer(estimateStringLength());
-            appendTo(buf);
+            StringBuffer buf = new StringBuffer(this.estimateStringLength()); // TODO GG
+            this.appendTo(buf);
             return buf.toString();
             }
 

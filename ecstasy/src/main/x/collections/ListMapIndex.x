@@ -269,7 +269,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
                     break;
                 }
             }
-        return tree.ensureMutable().insert(lo, index);
+        return tree.toArray(Array.Mutability.Mutable).insert(lo, index); // TODO GG
         }
 
     /**
@@ -451,7 +451,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
                 {
                 if (index > deleted)
                     {
-                    indexes = indexes.ensureMutable();
+                    indexes = indexes.toArray(Array.Mutability.Mutable); // TODO GG
                     indexes[loop.count] = index - 1;
                     }
                 }
