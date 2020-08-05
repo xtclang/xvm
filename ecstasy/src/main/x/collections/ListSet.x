@@ -8,10 +8,7 @@ class ListSet<Element>
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a ListSet that optionally contains an initial set of values. The [NaturalHasher]
-     * implementation will be used.
-     *
-     * @param values (optional) initial values to store in the ListSet
+     * Construct an empty ListSet. The [NaturalHasher] implementation will be used.
      */
     construct()
         {
@@ -19,6 +16,12 @@ class ListSet<Element>
         construct ListSet(new NaturalHasher<Element>());
         }
 
+    /**
+     * Construct a ListSet that contains an initial set of values. The [NaturalHasher]
+     * implementation will be used.
+     *
+     * @param values  initial values to store in the ListSet
+     */
     construct(Iterable<Element> values)
         {
         assert(Element.is(Type<Hashable>));
@@ -41,21 +44,5 @@ class ListSet<Element>
             map.put(value, Null);
             }
         construct MapSet(map);
-        }
-
-    /**
-     * (Internal) Construct a ListSet that delegates storage to the specified map.
-     *
-     * @param map   the map to delegate storage to
-     */
-    private construct(Map<Element, Nullable> map)
-        {
-        construct MapSet(map);
-        }
-
-    @Override
-    protected ListSet setFor(Map<Element, Nullable> map)
-        {
-        return new ListSet(map);
         }
     }

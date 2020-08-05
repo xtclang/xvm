@@ -162,7 +162,7 @@ interface Collection<Element>
      *
      * @return `True` iff the specified values all exist in this collection
      */
-    Boolean containsAll(Collection values)
+    Boolean containsAll(Collection! values)
         {
         // this.contains(values) is always true when there are no values to test
         if (values.empty)
