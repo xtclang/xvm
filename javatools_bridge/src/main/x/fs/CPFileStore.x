@@ -35,7 +35,7 @@ const CPFileStore(String path, Object constRoot)
             }
 
         Directory dir = root;
-        Segments: for (Path segment : path)
+        Segments: for (Path segment : path.as(List<Path>)) // TODO CP - see Path.x
             {
             switch (segment.form)
                 {

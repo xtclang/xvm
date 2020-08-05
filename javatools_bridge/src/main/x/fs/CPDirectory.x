@@ -42,7 +42,7 @@ const CPDirectory(Object cookie, Path path, DateTime created, DateTime modified,
         {
         return new Iterator<Directory>()
             {
-            Iterator<FileNode>? iter = exists ? contents.values.iterator(node -> node.is(Directory)) : Null;
+            Iterator<FileNode>? iter = exists ? contents.values.iterator().filter(node -> node.is(Directory)) : Null;
 
             @Override
             conditional Directory next()
@@ -65,7 +65,7 @@ const CPDirectory(Object cookie, Path path, DateTime created, DateTime modified,
         {
         return new Iterator<File>()
             {
-            Iterator<FileNode>? iter = exists ? contents.values.iterator(node -> node.is(File)) : Null;
+            Iterator<FileNode>? iter = exists ? contents.values.iterator().filter(node -> node.is(File)) : Null;
 
             @Override
             conditional File next()
