@@ -3541,7 +3541,31 @@ public abstract class Component
 
     // ----- interface: ResolutionCollector --------------------------------------------------------
 
-    public enum ResolutionResult {UNKNOWN, RESOLVED, POSSIBLE, DEFERRED, ERROR}
+    public enum ResolutionResult
+        {
+        UNKNOWN, RESOLVED, POSSIBLE, ERROR;
+
+        /**
+         * Combine this result with the specified one to produce better information.
+         *
+         * @param that  another result
+         *
+         * @return a combined result
+         */
+        public ResolutionResult combine(ResolutionResult that)
+            {
+            switch (this)
+                {
+                case POSSIBLE:
+                case ERROR:
+                    return this;
+
+                case UNKNOWN:
+                default:
+                    return that;
+                }
+            }
+        }
 
     /**
      * A callback interface used by the name resolution functionality of the Component.

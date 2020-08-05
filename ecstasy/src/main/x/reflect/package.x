@@ -68,7 +68,7 @@ package reflect
          */
         @RO immutable Class[] classes.get()
             {
-            return classByName.values.toArray(Array.Mutability.Constant).as(immutable Class[]); // TODO GG drop "Arrays.Mutability."
+            return classByName.values.toArray(Constant).as(immutable Class[]);
             }
 
         /**

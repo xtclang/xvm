@@ -241,18 +241,7 @@ public class UnionTypeConstant
             return result2;
             }
 
-        // combine the results
-        switch (result1)
-            {
-            case POSSIBLE:
-            case DEFERRED:
-            case ERROR:
-                return result1;
-
-            case UNKNOWN:
-            default:
-                return result2;
-            }
+        return result1.combine(result2);
         }
 
     @Override

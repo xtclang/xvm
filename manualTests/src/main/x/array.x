@@ -81,7 +81,7 @@ module TestArray
 
         console.println("list=" + list);
 
-        list = new Array<String>(Mutability.Mutable, list);
+        list = new Array<String>(Mutable, list);
         String one = list.getElement(0);
         list.setElement(0, "uno");
         console.println("list=" + list);
@@ -89,7 +89,7 @@ module TestArray
         list = new Array<String>(list, 1..2);
         console.println("list=" + list);
 
-        list = new Array<String>(Mutability.Fixed, list[0..1]);
+        list = new Array<String>(Fixed, list[0..1]);
         list.setElement(0, "один");
         list.setElement(1, "два");
         console.println("list=" + list);

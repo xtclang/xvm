@@ -18,8 +18,7 @@ const String
         {
         this.chars = chars.is(immutable Char[]) ? chars
                    : chars.is(Freezable)        ? chars.freeze()
-// TODO GG         : chars.toArray(Constant).as(immutable Char[]);
-                   : chars.toArray(Array.Mutability.Constant).as(immutable Char[]);
+                   : chars.toArray(Constant).as(immutable Char[]);
         }
 
 

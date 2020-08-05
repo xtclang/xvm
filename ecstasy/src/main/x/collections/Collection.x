@@ -620,7 +620,7 @@ interface Collection<Element>
      */
     List<Element> sorted(Orderer? orderer = Null)
         {
-        return toArray(Array.Mutability.Mutable).sorted(orderer, True); // TODO GG
+        return toArray(Mutable).sorted(orderer, True);
         }
 
     /**

@@ -674,7 +674,7 @@ class Array<Element>
             case Constant:
                 Array result = new Array<Element>(size + 1, i -> (i < size ? this[i] : element));
                 return mutability == Persistent
-                        ? result.toArray(Mutability.Persistent, True) // TODO GG - qualifiers
+                        ? result.toArray(Persistent, True)
                         : result.freeze(True);
             }
         }
@@ -709,7 +709,7 @@ class Array<Element>
                     };
                 Array<Element> result = new Array(this.size + values.size, supply);
                 return mutability == Persistent
-                        ? result.toArray(Mutability.Persistent, True)
+                        ? result.toArray(Persistent, True)
                         : result.freeze(True);
             }
         }
@@ -806,7 +806,7 @@ class Array<Element>
             {
             Array<Element> result = new Array(size, i -> (i == index ? value : this[i]));
             return mutability == Persistent
-                    ? result.toArray(Mutability.Persistent, True)
+                    ? result.toArray(Persistent, True)
                     : result.freeze(True);
             }
         }
@@ -842,7 +842,7 @@ class Array<Element>
                             case Greater: this[i-1];
                             });
                 return mutability == Persistent
-                        ? result.toArray(Mutability.Persistent, True)
+                        ? result.toArray(Persistent, True)
                         : result.freeze(True);
             }
         }
@@ -929,7 +929,7 @@ class Array<Element>
                     };
                 Array<Element> result = new Array<Element>(this.size + values.size, supply);
                 return mutability == Persistent
-                        ? result.toArray(Mutability.Persistent, True)
+                        ? result.toArray(Persistent, True)
                         : result.freeze(True);
             }
         }
@@ -963,7 +963,7 @@ class Array<Element>
             case Constant:
                 Array<Element> result = new Array(size, i -> this[i < index ? i : i+1]);
                 return mutability == Persistent
-                        ? result.toArray(Mutability.Persistent, True)
+                        ? result.toArray(Persistent, True)
                         : result.freeze(True);
             }
         }
@@ -1011,7 +1011,7 @@ class Array<Element>
                 Int            gap    = interval.size;
                 Array<Element> result = new Array(size, i -> this[i < lo ? i : i+gap]);
                 return mutability == Persistent
-                        ? result.toArray(Mutability.Persistent, True)
+                        ? result.toArray(Persistent, True)
                         : result.freeze(True);
             }
         }

@@ -246,9 +246,6 @@ public class NameResolver
                                 m_stage = Stage.ERROR;
                                 return Result.ERROR;
 
-                            case DEFERRED:
-                                return Result.DEFERRED;
-
                             default:
                                 throw new IllegalStateException();
                             }
@@ -353,9 +350,6 @@ public class NameResolver
                             case ERROR:
                                 m_stage = Stage.ERROR;
                                 return Result.ERROR;
-
-                            case DEFERRED:
-                                return Result.DEFERRED;
 
                             default:
                                 throw new IllegalStateException();
@@ -582,9 +576,6 @@ public class NameResolver
                 // the component resolved the name; advance to the next one
                 m_sName = m_iter.hasNext() ? m_iter.next() : null;
                 return Result.RESOLVED;
-
-            case DEFERRED:
-                return Result.DEFERRED;
 
             default:
                 throw new IllegalStateException();

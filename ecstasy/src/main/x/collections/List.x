@@ -528,7 +528,7 @@ interface List<Element>
             // already in the right order
             return inPlace
                     ? this
-                    : new Array<Element>(Array.Mutability.Mutable, this); // REVIEW this loses the Orderer for orderedBy()
+                    : new Array<Element>(Mutable, this); // REVIEW this loses the Orderer for orderedBy()
             }
 
         if (this.inPlace && inPlace)
@@ -583,7 +583,7 @@ interface List<Element>
             return this[size-1..0];
             }
 
-        return new Array<Element>(Array.Mutability.Mutable, this).reversed(True); // TODO GG drop "Array.Mutability."
+        return new Array<Element>(Mutable, this).reversed(True);
         }
 
     /**
@@ -621,7 +621,7 @@ interface List<Element>
                 }
             }
 
-        return new Array<Element>(Array.Mutability.Mutable, this).shuffled(inPlace);
+        return new Array<Element>(Mutable, this).shuffled(inPlace);
         }
 
     @Override
@@ -1291,7 +1291,7 @@ interface List<Element>
 
         if (list.is(immutable List) || !list.inPlace)
             {
-            list = list.toArray(Array.Mutability.Mutable); // TODO GG (drop the qualifiers)
+            list = list.toArray(Mutable);
             }
         else if (list.indexed)
             {

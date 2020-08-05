@@ -275,32 +275,39 @@ public class IntersectionTypeConstant
     @Override
     public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
         {
-        // for the IntersectionType to contribute a name, both sides need to find exactly
-        // the same component
+        // for the IntersectionType to contribute a name, either both sides need to find exactly
+        // the same component or just one side should find it
         ErrorListener    errs       = collector.getErrorListener();
         SimpleCollector  collector1 = new SimpleCollector(errs);
         ResolutionResult result1    = m_constType1.resolveContributedName(sName, access, collector1);
-        if (result1 != ResolutionResult.RESOLVED)
-            {
-            return result1;
-            }
-
         SimpleCollector  collector2 = new SimpleCollector(errs);
         ResolutionResult result2    = m_constType2.resolveContributedName(sName, access, collector2);
-        if (result2 != ResolutionResult.RESOLVED)
-            {
-            return result2;
-            }
 
-        Constant const1 = collector1.getResolvedConstant();
-        Constant const2 = collector2.getResolvedConstant();
-
-        if (const1.equals(const2))
+        if (result1 == ResolutionResult.RESOLVED)
             {
+            Constant const1 = collector1.getResolvedConstant();
+
+            if (result2 == ResolutionResult.RESOLVED)
+                {
+                Constant const2 = collector2.getResolvedConstant();
+                if (!const1.equals(const2))
+                    {
+                    return ResolutionResult.UNKNOWN; // ambiguous
+                    }
+                }
+
             collector.resolvedConstant(const1);
             return ResolutionResult.RESOLVED;
             }
-        return ResolutionResult.UNKNOWN; // ambiguous
+
+        if (result2 == ResolutionResult.RESOLVED)
+            {
+            Constant const2 = collector2.getResolvedConstant();
+            collector.resolvedConstant(const2);
+            return ResolutionResult.RESOLVED;
+            }
+
+        return result1.combine(result2);
         }
 
     @Override
