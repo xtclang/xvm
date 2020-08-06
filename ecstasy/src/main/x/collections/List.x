@@ -1296,9 +1296,9 @@ interface List<Element>
             }
 
         @Override
-        @Op("[]=") void setElement(Index index, Element value)
+        @Op("[]=") void setElement(Int index, Element value)
             {
-            List[indexes[index]] = value;
+            this.List[indexes[index]] = value;
             }
 
         @Override

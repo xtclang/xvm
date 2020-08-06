@@ -2461,35 +2461,38 @@ public class NameExpression
             {
             return null;
             }
-        Component component  = typeFrom.getSingleUnderlyingClass(true).getComponent();
+        Component component = typeFrom.getSingleUnderlyingClass(true).getComponent();
         if (!(component instanceof ClassStructure))
             {
             return null;
             }
 
-        ConstantPool     pool       = pool();
-        ClassStructure   clzParent  = (ClassStructure) component;
-        PseudoConstant   idVirtPath = null;
-        while (clzParent != null)
+        ConstantPool   pool       = pool();
+        ClassStructure clzFrom    = (ClassStructure) component;
+        PseudoConstant idVirtPath = null;
+        int            cDepth     = 0;
+        while (clzFrom != null)
             {
-            IdentityConstant idParent = clzParent.getIdentityConstant();
+            IdentityConstant idFrom = clzFrom.getIdentityConstant();
             idVirtPath = idVirtPath == null
-                    ? pool.ensureThisClassConstant(idParent)
+                    ? pool.ensureThisClassConstant(idFrom)
                     : pool.ensureParentClassConstant(idVirtPath);
 
-            if (idParent.equals(idTarget) || clzParent.hasContribution(idTarget, true))
+            if (idFrom.equals(idTarget) ||
+                    (cDepth > 0 && clzFrom.hasContribution(idTarget, true)))
                 {
                 // found it!
                 return idVirtPath;
                 }
 
-            if (clzParent.isTopLevel() || clzParent.isStatic())
+            if (clzFrom.isTopLevel() || clzFrom.isStatic())
                 {
                 // can't ".this" beyond the outermost class, and can't ".this" from a static child
                 return null;
                 }
 
-            clzParent = clzParent.getContainingClass();
+            clzFrom = clzFrom.getContainingClass();
+            cDepth++;
             }
 
         return null;
