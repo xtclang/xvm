@@ -93,9 +93,11 @@ public class Call_N1
                     throw new IllegalStateException();
                     }
 
-                checkReturnRegister(frame, chain.getSuper(frame));
+                MethodStructure methodSuper = chain.getSuper(frame);
 
-                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, chain.getSuper(frame).getMaxVars());
+                checkReturnRegister(frame, methodSuper);
+
+                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, methodSuper.getMaxVars());
 
                 if (anyDeferred(ahVar))
                     {

@@ -19,6 +19,7 @@ import org.xvm.asm.constants.MethodBody.Implementation;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.util.Handy.appendList;
 import static org.xvm.util.Handy.startList;
 
 
@@ -757,8 +758,9 @@ public class MethodInfo
             boolean fMixin = infoType.getFormat() == Component.Format.MIXIN;
 
             // see if the chain will work as-is
-            ArrayList  listNew     = null;
-            MethodBody bodyDefault = null;
+            ArrayList<MethodBody> listNew     = null;
+            ArrayList<MethodBody> listDefault = null;
+            forAll:
             for (int i = 0, c = chain.length; i < c; ++i)
                 {
                 MethodBody     body = chain[i];
@@ -789,12 +791,31 @@ public class MethodInfo
                         break;
 
                     case Default:
-                        // only the first one is kept, and it will be placed at the end of the chain
-                        if (bodyDefault == null)
+                        // all defaults should be placed at the end of the chain
+                        if (listDefault == null)
                             {
-                            bodyDefault = body;
+                            // check if there's anything, but defaults below this point
+                            boolean fAllDefaults = true;
+                            for (int j = i + 1; j < c; j++)
+                                {
+                                if (chain[j].getImplementation() != Implementation.Default)
+                                    {
+                                    fAllDefaults = false;
+                                    break;
+                                    }
+                                }
+                            if (fAllDefaults)
+                                {
+                                if (listNew != null)
+                                    {
+                                    appendList(listNew, chain, i, c - i);
+                                    }
+                                break forAll;
+                                }
+                            listDefault = new ArrayList<>();
                             }
-                        if (listNew == null && i != c-1)
+                        listDefault.add(body);
+                        if (listNew == null)
                             {
                             listNew = startList(chain, i);
                             }
@@ -832,7 +853,7 @@ public class MethodInfo
                         break;
 
                     case Native:
-                        if (bodyDefault != null &&
+                        if (listDefault != null &&
                             body.getIdentity().getNamespace().equals(pool().clzObject()))
                             {
                             // Object is the only interface with native methods; since another
@@ -853,14 +874,13 @@ public class MethodInfo
             // see if any changes were made to the chain, which will have been collected in listNew
             if (listNew != null)
                 {
-                if (bodyDefault != null)
+                if (listDefault != null)
                     {
-                    listNew.add(bodyDefault);
+                    listNew.addAll(listDefault);
                     }
-                int c = listNew.size();
-                chain = c == 0
+                chain = listNew.isEmpty()
                         ? MethodBody.NO_BODIES
-                        : (MethodBody[]) listNew.toArray(new MethodBody[c]);
+                        : listNew.toArray(MethodBody.NO_BODIES);
                 }
 
             // cache the optimized chain (no worries about race conditions, as the result is
