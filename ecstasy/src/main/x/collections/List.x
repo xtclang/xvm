@@ -978,7 +978,7 @@ interface List<Element>
          */
         @RO Boolean bidirectional.get()
             {
-            return False;
+            return True;
             }
 
 
@@ -1253,11 +1253,8 @@ interface List<Element>
 
             Int index = this.index;
             Int size  = this.List.size;
-            if (index < size)
-                {
-                list.delete(index);
-                }
-            // REVIEW else throw ???
+            assert:bounds index < size;
+            list.delete(index);
             }
         }
 
@@ -1282,7 +1279,6 @@ interface List<Element>
             assert indexes.effectiveLowerBound >= 0;
             assert indexes.effectiveUpperBound < size;
             this.indexes = indexes;
-// TODO
             }
 
         protected/private Range<Int> indexes;
@@ -1296,13 +1292,56 @@ interface List<Element>
         @Override
         @Op("[]") Element getElement(Int index)
             {
-            TODO CP
+            return this.List[indexes[index]];
+            }
+
+        @Override
+        @Op("[]=") void setElement(Index index, Element value)
+            {
+            List[indexes[index]] = value;
             }
 
         @Override
         Iterator<Element> iterator()
             {
-            TODO CP
+            Int first = indexes.effectiveFirst;
+            Int last  = indexes.effectiveLast;
+
+            return indexes.descending
+                    ? new Iterator()
+                        {
+                        private Int i = first;
+
+                        @Override
+                        conditional Element next()
+                            {
+                            if (i >= last)
+                                {
+                                return True, this.List[i--];
+                                }
+                            return False;
+                            }
+                        }
+                    : new Iterator()
+                        {
+                        private Int i = first;
+
+                        @Override
+                        conditional Element next()
+                            {
+                            if (i <= last)
+                                {
+                                return True, this.List[i++];
+                                }
+                            return False;
+                            }
+                        };
+            }
+
+        @Override
+        @Op("[..]") List!<Element> slice(Range<Int> indexes)
+            {
+            return this.List.slice(this.indexes[indexes.effectiveFirst]..this.indexes[indexes.effectiveLast]);
             }
 
         @Override
