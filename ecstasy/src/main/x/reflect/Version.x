@@ -465,6 +465,27 @@ const Version
         throw new OutOfBounds("no sequential steps from \"" + this + "\" to \"" + that + "\"");
         }
 
+    @Override
+    Version skip(Int steps)
+        {
+        switch (steps.sign)
+            {
+            case Negative:
+                steps = steps.abs();
+                return form == Num && number > steps
+                        ? new Version(parent, form, number-steps, null)
+                        : throw new OutOfBounds($"Version={this}, steps={steps}");
+
+            case Zero:
+                return this;
+
+            case Positive:
+                return form == Num
+                        ? new Version(parent, form, number+steps, null)
+                        : new Version(this, Num, steps, null);
+            }
+        }
+
 
     // ----- UniformIndexed methods ----------------------------------------------------------------
 

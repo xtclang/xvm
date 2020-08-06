@@ -90,6 +90,19 @@ const Bit
         return that - this;
         }
 
+    @Override
+    Bit skip(Int steps)
+        {
+        return switch (this, steps)
+            {
+            // TODO GG take the parenthesis off of these case statements to see the compiler NPE
+            case (_,  0): this;
+            case (0,  1): 1;
+            case (1, -1): 0;
+            default: throw new OutOfBounds($"Bit={this}, steps={steps}");
+            };
+        }
+
 
     // ----- Stringable ----------------------------------------------------------------------------
 

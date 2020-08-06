@@ -23,6 +23,7 @@ const Char
             {
             throw new IllegalUTF($"illegal code-point: {codepoint}");
             }
+        this.codepoint = codepoint;
         }
 
     /**
@@ -155,7 +156,13 @@ const Char
     @Override
     Int stepsTo(Char that)
         {
-        return that.codepoint.as(Int) - this.codepoint.as(Int);
+        return that - this;
+        }
+
+    @Override
+    Char skip(Int steps)
+        {
+        return this + steps;
         }
 
 

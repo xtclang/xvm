@@ -364,6 +364,12 @@ const IntLiteral(String text)
         return that - this;
         }
 
+    @Override
+    IntLiteral skip(Int steps)
+        {
+        return this + steps.toIntLiteral();
+        }
+
 
     // ----- conversions ---------------------------------------------------------------------------
 

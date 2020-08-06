@@ -100,26 +100,13 @@ mixin Interval<Element extends immutable Sequential>
             }
         }
 
-
+    /**
+     * Obtain the specified element from the interval.
+     */
     @Op("[]") Element getElement(Int index)
         {
-        // TODO this is super inefficient and should be built into Sequential as applySteps() or something
-        Element value = effectiveFirst;
-        if (descending)
-            {
-            while (index-- > 0)
-                {
-                --value;
-                }
-            }
-        else
-            {
-            while (index-- > 0)
-                {
-                ++value;
-                }
-            }
-        return value;
+        assert:bounds index >= 0 && index < size;
+        return effectiveFirst.skip(descending ? -index : index);
         }
 
     /**

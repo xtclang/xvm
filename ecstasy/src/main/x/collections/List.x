@@ -262,7 +262,12 @@ interface List<Element>
                         hi = mid - 1;
                         break;
                     case Equal:
-                        return True, mid;
+                        Int first = mid;
+                        while (first > startAt && this[first-1] == value)
+                            {
+                            --first;
+                            }
+                        return True, first;
                     case Greater:
                         lo = mid + 1;
                         break;
@@ -345,8 +350,9 @@ interface List<Element>
         if (Orderer? orderer := orderedBy(), orderer != Null)
             {
             // binary search
-            Int lo = 0;
-            Int hi = (size-1).minOf(startAt);
+            Int lo     = 0;
+            Int hi     = (size-1).minOf(startAt);
+            Int origHi = hi;
             while (lo <= hi)
                 {
                 Int     mid = (lo + hi) >>> 1;
@@ -357,7 +363,12 @@ interface List<Element>
                         hi = mid - 1;
                         break;
                     case Equal:
-                        return True, mid;
+                        Int last = mid;
+                        while (last < origHi && this[last+1] == value)
+                            {
+                            ++last;
+                            }
+                        return True, last;
                     case Greater:
                         lo = mid + 1;
                         break;
@@ -1360,7 +1371,7 @@ interface List<Element>
      *
      * @return the sorted list (which may not be the list that was passed in)
      */
-    static <Element> List!<Element> sort(List!<Element> list, List<Element>.Orderer? order = Null)
+    static <Element> List!<Element> sort(List!<Element> list, List<Element>.Orderer? order = Null)  // TODO GG why "!"
         {
         order ?:= list.naturalOrderer ?: throw new TypeMismatch($"Element type {Element} is not Orderable");
 

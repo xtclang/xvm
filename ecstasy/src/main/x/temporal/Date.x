@@ -144,6 +144,7 @@ const Date(Int epochDay)
         return MonthOfYear.values[month-1];
         }
 
+
     // ----- operators -----------------------------------------------------------------------------
 
     @Op("+") Date add(Duration duration)
@@ -160,6 +161,7 @@ const Date(Int epochDay)
         {
         return Duration.ofDays(this.epochDay - date.epochDay);
         }
+
 
     // ----- Sequential ----------------------------------------------------------------------------
 
@@ -181,6 +183,13 @@ const Date(Int epochDay)
         return this.epochDay - that.epochDay;
         }
 
+    @Override
+    Date skip(Int steps)
+        {
+        return new Date(epochDay + steps);
+        }
+
+
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
@@ -190,6 +199,7 @@ const Date(Int epochDay)
         {
         return new DateTime(this, Time.MIDNIGHT, TimeZone.NoTZ);
         }
+
 
     // ----- Stringable ----------------------------------------------------------------------------
 
@@ -220,6 +230,7 @@ const Date(Int epochDay)
             }
         return day.appendTo(buf);
         }
+
 
     // ----- helpers -------------------------------------------------------------------------------
 

@@ -192,6 +192,12 @@ const IntNumber
         return (that - this).toInt();
         }
 
+    @Override
+    IntNumber skip(Int steps)
+        {
+        return this + steps;
+        }
+
 
     // ----- conversions ---------------------------------------------------------------------------
 

@@ -99,6 +99,12 @@ const Nibble
         return that - this;
         }
 
+    @Override
+    Nibble skip(Int steps)
+        {
+        return Nibble.of(toInt() + steps);
+        }
+
 
     // ----- conversions ---------------------------------------------------------------------------
 
