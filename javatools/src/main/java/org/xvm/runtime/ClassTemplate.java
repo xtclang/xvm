@@ -1577,117 +1577,117 @@ public abstract class ClassTemplate
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "add", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "add", "+", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "sub", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "sub", "-", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "mul", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "mul", "*", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "div", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "div", "/", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "mod", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "mod", "%", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "shiftLeft", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "shiftLeft", "<<", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "shiftRight", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "shiftRight", ">>", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "shiftAllRight", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "shiftAllRight", ">>>", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "and", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "and", "&", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "or", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "or", "|", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "xor", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "xor", "^", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
         {
-        return getOpChain(hTarget, "divrem", hArg).invoke(frame, hTarget, hArg, aiReturn);
+        return getOpChain(hTarget, "divrem", "/%", hArg).invoke(frame, hTarget, hArg, aiReturn);
         }
 
     @Override
     public int invokeDotDot(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "to", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "to", "..", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeDotDotEx(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "toExcluding", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "toExcluding", "..<", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "neg", null).invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "neg", null, null).invoke(frame, hTarget, iReturn);
         }
 
     @Override
     public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "not", null).invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "not", "~", null).invoke(frame, hTarget, iReturn);
         }
 
     @Override
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "nextValue", null).invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "nextValue", null, null).invoke(frame, hTarget, iReturn);
         }
 
     @Override
     public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "prevValue", null).invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "prevValue", null, null).invoke(frame, hTarget, iReturn);
         }
 
     /**
      * @return a call chain for the specified op; throw if none exists
      */
-    protected CallChain getOpChain(ObjectHandle hTarget, String sOp, ObjectHandle hArg)
+    protected CallChain getOpChain(ObjectHandle hTarget, String sName, String sOp, ObjectHandle hArg)
         {
-        CallChain chain = findOpChain(hTarget, sOp, hArg);
+        CallChain chain = findOpChain(hTarget, sName, sOp, hArg);
         if (chain == null)
             {
             throw new IllegalStateException("Invalid op for " + this);
@@ -1698,12 +1698,12 @@ public abstract class ClassTemplate
     /**
      * @return a call chain for the specified op or null if none exists
      */
-    public CallChain findOpChain(ObjectHandle hTarget, String sOp)
+    public CallChain findOpChain(ObjectHandle hTarget, String sName, String sOp)
         {
         TypeComposition clz  = hTarget.getComposition();
         TypeInfo        info = clz.getType().ensureTypeInfo();
 
-        Set<MethodConstant> setMethods = info.findOpMethods(sOp, sOp, 0);
+        Set<MethodConstant> setMethods = info.findOpMethods(sName, sOp, 0);
         switch (setMethods.size())
             {
             case 0:
@@ -1717,7 +1717,7 @@ public abstract class ClassTemplate
 
             default:
                 // soft assert
-                System.err.println("Ambiguous \"" + sOp + "\" operation on " +
+                System.err.println("Ambiguous operation op=" + sOp + ", name=" + sName + " on " +
                         hTarget.getType().getValueString());
                 return null;
             }
@@ -1725,12 +1725,12 @@ public abstract class ClassTemplate
     /**
      * @return a call chain for the specified op and argument or null if none exists
      */
-    public CallChain findOpChain(ObjectHandle hTarget, String sOp, ObjectHandle hArg)
+    public CallChain findOpChain(ObjectHandle hTarget, String sName, String sOp, ObjectHandle hArg)
         {
         TypeComposition clz  = hTarget.getComposition();
         TypeInfo        info = clz.getType().ensureTypeInfo();
 
-        Set<MethodConstant> setMethods = info.findOpMethods(sOp, sOp, hArg == null ? 0 : 1);
+        Set<MethodConstant> setMethods = info.findOpMethods(sName, sOp, hArg == null ? 0 : 1);
         switch (setMethods.size())
             {
             case 0:

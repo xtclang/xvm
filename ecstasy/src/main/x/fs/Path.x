@@ -2,7 +2,6 @@
  * Path represents a path to a file.
  */
 const Path
-// TODO CP implements Iterable<Path>
         implements UniformIndexed<Int, Path>
         implements Sliceable<Int>
     {
@@ -59,11 +58,23 @@ const Path
             }
         }
 
+    /**
+     * Construct a Path based on a parent Path and a path element.
+     *
+     * @param parent  an optional parent
+     * @param name    a path element name
+     */
     construct(Path? parent, String name)
         {
         construct Path(parent, Name, name);
         }
 
+    /**
+     * Construct a Path based on a parent Path and an element form.
+     *
+     * @param parent  an optional parent
+     * @param form    a path element form (anything but Name)
+     */
     construct(Path? parent, ElementForm form)
         {
         assert form != Name;
@@ -101,7 +112,6 @@ const Path
     /**
      * The number of Path elements that make up this Path.
      */
-// TODO CP @Override
     Int size;
 
     /**
@@ -183,14 +193,8 @@ const Path
      * @return True iff this path begins with the same sequence of path elements as contained in the
      *         specified path
      */
-    Boolean startsWith(List!<Path> that)
+    Boolean startsWith(Path that)
         {
-        if (!that.is(Path))
-            {
-             TODO CP
-//            return super(that);
-            }
-
         Int tailSize = this.size - that.size;
         if (tailSize < 0 || this.absolute != that.absolute)
             {
@@ -223,14 +227,8 @@ const Path
      * @return True iff this path ends with the same sequence of path elements as contained in the
      *         specified path
      */
-    Boolean endsWith(List!<Path> that)
+    Boolean endsWith(Path that)
         {
-        if (!that.is(Path))
-            {
-             TODO CP
-//            return super(that);
-            }
-
         switch (this.size <=> that.size)
             {
             case Lesser:
@@ -303,8 +301,7 @@ const Path
     /**
      * Add a name to this path, creating a new path.
      */
-    @Op("+")
-    Path add(String name)
+    @Op("+") Path add(String name)
         {
         return new Path(this, name);
         }
@@ -312,8 +309,7 @@ const Path
     /**
      * Add a relative path to this path, creating a new path.
      */
-    @Op("+")
-    Path add(Path that)
+    @Op("+") Path add(Path that)
         {
         assert that.relative;
 
@@ -322,11 +318,10 @@ const Path
         }
 
 
-    // ----- Sequence methods --------------------------------------------------------------------
+    // ----- UniformIndexed methods ----------------------------------------------------------------
 
     @Override
-    @Op("[]")
-    Path getElement(Int index)
+    @Op("[]") Path getElement(Int index)
         {
         if (index < 0)
             {
@@ -346,6 +341,9 @@ const Path
             }
         return path;
         }
+
+
+    // ----- Sliceable methods ---------------------------------------------------------------------
 
     @Override
     @Op("[..]") Path slice(Range<Int> indexes)

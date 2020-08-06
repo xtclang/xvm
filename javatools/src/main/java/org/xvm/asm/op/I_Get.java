@@ -72,7 +72,7 @@ public class I_Get
         CallChain chain = getOpChain(frame, hTarget.getType());
         if (chain == null)
             {
-            chain = template.findOpChain(hTarget, "[]", hIndex);
+            chain = template.findOpChain(hTarget, "getElement", "[]", hIndex);
             if (chain == null)
                 {
                 return frame.raiseException("Invalid op: \"[]\"");

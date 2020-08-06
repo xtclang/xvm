@@ -246,14 +246,14 @@ public class ArrayAccessExpression
                         : expr.testFit(ctx, typeTest, errs);
                     }
 
-                // test for Sequence<T>, Array<T> (aka T[]), etc.
+                // test for List<T>, Array<T> (aka T[]), etc.
                 Expression exprTarget = expr;
                 Expression exprIndex  = indexes.get(0);
                 if (testType(ctx, exprTarget, typeTarget, pool.typeList()))
                     {
-                    // Sequence (Array, ...)   - if target is a Sequence (no conv)
+                    // List (Array, ...)       - if target is a List (no conv)
                     //     Int -> Element      - if index could be an Int, then test if target
-                    //                           could be a Sequence<Int, typeRequired>
+                    //                           could be a UniformIndexed<Int, typeRequired>
                     //
                     //     Range<Int> -> El... -  if target could be typeRequired (slice returns
                     //                            this:type) and index could be a Range<Int>
@@ -274,7 +274,7 @@ public class ArrayAccessExpression
                         return TypeFit.Fit;
                         }
                     }
-                else // not a Sequence, but might still be UniformIndexed and/or Sliceable
+                else // not a List, but might still be UniformIndexed and/or Sliceable
                     {
                     // test for UniformIndexed
                     //  UniformIndexed       - test if target could be
@@ -383,7 +383,7 @@ public class ArrayAccessExpression
                     ? pool.typeTuple()
                     : determineTupleTestType(typeRequired);
             }
-        // test for Sequence<T> (aka T...) and Array<T> (aka T[]) etc.
+        // test for List<T> and Array<T> (aka T[]) etc.
         else if (testType(ctx, exprArray, typeArray, pool.typeList()) && cIndexes == 1)
             {
             typeArrayReq = pool.typeList();
@@ -487,7 +487,7 @@ public class ArrayAccessExpression
         // first, validate the array expression; there is no way to say "required type is something
         // that has an operator for indexed look-up", since that could be Tuple, or List, or Array,
         // or UniformIndexed, or Matrix, or any custom class; however, the most common case is
-        // some sub-class of Sequence (such as Array, etc.), and we can test for that
+        // some sub-class of UniformIndexed (such as Array, etc.), and we can test for that
         boolean        fValid       = true;
         TypeConstant[] aIndexTypes  = null;
         TypeConstant   typeResult   = null;

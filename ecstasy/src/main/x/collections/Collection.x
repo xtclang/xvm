@@ -707,7 +707,7 @@ interface Collection<Element>
      * @throws ReadOnly  if the collection does not support element addition
      */
     @Override
-    @Op("+") Collection addAll(Iterator<Element> iter);
+    Collection addAll(Iterator<Element> iter);
 
     /**
      * Add the specified value to this collection if it is not already present in the collection.
