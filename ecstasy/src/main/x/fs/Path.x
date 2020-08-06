@@ -339,7 +339,7 @@ const Path
             {
             path = path.parent ?: assert;
             }
-        return path;
+        return path.parent == Null ? path : new Path(Null, path.form, path.name);
         }
 
 
@@ -350,29 +350,18 @@ const Path
         {
         Int lower = indexes.effectiveLowerBound;
         Int upper = indexes.effectiveUpperBound;
-        if (lower < 0)
-            {
-            throw new OutOfBounds($"{lower.toString()} < 0");
-            }
-        if (upper > size)
-            {
-            throw new OutOfBounds($"{upper.toString()} > {size}");
-            }
-        if (lower == upper)
-            {
-            throw new OutOfBounds($"minimum path size is one segment (indexes={indexes})");
-            }
+        assert:bounds lower <= upper && lower >= 0 && upper < size;
 
         if (lower == 0)
             {
-            if (indexes.descending)
+            assert !indexes.descending || relative;
+
+            Path result = this;
+            for (Int steps = size - upper - 1; steps > 0; --steps)
                 {
-                assert relative;
+                result = result.parent;
                 }
-            else
-                {
-                return this[upper];
-                }
+            return result;
             }
 
         Path? slice = null;
