@@ -1057,7 +1057,7 @@ interface Collection<Element>
             {
             if (Int i := remnants.indexOf(value))
                 {
-                remnants[i] = NonExistent.NotAValue; // TODO GG
+                remnants[i] = NotAValue;
                 }
             else
                 {
