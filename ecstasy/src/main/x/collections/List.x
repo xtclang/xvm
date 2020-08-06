@@ -444,22 +444,34 @@ interface List<Element>
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
     List! filterIndexed(function Boolean(Element, Int) match,
-                       List?                           dest = Null)
+                        List?                          dest = Null)
         {
-        if (dest == Null)
+        if (&dest == &this)
             {
-            dest = new Element[];
-            }
-        else if (&dest == &this)
-            {
-            return this.removeAll(e -> !match(e, -1)); // TODO CP
+            Cursor cur = cursor();
+            Int index = 0;
+            while (cur.exists)
+                {
+                // note that since this is occurring "in place", the cursor index will not advance
+                // after a node is deleted, so the original index is simulated with the counter
+                if (match(cur.value, index++))
+                    {
+                    cur.advance();
+                    }
+                else
+                    {
+                    cur.delete();
+                    }
+                }
+            return this;
             }
 
+        dest ?:= new Element[];
         Loop: for (Element e : this)
             {
             if (match(e, Loop.count))
                 {
-                dest.add(e);
+                dest += e;
                 }
             }
         return dest;

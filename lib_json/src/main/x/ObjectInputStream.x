@@ -808,7 +808,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         private static Token[] takeTokens(Map<String, Token[]>.Entry entry)
             {
             val result = entry.value;
-            entry.remove();
+            entry.delete();
             return result;
             }
 

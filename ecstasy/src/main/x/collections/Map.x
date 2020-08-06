@@ -310,13 +310,13 @@ interface Map<Key, Value>
 
     /**
      * Apply the specified function to the entry for the specified key. If that key does not exist
-     * in the map, an Entry is provided to it whose [Entry.exists] property is False;
-     * setting the value of the entry will cause the entry to _appear in_ the map, which is to say
-     * that the map will contain an entry for that key with that value. Similarly, calling {@link
-     * Entry.remove remove} on the entry will ensure that the key and any associated value are _not_
-     * present in the map.
+     * in the map, then an `Entry` is provided to it whose [Entry.exists] property is `False`;
+     * setting the value of the entry will cause the entry to _appear in_  (be added to) the map,
+     * which is to say that the map will now contain an entry for that key with that value.
+     * Similarly, calling [Entry.delete] on the entry will ensure that the key and any associated
+     * value are now _not_ present in the map.
      *
-     * @param key      specifies which entry to process
+     * @param key      specifies the key of the entry to process
      * @param compute  the function that will operate against the Entry
      *
      * @return the result of the specified function
@@ -469,7 +469,7 @@ interface Map<Key, Value>
          * @throws ReadOnly    if an attempt is made to write the value of the entry and the map
          *                     is not `inPlace`, or does not support mutation
          */
-        void remove();
+        void delete();
 
         /**
          * If the entry is a temporary object, for example an entry that can be re-used to represent

@@ -331,7 +331,7 @@ class HashMap<Key, Value>
             }
 
         @Override
-        void remove()
+        void delete()
             {
             if (verifyNotPersistent() & exists)
                 {

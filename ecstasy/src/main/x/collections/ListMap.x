@@ -526,7 +526,7 @@ class ListMap<Key, Value>
             }
 
         @Override
-        void remove()
+        void delete()
             {
             if (verifyNotPersistent() & exists)
                 {
@@ -637,7 +637,7 @@ class ListMap<Key, Value>
                 {
                 if (shouldRemove(entry.advance(i-removed)))
                     {
-                    entry.remove();
+                    entry.delete();
                     ++removed;
                     }
                 }

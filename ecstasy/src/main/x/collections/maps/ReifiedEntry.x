@@ -51,7 +51,7 @@ class ReifiedEntry<Key, Value>
         }
 
     @Override
-    void remove()
+    void delete()
         {
         map.keys.remove(key);
         }

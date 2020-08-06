@@ -3004,7 +3004,7 @@ Value? get(Key);
 
 // ----- entry processor
 
-map.process(key, e -> e.remove());
+map.process(key, e -> e.delete());
 
 map.entries.stream().filter(...).map(...).produceANewMap().do
 

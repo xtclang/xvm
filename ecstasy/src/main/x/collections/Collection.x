@@ -1033,7 +1033,7 @@ interface Collection<Element>
                     Int oldValue = entry.value;
                     if (oldValue <= 1)
                         {
-                        entry.remove();
+                        entry.delete();
                         }
                     else
                         {
