@@ -34,7 +34,7 @@ interface Channel
      *                  asynchronous read requests guarantees a non-blocking operation
      *                  (meaning that only already "available" bytes are going to be read)
      *
-     * @return the number of bytes read or false if the end-of-stream has been reached
+     * @return the number of bytes read or False if the end-of-stream has been reached
      *
      * @throw IOException if the operation fails to complete due to an unrecoverable IO error
      */
@@ -50,7 +50,7 @@ interface Channel
      *
      * @return the number of bytes read and the index of the buffer the next byte would be
      *         written into (e.g. if all the buffers are filled, the second return value would be
-     *         equal to the buffer array length) or false if the end-of-stream has been reached
+     *         equal to the buffer array length) or False if the end-of-stream has been reached
      */
     conditional (Int, Int) read(Buffer<Byte>[] buffers, Int minBytes = Int.maxvalue);
 

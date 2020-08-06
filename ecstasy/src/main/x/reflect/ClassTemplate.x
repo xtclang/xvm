@@ -96,7 +96,7 @@ interface ClassTemplate
             // interfaces do not extend and cannot be extended
             if (this.template.format == Interface || composition.template.format == Interface)
                 {
-                return false;
+                return False;
                 }
 
             if (&this == &composition)
@@ -185,7 +185,7 @@ interface ClassTemplate
             // incorporated
             if (this.template.format == Interface || composition.template.format != Mixin)
                 {
-                return false;
+                return False;
                 }
 
             if (&this == &composition)
@@ -234,7 +234,7 @@ interface ClassTemplate
          * Determine if this composition implements (or is) the specified interface.
          *
          * Note: Unlike [Type.isA], this method doesn't simply check if the referent's class
-         * has all methods that the specified interface has. Instead, it returns true iff any of the
+         * has all methods that the specified interface has. Instead, it returns True iff any of the
          * following conditions holds true:
          *  - the referent's class explicitly declares that it implements the specified interface, or
          *  - the referent's super class implements the specified interface (recursively), or

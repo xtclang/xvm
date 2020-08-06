@@ -515,13 +515,13 @@ const Duration(UInt128 picoseconds)
     @Override
     Appender<Char> appendTo(Appender<Char> buf)
         {
-        Boolean zerofill = false;
+        Boolean zerofill = False;
 
         if (picoseconds >= PICOS_PER_HOUR)
             {
             hours.appendTo(buf);
             buf.add(':');
-            zerofill = true;
+            zerofill = True;
             }
 
         if (picoseconds >= PICOS_PER_MINUTE)
@@ -533,7 +533,7 @@ const Duration(UInt128 picoseconds)
                 }
             else
                 {
-                zerofill = true;
+                zerofill = True;
                 }
             part.appendTo(buf);
             buf.add(':');

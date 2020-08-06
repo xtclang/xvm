@@ -7,14 +7,14 @@ package reflect
      * An TypeRequired exception is raised when a type is required, such as for a formal type
      * parameter.
      */
-    const TypeRequired(String? text = null, Exception? cause = null)
+    const TypeRequired(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
      * An InvalidType exception is raised to indicate that the production of a requested type would
      * violate the rules of the type system.
      */
-    const InvalidType(String? text = null, Exception? cause = null)
+    const InvalidType(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
@@ -22,7 +22,7 @@ package reflect
      * combination of a composition and a set of formal type parameter values) would violate the
      * rules of the type system.
      */
-    const InvalidClass(String? text = null, Exception? cause = null)
+    const InvalidClass(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
@@ -30,7 +30,7 @@ package reflect
      * parameter or invoke a function with parameters without having successfully bound all of the
      * formal type parameters.
      */
-    const UnboundFormalParameter(String? text = null, Exception? cause = null)
+    const UnboundFormalParameter(String? text = Null, Exception? cause = Null)
             extends IllegalState(text, cause);
 
     /**

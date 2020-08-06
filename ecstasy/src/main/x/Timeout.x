@@ -59,7 +59,7 @@
  * If a service needs to begin a long-running task that is independent of the timeout that the
  * service is currently constrained by, construct an _independent_ timeout:
  *
- *   using (new Timeout(Duration:5H, true))
+ *   using (new Timeout(Duration:5H, True))
  *       {
  *       new LongRunningReports().begin();
  *       }
@@ -67,7 +67,7 @@
 const Timeout
         implements Closeable
     {
-    construct(Duration remainingTime, Boolean independent = false)
+    construct(Duration remainingTime, Boolean independent = False)
         {
         assert remainingTime > Duration:0S;
 
@@ -79,7 +79,7 @@ const Timeout
         duration = remainingTime;
 
         Timeout? previousTimeout = this.previousTimeout;
-        if (!independent && previousTimeout != null)
+        if (!independent && previousTimeout != Null)
             {
             // because the timeout is not independent, it must respect the current outgoing timeout
             // that it is replacing
@@ -146,17 +146,17 @@ const Timeout
     Boolean registered.get()
         {
         Timeout? timeout = this:service.timeout;
-        while (timeout != null)
+        while (timeout != Null)
             {
             if (this == timeout)
                 {
-                return true;
+                return True;
                 }
 
             timeout = timeout.previousTimeout;
             }
 
-        return false;
+        return False;
         }
 
     /**

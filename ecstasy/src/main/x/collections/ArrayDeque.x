@@ -272,7 +272,7 @@ class ArrayDeque<Element>
             // be possible to fulfill the promise
             &promisedElement.whenComplete((v, e) ->
                 {
-                if (e != null)
+                if (e != Null)
                     {
                     array.remove(promisedElement);
                     }

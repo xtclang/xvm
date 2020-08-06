@@ -34,34 +34,34 @@ module Ecstasy.xtclang.org
      * A Deadlock exception is raised by the runtime in response to a situation in which re-entrancy
      * to a service is necessary, but for one of several reasons cannot be accomplished.
      */
-    const Deadlock(String? text = null, Exception? cause = null)
+    const Deadlock(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
      * A TimedOut exception is raised by the runtime in response to a thread-of-execution exceeding
      * a timeout (wall clock time) limitation within which it was running.
      */
-    const TimedOut(Timeout timeout, String? text = null, Exception? cause = null)
+    const TimedOut(Timeout timeout, String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
      * A ReadOnly exception is raised when an attempt is made to modify a read-only value.
      */
-    const ReadOnly(String? text = null, Exception? cause = null)
+    const ReadOnly(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
      * A TypeMismatch exception is raised when an attempt is made to cast a reference to a type, and
      * the reference is incompatible with the specified type.
      */
-    const TypeMismatch(String? text = null, Exception? cause = null)
+    const TypeMismatch(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
      * An OutOfBounds exception is raised when an attempt is made to invoke an operation with a
      * value that is out-of-bounds, or if the operation would result in an out-of-bounds condition.
      */
-    const OutOfBounds(String? text = null, Exception? cause = null)
+    const OutOfBounds(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
@@ -69,41 +69,41 @@ module Ecstasy.xtclang.org
      * was not expecting, and is unable to predictably continue processing according to the
      * contracts that it provides.
      */
-    const ConcurrentModification(String? text = null, Exception? cause = null)
+    const ConcurrentModification(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
      * An IllegalArgument exception is raised when an invalid argument is passed to a method or a
      * function.
      */
-    const IllegalArgument(String? text = null, Exception? cause = null)
+    const IllegalArgument(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
      * An IllegalState exception is raised when a data structure is not in a consistent state
      * to perform a requested operation.
      */
-    const IllegalState(String? text = null, Exception? cause = null)
+    const IllegalState(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
      * An Assertion exception is raised when an assert fails.
      */
-    const Assertion(String? text = null, Exception? cause = null)
+    const Assertion(String? text = Null, Exception? cause = Null)
             extends IllegalState(text, cause);
 
     /**
      * An UnsupportedOperation exception is raised when an attempt is made to invoke functionality
      * that is not present or has not yet been implemented.
      */
-    const UnsupportedOperation(String? text = null, Exception? cause = null)
+    const UnsupportedOperation(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
      * A Closed exception is raised when an attempt is made to use an object that has transitioned
      * to a closed state, including when a future is awaited and it is closed.
      */
-    const Closed(String? text = null, Exception? cause = null)
+    const Closed(String? text = Null, Exception? cause = Null)
             extends IllegalState(text, cause);
 
     /**

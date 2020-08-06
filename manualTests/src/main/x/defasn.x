@@ -17,7 +17,7 @@ module TestDefAsn
         }
     String? maybeNull()
         {
-        return null;
+        return Null;
         }
 
     void testDefAssignment()
@@ -42,7 +42,7 @@ module TestDefAsn
         // vary this test as necessary (do vs. while; break vs. continue; && vs. ||, etc.)
         L1: do
             {
-            if (f1 && {i=3; return true;})
+            if (f1 && {i=3; return True;})
                 {
                 //i = 3;
                 break L1;
@@ -65,7 +65,7 @@ module TestDefAsn
         Boolean f2 = gimmeTrue();
         String? s  = maybeNull();
 
-        if (s?.size > 1 && {i=3; return true;})
+        if (s?.size > 1 && {i=3; return True;})
             {
             //i = 3;
             }
@@ -95,7 +95,7 @@ module TestDefAsn
     void testWhileLoop(Int? in)
         {
         Int i;
-        while (true)
+        while (True)
             {
             if (in.is(Int))
                 {

@@ -84,7 +84,7 @@ mixin AtomicVar<Referent>
      * @param newValue  the value to set the referent to
      * @param oldValue  the value the referent is expected to be equal to
      *
-     * @return true if the value has been successfully changed, false if the current value
+     * @return True if the value has been successfully changed, False if the current value
      *         didn't match the `oldValue`
      */
     Boolean replace(Referent oldValue, Referent newValue)
@@ -109,11 +109,11 @@ mixin AtomicVar<Referent>
         if (curValue == oldValue)
             {
             set(newValue);
-            return false;
+            return False;
             }
         else
             {
-            return true, curValue;
+            return True, curValue;
             }
         }
     }

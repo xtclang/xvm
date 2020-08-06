@@ -250,10 +250,10 @@ const Int16
         {
         if (this < maxvalue)
             {
-            return true, this + 1;
+            return True, this + 1;
             }
 
-        return false;
+        return False;
         }
 
     @Override
@@ -261,10 +261,10 @@ const Int16
         {
         if (this > minvalue)
             {
-            return true, this - 1;
+            return True, this - 1;
             }
 
-        return false;
+        return False;
         }
 
 

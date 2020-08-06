@@ -17,7 +17,7 @@ service OSStorage
         }
     finally
         {
-        fileStore = new OSFileStore(this, false);
+        fileStore = new OSFileStore(this, False);
         }
 
     @Unassigned
@@ -48,7 +48,7 @@ service OSStorage
                         @Future Boolean cancel = watcher.onEvent(event, file);
                         return cancel;
                         }
-                    return false;
+                    return False;
                     }
                 };
 
@@ -73,7 +73,7 @@ service OSStorage
             findEmpty:
             for (FileWatcher? w : watchers)
                 {
-                if (w == null)
+                if (w == Null)
                     {
                     index = findEmpty.count;
                     break;
@@ -105,7 +105,7 @@ service OSStorage
             {
             if (watchers[index] == watcher)
                 {
-                watchers[index] = null;
+                watchers[index] = Null;
 
                 // TODO: cleanup if no one watches anymore
                 }
@@ -129,7 +129,7 @@ service OSStorage
             findWatcher:
             for (FileWatcher? watcher : watchers)
                 {
-                if (watcher != null)
+                if (watcher != Null)
                     {
                     @Future Boolean cancel = isFile
                         ? watcher.onEvent(event, fileStore.fileFor(pathStringNode))
@@ -138,7 +138,7 @@ service OSStorage
                     Int index = findWatcher.count;
                     &cancel.whenComplete((cancelled, exception) ->
                         {
-                        if (cancelled? || exception != null)
+                        if (cancelled? || exception != Null)
                             {
                             removeWatch(pathStringDir, index, watcher);
                             }

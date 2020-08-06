@@ -35,14 +35,14 @@ const VarFloat
     @Override
     Signum sign.get()
         {
-        Boolean negative = false;
+        Boolean negative = False;
         eachBit: for (Bit bit : toBitArray())
             {
             if (bit == 1)
                 {
                 if (eachBit.first)
                     {
-                    negative = true;
+                    negative = True;
                     }
                 else
                     {

@@ -475,7 +475,7 @@ class Parser
                     expect(LeftSquare);
                     Int dims    = 0;
                     Int indexes = 0;
-                    while (match(RightSquare) == null)
+                    while (match(RightSquare) == Null)
                         {
                         if (dims + indexes > 0)
                             {
@@ -483,7 +483,7 @@ class Parser
                             }
 
                         Token dim = peek(); // just for error reporting
-                        if (match(Condition) == null)
+                        if (match(Condition) == Null)
                             {
                             parseExpression();
                             if (indexes == 0 && dims > 0)
@@ -553,9 +553,9 @@ class Parser
      *     Annotation
      *         "@" NamedTypeExpression ArgumentList-opt
      *
-     * @param required  true iff the annotation is required
+     * @param required  True iff the annotation is required
      *
-     * @return an annotation, or null if no annotation was encountered
+     * @return an annotation, or Null if no annotation was encountered
      */
     protected AnnotationExpression? parseAnnotation(Boolean required)
         {
@@ -589,7 +589,7 @@ class Parser
             args = parseArgumentList(True, False, False);
             }
 
-        TextPosition endAnno = args == null ? type.end : prev().end;
+        TextPosition endAnno = args == Null ? type.end : prev().end;
         return new AnnotationExpression(type, args, start, endAnno);
         }
 

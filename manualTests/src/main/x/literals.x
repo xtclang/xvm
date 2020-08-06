@@ -24,8 +24,8 @@ module TestLiterals
         {
         console.println("\n** test Versions()");
 
-        Version version = new Version(null, 1);
-        console.println($"new Version(null, 1)={version}");
+        Version version = new Version(Null, 1);
+        console.println($"new Version(Null, 1)={version}");
 
         version = new Version(version, 0);
         // version = new Version(version, 0, "20130313144700");

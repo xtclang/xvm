@@ -62,7 +62,7 @@ interface Ref<Referent>
 
     /**
      * Conditionally dereference the reference to obtain the referent, iff the reference is
-     * assigned; otherwise return false.
+     * assigned; otherwise return False.
      *
      * A small number of references cannot be blindly dereferenced without risking a runtime
      * exception:

@@ -76,10 +76,10 @@ const Nibble
         {
         if (this < maxvalue)
             {
-            return true, of(this + 1);
+            return True, of(this + 1);
             }
 
-        return false;
+        return False;
         }
 
     @Override
@@ -87,10 +87,10 @@ const Nibble
         {
         if (this > minvalue)
             {
-            return true, of(this - 1);
+            return True, of(this - 1);
             }
 
-        return false;
+        return False;
         }
 
     @Override

@@ -39,7 +39,7 @@ interface Set<Element>
      */
     @Op("^") Set symmetricDifference(Set!<Element> values)
         {
-        Element[]? remove = null;
+        Element[]? remove = Null;
         for (Element value : this)
             {
             if (values.contains(value))
@@ -48,7 +48,7 @@ interface Set<Element>
                 }
             }
 
-        Element[]? add = null;
+        Element[]? add = Null;
         for (Element value : values)
             {
             if (!this.contains(value))

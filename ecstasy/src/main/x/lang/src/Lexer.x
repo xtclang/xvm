@@ -2350,7 +2350,7 @@ class Lexer
             offset -= count;
             while (count-- > 0)
                 {
-                // if the character is an \n and containsCRLFs is true, or if the character is a
+                // if the character is an \n and containsCRLFs is True, or if the character is a
                 // hexit and containsUnicodeEscapes, then extra work has to be done to make sure
                 // that the character isn't part of a sequence of characters that was translated to
                 // a single character when we previously read it

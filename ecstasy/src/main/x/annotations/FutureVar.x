@@ -66,12 +66,12 @@ mixin FutureVar<Referent>
     /**
      * True if the value of the future can be set.
      */
-    private Boolean assignable = false;
+    private Boolean assignable = False;
 
     /**
      * The exception, if the future completes exceptionally.
      */
-    private Exception? failure = null;
+    private Exception? failure = Null;
 
     /**
      * The function type used to notify dependent futures.
@@ -81,7 +81,7 @@ mixin FutureVar<Referent>
     /**
      * The future that is chained to this future, that this future sends its completion result to.
      */
-    protected NotifyDependent? notify = null;
+    protected NotifyDependent? notify = Null;
 
 
     // ----- Ref interface -------------------------------------------------------------------------
@@ -232,7 +232,7 @@ mixin FutureVar<Referent>
      * exception (from this future's exceptional completion).
      *
      * * If this future completes, the new future will execute the specified function, passing the
-     *   value of this future and the exception of this future (at least one of which will be null).
+     *   value of this future and the exception of this future (at least one of which will be Null).
      * * If that function throws an exception, then the new future will complete exceptionally with
      *   that exception.
      * * If that function returns, then the new future will complete successfully with the value
@@ -311,7 +311,7 @@ mixin FutureVar<Referent>
      *
      * * If this future completes, either successfully or exceptionally, then the new future will
      *   execute the specified function, passing the value of this future and the exception of this
-     *   future (at least one of which will be null).
+     *   future (at least one of which will be Null).
      * * If that function throws an exception, then the new future will complete exceptionally with
      *   that exception.
      * * If that function returns, then the new future will complete successfully in the same manner
@@ -370,16 +370,16 @@ mixin FutureVar<Referent>
         if (completion == Pending)
             {
             completion = Result;
-            assignable = true;
+            assignable = True;
             try
                 {
                 set(result);
                 }
             finally
                 {
-                assignable = false;
+                assignable = False;
                 }
-            thisCompleted(result, null);
+            thisCompleted(result, Null);
             }
         }
 
@@ -393,7 +393,7 @@ mixin FutureVar<Referent>
             {
             completion = Error;
             failure    = e;
-            thisCompleted(null, e);
+            thisCompleted(Null, e);
             }
         }
 
@@ -411,10 +411,10 @@ mixin FutureVar<Referent>
         {
         if (completion == Error)
             {
-            return true, failure.as(Exception);
+            return True, failure.as(Exception);
             }
 
-        return false;
+        return False;
         }
 
     /**
@@ -425,7 +425,7 @@ mixin FutureVar<Referent>
         {
         // by default, the only completion logic is to chain the completion
         notify?(completion, result, e);
-        notify = null;
+        notify = Null;
         }
 
     /**
@@ -449,7 +449,7 @@ mixin FutureVar<Referent>
         switch (completion)
             {
             case Pending:
-                if (this.notify == null)
+                if (this.notify == Null)
                     {
                     this.notify = notify;
                     }
@@ -461,12 +461,12 @@ mixin FutureVar<Referent>
 
             case Result:
                 // this future has already completed, so notify the dependent
-                notify(Result, get(), null);
+                notify(Result, get(), Null);
                 break;
 
             case Error:
                 // this future has already completed, so notify the dependent
-                notify(Error, null, failure);
+                notify(Error, Null, failure);
                 break;
             }
         }
@@ -549,7 +549,7 @@ mixin FutureVar<Referent>
             super(result, e);
 
             notify2?(completion, result, e);
-            notify2 = null;
+            notify2 = Null;
             }
         }
 
@@ -704,7 +704,7 @@ mixin FutureVar<Referent>
             }
         finally
             {
-            other.whenComplete((result, e) -> parentCompleted(e == null ? Result : Error, result, e));
+            other.whenComplete((result, e) -> parentCompleted(e == Null ? Result : Error, result, e));
             }
         }
 
@@ -722,7 +722,7 @@ mixin FutureVar<Referent>
             }
         finally
             {
-            other.whenComplete((result, e) -> parent2Completed(e == null ? Result : Error, result, e));
+            other.whenComplete((result, e) -> parent2Completed(e == Null ? Result : Error, result, e));
             }
 
         public/private function Referent (InputType, Input2Type) combine;
@@ -746,7 +746,7 @@ mixin FutureVar<Referent>
                     }
                 else
                     {
-                    assert completion == Result && input != null;
+                    assert completion == Result && input != Null;
 
                     input1 = input;
                     if (&input2.assigned)
@@ -772,7 +772,7 @@ mixin FutureVar<Referent>
                     }
                 else
                     {
-                    assert completion == Result && input != null;
+                    assert completion == Result && input != Null;
 
                     input2 = input;
                     if (&input1.assigned)
@@ -882,9 +882,9 @@ mixin FutureVar<Referent>
                 assert completion != Pending;
                 if (completion == Error)
                     {
-                    super(completion, null, e);
+                    super(completion, Null, e);
                     }
-                else if (asyncResult == null)
+                else if (asyncResult == Null)
                     {
                     // this is the point at which the continuation is created, i.e. the input to the
                     // async call is now available, so the async call needs to be made, with the

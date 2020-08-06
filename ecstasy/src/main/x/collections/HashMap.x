@@ -55,7 +55,7 @@ class HashMap<Key, Value>
     /**
      * This is the Entry implementation used to store the HashMap's keys and values.
      */
-    protected static class HashEntry(Key key, Int keyhash, Value value, HashEntry? next = null);
+    protected static class HashEntry(Key key, Int keyhash, Value value, HashEntry? next = Null);
 
     /**
      * An array of hash buckets.
@@ -95,7 +95,7 @@ class HashMap<Key, Value>
         Int        keyhash  = hasher.hashOf(key);
         Int        bucketId = keyhash % buckets.size;
         HashEntry? entry    = buckets[bucketId];
-        while (entry != null)
+        while (entry != Null)
             {
             if (entry.keyhash == keyhash && hasher.areEqual(entry.key, key))
                 {
@@ -140,7 +140,7 @@ class HashMap<Key, Value>
         Int        keyhash  = hasher.hashOf(key);
         Int        bucketId = keyhash % buckets.size;
         HashEntry? entry    = buckets[bucketId];
-        while (entry != null)
+        while (entry != Null)
             {
             if (entry.keyhash == keyhash && hasher.areEqual(entry.key, key))
                 {
@@ -173,7 +173,7 @@ class HashMap<Key, Value>
             Int        keyhash   = hasher.hashOf(key);
             Int        bucketId  = keyhash % bucketCount;
             HashEntry? currEntry = buckets[bucketId];
-            while (currEntry != null)
+            while (currEntry != Null)
                 {
                 if (currEntry.keyhash == keyhash && hasher.areEqual(currEntry.key, key))
                     {
@@ -197,13 +197,13 @@ class HashMap<Key, Value>
         Int        keyhash   = hasher.hashOf(key);
         Int        bucketId  = keyhash % buckets.size;
         HashEntry? entry     = buckets[bucketId];
-        HashEntry? prevEntry = null;
-        while (entry != null)
+        HashEntry? prevEntry = Null;
+        while (entry != Null)
             {
             if (entry.keyhash == keyhash && hasher.areEqual(entry.key, key))
                 {
                 // unlink the entry
-                if (prevEntry != null)
+                if (prevEntry != Null)
                     {
                     prevEntry.next = entry.next;
                     }
@@ -211,7 +211,7 @@ class HashMap<Key, Value>
                     {
                     buckets[bucketId] = entry.next;
                     }
-                entry.next = null;
+                entry.next = Null;
 
                 ++removeCount;
                 return this;
@@ -284,7 +284,7 @@ class HashMap<Key, Value>
         protected CursorEntry advance(HashEntry hashEntry)
             {
             this.hashEntry = hashEntry;
-            this.exists    = true;
+            this.exists    = True;
             return this;
             }
 
@@ -325,7 +325,7 @@ class HashMap<Key, Value>
                     {
                     this.HashMap.put(key, value);
                     assert hashEntry := this.HashMap.find(key);
-                    exists = true;
+                    exists = True;
                     }
                 }
             }
@@ -336,7 +336,7 @@ class HashMap<Key, Value>
             if (verifyNotPersistent() & exists)
                 {
                 assert this.HashMap.keys.removeIfPresent(key);
-                exists = false;
+                exists = False;
                 }
             }
 
@@ -363,7 +363,7 @@ class HashMap<Key, Value>
                 {
                 HashEntry?[] buckets     = this.HashMap.buckets;
                 Int          nextBucket  = 0;
-                HashEntry?   nextEntry   = null;
+                HashEntry?   nextEntry   = Null;
                 Int          addSnapshot = this.HashMap.addCount;
                 CursorEntry  entry       = new CursorEntry();
 
@@ -376,13 +376,13 @@ class HashMap<Key, Value>
                         }
 
                     Int bucketCount = buckets.size;
-                    while (nextEntry == null && nextBucket < bucketCount)
+                    while (nextEntry == Null && nextBucket < bucketCount)
                         {
                         nextEntry = buckets[nextBucket++];
                         }
 
                     HashEntry? currEntry = nextEntry;
-                    if (currEntry != null)
+                    if (currEntry != Null)
                         {
                         // this is the entry to return;
                         // always load next one in the chain to avoid losing the position if/when
@@ -408,9 +408,9 @@ class HashMap<Key, Value>
                 Int          keyhash   = hashEntry.keyhash;
                 Int          bucketId  = keyhash % buckets.size;
                 HashEntry?   currEntry = buckets[bucketId];
-                HashEntry?   prevEntry = null;
+                HashEntry?   prevEntry = Null;
 
-                loop: while (currEntry != null)
+                loop: while (currEntry != Null)
                     {
                     // check if we found the entry that we're looking for
                     if (currEntry.keyhash == keyhash && hasher.areEqual(currEntry.key, hashEntry.key))
@@ -419,7 +419,7 @@ class HashMap<Key, Value>
                         if (&currEntry == &hashEntry || currEntry.value == hashEntry.value)
                             {
                             // unlink the entry that is being removed
-                            if (prevEntry != null)
+                            if (prevEntry != Null)
                                 {
                                 prevEntry.next = currEntry.next;
                                 }
@@ -458,8 +458,8 @@ class HashMap<Key, Value>
             for (Int i = 0; i < bucketCount; ++i)
                 {
                 HashEntry? currEntry = buckets[i];
-                HashEntry? prevEntry = null;
-                while (currEntry != null)
+                HashEntry? prevEntry = Null;
+                while (currEntry != Null)
                     {
                     if (shouldRemove(entry.advance(currEntry)))
                         {
@@ -467,7 +467,7 @@ class HashMap<Key, Value>
                         currEntry = currEntry.next;
 
                         // unlink the entry that is being removed
-                        if (prevEntry != null)
+                        if (prevEntry != Null)
                             {
                             prevEntry.next = currEntry;
                             }
@@ -572,7 +572,7 @@ class HashMap<Key, Value>
 
         for (HashEntry? entry : oldBuckets)
             {
-            while (entry != null)
+            while (entry != Null)
                 {
                 // before we change the "next reference", remember which one is next in the old
                 // bucket

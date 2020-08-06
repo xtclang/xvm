@@ -32,10 +32,10 @@ class KeyEntries<Key, Value>(Map<Key, Value> contents)
                 if (Key key := keyIterator.next())
                     {
                     private CursorEntry<Key, Value> entry = new CursorEntry(this.KeyEntries.contents);
-                    return true, entry.advance(key);
+                    return True, entry.advance(key);
                     }
 
-                return false;
+                return False;
                 }
             };
         }

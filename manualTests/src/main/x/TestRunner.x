@@ -20,7 +20,7 @@ module TestRunner.xtclang.org
         if (modules.empty)
             {
             console.println($"Current directory is {curDir}");
-            while (true)
+            while (True)
                 {
                 console.print("\nEnter module path: ");
 
@@ -30,7 +30,7 @@ module TestRunner.xtclang.org
                     break;
                     }
                 Tuple<FutureVar, Buffer>? result = loadAndRun(path);
-                if (result != null)
+                if (result != Null)
                     {
                     result[0].get(); // block until done
                     console.println(result[1].flush());
@@ -54,7 +54,7 @@ module TestRunner.xtclang.org
                 {
                 resultTuple[0].whenComplete((_, e) ->
                     {
-                    if (e == null)
+                    if (e == Null)
                         {
                         console.println(resultTuple[1].flush());
                         }

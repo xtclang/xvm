@@ -64,7 +64,7 @@ module TestCompilerErrors
 
     void testAssertFalse()
         {
-        assert false;
+        assert False;
         String s = "testAssertFalse";
         }
 

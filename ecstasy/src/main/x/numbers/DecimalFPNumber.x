@@ -32,14 +32,14 @@ const DecimalFPNumber
     Signum sign.get()
         {
         // TODO this is correct for the default 0 encoding, but not for all members of the 0 cohort
-        Boolean negative = false;
+        Boolean negative = False;
         eachBit: for (Bit bit : toBitArray())
             {
             if (bit == 1)
                 {
                 if (eachBit.first)
                     {
-                    negative = true;
+                    negative = True;
                     }
                 else
                     {

@@ -219,7 +219,7 @@ const String
      * @param startAt  the first index to search from (optional)
      *
      * @return a conditional return of the location of the index of the specified substring, or
-     *         false if the substring could not be found
+     *         False if the substring could not be found
      */
      conditional Int indexOf(String! that, Int startAt = 0)
          {
@@ -228,7 +228,7 @@ const String
          Int thatLen = that.size;
          if (startAt > thisLen - thatLen)
              {
-             return false;
+             return False;
              }
 
          // can't start before the start of the string (at zero)
@@ -240,7 +240,7 @@ const String
              // assume that we can find the empty string wherever we look
              if (thatLen == 0)
                 {
-                return true, startAt;
+                return True, startAt;
                 }
 
              // for single-character strings, use the more efficient single-character search
@@ -259,10 +259,10 @@ const String
                      continue NextTry;
                      }
                  }
-             return true, next;
+             return True, next;
              }
 
-         return false;
+         return False;
          }
 
     /**
@@ -404,7 +404,7 @@ const String
     /**
      * Determine if the string needs to be escaped in order to be displayed.
      *
-     * @return true iff the string should be escaped in order to be displayed
+     * @return True iff the string should be escaped in order to be displayed
      * @return (conditional) the number of characters in the escaped string
      */
     conditional Int isEscaped()

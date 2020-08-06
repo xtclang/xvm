@@ -9,7 +9,7 @@ interface FileWatcher
     enum Event {Created, Modified, Deleted}
 
     static Set<Event> ALL_EVENTS = new collections.ListSet<Event>(
-            [Created, Modified, Deleted]).freeze(true);
+            [Created, Modified, Deleted]).freeze(True);
     // TODO CP the ideal way to present it would be a "set" literal
     // static Set<Event> ALL_EVENTS = Set<Event>:[Created, Modified, Deleted];
 
@@ -65,7 +65,7 @@ interface FileWatcher
      */
     Boolean onEvent(Event event, Directory dir)
         {
-        return false;
+        return False;
         }
 
     /**
@@ -78,7 +78,7 @@ interface FileWatcher
      */
     Boolean onEvent(Event event, File file)
         {
-        return false;
+        return False;
         }
 
     /**
@@ -90,6 +90,6 @@ interface FileWatcher
      */
     Boolean eventsDiscarded()
         {
-        return false;
+        return False;
         }
     }

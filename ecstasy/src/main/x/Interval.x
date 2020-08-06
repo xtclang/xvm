@@ -160,17 +160,17 @@ mixin Interval<Element extends immutable Sequential>
                         Element value = nextValue;
                         if (value == lastValue)
                             {
-                            hasNext = false;
+                            hasNext = False;
                             }
                         else
                             {
                             nextValue = value.prevValue();
                             }
-                        return true, value;
+                        return True, value;
                         }
                     else
                         {
-                        return false;
+                        return False;
                         }
                     }
                 };
@@ -193,17 +193,17 @@ mixin Interval<Element extends immutable Sequential>
                         Element value = nextValue;
                         if (value == lastValue)
                             {
-                            hasNext = false;
+                            hasNext = False;
                             }
                         else
                             {
                             nextValue = value.nextValue();
                             }
-                        return true, value;
+                        return True, value;
                         }
                     else
                         {
-                        return false;
+                        return False;
                         }
                     }
                 };

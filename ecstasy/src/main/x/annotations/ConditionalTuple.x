@@ -8,7 +8,7 @@ mixin ConditionalTuple
     @Override
     @Op("[]") Object getElement(Int index)
         {
-        assert index == 0 || super(0) == true;
+        assert index == 0 || super(0) == True;
         return super(index);
         }
 
@@ -43,21 +43,21 @@ mixin ConditionalTuple
     @Override
     @Op("[..]") Tuple!<> slice(Range<Int> indexes)
         {
-        assert indexes.effectiveUpperBound == 0 || this[0] == true;
+        assert indexes.effectiveUpperBound == 0 || this[0] == True;
         return super(indexes);
         }
 
     @Override
     @Op("[[..]]") Tuple!<> sliceInclusive(Range<Int> indexes)
         {
-        assert indexes.effectiveUpperBound == 0 || this[0] == true;
+        assert indexes.effectiveUpperBound == 0 || this[0] == True;
         return super(indexes);
         }
 
     @Override
     @Op("[[..)]") Tuple!<> sliceExclusive(Range<Int> indexes)
         {
-        assert indexes.effectiveUpperBound == 0 || this[0] == true;
+        assert indexes.effectiveUpperBound == 0 || this[0] == True;
         return super(indexes);
         }
 

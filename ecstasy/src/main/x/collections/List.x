@@ -1050,7 +1050,7 @@ interface List<Element>
          * elements in the list, then the index will be set to `size`, and the cursor will be
          * "beyond the end of the list", and referring to a non-existent element.
          *
-         * @return true if the cursor has advanced to another element in the list, or false if the
+         * @return True if the cursor has advanced to another element in the list, or False if the
          *         cursor is now beyond the end of the list
          */
         Boolean advance()
@@ -1070,7 +1070,7 @@ interface List<Element>
          * elements preceding the current element in the list, then the index will be set to
          * `0`, and referring to the first element in the list.
          *
-         * @return true if the cursor has rewound to another element in the list, or false if the
+         * @return True if the cursor has rewound to another element in the list, or False if the
          *         cursor was already at the beginning of the list
          */
         Boolean rewind()
@@ -1185,9 +1185,9 @@ interface List<Element>
             if (prev > 0)
                 {
                 index = prev - 1;
-                return true;
+                return True;
                 }
-            return false;
+            return False;
             }
 
         @Override
@@ -1452,7 +1452,7 @@ interface List<Element>
         Boolean sorted;
         do
             {
-            sorted = true;
+            sorted = True;
 
             list.Element bubble = list[last];
             for (Int i = last-1; i >= first; --i)
@@ -1462,7 +1462,7 @@ interface List<Element>
                     {
                     list[i  ] = bubble;
                     list[i+1] = prev;
-                    sorted    = false;
+                    sorted    = False;
                     }
                 else
                     {

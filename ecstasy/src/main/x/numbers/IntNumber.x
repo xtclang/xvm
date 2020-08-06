@@ -274,7 +274,7 @@ const IntNumber
      */
     protected static <IntType extends IntNumber> Int calculateStringSize(IntType n, IntType[] sizeArray)
         {
-        for (Int index = 0; true; index++)
+        for (Int index = 0; True; index++)
             {
             if (n <= sizeArray[index])
                 {

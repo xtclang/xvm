@@ -23,7 +23,7 @@ module TestFiles
         console.println("parent=" + Path.PARENT);
         console.println("current=" + Path.CURRENT);
 
-        Path path = new Path(null, "test");
+        Path path = new Path(Null, "test");
         console.println("path=" + path);
 
         path = new Path(path, "sub");

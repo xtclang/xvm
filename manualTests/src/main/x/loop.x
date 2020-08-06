@@ -110,7 +110,7 @@ module TestLoops
         {
         console.println("\n** testDo()");
 
-        Boolean f = false;
+        Boolean f = False;
         Int j = 0;
         Int i = 0;
         do

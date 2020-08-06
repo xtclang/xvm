@@ -240,13 +240,13 @@ class Array<Element>
         @Override
         Int get()
             {
-            if (delegate != null)
+            if (delegate != Null)
                 {
                 return delegate?.size : assert; // TODO assumptions implementation (should not need '?')
                 }
 
             Int count = 0;
-            for (ElementImpl? cur = head; cur != null; cur = cur.next)
+            for (ElementImpl? cur = head; cur != Null; cur = cur.next)
                 {
                 ++count;
                 }
@@ -256,7 +256,7 @@ class Array<Element>
         @Override
         void set(Int newCap)
             {
-            assert delegate == null;
+            assert delegate == Null;
 
             Int oldCap = get();
             if (newCap == oldCap)
@@ -274,7 +274,7 @@ class Array<Element>
                 cur = new ElementImpl(cur);
                 }
 
-            if (head == null)
+            if (head == Null)
                 {
                 head = cur;
                 }
@@ -375,7 +375,7 @@ class Array<Element>
      */
     public/private Mutability mutability.get()
         {
-        if (delegate != null)
+        if (delegate != Null)
             {
             TODO CP
 //            Mutability mutability = delegate?.mutability : assert; // TODO
@@ -403,7 +403,7 @@ class Array<Element>
             {
             // it is possible, in the case of a delegating array, that the underling array has been
             // transitioned to constant without this array having done so as well
-            if (delegate != null && !this.is(immutable Object))
+            if (delegate != Null && !this.is(immutable Object))
                 {
                 makeImmutable();
                 }
@@ -411,7 +411,7 @@ class Array<Element>
             return this.as(immutable Array);
             }
 
-        if (!inPlace || delegate != null)
+        if (!inPlace || delegate != Null)
             {
             return new Array(Constant, this).as(immutable Array);
             }
@@ -491,9 +491,9 @@ class Array<Element>
     @Override
     Var<Element> elementAt(Int index)
         {
-        if (delegate != null)
+        if (delegate != Null)
             {
-            return delegate?.elementAt(index) : assert; // TODO shouldn't need null check
+            return delegate?.elementAt(index) : assert; // TODO shouldn't need Null check
             }
 
         if (index < 0 || index >= size)
@@ -516,7 +516,7 @@ class Array<Element>
     @Override
     Int size.get()
         {
-        if (delegate != null)
+        if (delegate != Null)
             {
             return delegate?.size : assert; // TODO
             }
@@ -549,7 +549,7 @@ class Array<Element>
     @Override
     Array reify()
         {
-        return delegate == null
+        return delegate == Null
                 ? this
                 : new Array(mutability, this);
         }
@@ -630,7 +630,7 @@ class Array<Element>
     @Override
     Array toArray(Mutability? mutability = Null, Boolean inPlace = False)
         {
-        if (mutability == null || mutability == this.mutability)
+        if (mutability == Null || mutability == this.mutability)
             {
             return this;
             }
@@ -657,7 +657,7 @@ class Array<Element>
             {
             case Mutable:
                 ElementImpl el = new ElementImpl(element);
-                if (head == null)
+                if (head == Null)
                     {
                     head = el;
                     }
@@ -717,7 +717,7 @@ class Array<Element>
     @Override
     (Array, Int) removeAll(function Boolean (Element) shouldRemove)
         {
-        Int[]? indexes = null;
+        Int[]? indexes = Null;
         loop: for (Element value : this)
             {
             if (shouldRemove(value))
@@ -726,7 +726,7 @@ class Array<Element>
                 }
             }
 
-        if (indexes == null)
+        if (indexes == Null)
             {
             return this, 0;
             }
@@ -885,7 +885,7 @@ class Array<Element>
                     }
                 if (index == 0)
                     {
-                    if (head == null)
+                    if (head == Null)
                         {
                         head = first;
                         }
@@ -998,7 +998,7 @@ class Array<Element>
                 else
                     {
                     elementAt(lo-1).as(ElementImpl).next = (hi == size-1)
-                            ? null
+                            ? Null
                             : elementAt(hi+1).as(ElementImpl);
                     }
                 return this;
@@ -1070,7 +1070,7 @@ class Array<Element>
          *
          * @param next   the next element in the array (optional)
          */
-        construct(ElementImpl? next = null)
+        construct(ElementImpl? next = Null)
             {
             this.next = next;
             }
@@ -1081,7 +1081,7 @@ class Array<Element>
          * @param value  the initial value for the element
          * @param next   the next element in the array (optional)
          */
-        construct(Element value, ElementImpl? next = null)
+        construct(Element value, ElementImpl? next = Null)
             {
             this.value = value;
             this.next  = next;
@@ -1103,7 +1103,7 @@ class Array<Element>
         /**
          * The next element in the linked list.
          */
-        ElementImpl? next = null;
+        ElementImpl? next = Null;
 
         /**
          * The reference to the storage for the `value` property.

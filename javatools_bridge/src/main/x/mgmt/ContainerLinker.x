@@ -43,7 +43,7 @@ class ContainerLinker
                 {
                 return spec;
                 }
-            assert:arg repository != null;
+            assert:arg repository != Null;
             return repository.getModule(spec);
             });
 

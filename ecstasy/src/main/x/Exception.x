@@ -9,7 +9,7 @@
  */
 const Exception
     {
-    construct(String? text = null, Exception? cause = null)
+    construct(String? text = Null, Exception? cause = Null)
         {
         @Inject Iterable<StackFrame> stack;
 
@@ -43,7 +43,7 @@ const Exception
            .append(getMessage())
            .append(stackTrace);
 
-        if (cause != null)
+        if (cause != Null)
             {
             buf.append("\nCaused by: ")
                .append(cause.toString());
@@ -60,19 +60,19 @@ const Exception
     (String, StackFrame /* firstFrame */) formatStackTrace(StackFrame? lastFrame)
         {
         // stack trace
-        StackFrame? firstFrame = null;
+        StackFrame? firstFrame = Null;
 
         Iterator<StackFrame> frames = stackTrace.iterator();
         for (StackFrame frame : frames)
             {
-            if (firstFrame == null)
+            if (firstFrame == Null)
                 {
                 firstFrame = frame;
                 }
 
             // TODO "  at "
 
-            if (frame.opaque || frame.containingCode == null)
+            if (frame.opaque || frame.containingCode == Null)
                 {
                 TODO("(unknown)");
                 // continue;
@@ -81,7 +81,7 @@ const Exception
             // TODO path-to-code
 
             Int? lineNumber = frame.lineNumber;
-            if (lineNumber != null)
+            if (lineNumber != Null)
                 {
                 TODO("[" + lineNumber + "]");
                 }
@@ -92,7 +92,7 @@ const Exception
                 }
             }
 
-        assert firstFrame != null;
+        assert firstFrame != Null;
         return TODO, firstFrame;
         }
 

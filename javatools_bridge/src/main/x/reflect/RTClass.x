@@ -32,7 +32,7 @@ const RTClass<PublicType, ProtectedType extends PublicType,
     @Lazy ListMap<String, Type> canonicalParams.calc()
         {
         (String[] names, Type[] types) = getFormalNamesAndTypes();
-        return new ListMap<String, Type>(names, types).freeze(true);
+        return new ListMap<String, Type>(names, types).freeze(True);
         }
 
 

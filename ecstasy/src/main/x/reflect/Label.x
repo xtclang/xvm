@@ -27,7 +27,7 @@ interface Label<Key, Value>
     /**
      * True on the first iteration of the loop (do, while, or for).
      *
-     * For a Label that identifies a loop, the value of this property is true until the completion
+     * For a Label that identifies a loop, the value of this property is True until the completion
      * of the first iteration.
      *
      * For a non-loop Label, an attempt to access this property is illegal.
@@ -49,7 +49,7 @@ interface Label<Key, Value>
      * loop of the for-each variety iterating over an Interval or List.
      *
      * For a Label that identifies a loop within which the last iteration is detectable, this value
-     * will be true after the last iteration has begun.
+     * will be True after the last iteration has begun.
      *
      * For a non-loop Label, or a Label that identifies a loop in which the last iteration is
      * **not** detectable, an attempt to access this property is illegal.

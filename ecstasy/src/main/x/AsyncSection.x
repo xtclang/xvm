@@ -73,17 +73,17 @@ const AsyncSection
     Boolean registered.get()
         {
         AsyncSection? registered = this:service.asyncSection;
-        while (registered != null)
+        while (registered != Null)
             {
             if (this == registered)
                 {
-                return true;
+                return True;
                 }
 
             registered = registered.previousAsyncSection;
             }
 
-        return false;
+        return False;
         }
 
     /**

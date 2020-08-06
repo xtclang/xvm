@@ -47,7 +47,7 @@ const CPDirectory(Object cookie, Path path, DateTime created, DateTime modified,
             @Override
             conditional Directory next()
                 {
-                if (iter != null)
+                if (iter != Null)
                     {
                     if (FileNode node := iter?.next())
                         {
@@ -70,7 +70,7 @@ const CPDirectory(Object cookie, Path path, DateTime created, DateTime modified,
             @Override
             conditional File next()
                 {
-                if (iter != null)
+                if (iter != Null)
                     {
                     if (FileNode node := iter?.next())
                         {

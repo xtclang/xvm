@@ -31,7 +31,7 @@ const UIntNumber
     @Override
     Boolean signed.get()
         {
-        return false;
+        return False;
         }
 
     @Override

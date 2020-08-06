@@ -60,13 +60,13 @@ const Number
     /**
      * An IllegalMath exception is raised when an assert fails.
      */
-    static const IllegalMath(String? text = null, Exception? cause = null)
+    static const IllegalMath(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
      * An Assertion exception is raised when an assert fails.
      */
-    static const DivisionByZero(String? text = null, Exception? cause = null)
+    static const DivisionByZero(String? text = Null, Exception? cause = Null)
             extends IllegalMath(text, cause);
 
 
@@ -96,11 +96,11 @@ const Number
 
     /**
      * True if the numeric type is signed (has the potential to hold positive or negative values);
-     * false if unsigned (representing only a magnitude).
+     * False if unsigned (representing only a magnitude).
      */
     Boolean signed.get()
         {
-        return true;
+        return True;
         }
 
     /**

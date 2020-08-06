@@ -138,9 +138,9 @@ const Char
         {
         if (codepoint > 0)
             {
-            return true, new Char(codepoint - 1);
+            return True, new Char(codepoint - 1);
             }
-        return false;
+        return False;
         }
 
     @Override
@@ -148,9 +148,9 @@ const Char
         {
         if (codepoint < UInt32.maxvalue)
             {
-            return true, new Char(codepoint + 1);
+            return True, new Char(codepoint + 1);
             }
-        return false;
+        return False;
         }
 
     @Override
@@ -282,7 +282,7 @@ const Char
     /**
      * Determine if the specified character is considered to be white-space.
      *
-     * @return true iff this character is considered to be an Ecstasy whitespace character
+     * @return True iff this character is considered to be an Ecstasy whitespace character
      */
     Boolean isWhitespace()
         {
@@ -471,7 +471,7 @@ const Char
     /**
      * Determine if the character needs to be escaped in order to be displayed.
      *
-     * @return true iff the character should be escaped in order to be displayed
+     * @return True iff the character should be escaped in order to be displayed
      * @return (conditional) the number of characters in the escape sequence
      */
     conditional Int isEscaped()

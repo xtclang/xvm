@@ -30,10 +30,10 @@ interface Enum
         {
         if (ordinal + 1 < enumeration.count)
             {
-            return true, enumeration.values[ordinal + 1];
+            return True, enumeration.values[ordinal + 1];
             }
 
-        return false;
+        return False;
         }
 
     /**
@@ -44,10 +44,10 @@ interface Enum
         {
         if (ordinal > 0)
             {
-            return true, enumeration.values[ordinal - 1];
+            return True, enumeration.values[ordinal - 1];
             }
 
-        return false;
+        return False;
         }
 
     /**

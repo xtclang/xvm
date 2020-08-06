@@ -20,7 +20,7 @@ module TestServices
         @Future Int n0 = svc.terminateExceptionally("n0");
         &n0.whenComplete((n, e) ->
             {
-            assert e != null;
+            assert e != Null;
             console.println($"{tag()} 4. expected exception={e.text}");
             });
 
@@ -48,7 +48,7 @@ module TestServices
         assert &n2.assigned;
         &n2.whenComplete((n, e) ->
             {
-            assert e != null;
+            assert e != Null;
             console.println($"{tag()} 3. expected exception={e.text}");
             });
 
@@ -69,7 +69,7 @@ module TestServices
         import ecstasy.Timeout;
         try
             {
-            using (Timeout timeout = new Timeout(Duration:0.1S, true))
+            using (Timeout timeout = new Timeout(Duration:0.1S, True))
                 {
                 Int unused = svc.calcSomethingBig(Duration:10S);
                 assert;

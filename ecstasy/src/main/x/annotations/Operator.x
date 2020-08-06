@@ -1,7 +1,7 @@
 /**
  * Operator
  */
-mixin Operator(String? token = null)
+mixin Operator(String? token = Null)
         into Method
     {
     }

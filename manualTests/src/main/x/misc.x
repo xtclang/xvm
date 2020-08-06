@@ -79,11 +79,11 @@ module TestMisc
         {
         console.println("\n** testBools()");
 
-        console.println("!true=" + !true);
-        console.println("!false=" + !false);
+        console.println("!True=" + !True);
+        console.println("!False=" + !False);
 
-        Boolean a = true;
-        Boolean b = false;
+        Boolean a = True;
+        Boolean b = False;
         console.println("a=" + a);
         console.println("b=" + b);
         console.println("!a=" + !a);
@@ -124,29 +124,29 @@ module TestMisc
         Int i = 5;
         if (i.is(Object))
             {
-            console.println("i.is(Object) true (good)");
+            console.println("i.is(Object) True (good)");
             }
         else
             {
-            console.println("i.is(Object) false (bad)");
+            console.println("i.is(Object) False (bad)");
             }
 
         if (i.is(Int))
             {
-            console.println("i.is(Int) true (good)");
+            console.println("i.is(Int) True (good)");
             }
         else
             {
-            console.println("i.is(Int) false (bad)");
+            console.println("i.is(Int) False (bad)");
             }
 
         if (i.is(String))
             {
-            console.println("i.is(String) true (bad)");
+            console.println("i.is(String) True (bad)");
             }
         else
             {
-            console.println("i.is(String) false (good)");
+            console.println("i.is(String) False (good)");
             }
         }
 
@@ -205,7 +205,7 @@ module TestMisc
         Int? c = a;
         console.println("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
 
-        c = null;
+        c = Null;
         console.println("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
         }
 
@@ -213,7 +213,7 @@ module TestMisc
         {
         console.println("\n** testElseExpr()");
 
-        IntLiteral? a = null;
+        IntLiteral? a = Null;
         Int b = 7;
         console.println("a=" + a + ", b=" + b + ", a?.toInt():b=" + (a?.toInt():b));
         // [11] VAR #-238, Ecstasy:Int64 #2                             // create temp var "#2" to hold the result of the else expression (ok!)
@@ -221,7 +221,7 @@ module TestMisc
         // [13] MOV #0, #3                                              // ... and here's proof: it's just a one-time-use, read-only copy
         // [14] JMP_NULL #3 :else1                                      // here is the '?' operator (ok!)
         // [15] NVOK_01 #3.to() -> #4                                   // here is the toInt() (ok!)
-        // [16] MOV #4, #2                                              // here's the non-null result (ok!)
+        // [16] MOV #4, #2                                              // here's the non-Null result (ok!)
         // [17] JMP :end1                                               // all done; skip the else (ok!)
         // [18] :else1: MOV #1, #2                                      // else: move int to int (ok!)
         // [19] :end1: GP_ADD this:stack, #2, this:stack                // all done; do some string concat (ok!)
@@ -236,7 +236,7 @@ module TestMisc
         // [30] MOV #0, #6                                              // ... and here's proof: it's just a one-time-use, read-only copy
         // [31] JMP_NULL #6 :else2                                      // here is the '?' operator (ok!)
         // [32] NVOK_01 #6.to() -> #7                                   // here is the toInt() (ok!)
-        // [33] MOV #7, #5                                              // here's the non-null result (ok!)
+        // [33] MOV #7, #5                                              // here's the non-Null result (ok!)
         // [34] JMP :end2                                               // all done; skip the else (ok!)
         // [35] :else2: MOV #1, #5                                      // else: move int to int (ok!)
         // [36] :end2: GP_ADD this:stack, #5, this:stack                // all done; do some string concat (ok!)
@@ -371,7 +371,7 @@ module TestMisc
     void testAssertTrue()
         {
         console.println("\n** testAssertTrue()");
-        assert true;
+        assert True;
         console.println("(done)");
         }
 
@@ -451,11 +451,11 @@ module TestMisc
         String? s2 = s;
         if (String s3 ?= s2)
             {
-            console.println($"value is not null: {s3}");
+            console.println($"value is not Null: {s3}");
             }
         else
             {
-            console.println($"value is null: {s2}");
+            console.println($"value is Null: {s2}");
             assert;
             }
 
@@ -467,7 +467,7 @@ module TestMisc
         s ?= s2;
         console.println($"s={s}");
 
-        // this will assert (unless s2 is null)
+        // this will assert (unless s2 is Null)
         // assert s2?.size>=0, False;
 
         // this will not assert
@@ -476,14 +476,14 @@ module TestMisc
 
     private conditional String checkPositive(Int i)
         {
-        return i < 0 ? false : (true, "positive");
+        return i < 0 ? False : (True, "positive");
         }
 
     void testAssignOps()
         {
         console.println("\n** testAssignOps()");
 
-        Int? n = null;
+        Int? n = Null;
         n ?:= 4;
         console.println("n=" + n + " (should be 4)");
 
@@ -493,29 +493,29 @@ module TestMisc
         n ?:= 7;
         console.println("n=" + n + " (should be 4)");
 
-        Boolean f1 = false;
-        f1 &&= true;
-        console.println("f1=" + f1 + " (should be false)");
+        Boolean f1 = False;
+        f1 &&= True;
+        console.println("f1=" + f1 + " (should be False)");
 
-        Boolean f2 = false;
-        f2 ||= true;
-        console.println("f2=" + f2 + " (should be true)");
+        Boolean f2 = False;
+        f2 ||= True;
+        console.println("f2=" + f2 + " (should be True)");
 
-        Boolean f3 = true;
-        f3 &&= false;
-        console.println("f3=" + f3 + " (should be false)");
+        Boolean f3 = True;
+        f3 &&= False;
+        console.println("f3=" + f3 + " (should be False)");
 
-        Boolean f4 = true;
-        f4 ||= false;
-        console.println("f4=" + f4 + " (should be true)");
+        Boolean f4 = True;
+        f4 ||= False;
+        console.println("f4=" + f4 + " (should be True)");
 
-        Boolean f5 = true;
-        f5 &&= true;
-        console.println("f5=" + f5 + " (should be true)");
+        Boolean f5 = True;
+        f5 &&= True;
+        console.println("f5=" + f5 + " (should be True)");
 
-        Boolean f6 = false;
-        f6 ||= false;
-        console.println("f6=" + f6 + " (should be false)");
+        Boolean f6 = False;
+        f6 ||= False;
+        console.println("f6=" + f6 + " (should be False)");
         }
 
     void testBind()

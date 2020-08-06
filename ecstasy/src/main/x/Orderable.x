@@ -55,7 +55,7 @@ interface Orderable
      * Note: this function must yield "True" *if and only if* the result of `compare` function is
      *       "Equal".
      *
-     * @return true iff the objects are equivalent
+     * @return True iff the objects are equivalent
      */
     @Override
     static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);

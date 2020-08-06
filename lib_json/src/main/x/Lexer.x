@@ -527,7 +527,7 @@ class Lexer
                         }
 
                 case '\\':
-                    if (buf == null)
+                    if (buf == Null)
                         {
                         buf = new StringBuffer();
                         if (count > 0)
@@ -583,7 +583,7 @@ class Lexer
                         }
 
                     ++count;
-                    if (buf != null)
+                    if (buf != Null)
                         {
                         buf.add(ch);
                         }

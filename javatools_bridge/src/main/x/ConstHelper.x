@@ -98,6 +98,6 @@ class ConstHelper
      */
 //    static <Key, Value> immutable ListMap<Key, Value> crateListMap(Key[] keys, Value[] values)
 //        {
-//        return new ListMap<Key, Value>(keys, values).freeze(true);
+//        return new ListMap<Key, Value>(keys, values).freeze(True);
 //        }
     }

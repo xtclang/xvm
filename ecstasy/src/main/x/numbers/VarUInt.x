@@ -213,7 +213,7 @@ const VarUInt
     @Override
     conditional VarUInt next()
         {
-        return true, this + 1;
+        return True, this + 1;
         }
 
     @Override
@@ -221,10 +221,10 @@ const VarUInt
         {
         if (this > 0)
             {
-            return true, this - 1;
+            return True, this - 1;
             }
 
-        return false;
+        return False;
         }
 
 

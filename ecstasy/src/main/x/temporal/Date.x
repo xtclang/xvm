@@ -168,13 +168,13 @@ const Date(Int epochDay)
     @Override
     conditional Date prev()
         {
-        return true, new Date(this.epochDay-1);
+        return True, new Date(this.epochDay-1);
         }
 
     @Override
     conditional Date next()
         {
-        return true, new Date(this.epochDay+1);
+        return True, new Date(this.epochDay+1);
         }
 
     @Override
@@ -243,7 +243,7 @@ const Date(Int epochDay)
      * @param month  the month to test
      * @param day    the day to test
      *
-     * @return true iff the specified date is a valid date on the Gregorian calendar
+     * @return True iff the specified date is a valid date on the Gregorian calendar
      */
     static Boolean isGregorian(Int year, Int month, Int day)
         {
@@ -417,7 +417,7 @@ const Date(Int epochDay)
      *
      * @param year  the year to test
      *
-     * @return true iff the specified year is a leap year
+     * @return True iff the specified year is a leap year
      */
     static Boolean isLeapYear(Int year)
         {

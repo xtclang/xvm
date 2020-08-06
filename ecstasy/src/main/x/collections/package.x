@@ -11,13 +11,13 @@ package collections
      * Constant, and some reference that must be `immutable Const` cannot be made so or converted
      * to be so.
      */
-    const ConstantRequired(String? text = null, Exception? cause = null)
+    const ConstantRequired(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
      * An SizeLimited exception is raised when an attempt is made to alter a data structure in a
      * manner that would exceed its maximum size.
      */
-    const SizeLimited(String? text = null, Exception? cause = null)
+    const SizeLimited(String? text = Null, Exception? cause = null)
             extends Exception(text, cause);
     }

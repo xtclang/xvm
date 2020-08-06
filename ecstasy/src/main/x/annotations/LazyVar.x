@@ -29,11 +29,11 @@
  * implement the hash code calculation for a `const` class, as a default implementation is
  * provided.)
  */
-mixin LazyVar<Referent>(function Referent ()? calculate = null)
+mixin LazyVar<Referent>(function Referent ()? calculate = Null)
         into Var<Referent>
     {
     private function Referent ()? calculate;
-    private Boolean assignable = false;
+    private Boolean assignable = False;
 
     @Override
     Referent get()
@@ -43,12 +43,12 @@ mixin LazyVar<Referent>(function Referent ()? calculate = null)
             Referent value = calculate?() : calc();
             try
                 {
-                assignable = true;
+                assignable = True;
                 set(value);
                 }
             finally
                 {
-                assignable = false;
+                assignable = False;
                 }
 
             return value;

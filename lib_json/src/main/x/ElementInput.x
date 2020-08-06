@@ -51,7 +51,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
      *
      * @return a `Boolean` value
      *
-     * @throws IllegalJSON  if the value is null and no default value is provided, or if the value
+     * @throws IllegalJSON  if the value is `null` and no default value is provided, or if the value
      *                      is not of the requested type
      */
     Boolean readBoolean(Boolean? defaultValue = Null)

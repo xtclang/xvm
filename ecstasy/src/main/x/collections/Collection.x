@@ -164,13 +164,13 @@ interface Collection<Element>
      */
     Boolean containsAll(Collection! values)
         {
-        // this.contains(values) is always true when there are no values to test
+        // this.contains(values) is always True when there are no values to test
         if (values.empty)
             {
             return True;
             }
 
-        // this.contains(values) is always false when there are values to test and this is empty
+        // this.contains(values) is always False when there are values to test and this is empty
         if (this.empty)
             {
             return False;

@@ -57,17 +57,17 @@ const ContextToken<TokenType extends immutable Object>
         {
         ContextToken<>? token = current;
 
-        while (token != null)
+        while (token != Null)
             {
             if (&this == &token)
                 {
-                return true;
+                return True;
                 }
 
             token = token.previousContextToken;
             }
 
-        return false;
+        return False;
         }
 
     /**

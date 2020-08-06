@@ -55,14 +55,14 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
                 {
                 if (names.contains(typeName))
                     {
-                    return true;
+                    return True;
                     }
                 }
             else
                 {
                 if (paramType.producesFormalType(typeName))
                     {
-                    return true;
+                    return True;
                     }
                 }
             }
@@ -77,12 +77,12 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
                 {
                 if (returnType.consumesFormalType(typeName))
                     {
-                    return true;
+                    return True;
                     }
                 }
             }
 
-        return false;
+        return False;
         }
 
     /**
@@ -101,14 +101,14 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
                 {
                 if (names.contains(typeName))
                     {
-                    return true;
+                    return True;
                     }
                 }
             else
                 {
                 if (returnType.producesFormalType(typeName))
                     {
-                    return true;
+                    return True;
                     }
                 }
             }
@@ -123,12 +123,12 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
                 {
                 if (paramType.consumesFormalType(typeName))
                     {
-                    return true;
+                    return True;
                     }
                 }
             }
 
-        return false;
+        return False;
         }
 
     /**
@@ -140,7 +140,7 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
         {
         if (this.as(Object) == that.as(Object))
             {
-            return true;
+            return True;
             }
 
         /*
@@ -166,7 +166,7 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
             this.ParamTypes.size  != that.ParamTypes.size ||
             this.ReturnTypes.size != that.ReturnTypes.size)
             {
-            return false;
+            return False;
             }
 
         Iterator<Type> iterR1 = that.ReturnTypes.iterator();
@@ -175,7 +175,7 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
              assert Type typeR1 := iterR1.next();
              if (!typeR2.isA(typeR1))
                  {
-                 return false;
+                 return False;
                  }
              }
 
@@ -190,7 +190,7 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
 
             if (!typeP2.isA(typeP1))
                 {
-                return false;
+                return False;
                 }
 
             // if there is an number of different formal names, then at least one of them must be
@@ -208,26 +208,26 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
                         {
                         if (that.Target.producesFormalType(name))
                             {
-                            return true;
+                            return True;
                             }
                         }
                     }
                 }
-            return false;
+            return False;
             }
 
-        return true;
+        return True;
         }
 
     /**
      * Return an array of formal type names for the parameter type at the specified index.
-     * If the parameter type is not a formal one, this method will return false.
+     * If the parameter type is not a formal one, this method will return False.
      */
     conditional String[] formalParamNames(Int i);
 
     /**
      * Return an array of formal type names for the return type at the specified index.
-     * If the return type is not a formal one, this method will return false.
+     * If the return type is not a formal one, this method will return False.
      */
     conditional String[] formalReturnNames(Int i);
     }

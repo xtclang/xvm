@@ -9,7 +9,7 @@ const RTReturn<ReturnType>(Int ordinal, String? name)
     @Override
     conditional String hasName()
         {
-        return name == null
+        return name == Null
                 ? False
                 : (True, name.as(String));
         }

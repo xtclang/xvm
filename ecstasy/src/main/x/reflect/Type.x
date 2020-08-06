@@ -347,17 +347,17 @@ interface Type<DataType, OuterType>
         {
         if (this.as(Object) == that.as(Object))
             {
-            return true;
+            return True;
             }
 
         if (that.explicitlyImmutable && !this.explicitlyImmutable)
             {
-            return false;
+            return False;
             }
 
         if (this.isA(that))
             {
-            return true;
+            return True;
             }
 
         // this type must have a matching method for each method of that type
@@ -373,10 +373,10 @@ interface Type<DataType, OuterType>
                 }
 
             // no such matching method
-            return false;
+            return False;
             }
 
-        return true;
+        return True;
         }
 
     /**

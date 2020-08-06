@@ -618,7 +618,7 @@ const ConstOrdinalList
         // turn the nodes into bytes
         Byte[][] nodesBytes = new Byte[][];
 
-        Node? nodeNext = null;
+        Node? nodeNext = Null;
         for (Int i : [nodes.size-1..0])
             {
             Node node = nodes[i];

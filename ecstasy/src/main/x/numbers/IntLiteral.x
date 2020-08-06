@@ -48,7 +48,7 @@ const IntLiteral(String text)
             }
 
         // optional leading format
-        Boolean underscoreOk = false;
+        Boolean underscoreOk = False;
         if (text.length - of >= 2 && chars[of] == '0')
             {
             switch (chars[of+1])
@@ -71,7 +71,7 @@ const IntLiteral(String text)
             if (radix != 10)
                 {
                 of += 2;
-                underscoreOk = true;
+                underscoreOk = True;
                 }
             }
 
@@ -103,7 +103,7 @@ const IntLiteral(String text)
             assert nch < radix;
             magnitude = magnitude * radix + nch.toVarInt();
             ++digits;
-            underscoreOk = true;
+            underscoreOk = True;
             }
 
         assert digits > 0;
@@ -349,13 +349,13 @@ const IntLiteral(String text)
     @Override
     conditional IntLiteral prev()
         {
-        return true, this - 1;
+        return True, this - 1;
         }
 
     @Override
     conditional IntLiteral next()
         {
-        return true, this + 1;
+        return True, this + 1;
         }
 
     @Override

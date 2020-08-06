@@ -67,10 +67,10 @@ const Bit
         {
         if (this == 0)
             {
-            return true, 1;
+            return True, 1;
             }
 
-        return false;
+        return False;
         }
 
     @Override
@@ -78,10 +78,10 @@ const Bit
         {
         if (this == 1)
             {
-            return true, 0;
+            return True, 0;
             }
 
-        return false;
+        return False;
         }
 
     @Override

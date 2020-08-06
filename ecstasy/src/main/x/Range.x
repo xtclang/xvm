@@ -23,7 +23,7 @@ const Range<Element extends Orderable>
             lowerExclusive = lastExclusive;
             upperBound     = first;
             upperExclusive = firstExclusive;
-            descending       = true;
+            descending     = True;
             }
         else
             {
@@ -31,7 +31,7 @@ const Range<Element extends Orderable>
             lowerExclusive = firstExclusive;
             upperBound     = last;
             upperExclusive = lastExclusive;
-            descending       = false;
+            descending     = False;
             }
         }
 
@@ -88,7 +88,7 @@ const Range<Element extends Orderable>
     Boolean upperExclusive;
 
     /**
-     * The value is true if the range was specified from its upper bound to its lower bound.
+     * The value is True if the range was specified from its upper bound to its lower bound.
      */
     Boolean descending;
 
@@ -259,7 +259,7 @@ const Range<Element extends Orderable>
         {
         if (!this.adjoins(that))
             {
-            return false;
+            return False;
             }
 
         Element lower;

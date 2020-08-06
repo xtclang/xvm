@@ -158,7 +158,7 @@ const Class<PublicType, ProtectedType extends PublicType,
     @RO String displayName.get()
         {
         String? alias = implicitName;
-        if (alias != null)
+        if (alias != Null)
             {
             return alias;
             }
@@ -429,7 +429,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      * Determine if the class of the referent implements the specified interface.
      *
      * Note: Unlike [Type.isA], this method doesn't simply check if the referent's class
-     * has all methods that the specified interface has. Instead, it returns true iff any of the
+     * has all methods that the specified interface has. Instead, it returns True iff any of the
      * following conditions holds true:
      *  - the referent's class explicitly declares that it implements the specified interface, or
      *  - the referent's super class implements the specified interface (recursively), or

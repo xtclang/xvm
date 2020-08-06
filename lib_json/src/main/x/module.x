@@ -10,14 +10,14 @@ module Json.xtclang.org
     /**
      * An IllegalJSON exception is raised when a JSON format error is detected.
      */
-    const IllegalJSON(String? text = null, Exception? cause = null)
+    const IllegalJSON(String? text = Null, Exception? cause = Null)
             extends IOException(text, cause);
 
     /**
      * A MissingMapping exception is raised when a [Mapping] is required for a particular Ecstasy
      * type or JSON document format, and no corresponding Mapping is available.
      */
-    const MissingMapping(String? text = null, Exception? cause = null, Type? type = null)
+    const MissingMapping(String? text = Null, Exception? cause = Null, Type? type = Null)
             extends IllegalJSON(text, cause);
 
     /**

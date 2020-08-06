@@ -293,7 +293,7 @@ module TestNumbers
 
         Float f = -123456789.987654321;
         Dec   d = f.toDec64();
-        while (true)
+        while (True)
             {
             console.println($"f={f} d={d}");
             if (f.infinity)

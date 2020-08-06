@@ -239,13 +239,13 @@ const VarInt
     @Override
     conditional VarInt next()
         {
-        return true, this + 1;
+        return True, this + 1;
         }
 
     @Override
     conditional VarInt prev()
         {
-        return true, this - 1;
+        return True, this - 1;
         }
 
 

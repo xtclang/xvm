@@ -19,7 +19,7 @@ service LocalClock
     @Override
     Boolean monotonic.get()
         {
-        return false;
+        return False;
         }
 
     @Override

@@ -12,7 +12,7 @@ interface Hashable
     /**
      * Compare two objects of the same Hashable type for equality.
      *
-     * @return true iff the objects are equivalent
+     * @return True iff the objects are equivalent
      */
     @Override
     static <CompileType extends Hashable> Boolean equals(CompileType value1, CompileType value2);

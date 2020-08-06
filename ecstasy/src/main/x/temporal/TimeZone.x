@@ -21,7 +21,7 @@ import numbers.Int128;
  *   useful for acting like a UTC time, but whose DateTime values are incapable of being compared
  *   with those of any other TimeZone.
  */
-const TimeZone(Int picos, String? name = null)
+const TimeZone(Int picos, String? name = Null)
     {
     /**
      * Construct a resolved TimeZone.
@@ -30,7 +30,7 @@ const TimeZone(Int picos, String? name = null)
      *               picosecond value in order to calculate a TimeZone-adjusted picosecond value
      * @param name   the name of the TimeZone
      */
-    construct(Int picos, String? name = null)
+    construct(Int picos, String? name = Null)
         {
         assert picos.abs() <= Time.PICOS_PER_DAY;
         this.picos = picos;
@@ -118,13 +118,13 @@ const TimeZone(Int picos, String? name = null)
         @Override
         @RO Boolean isUTC.get()
             {
-            return true;
+            return True;
             }
 
         @Override
         @RO Boolean resolved.get()
             {
-            return true;
+            return True;
             }
 
         @Override
@@ -155,13 +155,13 @@ const TimeZone(Int picos, String? name = null)
         @Override
         @RO Boolean isNoTZ.get()
             {
-            return true;
+            return True;
             }
 
         @Override
         @RO Boolean resolved.get()
             {
-            return true;
+            return True;
             }
 
         @Override
@@ -201,7 +201,7 @@ const TimeZone(Int picos, String? name = null)
      */
     @RO Boolean isUTC.get()
         {
-        return false;
+        return False;
         }
 
     /**
@@ -209,7 +209,7 @@ const TimeZone(Int picos, String? name = null)
      */
     @RO Boolean isNoTZ.get()
         {
-        return false;
+        return False;
         }
 
     /**
@@ -349,10 +349,10 @@ const TimeZone(Int picos, String? name = null)
 // TODO
 //        return switch (nameLength > 0, offsetLength > 0)
 //            {
-//            case (true , true ): nameLength + offsetLength + 3;
-//            case (true , false): nameLength;
-//            case (false, true ): offsetLength;
-//            case (false, false): 6;
+//            case (True , True ): nameLength + offsetLength + 3;
+//            case (True , False): nameLength;
+//            case (False, True ): offsetLength;
+//            case (False, False): 6;
 //            }
 // or
 //        return switch ()
@@ -383,7 +383,7 @@ const TimeZone(Int picos, String? name = null)
         {
         Boolean showPicos = resolved;
         String? name      = this.name;
-        if (name != null)
+        if (name != Null)
             {
             name.appendTo(buf);
 
@@ -430,7 +430,7 @@ const TimeZone(Int picos, String? name = null)
                     }
                 }
 
-            if (name != null)
+            if (name != Null)
                 {
                 buf.add(')');
                 }

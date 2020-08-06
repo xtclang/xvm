@@ -5,9 +5,9 @@ const Path
         implements UniformIndexed<Int, Path>
         implements Sliceable<Int>
     {
-    static Path ROOT    = new Path(null, Root);
-    static Path PARENT  = new Path(null, Parent);
-    static Path CURRENT = new Path(null, Current);
+    static Path ROOT    = new Path(Null, Root);
+    static Path PARENT  = new Path(Null, Parent);
+    static Path CURRENT = new Path(Null, Current);
 
     enum ElementForm(String text, Int depth)
         {
@@ -87,7 +87,7 @@ const Path
         this.form   = form;
         this.name   = name;
 
-        assert form != Root || parent == null;
+        assert form != Root || parent == Null;
         assert parent?.relative || parent?.depth + form.depth >= 0;
 
         size     = 1 + (parent?.size : 0);
@@ -151,7 +151,7 @@ const Path
      */
     Path normalize()
         {
-        if (parent == null)
+        if (parent == Null)
             {
             return this;
             }
@@ -167,7 +167,7 @@ const Path
             {
             // the normalized result of "./d" is "d"
             assert parent.size == 1;
-            return new Path(null, form, name);
+            return new Path(Null, form, name);
             }
 
         if (form == Parent && parent.form == Name)
@@ -243,7 +243,7 @@ const Path
 
             case Equal:
                 return this.form == that.form && this.name == that.name
-                        && (this.parent?.endsWith(that.parent?) : true);
+                        && (this.parent?.endsWith(that.parent?) : True);
             }
         }
 
@@ -283,7 +283,7 @@ const Path
      */
     Path sibling(String name)
         {
-        return parent? + name : new Path(null, Name, name);
+        return parent? + name : new Path(Null, Name, name);
         }
 
     /**
@@ -382,7 +382,7 @@ const Path
         Int length = name.size;
         // prepend the parent path and the path separator; if the parent is the root, then no
         // additional separator is added
-        if (parent != null)
+        if (parent != Null)
             {
             if (parent.form == Root)
                 {
@@ -401,7 +401,7 @@ const Path
         {
         // prepend the parent path and the path separator; if the parent is the root, then no
         // additional separator is added
-        if (parent != null)
+        if (parent != Null)
             {
             parent.appendTo(buf);
             if (parent.form != Root)
