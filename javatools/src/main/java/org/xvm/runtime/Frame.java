@@ -1603,8 +1603,10 @@ public class Frame
                 throw new IllegalStateException("Variable " + nVar + " ouf of scope " + f_function);
                 }
 
-            Parameter param = f_function.getParam(nVar);
-            info = f_aInfo[nVar] = new VarInfo(param.getType(), VAR_STANDARD);
+            Parameter    param = f_function.getParam(nVar);
+            TypeConstant type  = param.getType().resolveGenerics(poolContext(), getGenericsResolver());
+
+            info = f_aInfo[nVar] = new VarInfo(type, VAR_STANDARD);
             info.setName(param.getName());
             }
         return info;
