@@ -2,6 +2,7 @@ package org.xvm.runtime.template._native.numbers;
 
 
 import java.util.Random;
+
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.xvm.asm.ClassStructure;
@@ -115,7 +116,7 @@ public class xRTRandom
 
     protected int invokeFill(Frame frame, ObjectHandle hTarget, BitArrayHandle hArray)
         {
-        if (hArray.isMutable() && hArray.m_mutability.compareTo(xArray.Mutability.FixedSize) <= 0)
+        if (hArray.isMutable() && hArray.m_mutability.compareTo(xArray.Mutability.Fixed) >= 0)
             {
             // REVIEW GG this may set bits beyond "m_cSize" ... is that a problem?
             rnd(hTarget).nextBytes(hArray.m_abValue);

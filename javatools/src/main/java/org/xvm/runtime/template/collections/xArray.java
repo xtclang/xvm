@@ -296,7 +296,7 @@ public class xArray
                     }
 
                 xArray      template = (xArray) clzArray.getTemplate();
-                ArrayHandle hArray   = template.createArrayHandle(clzArray, (int) cCapacity, Mutability.FixedSize);
+                ArrayHandle hArray   = template.createArrayHandle(clzArray, (int) cCapacity, Mutability.Fixed);
 
                 int cSize = (int) cCapacity;
                 if (cSize > 0)
@@ -334,8 +334,8 @@ public class xArray
                 {
                 // call Iterable.to<Element> naturally
                 ObjectHandle   hMutability = ahVar[0];
-                ObjectHandle   hSequence  = ahVar[1];
-                ObjectHandle[] ahVars     = new ObjectHandle[ITERABLE_TO_ARRAY.getMaxVars()];
+                ObjectHandle   hSequence   = ahVar[1];
+                ObjectHandle[] ahVars      = new ObjectHandle[ITERABLE_TO_ARRAY.getMaxVars()];
                 ahVars[0] = hMutability;
 
                 return frame.call1(ITERABLE_TO_ARRAY, hSequence, ahVars, iReturn);
@@ -497,7 +497,7 @@ public class xArray
                 ArrayHandle hArray  = (ArrayHandle) hTarget;
                 boolean    fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
 
-                // TODO GG ensure all elements are immutable, and if not, they must be Freezeable
+                // TODO GG ensure all elements are immutable, and if not, they must be Freezable
 
                 if (fInPlace)
                     {
@@ -630,7 +630,7 @@ public class xArray
 
         switch (hArray.m_mutability)
             {
-            case FixedSize:
+            case Fixed:
                 return frame.raiseException(xException.readOnly(frame));
 
             case Constant:
@@ -668,7 +668,7 @@ public class xArray
 
         switch (hArray.m_mutability)
             {
-            case FixedSize:
+            case Fixed:
                 return frame.raiseException(xException.readOnly(frame));
 
             case Constant:
@@ -707,7 +707,7 @@ public class xArray
 
         switch (hArray.m_mutability)
             {
-            case FixedSize:
+            case Fixed:
                 return frame.raiseException(xException.readOnly(frame));
 
             case Constant:
@@ -819,7 +819,7 @@ public class xArray
         Mutability mutability = null;
         switch (hArray.m_mutability)
             {
-            case FixedSize:
+            case Fixed:
                 return frame.raiseException(xException.readOnly(frame));
 
             case Constant:
@@ -942,7 +942,7 @@ public class xArray
             // an array can only grow without any "holes"
             if (cSize == ahValue.length)
                 {
-                if (hArray.m_mutability == Mutability.FixedSize)
+                if (hArray.m_mutability == Mutability.Fixed)
                     {
                     return frame.raiseException(xException.readOnly(frame));
                     }
@@ -1250,7 +1250,7 @@ public class xArray
             }
         }
 
-    public enum Mutability {Constant, Persistent, Mutable, FixedSize}
+    public enum Mutability {Constant, Persistent, Fixed, Mutable}
 
     // array of constructors
     private static MethodConstant[] CONSTRUCTORS = new MethodConstant[4];

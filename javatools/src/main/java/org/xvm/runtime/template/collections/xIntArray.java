@@ -128,7 +128,7 @@ public class xIntArray
             // an array can only grow without any "holes"
             if (cSize == alValue.length)
                 {
-                if (hArray.m_mutability == Mutability.FixedSize)
+                if (hArray.m_mutability == Mutability.Fixed)
                     {
                     return frame.raiseException(xException.readOnly(frame));
                     }

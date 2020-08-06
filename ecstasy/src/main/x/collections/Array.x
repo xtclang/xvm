@@ -640,7 +640,7 @@ class Array<Element>
             return freeze(inPlace);
             }
 
-        if (!inPlace || mutability < this.mutability)
+        if (!inPlace || mutability > this.mutability)
             {
             return new Array(mutability, this);  // return a copy that has the desired mutability
             }

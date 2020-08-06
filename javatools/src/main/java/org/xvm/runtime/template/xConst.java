@@ -215,7 +215,7 @@ public class xConst
                 if (ahFields.length > 0)
                     {
                     GenericArrayHandle hValues = (GenericArrayHandle)
-                        xArray.makeObjectArrayHandle(ahFields, xArray.Mutability.FixedSize);
+                        xArray.makeObjectArrayHandle(ahFields, xArray.Mutability.Fixed);
 
                     ObjectHandle[] ahVars = new ObjectHandle[FN_FREEZE.getMaxVars()];
                     ahVars[0] = hValues;
