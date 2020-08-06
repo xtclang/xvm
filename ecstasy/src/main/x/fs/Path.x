@@ -359,12 +359,12 @@ const Path
             Path result = this;
             for (Int steps = size - upper - 1; steps > 0; --steps)
                 {
-                result = result.parent;
+                result = result.parent ?: assert;
                 }
             return result;
             }
 
-        Path? slice = null;
+        Path? slice = Null;
         for (Int index : indexes)
             {
             Path part = this[index];
