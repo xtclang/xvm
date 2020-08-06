@@ -100,6 +100,28 @@ mixin Interval<Element extends immutable Sequential>
             }
         }
 
+
+    @Op("[]") Element getElement(Int index)
+        {
+        // TODO this is super inefficient and should be built into Sequential as applySteps() or something
+        Element value = effectiveFirst;
+        if (descending)
+            {
+            while (index-- > 0)
+                {
+                --value;
+                }
+            }
+        else
+            {
+            while (index-- > 0)
+                {
+                ++value;
+                }
+            }
+        return value;
+        }
+
     /**
      * Obtain an iterator over all of the values in the interval. Note that the values are iterated
      * in the order that the interval was specified, so if the interval was specified with a higher

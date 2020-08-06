@@ -607,21 +607,12 @@ interface List<Element>
             // already in the right order
             return inPlace
                     ? this
-                    : new Array<Element>(Mutable, this); // REVIEW this loses the Orderer for orderedBy()
+                    : this[0..size);
             }
 
-        if (this.inPlace && inPlace)
-            {
-            // TODO
-            }
-
-        // TODO functions for different sort implementations; default sort() to pick one based on size etc.
-        // eventual to-do is to should pick a better sort impl based on some heuristics, such as
-        // size of list and how many elements are out-of-order
-//        function List<Element> (List<Element>, Orderer?) sortimpl = bubbleSort;
-// TODO
-//        sortimpl(temp, order);
-        TODO return super(orderer, inPlace);
+        return this.inPlace && inPlace
+                ? sort(this, orderer)
+                : super(orderer);
         }
 
     /**
@@ -801,11 +792,7 @@ interface List<Element>
             }
         else
             {
-            // this returns an array, which is a reasonable default, but unlikely to be desirable
-            // if the List implementation is specialized and the result should be similarly
-            // specialized
-            TODO
-//            return toArray().replace(index, value);
+            throw new ReadOnly();
             }
         }
 
@@ -1206,6 +1193,7 @@ interface List<Element>
             void set(Element value)
                 {
                 Int index = this.index;
+                Int size  = this.List.size;
                 if (index < size)
                     {
                     // may throw ReadOnly
@@ -1213,8 +1201,8 @@ interface List<Element>
                     }
                 else if (inPlace)
                     {
+                    this.index = size;
                     add(value);
-                    index = size;
                     }
                 else
                     {
@@ -1226,18 +1214,20 @@ interface List<Element>
         @Override
         void insert(Element value)
             {
-            if (inPlace)
+            if (!inPlace)
                 {
                 throw new ReadOnly();
                 }
 
             Int index = this.index;
+            Int size  = this.List.size;
             if (index < size)
                 {
                 list.insert(index, value);
                 }
             else
                 {
+                this.index = size;
                 add(value);
                 }
             }
@@ -1251,10 +1241,12 @@ interface List<Element>
                 }
 
             Int index = this.index;
+            Int size  = this.List.size;
             if (index < size)
                 {
                 list.delete(index);
                 }
+            // REVIEW else throw ???
             }
         }
 
@@ -1264,10 +1256,6 @@ interface List<Element>
     @Override
     @Op("[..]") List!<Element> slice(Range<Int> indexes)
         {
-        assert indexes.effectiveLowerBound >= 0;
-        assert indexes.effectiveUpperBound < size;
-
-// TODO
         return new SubList(indexes);
         }
 
@@ -1275,9 +1263,19 @@ interface List<Element>
      * An SubList is a simple [List] implementation that delegates all operations back to an
      * underlying List.
      */
-    class SubList(Range<Int> indexes)
+    class SubList
             implements List<Element>
         {
+        construct(Range<Int> indexes)
+            {
+            assert indexes.effectiveLowerBound >= 0;
+            assert indexes.effectiveUpperBound < size;
+            this.indexes = indexes;
+// TODO
+            }
+
+        protected/private Range<Int> indexes;
+
         @Override
         Int size.get()
             {
@@ -1354,17 +1352,15 @@ interface List<Element>
     // ----- sorting algorithms --------------------------------------------------------------------
 
     /**
-     * Bubble-sort the contents of the passed list, in place, using the specified Orderer. The loop
-     * is optimized for an almost-sorted list, with the most-likely-to-be-unsorted items at the end.
+     * Sort the contents of the passed list, in place if possible, using the specified order.
      *
      * @param list   the list to sort
-     * @param order  the optional Orderer to use to sort the list; defaults to using the "natural"
-     *               sort order of the Element type)
+     * @param order  (optional) the Orderer to use to sort the list; defaults to the natural order
+     *               for Element
      *
-     * @return the sorted list, which may be a different `List` than the one passed in
+     * @return the sorted list (which may not be the list that was passed in)
      */
-     // TODO GG: why do we need List! ?
-    static <Element> List!<Element> bubbleSort(List!<Element> list, List<Element>.Orderer? order = Null)
+    static <Element> List!<Element> sort(List!<Element> list, List<Element>.Orderer? order = Null)
         {
         order ?:= list.naturalOrderer ?: throw new TypeMismatch($"Element type {Element} is not Orderable");
 
@@ -1372,56 +1368,64 @@ interface List<Element>
             {
             list = list.toArray(Mutable);
             }
-        else if (list.indexed)
-            {
-            sortImpl(list, order);
-            }
-        else
-            {
-            // avoid index-based operations during the sort if the list is not indexed
-            sortImpl(list.cursor(0), order);
-            }
 
+        bubbleSort(list, order);
         return list;
+        }
 
-        private static <Element> void sortImpl(List<Element> list, List<Element>.Orderer order)
+    /**
+     * Bubble-sort the contents of the passed list, in place, using the specified Orderer. The loop
+     * is optimized for an almost-sorted list, with the most-likely-to-be-unsorted items at the end.
+     *
+     * @param list   the list to sort in-place
+     * @param order  the Orderer to use to sort the list
+     * @param max    the maximum number of passes to make over the list
+     *
+     * @return True iff the list is now sorted
+     */
+    static <Element> Boolean bubbleSort(List<Element>         list,
+                                        List<Element>.Orderer order,
+                                        Int                   max = Int.maxvalue)
+        {
+        if (!list.indexed)
             {
-            Int last = list.size - 1;
-            if (last <= 0)
-                {
-                return;
-                }
+            // TODO cursor-based implementation?
+            }
 
-            Int first = 0;
-            do
+        Int last = list.size - 1;
+        if (last <= 0)
+            {
+            return True;
+            }
+
+        Int     first = 0;
+        Boolean sorted;
+        do
+            {
+            sorted = true;
+
+            list.Element bubble = list[last];
+            for (Int i = last-1; i >= first; --i)
                 {
-                Boolean      sorted = true;
-                list.Element bubble = list[last];
-                for (Int i = last-1; i >= first; --i)
+                list.Element prev = list[i];
+                if (order(prev, bubble) == Greater)
                     {
-                    list.Element prev = list[i];
-                    if (order(prev, bubble) == Greater)
-                        {
-                        list[i  ] = bubble;
-                        list[i+1] = prev;
-                        sorted    = false;
-                        }
-                    else
-                        {
-                        bubble = prev;
-                        }
+                    list[i  ] = bubble;
+                    list[i+1] = prev;
+                    sorted    = false;
                     }
-
-                // the smallest item in the list has now bubbled up to the first position in the list;
-                // optimize the next iteration by only bubbling up to the second position, and so on
-                ++first;
+                else
+                    {
+                    bubble = prev;
+                    }
                 }
-            while (!sorted);
-            }
 
-        private static <Element> void sortImpl(List<Element>.Cursor cur, List<Element>.Orderer order)
-            {
-            TODO // TODO
+            // the smallest item in the list has now bubbled up to the first position in the list;
+            // optimize the next iteration by only bubbling up to the second position, and so on
+            ++first;
             }
+        while (!sorted && --max > 0);
+
+        return sorted;
         }
     }
