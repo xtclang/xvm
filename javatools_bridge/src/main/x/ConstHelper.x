@@ -81,7 +81,7 @@ class ConstHelper
                 {
                 if (field.is(Freezable))
                     {
-                    fields[i] = field.freeze(false);
+                    fields[i] = field.freeze();
                     result = -2;
                     }
                 else

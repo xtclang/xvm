@@ -2,7 +2,7 @@
  * The MapSet is simple implementation of the [Set] interface that uses an underlying [Map] instance
  * as its storage.
  *
- * TODO persistend mode and change inPlace to False on freeze()
+ * TODO persistent mode
  */
 class MapSet<Element>
         implements Set<Element>

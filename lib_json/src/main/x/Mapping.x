@@ -3,6 +3,7 @@
  * from/to a JSON document format.
  */
 interface Mapping<Serializable>
+        extends immutable Const
     {
     /**
      * The name of the type for the mapping. This name helps to identify a Mapping from JSON

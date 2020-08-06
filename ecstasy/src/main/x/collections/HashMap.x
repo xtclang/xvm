@@ -11,7 +11,7 @@ import maps.ReifiedEntry;
 class HashMap<Key, Value>
         implements Map<Key, Value>
         // TODO conditional incorporation of ... HashMap<Key extends immutable Hashable, Value>
-        // TODO Freezable interfaces
+        incorporates conditional MapFreezer<Key extends immutable Object, Value extends ImmutableAble>
         incorporates text.Stringer
     {
     // ----- constructors --------------------------------------------------------------------------
