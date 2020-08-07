@@ -23,19 +23,24 @@
  * * The actual version `v<sub>A</sub>` is **substitutable for** the requested version
  *   `v<sub>R</sub>` iff each version indicator of the requested version from the most
  *   significant to the least significant is identical to the corresponding version indicator
- *   in the actual version, or if the first different version indicator in the actual version is
- *   greater than the corresponding version indicator in the requested version; in other words,
- *   version "1.2", "1.2.1", and "1.2.1.7", and "1.3" are all substitutable for version "1.2",
- *   but "2.0" and "2.1" are not.
+ *   in the actual version, or if the first difference encountered is on the least significant
+ *   version indicator of the requested version, and the version indicator in the actual version is
+ *   greater than the version indicator in the requested version; in other words, version "1.2",
+ *   "1.2.1", "1.2.1.7", "1.3", and "1.7.5" are substitutable for version "1.2", but "2.0", "2.1",
+ *   and "3" are **not** substitutable for version "1.2".
  *
  * * In the previous example, to use only one of the versions that begins with "1.2", the
  *   requested version `v<sub>R</sub>` should be specified as "1.2.0"; versions "1.2",
- *   "1.2.1", and "1.2.1.7" are substitutes for 1.2.0, but versions "1.3", "2.0", and "2.1" are
- *   not.
+ *   "1.2.1", and "1.2.1.7" are substitutes for 1.2.0, but **not** versions "1.3", "2.0", and "2.1".
  *
- * * Pre-release version numbers are encoded specially. The version "1.2beta3" is encoded as
- *   "1.2.-2.3", which means that it is explicitly **not** substitutable for version "1.2";
- *   however, version "1.2" _is_ substitutable for version "1.2beta3".
+ * * Pre-release version numbers are encoded specially, and impact the substitutability rules
+ *   significantly. The version "1.2beta3" is encoded as "1.2.-2.3"; it is substitutable for version
+ *   "1.1", but it is explicitly **not** substitutable for version "1.2" -- because it is a
+ *   pre-release of version "1.2". However, version "1.2" _is_ substitutable for version "1.2beta3".
+ *   The pre-release indicator means that the immediately preceding version indicator is _less than_
+ *   its value indicates; for example, version "1.2beta3" is less than (precedes) version "1.2", but
+ *   it is greater than version "1.2alpha", "1.2alpha7", "1.2beta" and version "1.2beta2", and it is
+ *   less than version "1.2beta4" and version "1.2rc".
  *
  * The Version design supports [Semantic Versioning 2.0.0] (https://semver.org/), and adherence
  * to that specification is encouraged. However, the use of Semantic Versioning is a choice, and
@@ -43,14 +48,16 @@
  * Additionally, this design constrains the use of alpha-numeric forms in two different ways:
  *
  * * Only six alpha-numeric forms are supported ("CI", "Dev", "QC", "alpha", "beta", and "rc"),
- *   with the first three representing internal versions and the remainder representing published
+ *   with the first three representing internal versions and the remainder representing publishable
  *   versions. (The use of uppercase names for the first three is not accidental; ASCII uppercase
- *   precedes ASCII lowercase, which achieves compliance with the ASCII ordering specified by the
- *   Semantic Versioning specification.)
+ *   precedes ASCII lowercase, which achieves compliance with the ASCII ordering rules specified by
+ *   the Semantic Versioning specification.)
  *
  * * A Version can only contain **one** of the alpha-numeric pre-release specifiers, and it must
- *   occur at the end of the Version (no subsequent "dot" indicators). For example, "2.0.0-alpha"
- *   and "2.0.0-beta3" are both legal, but neither "2-alpha-beta3" nor "2.0.0-beta3.5" are legal.
+ *   occur at the end of the Version with an optional numeric counter appended; i.e. there can be
+ *   no subsequent "dot" indicators after the alpha-numeric pre-release specifier. For example,
+ *   "2.0.0-alpha" and "2.0.0-beta3" are both legal, but neither "2-alpha-beta3" nor "2.0.0-beta3.5"
+ *   are legal.
  *
  * As specified by Semantic Versioning, build metadata is appended to the end of the version string
  * after a plus sign. Build metadata is retained by, but ignored by the Version class. The examples
@@ -68,7 +75,7 @@ const Version
 
     /**
      * Each part of a version is called a version indicator, and that version indicator has a Form.
-     * The overwhelmingly prevalent form of version indicator is the Num (number) form.
+     * The overwhelmingly prevalent form of version indicator is the `Number` form.
      */
     enum Form(String text, Int equiv)
         {
@@ -78,13 +85,13 @@ const Version
          * to identify builds; for example, a the 47th CI build for version 2.7.1 should be labeled
          * as "2.7.1-CI47"
          */
-        CI   ("CI",    -6),
+        CI    ("CI",    -6),
         /**
          * Development (or "engineering") version. This is an "internal" version, i.e. not intended
          * for distribution. In the absence of a Version being specified, the Ecstasy compiler will
          * simply use "Dev" as the default version when it emits a module.
          */
-        Dev  ("Dev"  , -5),
+        Dev   ("Dev"  , -5),
         /**
          * Quality Control (QC) version. This is an "internal" version, i.e. not intended for
          * distribution. It is expected that when a Dev or CI version is selected for testing,
@@ -96,31 +103,31 @@ const Version
          *
          * (The use of "QC" instead of "QA" is purposeful, and aligns with CMM and ISO-9000.)
          */
-        QC   ("QC"   , -4),
+        QC    ("QC"   , -4),
         /**
          * Alpha (α) version. An alpha version usually indicates an extremely early pre-release
          * version that is selectively published to obtain engineering feedback. An alpha is an
          * external version, but it is not a generally available (GA) version.
          */
-        Alpha("alpha", -3),
+        Alpha ("alpha", -3),
         /**
          * Beta (β) version. A beta version usually indicates a pre-release version that is
          * feature complete (or nearly so), and approaching a GA release. A beta version is
          * selectively published to obtain engineering, quality control, and end user feedback.
          * A beta is an external version, but it is not a generally available (GA) version.
          */
-        Beta ("beta" , -2),
+        Beta  ("beta" , -2),
         /**
          * Release Candidate (RC) version. A release candidate version indicates a pre-release
          * version that is being evaluated as a potential version to publish as the generally
          * available (GA) release version. A release candidate is an external version, but it is
          * not a generally available (GA) version.
          */
-        RC   ("rc"   , -1),
+        RC    ("rc"   , -1),
         /**
          * An integer version indicator.
          */
-        Num  ("#"    ,  0)
+        Number("#"    ,  0)
         }
 
     /**
@@ -137,13 +144,13 @@ const Version
 
         return switch (name[0])
             {
-            case 'c', 'C': (true, CI);
-            case 'd', 'D': (true, Dev);
-            case 'q', 'Q': (true, QC);
-            case 'a', 'A': (true, Alpha);
-            case 'b', 'B': (true, Beta);
-            case 'r', 'R': (true, RC);
-            default      : false;
+            case 'c', 'C': (True, CI);
+            case 'd', 'D': (True, Dev);
+            case 'q', 'Q': (True, QC);
+            case 'a', 'A': (True, Alpha);
+            case 'b', 'B': (True, Beta);
+            case 'r', 'R': (True, RC);
+            default      : False;
             };
         }
 
@@ -159,7 +166,7 @@ const Version
         {
         // check for "+" (start of build string)
         Int     end   = version.size-1;
-        String? build = null;
+        String? build = Null;
         if (Int buildStart := version.indexOf('+'))
             {
             if (buildStart < end)
@@ -174,10 +181,10 @@ const Version
         //   "-" (precedes non-numeric version indicator)
         //   a shift from numbers to letters, or letters to numbers
         //   the beginning of the string
-        Boolean  fAnyChars = false;
-        Boolean  fAnyNums  = false;
+        Boolean  fAnyChars = False;
+        Boolean  fAnyNums  = False;
         Int      start     = 0;
-        Version? parent    = null;
+        Version? parent    = Null;
         scan: for (Int of = end; of >= 0; --of)
             {
             switch (Char ch = version[of])
@@ -203,7 +210,7 @@ const Version
                         break scan;
                         }
 
-                    fAnyChars = true;
+                    fAnyChars = True;
                     break;
 
                 case '0'..'9':
@@ -216,7 +223,7 @@ const Version
                         break scan;
                         }
 
-                    fAnyNums = true;
+                    fAnyNums = True;
                     break;
                 }
             }
@@ -252,9 +259,9 @@ const Version
      * @param build   an optional build metadata string, comprised only of ASCII alphanumerics and
      *                hyphen `[0-9A-Za-z-]`
      */
-    construct(Version? parent, Int number, String? build = null)
+    construct(Version? parent, Int number, String? build = Null)
         {
-        construct Version(parent, Num, number, build);
+        construct Version(parent, Number, number, build);
         }
 
     /**
@@ -265,9 +272,9 @@ const Version
      * @param build   an optional build metadata string, comprised only of ASCII alphanumerics and
      *                hyphen `[0-9A-Za-z-]`
      */
-    construct(Version? parent, Form form, String? build = null)
+    construct(Version? parent, Form form, String? build = Null)
         {
-        assert form != Num;
+        assert form != Number;
         construct Version(parent, form, form.equiv, build);
         }
 
@@ -280,17 +287,17 @@ const Version
      * @param build   an optional build metadata string, comprised only of ASCII alphanumerics and
      *                hyphen `[0-9A-Za-z-]`
      */
-    private construct(Version? parent, Form form, Int number, String? build = null)
+    private construct(Version? parent, Form form, Int number, String? build = Null)
         {
         // only one pre-release designation can be used in a Version
-        assert form == Num || parent?.GA;
+        assert form == Number || parent?.GA;
 
         // version indicators are >= 0 except for the pre-defined forms
-        assert form == Num ? number >= 0 : number == form.equiv;
+        assert form == Number ? number >= 0 : number == form.equiv;
 
         // for a non-GA parent, only a version number indicator can be added, and only if the last
         // indicator of the parent is the pre-release indicator
-        assert parent?.GA || parent?.form != Num;  // TODO CP: the second parent? should be just "parent"
+        assert parent?.GA || parent?.form != Number;   // TODO GG the second "parent?" should be just "parent"
 
         for (Char ch : build?)
             {
@@ -334,7 +341,7 @@ const Version
             case -3: Alpha;
             case -2: Beta;
             case -1: RC;
-            default: Num;
+            default: Number;
             };
         }
 
@@ -358,11 +365,38 @@ const Version
      */
     Boolean GA.get()
         {
-        return form == Num && (parent?.form == Num : true);
+        return form == Number && (parent?.form == Number : True);
         }
 
 
     // ----- operations ----------------------------------------------------------------------------
+
+    /**
+     * Determine if this is a pre-release, and if it is, determine the version that it is a
+     * pre-release of. Since it is possible that the version number (that this is a pre-release of)
+     * is not specified, the result may be `Null`.
+     *
+     * @return if this is a pre-release version
+     * @return (conditional) the `Version` that this is a pre-release of, or `Null` if this
+     *         pre-release does not have a specific version number that it is a pre-release of
+     *         (e.g. `v:1.2` for "1.2-beta3")
+     * @return (conditional) the form of the pre-release (e.g. `Beta` for "1.2-beta3")
+     * @return (conditional) the number of the pre-release (e.g. `3` for "1.2-beta3")
+     */
+    conditional (Version?, Form, Int) prereleaseOf()
+        {
+        if (form != Number)
+            {
+            return True, parent, form, 0;
+            }
+
+        if (Version parent ?= this.parent, parent.form != Number)
+            {
+            return True, parent.parent, parent.form, this.number;
+            }
+
+        return False;
+        }
 
     /**
      * Simplify the version, if possible, by removing any redundant or ignored information without
@@ -377,43 +411,139 @@ const Version
             return parent?.normalize();
             }
 
-        return build == null
+        return build == Null
                 ? this
-                : new Version(parent, form, number, null);
+                : new Version(parent, form, number, Null);
         }
 
     /**
      * Determine if this version satisfies the specified required version.
      *
-     * The actual version `v<sub>A</sub>` is **substitutable for** the requested version
-     * `v<sub>R</sub>` iff each version indicator of the requested version from the most
-     * significant to the least significant is identical to the corresponding version indicator
-     * in the actual version, or if the first different version indicator in the actual version is
-     * greater than the corresponding version indicator in the requested version; in other words,
-     * version "1.2", "1.2.1", and "1.2.1.7", and "1.3" are all substitutable for version "1.2",
-     * but "2.0" and "2.1" are not.
+     * For two GA versions, the one is substitutable for the other iff each version indicator of the
+     * requested version from the most significant to the least significant is identical to the
+     * corresponding version indicator in the actual version, or if the first difference encountered
+     * is on the least significant version indicator of the requested version, and the corresponding
+     * version indicator in the actual version is greater than the version indicator in the
+     * requested version; in other words, version "1.2", "1.2.1", "1.2.1.7", "1.3", and "1.7.5" are
+     * all substitutable for version "1.2", but "2.0", "2.1", and "3" are not. To use only one of
+     * the versions that begins with "1.2", the requested version should be specified as "1.2.0";
+     * versions "1.2", "1.2.1", and "1.2.1.7" are substitutes for 1.2.0, but **not** versions "1.3",
+     * "2.0", and "2.1".
+     *
+     * Pre-release version numbers are encoded specially, and impact the substitutability rules
+     * significantly. The version "1.2beta3" is encoded as "1.2.-2.3"; it is substitutable for
+     * version "1.1", but it is explicitly **not** substitutable for version "1.2" -- because it is
+     * a pre-release of version "1.2". However, version "1.2" _is_ substitutable for version
+     * "1.2beta3". The pre-release indicator means that the immediately preceding version indicator
+     * is _less than_ its value indicates; for example, version "1.2beta3" is less than (precedes)
+     * version "1.2", but it is greater than version "1.2alpha", "1.2alpha7", "1.2beta", and version
+     * "1.2beta2", and it is less than version "1.2beta4" and version "1.2rc".
      *
      * @param that  the requested version
      *
-     * @return true iff this version can be used as a match for the requested version based on the
+     * @return True iff this version can be used as a match for the requested version based on the
      *         rules of version substitutability
      */
     Boolean satisfies(Version that)
         {
-        TODO
-//        Int tailSize = this.size - that.size;
-//        if (tailSize < 0 || this.absolute != that.absolute)
-//            {
-//            return false;
-//            }
-//
-//        Version parent = this;
-//        while (tailSize-- > 0)
-//            {
-//            parent = parent.parent ?: assert;
-//            }
-//
-//        return parent == that;
+        // if the versions are equal, then the answer is obvious
+        if (this == that)
+            {
+            return True;
+            }
+
+        switch (this.GA, that.GA)
+            {
+            case (False, False):
+                // "this" is a pre-release, and "that" is a pre-release, so "this" satisfies "that"
+                // if "this" satisfies the GA release of "that", or if the GA release of "this" and
+                // "that" are the same, and the pre-release of "this" is greater than the
+                // pre-release of "that"
+                assert (Version? thisGA, Form thisForm, Int thisNum) := this.prereleaseOf();
+                assert (Version? thatGA, Form thatForm, Int thatNum) := that.prereleaseOf();
+
+                // for example, 1.3-beta2 satisfies 1.2-rc7
+                if (thisGA != Null && thatGA == Null || this.satisfies(thatGA?))
+                    {
+                    return True;
+                    }
+
+                // for example, 1.3-beta2 does NOT satisfy 1.3-rc7
+                if (thisGA == thatGA)
+                    {
+                    return thisForm > thatForm || thisForm == thatForm && thisNum >= thatNum;
+                    }
+
+                return False;
+
+            case (False, True):
+                // "this" is a pre-release, and "that" is GA, so strip off the pre-release version
+                // info (to pretend it's a GA), and if what is left is equal to "that", then "this"
+                // is a pre-release of "that" (and thus does NOT satisfy "that"); otherwise, if the
+                // remainder (GA) of "this" satisfies "that", then the pre-release "this" also
+                // satisfies "that"
+                assert Version? thisGA := this.prereleaseOf();
+                return thisGA != Null && thisGA != that && thisGA.satisfies(that);
+
+            case (True, False):
+                // "this" is a GA, and "that" is a pre-release, so "this" satisfies "that" iff
+                // "this" satisfies the GA version of "that"; for example, both "1.3" and "1.4"
+                // satisfy the requrest for "1.3-beta"
+                assert Version? thatGA := that.prereleaseOf();
+                return thatGA == Null || this.satisfies(thatGA);
+
+            case (True, True):
+                // if this version number is shorter than that version number, then this version
+                // cannot satisfy that version; consider these examples:
+                //
+                // this    that   result
+                // -----   -----  -------------
+                // 2       2.6    nope, version 2 is older
+                // 3       2.6    nope, version 3 is not related to version 2.6
+                // 1.2     1.2.1  nope
+                // 1.3     1.2.1  nope
+                // 1.2     1.2.0  YES! -- except we would have already found this above (this==that)
+                if (this.size < that.size)
+                    {
+                    return False;
+                    }
+
+                // the digits left-to-right from "this" need to match the digits from "that", except
+                // that the last digit of "this" may be greater than the last digit of "that"
+                //
+                // thisP    thatP  result
+                // ------   -----  -------------
+                // 2.5...   2.6    No
+                // 1.6...   2.6    No
+                // 2.6...   2.6    Yes
+                // 3.6...   2.6    No
+                // 2.7...   2.6    Yes
+                Version thisParent = this;
+                Version thatParent = that;
+                for (Int i = 0, Int c = this.size - that.size; i < c; ++i)
+                    {
+                    thisParent = thisParent.parent ?: assert;
+                    }
+                assert thisParent.size == thatParent.size;
+
+                // now that we got rid of the "..." (the two versions are now of equal number of
+                // digits), the rightmost digit of this must be equal or greater than the rightmost
+                // digit of that
+                if (thisParent.number < thatParent.number)
+                    {
+                    return False;
+                    }
+
+                // all other digits must be equal
+                while (thisParent ?= thisParent.parent, thatParent ?= thatParent.parent)
+                    {
+                    if (thisParent.number != thatParent.number)
+                        {
+                        return False;
+                        }
+                    }
+                return True;
+            }
         }
 
 
@@ -422,17 +552,17 @@ const Version
     @Override
     conditional Version prev()
         {
-        return form == Num && number > 0
-                ? (true, new Version(parent, form, number-1, null))
-                : false;
+        return form == Number && number > 0
+                ? (True, new Version(parent, form, number-1, Null))
+                : False;
         }
 
     @Override
     conditional Version next()
         {
-        return true, form == Num
-                ? new Version(parent, form, number+1, null)
-                : new Version(this, Num, 1, null);
+        return True, form == Number
+                ? new Version(parent, form, number+1, Null)
+                : new Version(this, Number, 1, Null);
         }
 
     @Override
@@ -441,23 +571,23 @@ const Version
         // common scenario: two versions with different ending number but common root
         // e.g. "1.2.beta3" to "1.2.beta5"
         Int sizeDiff = this.size - that.size;
-        if (sizeDiff == 0 && this.form == that.form && (this.parent? == that.parent? : true))
+        if (sizeDiff == 0 && this.form == that.form && (this.parent? == that.parent? : True))
             {
-            return this.form == Num
+            return this.form == Number
                     ? that.number - this.number
                     : 0;
             }
 
         // compare a numbered version to a non-numbered version
         // e.g. "1.2.beta3" to "1.2.beta"
-        if (sizeDiff == 1 && that.form != Num && this.parent? == that)
+        if (sizeDiff == 1 && that.form != Number && this.parent? == that)
             {
             return -this.number;
             }
 
         // compare a non-numbered version to a numbered version
         // e.g. "1.2.beta" to "1.2.beta3"
-        else if (sizeDiff == -1 && this.form != Num && this == that.parent?)
+        else if (sizeDiff == -1 && this.form != Number && this == that.parent?)
             {
             return that.number;
             }
@@ -472,17 +602,17 @@ const Version
             {
             case Negative:
                 steps = steps.abs();
-                return form == Num && number > steps
-                        ? new Version(parent, form, number-steps, null)
+                return form == Number && number > steps
+                        ? new Version(parent, form, number-steps, Null)
                         : throw new OutOfBounds($"Version={this}, steps={steps}");
 
             case Zero:
                 return this;
 
             case Positive:
-                return form == Num
-                        ? new Version(parent, form, number+steps, null)
-                        : new Version(this, Num, steps, null);
+                return form == Number
+                        ? new Version(parent, form, number+steps, Null)
+                        : new Version(this, Number, steps, Null);
             }
         }
 
@@ -493,14 +623,7 @@ const Version
     @Op("[]")
     Version getElement(Int index)
         {
-        if (index < 0)
-            {
-            throw new OutOfBounds(index.toString() + " < 0");
-            }
-        if (index >= size)
-            {
-            throw new OutOfBounds(index.toString() + " >= " + size);
-            }
+        assert:bounds index >= 0 && index < size;
 
         Version version = this;
         Int     steps   = size - index - 1;
@@ -508,7 +631,9 @@ const Version
             {
             version = version.parent ?: assert;
             }
-        return version;
+        return version.parent == Null
+                ? version
+                : new Version(Null, version.form, version.number, version.build);
         }
 
 
@@ -535,7 +660,7 @@ const Version
             return this[upper];
             }
 
-        Version? slice = null;
+        Version? slice = Null;
         for (Int index : indexes)
             {
             Version part = this[index];
@@ -550,11 +675,17 @@ const Version
     static <CompileType extends Version> Int hashCode(CompileType version)
         {
         Version? parent = version.parent;
-        return parent == null
+        return parent == Null
                 ? version.number
                 : Version.hashCode(parent.as(Version)).rotateLeft(1) ^ version.number;
         }
 
+    /**
+     * Two versions are equal iff after removing every trailing (least significant) "0" indicator,
+     * each version indicator from the most significant to the least significant is identical; in
+     * other words, version "1.2.1" is identical only to version "1.2.1" (which is identical to
+     * version "1.2.1.0").
+     */
     static <CompileType extends Version> Boolean equals(CompileType version1, CompileType version2)
         {
         switch (version1.size <=> version2.size)
@@ -607,17 +738,17 @@ const Version
         {
         Int      length  = 0;
         Version? version = this;
-        each: while (version != null)
+        each: while (version != Null)
             {
             // check if we accidentally assumed a separator character between the current
             // pre-release version indicator and the following version indicator (e.g. "beta.2"
             // should be "beta2")
-            if (version.form != Num && !each.first)
+            if (version.form != Number && !each.first)
                 {
                 --length;
                 }
 
-            length += 1 + (form == Num ? number.estimateStringLength() : form.text.size);
+            length += 1 + (form == Number ? number.estimateStringLength() : form.text.size);
 
             version = version.parent;
             }
@@ -632,16 +763,16 @@ const Version
         }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf, Boolean suppressBuild=false)
+    Appender<Char> appendTo(Appender<Char> buf, Boolean suppressBuild=False)
         {
-        parent?.appendTo(buf, true);
+        parent?.appendTo(buf, True);
 
-        if (parent != null && parent.form == Num)
+        if (parent != Null && parent.form == Number)
             {
-            buf.add(this.form == Num ? '.' : '-');
+            buf.add(this.form == Number ? '.' : '-');
             }
 
-        if (this.form == Num)
+        if (this.form == Number)
             {
             number.appendTo(buf);
             }
@@ -650,7 +781,7 @@ const Version
             form.text.appendTo(buf);
             }
 
-        if (build != null && !suppressBuild)
+        if (build != Null && !suppressBuild)
             {
             buf.add('+').addAll(build);
             }
