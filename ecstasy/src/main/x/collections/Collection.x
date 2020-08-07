@@ -224,7 +224,7 @@ interface Collection<Element>
             {
             // it's expensive to create a new HashSet for this purpose, but it turns an O(N^2)
             // operation into an O(2*N) problem
-            return new HashSet<Element>(this.as(Iterable<Element>)).containsAll(values); // TODO GG .as() not needed
+            return new HashSet<Element>(this).containsAll(values);
             }
 
         // brute force search for each value from the passed-in values collection

@@ -728,11 +728,13 @@ public class Context
             if (ctxOuter != null)
                 {
                 arg = ctxOuter.getVar(sName, name, Branch.Always, errs);
-                if (arg instanceof Register)
-                    {
-                    arg = resolveRegisterType(branch, (Register) arg);
-                    }
                 }
+            }
+        // we need to call resolveRegisterType() even on registers that are local
+        // since some formal types could have been narrowed afterwards
+        if (arg instanceof Register)
+            {
+            arg = resolveRegisterType(branch, (Register) arg);
             }
         return arg;
         }
@@ -1329,12 +1331,15 @@ public class Context
             {
             case WhenTrue:
                 ensureNarrowingMap(true).put(sName, infoNew);
+                break;
 
             case WhenFalse:
                 ensureNarrowingMap(false).put(sName, infoNew);
+                break;
 
             default:
                 ensureNameMap().put(sName, infoNew);
+                break;
             }
 
         replaceGenericType(sName, branch, infoNew.getType());
@@ -2005,10 +2010,10 @@ public class Context
                 {
                 // we only use the parent's "true" branch
                 arg = getOuterContext().getVar(sName, name, Branch.of(m_fWhenTrue), errs);
-                if (arg instanceof Register)
-                    {
-                    arg = resolveRegisterType(branch, (Register) arg);
-                    }
+                }
+            if (arg instanceof Register)
+                {
+                arg = resolveRegisterType(branch, (Register) arg);
                 }
             return arg;
             }
@@ -2098,10 +2103,10 @@ public class Context
                 {
                 // we only use the parent's "true" branch
                 arg = getOuterContext().getVar(sName, name, Branch.WhenTrue, errs);
-                if (arg instanceof Register)
-                    {
-                    arg = resolveRegisterType(branch, (Register) arg);
-                    }
+                }
+            if (arg instanceof Register)
+                {
+                arg = resolveRegisterType(branch, (Register) arg);
                 }
             return arg;
             }
@@ -2225,10 +2230,10 @@ public class Context
                 {
                 // we only use the parent's "false" branch (logical short-circuit)
                 arg = getOuterContext().getVar(sName, name, Branch.WhenFalse, errs);
-                if (arg instanceof Register)
-                    {
-                    arg = resolveRegisterType(branch, (Register) arg);
-                    }
+                }
+            if (arg instanceof Register)
+                {
+                arg = resolveRegisterType(branch, (Register) arg);
                 }
             return arg;
             }
@@ -2334,10 +2339,10 @@ public class Context
             if (arg == null)
                 {
                 arg = getOuterContext().getVar(sName, name, branch.complement(), errs);
-                if (arg instanceof Register)
-                    {
-                    arg = resolveRegisterType(branch, (Register) arg);
-                    }
+                }
+            if (arg instanceof Register)
+                {
+                arg = resolveRegisterType(branch, (Register) arg);
                 }
             return arg;
             }
