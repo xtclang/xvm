@@ -4,6 +4,7 @@
 class HashSet<Element>
         extends MapSet<Element>
         // TODO variably mutable implementations to match HashMap
+        // TODO make "freeze" virtual - to return HashSet, not MapSet
     {
     /**
      * Construct a HashSet that optionally contains an initial set of values. The [NaturalHasher]

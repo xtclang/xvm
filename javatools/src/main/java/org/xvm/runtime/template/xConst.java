@@ -235,7 +235,24 @@ public class xConst
                                 List<String> listNames = clz.getFieldNames();
                                 for (int i = 0, c = listNames.size(); i < c; i++)
                                     {
-                                    hConst.setField(listNames.get(i), hValues.m_ahValue[i]);
+                                    // verify that "freeze" didn't widen the type
+                                    String       sField  = listNames.get(i);
+                                    ObjectHandle hNew    = hValues.m_ahValue[i];
+                                    TypeConstant typeOld = hConst.getField(sField).getType();
+                                    TypeConstant typeNew = hNew.getType();
+                                    if (typeNew.isA(typeOld))
+                                        {
+                                        hConst.setField(sField, hNew);
+                                        }
+                                    else
+                                        {
+                                        TypeConstant typeExpected = frameCaller.poolContext().
+                                            ensureImmutableTypeConstant(typeOld);
+                                        return frameCaller.raiseException("The freeze() result type for the \"" +
+                                            sField + "\" field was illegally changed; \"" +
+                                            typeExpected.getValueString() + "\" expected, \"" +
+                                            typeNew.getValueString() + "\" returned");
+                                        }
                                     }
                                 break;
                                 }
@@ -243,7 +260,7 @@ public class xConst
                             default: // iResult is an index for a not freezable field
                                 {
                                 String sField = clz.getFieldNames().get(iResult);
-                                return frame.raiseException("field \"" + sField + "\" is not freezable");
+                                return frame.raiseException("Field \"" + sField + "\" is not freezable");
                                 }
                             }
 

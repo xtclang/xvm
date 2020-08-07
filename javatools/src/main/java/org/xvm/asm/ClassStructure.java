@@ -1886,8 +1886,7 @@ public class ClassStructure
                     // for virtual child we need to repeat the check for the parent types
                     TypeConstant typeParentLeft  = typeLeft.getParentType();
                     TypeConstant typeParentRight = typeRight.getParentType();
-                    Relation     relationParent  = getVirtualParent().
-                            findContribution(typeParentLeft, typeParentRight, fAllowInto);
+                    Relation     relationParent  = typeParentRight.calculateRelation(typeParentLeft);
                     return relation.worseOf(relationParent);
                     }
                 break;

@@ -65,10 +65,10 @@ const TypeSystem
             }
 
         this.modules               = modules;
-        this.modulePaths           = modulePaths;
-        this.sharedModules         = sharedModules;
-        this.moduleBySimpleName    = moduleBySimpleName;
-        this.moduleByQualifiedName = moduleByQualifiedName;
+        this.modulePaths           = modulePaths          .freeze(True);
+        this.sharedModules         = sharedModules        .freeze(True);
+        this.moduleBySimpleName    = moduleBySimpleName   .freeze(True);
+        this.moduleByQualifiedName = moduleByQualifiedName.freeze(True);
         }
 
     /**
