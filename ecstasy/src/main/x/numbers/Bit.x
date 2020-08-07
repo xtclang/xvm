@@ -95,7 +95,6 @@ const Bit
         {
         return switch (this, steps)
             {
-            // TODO GG take the parenthesis off of these case statements to see the compiler NPE
             case (_,  0): this;
             case (0,  1): 1;
             case (1, -1): 0;
