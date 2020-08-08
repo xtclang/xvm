@@ -170,18 +170,34 @@ interface Map<Key, Value>
      *
      * @return the resultant map, which is the same as `this` for an in-place map
      *
-     * @throws ReadOnly  if the map is _fixed size_ and the key does not already exist in the map
+     * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
      Map put(Key key, Value value)
         {
-        TODO entry addition and modification is not supported
+        throw new ReadOnly("entry addition and modification is not supported");
         }
 
+    /**
+     * For an in-place Map, store a mapping of the specified key to the specified value, regardless
+     * of whether that key is already present in the map. This method supports the use of the `[]`
+     * operator:
+     *
+     *     map[key] = value;
+     *
+     * @param key    the key to store in the map
+     * @param value  the value to associate with the specified key
+     *
+     * @throws ReadOnly  if the map does not allow or support the requested mutating operation
+     */
     @Op("[]=")
     void putInPlace(Key key, Value value)
         {
-        assert inPlace;
-        put(key, value);
+        if (inPlace)
+            {
+            put(key, value);
+            }
+
+        throw new ReadOnly("map does not support in-place modification");
         }
 
     /**
@@ -195,7 +211,7 @@ interface Map<Key, Value>
      *
      * @return the resultant map, which is the same as `this` for an in-place map
      *
-     * @throws ReadOnly  if the map is _fixed size_ and the keys do not already all exist in the map
+     * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
     Map putAll(Map! that)
         {
@@ -221,7 +237,7 @@ interface Map<Key, Value>
      * @return True iff the key did not previously exist in the map and now it does
      * @return the resultant map, which is the same as `this` for an in-place map
      *
-     * @throws ReadOnly  if the map is _fixed size_
+     * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
     conditional Map putIfAbsent(Key key, Value value)
         {
@@ -264,11 +280,11 @@ interface Map<Key, Value>
      *
      * @return the resultant map, which is the same as `this` for an in-place map
      *
-     * @throws ReadOnly  if the map is _fixed size_
+     * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
     Map remove(Key key)
         {
-        TODO entry removal is not supported
+        throw new ReadOnly("entry removal is not supported");
         }
 
     /**
@@ -281,7 +297,7 @@ interface Map<Key, Value>
      * @return True iff the key did exist in the map and was associated with `value`
      * @return the resultant map, which is the same as `this` for an in-place map
      *
-     * @throws ReadOnly  if the map does not support mutation
+     * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
     conditional Map remove(Key key, Value value)
         {
@@ -301,7 +317,7 @@ interface Map<Key, Value>
      *
      * @return the resultant map, which is the same as `this` for an in-place map
      *
-     * @throws ReadOnly  if the map does not support mutation
+     * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
     Map clear();
 
@@ -395,7 +411,7 @@ interface Map<Key, Value>
      * @return the value for the specified key, which may have already existed in the map, or may
      *         have just been calculated by the specified function and placed into the map
      *
-     * @throws ReadOnly  if the map does not support in-place mutation
+     * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
     Value computeIfAbsent(Key              key,
                           function Value() compute)
@@ -526,6 +542,8 @@ interface Map<Key, Value>
 
 
     // ----- Stringable methods --------------------------------------------------------------------
+
+    // REVIEW Map (like Collection, etc.) should not itself be Stringable (or should they all be Stringable?)
 
     @Override
     Int estimateStringLength()

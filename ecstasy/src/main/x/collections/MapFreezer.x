@@ -16,8 +16,12 @@ mixin MapFreezer<Key   extends immutable Object,
             return this;
             }
 
-        MapFreezer result = this;
-        if (inPlace)
+        if (inPlace && values.all(e -> e.is(immutable Object)))
+            {
+            return makeImmutable();
+            }
+
+        if (inPlace && this.inPlace)
             {
             for (val entry : entries)
                 {
@@ -27,17 +31,17 @@ mixin MapFreezer<Key   extends immutable Object,
                     entry.value = v.freeze();
                     }
                 }
+            return makeImmutable();
             }
-        else
-            {
-            for ((Key k, Value v) : this)
-                {
-                if (!(v.is(immutable Object)))
-                    {
-                    result = result.put(k, v.freeze());
-                    }
-                }
-            }
-        return result.makeImmutable();
+
+        TODO
+//        for ((Key k, Value v) : this)
+//            {
+//            if (!(v.is(immutable Object)))
+//                {
+//                result = result.put(k, v.freeze());
+//                }
+//            }
+//        return result.makeImmutable();
         }
     }
