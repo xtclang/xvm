@@ -196,8 +196,10 @@ interface Map<Key, Value>
             {
             put(key, value);
             }
-
-        throw new ReadOnly("map does not support in-place modification");
+        else
+            {
+            throw new ReadOnly("map does not support in-place modification");
+            }
         }
 
     /**
