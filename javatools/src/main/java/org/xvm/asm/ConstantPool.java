@@ -3240,8 +3240,8 @@ public class ConstantPool
                 TypeConstant typeLP = typeLeft .getParamType(ixParams);
                 TypeConstant typeLR = typeLeft .getParamType(ixReturns);
 
-                assert typeLP.isTuple() && typeLR.isTuple();
-                if (typeLP.getParamsCount() == 0 && typeLR.getParamsCount() == 0)
+                if (typeLP.isTuple() && typeLR.isTuple() &&
+                    typeLP.getParamsCount() == 0 && typeLR.getParamsCount() == 0)
                     {
                     return Relation.IS_A;
                     }
@@ -3254,7 +3254,12 @@ public class ConstantPool
         TypeConstant typeRP = typeRight.getParamType(ixParams);
         TypeConstant typeRR = typeRight.getParamType(ixReturns);
 
-        assert typeLP.isTuple() && typeLR.isTuple() && typeRP.isTuple() && typeRR.isTuple();
+        if (!typeLP.isTuple() || !typeLR.isTuple() ||
+            !typeRP.isTuple() || !typeRR.isTuple())
+            {
+            // ill-constructed function type; not our responsibility to report
+            return Relation.INCOMPATIBLE;
+            }
 
         int cLP = typeLP.getParamsCount();
         int cLR = typeLR.getParamsCount();

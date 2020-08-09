@@ -103,7 +103,8 @@ public class ReturnStatement
             }
 
         TypeConstant[] atypeRet = container.getReturnTypes();
-        switch (atypeRet.length)
+        int            cRets    = atypeRet == null ? 0 : atypeRet.length;
+        switch (cRets)
             {
             case 0:
                 return true;
