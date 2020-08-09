@@ -1,6 +1,6 @@
 /**
- * A Property represents a property of a particular implementation or type. A property has a type, a name,
- * and a value. At runtime, a property is itself of type `Ref`.
+ * A Property represents a property of a particular implementation or type. A property has a type, a
+ * name, and a value. At runtime, a property is itself of type `Ref`.
  */
 interface Property<Target, Referent, Implementation extends Ref<Referent>>
         extends immutable Const
@@ -61,6 +61,12 @@ interface Property<Target, Referent, Implementation extends Ref<Referent>>
     * True iff this property is abstract.
     */
     @RO Boolean abstract;
+
+    /**
+    * The property annotations. These are the annotations that apply to the property itself (i.e.
+    * they mix into `Property`), such as `@RO`. The order of the annotations in the array is TODO GG
+    */
+    Annotation[] annotations;
 
 
     // ----- dynamic behavior ----------------------------------------------------------------------

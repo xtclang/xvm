@@ -235,6 +235,18 @@ interface Ref<Referent>
     conditional String hasName();
 
     /**
+    * The [Property] corresponding to this reference, if this is a reference to a property value.
+    */
+    conditional Property</* TODO GG */ Object, Referent, Ref<Referent>> isProperty();
+
+    /**
+    * The reference annotations. These are the annotations that apply to the reference itself (i.e.
+    * they mix into `Ref` or `Var`), such as `@Future` and `@Lazy`. The order of the annotations in
+    * the array is TODO GG
+    */
+    Annotation[] annotations;
+
+    /**
      * The reference uses a number of bytes for its own storage; while the size of the reference is
      * not expected to dynamically change, reference sizes may vary from one reference to another.
      * References may be larger than expected, because references may include additional information
