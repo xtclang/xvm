@@ -96,7 +96,7 @@ interface Ref<Referent>
      * Referent, but is not limited to only having the methods of the Referent; the Referent is
      * often the _compile-time type_ of the reference.)
      */
-    @RO Type actualType;
+    @RO Type<Referent> actualType;
 
     /**
      * Obtain the class of the referent. If the reference is masked, and the caller is not permitted

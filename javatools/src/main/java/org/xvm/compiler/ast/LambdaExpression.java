@@ -201,9 +201,10 @@ public class LambdaExpression
     @Override
     public boolean isReturnConditional()
         {
-        // this is called during validation, when we're still trying to figure out what exactly does
-        // get returned
-        return false;
+        // this may be called during validation, when we're still trying to figure out what exactly
+        // does get returned
+        TypeConstant typeFn = isValidated() ? getType() : m_typeRequired;
+        return typeFn != null && pool().isConditionalReturn(typeFn);
         }
 
     @Override
@@ -534,12 +535,13 @@ public class LambdaExpression
         ctxLambda.exit();
 
         TypeConstant[] atypeRets;
+        boolean        fCond;
         if (m_collector == null)
             {
             // the lambda is a void function that is missing a closing return; the statement block
             // will automatically add a trailing "return" when it is compiled
             atypeRets = TypeConstant.NO_TYPES;
-
+            fCond     = false;
             if (cReqReturns > 0)
                 {
                 log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
@@ -548,7 +550,8 @@ public class LambdaExpression
             }
         else
             {
-            atypeRets   = m_collector.inferMulti(atypeReqReturns); // TODO conditional
+            atypeRets   = m_collector.inferMulti(atypeReqReturns);
+            fCond       = m_collector.isConditional();
             m_collector = null;
 
             if (atypeRets == null)
@@ -578,7 +581,9 @@ public class LambdaExpression
                     ? Collections.EMPTY_MAP
                     : ctxLambda.getGenericMap();
 
-            typeActual = pool.buildFunctionType(atypeParams, atypeRets);
+            typeActual = fCond
+                ? pool.buildConditionalFunctionType(atypeParams, atypeRets)
+                : pool.buildFunctionType(atypeParams, atypeRets);
 
             if (m_mapCapture.isEmpty() && m_mapGenerics.isEmpty() && !m_fLambdaIsMethod)
                 {
