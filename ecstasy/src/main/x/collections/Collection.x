@@ -937,8 +937,8 @@ interface Collection<Element>
         {
         if (this.is(Stringable))
             {
-            StringBuffer buf = new StringBuffer(this.estimateStringLength()); // TODO GG "this" should not be needed
-            this.appendTo(buf);
+            StringBuffer buf = new StringBuffer(estimateStringLength());
+            appendTo(buf);
             return buf.toString();
             }
 
