@@ -4,7 +4,7 @@ import Lexer.Token;
 
 
 /**
- * A `Paremeter` represents an in (argument) or out (return value) parameter, including a type,
+ * A `Parameter` represents an in (argument) or out (return value) parameter, including a type,
  * an optional name, and an optional default value.
  */
 const Parameter(TypeExpression type,

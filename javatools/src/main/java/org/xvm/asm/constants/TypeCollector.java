@@ -241,7 +241,7 @@ public class TypeCollector
     private ArrayList<TypeConstant[]> ensureMulti()
         {
         // assume that a call to ensure is a mutating call; clear the cached conditional calculation
-        m_FConditional = false;
+        m_FConditional = null;
 
         ArrayList<TypeConstant[]> listMulti = m_listMulti;
         if (listMulti != null)
@@ -340,15 +340,22 @@ public class TypeCollector
             // it is permissible for a single "False" value to be returned if the multi-type is
             // a "conditional" type
             int cTypes = aTypes.length;
-            if (cTypes == 1 && aTypes[0].equals(f_pool.typeFalse()))
+            if (cTypes == 1)
                 {
-                ++cCondFalse;
+                if (aTypes[0].equals(f_pool.typeFalse()))
+                    {
+                    ++cCondFalse;
+                    }
+                else
+                    {
+                    fConditional = false;
+                    }
                 }
             else
                 {
                 // since this isn't a "conditional false", anything less than two elements
                 // automatically means that this cannot be a conditional result
-                if (cTypes <= 1)
+                if (cTypes == 0 || !aTypes[0].isA(f_pool.typeBoolean()))
                     {
                     fConditional = false;
                     }
@@ -380,7 +387,7 @@ public class TypeCollector
             // determine if the result is conditional
             boolean fDone = false;
             aResult = new TypeConstant[cWidth];
-            if (fConditional && cCondFalse > 0)
+            if (fConditional)
                 {
                 // determine the types of each column
                 int            cNonFalse = cHeight - cCondFalse;

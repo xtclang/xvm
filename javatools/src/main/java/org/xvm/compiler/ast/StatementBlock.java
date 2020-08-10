@@ -36,7 +36,6 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypedefConstant;
 
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
@@ -942,10 +941,14 @@ public class StatementBlock
                     else
                         {
                         TypeConstant typeClz;
-                        if (typeThis == null || typeThis.isRelationalType())
+                        if (typeThis == null)
                             {
                             typeClz = ((ClassStructure) idClz.getComponent()).getFormalType();
                             typeClz = pool.ensureAccessTypeConstant(typeClz, access);
+                            }
+                        else if (typeThis.isRelationalType())
+                            {
+                            typeClz = typeThis;
                             }
                         else
                             {
