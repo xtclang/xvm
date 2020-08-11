@@ -85,6 +85,8 @@ public abstract class RelationalTypeConstant
         m_constType2 = (TypeConstant) pool.getConstant(m_iType2);
         }
 
+    // ----- type specific methods -----------------------------------------------------------------
+
     /**
      * @return clone this relational type based on the underlying types
      */
@@ -182,6 +184,20 @@ public abstract class RelationalTypeConstant
         {
         return m_constType1.isOnlyNullable()
             && m_constType2.isOnlyNullable();
+        }
+
+    @Override
+    public TypeConstant freeze()
+        {
+        // both Intersection and Union have the same algorithm
+        TypeConstant typeOriginal1  = m_constType1;
+        TypeConstant typeOriginal2  = m_constType2;
+        TypeConstant typeImmutable1 = typeOriginal1.freeze();
+        TypeConstant typeImmutable2 = typeOriginal2.freeze();
+
+        return typeOriginal1 == typeImmutable1 && typeOriginal2 == typeImmutable2
+                ? this
+                : cloneRelational(getConstantPool(), typeImmutable1, typeImmutable2);
         }
 
     @Override

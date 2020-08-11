@@ -79,6 +79,19 @@ public class DifferenceTypeConstant
         }
 
     @Override
+    public TypeConstant freeze()
+        {
+        // the immutability of the second type is irrelevant
+        TypeConstant typeOriginal1  = m_constType1;
+        TypeConstant typeOriginal2  = m_constType2;
+        TypeConstant typeImmutable1 = typeOriginal1.freeze();
+
+        return typeOriginal1 == typeImmutable1
+                ? this
+                : cloneRelational(getConstantPool(), typeImmutable1, typeOriginal2);
+        }
+
+    @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
         // a difference type is NEVER a class type

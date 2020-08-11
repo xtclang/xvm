@@ -95,6 +95,12 @@ public class ImmutableTypeConstant
         }
 
     @Override
+    public TypeConstant freeze()
+        {
+        return this;
+        }
+
+    @Override
     public boolean isNullable()
         {
         return m_constType.isNullable();
@@ -112,6 +118,16 @@ public class ImmutableTypeConstant
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         return pool.ensureImmutableTypeConstant(type);
+        }
+
+    @Override
+    public TypeConstant resolveConstraints()
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.resolveConstraints();
+        return constResolved == constOriginal
+                ? this
+                : constResolved.freeze();
         }
 
     @Override

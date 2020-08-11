@@ -888,10 +888,34 @@ public class TerminalTypeConstant
                 {
                 FormalConstant constFormal    = (FormalConstant) constant;
                 TypeConstant   typeConstraint = constFormal.getConstraintType();
-                TypeConstant   typeAndNot     = typeConstraint.andNot(pool, that);
-                return typeAndNot.equals(typeConstraint)
+                /*
+                 * In a number of places in Ecstasy code we have a check that look like:
+                 *
+                 *   Element extends (immutable Object | Freezable)
+                 *   Element e = ...;
+                 *   if (!e.is(immutable Object))
+                 *      {
+                 *      // the type inference implication gets resolved to: e.is(Freezable)
+                 *      }
+                 *   if (!e.is(immutable Element))
+                 *      {
+                 *      // logically, the type inference implication here should be the same
+                 *      // as above, but the logic in IntersectionTypeConstant.andNot()
+                 *      // doesn't have enough knowledge to figure that out.
+                 *      // The logic below answers this very narrow scenario..
+                 *      }
+                 */
+
+                if (that.isImmutabilitySpecified() && that.removeImmutable().equals(this))
+                    {
+                    return typeConstraint.andNot(pool,
+                        pool.ensureImmutableTypeConstant(pool.typeObject()));
+                    }
+
+                TypeConstant typeR = typeConstraint.andNot(pool, that);
+                return typeR.equals(typeConstraint)
                         ? this
-                        : this.combine(pool, typeAndNot);
+                        : this.combine(pool, typeR);
                 }
             }
 

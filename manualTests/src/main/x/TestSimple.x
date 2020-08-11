@@ -98,7 +98,7 @@ module TestSimple
                 @Op("[]") Element getElement(Int index)
                     {
                     Element e = this.ListFreezer[index];
-                    return e.is(immutable Element) ? e : e.as(Freezable+Element).freeze(); // TODO GG ".as()" should not be required
+                    return e.is(immutable Element) ? e : e.freeze();
                     }
 
                 @Override
@@ -113,7 +113,7 @@ module TestSimple
                             {
                             if (Element e := unfrozen.next())
                                 {
-                                return True, e.is(immutable Element) ? e : e.as(Freezable+Element).freeze(); // TODO GG ".as()" should not be required
+                                return True, e.is(immutable Object) ? e : e.freeze();
                                 }
                             return False;
                             }

@@ -192,6 +192,23 @@ public class IntersectionTypeConstant
                 }
             }
 
+        if (that instanceof IntersectionTypeConstant)
+            {
+            // (A | B) - (C | D) => ((A | B) - C) | ((A | B) - D)
+            TypeConstant type1R = andNot(pool, that.getUnderlyingType());
+            TypeConstant type2R = andNot(pool, that.getUnderlyingType2());
+            if (type1R != this || type2R != that)
+                {
+                return type1R.intersect(pool, type2R);
+                }
+            }
+        else if (that.isFormalType())
+            {
+            // (A | B) - F => (A | B) - F.constraint
+            TypeConstant typeConstraint = that.resolveConstraints();
+            return andNot(pool, typeConstraint);
+            }
+
         return super.andNot(pool, that);
         }
 
