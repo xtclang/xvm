@@ -84,8 +84,8 @@ interface Property<Target, Referent, Implementation extends Ref<Referent>>
     <DataType> conditional Property!<DataType> retarget(Type<DataType> type);
 
     /**
-     * Given an object reference of a type that contains this method, obtain the invocable function
-     * that corresponds to this method on that object.
+     * Given an object reference of a type that contains this property, obtain the [Ref] or [Var]
+     * that corresponds to this property on that object.
      */
     Implementation of(Target target);
 
