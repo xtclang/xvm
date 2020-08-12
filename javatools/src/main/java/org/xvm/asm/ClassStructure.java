@@ -3466,7 +3466,8 @@ public class ClassStructure
 
             m_listActual = listActual;
 
-            if (!getIdentityConstant().equals(pool.clzTuple()))
+            IdentityConstant id = getIdentityConstant();
+            if (!id.equals(pool.clzTuple()) && !id.equals(pool.clzCondTuple()))
                 {
                 int cFormal = getTypeParamCount();
                 int cActual = listActual.size();

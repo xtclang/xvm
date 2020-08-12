@@ -69,14 +69,14 @@ mixin ListFreezer<Element extends ImmutableAble>
 
         // find the copy constructor
         typedef Function<<>, <ListFreezer>> Constructor;
-        assert Constructor constructor := &this.actualType.constructors.filter( // TODO GG Error: [72:43..76:35] COMPILER-151: Return type mismatch for "next" method; required "Ecstasy:reflect.Function<Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<Ecstasy:collections.ListFreezer<Ecstasy:collections.ListFreezer.Element>>>", actual "Ecstasy:reflect.Function<Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<Ecstasy:Object>>".
+        assert Constructor constructor := &this.actualType.constructors.filter(
                 f -> f.params.size >= 1
                     && f.params[0].ParamType.is(Type<Iterable<Element>>)
                     && (f.params.size == 1 || f.params[[1..f.params.size)].all(p -> p.defaultValue())))
                 .iterator().next();
 
         // bind any default parameters
-        if (constructor.params.size > 1) // TODO GG Error: [79:13..79:24] COMPILER-81: The variable "constructor" is not definitely assigned.
+        if (constructor.params.size > 1)
             {
             constructor = constructor.bind(constructor.params[[1..constructor.params.size)]
                     .associateWith(p -> {assert val v := p.defaultValue(); return v;})).as(Constructor);
@@ -96,7 +96,7 @@ mixin ListFreezer<Element extends ImmutableAble>
             @Op("[]") Element getElement(Int index)
                 {
                 Element e = this.ListFreezer[index];
-                return e.is(immutable Element) ? e : e.as(Freezable+Element).freeze(); // TODO GG ".as()" should not be required
+                return e.is(immutable Element) ? e : e.freeze();
                 }
 
             @Override
@@ -111,7 +111,7 @@ mixin ListFreezer<Element extends ImmutableAble>
                         {
                         if (Element e := unfrozen.next())
                             {
-                            return True, e.is(immutable Element) ? e : e.as(Freezable+Element).freeze(); // TODO GG ".as()" should not be required
+                            return True, e.is(immutable Element) ? e : e.freeze();
                             }
                         return False;
                         }
@@ -119,6 +119,6 @@ mixin ListFreezer<Element extends ImmutableAble>
                 }
             };
 
-        return constructor.invoke(Tuple:(frozenContents))[0].freeze(true); // TODO GG Error: [122:16..122:71] COMPILER-151: Return type mismatch for "freeze" method; required "immutable Ecstasy:collections.ListFreezer<Ecstasy:collections.ListFreezer.Element>", actual "immutable Ecstasy:collections.Tuple<Ecstasy:collections.ListFreezer<Ecstasy:collections.ListFreezer.Element>>".
+        return constructor.invoke(Tuple:(frozenContents))[0].freeze(true);
         }
     }
