@@ -80,6 +80,18 @@ interface List<Element>
             return False;
             }
 
+        if (indexed, Int size := knownSize())
+            {
+            for (Int i = 0; i < size; ++i)
+                {
+                if (this[i] == value)
+                    {
+                    return True;
+                    }
+                }
+            return False;
+            }
+
         return super(value);
         }
 

@@ -12,7 +12,7 @@ class HashSet<Element>
      *
      * @param values (optional) initial values to store in the HashSet
      */
-    construct(Iterable<Element>? values = Null)
+    construct(Iterable<Element+Hashable>? values = Null)
         {
         assert(Element.is(Type<Hashable>));
         construct HashSet(new NaturalHasher<Element>(), values);
@@ -32,16 +32,6 @@ class HashSet<Element>
             {
             map.put(value, Null);
             }
-        construct MapSet(map);
-        }
-
-    /**
-     * (Internal) Construct a HashSet that delegates storage to the specified map.
-     *
-     * @param map   the map to delegate storage to
-     */
-    private construct(Map<Element, Nullable> map)
-        {
         construct MapSet(map);
         }
     }

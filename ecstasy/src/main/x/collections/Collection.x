@@ -266,8 +266,8 @@ interface Collection<Element>
      *
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
-    Collection! filter(function Boolean(Element)  match,
-                       Collection!?               dest  = Null)
+    Collection! filter(function Boolean(Element) match,
+                       Collection!?              dest  = Null)
         {
         if (dest == Null)
             {

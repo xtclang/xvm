@@ -8,37 +8,14 @@ class ListSet<Element>
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct an empty ListSet. The [NaturalHasher] implementation will be used.
-     */
-    construct()
-        {
-        assert(Element.is(Type<Hashable>));
-        construct ListSet(new NaturalHasher<Element>());
-        }
-
-    /**
-     * Construct a ListSet that contains an initial set of values. The [NaturalHasher]
-     * implementation will be used.
+     * Construct a ListSet that optionally contains an initial set of values.
      *
-     * @param values  initial values to store in the ListSet
-     */
-    construct(Iterable<Element> values)
-        {
-        assert(Element.is(Type<Hashable>));
-        construct ListSet(new NaturalHasher<Element>(), values);
-        }
-
-    /**
-     * Construct a ListSet that relies on an external hasher, and optionally contains an initial set
-     * of values.
-     *
-     * @param hasher        the [Hasher] to use for the values stored in the set
      * @param values        (optional) initial values to store in the ListSet
      * @param initCapacity  (optional) initial capacity of the ListSet
      */
-    construct(Hasher<Element> hasher, Iterable<Element>? values = Null, Int initCapacity = 0)
+    construct(Iterable<Element>? values = Null, Int initCapacity = 0)
         {
-        HashMap<Element, Nullable> map = new HashMap(hasher, values?.size : initCapacity);
+        ListMap<Element, Nullable> map = new ListMap(values?.size : initCapacity);
         for (Element value : values?)
             {
             map.put(value, Null);

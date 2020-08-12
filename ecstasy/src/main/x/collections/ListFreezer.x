@@ -2,6 +2,9 @@
  * Simple List implementations that need to implement Freezable can use this mix-in to do so:
  *
  *     incorporates conditional ListFreezer<Element extends immutable Object | Freezable>
+ *
+ * This implementation requires that the List have a copy constructor, i.e. a constructor that
+ * requires only a "this" as its argument.
  */
 mixin ListFreezer<Element extends ImmutableAble>
         into List<Element>
@@ -20,30 +23,102 @@ mixin ListFreezer<Element extends ImmutableAble>
             return makeImmutable();
             }
 
-        ListFreezer result = this;
-        if (inPlace && !indexed)
+        // inPlace  inPlace  indexed
+        // request  List     List     description
+        // -------  -------  -------  --------------------------------------------------------------
+        //    N        N        N     these two will copy-construct the frozen contents of this list
+        //    N        N        Y
+        //
+        //    N        Y        N     these two could just copy-construct this list, and freeze that
+        //    N        Y        Y     list in place, but instead just do the same as above
+        //
+        //    Y        N        N     the request is in-place, but list is not, so these ends up
+        //    Y        N        Y     being the same as "NNN" and "NNY"
+        //
+        //    Y        Y        N     easy and efficient: freeze element in place using a cursor
+        //    Y        Y        Y     easy and efficient: freeze the elements in place using []
+
+        if (inPlace && this.inPlace)
             {
-            Cursor cur = cursor();
-            while (cur.exists)
+            if (indexed)
                 {
-                Element e = cur.value;
-                if (!e.is(immutable Object))
+                for (Int i = 0, Int c = size; i < c; ++i)
                     {
-                    cur.value = e.freeze();
+                    Element e = this[i];
+                    if (!e.is(immutable Object))
+                        {
+                        this[i] = e.freeze();
+                        }
                     }
-                cur.advance();
                 }
+            else
+                {
+                Cursor cur = cursor();
+                while (cur.exists)
+                    {
+                    Element e = cur.value;
+                    if (!e.is(immutable Object))
+                        {
+                        cur.value = e.freeze();
+                        }
+                    cur.advance();
+                    }
+                }
+            return makeImmutable();
             }
-        else
+
+        // find the copy constructor
+        typedef Function<<>, <ListFreezer>> Constructor;
+        assert Constructor constructor := &this.actualType.constructors.filter( // TODO GG Error: [72:43..76:35] COMPILER-151: Return type mismatch for "next" method; required "Ecstasy:reflect.Function<Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<Ecstasy:collections.ListFreezer<Ecstasy:collections.ListFreezer.Element>>>", actual "Ecstasy:reflect.Function<Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<Ecstasy:Object>>".
+                f -> f.params.size >= 1
+                    && f.params[0].ParamType.is(Type<Iterable<Element>>)
+                    && (f.params.size == 1 || f.params[[1..f.params.size)].all(p -> p.defaultValue())))
+                .iterator().next();
+
+        // bind any default parameters
+        if (constructor.params.size > 1) // TODO GG Error: [79:13..79:24] COMPILER-81: The variable "constructor" is not definitely assigned.
             {
-            Loop: for (Element e : this)
-                {
-                if (!e.is(immutable Object))
-                    {
-                    result = result.replace(Loop.count, e.freeze());
-                    }
-                }
+            constructor = constructor.bind(constructor.params[[1..constructor.params.size)]
+                    .associateWith(p -> {assert val v := p.defaultValue(); return v;})).as(Constructor);
             }
-        return result.makeImmutable();
+
+        // create a List that enumerates the frozen contents of this list
+        List frozenContents = new List<Element>()
+            {
+            @Override
+            Int size.get()
+                {
+                return this.ListFreezer.size;
+                }
+
+
+            @Override
+            @Op("[]") Element getElement(Int index)
+                {
+                Element e = this.ListFreezer[index];
+                return e.is(immutable Element) ? e : e.as(Freezable+Element).freeze(); // TODO GG ".as()" should not be required
+                }
+
+            @Override
+            Iterator<Element> iterator()
+                {
+                // implementations that are not indexed should provide a more efficient implementation
+                val unfrozen = this.ListFreezer.iterator();
+                return new Iterator()
+                    {
+                    @Override
+                    conditional Element next()
+                        {
+                        if (Element e := unfrozen.next())
+                            {
+                            return True, e.is(immutable Element) ? e : e.as(Freezable+Element).freeze(); // TODO GG ".as()" should not be required
+                            }
+                        return False;
+                        }
+                    };
+                }
+            };
+
+        return constructor.invoke(Tuple:(frozenContents))[0].freeze(true); // TODO GG Error: [122:16..122:71] COMPILER-151: Return type mismatch for "freeze" method; required "immutable Ecstasy:collections.ListFreezer<Ecstasy:collections.ListFreezer.Element>", actual "immutable Ecstasy:collections.Tuple<Ecstasy:collections.ListFreezer<Ecstasy:collections.ListFreezer.Element>>".
         }
     }
