@@ -27,21 +27,9 @@ const AnnotationExpression(TypeExpression name,
      */
     conditional Annotation resolveAnnotation(TypeSystem typeSystem, Boolean hideExceptions = False)
         {
-        // determine the mixin class that is going to be used as an annotation
-        // TODO GG
-        // Class mixinClass;
-        // if (Type mixinType := name.resolveType(typeSystem, hideExceptions),
-        //         mixinClass := mixinType.fromClass())
-        //     {
-        //     }
-        // else
-        //     {
-        //     return False;
-        //     }
         Class mixinClass = Object;
-        Type  mixinType  = Object;
-        if (     mixinType := name.resolveType(typeSystem, hideExceptions),
-                mixinClass := mixinType.fromClass())
+        if (Type mixinType  := name.resolveType(typeSystem, hideExceptions),
+                 mixinClass := mixinType.fromClass())
             {
             }
         else

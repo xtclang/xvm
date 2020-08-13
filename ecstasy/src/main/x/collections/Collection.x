@@ -1001,11 +1001,11 @@ interface Collection<Element>
         // in theory, sets may execute in O(N) time
         if (collection1.is(Set))
             {
-            return collection1.as(CompileType).containsAll(collection2); // TODO GG too much knowledge
+            return collection1.containsAll(collection2);
             }
         else if (collection2.is(Set))
             {
-            return collection2.as(CompileType).containsAll(collection1);
+            return collection2.containsAll(collection1);
             }
 
         // if the type is hashable, then build a HashSet, and if its size is the same as before,

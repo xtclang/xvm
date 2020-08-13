@@ -215,7 +215,7 @@ const Path
             parent = parent.parent ?: assert;
             }
 
-        return parent == that.as(Path); // TODO GG "as" not needed
+        return parent == that;
         }
 
     /**
