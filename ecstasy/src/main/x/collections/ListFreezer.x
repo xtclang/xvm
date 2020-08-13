@@ -91,7 +91,6 @@ mixin ListFreezer<Element extends ImmutableAble>
                 return this.ListFreezer.size;
                 }
 
-
             @Override
             @Op("[]") Element getElement(Int index)
                 {
@@ -103,7 +102,7 @@ mixin ListFreezer<Element extends ImmutableAble>
             Iterator<Element> iterator()
                 {
                 // implementations that are not indexed should provide a more efficient implementation
-                val unfrozen = this.ListFreezer.iterator();
+                Iterator<Element> unfrozen = this.ListFreezer.iterator();
                 return new Iterator()
                     {
                     @Override

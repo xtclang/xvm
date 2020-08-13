@@ -34,14 +34,15 @@ mixin MapFreezer<Key   extends immutable Object,
             return makeImmutable();
             }
 
-        TODO
-//        for ((Key k, Value v) : this)
-//            {
-//            if (!(v.is(immutable Object)))
-//                {
-//                result = result.put(k, v.freeze());
-//                }
-//            }
-//        return result.makeImmutable();
+        // TODO CP this is wrong and requires some logic similar to ListFreezer's
+        MapFreezer result = this;
+        for ((Key k, Value v) : this)
+            {
+            if (!(v.is(immutable Object)))
+                {
+                result = result.put(k, v.freeze());
+                }
+            }
+        return makeImmutable();
         }
     }
