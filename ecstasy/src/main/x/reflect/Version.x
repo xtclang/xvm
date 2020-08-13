@@ -657,7 +657,13 @@ const Version
 
         if (lower == 0)
             {
-            return this[upper];
+            Version version = this;
+            Int     steps   = size - upper - 1;
+            while (steps-- > 0)
+                {
+                version = version.parent ?: assert;
+                }
+            return version;
             }
 
         Version? slice = Null;
