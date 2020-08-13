@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
@@ -572,20 +574,15 @@ public class LambdaExpression
             // the variables go out of scope in the method body that contains this lambda, so we need
             // to store off the data from the capture context, and defer the signature creation to the
             // generateAssignment() method
-            m_mapCapture      = ctxLambda.getCaptureMap();
-            m_mapRegisters    = ctxLambda.ensureRegisterMap();
-            m_fLambdaIsMethod = ctxLambda.isLambdaMethod();
-
-            // if the lambda requires "this", there is no need to capture the generic types
-            m_mapGenerics = m_fLambdaIsMethod
-                    ? Collections.EMPTY_MAP
-                    : ctxLambda.getGenericMap();
+            m_ctxLambda = ctxLambda;
 
             typeActual = fCond
                 ? pool.buildConditionalFunctionType(atypeParams, atypeRets)
                 : pool.buildFunctionType(atypeParams, atypeRets);
 
-            if (m_mapCapture.isEmpty() && m_mapGenerics.isEmpty() && !m_fLambdaIsMethod)
+            if (ctxLambda.getCaptureMap().isEmpty() &&
+                ctxLambda.getGenericMap().isEmpty() &&
+                !ctxLambda.isLambdaMethod())
                 {
                 // there are no bindings, so the lambda is a constant i.e. the function is the value
                 configureLambda(atypeParams, asParams, 0, null, atypeRets);
@@ -947,9 +944,10 @@ public class LambdaExpression
      */
     protected Argument[] calculateBindings(Context ctx, Code code, ErrorListener errs)
         {
-        MethodStructure lambda = m_lambda;
+        MethodStructure lambda    = m_lambda;
+        LambdaContext   ctxLambda = m_ctxLambda;
         assert lambda != null && lambda.getIdentityConstant().isLambda();
-        assert m_mapCapture != null;
+        assert ctxLambda != null;
 
         if (lambda.getIdentityConstant().isNascent())
             {
@@ -960,8 +958,8 @@ public class LambdaExpression
             String[]                asParams        = getParamNames();
             TypeConstant[]          atypeParams     = pool.extractFunctionParams(typeFn);
             TypeConstant[]          atypeReturns    = pool.extractFunctionReturns(typeFn);
-            Map<String, TargetInfo> mapGenerics     = m_mapGenerics;
-            Map<String, Boolean>    mapCapture      = m_mapCapture;
+            Map<String, TargetInfo> mapGenerics     = ctxLambda.getGenericMap();
+            Map<String, Boolean>    mapCapture      = ctxLambda.getCaptureMap();
             int                     cGenerics       = mapGenerics.size();
             int                     cCaptures       = mapCapture.size();
             int                     cBindArgs       = cGenerics + cCaptures;
@@ -969,12 +967,12 @@ public class LambdaExpression
             boolean[]               afImplicitDeref = null;
 
             // MBIND is indicated by the method structure *NOT* being static
-            lambda.setStatic(!m_fLambdaIsMethod);
+            lambda.setStatic(!ctxLambda.isLambdaMethod());
 
             // FBIND is indicated by >0 bind arguments being returned from this method
             if (cBindArgs > 0)
                 {
-                Map<String, Register> mapRegisters   = m_mapRegisters;
+                Map<String, Register> mapRegisters   = ctxLambda.ensureRegisterMap();
                 int                   cLambdaParams  = atypeParams.length;
                 int                   cAllParams     = cBindArgs + cLambdaParams;
                 TypeConstant[]        atypeAllParams = new TypeConstant[cAllParams];
@@ -1118,12 +1116,21 @@ public class LambdaExpression
         }
 
     /**
+     * @return the LambdaContext stored off after the successful validation
+     */
+    protected LambdaContext getValidatedContext()
+        {
+        assert isValidated();
+        return m_ctxLambda;
+        }
+
+    /**
      * @return true iff lambda requires "this"
      */
     protected boolean isRequiredThis()
         {
         assert isValidated();
-        return m_fLambdaIsMethod;
+        return m_ctxLambda.isLambdaMethod();
         }
 
 
@@ -1226,8 +1233,8 @@ public class LambdaExpression
 
             assert atypeParams == null && asParams == null
                     || atypeParams != null && asParams != null && atypeParams.length == asParams.length;
-            m_atypeParams = atypeParams;
-            m_asParams    = asParams;
+            f_atypeParams   = atypeParams;
+            f_asParams      = asParams;
             }
 
         @Override
@@ -1309,10 +1316,23 @@ public class LambdaExpression
             }
 
         @Override
+        public Map<String, TargetInfo> getGenericMap()
+            {
+            // if the lambda requires "this", there is no need to capture the generic types
+            return isLambdaMethod()
+                    ? Collections.EMPTY_MAP
+                    : super.getGenericMap();
+            }
+
+        @Override
         protected void initNameMap(Map<String, Argument> mapByName)
             {
-            TypeConstant[] atypeParams = m_atypeParams;
-            String[]       asParams    = m_asParams;
+            ConstantPool              pool        = pool();
+            GenericTypeResolver       resolver    = getOuterContext().getFormalTypeResolver();
+            Map<String, TypeConstant> mapNarrowed = null;
+
+            TypeConstant[] atypeParams = f_atypeParams;
+            String[]       asParams    = f_asParams;
             int            cParams     = atypeParams == null ? 0 : atypeParams.length;
             for (int i = 0; i < cParams; ++i)
                 {
@@ -1320,7 +1340,20 @@ public class LambdaExpression
                 String       sName = asParams[i];
                 if (!sName.equals(Id.ANY.TEXT) && type != null)
                     {
-                    mapByName.put(sName, new Register(type));
+                    Register     reg          = new Register(type);
+                    TypeConstant typeNarrowed = type.resolveGenerics(pool, resolver);
+                    if (typeNarrowed != type)
+                        {
+                        reg = reg.narrowType(typeNarrowed);
+                        reg.markInPlace();
+
+                        if (mapNarrowed == null)
+                            {
+                            m_mapNarrowed = mapNarrowed = new HashMap<>();
+                            }
+                        mapNarrowed.put(sName, typeNarrowed);
+                        }
+                    mapByName.put(sName, reg);
 
                     // the variable has been definitely assigned, but not multiple times (i.e. it's
                     // still effectively final)
@@ -1329,8 +1362,20 @@ public class LambdaExpression
                 }
             }
 
-        private TypeConstant[] m_atypeParams;
-        private String[]       m_asParams;
+        /**
+         * @return a map of narrowed parameter types for the corresponding lambda
+         */
+        public Map<String, TypeConstant> getNarrowedParameters()
+            {
+            return m_mapNarrowed == null
+                    ? Collections.EMPTY_MAP
+                    : m_mapNarrowed;
+            }
+
+        private final TypeConstant[] f_atypeParams;
+        private final String[]       f_asParams;
+
+        private Map<String, TypeConstant> m_mapNarrowed;
         }
 
 
@@ -1371,22 +1416,9 @@ public class LambdaExpression
      */
     private transient MethodStructure      m_lambda;
     /**
-     * The variables captured by the lambda, with an associated "true" flag if the lambda needs to
-     * capture the variable in a read/write mode.
+     * The LambdaContext that collected all the necessary information during validation.
      */
-    private transient Map<String, Boolean> m_mapCapture;
-    /**
-     * A map from variable name to register, built by the lambda context.
-     */
-    private Map<String, Register>          m_mapRegisters;
-    /**
-     * A map from variable name to generic type, built by the lambda context.
-     */
-    private Map<String, TargetInfo>        m_mapGenerics;
-    /**
-     * The reserved names captured by the lambda.
-     */
-    private transient boolean              m_fLambdaIsMethod;
+    private transient LambdaContext        m_ctxLambda;
     /**
      * A cached array of bound arguments. Private to calculateBindings().
      */

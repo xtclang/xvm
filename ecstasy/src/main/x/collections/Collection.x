@@ -903,7 +903,7 @@ interface Collection<Element>
         function Appender<Char>(Element) appendElement = switch()
             {
             case render != Null              : (e -> render(e).appendTo(buf));
-            case Element.is(Type<Stringable>): (e -> e.as(Stringable).appendTo(buf)); // TODO GG - get rid of "as"
+            case Element.is(Type<Stringable>): (e -> e.appendTo(buf));
             default: (e -> e.is(Stringable) ? e.appendTo(buf) : buf.addAll(e.toString()));
             };
 
