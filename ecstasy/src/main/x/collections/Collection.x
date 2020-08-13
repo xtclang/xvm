@@ -1015,7 +1015,7 @@ interface Collection<Element>
             Map<CompileType.Element, Int> map = collection1.groupWith(
                     (_, n) -> (n + 1),
                     (_) -> 1,
-                    new HashMap<CompileType.Element, Int>());  // TODO GG inference
+                    new HashMap());
             if (map.size == size)
                 {
                 return collection1.containsAll(collection2);

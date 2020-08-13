@@ -563,6 +563,18 @@ public abstract class Expression
      */
     protected TypeConstant inferTypeFromRequired(TypeConstant typeActual, TypeConstant typeRequired)
         {
+        if (typeRequired.isNullable() && !typeActual.isNullable())
+            {
+            // consider an example:
+            //   class C(Set<Int>? ints) {...}
+            //   ...
+            //   C c = new C(new HashSet());
+            //
+            // it's clear that the despite the fact that the required type for the constructor
+            // parameter is "Nullable | Set<Int>", the actual type should be HashSet<Int>
+            typeRequired = typeRequired.removeNullable();
+            }
+
         if (typeRequired.isParameterizedDeep() && !typeActual.isParamsSpecified()
                 && !typeActual.equals(typeRequired))
             {
