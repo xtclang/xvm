@@ -55,6 +55,7 @@ import ecstasy.annotations.WeakVar           as Weak;
 import ecstasy.annotations.UncheckedInt      as Unchecked;
 
 import ecstasy.collections.Array;
+import ecstasy.collections.Collection;
 import ecstasy.collections.Freezable;
 import ecstasy.collections.Hashable;
 import ecstasy.collections.HashMap;

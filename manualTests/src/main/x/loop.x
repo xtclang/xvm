@@ -1,6 +1,6 @@
 module TestLoops
     {
-    @Inject ecstasy.io.Console console;
+    @Inject Console console;
 
     void run()
         {
@@ -67,7 +67,7 @@ module TestLoops
         {
         console.println("\n** testForEachCollection()");
 
-        ecstasy.collections.Collection<String> strs = ["hello", "world"];
+        Collection<String> strs = ["hello", "world"];
         L1: for (String s : strs)
             {
             console.println("s=" + s);
