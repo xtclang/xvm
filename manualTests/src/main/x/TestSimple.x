@@ -4,7 +4,19 @@ module TestSimple
 
     void run(  )
         {
-        console.println("Starting");
+        import ecstasy.reflect.Annotation;
+
+        // console.println("Starting");
+
+        // TODO
+        // Property p = second;
+
+        Annotation[] annos = &prop.annotations;
+        console.println(annos);
+
+        @Watch(n -> {console.print($"{n}, ");}) @Silly(2, "b")
+            @Unchecked Int n;
+        console.println(&n.annotations);
         }
 
     mixin ListFreezer<Element extends ecstasy.collections.ImmutableAble>
@@ -124,5 +136,18 @@ module TestSimple
             return constructor.invoke(Tuple:(frozenContents))[0].freeze(true);
             }
         }
+
+    mixin Silly(Int i, String s)
+            into Var
+        {
+        }
+// TODO
+//    @Link(second) Int first = 1;
+//    Int second = 5;
+//
+//    mixin Link(Property next)
+//            into Var
+//        {
+//        }
     }
 

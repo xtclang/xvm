@@ -230,6 +230,25 @@ public class AnnotatedTypeConstant
         }
 
     @Override
+    public Annotation[] getAnnotations()
+        {
+        List<Annotation>      listAnnos = new ArrayList<>();
+        AnnotatedTypeConstant typeAnno  = this;
+        while (true)
+            {
+            listAnnos.add(typeAnno.getAnnotation());
+
+            TypeConstant typeNext = typeAnno.getUnderlyingType();
+            if (!(typeNext instanceof AnnotatedTypeConstant))
+                {
+                break;
+                }
+            typeAnno = (AnnotatedTypeConstant) typeNext;
+            }
+        return listAnnos.toArray(Annotation.NO_ANNOTATIONS);
+        }
+
+    @Override
     public boolean isNullable()
         {
         return m_constType.isNullable();
@@ -249,6 +268,21 @@ public class AnnotatedTypeConstant
         {
         return pool.ensureAnnotatedTypeConstant(m_annotation.getAnnotationClass(),
             m_annotation.getParams(), type);
+        }
+
+    @Override
+    public TypeInfo ensureTypeInfo(ErrorListener errs)
+        {
+        if (m_annotation.containsUnresolved() && m_annotation.getParams().length > 0)
+            {
+            // during the compilation we may need the TypeInfo for the annotated type before
+            // the parameters have been fully resolved (e.g. lambda); since the annotation
+            // parameters don't play any role in the TypeInfo, simply remove them
+            AnnotatedTypeConstant typeSansParams = getConstantPool().ensureAnnotatedTypeConstant(
+                m_annotation.getAnnotationClass(), Constant.NO_CONSTS, m_constType);
+            return typeSansParams.ensureTypeInfo(errs);
+            }
+        return super.ensureTypeInfo(errs);
         }
 
     /**

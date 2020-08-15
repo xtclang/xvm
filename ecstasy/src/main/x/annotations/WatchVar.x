@@ -3,7 +3,7 @@
  * the reference changes.
  *
  * Usage example:
- *   @Watch(n -> console.print("new value=" + n)) Int n = 0;
+ *   @Watch(n -> {console.print($"new value={n}");}) Int n = 0;
  */
 mixin WatchVar<Referent>(function void (Referent) notify)
         into Var<Referent>

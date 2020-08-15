@@ -429,6 +429,16 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this type is annotated by the specified annotation class
+     */
+    public Annotation[] getAnnotations()
+        {
+        return isAnnotated()
+                ? getUnderlyingType().getAnnotations()
+                : Annotation.NO_ANNOTATIONS;
+        }
+
+    /**
      * @return true iff this type represents a virtual child type
      */
     public boolean isVirtualChild()

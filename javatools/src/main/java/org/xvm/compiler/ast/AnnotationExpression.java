@@ -10,6 +10,7 @@ import java.util.Map;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -256,7 +257,7 @@ public class AnnotationExpression
             // build a list of argument types and names (used later to try to find an appropriate
             // annotation constructor)
             atypeArgs = new TypeConstant[cArgs];
-            ctx       = new ValidatingContext();
+            ctx       = new ValidatingContext(getComponent().getContainingClass());
 
             for (int iArg = 0; iArg < cArgs; ++iArg)
                 {
@@ -457,9 +458,17 @@ public class AnnotationExpression
     protected class ValidatingContext
             extends Context
         {
-        public ValidatingContext()
+        public ValidatingContext(ClassStructure clzContainer)
             {
             super(null, false);
+
+            f_clzContainer = clzContainer;
+            }
+
+        @Override
+        public ClassStructure getThisClass()
+            {
+            return f_clzContainer;
             }
 
         @Override
@@ -547,6 +556,8 @@ public class AnnotationExpression
             {
             throw new IllegalStateException();
             }
+
+        private final ClassStructure f_clzContainer;
         }
 
 
