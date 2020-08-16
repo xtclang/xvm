@@ -44,6 +44,7 @@ import ecstasy.annotations.FutureVar;
 import ecstasy.annotations.FutureVar         as Future;
 import ecstasy.annotations.InjectedRef       as Inject;
 import ecstasy.annotations.LazyVar           as Lazy;
+import ecstasy.annotations.LinkedList;
 import ecstasy.annotations.UnassignedVar     as Unassigned;
 import ecstasy.annotations.Operator          as Op;
 import ecstasy.annotations.Override;
