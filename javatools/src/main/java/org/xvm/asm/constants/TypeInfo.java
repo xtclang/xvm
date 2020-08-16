@@ -137,7 +137,6 @@ public class TypeInfo
 
         assert cInvalidations == 0 // necessary for TYPEINFO_PLACEHOLDER construction
             || cInvalidations <= type.getConstantPool().getInvalidationCount();
-        assert validateCapped();
         }
 
     /**
@@ -2265,18 +2264,20 @@ public class TypeInfo
         }
 
     /**
-     * Assertion helper: validate the integrity of all "capped" methods.
+     * Helper: validate the integrity of all "capped" methods.
+     *
+     * @return null if all is good; a first offending method otherwise
      */
-    private boolean validateCapped()
+    public MethodInfo validateCapped()
         {
         for (MethodInfo method : f_mapMethods.values())
             {
             if (method.isCapped() && getNarrowingMethod(method) == null)
                 {
-                return false;
+                return method;
                 }
             }
-        return true;
+        return null;
         }
 
     private static Annotation[] mergeAnnotations(Annotation[] anno1, Annotation[] anno2)

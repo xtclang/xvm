@@ -1689,6 +1689,21 @@ public abstract class TypeConstant
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 fComplete ? Progress.Complete : Progress.Incomplete);
 
+        if (fComplete)
+            {
+            MethodInfo methodInvalid = info.validateCapped();
+            if (methodInvalid != null)
+                {
+                MethodConstant id = methodInvalid.getIdentity();
+                // TODO GG create a dedicated error
+                id.log(errs, Severity.ERROR, VE_METHOD_NARROWING_AMBIGUOUS,
+                    getValueString(),
+                    id.getValueString(),
+                    methodInvalid.getHead().getNarrowingNestedIdentity()
+                    );
+                }
+            }
+
         return atypeCondInc == null || !fComplete
                 ? info
                 : mergeConditionalIncorporates(cInvalidations, constId, info, atypeCondInc, errs);
