@@ -1,27 +1,64 @@
 /**
- * An implementation of Map Entry that delegates back to its originating map on behalf of a
+ * A simple implementation of [Map.Entry] that delegates back to its originating map on behalf of a
  * specific key.
  */
-class ReifiedEntry<Key, Value>
-        implements Map<Key, Value>.Entry
-        incorporates text.Stringer
+class ReifiedEntry<MapKey, MapValue>
+        implements Map<MapKey, MapValue>.Entry
+        incorporates conditional EntryStringer<MapKey extends Stringable, MapValue extends Stringable>
+        // TODO EntryFreezer
     {
-    public construct(Map<Key, Value> map, Key key)
+    // ----- constructors --------------------------------------------------------------------------
+    /**
+     * Construct a ReifiedEntry for the specified key of the specified map.
+     *
+     * @param map  the Map that this Entry will act as a part of
+     * @param key  the Key that this Entry represents
+     */
+    construct(Map<MapKey, MapValue> map, MapKey key)
         {
         this.map = map;
         this.key = key;
         }
 
-    protected construct(Map<Key, Value> map)
+    /**
+     * A constructor designed for sub-classes, such as the [CursorEntry].
+     *
+     * @param map  the Map that this Entry will act as a part of
+     */
+    protected construct(Map<MapKey, MapValue> map)
         {
         this.map = map;
         }
 
-    protected/private Map<Key, Value> map;
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    /**
+     * The Map that "contains" this entry.
+     */
+    protected/private Map<MapKey, MapValue> map;
+
+    /**
+     * Verify that the containing Map's mutability is non-persistent.
+     *
+     * @return True iff the Map supports in-place modification
+     *
+     * @throws ReadOnly iff the Map does not support in-place modification
+     */
+    protected Boolean verifyInPlace()
+        {
+        if (!map.inPlace)
+            {
+            throw new ReadOnly("Map Entry modification requires inPlace==True");
+            }
+        return True;
+        }
+
+
+    // ----- Entry interface -----------------------------------------------------------------------
 
     @Override
-    @Unassigned
-    public/protected Key key;
+    public/protected MapKey key;
 
     @Override
     Boolean exists.get()
@@ -30,12 +67,12 @@ class ReifiedEntry<Key, Value>
         }
 
     @Override
-    Value value
+    MapValue value
         {
         @Override
-        Value get()
+        MapValue get()
             {
-            if (Value value := map.get(key))
+            if (MapValue value := map.get(key))
                 {
                 return value;
                 }
@@ -43,67 +80,16 @@ class ReifiedEntry<Key, Value>
             }
 
         @Override
-        void set(Value value)
+        void set(MapValue value)
             {
-            verifyNotPersistent();
-            map.put(key, value);
+            map[key] = value;
             }
         }
 
     @Override
     void delete()
         {
+        verifyInPlace();
         map.keys.remove(key);
-        }
-
-    /**
-     * Verify that the containing Map's mutability is non-persistent.
-     *
-     * @return True
-     *
-     * @throws ReadOnly if the Map's mutability is persistent
-     */
-    protected Boolean verifyNotPersistent()
-        {
-        if (!map.inPlace)
-            {
-            throw new ReadOnly("Map operation requires inPlace==True");
-            }
-        return True;
-        }
-
-    // ----- Stringable methods --------------------------------------------------------------------
-
-    @Override
-    Int estimateStringLength()
-        {
-        return estimateStringLength(key) + 1 + estimateStringLength(value);
-
-        static Int estimateStringLength(Object o)
-            {
-            return o.is(Stringable)
-                ? o.estimateStringLength()
-                : 8; // completely arbitrary estimate
-            }
-        }
-
-    @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
-        if (key.is(Stringable))
-            {
-            // TODO CP remove ".as(Stringable)"
-            key.as(Stringable).appendTo(buf);
-            }
-        else
-            {
-            buf.addAll(key.toString());
-            }
-
-        buf.add('=');
-
-        return value.is(Stringable)
-                ? value.as(Stringable).appendTo(buf)
-                : buf.addAll(value.toString());
         }
     }

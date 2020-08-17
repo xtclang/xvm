@@ -12,7 +12,7 @@ class HashMap<Key, Value>
         implements Map<Key, Value>
         // TODO conditional incorporation of ... HashMap<Key extends immutable Hashable, Value>
         incorporates conditional MapFreezer<Key extends immutable Object, Value extends ImmutableAble>
-        incorporates text.Stringer
+        incorporates conditional MapStringer<Key extends Stringable, Value extends Stringable>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -234,7 +234,7 @@ class HashMap<Key, Value>
             }
 
         // TODO implement Persistent/Constant mutability
-        verifyNotPersistent();
+        verifyInPlace();
 
         (Int bucketCount, this.growAt, this.shrinkAt) = calcBucketCount(0);
         buckets = new HashEntry?[bucketCount];
@@ -316,7 +316,7 @@ class HashMap<Key, Value>
             @Override
             void set(Value value)
                 {
-                verifyNotPersistent();
+                verifyInPlace();
                 if (exists)
                     {
                     hashEntry.value = value;
@@ -333,7 +333,7 @@ class HashMap<Key, Value>
         @Override
         void delete()
             {
-            if (verifyNotPersistent() & exists)
+            if (verifyInPlace() & exists)
                 {
                 assert this.HashMap.keys.removeIfPresent(key);
                 exists = False;
@@ -354,7 +354,7 @@ class HashMap<Key, Value>
      * A representation of all of the HashEntry objects in the Map.
      */
     class EntrySet
-            implements Set<Entry>
+            implements Collection<Entry>
         {
         @Override
         Iterator<Entry> iterator()
@@ -399,7 +399,7 @@ class HashMap<Key, Value>
         @Override
         EntrySet remove(Entry entry)
             {
-            verifyMutable();
+            verifyInPlace();
 
             if (entry.is(CursorEntry))
                 {
@@ -501,27 +501,11 @@ class HashMap<Key, Value>
      *
      * @throws ReadOnly if the Map is not mutable
      */
-    protected Boolean verifyMutable()
+    protected Boolean verifyInPlace()
         {
         if (!inPlace)
             {
             throw new ReadOnly("Map operation requires inPlace==True");
-            }
-        return True;
-        }
-
-    /**
-     * Verify that the Map's mutability is non-persistent.
-     *
-     * @return True
-     *
-     * @throws ReadOnly if the Map's mutability is persistent
-     */
-    protected Boolean verifyNotPersistent()
-        {
-        if (!inPlace)
-            {
-            throw new ReadOnly("Map operation requires");
             }
         return True;
         }

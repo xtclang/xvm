@@ -3,10 +3,16 @@
  * combination of a key and its value is an _entry_.
  *
  * The Map is one of the most commonly used data structures, because it allows information to be
- * easily _related to_ other information.
+ * easily _related to_ other information. The best known implementation is the [HashMap], which
+ * uses [Hashable] key values.
+ *
+ * To implement the Map interface for a read-only Map, it is only necessary to implement the [keys]
+ * property and the [get] method.
+ *
+ * To implement the Map interface for a read/write Map, it is additionally necessary to implement
+ * the [put] and [remove] methods.
  */
 interface Map<Key, Value>
-        extends Stringable
     {
     // ----- metadata ------------------------------------------------------------------------------
 
@@ -30,7 +36,10 @@ interface Map<Key, Value>
     /**
      * Determine the size of the Map, which is the number of entries (key/value pairs) in the Map.
      */
-    @RO Int size;
+    @RO Int size.get()
+        {
+        return keys.size;
+        }
 
     /**
      * Determine if the Map is empty.
@@ -40,7 +49,7 @@ interface Map<Key, Value>
      */
     @RO Boolean empty.get()
         {
-        return size == 0;
+        return keys.empty;
         }
 
     /**
@@ -52,7 +61,7 @@ interface Map<Key, Value>
      */
     Boolean contains(Key key)
         {
-        return get(key);
+        return keys.contains(key);
         }
 
     /**
@@ -146,14 +155,20 @@ interface Map<Key, Value>
      * The returned collection is expected to support mutation operations iff the map is `inPlace`;
      * the returned collection is _not_ expected to support the `add` or `addAll` operations.
      */
-    @RO Collection<Value> values;
+    @RO Collection<Value> values.get()
+        {
+        return new maps.KeyValues<Key, Value>(this);
+        }
 
     /**
-     * Obtain the set of all entries (key/value pairs) in the map.
+     * Obtain the collection of all entries (key/value pairs) in the map.
      *
      * The returned set is expected to support mutation operations iff the map is `inPlace`.
      */
-    @RO Set<Entry> entries;
+    @RO Collection<Entry> entries.get()
+        {
+        return new maps.KeyEntries<Key, Value>(this);
+        }
 
 
     // ----- write operations ----------------------------------------------------------------------
@@ -321,7 +336,24 @@ interface Map<Key, Value>
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
-    Map clear();
+    Map clear()
+        {
+        // this method should be overridden by any class that has a more efficient implementation
+        // available
+        Map result = this;
+        if (inPlace)
+            {
+            keys.clear();
+            }
+        else
+            {
+            for (Key key : keys.toArray())
+                {
+                result = result.remove(key);
+                }
+            }
+        return result;
+        }
 
 
     // ----- Entry operations -----------------------------------------------------------
@@ -343,7 +375,12 @@ interface Map<Key, Value>
      *                   attempts to modify an entry
      */
     <Result> Result process(Key                     key,
-                            function Result(Entry) compute);
+                            function Result(Entry) compute)
+        {
+        Entry  entry  = new maps.ReifiedEntry<Key, Value>(this, key);
+        Result result = compute(entry);
+        return result;
+        }
 
     /**
      * Apply the specified function to the Entry objects for the specified keys.
@@ -504,6 +541,22 @@ interface Map<Key, Value>
             return this;
             }
 
+        @Override
+        String toString()
+            {
+            Key   key   = this.key;
+            Value value = this.value;
+            if (key.is(Stringable) && value.is(Stringable))
+                {
+                val buf = new StringBuffer(key.estimateStringLength() + 1
+                                       + value.estimateStringLength());
+                key.appendTo(buf).add(' ');
+                return value.appendTo(buf).toString();
+                }
+
+            return key.toString() + ' ' + value.toString();
+            }
+
         /**
          * Two entries are equal iff they contain equal keys and equal values (or neither exists).
          */
@@ -540,100 +593,5 @@ interface Map<Key, Value>
             }
 
         return True;
-        }
-
-
-    // ----- Stringable methods --------------------------------------------------------------------
-
-    // REVIEW Map (like Collection, etc.) should not itself be Stringable (or should they all be Stringable?)
-
-    @Override
-    Int estimateStringLength()
-        {
-        return (3 * size)   // allow for "[]", for "=" on each entry, and ", " between each entry
-                + estimateLength(keys)
-                + estimateLength(values);
-
-        static Int estimateLength(Collection coll)
-            {
-            Int capacity = 0;
-            if (coll.is(Collection<Stringable>))
-                {
-                for (Stringable element : coll)
-                    {
-                    capacity += element.estimateStringLength();
-                    }
-                }
-            else
-                {
-                for (coll.Element element : coll)
-                    {
-                    if (element.is(Stringable))
-                        {
-                        capacity += element.estimateStringLength();
-                        }
-                    else
-                        {
-                        // completely arbitrary estimate
-                        capacity += 8;
-                        }
-                    }
-                }
-            return capacity;
-            }
-        }
-
-    @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
-        buf.add('[');
-
-        if (Key.is(Type<Stringable>) && Value.is(Type<Stringable>))
-            {
-            Append:
-            for (Entry entry : entries)
-                {
-                if (!Append.first)
-                    {
-                    buf.addAll(", ");
-                    }
-                entry.key.appendTo(buf);
-                buf.add('=');
-                entry.value.appendTo(buf);
-                }
-            }
-        else
-            {
-            Append:
-            for (Entry entry : entries)
-                {
-                if (!Append.first)
-                    {
-                    buf.addAll(", ");
-                    }
-                Key key = entry.key;
-                if (key.is(Stringable))
-                    {
-                    key.appendTo(buf);
-                    }
-                else
-                    {
-                    buf.addAll(key.toString());
-                    }
-
-                buf.add('=');
-
-                Value value = entry.value;
-                if (value.is(Stringable))
-                    {
-                    value.appendTo(buf);
-                    }
-                else
-                    {
-                    buf.addAll(value.toString());
-                    }
-                }
-            }
-        return buf.add(']');
         }
     }

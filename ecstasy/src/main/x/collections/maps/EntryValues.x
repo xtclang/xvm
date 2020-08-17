@@ -2,10 +2,10 @@
  * An implementation of the Collection for the [Map.values] property that delegates back
  * to the map and to the map's [Map.entries].
  */
-class EntryValues<Key, Value>(Map<Key, Value> contents)
-        implements Collection<Value>
+class EntryValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
+        implements Collection<MapValue>
     {
-    public/private Map<Key, Value> contents;
+    public/private Map<MapKey, MapValue> contents;
 
     @Override
     Int size.get()
@@ -20,16 +20,16 @@ class EntryValues<Key, Value>(Map<Key, Value> contents)
         }
 
     @Override
-    Iterator<Value> iterator()
+    Iterator<MapValue> iterator()
         {
         return new Iterator()
             {
-            Iterator<Map<Key, Value>.Entry> entryIterator = contents.entries.iterator();
+            Iterator<Map<MapKey, MapValue>.Entry> entryIterator = contents.entries.iterator();
 
             @Override
-            conditional Value next()
+            conditional MapValue next()
                 {
-                if (Map<Key, Value>.Entry entry := entryIterator.next())
+                if (Map<MapKey, MapValue>.Entry entry := entryIterator.next())
                     {
                     return True, entry.value;
                     }
@@ -40,9 +40,9 @@ class EntryValues<Key, Value>(Map<Key, Value> contents)
         }
 
     @Override
-    EntryValues remove(Value value)
+    EntryValues remove(MapValue value)
         {
-        verifyMutable();
+        verifyInPlace();
 
         contents.entries.iterator().untilAny(entry ->
             {
@@ -58,9 +58,9 @@ class EntryValues<Key, Value>(Map<Key, Value> contents)
         }
 
     @Override
-    (EntryValues, Int) removeAll(function Boolean (Value) shouldRemove)
+    (EntryValues, Int) removeAll(function Boolean (MapValue) shouldRemove)
         {
-        verifyMutable();
+        verifyInPlace();
 
         (_, Int removed) = contents.entries.removeAll(entry -> shouldRemove(entry.value));
 
@@ -70,7 +70,7 @@ class EntryValues<Key, Value>(Map<Key, Value> contents)
     @Override
     EntryValues clear()
         {
-        verifyMutable();
+        verifyInPlace();
         contents.clear();
         return this;
         }
@@ -83,7 +83,7 @@ class EntryValues<Key, Value>(Map<Key, Value> contents)
      *
      * @throws ReadOnly if the Map is not mutable
      */
-    protected Boolean verifyMutable()
+    protected Boolean verifyInPlace()
         {
         if (!contents.inPlace)
             {

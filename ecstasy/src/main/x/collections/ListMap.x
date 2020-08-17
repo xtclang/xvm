@@ -18,7 +18,7 @@ class ListMap<Key, Value>
         implements Map<Key, Value>
         incorporates conditional ListMapIndex<Key extends immutable Hashable, Value>
         incorporates conditional MapFreezer<Key extends immutable Object, Value extends ImmutableAble>
-        incorporates text.Stringer
+        incorporates conditional MapStringer<Key extends Stringable, Value extends Stringable>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -135,23 +135,7 @@ class ListMap<Key, Value>
      *
      * @throws ReadOnly if the Map is not Mutable
      */
-    protected Boolean verifyMutable()
-        {
-        if (!inPlace)
-            {
-            throw new ReadOnly("Map operation requires inPlace==True");
-            }
-        return True;
-        }
-
-    /**
-     * Verify that the Map's mutability is non-persistent.
-     *
-     * @return True
-     *
-     * @throws ReadOnly if the Map's mutability is persistent
-     */
-    protected Boolean verifyNotPersistent()
+    protected Boolean verifyInPlace()
         {
         if (!inPlace)
             {
@@ -196,7 +180,7 @@ class ListMap<Key, Value>
         }
 
     @Override
-    @Lazy Set<Entry> entries.calc()
+    @Lazy Collection<Entry> entries.calc()
         {
         return new Entries();
         }
@@ -361,7 +345,7 @@ class ListMap<Key, Value>
         @Override
         Keys remove(Key key)
             {
-            verifyMutable();
+            verifyInPlace();
 
             if (Int index := indexOf(key))
                 {
@@ -374,7 +358,7 @@ class ListMap<Key, Value>
         @Override
         (Keys, Int) removeAll(function Boolean (Key) shouldRemove)
             {
-            verifyMutable();
+            verifyInPlace();
 
             Int removed = 0;
             for (Int i = 0, Int c = size; i < c; ++i)
@@ -392,7 +376,7 @@ class ListMap<Key, Value>
         @Override
         Keys clear()
             {
-            verifyMutable();
+            verifyInPlace();
             this.ListMap.clear();
             return this;
             }
@@ -505,7 +489,7 @@ class ListMap<Key, Value>
             @Override
             void set(Value value)
                 {
-                verifyNotPersistent();
+                verifyInPlace();
                 if (exists)
                     {
                     listVals[index] = value;
@@ -528,7 +512,7 @@ class ListMap<Key, Value>
         @Override
         void delete()
             {
-            if (verifyNotPersistent() & exists)
+            if (verifyInPlace() & exists)
                 {
                 deleteEntryAt(index);
                 exists = False;
@@ -566,7 +550,7 @@ class ListMap<Key, Value>
     // ----- Entries Set ---------------------------------------------------------------------------
 
     class Entries
-            implements Set<Entry>
+            implements Collection<Entry>
         {
         @Override
         Int size.get()
@@ -616,7 +600,7 @@ class ListMap<Key, Value>
         @Override
         Entries remove(Entry entry)
             {
-            verifyMutable();
+            verifyInPlace();
 
             if (Int index := indexOf(entry))
                 {
@@ -629,7 +613,7 @@ class ListMap<Key, Value>
         @Override
         (Entries, Int) removeAll(function Boolean (Entry) shouldRemove)
             {
-            verifyMutable();
+            verifyInPlace();
 
             CursorEntry entry   = new CursorEntry();
             Int         removed = 0;
@@ -648,7 +632,7 @@ class ListMap<Key, Value>
         @Override
         Entries clear()
             {
-            verifyMutable();
+            verifyInPlace();
             this.ListMap.clear();
             return this;
             }
@@ -741,7 +725,7 @@ class ListMap<Key, Value>
         @Override
         Values remove(Value value)
             {
-            verifyMutable();
+            verifyInPlace();
 
             if (Int index := listVals.indexOf(value))
                 {
@@ -754,7 +738,7 @@ class ListMap<Key, Value>
         @Override
         (Values, Int) removeAll(function Boolean (Value) shouldRemove)
             {
-            verifyMutable();
+            verifyInPlace();
 
             Int removed = 0;
             for (Int i = 0, Int c = size; i < c; ++i)
@@ -772,7 +756,7 @@ class ListMap<Key, Value>
         @Override
         Values clear()
             {
-            verifyMutable();
+            verifyInPlace();
             this.ListMap.clear();
             return this;
             }

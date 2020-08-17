@@ -2,10 +2,10 @@
  * An implementation of the Collection for the [Map.values] property that delegates back
  * to the map and to the map's [Map.keys].
  */
-class KeyValues<Key, Value>(Map<Key, Value> contents)
-        implements Collection<Value>
+class KeyValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
+        implements Collection<MapValue>
     {
-    public/private Map<Key, Value> contents;
+    public/private Map<MapKey, MapValue> contents;
 
     @Override
     Int size.get()
@@ -20,16 +20,16 @@ class KeyValues<Key, Value>(Map<Key, Value> contents)
         }
 
     @Override
-    Iterator<Value> iterator()
+    Iterator<MapValue> iterator()
         {
         return new Iterator()
             {
-            Iterator<Key> keyIterator = this.KeyValues.contents.keys.iterator();
+            Iterator<MapKey> keyIterator = this.KeyValues.contents.keys.iterator();
 
             @Override
-            conditional Value next()
+            conditional MapValue next()
                 {
-                if (Key key := keyIterator.next())
+                if (MapKey key := keyIterator.next())
                     {
                     return this.KeyValues.contents.get(key);
                     }
@@ -40,13 +40,13 @@ class KeyValues<Key, Value>(Map<Key, Value> contents)
         }
 
     @Override
-    KeyValues remove(Value value)
+    KeyValues remove(MapValue value)
         {
-        verifyMutable();
+        verifyInPlace();
 
         contents.keys.iterator().untilAny(key ->
             {
-            if (Value test := contents.get(key))
+            if (MapValue test := contents.get(key))
                 {
                 if (test == value)
                     {
@@ -61,13 +61,13 @@ class KeyValues<Key, Value>(Map<Key, Value> contents)
         }
 
     @Override
-    (KeyValues, Int) removeAll(function Boolean (Value) shouldRemove)
+    (KeyValues, Int) removeAll(function Boolean (MapValue) shouldRemove)
         {
-        verifyMutable();
+        verifyInPlace();
 
         (_, Int removed) = contents.keys.removeAll(key ->
                 {
-                assert Value value := contents.get(key);
+                assert MapValue value := contents.get(key);
                 return shouldRemove(value);
                 });
         return this, removed;
@@ -76,7 +76,7 @@ class KeyValues<Key, Value>(Map<Key, Value> contents)
     @Override
     KeyValues clear()
         {
-        verifyMutable();
+        verifyInPlace();
         contents.clear();
         return this;
         }
@@ -89,7 +89,7 @@ class KeyValues<Key, Value>(Map<Key, Value> contents)
      *
      * @throws ReadOnly if the Map is not mutable
      */
-    protected Boolean verifyMutable()
+    protected Boolean verifyInPlace()
         {
         if (!contents.inPlace)
             {

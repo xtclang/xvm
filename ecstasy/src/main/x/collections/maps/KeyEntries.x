@@ -1,11 +1,11 @@
 /**
- * An implementation of the Set for the [Map.entries] property that delegates back to the map and
- * to the map's [Map.keys] set.
+ * An implementation of the Collection for the [Map.entries] property that delegates back to the map
+ * and to the map's [Map.keys] set.
  */
-class KeyEntries<Key, Value>(Map<Key, Value> contents)
-        implements Set<Map<Key, Value>.Entry>
+class KeyEntries<MapKey, MapValue>(Map<MapKey, MapValue> contents)
+        implements Collection<Map<MapKey, MapValue>.Entry>
     {
-    public/private Map<Key, Value> contents;
+    public/private Map<MapKey, MapValue> contents;
 
     @Override
     Int size.get()
@@ -20,18 +20,18 @@ class KeyEntries<Key, Value>(Map<Key, Value> contents)
         }
 
     @Override
-    Iterator<Map<Key, Value>.Entry> iterator()
+    Iterator<Map<MapKey, MapValue>.Entry> iterator()
         {
         return new Iterator()
             {
-            Iterator<Key> keyIterator = this.KeyEntries.contents.keys.iterator();
+            Iterator<MapKey> keyIterator = this.KeyEntries.contents.keys.iterator();
 
             @Override
-            conditional Map<Key, Value>.Entry next()
+            conditional Map<MapKey, MapValue>.Entry next()
                 {
-                if (Key key := keyIterator.next())
+                if (MapKey key := keyIterator.next())
                     {
-                    private CursorEntry<Key, Value> entry = new CursorEntry(this.KeyEntries.contents);
+                    private CursorEntry<MapKey, MapValue> entry = new CursorEntry(this.KeyEntries.contents);
                     return True, entry.advance(key);
                     }
 
@@ -41,20 +41,20 @@ class KeyEntries<Key, Value>(Map<Key, Value> contents)
         }
 
     @Override
-    KeyEntries remove(Map<Key, Value>.Entry entry)
+    KeyEntries remove(Map<MapKey, MapValue>.Entry entry)
         {
-        verifyMutable();
+        verifyInPlace();
         contents.remove(entry.key, entry.value);
         return this;
         }
 
     @Override
     (KeyEntries, Int) removeAll(
-            function Boolean (Map<Key, Value>.Entry) shouldRemove)
+            function Boolean (Map<MapKey, MapValue>.Entry) shouldRemove)
         {
-        verifyMutable();
+        verifyInPlace();
 
-        CursorEntry<Key, Value> entry = new CursorEntry(contents);
+        CursorEntry<MapKey, MapValue> entry = new CursorEntry(contents);
         (_, Int removed) = contents.keys.removeAll(key -> shouldRemove(entry.advance(key)));
 
         return this, removed;
@@ -63,7 +63,7 @@ class KeyEntries<Key, Value>(Map<Key, Value> contents)
     @Override
     KeyEntries clear()
         {
-        verifyMutable();
+        verifyInPlace();
         contents.clear();
         return this;
         }
@@ -76,7 +76,7 @@ class KeyEntries<Key, Value>(Map<Key, Value> contents)
      *
      * @throws ReadOnly if the Map is not mutable
      */
-    protected Boolean verifyMutable()
+    protected Boolean verifyInPlace()
         {
         if (!contents.inPlace)
             {

@@ -1,7 +1,7 @@
 /**
  * A [Stringable] implementation for [Collection] implementations.
  */
-mixin StringableCollection
+mixin CollectionStringer
         into Collection<Stringable>
         implements Stringable
     {

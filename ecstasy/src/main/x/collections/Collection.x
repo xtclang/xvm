@@ -16,7 +16,8 @@
  *   implementations being the [Array] class and the [LinkedList] property annotation.
  *
  * * A related interface that is **not** derived from this Collection interface is the key/value
- *   (dictionary) interface [Map], which may itself be viewed as a `Set` of [entries](Map.Entry).
+ *   (dictionary) interface [Map], which may itself be viewed as a `Collection` of
+ *   [entries](Map.Entry).
  *
  * The Collection API supports both in-place mutation and _persistent_ data structures; from
  * Wikipedia: "a persistent data structure is a data structure that always preserves the previous
