@@ -342,6 +342,21 @@ public class ClassConstant
         return that.getConstantPool().ensureClassConstant(that, getName());
         }
 
+    @Override
+    public String getValueString()
+        {
+        if (getModuleConstant().isEcstasyModule())
+            {
+            String sPath   = "ecstasy." + getPathString();
+            String sImport = getConstantPool().getImplicitImportName(sPath);
+            if (sImport != null)
+                {
+                return getName();
+                }
+            }
+
+        return super.getValueString();
+        }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
