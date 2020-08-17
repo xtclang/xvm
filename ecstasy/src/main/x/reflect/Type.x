@@ -413,6 +413,11 @@ interface Type<DataType, OuterType>
                 : throw new InvalidType($"Type mismatch (actualType={&o.actualType}, this={this}");
         }
 
+    /**
+     * Produces OuterType TODO CP
+     */
+    conditional OuterType hasOuter(DataType o);
+
 
     // ----- operators -----------------------------------------------------------------------------
 

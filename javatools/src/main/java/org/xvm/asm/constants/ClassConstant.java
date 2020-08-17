@@ -351,7 +351,7 @@ public class ClassConstant
             String sImport = getConstantPool().getImplicitImportName(sPath);
             if (sImport != null)
                 {
-                return getName();
+                return sImport;
                 }
             }
 
