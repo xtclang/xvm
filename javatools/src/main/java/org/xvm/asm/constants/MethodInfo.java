@@ -429,6 +429,28 @@ public class MethodInfo
         }
 
     /**
+     * For a capped method info, "indent" the narrowing identity with the nested identity of the
+     * specified property.
+     *
+     * @param pool    the ConstantPool to use
+     * @param idProp  the property id
+     *
+     * @return a new MethodInfo
+     */
+    public MethodInfo nestNarrowingIdentity(ConstantPool pool, PropertyConstant idProp)
+        {
+        assert isCapped();
+
+        MethodBody bodyCap    = getHead();
+        Object     nidTarget  = idProp.appendNestedIdentity(pool, bodyCap.getNarrowingNestedIdentity()).
+                                    resolveNestedIdentity(pool, null);
+        MethodBody[] chainNew = getChain().clone();
+        chainNew[0] = new MethodBody(bodyCap.getIdentity(), bodyCap.getSignature(),
+                                     Implementation.Capped, nidTarget);
+        return new MethodInfo(chainNew);
+        }
+
+    /**
      * @return the "into" version of this MethodInfo
      */
     public MethodInfo asInto()

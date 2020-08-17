@@ -3065,7 +3065,12 @@ public abstract class TypeConstant
             {
             Object         nidContrib = entry.getKey().resolveNestedIdentity(pool, null);
             MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(pool, nidContrib);
-            mapContribMethods.put(idContrib, entry.getValue());
+            MethodInfo     infoMethod = entry.getValue();
+            if (infoMethod.isCapped())
+                {
+                infoMethod = infoMethod.nestNarrowingIdentity(pool, idProp);
+                }
+            mapContribMethods.put(idContrib, infoMethod);
             }
         layerOnMethods(constId, false, false, null, mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
         }
