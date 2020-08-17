@@ -557,7 +557,7 @@ public class Parser
                 //     TypeExpression ArgumentList-opt
                 do
                     {
-                    TypeExpression  type;
+                    TypeExpression  type        = null;
                     List<Parameter> constraints = null;
                     if (match(Id.CONDITIONAL) == null)
                         {
@@ -565,20 +565,41 @@ public class Parser
                         }
                     else
                         {
-                        // parse the type parameter list e.g. "<Key extends Int, Value>",
-                        // and turn it into a type parameter name list e.g. "<Key, Value>"
-                        List<Token>          names       = parseQualifiedName();
-                                             constraints = parseTypeParameterList(true);
-                        List<TypeExpression> paramnames  = new ArrayList<>();
-                        for (Parameter param : constraints)
+                        do
                             {
-                            Token       tokName       = param.getNameToken();
-                            List<Token> listParamName = Collections.singletonList(tokName);
-                            paramnames.add(new NamedTypeExpression(null, listParamName,
-                                    null, null, null, tokName.getEndPosition()));
+                            // parse the type parameter list e.g. "<Key extends Int, Value>",
+                            // and turn it into a type parameter name list e.g. "<Key, Value>"
+                            List<Token>          names      = parseQualifiedName();
+                            List<Parameter>      params     = parseTypeParameterList(type == null);
+                            List<TypeExpression> paramnames = null;
+                            if (params != null)
+                                {
+                                if (constraints == null)
+                                    {
+                                    constraints = params;
+                                    }
+                                else
+                                    {
+                                    constraints.addAll(params);
+                                    }
+
+                                paramnames  = new ArrayList<>();
+                                for (Parameter param : params)
+                                    {
+                                    Token       tokName       = param.getNameToken();
+                                    List<Token> listParamName = Collections.singletonList(tokName);
+                                    paramnames.add(new NamedTypeExpression(null, listParamName,
+                                            null, null, null, tokName.getEndPosition()));
+                                    }
+                                }
+
+                            type = type == null
+                                    ? new NamedTypeExpression(null, names, null, null, paramnames, prev().getEndPosition())
+                                    : new NamedTypeExpression(type, names, paramnames, prev().getEndPosition());
                             }
-                        type = new NamedTypeExpression(null, names, null, null, paramnames, prev().getEndPosition());
+                        while (match(Id.DOT) != null);
                         }
+
                     List<Expression> args = parseArgumentList(false, false, false);
                     compositions.add(new CompositionNode.Incorporates(exprCondition, keyword, type, args, constraints));
                     }
