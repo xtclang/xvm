@@ -3248,7 +3248,7 @@ public abstract class Component
             assert typeContrib.isSingleDefiningConstant();
 
             typeContrib = typeContrib.normalizeParameters();
-            if (!typeContrib.isParamsSpecified())
+            if (!typeContrib.isParameterizedDeep())
                 {
                 return typeContrib;
                 }

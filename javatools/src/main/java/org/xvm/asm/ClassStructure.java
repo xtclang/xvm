@@ -1474,6 +1474,16 @@ public class ClassStructure
                         {
                         return type;
                         }
+
+                    if (clzContrib.isVirtualChild() && typeResolved.isVirtualChild())
+                        {
+                        type = clzContrib.getVirtualParent().getGenericParamTypeImpl(pool, sName,
+                                    typeResolved.getParentType().getParamTypes(), true);
+                        if (type != null)
+                            {
+                            return type;
+                            }
+                        }
                     break;
                     }
 
