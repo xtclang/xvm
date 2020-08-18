@@ -364,7 +364,7 @@ const String
     // ----- UniformIndexed methods ----------------------------------------------------------------
 
     @Override
-    @Op("[]") @Op Char getElement(Int index)
+    @Op("[]") Char getElement(Int index)
         {
         return chars[index];
         }
