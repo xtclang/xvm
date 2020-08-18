@@ -77,14 +77,15 @@ interface Map<Key, Value>
 
     /**
      * Obtain the value associated with the specified key, or the value `Null` if the key is
-     * not present in the map.
+     * not present in the map. This method supports the use of the `[]` operator:
+     *
+     *     value = map[key];
      *
      * @param key  the key to look up in the map
      *
      * @return the value for the associated key if it exists in the map; otherwise Null
      */
-    @Op("[]")
-    Value? getOrNull(Key key)
+    @Op("[]") Value? getOrNull(Key key)
         {
         if (Value value := get(key))
             {
@@ -145,7 +146,7 @@ interface Map<Key, Value>
      *   if (map.keys.contains(name)) {...}
      *
      * The returned set is expected to support mutation operations iff the map is `inPlace`; the
-     * returned set is not expected to support the `add` or `addAll` operations.
+     * returned set is _not_ expected to support the `add` or `addAll` operations.
      */
     @RO Set<Key> keys;
 
@@ -157,6 +158,8 @@ interface Map<Key, Value>
      */
     @RO Collection<Value> values.get()
         {
+        // this is sub-optimal because a new Collection is instantiated each time; an implementing
+        // class could use this same approach but with @Lazy
         return new maps.KeyValues<Key, Value>(this);
         }
 
@@ -167,6 +170,8 @@ interface Map<Key, Value>
      */
     @RO Collection<Entry> entries.get()
         {
+        // this is sub-optimal because a new Collection is instantiated each time; an implementing
+        // class could use this same approach but with @Lazy
         return new maps.KeyEntries<Key, Value>(this);
         }
 
@@ -204,8 +209,7 @@ interface Map<Key, Value>
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
-    @Op("[]=")
-    void putInPlace(Key key, Value value)
+    @Op("[]=") void putInPlace(Key key, Value value)
         {
         if (inPlace)
             {

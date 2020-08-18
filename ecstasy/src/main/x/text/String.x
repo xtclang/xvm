@@ -39,8 +39,7 @@ const String
      *
      * @return a String that is the result of duplicating this String the specified number of times
      */
-    @Op("*")
-    String! dup(Int n)
+    @Op("*") String! dup(Int n)
         {
         if (n <= 1)
             {
@@ -64,8 +63,7 @@ const String
      *
      * @return the concatenation of the String form of the passed object onto this String
      */
-    @Op("+")
-    String! append(Object o)
+    @Op("+") String! append(Object o)
         {
         Int          add = o.is(Stringable) ? o.estimateStringLength() : 0x0F;
         StringBuffer buf = new StringBuffer(size + add);
@@ -366,8 +364,7 @@ const String
     // ----- UniformIndexed methods ----------------------------------------------------------------
 
     @Override
-    @Op("[]")
-    @Op Char getElement(Int index)
+    @Op("[]") @Op Char getElement(Int index)
         {
         return chars[index];
         }
