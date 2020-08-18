@@ -917,7 +917,7 @@ public class xRTType
             PropertyInfo     infoProp = entry.getValue();
             if (!infoProp.isConstant() && idProp.getNestedDepth() == 1)
                 {
-                TypeConstant  typeProperty = entry.getKey().getValueType(typeTarget);
+                TypeConstant  typeProperty = idProp.getValueType(typeTarget);
                 PropertyHandle hProperty   = xRTProperty.INSTANCE.makeHandle(typeProperty);
 
                 listProps.add(hProperty);

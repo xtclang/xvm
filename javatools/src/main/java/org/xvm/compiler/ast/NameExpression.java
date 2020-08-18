@@ -2114,6 +2114,7 @@ public class NameExpression
                 TypeConstant typeLeft;
                 if (left == null)
                     {
+                    PropertyInfo infoProp = null;
                     if (m_targetInfo == null)
                         {
                         typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
@@ -2124,19 +2125,20 @@ public class NameExpression
                             {
                             // the property may originate in a contribution
                             // (e.g. Interval.x refers to Range.upperBound)
-                            PropertyInfo infoProp = clz.getFormalType().
+                            infoProp = clz.getFormalType().
                                     ensureTypeInfo(errs).findProperty(idProp);
-                            if (infoProp != null)
-                                {
-                                type = infoProp.getType();
-                                }
                             }
                         }
                     else
                         {
                         idProp   = (PropertyConstant) m_targetInfo.getId();
                         typeLeft = m_targetInfo.getTargetType();
-                        type     = typeLeft.ensureTypeInfo(errs).findProperty(idProp).getType();
+                        infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
+                        }
+
+                    if (infoProp != null)
+                        {
+                        type = infoProp.getType();
                         }
 
                     // check for a narrowed property type
