@@ -2983,7 +2983,7 @@ public abstract class TypeConstant
             Annotation     anno     = aAnnos[i];
             TypeConstant   typeAnno = anno.getAnnotationType();
             ClassStructure clzAnno  = (ClassStructure) ((IdentityConstant) anno.getAnnotationClass()).getComponent();
-            if (clzAnno.indexOfGenericParameter("Referent") == 0)
+            if (typeAnno.isIntoPropertyType() && clzAnno.isParameterized())
                 {
                 typeAnno = pool.ensureParameterizedTypeConstant(typeAnno, typeProp);
                 }

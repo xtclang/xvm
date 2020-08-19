@@ -400,6 +400,26 @@ public class IntersectionTypeConstant
         return pool.typeRef();
         }
 
+    @Override
+    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
+        {
+        typeActual = typeActual.resolveTypedefs();
+
+        if (getFormat() == typeActual.getFormat())
+            {
+            return super.resolveTypeParameter(typeActual, sFormalName);
+            }
+
+        // check if any of our legs can unambiguously resolve the formal type
+        TypeConstant typeResult1 = getUnderlyingType().resolveTypeParameter(typeActual, sFormalName);
+        TypeConstant typeResult2 = getUnderlyingType2().resolveTypeParameter(typeActual, sFormalName);
+        return typeResult1 == null
+                ? typeResult2
+                : typeResult2 == null || typeResult1.equals(typeResult2)
+                        ? typeResult1
+                        : null;
+        }
+
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 

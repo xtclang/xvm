@@ -6,7 +6,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import java.util.function.Consumer;
 
@@ -145,23 +147,48 @@ public class AnnotatedTypeConstant
      */
     public TypeConstant getAnnotationType()
         {
+        TypeConstant typeAnno = m_typeAnno;
+        if (typeAnno != null)
+            {
+            return typeAnno;
+            }
+
         Constant idAnno = getAnnotationClass();
         if (idAnno instanceof ClassConstant)
             {
-            ConstantPool   pool  = getConstantPool();
             ClassStructure mixin = (ClassStructure) ((ClassConstant) idAnno).getComponent();
+
+            if (!mixin.isParameterizedDeep())
+                {
+                return mixin.getCanonicalType();
+                }
 
             // here we assume that the type parameters for the annotation mixin are
             // structurally and semantically congruent with the type parameters for the
             // incorporating class the annotation is mixing into (regardless of the parameter name)
-            return mixin.getFormalType().resolveGenerics(pool, m_constType);
+
+            TypeConstant typeFormal = mixin.getFormalType();
+            TypeConstant typeInto   = mixin.getTypeInto();
+            TypeConstant typeActual = m_constType;
+
+            Map<String, TypeConstant> mapResolve = new HashMap<>();
+            for (Map.Entry<StringConstant, TypeConstant> entry : mixin.getTypeParamsAsList())
+                {
+                String       sName = entry.getKey().getValue();
+                TypeConstant type  = typeInto.resolveTypeParameter(typeActual, sName);
+                if (type != null)
+                    {
+                    mapResolve.put(sName, type);
+                    }
+                }
+            return m_typeAnno = typeFormal.resolveGenerics(getConstantPool(), mapResolve::get);
             }
 
         // REVIEW the only other option is the constAnno to be a PseudoConstant (referring to a virtual
         //        child / sibling that is a mix-in, so some form of "virtual annotation" that has not
         //        yet been defined / evaluated for inclusion in the language)
 
-        return m_annotation.getAnnotationType();
+        return m_typeAnno = m_annotation.getAnnotationType();
         }
 
     /**
@@ -268,6 +295,24 @@ public class AnnotatedTypeConstant
         {
         return pool.ensureAnnotatedTypeConstant(m_annotation.getAnnotationClass(),
             m_annotation.getParams(), type);
+        }
+
+    @Override
+    public boolean containsGenericParam(String sName)
+        {
+        return getAnnotationType().containsGenericParam(sName) ||
+               super.containsGenericParam(sName);
+        }
+
+    @Override
+    protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
+        {
+        assert listParams.isEmpty();
+
+        TypeConstant type = getAnnotationType().resolveGenericType(sName);
+        return type == null
+                ? super.getGenericParamType(sName, listParams)
+                : type;
         }
 
     @Override
@@ -611,6 +656,9 @@ public class AnnotatedTypeConstant
         {
         m_annotation = (Annotation)   pool.register(m_annotation);
         m_constType  = (TypeConstant) pool.register(m_constType);
+
+        // invalidate cached type
+        m_typeAnno = null;
         }
 
     @Override
@@ -717,4 +765,9 @@ public class AnnotatedTypeConstant
      * Cached OpSupport reference.
      */
     private transient OpSupport m_support;
+
+    /**
+     * Cached annotation type.
+     */
+    private transient TypeConstant m_typeAnno;
     }

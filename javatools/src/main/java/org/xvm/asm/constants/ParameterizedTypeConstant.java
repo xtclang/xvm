@@ -576,7 +576,10 @@ public class ParameterizedTypeConstant
             {
             if (!typeActual.isModifyingType())
                 {
-                return null;
+                // the actual type is not parameterized, but could have a contribution that
+                // resolves the specified formal type, e.g. String, which implements Iterable<Char>
+                // and therefore resolves "Element" to Char
+                return typeActual.resolveGenericType(sFormalName);
                 }
 
             if (typeActual.getFormat() == Format.ParameterizedType)

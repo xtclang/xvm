@@ -630,6 +630,15 @@ public class ClassStructure
         }
 
     /**
+     * @return true iff if this class is parameterized or has a parameterized virtual parent
+     */
+    public boolean isParameterizedDeep()
+        {
+        return isParameterized() ||
+               isVirtualChild() && getVirtualParent().isParameterized();
+        }
+
+    /**
      * @return the formal type (e.g. Map<Key, Value>)
      */
     public TypeConstant getFormalType()
