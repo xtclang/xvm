@@ -205,7 +205,6 @@ mixin LinkedList<Element>
     protected (Element? head, Link nextLink, Link? prevLink, Boolean thisHeadVar, Boolean readOnly)
             readConfig(Boolean rewind = True)
         {
-        // TODO GG my assumption is that the order of "args" is as spec'd by the constructor, and defaults are filled in
         Argument[] args     = annotationArgs;
         Link?      nextLink = args[0].value.as(Link?);
         Link?      prevLink = args[1].value.as(Link?);
@@ -213,8 +212,7 @@ mixin LinkedList<Element>
         Boolean    ro       = args[3].value.as(Boolean);
 
         // "this" ref is from a property inside some parent object
-        // TODO GG: assert (Property<Object, Referent?, Ref<Referent>> prop, Object parent) := isProperty();
-        assert (val prop, val parent) := isProperty();
+        assert (Property<Object, Element?, LinkedList> prop, Object parent) := isProperty();
 
         // if the "nextLink" property isn't specified, then default to using the property for this ref
         nextLink ?:= prop.as(Link);
@@ -250,8 +248,8 @@ mixin LinkedList<Element>
     /**
      * Obtain the configuration for reading and mutating this LinkedList.
      *
-     * @param rewind        if the list is bi-directional and "this node" is not the start of the list,
-     *                      kthen force the rewind it to the actual head of the list
+     * @param rewind        if the list is bi-directional and "this node" is not the start of the
+     *                      list, then force the rewind it to the actual head of the list
      *
      * @return head         the first element in the list, which may be Null
      * @return nextLink     the property of each element that provides the following element

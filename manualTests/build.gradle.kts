@@ -9,6 +9,7 @@ val javatoolsJar = "${javatools.buildDir}/libs/javatools.jar"
 val tests = listOf<String>(
     "src/main/x/annos.x",
     "src/main/x/array.x",
+    "src/main/x/collections.x",
     "src/main/x/defasn.x",
     "src/main/x/exceptions.x",
     "src/main/x/generics.x",
@@ -134,6 +135,7 @@ tasks.register<JavaExec>("hostAll") {
     val names = listOf<String>(
         "build/TestAnnotations.xtc",
         "build/TestArray.xtc",
+        "build/TestCollections.xtc",
         "build/TestDefAsn.xtc",
         "build/TestTry.xtc",
         "build/TestGenerics.xtc",

@@ -47,6 +47,8 @@ import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 
+import org.xvm.runtime.template._native.reflect.xRTProperty;
+import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
@@ -225,6 +227,12 @@ public class xRef
                 return sName == null
                         ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
                         : frame.assignValues(aiReturn, xBoolean.TRUE, xString.makeHandle(sName));
+                }
+
+            case "isProperty":
+                {
+                // <Container> conditional (Property<Container, Referent, Ref<Referent>>, Container) isProperty();
+                return invokeIsProperty(frame, hRef, aiReturn);
                 }
 
             case "peek":
@@ -565,6 +573,51 @@ public class xRef
         }
 
     /**
+     * Implementation of "isProperty" method:
+     *      <Container> conditional (Property<Container, Referent, Ref<Referent>>, Container)
+     *          isProperty();
+     *
+     * @param frame    the current frame
+     * @param hRef     the Ref object
+     * @param aiReturn the registers to return the result into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION}
+     */
+    protected int invokeIsProperty(Frame frame, RefHandle hRef, int[] aiReturn)
+        {
+        TypeComposition composition = hRef.getComposition();
+
+        if (composition instanceof PropertyComposition)
+            {
+            PropertyInfo infoProp = ((PropertyComposition) composition).getPropertyInfo();
+            TypeConstant typeContainer = infoProp.getType();
+            throw new UnsupportedOperationException("TODO GG");
+            }
+        else if (composition instanceof ClassComposition)
+            {
+            ObjectHandle hContainer = hRef.isProperty() ? hRef.getReferentHolder() : null ;
+            String       sName      = hRef.getName();
+            if (hContainer != null && sName != null)
+                {
+                ConstantPool pool          = frame.poolContext();
+                TypeConstant typeContainer = hContainer.getType();
+                PropertyInfo infoProp      = pool.ensureAccessTypeConstant(typeContainer, Access.PRIVATE).
+                                                ensureTypeInfo().findProperty(sName);
+                if (infoProp == null)
+                    {
+                    return frame.raiseException("Unknown property \"" + sName + "\" at" +
+                            typeContainer.getValueString());
+                    }
+
+                TypeConstant   typeProperty = infoProp.getIdentity().getValueType(typeContainer);
+                PropertyHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
+                return frame.assignValues(aiReturn, xBoolean.TRUE, hProperty, hContainer);
+                }
+            }
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        }
+
+    /**
      * Mask the specified target as a wider type.
      *
      * @param frame    the current frame
@@ -783,16 +836,33 @@ public class xRef
             return frame.callInitialized(frameID);
             }
 
+        public boolean isProperty()
+            {
+            switch (m_iVar)
+                {
+                case REF_REFERENT:
+                    return getField(OUTER) != null;
+
+                case REF_PROPERTY:
+                    return true;
+
+                default:
+                    return false;
+                }
+            }
+
         public ObjectHandle getReferentHolder()
             {
-            assert m_iVar != REF_REFERENT;
-            return m_hReferent;
+            return m_iVar == REF_REFERENT
+                    ? getField(OUTER)
+                    : m_hReferent;
             }
 
         public ObjectHandle getReferent()
             {
-            assert m_iVar == REF_REFERENT;
-            return getField(REFERENT);
+            return m_iVar == REF_REFERENT
+                    ? getField(REFERENT)
+                    : null;
             }
 
         public void setReferent(ObjectHandle hReferent)
@@ -829,11 +899,11 @@ public class xRef
                     return getReferent() != null;
 
                 case REF_REF:
-                    return ((RefHandle) getReferentHolder()).isAssigned();
+                    return ((RefHandle) m_hReferent).isAssigned();
 
                 case REF_PROPERTY:
                     {
-                    GenericHandle hTarget = (GenericHandle) getReferentHolder();
+                    GenericHandle hTarget = (GenericHandle) m_hReferent;
                     ObjectHandle  hValue  = hTarget.getField(m_idProp);
                     if (hValue == null)
                         {
@@ -846,7 +916,7 @@ public class xRef
                     return true;
                     }
                 case REF_ARRAY:
-                    return getReferentHolder() != null;
+                    return m_hReferent != null;
 
                 default: // assertion m_frame != null && m_iVar >= 0
                     return m_frame.f_ahVar[m_iVar] != null;
@@ -878,13 +948,13 @@ public class xRef
                     return isAssigned() ? s + getReferent() : s;
 
                 case REF_REF:
-                    return s + "--> " + getReferentHolder();
+                    return s + "--> " + m_hReferent;
 
                 case REF_PROPERTY:
-                    return s + "-> " + getReferentHolder().getComposition() + "#" + m_sName;
+                    return s + "-> " + m_hReferent.getComposition() + "#" + m_sName;
 
                 case REF_ARRAY:
-                    return getReferentHolder() + "[" + ((IndexedRefHandle) this).f_lIndex + "]";
+                    return m_hReferent + "[" + ((IndexedRefHandle) this).f_lIndex + "]";
 
                 default:
                     return s + "-> #" + m_iVar;
@@ -1112,28 +1182,42 @@ public class xRef
                         assert ahAnnoArg == null;
 
                         // start working on the Annotation arguments
-                        Annotation anno    = aAnno[iAnno];
-                        Constant[] aParams = anno.getParams();
-                        int        cParams = aParams.length;
-                        if (cParams == 0)
-                            {
-                            ahAnnoArg = Utils.OBJECTS_NONE;
-                            stageNext = Stage.Annotation;
-                            break;
-                            }
+                        Annotation anno  = aAnno[iAnno];
+                        int        cArgs = anno.getParams().length;
 
                         ClassConstant  idAnno      = (ClassConstant) anno.getAnnotationClass();
                         ClassStructure structMixin = (ClassStructure) idAnno.getComponent();
 
                         // should be one and only one constructor
                         constructMixin = structMixin.findMethod("construct", m -> true);
-                        if (constructMixin == null || cParams > constructMixin.getParamCount())
+                        if (constructMixin == null || cArgs > constructMixin.getParamCount())
                             {
                             return frameCaller.raiseException("Unknown annotation: " + idAnno
-                                + " with " + cParams + " parameters");
+                                + " with " + cArgs + " parameters");
                             }
 
-                        ahAnnoArg = new ObjectHandle[cParams];
+                        int cParamsAll      = constructMixin.getParamCount();
+                        int cParamsDefault  = constructMixin.getDefaultParamCount();
+                        int cParamsRequired = cParamsAll - cParamsDefault;
+                        if (cParamsRequired > cArgs)
+                            {
+                            return frameCaller.raiseException("Missing arguments for: " + idAnno
+                                + "; required=" + cParamsRequired + "; actual=" + cArgs);
+                            }
+                        if (cArgs > cParamsAll)
+                            {
+                            return frameCaller.raiseException("Unknown arguments for: " + idAnno
+                                + "; required=" + cParamsAll + "; actual=" + cArgs);
+                            }
+
+                        if (cParamsAll == 0)
+                            {
+                            ahAnnoArg = Utils.OBJECTS_NONE;
+                            stageNext = Stage.Annotation;
+                            break;
+                            }
+
+                        ahAnnoArg = new ObjectHandle[cParamsAll];
                         iArg      = -1;
                         stageNext = Stage.Value;
                         // break through
@@ -1143,14 +1227,19 @@ public class xRef
                         {
                         assert ahAnnoArg != null;
 
-                        if (++iArg == ahAnnoArg.length)
+                        if (++iArg == constructMixin.getParamCount())
                             {
                             // all arguments are collected; construct the annotation
                             stageNext = Stage.Annotation;
                             continue NextStep;
                             }
 
-                        hValue    = frameCaller.getConstHandle(aAnno[iAnno].getParams()[iArg]);
+                        Constant[] aconstArg = aAnno[iAnno].getParams();
+                        Constant   constArg  = iArg < aconstArg.length
+                            ? aconstArg[iArg]
+                            : constructMixin.getParam(iArg).getDefaultValue();
+
+                        hValue    = frameCaller.getConstHandle(constArg);
                         stageNext = Stage.Argument;
 
                         if (Op.isDeferred(hValue))

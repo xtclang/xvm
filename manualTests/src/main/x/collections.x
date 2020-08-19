@@ -2,7 +2,7 @@ module TestCollections
     {
     @Inject ecstasy.io.Console console;
 
-    void run()
+    void run( )
         {
         console.println("Collection tests");
 
@@ -15,7 +15,13 @@ module TestCollections
         @LinkedList Phone? next;
         List<Phone> list.get()
             {
-            return &next.as(List<Phone>);  // TODO GG .as should not be required
+            return &next;
+            }
+
+        @Override
+        String toString()
+            {
+            return desc + " " + number;
             }
         }
 
