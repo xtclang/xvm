@@ -333,7 +333,7 @@ interface Collection<Element>
         // implementations of this interface should replace this default behavior
         if (&dest == &this)
             {
-            Result[] results = new Result[size](_ -> transform(iter.next()));
+            Result[] results = new Result[size](_ -> transform(iter.take()));
             clear();
             addAll(results.as(List<Element>));
             assert dest != Null;
@@ -343,7 +343,7 @@ interface Collection<Element>
         if (dest == Null)
             {
             // TODO replace with deferred-map collection?
-            return new Result[size](_ -> transform(iter.next()));
+            return new Result[size](_ -> transform(iter.take()));
             }
 
         for (Element e : iter)

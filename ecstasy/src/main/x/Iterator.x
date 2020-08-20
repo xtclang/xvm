@@ -20,6 +20,19 @@ interface Iterator<Element>
     conditional Element next();
 
     /**
+     * Take the next element.
+     *
+     * @return the Element value
+     *
+     * @throws IllegalState if the iterator is exhausted
+     */
+    Element take()
+        {
+        assert Element e := next();
+        return e;
+        }
+
+    /**
      * Perform the specified action for all remaining elements in the iterator, allowing for
      * a possibility to stop the iteration at any time.
      *
