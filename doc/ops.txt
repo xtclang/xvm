@@ -15,11 +15,89 @@
 +FINALLY_E                                          ; ("E"=) end  a "finally" handler (implicit EXIT)
 +THROW      rvalue                                  ; raise exception
 
-// asserts
-// (specifying CONSTRUCT as A_IGNORE implies a breakpoint only, and not a raised exception)
-+ASSERT     rvalue, CONSTRUCT                       ; assert boolean (zero parameter exception constructor)
-+ASSERT_M   rvalue, CONSTRUCT, STRING               ; assert with a ("M"=) message (one String parameter exception constructor)
-+ASSERT_V   rvalue, CONSTRUCT, STRING, #vals(rvalue); assert with a message and ("V"=) values to print (one String parameter exception constructor)
+// function calls
+// rvalue-fn, rvalue-param and lvalue-return support "local property" mode
+// return values can specify the "next register" to allocate
+// - first digit is # params: 0, 1, n, or "t"=tuple
+// - second digit is # returns: 0, 1, n, or "t"=tuple
++CALL_00    rvalue-fn
++CALL_01    rvalue-fn, lvalue-return
++CALL_0N    rvalue-fn, #:(lvalue)
++CALL_0T    rvalue-fn, lvalue-treturn
++CALL_10    rvalue-fn, rvalue-param
++CALL_11    rvalue-fn, rvalue-param, lvalue-return
++CALL_1N    rvalue-fn, rvalue-param, #:(lvalue)
++CALL_1T    rvalue-fn, rvalue-param, lvalue-treturn
++CALL_N0    rvalue-fn, #:(rvalue)
++CALL_N1    rvalue-fn, #:(rvalue), lvalue-return
++CALL_NN    rvalue-fn, #:(rvalue), #:(lvalue)
++CALL_NT    rvalue-fn, #:(rvalue), lvalue-treturn
++CALL_T0    rvalue-fn, rvalue-tparams
++CALL_T1    rvalue-fn, rvalue-tparams, lvalue-return
++CALL_TN    rvalue-fn, rvalue-tparams, #:(lvalue)
++CALL_TT    rvalue-fn, rvalue-tparams, lvalue-treturn
+
+// method calls ("NVOK"=invoke)
+// REVIEW rvalue-target should not support lprops
+// lvalue-param and lvalue-return support "local property" mode
+// return values can specify the "next register" to allocate
+// - first digit is # params: 0, 1, n, or tuple
+// - second digit is # returns: 0, 1, n, or tuple
++NVOK_00    rvalue-target, METHOD
++NVOK_01    rvalue-target, METHOD, lvalue-return
++NVOK_0N    rvalue-target, METHOD, #:(lvalue)
++NVOK_0T    rvalue-target, METHOD, lvalue-treturn
++NVOK_10    rvalue-target, METHOD, rvalue-param
++NVOK_11    rvalue-target, METHOD, rvalue-param, lvalue-return
++NVOK_1N    rvalue-target, METHOD, rvalue-param, #returns:(lvalue)
++NVOK_1T    rvalue-target, METHOD, rvalue-param, lvalue-treturn
++NVOK_N0    rvalue-target, METHOD, #:(rvalue)
++NVOK_N1    rvalue-target, METHOD, #:(rvalue), lvalue-return
++NVOK_NN    rvalue-target, METHOD, #:(rvalue), #:(lvalue)
++NVOK_NT    rvalue-target, METHOD, #:(rvalue), lvalue-treturn
++NVOK_T0    rvalue-target, METHOD, rvalue-tparams
++NVOK_T1    rvalue-target, METHOD, rvalue-tparams, lvalue-return
++NVOK_TN    rvalue-target, METHOD, rvalue-tparams, #:(lvalue)
++NVOK_TT    rvalue-target, METHOD, rvalue-tparams, lvalue-treturn
+
+// method and function binding
+// - does NOT support "local property" mode nor "next register"  REVIEW why not? agreed that rvalue-target and rvalue-param must not support lprops
++BIND_M      rvalue-target, METHOD, lvalue-fn-result
++BIND_F      rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
+
+// construct calls
+ SYN_INIT                                                           ; default initializer
++CONSTR_0   CONSTRUCT                                               ; "super" construct call
++CONSTR_1   CONSTRUCT, rvalue-param
++CONSTR_N   CONSTRUCT, #params:(rvalue)
+ CONSTR_T   CONSTRUCT, rvalue-tparams
+
+// construction
+// ("G"=) generic types; ("C"=) child classes;
+// - rvalue parameters can be registers, constant values, or local-property indicators (PROPERTY)
+// - lvalue will hold the newly constructed object
+// - the lvalue can be a register or a local-property indicator (PROPERTY)
+// - a new register of the constructed type is allocated if the lvalue is the next unallocated register
++NEW_0      CONSTRUCT, lvalue                                       ; simple "new"
++NEW_1      CONSTRUCT, rvalue-param, lvalue
++NEW_N      CONSTRUCT, #:(rvalue), lvalue
++NEW_T      CONSTRUCT, rvalue-tparams, lvalue
++NEWG_0     CONSTRUCT, TYPE, lvalue                                 ; generic-type "new"
++NEWG_1     CONSTRUCT, TYPE, rvalue-param, lvalue
++NEWG_N     CONSTRUCT, TYPE, #:(rvalue), lvalue
++NEWG_T     CONSTRUCT, TYPE, rvalue-tparams, lvalue
++NEWC_0     CONSTRUCT, rvalue-parent, lvalue                        ; virtual "new" for child classes
++NEWC_1     CONSTRUCT, rvalue-parent, rvalue-param, lvalue
++NEWC_N     CONSTRUCT, rvalue-parent, #:(rvalue), lvalue
+ NEWC_T     CONSTRUCT, rvalue-parent, rvalue-tparams, lvalue
++NEWCG_0    CONSTRUCT, rvalue-parent, TYPE, lvalue                  ; virtual generic-type "new" for child classes
++NEWCG_1    CONSTRUCT, rvalue-parent, TYPE, rvalue-param, lvalue
++NEWCG_N    CONSTRUCT, rvalue-parent, TYPE, #:(rvalue), lvalue
+ NEWCG_T    CONSTRUCT, rvalue-parent, TYPE, rvalue-tparams, lvalue
+ NEWV_0     CONSTRUCT, rvalue-type, lvalue                          ; virtual "new"
+ NEWV_1     CONSTRUCT, rvalue-type, rvalue-param, lvalue            ;  - CONSTRUCT may be on an interface (implies compile-time type)
+ NEWV_N     CONSTRUCT, rvalue-type, #:(rvalue), lvalue              ;  - rvalue-type is the virtual type
+ NEWV_T     CONSTRUCT, rvalue-type, rvalue-tparams, lvalue
 
 // returns
 // - rvalues support a local-property mode
@@ -27,61 +105,6 @@
 +RETURN_1   rvalue                                  ; return (single return value)
 +RETURN_N   #vals:(rvalue)                          ; return (multiple return value)
 +RETURN_T   rvalue-tuple                            ; return (multiple return from a tuple)
-
-// method and function binding
-// - does NOT support "local property" mode nor "next register"  REVIEW why not? agreed that rvalue-target and rvalue-param must not support lprops
-+BIND_M      rvalue-target, METHOD, lvalue-fn-result
-+BIND_F      rvalue-fn, #params:(param-index, rvalue-param), lvalue-fn-result
-
-// generic type resolution
- RTYPE_1    TYPE, rvalue-type, lvalue               ; resolve generic type; lvalue - a Type object
- RTYPE_N    TYPE, #type-params:(rvalue-type), lvalue
-
-// jumps (all addresses are relative to the PC of the jump op)
-// - rvalues support a local-property mode
-+JMP        addr                                    ; unconditional relative jump
-+JMP_TRUE   rvalue, addr                            ; jump if Boolean value is Boolean.True
-+JMP_FALSE  rvalue, addr                            ; jump if Boolean value is Boolean.False
-+JMP_ZERO   rvalue, addr                            ; jump if value is zero
-+JMP_NZERO  rvalue, addr                            ; jump if value is NOT zero
-+JMP_NULL   rvalue, addr                            ; jump if value is null
-+JMP_NNULL  rvalue, addr                            ; jump if value is NOT null
-+JMP_EQ     rvalue1, rvalue2, addr                  ; jump if value-1 is equal to value-2
-+JMP_NEQ    rvalue1, rvalue2, addr                  ; jump if value-1 is NOT equal to value-2
-+JMP_LT     rvalue1, rvalue2, addr                  ; jump if value-1 is less than value-2
-+JMP_LTE    rvalue1, rvalue2, addr                  ; jump if value-1 is less than or equal to value-2
-+JMP_GT     rvalue1, rvalue2, addr                  ; jump if value-1 is greater than value-2
-+JMP_GTE    rvalue1, rvalue2, addr                  ; jump if value-1 is greater than or equal to value-2
-+JMP_TYPE   rvalue, TYPE, addr                      ; jump if type of the value is “instanceof" specified type
-+JMP_NTYPE  rvalue, TYPE, addr                      ; jump if type of the value is NOT “instanceof" specified type
-+JMP_COND   COND, addr                              ; jump if the link-time condition evaluates to True
-+JMP_NCOND  COND, addr                              ; jump if the link-time condition evaluates to False
-+JMP_NFIRST addr                                    ; jump if this is NOT the first time the op has been executed
-+JMP_NSAMPL rvalue, addr                            ; jump if this is NOT a selected sample based on the rvalue sample rate (a compile-time or run-time constant)
-+JMP_INT    rvalue, offset, #:(addr), addr-default      ; if (value - offset) equals (0,1,2,...), jump to corresponding address, otherwise default
-+JMP_VAL    rvalue, #:(CONST, addr), addr-default       ; if value equals a constant, jump to address, otherwise default
--JMP_VAL_N  #:(rvalue), #:(CONST, addr), addr-default   ; if values equals fields of a tuple constant, jump to address, otherwise default
-
-// Value comparisons (mostly Boolean checks)
-// - rvalues support a local-property mode
-// - lvalue return values can specify the "next register" to allocate
-+IS_ZERO    rvalue-int, lvalue-return               ; T == 0 -> Boolean
-+IS_NZERO   rvalue-int, lvalue-return               ; T != 0 -> Boolean
-+IS_NULL    rvalue, lvalue-return                   ; T == null -> Boolean
-+IS_NNULL   rvalue, lvalue-return                   ; T != null -> Boolean
-+IS_EQ      rvalue, rvalue, lvalue-return           ; T == T -> Boolean
-+IS_NEQ     rvalue, rvalue, lvalue-return           ; T != T -> Boolean
-+IS_LT      rvalue, rvalue, lvalue-return           ; T < T -> Boolean
-+IS_LTE     rvalue, rvalue, lvalue-return           ; T <= T -> Boolean
-+IS_GT      rvalue, rvalue, lvalue-return           ; T > T -> Boolean
-+IS_GTE     rvalue, rvalue, lvalue-return           ; T >= T -> Boolean
-+IS_NOT     rvalue, lvalue-return                   ; !T -> Boolean
-+IS_TYPE    rvalue, rvalue-type, lvalue-return      ; T instanceof Type -> Boolean
-+IS_NTYPE   rvalue, rvalue-type, lvalue-return      ; !(T instanceof Type) -> Boolean
-+IS_SVC     rvalue, lvalue-return                   ; (T is a service) -> Boolean
-+IS_CONST   rvalue, lvalue-return                   ; (T is a const) -> Boolean
-+IS_IMMUT   rvalue, lvalue-return                   ; (T is an immutable) -> Boolean
-+CMP        rvalue1, rvalue2, lvalue-return         ; T <=> T -> Ordered
 
 // next register allocation (variables, including refs)
 // - does NOT support "local property" mode
@@ -110,7 +133,60 @@
 +MOV_REF    rvalue-src, lvalue-dest                 ; move ("R"=) Ref-to-source to destination (read-only)
 +MOV_THIS   #, lvalue-dest                          ; # (an inline unsigned byte) specifies the count of this-to-outer-this steps (0=this, 1=ImmediatelyOuter.this, etc.)
 +MOV_THISA  #, lvalue-dest, A_*                     ; same as above with an additional access modifier (A_TARGET, A_PUBLIC, A_PROTECTED, A_PRIVATE)
+ MOV_TYPE   rvalue-src, lvalue-dest                 ; place the type of the r-value into the l-value
 +CAST       rvalue-src, lvalue-dest, TYPE           ; copy source to destination with cast
+
+// Value comparisons (mostly Boolean checks)
+// - rvalues support a local-property mode
+// - lvalue return values can specify the "next register" to allocate
++CMP        rvalue1, rvalue2, lvalue-return         ; T <=> T -> Ordered
++IS_ZERO    rvalue-int, lvalue-return               ; T == 0 -> Boolean
++IS_NZERO   rvalue-int, lvalue-return               ; T != 0 -> Boolean
++IS_NULL    rvalue, lvalue-return                   ; T == null -> Boolean
++IS_NNULL   rvalue, lvalue-return                   ; T != null -> Boolean
++IS_EQ      rvalue, rvalue, lvalue-return           ; T == T -> Boolean
++IS_NEQ     rvalue, rvalue, lvalue-return           ; T != T -> Boolean
++IS_LT      rvalue, rvalue, lvalue-return           ; T < T -> Boolean
++IS_LTE     rvalue, rvalue, lvalue-return           ; T <= T -> Boolean
++IS_GT      rvalue, rvalue, lvalue-return           ; T > T -> Boolean
++IS_GTE     rvalue, rvalue, lvalue-return           ; T >= T -> Boolean
++IS_NOT     rvalue, lvalue-return                   ; !T -> Boolean
++IS_TYPE    rvalue, rvalue-type, lvalue-return      ; T instanceof Type -> Boolean
++IS_NTYPE   rvalue, rvalue-type, lvalue-return      ; !(T instanceof Type) -> Boolean
++IS_SVC     rvalue, lvalue-return                   ; (T is a service) -> Boolean
++IS_CONST   rvalue, lvalue-return                   ; (T is a const) -> Boolean
++IS_IMMUT   rvalue, lvalue-return                   ; (T is an immutable) -> Boolean
+
+// jumps (all addresses are relative to the PC of the jump op)
+// - rvalues support a local-property mode
++JMP        addr                                    ; unconditional relative jump
++JMP_TRUE   rvalue, addr                            ; jump if Boolean value is Boolean.True
++JMP_FALSE  rvalue, addr                            ; jump if Boolean value is Boolean.False
++JMP_ZERO   rvalue, addr                            ; jump if value is zero
++JMP_NZERO  rvalue, addr                            ; jump if value is NOT zero
++JMP_NULL   rvalue, addr                            ; jump if value is null
++JMP_NNULL  rvalue, addr                            ; jump if value is NOT null
++JMP_EQ     rvalue1, rvalue2, addr                  ; jump if value-1 is equal to value-2
++JMP_NEQ    rvalue1, rvalue2, addr                  ; jump if value-1 is NOT equal to value-2
++JMP_LT     rvalue1, rvalue2, addr                  ; jump if value-1 is less than value-2
++JMP_LTE    rvalue1, rvalue2, addr                  ; jump if value-1 is less than or equal to value-2
++JMP_GT     rvalue1, rvalue2, addr                  ; jump if value-1 is greater than value-2
++JMP_GTE    rvalue1, rvalue2, addr                  ; jump if value-1 is greater than or equal to value-2
++JMP_TYPE   rvalue, TYPE, addr                      ; jump if type of the value is “instanceof" specified type
++JMP_NTYPE  rvalue, TYPE, addr                      ; jump if type of the value is NOT “instanceof" specified type
++JMP_COND   COND, addr                              ; jump if the link-time condition evaluates to True
++JMP_NCOND  COND, addr                              ; jump if the link-time condition evaluates to False
++JMP_NFIRST addr                                    ; jump if this is NOT the first time the op has been executed
++JMP_NSAMPL rvalue, addr                            ; jump if this is NOT a selected sample based on the rvalue sample rate (a compile-time or run-time constant)
++JMP_INT    rvalue, offset, #:(addr), addr-default      ; if (value - offset) equals (0,1,2,...), jump to corresponding address, otherwise default
++JMP_VAL    rvalue, #:(CONST, addr), addr-default       ; if value equals a constant, jump to address, otherwise default
+-JMP_VAL_N  #:(rvalue), #:(CONST, addr), addr-default   ; if values equals fields of a tuple constant, jump to address, otherwise default
+
+// asserts
+// (specifying CONSTRUCT as A_IGNORE implies a breakpoint only, and not a raised exception)
++ASSERT     rvalue, CONSTRUCT                       ; assert boolean (zero parameter exception constructor)
++ASSERT_M   rvalue, CONSTRUCT, STRING               ; assert with a ("M"=) message (one String parameter exception constructor)
++ASSERT_V   rvalue, CONSTRUCT, STRING, #vals(rvalue); assert with a message and ("V"=) values to print (one String parameter exception constructor)
 
 // ("GP"=) general purpose register/local-property operations:
 // - rvalues could be a register or a constant value or a local-property indicator (PROPERTY)
@@ -246,84 +322,6 @@
  MIP_AND     rvalue-target, #:(rvalue-ix), rvalue2
  MIP_OR      rvalue-target, #:(rvalue-ix), rvalue2
  MIP_XOR     rvalue-target, #:(rvalue-ix), rvalue2
-
-// function calls
-// rvalue-fn, rvalue-param and lvalue-return support "local property" mode
-// return values can specify the "next register" to allocate
-// - first digit is # params: 0, 1, n, or "t"=tuple
-// - second digit is # returns: 0, 1, n, or "t"=tuple
-+CALL_00    rvalue-fn
-+CALL_01    rvalue-fn, lvalue-return
-+CALL_0N    rvalue-fn, #:(lvalue)
-+CALL_0T    rvalue-fn, lvalue-treturn
-+CALL_10    rvalue-fn, rvalue-param
-+CALL_11    rvalue-fn, rvalue-param, lvalue-return
-+CALL_1N    rvalue-fn, rvalue-param, #:(lvalue)
-+CALL_1T    rvalue-fn, rvalue-param, lvalue-treturn
-+CALL_N0    rvalue-fn, #:(rvalue)
-+CALL_N1    rvalue-fn, #:(rvalue), lvalue-return
-+CALL_NN    rvalue-fn, #:(rvalue), #:(lvalue)
-+CALL_NT    rvalue-fn, #:(rvalue), lvalue-treturn
-+CALL_T0    rvalue-fn, rvalue-tparams
-+CALL_T1    rvalue-fn, rvalue-tparams, lvalue-return
-+CALL_TN    rvalue-fn, rvalue-tparams, #:(lvalue)
-+CALL_TT    rvalue-fn, rvalue-tparams, lvalue-treturn
-
-// method calls ("NVOK"=invoke)
-// REVIEW rvalue-target should not support lprops
-// lvalue-param and lvalue-return support "local property" mode
-// return values can specify the "next register" to allocate
-// - first digit is # params: 0, 1, n, or tuple
-// - second digit is # returns: 0, 1, n, or tuple
-+NVOK_00    rvalue-target, METHOD
-+NVOK_01    rvalue-target, METHOD, lvalue-return
-+NVOK_0N    rvalue-target, METHOD, #:(lvalue)
-+NVOK_0T    rvalue-target, METHOD, lvalue-treturn
-+NVOK_10    rvalue-target, METHOD, rvalue-param
-+NVOK_11    rvalue-target, METHOD, rvalue-param, lvalue-return
-+NVOK_1N    rvalue-target, METHOD, rvalue-param, #returns:(lvalue)
-+NVOK_1T    rvalue-target, METHOD, rvalue-param, lvalue-treturn
-+NVOK_N0    rvalue-target, METHOD, #:(rvalue)
-+NVOK_N1    rvalue-target, METHOD, #:(rvalue), lvalue-return
-+NVOK_NN    rvalue-target, METHOD, #:(rvalue), #:(lvalue)
-+NVOK_NT    rvalue-target, METHOD, #:(rvalue), lvalue-treturn
-+NVOK_T0    rvalue-target, METHOD, rvalue-tparams
-+NVOK_T1    rvalue-target, METHOD, rvalue-tparams, lvalue-return
-+NVOK_TN    rvalue-target, METHOD, rvalue-tparams, #:(lvalue)
-+NVOK_TT    rvalue-target, METHOD, rvalue-tparams, lvalue-treturn
-
-// construction
-// ("G"=) generic types; ("C"=) child classes;
-// - rvalue parameters can be registers, constant values, or local-property indicators (PROPERTY)
-// - lvalue will hold the newly constructed object
-// - the lvalue can be a register or a local-property indicator (PROPERTY)
-// - a new register of the constructed type is allocated if the lvalue is the next unallocated register
-+NEW_0      CONSTRUCT, lvalue                                       ; simple "new"
-+NEW_1      CONSTRUCT, rvalue-param, lvalue
-+NEW_N      CONSTRUCT, #:(rvalue), lvalue
-+NEW_T      CONSTRUCT, rvalue-tparams, lvalue
-+NEWG_0     CONSTRUCT, TYPE, lvalue                                 ; generic-type "new"
-+NEWG_1     CONSTRUCT, TYPE, rvalue-param, lvalue
-+NEWG_N     CONSTRUCT, TYPE, #:(rvalue), lvalue
-+NEWG_T     CONSTRUCT, TYPE, rvalue-tparams, lvalue
-+NEWC_0     CONSTRUCT, rvalue-parent, lvalue                        ; virtual "new" for child classes
-+NEWC_1     CONSTRUCT, rvalue-parent, rvalue-param, lvalue
-+NEWC_N     CONSTRUCT, rvalue-parent, #:(rvalue), lvalue
- NEWC_T     CONSTRUCT, rvalue-parent, rvalue-tparams, lvalue
-+NEWCG_0    CONSTRUCT, rvalue-parent, TYPE, lvalue                  ; virtual generic-type "new" for child classes
-+NEWCG_1    CONSTRUCT, rvalue-parent, TYPE, rvalue-param, lvalue
-+NEWCG_N    CONSTRUCT, rvalue-parent, TYPE, #:(rvalue), lvalue
- NEWCG_T    CONSTRUCT, rvalue-parent, TYPE, rvalue-tparams, lvalue
- NEWV_0     CONSTRUCT, rvalue-type, lvalue                          ; virtual "new"
- NEWV_1     CONSTRUCT, rvalue-type, rvalue-param, lvalue            ;  - CONSTRUCT must be on an interface
- NEWV_N     CONSTRUCT, rvalue-type, #:(rvalue), lvalue              ;  - rvalue-type is the virtual type
- NEWV_T     CONSTRUCT, rvalue-type, rvalue-tparams, lvalue
-
-// construct calls
-+CONSTR_0   CONSTRUCT                                               ; "super" construct call
-+CONSTR_1   CONSTRUCT, rvalue-param
-+CONSTR_N   CONSTRUCT, #params:(rvalue)
- CONSTR_T   CONSTRUCT, rvalue-tparams
 
 
 
