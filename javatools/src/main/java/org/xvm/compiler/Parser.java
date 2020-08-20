@@ -3185,17 +3185,7 @@ public class Parser
                         {
                         case NEW:
                             {
-                            Token            keyword = expect(Id.NEW);
-                            TypeExpression   type    = parseTypeExpression();
-                            long             lEndPos = type.getEndPosition();
-                            List<Expression> args    = Collections.EMPTY_LIST;
-                            if (!(type instanceof ArrayTypeExpression
-                                    && ((ArrayTypeExpression) type).getDimensions() == 0))
-                                {
-                                args    = parseArgumentList(true, false, true);
-                                lEndPos = prev().getEndPosition();
-                                }
-                            expr = new NewExpression(expr, keyword, type, args, lEndPos);
+                            expr = parseNewExpression(expr);
                             break;
                             }
 
@@ -3316,6 +3306,79 @@ public class Parser
             }
         }
 
+    NewExpression parseNewExpression(Expression left)
+        {
+        Token            keyword = expect(Id.NEW);
+        TypeExpression   type    = null;
+        List<Expression> args    = null;
+        int              dims    = -1;
+        StatementBlock   body    = null;
+        long             lEndPos = 0;
+
+        if (peek().getId() == Id.L_PAREN)
+            {
+            // this could be a type expression inside parenthesis, or it could be an
+            // argument list for a "virtual new"; assume it's a virtual new, and we'll back
+            // up if we were wrong
+            Mark mark = mark();
+            args    = parseArgumentList(true, false, false);
+            lEndPos = prev().getEndPosition();
+
+            Token.Id idNext = peek().getId();
+            if (args.size() == 1 && (idNext == Id.L_PAREN || idNext == Id.L_SQUARE))
+                {
+                // this wasn't supposed to be an argument list, it was supposed to be a type
+                restore(mark);
+                args = null;
+                }
+            }
+
+        if (args == null)
+            {
+            type    = parseTypeExpression();
+            lEndPos = type.getEndPosition();
+
+            // we always need arguments, but if the arguments are an empty array indicator,
+            // e.g. "new Int[]", then we've already eaten the arguments when we parsed the type
+            // expression
+            boolean fArray = type instanceof ArrayTypeExpression;
+            if (fArray)
+                {
+                if (peek().getId() == Id.L_SQUARE)
+                    {
+                    args    = parseArgumentList(true, false, true);
+                    dims    = args.size();
+                    lEndPos = prev().getEndPosition();
+                    }
+                else
+                    {
+                    args = Collections.EMPTY_LIST;
+                    }
+
+                // parenthesized arguments after the dims
+                List<Expression> argsTrailing = parseArgumentList(false, false, false);
+                if (argsTrailing != null)
+                    {
+                    args.addAll(argsTrailing);
+                    lEndPos = prev().getEndPosition();
+                    }
+                }
+            else
+                {
+                args    = parseArgumentList(true, false, false);
+                lEndPos = prev().getEndPosition();
+                }
+
+            if (peek().getId() == Id.L_CURLY)
+                {
+                body    = parseTypeCompositionBody(keyword);
+                lEndPos = prev().getEndPosition();
+                }
+            }
+
+        return new NewExpression(left, keyword, type, args, dims, body, lEndPos);
+        }
+
     /**
      * Parse a primary expression.
      *
@@ -3363,21 +3426,7 @@ public class Parser
                 }
 
             case NEW:
-                {
-                Token            keyword = expect(Id.NEW);
-                TypeExpression   type    = parseTypeExpression();
-                // we always need arguments, but if the arguments are an empty array indicator,
-                // e.g. "new Int[]", then we've already eaten the arguments when we parsed the type
-                // expression
-                List<Expression> args = type instanceof ArrayTypeExpression &&
-                                        ((ArrayTypeExpression) type).getDimensions() == 0
-                                      ? Collections.EMPTY_LIST
-                                      : parseArgumentList(true, false, true);
-                StatementBlock   body = peek().getId() == Id.L_CURLY
-                                      ? parseTypeCompositionBody(keyword)
-                                      : null ;
-                return new NewExpression(keyword, type, args, body, prev().getEndPosition());
-                }
+                return parseNewExpression(null);
 
             case THROW:
                 return new ThrowExpression(expect(Id.THROW), parseTernaryExpression());

@@ -333,12 +333,7 @@ interface Collection<Element>
         // implementations of this interface should replace this default behavior
         if (&dest == &this)
             {
-            Result[] results = new Array<Result>(size, _ ->
-                {
-                assert val el := iter.next();
-                return transform(el);
-                });
-            // TODO Result[] results = new Result[size](_ -> transform(iter.next()));
+            Result[] results = new Result[size](_ -> transform(iter.next()));
             clear();
             addAll(results.as(List<Element>));
             assert dest != Null;
@@ -347,14 +342,8 @@ interface Collection<Element>
 
         if (dest == Null)
             {
-            // TODO replace with deferred-map collection
-            return new Array<Result>(size, _ ->
-                {
-                assert val el := iter.next();
-                return transform(el);
-                });
-
-            // TODO return new Result[size](_ -> transform(iter.next()));
+            // TODO replace with deferred-map collection?
+            return new Result[size](_ -> transform(iter.next()));
             }
 
         for (Element e : iter)

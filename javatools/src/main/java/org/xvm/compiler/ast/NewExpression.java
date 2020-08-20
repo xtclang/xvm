@@ -56,49 +56,28 @@ public class NewExpression
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a "new" expression.
-     *
-     * @param operator  presumably, the "new" operator
-     * @param type      the type being instantiated
-     * @param args      a list of constructor arguments for the type being instantiated
-     * @param body      the body of the anonymous inner class being instantiated, or null
-     * @param lEndPos   the expression's end position in the source code
-     */
-    public NewExpression(Token operator, TypeExpression type, List<Expression> args, StatementBlock body, long lEndPos)
-        {
-        assert operator != null;
-        assert type != null;
-        assert args != null;
-
-        this.left     = null;
-        this.operator = operator;
-        this.type     = type;
-        this.args     = args;
-        this.body     = body;
-        this.lEndPos  = lEndPos;
-        }
-
-    /**
      * Construct a ".new" expression.
      *
      * @param left      the "left" expression
      * @param operator  presumably, the "new" operator
-     * @param type      the type being instantiated
-     * @param args      a list of constructor arguments for the type being instantiated, or null
+     * @param type      the type being instantiated (can be null for virtual new)
+     * @param args      a list of constructor arguments for the type being instantiated
+     * @param dims      the number of arguments inside square brackets (the rest are in the trailing
+     *                  parenthesized argument list), or -1 if no square brackets
+     * @param body      the body of the anonymous inner class being instantiated, or null
      * @param lEndPos   the expression's end position in the source code
      */
-    public NewExpression(Expression left, Token operator, TypeExpression type, List<Expression> args, long lEndPos)
+    public NewExpression(Expression left, Token operator, TypeExpression type, List<Expression> args, int dims, StatementBlock body, long lEndPos)
         {
-        assert left != null;
         assert operator != null;
-        assert type != null;
         assert args != null;
 
         this.left     = left;
         this.operator = operator;
         this.type     = type;
         this.args     = args;
-        this.body     = null;
+        this.dims     = dims;
+        this.body     = body;
         this.lEndPos  = lEndPos;
         }
 
@@ -129,12 +108,36 @@ public class NewExpression
         }
 
     /**
+     * @return true iff the new expression is for a "virtual new"
+     */
+    public boolean isVirtualNew()
+        {
+        return type == null;
+        }
+
+    /**
      * @return return a list of expressions that are passed to the constructor of the object being
-     *         instantiated, or null if there is no argument list specified
+     *         instantiated
      */
     public List<Expression> getConstructorArguments()
         {
         return args;
+        }
+
+    /**
+     * @return true iff there were square brackets as part of the new expression
+     */
+    public boolean hasSquareBrackets()
+        {
+        return dims >= 0;
+        }
+
+    /**
+     * @return the number of constructor arguments that were inside of square brackets
+     */
+    public int getDimensionCount()
+        {
+        return Math.max(dims, 0);
         }
 
     /**
@@ -242,6 +245,7 @@ public class NewExpression
         TypeConstant typeTarget;
         if (body == null)
             {
+// TODO GG type == null
             typeTarget  = type.ensureTypeConstant(ctx);
             }
         else
@@ -1460,16 +1464,45 @@ public class NewExpression
               .append('.');
             }
 
-        sb.append(operator.getId().TEXT)
-          .append(' ')
-          .append(type);
+        sb.append(operator.getId().TEXT);
+
+        if (type != null)
+            {
+            sb.append(' ')
+              .append(type);
+            }
 
         if (args != null)
             {
+            int iFirst = 0;
+
+            if (hasSquareBrackets())
+                {
+                iFirst = getDimensionCount() + 1;
+
+                sb.append('[');
+                boolean first = true;
+                for (int i = 0; i < iFirst; ++i)
+                    {
+                    Expression arg = args.get(i);
+                    if (first)
+                        {
+                        first = false;
+                        }
+                    else
+                        {
+                        sb.append(", ");
+                        }
+                    sb.append(arg);
+                    }
+                sb.append(']');
+                }
+
             sb.append('(');
             boolean first = true;
-            for (Expression arg : args)
+            for (int i = iFirst, c = args.size(); i < c; ++i)
                 {
+                Expression arg = args.get(i);
                 if (first)
                     {
                     first = false;
@@ -1579,6 +1612,7 @@ public class NewExpression
     protected Token                    operator;
     protected TypeExpression           type;
     protected List<Expression>         args;
+    protected int                      dims;        // -1 == no [dims]
     protected StatementBlock           body;        // NOT a child
     protected TypeCompositionStatement anon;        // synthetic, added as a child
     protected long                     lEndPos;

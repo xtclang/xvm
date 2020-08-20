@@ -7,7 +7,7 @@
  * requires only a "this" as its argument.
  */
 mixin ListFreezer<Element extends ImmutableAble>
-        into List<Element>
+        into List<Element> + CopyableCollection<Element>
         implements Freezable
     {
     @Override
@@ -20,7 +20,7 @@ mixin ListFreezer<Element extends ImmutableAble>
 
         if (inPlace && all(e -> e.is(immutable Object)))
             {
-            return makeImmutable();
+            return this.makeImmutable();
             }
 
         // inPlace  inPlace  indexed
@@ -67,57 +67,6 @@ mixin ListFreezer<Element extends ImmutableAble>
             return makeImmutable();
             }
 
-        // find the copy constructor
-        typedef Function<<>, <ListFreezer>> Constructor;
-        assert Constructor constructor := &this.actualType.constructors.filter(
-                f -> f.params.size >= 1
-                    && f.params[0].ParamType.is(Type<Iterable<Element>>)
-                    && (f.params.size == 1 || f.params[[1..f.params.size)].all(p -> p.defaultValue())))
-                .iterator().next();
-
-        // bind any default parameters
-        if (constructor.params.size > 1)
-            {
-            constructor = constructor.bind(constructor.params[[1..constructor.params.size)]
-                    .associateWith(p -> {assert val v := p.defaultValue(); return v;})).as(Constructor);
-            }
-
-        // create a List that enumerates the frozen contents of this list
-        List frozenContents = new List<Element>()
-            {
-            @Override
-            Int size.get()
-                {
-                return this.ListFreezer.size;
-                }
-
-            @Override
-            @Op("[]") Element getElement(Int index)
-                {
-                Element e = this.ListFreezer[index];
-                return e.is(immutable Element) ? e : e.freeze();
-                }
-
-            @Override
-            Iterator<Element> iterator()
-                {
-                // implementations that are not indexed should provide a more efficient implementation
-                Iterator<Element> unfrozen = this.ListFreezer.iterator();
-                return new Iterator()
-                    {
-                    @Override
-                    conditional Element next()
-                        {
-                        if (Element e := unfrozen.next())
-                            {
-                            return True, e.is(immutable Element) ? e : e.freeze();
-                            }
-                        return False;
-                        }
-                    };
-                }
-            };
-
-        return constructor.invoke(Tuple:(frozenContents))[0].freeze(true);
+        return duplicate(e -> e.is(immutable Element) ? e : e.freeze());
         }
     }

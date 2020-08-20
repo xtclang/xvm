@@ -693,7 +693,7 @@ PostfixExpression
     PostfixExpression ArrayIndexes
     PostfixExpression NoWhitespace "?"
     PostfixExpression "." "&"-opt Name TypeParameterTypeList-opt
-    PostfixExpression ".new" TypeExpression "(" Arguments-opt ")"
+    PostfixExpression ".new" NewFinish
     PostfixExpression ".as" "(" TypeExpression ")"
     PostfixExpression ".is" "(" TypeExpression ")"
 
@@ -714,6 +714,14 @@ ExpressionList
     Expression
     ExpressionList "," Expression
 
+NewFinish
+    TypeExpression NewArguments AnonClassBody-opt
+    ArgumentList
+
+NewArguments
+    ArrayIndexes ArgumentList-opt
+    ArgumentList
+
 
 # Note: A parenthesized Expression, a TupleLiteral, and a LambdaExpression share a parse path
 # Note: The use of QualifiedName instead of a simple Name here (which would be logical and even
@@ -726,7 +734,7 @@ ExpressionList
 #       parametized type.
 PrimaryExpression
     "(" Expression ")"
-    "new" TypeExpression "(" Arguments-opt ")" AnonClassBody-opt
+    "new" NewFinish
     "throw" TernaryExpression
     "T0D0" TodoFinish-opt
     "assert"
