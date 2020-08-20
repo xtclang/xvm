@@ -5,7 +5,7 @@ interface Const
         extends Stringable
     {
     @Override
-    Cloneable clone()
+    Const clone()
         {
         return this;
         }
