@@ -196,10 +196,8 @@ public class AnnotationExpression
             return;
             }
 
-        boolean       fValid   = true;
         ClassConstant idAnno   = (ClassConstant) constAnno;
-        // TODO ask Cam: this should "steal" any matching type parameters from the underlying type
-        TypeConstant typeAnno = type == null
+        TypeConstant  typeAnno = type == null
                 ? idAnno.getFormalType()
                 : type.ensureTypeConstant();
 
@@ -207,7 +205,7 @@ public class AnnotationExpression
         if (infoAnno.getFormat() != Format.MIXIN)
             {
             log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, idAnno.getName());
-            fValid = false;
+            return;
             }
 
         if (!mgr.processChildren())
@@ -216,76 +214,47 @@ public class AnnotationExpression
             return;
             }
 
-        // check the named arguments
-        List<Expression>  args       = getArguments();
-        int               cArgs      = args == null ? 0 : args.size();
-        String[]          asArgNames = null;
-        boolean           fNameErr   = false;
-
-        for (int iArg = 0; iArg < cArgs; ++iArg)
-            {
-            Expression exprArg = args.get(iArg);
-            if (exprArg instanceof LabeledExpression)
-                {
-                if (asArgNames == null)
-                    {
-                    asArgNames = new String[cArgs];
-                    }
-                asArgNames[iArg] = ((LabeledExpression) exprArg).getName();
-                }
-            else if (asArgNames != null && !fNameErr)
-                {
-                // there was already at least one arg with a name, so all trailing args MUST
-                // have a name
-                exprArg.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, iArg);
-                fNameErr = true;
-                fValid   = false;
-                }
-            }
-
-        if (!fValid || getCodeContainer() != null)
+        if (getCodeContainer() != null)
             {
             return;
             }
 
+        List<Expression>  args  = getArguments();
+        int               cArgs = args == null ? 0 : args.size();
+        ValidatingContext ctx   = new ValidatingContext(getComponent().getContainingClass());
+
         // find a matching constructor on the annotation class
-        // before we let the children go, we need to fill in the annotation construction parameters
-        TypeConstant[]    atypeArgs  = TypeConstant.NO_TYPES;
-        ValidatingContext ctx        = null;
-        if (cArgs > 0)
-            {
-            // build a list of argument types and names (used later to try to find an appropriate
-            // annotation constructor)
-            atypeArgs = new TypeConstant[cArgs];
-            ctx       = new ValidatingContext(getComponent().getContainingClass());
+        MethodConstant idConstruct = findMethod(ctx, typeAnno, infoAnno,
+                    "construct", args, MethodKind.Constructor, true, false, TypeConstant.NO_TYPES, errs);
 
-            for (int iArg = 0; iArg < cArgs; ++iArg)
-                {
-                atypeArgs[iArg] = args.get(iArg).getImplicitType(ctx);
-                }
-            }
-
-        MethodConstant idConstruct = infoAnno.findConstructor(atypeArgs, asArgNames);
         if (idConstruct == null)
             {
             log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getName());
+            return;
             }
-        else if (cArgs > 0)
+
+        if (cArgs > 0)
             {
+            MethodStructure method = infoAnno.getMethodById(idConstruct).
+                                        getTopmostMethodStructure(infoAnno);
+
             // validate the argument expressions and fix up all of the constants used as
             // arguments to construct the annotation
-            Constant[] aconstArgs = anno.getParams();
-            assert cArgs == aconstArgs.length;
-
             TypeConstant[] atypeParams = idConstruct.getRawParams();
+            int            cAll        = method.getParamCount();
+            int            cDefault    = method.getDefaultParamCount();
+            Constant[]     aconstArgs  = new Constant[cAll];
+
+            assert cArgs <= cAll && cArgs >= cAll - cDefault;
+
             for (int iArg = 0; iArg < cArgs; ++iArg)
                 {
                 Expression exprOld = args.get(iArg);
-                Expression exprNew = exprOld.validate(ctx, atypeParams[iArg], errs);
-                if (exprNew != null && exprNew != exprOld)
-                    {
-                    args.set(iArg, exprNew);
-                    }
+                int        iParam  = exprOld instanceof LabeledExpression
+                        ? method.getParam(((LabeledExpression) exprOld).getName()).getIndex()
+                        : iArg;
+
+                Expression exprNew = exprOld.validate(ctx, atypeParams[iParam], errs);
 
                 if (exprNew == null || !exprNew.isRuntimeConstant())
                     {
@@ -293,13 +262,32 @@ public class AnnotationExpression
                     }
                 else
                     {
+                    if (exprNew != exprOld)
+                        {
+                        args.set(iArg, exprNew);
+                        }
+
                     // update the Annotation directly
                     // Note: this is quite unusual, in that normally things like an annotation are
                     //       treated as a constant once instantiated, but in this case, it was
                     //       impossible to validate the arguments of the annotation when it was
                     //       constructed, because we were too early in the compile cycle to resolve
                     //       any constant expressions that refer to anything _by name_
-                    aconstArgs[iArg] = exprNew.toConstant();
+                    aconstArgs[iParam] = exprNew.toConstant();
+                    }
+                }
+
+            if (cArgs < cAll)
+                {
+                // fill the default values
+                for (int iParam = 0; iParam < cAll; ++iParam)
+                    {
+                    if (aconstArgs[iParam] == null)
+                        {
+                        Constant constDefault = method.getParam(iParam).getDefaultValue();
+                        assert constDefault != null;
+                        aconstArgs[iParam] = constDefault;
+                        }
                     }
                 }
 

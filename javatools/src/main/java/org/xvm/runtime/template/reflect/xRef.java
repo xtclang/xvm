@@ -567,6 +567,7 @@ public class xRef
             aAnno = inoProp.getRefAnnotations();
             }
 
+        // TODO GG: can we cache the annotations on the composition?
         return aAnno.length > 0
                 ? new CreateAnnos(aAnno, iReturn).doNext(frame)
                 : frame.assignValue(iReturn, makeAnnoArrayHandle(ahAnno));

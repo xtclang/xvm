@@ -161,11 +161,10 @@ public class Annotation
     /**
      * Allows the caller to provide resolved Annotation parameters.
      *
-     * @param aParams
+     * @param aParams  the new parameters (may include default pareameter values)
      */
     public void resolveParams(Constant[] aParams)
         {
-        assert m_aParams.length == aParams.length;
         m_aParams = aParams;
         }
 
