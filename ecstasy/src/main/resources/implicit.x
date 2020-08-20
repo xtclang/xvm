@@ -5,6 +5,7 @@ import ecstasy.Boolean.True;
 import ecstasy.Boolean.True     as true;
 import ecstasy.Boolean.False;
 import ecstasy.Boolean.False    as false;
+import ecstasy.Cloneable;
 import ecstasy.Closeable;
 import ecstasy.ConcurrentModification;
 import ecstasy.Const;
