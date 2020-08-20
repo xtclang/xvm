@@ -699,28 +699,43 @@ public class NameExpression
                         // property is only a constant iff the property itself has a compile-time
                         // constant
                         PropertyConstant id = (PropertyConstant) argRaw;
-                        if (id.isConstant())
+                        switch (m_plan)
                             {
-                            PropertyStructure prop = (PropertyStructure) id.getComponent();
+                            case Singleton:
+                            case PropertyDeref:
+                                if (id.isConstant())
+                                    {
+                                    PropertyStructure prop = (PropertyStructure) id.getComponent();
+                                    constVal = prop.hasInitialValue()
+                                            ? prop.getInitialValue()
+                                            : pool.ensureSingletonConstConstant(id);
+                                    }
+                                break;
 
-                            if (m_plan == Plan.Singleton || m_plan == Plan.PropertyDeref)
+                            case PropertySelf:
                                 {
-                                constVal = prop.hasInitialValue()
-                                        ? prop.getInitialValue()
-                                        : pool.ensureSingletonConstConstant(id);
-                                }
-                            }
-                        if (m_plan == Plan.None)
-                            {
-                            assert type.isA(pool.typeProperty());
-                            assert left == null || left.getType().isA(pool.typeClass());
+                                assert type.isA(pool.typeProperty());
 
-                            TypeConstant typeParent = left == null
-                                    ? ctx.getThisType()
-                                    : m_fClassAttribute
-                                            ? left.getType()
-                                            : left.getType().getParamType(0);
-                            constVal = pool.ensurePropertyClassTypeConstant(typeParent, id);
+                                TypeConstant typeParent = left == null
+                                        ? ctx.getThisType()
+                                        : left.getType();
+                                constVal = pool.ensurePropertyClassTypeConstant(typeParent, id);
+                                break;
+                                }
+
+                            case None:
+                                {
+                                assert type.isA(pool.typeProperty());
+                                assert left == null || left.getType().isA(pool.typeClass());
+
+                                TypeConstant typeParent = left == null
+                                        ? ctx.getThisType()
+                                        : m_fClassAttribute
+                                                ? left.getType()
+                                                : left.getType().getParamType(0);
+                                constVal = pool.ensurePropertyClassTypeConstant(typeParent, id);
+                                break;
+                                }
                             }
                         break;
 
@@ -761,7 +776,7 @@ public class NameExpression
                         {
                         ctx.useGenericType(getName(), errs);
                         }
-                    else if (!idProp.getComponent().isStatic())
+                    else if (!idProp.getComponent().isStatic() && m_plan != Plan.PropertySelf)
                         {
                         // there is a read of the implicit "this" variable
                         ctx.requireThis(getStartPosition(), errs);
@@ -1577,13 +1592,14 @@ public class NameExpression
 
                     case Property:
                         {
-                        TypeInfo info = target.getTargetType().ensureTypeInfo(errs);
+                        TypeConstant typeTarget = target.getTargetType();
+                        TypeInfo     info       = typeTarget.ensureTypeInfo(errs);
 
                         // TODO still some work here to mark the this (and out this's) as being used
                         PropertyInfo prop = info.findProperty((PropertyConstant) id);
                         if (prop == null)
                             {
-                            throw new IllegalStateException("missing property: " + id + " on " + target.getTargetType());
+                            throw new IllegalStateException("missing property: " + id + " on " + typeTarget);
                             }
 
                         if (info.isTopLevel() && info.isStatic() &&
@@ -1604,7 +1620,7 @@ public class NameExpression
                             if (!prop.isConstant() && target.getStepsOut() > 0 && !target.hasThis())
                                 {
                                 log(errs, Severity.ERROR, Compiler.NO_OUTER_PROPERTY,
-                                    target.getTargetType().removeAccess().getValueString(), prop.getName());
+                                        typeTarget.removeAccess().getValueString(), prop.getName());
                                 return null;
                                 }
                             m_propAccessPlan = PropertyAccess.Outer;
@@ -1882,7 +1898,8 @@ public class NameExpression
             ErrorListener   errs)
         {
         assert ctx != null && argRaw != null;
-        ConstantPool pool = pool();
+        ConstantPool pool           = pool();
+        boolean      fSuppressDeref = isSuppressDeref();
 
         if (argRaw instanceof Register)
             {
@@ -1899,8 +1916,7 @@ public class NameExpression
                 log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                 }
 
-            Register reg            = (Register) argRaw;
-            boolean  fSuppressDeref = isSuppressDeref();
+            Register reg = (Register) argRaw;
 
             // label variables do not actually exist
             if (reg.isLabel() && (fSuppressDeref || !(getParent() instanceof NameExpression)))
@@ -1932,7 +1948,7 @@ public class NameExpression
             {
             // this can only mean an "outer this"
             TypeConstant typeParent = (TypeConstant) argRaw;
-            if (isSuppressDeref())
+            if (fSuppressDeref)
                 {
                 m_plan = Plan.OuterRef;
                 return pool.ensureParameterizedTypeConstant(pool.typeRef(), typeParent);
@@ -1952,7 +1968,7 @@ public class NameExpression
                 {
                 TypeConstant typeThis = pool.ensureAccessTypeConstant(
                         constant.getType().adoptParameters(pool, ctx.getThisType()), Access.PRIVATE);
-                if (isSuppressDeref())
+                if (fSuppressDeref)
                     {
                     m_plan = Plan.OuterRef;
                     return pool.ensureParameterizedTypeConstant(pool.typeRef(), typeThis);
@@ -2097,6 +2113,20 @@ public class NameExpression
                 PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
                 TypeConstant      type   = prop.getType();
 
+                // use the type inference to differentiate between a property dereferencing
+                // and the Property instance itself
+                if (typeDesired != null && typeDesired.isA(pool.typeProperty()) &&
+                        !type.isA(pool.typeProperty()))
+                    {
+                    if (fSuppressDeref)
+                        {
+                        log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
+                        return null;
+                        }
+                    m_plan = Plan.PropertySelf;
+                    return idProp.getValueType(null);
+                    }
+
                 if (idProp.isTypeSequenceTypeParameter())
                     {
                     assert !m_fAssignable;
@@ -2104,7 +2134,7 @@ public class NameExpression
                     return idProp.getConstraintType();
                     }
 
-                if (prop.isConstant())
+                if (prop.isConstant() && !fSuppressDeref)
                     {
                     assert !m_fAssignable;
                     m_plan = prop.hasInitialValue() ? Plan.PropertyDeref : Plan.Singleton;
@@ -2178,7 +2208,7 @@ public class NameExpression
                 if (fClass && typeDesired != null && typeDesired.isA(pool.typeProperty())
                         || !fClass && isIdentityMode(ctx, false))
                     {
-                    if (isSuppressDeref())
+                    if (fSuppressDeref)
                         {
                         log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
                         return null;
@@ -2189,7 +2219,7 @@ public class NameExpression
                     return idProp.getValueType(fClass ? typeLeft : typeLeft.getParamType(0));
                     }
 
-                if (isSuppressDeref())
+                if (fSuppressDeref)
                     {
                     m_plan = Plan.PropertyRef;
 
@@ -2701,8 +2731,8 @@ public class NameExpression
      * produce as part of compilation, if it is asked to produce an argument, an assignable, or an
      * assignment.
      */
-    enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass,
-               TypeOfTypedef, Singleton, TypeOfFormalChild, BindTarget}
+    enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, PropertySelf,
+               TypeOfClass, TypeOfTypedef, Singleton, TypeOfFormalChild, BindTarget}
 
     /**
      * If the plan is None or BindTarget, and this expression represents a method or function,
