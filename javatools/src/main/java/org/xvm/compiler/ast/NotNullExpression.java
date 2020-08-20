@@ -102,7 +102,7 @@ public class NotNullExpression
 
             // the second check is for not-nullable type that is still allowed to be assigned from null
             // (e.g. Object or Const)
-            if (!type.isNullable() && !pool().typeNull().isA(type))
+            if (!type.isNullable() && !pool().typeNull().isA(type.resolveConstraints()))
                 {
                 exprNew.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
                 return replaceThisWith(exprNew);
@@ -146,7 +146,7 @@ public class NotNullExpression
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         TypeConstant typeExpr = getType();
-        if (isConstant() || pool().typeNull().isA(typeExpr))
+        if (isConstant() || pool().typeNull().isA(typeExpr.resolveConstraints()))
             {
             return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
             }
@@ -160,7 +160,8 @@ public class NotNullExpression
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        if (isConstant() || !LVal.isLocalArgument() || !pool().typeNull().isA(LVal.getType()))
+        if (isConstant() || !LVal.isLocalArgument() ||
+                !pool().typeNull().isA(LVal.getType().resolveConstraints()))
             {
             super.generateAssignment(ctx, code, LVal, errs);
             return;

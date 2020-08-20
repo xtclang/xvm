@@ -123,7 +123,7 @@ public class ElvisExpression
 
         // the second check is for not-nullable type that is still allowed to be assigned from null
         // (e.g. Object or Const)
-        if (!type1.isNullable() && !pool.typeNull().isA(type1))
+        if (!type1.isNullable() && !pool.typeNull().isA(type1.resolveConstraints()))
             {
             expr1New.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
             return replaceThisWith(expr1New);

@@ -242,7 +242,7 @@ mixin LinkedList<Element>
                 }
             }
 
-        return (head, nextLink, prevLink, ro, thisHeadVar);
+        return (head, nextLink, prevLink, thisHeadVar, ro);
         }
 
     /**
@@ -401,8 +401,7 @@ mixin LinkedList<Element>
     @Override
     @Op("[]=") void setElement(Int index, Element value)
         {
-        // TODO GG assert:arg value != Null;
-        assert value.as(Object) != Null;
+        assert:arg value != Null;
 
         (Element? node, Link nextLink, Link? prevLink, Boolean thisHeadVar) = writeConfig();
 
@@ -413,7 +412,7 @@ mixin LinkedList<Element>
             {
             // drag the nodeVar behind the node, because in a singly linked list we need to keep a
             // reference to the node that will point to the newly inserted node
-            // Loop: for (Var<Element> nodeVar = this; // TODO GG badd err message:
+            // Loop: for (Var<Element> nodeVar = this; // TODO GG bad err message:
             Loop: for (Var<Element?> nodeVar = this;
                     node != Null;
                     nodeVar = nextLink.of(node), node = nodeVar.get())
@@ -698,7 +697,6 @@ mixin LinkedList<Element>
             }
 
         // unlink the nodes
-        // TODO GG: "while (node != Null)" (instead of do..while) COMPILER-91: The expression type is not nullable: "Ecstasy:annotaions.LinkedList.Element". ("node != Null")
         do
             {
             Element? next = nextLink.get(node);
