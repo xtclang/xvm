@@ -8,6 +8,7 @@ class ReifiedEntry<MapKey, MapValue>
         // TODO EntryFreezer
     {
     // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct a ReifiedEntry for the specified key of the specified map.
      *
@@ -82,7 +83,8 @@ class ReifiedEntry<MapKey, MapValue>
         @Override
         void set(MapValue value)
             {
-            map[key] = value;
+            verifyInPlace();
+            map.put(key, value);
             }
         }
 

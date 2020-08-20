@@ -351,7 +351,7 @@ interface Map<Key, Value>
             }
         else
             {
-            for (Key key : keys.toArray())
+            for (Key key : keys)
                 {
                 result = result.remove(key);
                 }
@@ -378,7 +378,7 @@ interface Map<Key, Value>
      * @throws ReadOnly  if the map does not support in-place mutation and the `compute` function
      *                   attempts to modify an entry
      */
-    <Result> Result process(Key                     key,
+    <Result> Result process(Key                    key,
                             function Result(Entry) compute)
         {
         Entry  entry  = new maps.ReifiedEntry<Key, Value>(this, key);
