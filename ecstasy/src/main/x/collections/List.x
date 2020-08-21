@@ -714,7 +714,7 @@ interface List<Element>
                 }
             }
 
-        return new Array<Element>(Mutable, this).shuffled(inPlace);
+        return new Array<Element>(Mutable, this).shuffled(True);
         }
 
     @Override
