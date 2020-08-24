@@ -96,8 +96,32 @@ public class LiteralExpression
                 return pool.typeIntLiteral();
 
             case LIT_DEC:
-            case LIT_BIN:
+            case LIT_FLOAT:
                 return pool.typeFPLiteral();
+
+            case LIT_INT8:
+            case LIT_INT16:
+            case LIT_INT32:
+            case LIT_INT64:
+            case LIT_INT128:
+            case LIT_INTN:
+            case LIT_UINT8:
+            case LIT_UINT16:
+            case LIT_UINT32:
+            case LIT_UINT64:
+            case LIT_UINT128:
+            case LIT_UINTN:
+            case LIT_DEC32:
+            case LIT_DEC64:
+            case LIT_DEC128:
+            case LIT_DECN:
+            case LIT_FLOAT16:
+            case LIT_FLOAT32:
+            case LIT_FLOAT64:
+            case LIT_FLOAT128:
+            case LIT_FLOATN:
+            case LIT_BFLOAT16:
+                return pool.ensureEcstasyTypeConstant("numbers." + literal.getId().TEXT);
 
             case LIT_DATE:
                 return pool.typeDate();
@@ -149,16 +173,38 @@ public class LiteralExpression
                 return this;
 
             case LIT_INT:
+            case LIT_INT8:
+            case LIT_INT16:
+            case LIT_INT32:
+            case LIT_INT64:
+            case LIT_INT128:
+            case LIT_INTN:
+            case LIT_UINT8:
+            case LIT_UINT16:
+            case LIT_UINT32:
+            case LIT_UINT64:
+            case LIT_UINT128:
+            case LIT_UINTN:
                 PackedInteger pint = (PackedInteger) tokNumber.getValue();
                 oValue = fNegate ? PackedInteger.ZERO.sub(pint) : pint;
                 break;
 
             case LIT_DEC:
+            case LIT_DEC32:
+            case LIT_DEC64:
+            case LIT_DEC128:
+            case LIT_DECN:
                 BigDecimal dec = (BigDecimal) tokNumber.getValue();
                 oValue = fNegate ? dec.negate() : dec;
                 break;
 
-            case LIT_BIN:
+            case LIT_FLOAT:
+            case LIT_FLOAT16:
+            case LIT_FLOAT32:
+            case LIT_FLOAT64:
+            case LIT_FLOAT128:
+            case LIT_FLOATN:
+            case LIT_BFLOAT16:
                 // it's just a string
                 oValue = getSource().toString(tokenPrefix.getStartPosition(), tokNumber.getEndPosition());
                 break;
@@ -198,6 +244,7 @@ public class LiteralExpression
         // other types are possible to obtain because there are conversion methods on the literal
         // types that provide support for other constant types
         ConstantPool pool = pool();
+        Format       format;
         switch (literal.getId())
             {
             case LIT_CHAR:
@@ -211,11 +258,101 @@ public class LiteralExpression
                 return pool.ensureByteStringConstant((byte[]) literal.getValue());
 
             case LIT_INT:
-                return pool.ensureLiteralConstant(Format.IntLiteral, literal.getString(getSource()), literal.getValue());
+                format = Format.IntLiteral;
+                break;
+
+            case LIT_INT8:
+                format = Format.Int8;
+                break;
+
+            case LIT_INT16:
+                format = Format.Int16;
+                break;
+
+            case LIT_INT32:
+                format = Format.Int32;
+                break;
+
+            case LIT_INT64:
+                format = Format.Int64;
+                break;
+
+            case LIT_INT128:
+                format = Format.Int128;
+                break;
+
+            case LIT_INTN:
+                format = Format.VarInt;
+                break;
+
+            case LIT_UINT8:
+                format = Format.UInt8;
+                break;
+
+            case LIT_UINT16:
+                format = Format.UInt16;
+                break;
+
+            case LIT_UINT32:
+                format = Format.UInt32;
+                break;
+
+            case LIT_UINT64:
+                format = Format.UInt64;
+                break;
+
+            case LIT_UINT128:
+                format = Format.UInt128;
+                break;
+
+            case LIT_UINTN:
+                format = Format.VarUInt;
+                break;
 
             case LIT_DEC:
-            case LIT_BIN:
-                return pool.ensureLiteralConstant(Format.FPLiteral, literal.getString(getSource()), literal.getValue());
+            case LIT_FLOAT:
+                format = Format.FPLiteral;
+                break;
+
+            case LIT_DEC32:
+                format = Format.Dec32;
+                break;
+
+            case LIT_DEC64:
+                format = Format.Dec64;
+                break;
+
+            case LIT_DEC128:
+                format = Format.Dec128;
+                break;
+
+            case LIT_DECN:
+                format = Format.VarDec;
+                break;
+
+            case LIT_FLOAT16:
+                format = Format.Float16;
+                break;
+
+            case LIT_FLOAT32:
+                format = Format.Float32;
+                break;
+
+            case LIT_FLOAT64:
+                format = Format.Float64;
+                break;
+
+            case LIT_FLOAT128:
+                format = Format.Float128;
+                break;
+
+            case LIT_FLOATN:
+                format = Format.VarFloat;
+                break;
+
+            case LIT_BFLOAT16:
+                format = Format.BFloat16;
+                break;
 
             case LIT_DATE:
                 return pool.ensureLiteralConstant(Format.Date, (String) literal.getValue());
@@ -241,6 +378,8 @@ public class LiteralExpression
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
             }
+
+        return pool.ensureLiteralConstant(format, literal.getString(getSource()), literal.getValue());
         }
 
 
@@ -253,8 +392,32 @@ public class LiteralExpression
             {
             case LIT_INT:
             case LIT_DEC:
-            case LIT_BIN:
+            case LIT_FLOAT:
                 return String.valueOf(literal.getValue());
+
+            case LIT_INT8:
+            case LIT_INT16:
+            case LIT_INT32:
+            case LIT_INT64:
+            case LIT_INT128:
+            case LIT_INTN:
+            case LIT_UINT8:
+            case LIT_UINT16:
+            case LIT_UINT32:
+            case LIT_UINT64:
+            case LIT_UINT128:
+            case LIT_UINTN:
+            case LIT_DEC32:
+            case LIT_DEC64:
+            case LIT_DEC128:
+            case LIT_DECN:
+            case LIT_FLOAT16:
+            case LIT_FLOAT32:
+            case LIT_FLOAT64:
+            case LIT_FLOAT128:
+            case LIT_FLOATN:
+            case LIT_BFLOAT16:
+                return literal.toString();
 
             case LIT_CHAR:
                  return Handy.quotedChar((Character) literal.getValue());

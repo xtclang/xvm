@@ -679,10 +679,97 @@ public class Lexer
                             String suffix = source.toString(lPosSuffix, source.getPosition());
                             source.setPosition(lPosSuffix); // back up past the suffix
 
+                            Token.Id idNum  = null;
+                            boolean  fFloat = false;
                             if (Id.valueByText(suffix) == null)
                                 {
                                 switch (name)
                                     {
+                                    case "Int8":
+                                        idNum = Id.LIT_INT8;
+                                        break;
+                                    case "Int16":
+                                        idNum = Id.LIT_INT16;
+                                        break;
+                                    case "Int32":
+                                        idNum = Id.LIT_INT32;
+                                        break;
+                                    case "Int":
+                                    case "Int64":
+                                        idNum = Id.LIT_INT64;
+                                        break;
+                                    case "Int128":
+                                        idNum = Id.LIT_INT128;
+                                        break;
+                                    case "IntN":
+                                        idNum = Id.LIT_INTN;
+                                        break;
+
+                                    case "Byte":
+                                    case "UInt8":
+                                        idNum = Id.LIT_UINT8;
+                                        break;
+                                    case "UInt16":
+                                        idNum = Id.LIT_UINT16;
+                                        break;
+                                    case "UInt32":
+                                        idNum = Id.LIT_UINT32;
+                                        break;
+                                    case "UInt":
+                                    case "UInt64":
+                                        idNum = Id.LIT_UINT64;
+                                        break;
+                                    case "UInt128":
+                                        idNum = Id.LIT_UINT128;
+                                        break;
+                                    case "UIntN":
+                                        idNum = Id.LIT_UINTN;
+                                        break;
+
+                                    case "Dec32":
+                                        idNum  = Id.LIT_DEC32;
+                                        fFloat = true;
+                                        break;
+                                    case "Dec":
+                                    case "Dec64":
+                                        idNum  = Id.LIT_DEC64;
+                                        fFloat = true;
+                                        break;
+                                    case "Dec128":
+                                        idNum  = Id.LIT_DEC128;
+                                        fFloat = true;
+                                        break;
+                                    case "DecN":
+                                        idNum  = Id.LIT_DECN;
+                                        fFloat = true;
+                                        break;
+
+                                    case "BFloat16":
+                                        idNum = Id.LIT_BFLOAT16;
+                                        fFloat = true;
+                                        break;
+                                    case "Float16":
+                                        idNum = Id.LIT_FLOAT16;
+                                        fFloat = true;
+                                        break;
+                                    case "Float32":
+                                        idNum = Id.LIT_FLOAT32;
+                                        fFloat = true;
+                                        break;
+                                    case "Float":
+                                    case "Float64":
+                                        idNum = Id.LIT_FLOAT64;
+                                        fFloat = true;
+                                        break;
+                                    case "Float128":
+                                        idNum = Id.LIT_FLOAT128;
+                                        fFloat = true;
+                                        break;
+                                    case "FloatN":
+                                        idNum = Id.LIT_FLOATN;
+                                        fFloat = true;
+                                        break;
+
                                     case "Date":
                                         return eatDate(lInitPos, false);
                                     case "Time":
@@ -693,12 +780,37 @@ public class Lexer
                                         return eatTimeZone(lInitPos);
                                     case "Duration":
                                         return eatDuration(lInitPos);
+
                                     case "Version":
                                     case "v":
                                         return eatVersion(lInitPos);
 
                                     default:
                                         source.rewind(); // back up past the ':'
+                                    }
+
+                                if (idNum != null)
+                                    {
+                                    Token tokNum = eatNumericLiteral();
+                                    switch (tokNum.getId())
+                                        {
+                                        case LIT_DEC:
+                                        case LIT_FLOAT:
+                                            if (!fFloat)
+                                                {
+                                                // we were expecting an integer
+                                                log(Severity.ERROR, ILLEGAL_NUMBER, new Object[] {
+                                                    source.toString(lInitPos, tokNum.getEndPosition())},
+                                                    lInitPos, source.getPosition());
+                                                return tokNum;
+                                                }
+                                            // fall through
+                                        case LIT_INT:
+                                            return tokNum.refine(idNum);
+
+                                        default:
+                                            throw new IllegalStateException("id=" + idNum);
+                                        }
                                     }
                                 }
                             else
@@ -1426,7 +1538,7 @@ public class Lexer
             {
             // convert to IEEE-754 binary floating point format
             // note: for now it is simply stored in the literal token as a String
-            return new Token(lStartPos, lPosEnd, Id.LIT_BIN, source.toString(lStartPos, lPosEnd));
+            return new Token(lStartPos, lPosEnd, Id.LIT_FLOAT, source.toString(lStartPos, lPosEnd));
             }
         }
 

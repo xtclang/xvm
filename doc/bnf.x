@@ -802,6 +802,7 @@ TodoFinish
     NoWhitespace "(" Expression ")"
 
 Literal
+    TypedNumericLiteral
     IntLiteral                                                  # defined in language spec
     FPDecimalLiteral                                            # defined in language spec
     FPBinaryLiteral                                             # defined in language spec
@@ -821,6 +822,46 @@ Literal
     FileLiteral
     DirectoryLiteral
     FileStoreLiteral
+
+TypedNumericLiteral:
+    IntTypeName ":" IntLiteral
+    FPTypeName ":" FPLiteral
+
+FPLiteral:
+    IntLiteral
+    FPDecimalLiteral
+    FPBinaryLiteral
+
+IntTypeName:
+    "Int8"
+    "Int16"
+    "Int32"
+    "Int"
+    "Int64"
+    "Int128"
+    "IntN"
+    "Byte"
+    "UInt8"
+    "UInt16"
+    "UInt32"
+    "UInt"
+    "UInt64"
+    "UInt128"
+    "UIntN"
+
+FPTypeName:
+    "Dec32"
+    "Dec"
+    "Dec64"
+    "Dec128"
+    "DecN"
+    "BFloat16"
+    "Float16"
+    "Float32"
+    "Float"
+    "Float64"
+    "Float128"
+    "FloatN"
 
 StringLiteral
     "$"-opt NoWhitespace '"' CharacterString-opt '"'
