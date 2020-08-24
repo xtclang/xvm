@@ -29,6 +29,8 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
 
+import org.xvm.util.ListMap;
+
 
 /**
  * Represent a constant that specifies the intersection ("|") of two types.
@@ -659,6 +661,36 @@ public class IntersectionTypeConstant
                 }
             }
         return mapMerged;
+        }
+
+    @Override
+    protected ListMap<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        if (info1 == null || info2 == null)
+            {
+            return ListMap.EMPTY;
+            }
+
+        ListMap<String, ChildInfo> map1     = info1.getChildInfosByName();
+        ListMap<String, ChildInfo> map2     = info2.getChildInfosByName();
+        ListMap<String, ChildInfo> mapMerge = new ListMap<>();
+        for (Map.Entry<String, ChildInfo> entry : map1.entrySet())
+            {
+            String sChild = entry.getKey();
+
+            if (map2.containsKey(sChild))
+                {
+                ChildInfo child1 = map1.get(sChild);
+                ChildInfo child2 = map2.get(sChild);
+
+                ChildInfo childM = child1.layerOn(child2);
+                if (childM != null)
+                    {
+                    mapMerge.put(sChild, entry.getValue());
+                    }
+                }
+            }
+        return mapMerge;
         }
 
 

@@ -94,8 +94,8 @@
 +NEWCG_1    CONSTRUCT, rvalue-parent, TYPE, rvalue-param, lvalue
 +NEWCG_N    CONSTRUCT, rvalue-parent, TYPE, #:(rvalue), lvalue
  NEWCG_T    CONSTRUCT, rvalue-parent, TYPE, rvalue-tparams, lvalue
- NEWV_0     CONSTRUCT, rvalue-type, lvalue                          ; virtual "new"
- NEWV_1     CONSTRUCT, rvalue-type, rvalue-param, lvalue            ;  - CONSTRUCT may be on an interface (implies compile-time type)
++NEWV_0     CONSTRUCT, rvalue-type, lvalue                          ; virtual "new"
++NEWV_1     CONSTRUCT, rvalue-type, rvalue-param, lvalue            ;  - CONSTRUCT may be on an interface (implies compile-time type)
  NEWV_N     CONSTRUCT, rvalue-type, #:(rvalue), lvalue              ;  - rvalue-type is the virtual type
  NEWV_T     CONSTRUCT, rvalue-type, rvalue-tparams, lvalue
 
@@ -133,7 +133,7 @@
 +MOV_REF    rvalue-src, lvalue-dest                 ; move ("R"=) Ref-to-source to destination (read-only)
 +MOV_THIS   #, lvalue-dest                          ; # (an inline unsigned byte) specifies the count of this-to-outer-this steps (0=this, 1=ImmediatelyOuter.this, etc.)
 +MOV_THISA  #, lvalue-dest, A_*                     ; same as above with an additional access modifier (A_TARGET, A_PUBLIC, A_PROTECTED, A_PRIVATE)
- MOV_TYPE   rvalue-src, lvalue-dest                 ; place the type of the r-value into the l-value
++MOV_TYPE   rvalue-src, lvalue-dest                 ; place the type of the r-value into the l-value
 +CAST       rvalue-src, lvalue-dest, TYPE           ; copy source to destination with cast
 
 // Value comparisons (mostly Boolean checks)

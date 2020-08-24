@@ -91,7 +91,7 @@ public class NewC_1
             {
             ObjectHandle hParent = frame.getArgument(m_nParentValue);
 
-            MethodStructure constructor = getVirtualConstructor(frame, hParent);
+            MethodStructure constructor = getChildConstructor(frame, hParent);
             if (constructor == null)
                 {
                 return reportMissingConstructor(frame, hParent);

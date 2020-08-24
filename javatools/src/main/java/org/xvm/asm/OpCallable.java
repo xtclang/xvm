@@ -22,6 +22,8 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
 
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -131,7 +133,7 @@ public abstract class OpCallable extends Op
      *
      * @return a child constructor for the specified parent
      */
-    protected MethodStructure getVirtualConstructor(Frame frame, ObjectHandle hParent)
+    protected MethodStructure getChildConstructor(Frame frame, ObjectHandle hParent)
         {
         // suffix "C" indicates the compile-time constants; "R" - the run-time
         ClassConstant   idParentR   = (ClassConstant) hParent.getTemplate().getClassConstant();
@@ -171,6 +173,52 @@ public abstract class OpCallable extends Op
             }
 
         context.setOpInfo(this, Category.ParentClass, idParentR);
+        context.setOpInfo(this, Category.Constructor, constructor);
+        return constructor;
+        }
+
+    /**
+     * This Op holds a constant for the constructor of the compile-time target.
+     * The run-time type of the target could extend the compile-time type and that target
+     * must have the corresponding constructor
+     *
+     * @return a constructor for the specified type
+     */
+    protected MethodStructure getTypeConstructor(Frame frame, TypeHandle hType)
+        {
+        TypeConstant    typeR       = hType.getDataType();
+        ClassConstant   idTargetR   = (ClassConstant) typeR.getDefiningConstant();
+        ServiceContext  context     = frame.f_context;
+        MethodStructure constructor = (MethodStructure) context.getOpInfo(this, Category.Constructor);
+        if (constructor != null)
+            {
+            ClassConstant idTarget = (ClassConstant) context.getOpInfo(this, Category.ParentClass);
+            if (idTarget.equals(idTargetR))
+                {
+                // cached constructor fits the parent's class
+                return constructor;
+                }
+            }
+
+        constructor = getMethodStructure(frame);
+        if (constructor == null)
+            {
+            return null;
+            }
+
+        ClassStructure clzTargetC = (ClassStructure) constructor.getParent().getParent();
+        ClassConstant  idTargetC  = (ClassConstant)  clzTargetC.getIdentityConstant();
+
+        if (!idTargetR.equals(idTargetC))
+            {
+            TypeInfo infoTarget = typeR.ensureTypeInfo();
+
+            MethodInfo info = infoTarget.getMethodBySignature(
+                constructor.getIdentityConstant().getSignature());
+            constructor = info.getTopmostMethodStructure(infoTarget);
+            }
+
+        context.setOpInfo(this, Category.ParentClass, idTargetR);
         context.setOpInfo(this, Category.Constructor, constructor);
         return constructor;
         }

@@ -1263,6 +1263,7 @@ public abstract class Op
             case OP_MOV_REF:     return new MoveRef     (in, aconst);
             case OP_MOV_THIS:    return new MoveThis    (in, aconst, nOp);
             case OP_MOV_THIS_A:  return new MoveThis    (in, aconst, nOp);
+            case OP_MOV_TYPE:    return new MoveType    (in, aconst);
             case OP_CAST:        return new MoveCast    (in, aconst);
 
             case OP_GP_ADD:      return new GP_Add      (in, aconst);
@@ -1381,6 +1382,8 @@ public abstract class Op
             case OP_NEWCG_0:     return new NewCG_0     (in, aconst);
             case OP_NEWCG_1:     return new NewCG_1     (in, aconst);
             case OP_NEWCG_N:     return new NewCG_N     (in, aconst);
+            case OP_NEWV_0:      return new NewV_0      (in, aconst);
+            case OP_NEWV_1:      return new NewV_1      (in, aconst);
 
             case OP_CONSTR_0:    return new Construct_0 (in, aconst);
             case OP_CONSTR_1:    return new Construct_1 (in, aconst);
@@ -1486,6 +1489,7 @@ public abstract class Op
             case OP_MOV_REF:     return "MOV_REF";
             case OP_MOV_THIS:    return "MOV_THIS";
             case OP_MOV_THIS_A:  return "MOV_THIS_A";
+            case OP_MOV_TYPE:    return "MOV_TYPE";
             case OP_CAST:        return "CAST";
             case OP_GP_ADD:      return "GP_ADD";
             case OP_GP_SUB:      return "GP_SUB";
@@ -1594,6 +1598,8 @@ public abstract class Op
             case OP_NEWCG_1:     return "NEWCG_1";
             case OP_NEWCG_N:     return "NEWCG_N";
             case OP_NEWCG_T:     return "NEWCG_T";
+            case OP_NEWV_0:      return "NEWV_0";
+            case OP_NEWV_1:      return "NEWV_1";
             case OP_CONSTR_0:    return "CONSTR_0";
             case OP_CONSTR_1:    return "CONSTR_1";
             case OP_CONSTR_N:    return "CONSTR_N";

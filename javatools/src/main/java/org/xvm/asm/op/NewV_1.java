@@ -11,38 +11,39 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * NEWCG_1 CONSTRUCT, rvalue-parent, TYPE, rvalue-param, lvalue ; generic-type "new virtual child"
+ * CONSTRUCT, rvalue-type, rvalue-param, lvalue; virtual "new"
  */
-public class NewCG_1
+public class NewV_1
         extends OpCallable
     {
     /**
-     * Construct a NEWCG_1 op based on the passed arguments.
+     * Construct a NEWV_1 op based on the passed arguments.
      *
      * @param constMethod  the constructor method
-     * @param argParent    the parent Argument
      * @param argType      the type Argument
      * @param argValue     the value Argument
      * @param argReturn    the return Argument
      */
-    public NewCG_1(MethodConstant constMethod, Argument argParent, Argument argType, Argument argValue, Argument argReturn)
+    public NewV_1(MethodConstant constMethod, Argument argType, Argument argValue, Argument argReturn)
         {
         super(constMethod);
 
-        m_argParent = argParent;
-        m_argValue  = argValue;
         m_argType   = argType;
+        m_argValue  = argValue;
         m_argReturn = argReturn;
         }
 
@@ -52,15 +53,14 @@ public class NewCG_1
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public NewCG_1(DataInput in, Constant[] aconst)
+    public NewV_1(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
 
-        m_nParentValue = readPackedInt(in);
-        m_nTypeValue   = readPackedInt(in);
-        m_nArgValue    = readPackedInt(in);
-        m_nRetValue    = readPackedInt(in);
+        m_nType     = readPackedInt(in);
+        m_nArgValue = readPackedInt(in);
+        m_nRetValue = readPackedInt(in);
         }
 
     @Override
@@ -69,16 +69,14 @@ public class NewCG_1
         {
         super.write(out, registry);
 
-        if (m_argParent != null)
+        if (m_argType != null)
             {
-            m_nParentValue = encodeArgument(m_argParent, registry);
-            m_nTypeValue   = encodeArgument(m_argType, registry);
-            m_nArgValue    = encodeArgument(m_argValue, registry);
-            m_nRetValue    = encodeArgument(m_argReturn, registry);
+            m_nType     = encodeArgument(m_argType, registry);
+            m_nArgValue = encodeArgument(m_argValue, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
             }
 
-        writePackedLong(out, m_nParentValue);
-        writePackedLong(out, m_nTypeValue);
+        writePackedLong(out, m_nType);
         writePackedLong(out, m_nArgValue);
         writePackedLong(out, m_nRetValue);
         }
@@ -86,7 +84,7 @@ public class NewCG_1
     @Override
     public int getOpCode()
         {
-        return OP_NEWCG_1;
+        return OP_NEWV_1;
         }
 
     @Override
@@ -94,13 +92,13 @@ public class NewCG_1
         {
         try
             {
-            ObjectHandle hParent = frame.getArgument(m_nParentValue);
-            ObjectHandle hArg    = frame.getArgument(m_nArgValue);
+            ObjectHandle hType = frame.getArgument(m_nType);
+            ObjectHandle hArg  = frame.getArgument(m_nArgValue);
 
-            return isDeferred(hParent)
-                    ? hParent.proceed(frame, frameCaller ->
-                        collectArg(frameCaller, frameCaller.popStack(), hArg))
-                    : collectArg(frame, hParent, hArg);
+            return isDeferred(hType)
+                    ? hType.proceed(frame, frameCaller ->
+                        collectArg(frameCaller, (TypeHandle) frameCaller.popStack(), hArg))
+                    : collectArg(frame, (TypeHandle) hType, hArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -108,20 +106,21 @@ public class NewCG_1
             }
         }
 
-    protected int collectArg(Frame frame, ObjectHandle hParent, ObjectHandle hArg)
+    protected int collectArg(Frame frame, TypeHandle hType, ObjectHandle hArg)
         {
-        MethodStructure constructor = getChildConstructor(frame, hParent);
+        MethodStructure constructor = getChildConstructor(frame, hType);
         if (constructor == null)
             {
-            return reportMissingConstructor(frame, hParent);
+            return reportMissingConstructor(frame, hType);
             }
 
-        ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
-        int              nReturn   = m_nRetValue;
+        TypeConstant     typeTarget = hType.getDataType();
+        ClassComposition clzTarget  = frame.f_context.f_templates.resolveClass(typeTarget);
+        int              nReturn    = m_nRetValue;
 
         if (frame.isNextRegister(nReturn))
             {
-            frame.introduceResolvedVar(nReturn, clzTarget.getType());
+            frame.introduceResolvedVar(nReturn, typeTarget);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
@@ -132,10 +131,10 @@ public class NewCG_1
                     {
                     ahVar[0] = frameCaller.popStack();
                     return clzTarget.getTemplate().
-                        construct(frameCaller, constructor, clzTarget, hParent, ahVar, nReturn);
+                        construct(frameCaller, constructor, clzTarget, null, ahVar, nReturn);
                     })
                 : clzTarget.getTemplate().
-                    construct(frame, constructor, clzTarget, hParent, ahVar, nReturn);
+                        construct(frame, constructor, clzTarget, null, ahVar, nReturn);
         }
 
     @Override
@@ -143,9 +142,8 @@ public class NewCG_1
         {
         super.registerConstants(registry);
 
-        m_argParent = registerArgument(m_argParent, registry);
-        m_argType   = registerArgument(m_argType, registry);
-        m_argValue  = registerArgument(m_argValue, registry);
+        m_argType  = registerArgument(m_argType, registry);
+        m_argValue = registerArgument(m_argValue, registry);
         }
 
     @Override
@@ -154,11 +152,9 @@ public class NewCG_1
         return Argument.toIdString(m_argValue, m_nArgValue);
         }
 
-    private int m_nParentValue;
-    private int m_nTypeValue;
+    private int m_nType;
     private int m_nArgValue;
 
-    private Argument m_argParent;
     private Argument m_argType;
     private Argument m_argValue;
     }

@@ -23,10 +23,11 @@ interface CopyableMap<Key, Value>
             return this.new(this);
             }
 
-        CopyableMap<Key, Map> that = this.new();
+        CopyableMap<Key, Value> that = this.new();
         for ((Key key, Value value) : this)
             {
-            that.put(transform(key, value));
+            (key, value) = transform(key, value); // TODO GG: inline
+            that.put(key, value);
             }
         return that;
         }

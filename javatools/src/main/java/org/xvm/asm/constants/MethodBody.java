@@ -239,6 +239,15 @@ public class MethodBody
         }
 
     /**
+     * @return true iff this is a virtual constructor
+     */
+    public boolean isVirtualConstructor()
+        {
+        MethodStructure structMethod = getMethodStructure();
+        return structMethod != null && structMethod.isVirtualConstructor();
+        }
+
+    /**
      * @return true iff this is a validator
      */
     public boolean isValidator()

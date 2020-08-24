@@ -92,31 +92,40 @@ public class NewCG_0
             {
             ObjectHandle hParent = frame.getArgument(m_nParentValue);
 
-            MethodStructure constructor = getVirtualConstructor(frame, hParent);
-            if (constructor == null)
-                {
-                return reportMissingConstructor(frame, hParent);
-                }
-
-            ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
-            ClassTemplate    template  = clzTarget.getTemplate();
-
-            if (frame.isNextRegister(m_nRetValue))
-                {
-                frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
-                }
-
-            ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
-
             return isDeferred(hParent)
                     ? hParent.proceed(frame, frameCaller ->
-                        template.construct(frame, constructor, clzTarget, frameCaller.popStack(), ahVar, m_nRetValue))
-                    : template.construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
+                        complete(frameCaller, frameCaller.popStack()))
+                    : complete(frame, hParent);
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
+        }
+
+    protected int complete(Frame frame, ObjectHandle hParent)
+        {
+        MethodStructure constructor = getChildConstructor(frame, hParent);
+        if (constructor == null)
+            {
+            return reportMissingConstructor(frame, hParent);
+            }
+
+        ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
+        ClassTemplate    template  = clzTarget.getTemplate();
+        int              nReturn   = m_nRetValue;
+
+        if (frame.isNextRegister(nReturn))
+            {
+            frame.introduceResolvedVar(nReturn, clzTarget.getType());
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
+
+        return isDeferred(hParent)
+                ? hParent.proceed(frame, frameCaller ->
+                    template.construct(frame, constructor, clzTarget, frameCaller.popStack(), ahVar, nReturn))
+                : template.construct(frame, constructor, clzTarget, hParent, ahVar, nReturn);
         }
 
     @Override

@@ -21,6 +21,8 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
+import org.xvm.util.ListMap;
+
 
 /**
  * Represent a constant that specifies the difference (relative complement) ("-") of two types.
@@ -275,9 +277,14 @@ public class DifferenceTypeConstant
     @Override
     protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
-        if (info1 == null || info2 == null)
+        if (info1 == null)
             {
             return Collections.EMPTY_MAP;
+            }
+
+        if (info2 == null)
+            {
+            return info1.getProperties();
             }
 
         Map<PropertyConstant, PropertyInfo> map = new HashMap<>();
@@ -300,9 +307,14 @@ public class DifferenceTypeConstant
     @Override
     protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs)
         {
-        if (info1 == null || info2 == null)
+        if (info1 == null)
             {
             return Collections.EMPTY_MAP;
+            }
+
+        if (info2 == null)
+            {
+            return info1.getMethods();
             }
 
         Map<MethodConstant, MethodInfo> map = new HashMap<>();
@@ -321,6 +333,27 @@ public class DifferenceTypeConstant
                 }
             }
         return map;
+        }
+
+    @Override
+    protected ListMap<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        if (info1 == null)
+            {
+            return ListMap.EMPTY;
+            }
+
+        if (info2 == null)
+            {
+            return info1.getChildInfosByName();
+            }
+
+        ListMap<String, ChildInfo> map1     = info1.getChildInfosByName();
+        ListMap<String, ChildInfo> map2     = info2.getChildInfosByName();
+        ListMap<String, ChildInfo> mapMerge = new ListMap<>(map1);
+
+        mapMerge.keySet().removeAll(map2.keySet());
+        return mapMerge;
         }
 
 

@@ -167,7 +167,7 @@ class Parser
             case IntVal:
             case FPVal:
             case StrVal:
-                return take().value;
+                return takeToken().value;
 
             case ArrayEnter:
                 return parseArray();
@@ -196,7 +196,7 @@ class Parser
             case IntVal:
             case FPVal:
             case StrVal:
-                Token value = take();
+                Token value = takeToken();
                 skipped?.add(value);
                 return;
 
@@ -341,7 +341,7 @@ class Parser
      *
      * @return the token
      */
-    Token take()
+    Token takeToken()
         {
         Token? token = this.token;
         advance();

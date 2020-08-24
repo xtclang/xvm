@@ -528,7 +528,7 @@ public abstract class RelationalTypeConstant
                             mergeMethods(info1, info2, errs),
                             Collections.EMPTY_MAP,  // mapVirtProps
                             Collections.EMPTY_MAP,  // mapVirtMethods
-                            ListMap.EMPTY,          // mapChildren
+                            mergeChildren(info1, info2, errs),
                             info1 == null || info2 == null
                                     ? TypeInfo.Progress.Incomplete
                                     : info1.getProgress().worstOf(info2.getProgress())
@@ -571,6 +571,15 @@ public abstract class RelationalTypeConstant
      * @return a merged map
      */
     abstract protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs);
+
+    /**
+     * Produce a ListMap of children for for a merge of the specified TypeInfos.
+     *
+     * Note, that either of the two TypeInfos can be null.
+     *
+     * @return a merged ListMap
+     */
+    abstract protected ListMap<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
 
     // ----- type comparison support ---------------------------------------------------------------

@@ -245,8 +245,16 @@ public class NewExpression
         TypeConstant typeTarget;
         if (body == null)
             {
-// TODO GG type == null
-            typeTarget  = type.ensureTypeConstant(ctx);
+            if (isVirtualNew())
+                {
+                typeTarget = left == null
+                        ? ctx.getThisType()
+                        : left.getImplicitType(ctx);
+                }
+            else
+                {
+                typeTarget  = type.ensureTypeConstant(ctx);
+                }
             }
         else
             {
@@ -305,6 +313,7 @@ public class NewExpression
         // being able to obtain a type for a "new anon inner class" expression requires the
         // inner class to exist (so we create a temporary one)
         boolean fAnon = body != null;
+        boolean fVirt = isVirtualNew();
         if (fAnon)
             {
             ErrorListener errsTemp = errs.branch();
@@ -321,18 +330,25 @@ public class NewExpression
 
         if (left == null)
             {
-            typeTarget = type.ensureTypeConstant(ctx);
-            if (typeTarget.containsUnresolved())
+            if (fVirt)
                 {
-                if (typeTarget instanceof AnnotatedTypeConstant)
+                typeResult = typeTarget = ctx.getThisType();
+                }
+            else
+                {
+                typeTarget = type.ensureTypeConstant(ctx);
+                if (typeTarget.containsUnresolved())
                     {
-                    typeTarget     = ((AnnotatedTypeConstant) typeTarget).stripParameters();
-                    m_fDynamicAnno = true;
-                    }
-                else
-                    {
-                    type.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, type.toString());
-                    return null;
+                    if (typeTarget instanceof AnnotatedTypeConstant)
+                        {
+                        typeTarget     = ((AnnotatedTypeConstant) typeTarget).stripParameters();
+                        m_fDynamicAnno = true;
+                        }
+                    else
+                        {
+                        type.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, type.toString());
+                        return null;
+                        }
                     }
                 }
             }
@@ -355,61 +371,68 @@ public class NewExpression
 
                 TypeConstant typeLeft = exprLeftNew.getType();
 
-                // first, assume the name is relative to the parent's class, e.g.:
-                //      parent.new [@Mixin] Child<...>(...)
-                TypeExpression exprType = type;
-                while (exprType instanceof AnnotatedTypeExpression)
+                if (fVirt)
                     {
-                    exprType = exprType.unwrapIntroductoryType();
+                    typeResult = typeTarget = typeLeft;
                     }
-
-                NamedTypeExpression exprNameType = (NamedTypeExpression) exprType;
-                if (exprNameType.isVirtualChild())
+                else
                     {
-                    String   sChild   = exprNameType.getName();
-                    TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
+                    // first, assume the name is relative to the parent's class, e.g.:
+                    //      parent.new [@Mixin] Child<...>(...)
+                    TypeExpression exprType = type;
+                    while (exprType instanceof AnnotatedTypeExpression)
+                        {
+                        exprType = exprType.unwrapIntroductoryType();
+                        }
 
-                    typeTarget = infoLeft.calculateChildType(pool, sChild);
+                    NamedTypeExpression exprNameType = (NamedTypeExpression) exprType;
+                    if (exprNameType.isVirtualChild())
+                        {
+                        String   sChild   = exprNameType.getName();
+                        TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
+
+                        typeTarget = infoLeft.calculateChildType(pool, sChild);
+                        if (typeTarget != null)
+                            {
+                            exprNameType.setTypeConstant(typeTarget);
+                            }
+                        }
+
+                    if (typeTarget == null)
+                        {
+                        // now try to use the NameTypeExpression validation logic for a fully qualified
+                        // type scenario, such as:
+                        //      parent.new [@Mixin] Parent.Child<...>(...)
+                        TypeExpression exprTest = (TypeExpression) type.clone();
+                        Context        ctxTest  = ctx.enter();
+                        if (exprTest.validate(ctxTest, pool.typeType(), errs) == null)
+                            {
+                            fValid = false;
+                            }
+                        else
+                            {
+                            typeTarget = exprTest.ensureTypeConstant(ctx);
+                            }
+                        ctx.exit();
+                        exprTest.discard(true);
+                        }
+
                     if (typeTarget != null)
                         {
-                        exprNameType.setTypeConstant(typeTarget);
-                        }
-                    }
-
-                if (typeTarget == null)
-                    {
-                    // now try to use the NameTypeExpression validation logic for a fully qualified
-                    // type scenario, such as:
-                    //      parent.new [@Mixin] Parent.Child<...>(...)
-                    TypeExpression exprTest = (TypeExpression) type.clone();
-                    Context        ctxTest  = ctx.enter();
-                    if (exprTest.validate(ctxTest, pool.typeType(), errs) == null)
-                        {
-                        fValid = false;
-                        }
-                    else
-                        {
-                        typeTarget = exprTest.ensureTypeConstant(ctx);
-                        }
-                    ctx.exit();
-                    exprTest.discard(true);
-                    }
-
-                if (typeTarget != null)
-                    {
-                    if (!typeTarget.isVirtualChild() ||
-                        !typeTarget.getParentType().getDefiningConstant().equals(
-                            typeLeft.getDefiningConstant()))
-                        {
-                        log(errs, Severity.ERROR, Constants.VE_NEW_UNRELATED_PARENT,
-                                typeTarget.getValueString(), typeLeft.getValueString());
-                        fValid = false;
+                        if (!typeTarget.isVirtualChild() ||
+                            !typeTarget.getParentType().getDefiningConstant().equals(
+                                typeLeft.getDefiningConstant()))
+                            {
+                            log(errs, Severity.ERROR, Constants.VE_NEW_UNRELATED_PARENT,
+                                    typeTarget.getValueString(), typeLeft.getValueString());
+                            fValid = false;
+                            }
                         }
                     }
                 }
             }
 
-        if (fValid)
+        if (fValid && !fVirt)
             {
             if (typeRequired != null)
                 {
@@ -445,7 +468,7 @@ public class NewExpression
                 }
             }
 
-        if (fValid)
+        if (fValid && !fVirt)
             {
             if (left == null)
                 {
@@ -510,7 +533,8 @@ public class NewExpression
                     }
                 else if (type instanceof ArrayTypeExpression)
                     {
-                    // this is a "new X[]", "new X[c1]" or "new X[c1, ...]" construct
+                    // this is a "new X[]", "new X[c1]", new X[c1](supply),
+                    // or "new X[c1, ...]" construct
                     ArrayTypeExpression exprArray = (ArrayTypeExpression) type;
                     int                 cDims     = exprArray.getDimensions();
                     switch (cDims)
@@ -528,7 +552,20 @@ public class NewExpression
                             // since we know that the ArrayTypeExpression has successfully validated,
                             // we will emit the second constructor in leu of the first one
                             // using the default value for the element type as the second argument
-                            assert args.size() == 1;
+                            int cArgs = args.size();
+                            if (cArgs == 1)
+                                {
+                                // array[capacity] is a fixed size array and is allowed only for
+                                // types with default values
+                                TypeConstant typeElement = typeTarget.getParamType(0);
+                                if (typeElement.getDefaultValue() == null)
+                                    {
+                                    log(errs, Severity.ERROR, Compiler.NO_DEFAULT_VALUE,
+                                        typeElement.getValueString());
+                                    fValid = false;
+                                    break;
+                                    }
+                                }
                             m_fFixedSizeArray = true;
                             break;
 
@@ -552,8 +589,8 @@ public class NewExpression
                     ? typeTarget.ensureTypeInfo(errs)
                     : getTypeInfo(ctx, typeResult, errs);
 
-            // the target type must be new-able
-            if (!infoTarget.isNewable())
+            // unless it's a virtual new, the target type must be new-able
+            if (!fVirt && !infoTarget.isNewable())
                 {
                 String sType = typeResult.getValueString();
                 if (infoTarget.isExplicitlyAbstract())
@@ -1478,7 +1515,7 @@ public class NewExpression
 
             if (hasSquareBrackets())
                 {
-                iFirst = getDimensionCount() + 1;
+                iFirst = getDimensionCount();
 
                 sb.append('[');
                 boolean first = true;

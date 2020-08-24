@@ -105,12 +105,12 @@ public class ArrayTypeExpression
         type = exprTypeNew;
 
         ArrayTypeExpression exprNew = (ArrayTypeExpression) super.validate(ctx, typeRequired, errs);
-        if (exprNew == null || dims == 0)
+        if (exprNew == null || dims <= 1)
             {
             return exprNew;
             }
 
-        // array[capacity] is a fixed size array and is allowed only for types with default values
+        // array[c1, c2, ...] is a fixed size matrix and is allowed only for types with default values
         TypeConstant typeArray   = exprNew.ensureTypeConstant(ctx);
         TypeConstant typeElement = typeArray.getParamType(0);
 

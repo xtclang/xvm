@@ -15,7 +15,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -86,16 +85,17 @@ public class NewC_0
             {
             ObjectHandle hParent = frame.getArgument(m_nParentValue);
 
-            MethodStructure constructor = getVirtualConstructor(frame, hParent);
+            MethodStructure constructor = getChildConstructor(frame, hParent);
             if (constructor == null)
                 {
                 return reportMissingConstructor(frame, hParent);
                 }
 
+            ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
             return isDeferred(hParent)
                     ? hParent.proceed(frame, frameCaller ->
-                        constructChild(frameCaller, constructor, frameCaller.popStack(), Utils.OBJECTS_NONE))
-                    : constructChild(frame, constructor, hParent, Utils.OBJECTS_NONE);
+                        constructChild(frameCaller, constructor, frameCaller.popStack(), ahVar))
+                    : constructChild(frame, constructor, hParent, ahVar);
             }
         catch (ExceptionHandle.WrapperException e)
             {

@@ -53,7 +53,7 @@ mixin ListFreezer<Element extends ImmutableAble>
                 }
             else
                 {
-                Cursor cur = cursor();
+                List<Element>.Cursor cur = cursor(); // TODO GG Cursor cur = cursor();
                 while (cur.exists)
                     {
                     Element e = cur.value;
@@ -67,6 +67,11 @@ mixin ListFreezer<Element extends ImmutableAble>
             return makeImmutable();
             }
 
-        return duplicate(e -> e.is(immutable Element) ? e : e.freeze());
+        // TODO GG get rid of all .as()
+        function Element (Element) transform =
+            e -> e.is(immutable Element)
+                ? e
+                : e.as(Freezable).freeze().as(immutable Element);
+        return duplicate(transform).as(immutable ListFreezer);
         }
     }

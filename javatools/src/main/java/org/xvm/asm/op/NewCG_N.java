@@ -95,27 +95,13 @@ public class NewCG_N
         {
         try
             {
-            ObjectHandle hParent = frame.getArgument(m_nParentValue);
-
-            MethodStructure constructor = getVirtualConstructor(frame, hParent);
-            if (constructor == null)
-                {
-                return reportMissingConstructor(frame, hParent);
-                }
-
-            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
-
-            ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
-
-            if (frame.isNextRegister(m_nRetValue))
-                {
-                frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
-                }
+            ObjectHandle   hParent = frame.getArgument(m_nParentValue);
+            ObjectHandle[] ahArg   = frame.getArguments(m_anArgValue, 0);
 
             return isDeferred(hParent)
                     ? hParent.proceed(frame, frameCaller ->
-                        collectArgs(frameCaller, constructor, clzTarget, frameCaller.popStack(), ahVar))
-                    : collectArgs(frame, constructor, clzTarget, hParent, ahVar);
+                        collectArgs(frameCaller, frameCaller.popStack(), ahArg))
+                    : collectArgs(frame, hParent, ahArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -123,25 +109,34 @@ public class NewCG_N
             }
         }
 
-    protected int collectArgs(Frame frame, MethodStructure constructor, ClassComposition clzTarget,
-                              ObjectHandle hParent, ObjectHandle[] ahVar)
+    protected int collectArgs(Frame frame, ObjectHandle hParent, ObjectHandle[] ahArg)
         {
+        MethodStructure constructor = getChildConstructor(frame, hParent);
+        if (constructor == null)
+            {
+            return reportMissingConstructor(frame, hParent);
+            }
+
+        ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
+        int              nReturn   = m_nRetValue;
+
+        if (frame.isNextRegister(nReturn))
+            {
+            frame.introduceResolvedVar(nReturn, clzTarget.getType());
+            }
+
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, constructor.getMaxVars());
         if (anyDeferred(ahVar))
             {
             Frame.Continuation stepNext = frameCaller ->
-                constructChild(frameCaller, constructor, clzTarget, hParent, ahVar);
+                clzTarget.getTemplate().
+                    construct(frameCaller, constructor, clzTarget, hParent, ahVar, nReturn);
 
-            return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
+            return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
             }
 
-        return constructChild(frame, constructor, clzTarget, hParent, ahVar);
-        }
-
-    protected int constructChild(Frame frame, MethodStructure constructor, ClassComposition clzTarget,
-                                 ObjectHandle hParent, ObjectHandle[] ahVar)
-        {
         return clzTarget.getTemplate().
-            construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
+            construct(frame, constructor, clzTarget, hParent, ahVar, nReturn);
         }
 
     @Override

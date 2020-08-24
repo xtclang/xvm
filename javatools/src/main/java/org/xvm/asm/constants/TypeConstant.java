@@ -3267,12 +3267,12 @@ public abstract class TypeConstant
                 boolean fKeep = true;
                 if (methodContrib.isConstructor())
                     {
+                    idContrib = (MethodConstant) constId.appendNestedIdentity(
+                                                    pool, idContrib.getSignature());
                     // for all other purposes validators are treated as constructors, except we need
                     // to chain them (based on the same resolved id)
                     if (methodContrib.isValidator())
                         {
-                        idContrib = (MethodConstant) constId.appendNestedIdentity(
-                                                        pool, idContrib.getSignature());
                         MethodInfo methodBase = mapMethods.get(idContrib);
                         if (methodBase != null)
                             {
@@ -3281,8 +3281,29 @@ public abstract class TypeConstant
                         }
                     else
                         {
-                        // keep constructors only for ourselves and not "super" contributions
+                        // keep constructors only for ourselves and not "super" contributions,
+                        // but retain the virtual constructor information
                         fKeep = fSelf;
+
+                        Object nidContrib = fSelf
+                                ? idContrib.resolveNestedIdentity(pool, this)
+                                : idContrib.getNestedIdentity();
+                        List<Object> listMatches = collectPotentialSuperMethods(
+                                methodContrib.getHead().getMethodStructure(),
+                                nidContrib, sigContrib, mapVirtMethods);
+                        if (!listMatches.isEmpty())
+                            {
+                            for (Object nidBase : listMatches)
+                                {
+                                MethodInfo methodBase = mapVirtMethods.get(nidBase);
+                                if (methodBase.isVirtualConstructor())
+                                    {
+                                    methodContrib = methodBase.layerOnVirtualConstructor(methodContrib);
+                                    fKeep         = true;
+                                    break;
+                                    }
+                                }
+                            }
                         }
                     }
                 else if (idContrib.getNestedDepth() == 2)

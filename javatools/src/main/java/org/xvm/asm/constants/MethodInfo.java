@@ -239,6 +239,41 @@ public class MethodInfo
         }
 
     /**
+     * Layer the MethodInfo for the virtual constructor.
+     * <p/>
+     * This method is different from the "layerOn" method above since the virtual constructors are
+     * quite special: they are not virtual (not callable directly), but the compiler and validator
+     * need this information to enforce the virtual constructor's contract.
+     *
+     * @param that  the "contribution" MethodInfo to layer onto this MethodInfo
+     *
+     * @return the resulting MethodInfo
+     */
+    public MethodInfo layerOnVirtualConstructor(MethodInfo that)
+        {
+        MethodBody bodyVirt = null;
+        for (MethodBody body : m_aBody)
+            {
+            if (body.isVirtualConstructor())
+                {
+                bodyVirt = body;
+                break;
+                }
+            }
+        assert bodyVirt != null;
+
+        // add the base virtual constructor at the bottom
+        MethodBody[] aThat = that.m_aBody;
+        int          cThat = aThat.length;
+        MethodBody[] aNew  = new MethodBody[cThat + 1];
+
+        System.arraycopy(aThat, 0, aNew, 0, cThat);
+        aNew[cThat] = bodyVirt;
+
+        return new MethodInfo(aNew);
+        }
+
+    /**
      * In terms of the "glass planes" metaphor, the glass plane from "this" (contribution) is to
      * replace the glass plane of "that" (base), with the resulting combination of glass planes
      * returned as a MethodInfo.
@@ -644,6 +679,11 @@ public class MethodInfo
      */
     public boolean isVirtual()
         {
+        if (getHead().isVirtualConstructor())
+            {
+            return true;
+            }
+
         // it can only be virtual if it is non-private and non-function, and if it is not contained
         // within a method or a private property
         if (isFunction() || isConstructor() || getAccess() == Access.PRIVATE)
@@ -675,6 +715,22 @@ public class MethodInfo
             }
 
         return true;
+        }
+
+    /**
+     * @return true iff the method represents a constructor that must be overridden by
+     *         all extending classes
+     */
+    public boolean isVirtualConstructor()
+        {
+        for (MethodBody body : getChain())
+            {
+            if (body.isVirtualConstructor())
+                {
+                return true;
+                }
+            }
+        return false;
         }
 
     /**

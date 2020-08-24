@@ -20,6 +20,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
+import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
@@ -493,6 +494,65 @@ public class UnionTypeConstant
                 }
             }
         return map;
+        }
+
+    @Override
+    protected ListMap<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs)
+        {
+        ListMap<String, ChildInfo> map1 = info1 == null ? ListMap.EMPTY : info1.getChildInfosByName();
+        ListMap<String, ChildInfo> map2 = info1 == null ? ListMap.EMPTY : info2.getChildInfosByName();
+
+        if (map1.isEmpty())
+            {
+            return map2;
+            }
+
+        if (map2.isEmpty())
+            {
+            return map1;
+            }
+
+        ListMap<String, ChildInfo> mapMerge = new ListMap<>();
+        for (Map.Entry<String, ChildInfo> entry : map1.entrySet())
+            {
+            String    sChild = entry.getKey();
+            ChildInfo child1 = entry.getValue();
+
+            if (map2.containsKey(sChild))
+                {
+                // the child exists in both maps
+                ChildInfo child2 = map2.get(sChild);
+                ChildInfo childM = child1.layerOn(child2);
+                if (childM == null)
+                    {
+                    log(errs, Severity.ERROR, VE_CHILD_COLLISION,
+                        getValueString(), sChild,
+                        child2.getIdentity().getValueString(),
+                        child1.getIdentity().getValueString());
+                    }
+                else
+                    {
+                    // the child is only in the first map
+                    mapMerge.put(sChild, childM);
+                    }
+                }
+            else
+                {
+                mapMerge.put(sChild, child1);
+                }
+            }
+
+        for (Map.Entry<String, ChildInfo> entry : map2.entrySet())
+            {
+            String sChild = entry.getKey();
+
+            if (!map1.containsKey(sChild))
+                {
+                // the child is only in the second map
+                mapMerge.put(sChild, entry.getValue());
+                }
+            }
+        return mapMerge;
         }
 
 

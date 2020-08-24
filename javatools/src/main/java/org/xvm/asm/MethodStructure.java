@@ -142,6 +142,14 @@ public class MethodStructure
         }
 
     /**
+     * @return true iff this is a virtual constructor, which is a specialized form of a method
+     */
+    public boolean isVirtualConstructor()
+        {
+        return getName().equals("construct") && getParent().getParent().getFormat() == Format.INTERFACE;
+        }
+
+    /**
      * @return true iff this is a constructor finalizer, which is a specialized form of a method
      */
     public boolean isConstructorFinalizer()
