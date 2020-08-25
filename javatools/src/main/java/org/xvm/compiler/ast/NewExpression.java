@@ -1027,8 +1027,8 @@ public class NewExpression
                         break;
 
                     default:
-                        // code.add(new New_VN(idConstruct, regType, aArgs, argResult));
-                        throw new UnsupportedOperationException();
+                        code.add(new NewV_N(idConstruct, regType, aArgs, argResult));
+                        break;
                     }
                 }
             else

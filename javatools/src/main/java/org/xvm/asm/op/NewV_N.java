@@ -11,38 +11,41 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
 import org.xvm.runtime.Utils;
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * NEWG_N CONSTRUCT, TYPE, #:(rvalue) lvalue
+ * NEWV_N CONSTRUCT, rvalue-type, #:(rvalue), lvalue; virtual "new"
  */
-public class NewG_N
+public class NewV_N
         extends OpCallable
     {
     /**
-     * Construct a NEWG_N op based on the passed arguments.
+     * Construct a NEWV_N op based on the passed arguments.
      *
      * @param constMethod  the constructor method
      * @param argType      the type Argument
-     * @param aArgValue    the array of value Arguments
+     * @param aargValue    the values Arguments
      * @param argReturn    the return Argument
      */
-    public NewG_N(MethodConstant constMethod, Argument argType, Argument[] aArgValue, Argument argReturn)
+    public NewV_N(MethodConstant constMethod, Argument argType, Argument[] aargValue,
+                  Argument argReturn)
         {
         super(constMethod);
 
-        m_aArgValue = aArgValue;
         m_argType   = argType;
+        m_aArgValue = aargValue;
         m_argReturn = argReturn;
         }
 
@@ -52,12 +55,12 @@ public class NewG_N
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public NewG_N(DataInput in, Constant[] aconst)
+    public NewV_N(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
 
-        m_nTypeValue = readPackedInt(in);
+        m_nType      = readPackedInt(in);
         m_anArgValue = readIntArray(in);
         m_nRetValue  = readPackedInt(in);
         }
@@ -70,12 +73,12 @@ public class NewG_N
 
         if (m_argType != null)
             {
-            m_nTypeValue = encodeArgument(m_argType, registry);
+            m_nType      = encodeArgument(m_argType, registry);
             m_anArgValue = encodeArguments(m_aArgValue, registry);
             m_nRetValue  = encodeArgument(m_argReturn, registry);
             }
 
-        writePackedLong(out, m_nTypeValue);
+        writePackedLong(out, m_nType);
         writeIntArray(out,   m_anArgValue);
         writePackedLong(out, m_nRetValue);
         }
@@ -83,7 +86,7 @@ public class NewG_N
     @Override
     public int getOpCode()
         {
-        return OP_NEWG_N;
+        return OP_NEWV_N;
         }
 
     @Override
@@ -91,22 +94,13 @@ public class NewG_N
         {
         try
             {
-            MethodStructure constructor = getMethodStructure(frame);
-            if (constructor == null)
-                {
-                return R_EXCEPTION;
-                }
+            ObjectHandle   hType = frame.getArgument(m_nType);
+            ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, 0);
 
-            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
-
-            if (anyDeferred(ahVar))
-                {
-                Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, constructor, ahVar);
-
-                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
-                }
-            return complete(frame, constructor, ahVar);
+            return isDeferred(hType)
+                    ? hType.proceed(frame, frameCaller ->
+                        collectArgs(frameCaller, (TypeHandle) frameCaller.popStack(), ahArg))
+                    : collectArgs(frame, (TypeHandle) hType, ahArg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -114,18 +108,36 @@ public class NewG_N
             }
         }
 
-    private int complete(Frame frame, MethodStructure constructor, ObjectHandle[] ahVar)
+    protected int collectArgs(Frame frame, TypeHandle hType, ObjectHandle[] ahArg)
         {
-        ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
-        ClassTemplate   template   = clzTarget.getTemplate();
-        ObjectHandle     hParent   = clzTarget.isInstanceChild() ? frame.getThis() : null;
-
-        if (frame.isNextRegister(m_nRetValue))
+        MethodStructure constructor = getTypeConstructor(frame, hType);
+        if (constructor == null)
             {
-            frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
+            return reportMissingConstructor(frame, hType);
             }
 
-        return template.construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
+        TypeConstant     typeTarget = hType.getDataType();
+        ClassComposition clzTarget  = frame.f_context.f_templates.resolveClass(typeTarget);
+        int              nReturn    = m_nRetValue;
+
+        if (frame.isNextRegister(nReturn))
+            {
+            frame.introduceResolvedVar(nReturn, typeTarget);
+            }
+
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, constructor.getMaxVars());
+        if (anyDeferred(ahVar))
+            {
+            Frame.Continuation stepNext = frameCaller ->
+                clzTarget.getTemplate().
+                    construct(frameCaller, constructor, clzTarget, null, ahVar, nReturn);
+
+            return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+            }
+
+        return clzTarget.getTemplate().
+            construct(frame, constructor, clzTarget, null, ahVar, nReturn);
+
         }
 
     @Override
@@ -140,11 +152,11 @@ public class NewG_N
     @Override
     protected String getParamsString()
         {
-        return Argument.toIdString(m_argType, m_nTypeValue) + ": " +
+        return Argument.toIdString(m_argType, m_nType) + ", " +
                getParamsString(m_anArgValue, m_aArgValue);
         }
 
-    private int   m_nTypeValue;
+    private int   m_nType;
     private int[] m_anArgValue;
 
     private Argument   m_argType;

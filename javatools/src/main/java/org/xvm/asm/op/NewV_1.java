@@ -25,7 +25,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * CONSTRUCT, rvalue-type, rvalue-param, lvalue; virtual "new"
+ * NEWV_1 CONSTRUCT, rvalue-type, rvalue-param, lvalue; virtual "new"
  */
 public class NewV_1
         extends OpCallable
