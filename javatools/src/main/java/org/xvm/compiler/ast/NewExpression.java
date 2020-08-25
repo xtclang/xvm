@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
@@ -26,6 +27,7 @@ import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -271,7 +273,7 @@ public class NewExpression
                 }
             }
 
-        if (typeTarget.containsUnresolved())
+        if (typeTarget != null && typeTarget.containsUnresolved())
             {
             log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, type.toString());
             return null;
@@ -626,6 +628,20 @@ public class NewExpression
                                             sType, entry.getKey().getNestedIdentity());
                                     }
                                 });
+
+                    Set<MethodConstant> setConstruct = infoTarget.
+                        findMethods("construct", -1, MethodKind.Constructor);
+                    for (MethodConstant id : setConstruct)
+                        {
+                        MethodInfo infoMethod = infoTarget.getMethodById(id);
+                        if (infoMethod.isVirtualConstructor() &&
+                                infoMethod.isVirtualConstructorImplemented(infoTarget))
+                            {
+                            log(errs, Severity.ERROR, Constants.VE_NEW_VIRTUAL_CONSTRUCT,
+                                    sType, infoMethod.getVirtualConstructorIdentity().getValueString());
+                            }
+                        }
+                    assert errs.isSilent() || errs.hasSeriousErrors();
                     }
 
                 fValid = false;
@@ -635,7 +651,7 @@ public class NewExpression
         if (fValid)
             {
             List<Expression> listArgs = this.args;
-            MethodConstant   idMethod;
+            MethodConstant   idConstruct;
             if (fAnon)
                 {
                 // first, see if the constructor that we're looking for is on the anonymous
@@ -646,9 +662,9 @@ public class NewExpression
                 // any required dependency that it has one a super class constructor will be handled
                 // as if this were any other normal class)
                 ErrorListener errsTemp = errs.branch();
-                idMethod = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs, MethodKind.Constructor,
-                                true, false, null, errsTemp);
-                if (idMethod == null && !listArgs.isEmpty())
+                idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
+                                MethodKind.Constructor, true, false, null, errsTemp);
+                if (idConstruct == null && !listArgs.isEmpty())
                     {
                     // the constructor that we're looking for is not on the anonymous inner class,
                     // so we need to find the specified constructor on the super class (which means
@@ -657,8 +673,9 @@ public class NewExpression
                     // replaced by a constructor with the same signature as the super's constructor
                     // (note: the automatic creation of the synthetic no-arg constructor in the
                     // absence of any explicit constructor must do this same check)
-                    MethodConstant idSuper = findMethod(ctx, typeSuper, typeSuper.ensureTypeInfo(errs),
-                            "construct", listArgs, MethodKind.Constructor, true, false, null, errs);
+                    TypeInfo       infoSuper = typeSuper.ensureTypeInfo(errs);
+                    MethodConstant idSuper   = findMethod(ctx, typeSuper, infoSuper, "construct",
+                                listArgs, MethodKind.Constructor, true, false, null, errs);
                     if (idSuper == null)
                         {
                         fValid = false;
@@ -671,7 +688,10 @@ public class NewExpression
                         // with a constructor that matches the super class constructor, so that we
                         // correctly invoke it
                         destroyDefaultConstructor();
-                        idMethod = createPassThroughConstructor(idSuper);
+
+                        MethodStructure methodSuper =
+                                infoSuper.getMethodById(idSuper).getHead().getMethodStructure();
+                        idConstruct = createPassThroughConstructor(idSuper, methodSuper);
 
                         // since we just modified the component, flush the TypeInfo cache for
                         // the type of the anonymous inner class
@@ -687,24 +707,24 @@ public class NewExpression
                 }
             else
                 {
-                idMethod = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
+                idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
                                 MethodKind.Constructor, true, false, null, errs);
                 }
 
-            if (idMethod == null)
+            if (idConstruct == null)
                 {
                 fValid = false;
                 }
             else if (fValid)
                 {
-                MethodStructure constructor = (MethodStructure) idMethod.getComponent();
+                MethodStructure constructor = (MethodStructure) idConstruct.getComponent();
                 if (constructor == null)
                     {
-                    constructor = infoTarget.getMethodById(idMethod).getTopmostMethodStructure(infoTarget);
+                    constructor = infoTarget.getMethodById(idConstruct).getHead().getMethodStructure();
                     assert constructor != null;
                     }
 
-                TypeConstant[] atypeArgs = idMethod.getRawParams();
+                TypeConstant[] atypeArgs = idConstruct.getRawParams();
 
                 // test the "regular fit" first and Tuple afterwards
                 TypeConstant typeTuple = null;
@@ -924,7 +944,7 @@ public class NewExpression
                 }
 
             Argument argOuter = null;
-            if (m_fVirtualChild)
+            if (m_fVirtualChild || isVirtualNew())
                 {
                 if (left == null)
                     {
@@ -990,6 +1010,25 @@ public class NewExpression
                             code.add(new NewCG_N(idConstruct, argOuter, typeTarget, aArgs, argResult));
                             break;
                         }
+                    }
+                }
+            else if (isVirtualNew())
+                {
+                Register regType = createRegister(argOuter.getType().getType(), true);
+                code.add(new MoveType(argOuter, regType));
+                switch (cParams)
+                    {
+                    case 0:
+                        code.add(new NewV_0(idConstruct, regType, argResult));
+                        break;
+
+                    case 1:
+                        code.add(new NewV_1(idConstruct, regType, aArgs[0], argResult));
+                        break;
+
+                    default:
+                        // code.add(new New_VN(idConstruct, regType, aArgs, argResult));
+                        throw new UnsupportedOperationException();
                     }
                 }
             else
@@ -1266,14 +1305,16 @@ public class NewExpression
     /**
      * Create a synthetic constructor on the inner class that calls the specified super constructor.
      *
-     * @param idSuper  the super constructor
+     * @param idSuper      the super constructor id
+     * @param methodSuper  the super constructor method
      *
      * @return the identity of the new constructor on the anonymous inner class
      */
-    private MethodConstant createPassThroughConstructor(MethodConstant idSuper)
+    private MethodConstant createPassThroughConstructor(MethodConstant idSuper,
+                                                        MethodStructure methodSuper)
         {
         // create a constructor that matches the one that we need to route to on the super class
-        Parameter[]     aParams     = ((MethodStructure) idSuper.getComponent()).getParamArray();
+        Parameter[]     aParams     = methodSuper.getParamArray();
         int             cParams     = aParams.length;
         ClassStructure  clzAnon     = (ClassStructure) anon.getComponent();
         MethodStructure constrThis  = clzAnon.createMethod(true, Access.PUBLIC, null,

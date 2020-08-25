@@ -8,7 +8,6 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.OpMove;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -26,12 +25,12 @@ public class MoveType
     /**
      * Construct a MOV_TYPE op for the passed arguments.
      *
-     * @param regSrc   the source Register
+     * @param argSrc   the source Argument
      * @param argDest  the destination Argument
      */
-    public MoveType(Register regSrc, Argument argDest)
+    public MoveType(Argument argSrc, Argument argDest)
         {
-        super(regSrc, argDest);
+        super(argSrc, argDest);
         }
 
     /**
@@ -74,11 +73,12 @@ public class MoveType
         {
         ConstantPool pool = frame.poolContext();
         int          nTo  = m_nToValue;
-        TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeType(), hValue.getType());
+        TypeConstant type = hValue.getType();
 
         if (frame.isNextRegister(nTo))
             {
-            frame.introduceResolvedVar(nTo, type);
+            frame.introduceResolvedVar(nTo,
+                pool.ensureParameterizedTypeConstant(pool.typeType(), type));
             }
         return frame.assignValue(nTo, type.getTypeHandle());
         }

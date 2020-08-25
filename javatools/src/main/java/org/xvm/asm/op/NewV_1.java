@@ -108,7 +108,7 @@ public class NewV_1
 
     protected int collectArg(Frame frame, TypeHandle hType, ObjectHandle hArg)
         {
-        MethodStructure constructor = getChildConstructor(frame, hType);
+        MethodStructure constructor = getTypeConstructor(frame, hType);
         if (constructor == null)
             {
             return reportMissingConstructor(frame, hType);
@@ -149,7 +149,8 @@ public class NewV_1
     @Override
     protected String getParamsString()
         {
-        return Argument.toIdString(m_argValue, m_nArgValue);
+        return Argument.toIdString(m_argType, m_nType) + ", " +
+               Argument.toIdString(m_argValue, m_nArgValue);
         }
 
     private int m_nType;

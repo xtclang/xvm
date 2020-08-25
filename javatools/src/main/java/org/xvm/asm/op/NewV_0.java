@@ -132,6 +132,12 @@ public class NewV_0
         m_argType = registerArgument(m_argType, registry);
         }
 
+    @Override
+    protected String getParamsString()
+        {
+        return Argument.toIdString(m_argType, m_nType);
+        }
+
     private int m_nType;
 
     private Argument m_argType;

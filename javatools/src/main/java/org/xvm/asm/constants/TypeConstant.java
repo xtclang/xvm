@@ -3281,28 +3281,46 @@ public abstract class TypeConstant
                         }
                     else
                         {
-                        // keep constructors only for ourselves and not "super" contributions,
-                        // but retain the virtual constructor information
-                        fKeep = fSelf;
+                        // In general constructors are not virtual, unless a class or mixin implement
+                        // an interface that declares a virtual constructor.
+                        // When a real constructor matches a virtual one, the "virtual origin"
+                        // information is retained on the non-virtual (real) constructor.
+                        // We keep constructors in the map of methods only for "self" and not
+                        // any "super" contributions, except for virtual constructors that are
+                        // retained to enforce the corresponding constructor contracts.
+                        fKeep = fSelf || methodContrib.isVirtualConstructor();
 
-                        Object nidContrib = fSelf
-                                ? idContrib.resolveNestedIdentity(pool, this)
-                                : idContrib.getNestedIdentity();
-                        List<Object> listMatches = collectPotentialSuperMethods(
-                                methodContrib.getHead().getMethodStructure(),
-                                nidContrib, sigContrib, mapVirtMethods);
-                        if (!listMatches.isEmpty())
+                        List<MethodConstant> listMatches =
+                                collectVirtualConstructors(methodContrib, mapMethods);
+
+                        switch (listMatches.size())
                             {
-                            for (Object nidBase : listMatches)
+                            case 0:
+                                break;
+
+                            case 1:
                                 {
-                                MethodInfo methodBase = mapVirtMethods.get(nidBase);
-                                if (methodBase.isVirtualConstructor())
+                                MethodConstant idBase     = listMatches.get(0);
+                                MethodInfo     methodBase = mapMethods.get(idBase);
+
+                                methodContrib = methodBase.layerOnVirtualConstructor(methodContrib);
+                                fKeep         = true;
+
+                                if (!idBase.equals(idContrib))
                                     {
-                                    methodContrib = methodBase.layerOnVirtualConstructor(methodContrib);
-                                    fKeep         = true;
-                                    break;
+                                    // TODO: removing the base constructor is a bit ham-handed;
+                                    //       consider capping it, similarly to regular methods
+                                    mapMethods.remove(idBase);
                                     }
+                                break;
                                 }
+
+                            default:
+                                log(errs, Severity.ERROR, VE_METHOD_NARROWING_AMBIGUOUS,
+                                        typeContrib.getValueString(),
+                                        idContrib.getValueString(),
+                                        listMatches.get(0).getValueString());
+                                break;
                             }
                         }
                     }
@@ -3668,7 +3686,6 @@ public abstract class TypeConstant
             Object                  nidSub,
             SignatureConstant       sigSub,
             Map<Object, MethodInfo> mapSupers)
-
         {
         List<Object> listMatch = null;
         boolean      fExact    = true;
@@ -3713,6 +3730,81 @@ public abstract class TypeConstant
                                     listMatch.add(nidCandidate);
                                     fExact = false;
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        return listMatch == null ? Collections.EMPTY_LIST : listMatch;
+        }
+
+    /**
+     * Collect all virtual constructors that may serve as a base contract for the specified
+     * contributing constructor.
+     *
+     * This methods is very similar, but simpler then "collectPotentialSuperMethods" above.
+     *
+     * @param infoConstruct  the contributing constructor at the "sub" level
+     * @param mapMethods     the map of all super methods
+
+     * @return a list of all matching virtual constructors
+     */
+    protected List<MethodConstant> collectVirtualConstructors(
+                MethodInfo                      infoConstruct,
+                Map<MethodConstant, MethodInfo> mapMethods)
+        {
+        MethodStructure      method    = infoConstruct.getHead().getMethodStructure();
+        SignatureConstant    sigSub    = infoConstruct.getIdentity().getSignature();
+        List<MethodConstant> listMatch = null;
+        boolean              fExact    = true;
+
+        for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
+            {
+            MethodConstant idCandidate = entry.getKey();
+            if (idCandidate.getNestedDepth() != 2)
+                {
+                continue;
+                }
+
+            MethodInfo        infoCandidate = entry.getValue();
+            SignatureConstant sigCandidate  = infoCandidate.getSignature(); // resolved
+
+            if (sigCandidate.getName().equals(sigSub.getName()) &&
+                    infoCandidate.isVirtualConstructor())
+                {
+                if (sigSub.isSubstitutableFor(sigCandidate, this))
+                    {
+                    if (!fExact && listMatch != null)
+                        {
+                        // we found an exact match; get rid of non-exact ones
+                        listMatch.clear();
+                        }
+                    if (listMatch == null)
+                        {
+                        listMatch = new ArrayList<>();
+                        }
+                    listMatch.add(idCandidate);
+                    }
+                else if (method != null && (listMatch == null || !fExact))
+                    {
+                    // allow default parameters (but only if there is no "exact" match)
+                    int cDefault = method.getDefaultParamCount();
+                    if (cDefault > 0)
+                        {
+                        int cParamsReq = sigCandidate.getParamCount();
+                        int cParamsSub = sigSub.getParamCount();
+                        if (cParamsSub > cParamsReq && cParamsSub - cDefault <= cParamsReq)
+                            {
+                            SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
+                            if (sigSubReq.isSubstitutableFor(sigCandidate, this))
+                                {
+                                if (listMatch == null)
+                                    {
+                                    listMatch = new ArrayList<>();
+                                    }
+                                listMatch.add(idCandidate);
+                                fExact = false;
                                 }
                             }
                         }

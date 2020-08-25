@@ -734,6 +734,33 @@ public class MethodInfo
         }
 
     /**
+     * @return the identity of a constructor that must be overridden by all extending classes
+     */
+    public MethodConstant getVirtualConstructorIdentity()
+        {
+        for (MethodBody body : getChain())
+            {
+            if (body.isVirtualConstructor())
+                {
+                return body.getIdentity();
+                }
+            }
+        return null;
+        }
+
+    /**
+     * @return true iff the virtual constructor represented by this info is explicitly implemented
+     *         by the specified type
+     */
+    public boolean isVirtualConstructorImplemented(TypeInfo infoTarget)
+        {
+        assert isVirtualConstructor();
+
+        MethodStructure constructor = getTopmostMethodStructure(infoTarget);
+        return constructor.getParent().getParent() != infoTarget.getClassStructure();
+        }
+
+    /**
      * @return true iff this is an abstract function (declared on an interface)
      */
     public boolean isAbstractFunction()

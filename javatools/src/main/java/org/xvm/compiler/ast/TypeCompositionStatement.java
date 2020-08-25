@@ -1754,7 +1754,8 @@ public class TypeCompositionStatement
             boolean fFound = false;
             if (constructors != null)
                 {
-                NextConstructor: for (MethodStructure constructor : constructors.getMethodByConstantMap().values())
+                NextConstructor:
+                for (MethodStructure constructor : constructors.getMethodByConstantMap().values())
                     {
                     org.xvm.asm.Parameter[] aConsParams = constructor.getParamArray();
                     int                     cConsParams = aConsParams.length;
@@ -2167,8 +2168,8 @@ public class TypeCompositionStatement
         TypeInfo       infoSuper = clzSuper == null
                 ? null
                 : pool().ensureAccessTypeConstant(clzSuper.getFormalType(), Access.PROTECTED).ensureTypeInfo(errs);
-        MethodConstant idSuper; // super constructor
-
+        MethodConstant   idSuper;
+        MethodStructure  constructSuper;
         List<Expression> listArgs;
         if (args == null)
             {
@@ -2205,7 +2206,8 @@ public class TypeCompositionStatement
 
         if (clzSuper == null)
             {
-            idSuper = null;
+            idSuper        = null;
+            constructSuper = null;
             }
         else
             {
@@ -2218,10 +2220,11 @@ public class TypeCompositionStatement
                         component.getIdentityConstant().getValueString(), clzSuper.getName());
                 return;
                 }
+            constructSuper = infoSuper.getMethodById(idSuper).getHead().getMethodStructure();
             }
 
         // validate
-        if (idSuper != null && listArgs != null)
+        if (constructSuper != null && listArgs != null)
             {
             if (containsNamedArgs(listArgs))
                 {
@@ -2231,9 +2234,7 @@ public class TypeCompositionStatement
                     return;
                     }
 
-                MethodStructure constructorSuper = (MethodStructure) idSuper.getComponent();
-
-                listArgs = rearrangeNamedArgs(constructorSuper, listArgs, mapNamedExpr, errs);
+                listArgs = rearrangeNamedArgs(constructSuper, listArgs, mapNamedExpr, errs);
                 if (listArgs == null)
                     {
                     // invalid names encountered
@@ -2307,7 +2308,7 @@ public class TypeCompositionStatement
                 }
             }
 
-        if (idSuper == null)
+        if (constructSuper == null)
             {
             if (constructor.isAnonymousClassWrapperConstructor())
                 {
@@ -2317,10 +2318,9 @@ public class TypeCompositionStatement
             }
         else
             {
-            MethodStructure constructSuper = (MethodStructure) idSuper.getComponent();
-            int             cSuperArgs     = constructSuper.getParamCount();
-            Argument[]      aSuperArgs     = new Argument[cSuperArgs];
-            int             cArgs          = listArgs == null ? 0 : listArgs.size();
+            int        cSuperArgs = constructSuper.getParamCount();
+            Argument[] aSuperArgs = new Argument[cSuperArgs];
+            int        cArgs      = listArgs == null ? 0 : listArgs.size();
 
             // generate the super constructor arguments (filling in the default values)
             for (int i = 0; i < cSuperArgs; i++)

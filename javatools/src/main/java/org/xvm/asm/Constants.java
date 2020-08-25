@@ -570,6 +570,10 @@ public interface Constants
      * existing child {3}.
      */
     public static final String VE_CHILD_COLLISION                     = "VERIFY-96";
+    /**
+     * "{0}" is not an instantiable type because it doesn't implement a virtual constructor "{1}".
+     */
+    public static final String VE_NEW_VIRTUAL_CONSTRUCT               = "VERIFY-97";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

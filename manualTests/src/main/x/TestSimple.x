@@ -2,139 +2,25 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run(  )
+    void run()
         {
-        import ecstasy.reflect.Annotation;
+        console.println("Starting");
 
-        // console.println("Starting");
+        Int n = 0;
 
-        // TODO
-        // Property p = second;
+        Base b = new Base(1);
+        console.println(b);
 
-        Annotation[] annos = &prop.annotations;
-        console.println(annos);
+        Base b2 = b.new(b);
+        console.println(b2);
 
-        @Watch(n -> {console.print($"{n}, ");}) @Silly(2, "b")
-            @Unchecked Int n;
-        console.println(&n.annotations);
-        }
+        Base d = new Derived(2);
+        console.println(d);
 
-    mixin ListFreezer<Element extends ecstasy.collections.ImmutableAble>
-            into List<Element>
-            implements Freezable
-        {
-        @Override
-        immutable ListFreezer freeze(Boolean inPlace = False)
-            {
-            if (this.is(immutable ListFreezer))
-                {
-                return this;
-                }
+        Base d2 = d.new(d);
+        console.println(d2);
 
-            if (inPlace && all(e -> e.is(immutable Object)))
-                {
-                return makeImmutable();
-                }
-
-            // inPlace  inPlace  indexed
-            // request  List     List     description
-            // -------  -------  -------  --------------------------------------------------------------
-            //    N        N        N     these two will copy-construct the frozen contents of this list
-            //    N        N        Y
-            //
-            //    N        Y        N     these two could just copy-construct this list, and freeze that
-            //    N        Y        Y     list in place, but instead just do the same as above
-            //
-            //    Y        N        N     the request is in-place, but list is not, so these ends up
-            //    Y        N        Y     being the same as "NNN" and "NNY"
-            //
-            //    Y        Y        N     easy and efficient: freeze element in place using a cursor
-            //    Y        Y        Y     easy and efficient: freeze the elements in place using []
-
-            if (inPlace && this.inPlace)
-                {
-                if (indexed)
-                    {
-                    for (Int i = 0, Int c = size; i < c; ++i)
-                        {
-                        Element e = this[i];
-                        if (!e.is(immutable Object))
-                            {
-                            this[i] = e.freeze();
-                            }
-                        }
-                    }
-                else
-                    {
-                    Cursor cur = cursor();
-                    while (cur.exists)
-                        {
-                        Element e = cur.value;
-                        if (!e.is(immutable Object))
-                            {
-                            cur.value = e.freeze();
-                            }
-                        cur.advance();
-                        }
-                    }
-                return makeImmutable();
-                }
-
-            // find the copy constructor
-            typedef Function<<>, <ListFreezer>> Constructor;
-
-            assert Constructor constructor := &this.actualType.constructors.filter(
-                    f -> f.params.size >= 1
-                        && f.params[0].ParamType.is(Type<Iterable<Element>>)
-                        && (f.params.size == 1 || f.params[[1..f.params.size)].all(p -> p.defaultValue()))
-                    ).iterator().next();
-
-            // bind any default parameters
-            if (constructor.params.size > 1)
-                {
-                constructor = constructor.bind(constructor.params[[1..constructor.params.size)]
-                        .associateWith(p -> {assert val v := p.defaultValue(); return v;})).as(Constructor);
-                }
-
-            // create a List that enumerates the frozen contents of this list
-            List frozenContents = new List<Element>()
-                {
-                @Override
-                Int size.get()
-                    {
-                    return this.ListFreezer.size;
-                    }
-
-
-                @Override
-                @Op("[]") Element getElement(Int index)
-                    {
-                    Element e = this.ListFreezer[index];
-                    return e.is(immutable Element) ? e : e.freeze();
-                    }
-
-                @Override
-                Iterator<Element> iterator()
-                    {
-                    // implementations that are not indexed should provide a more efficient implementation
-                    val unfrozen = this.ListFreezer.iterator();
-                    return new Iterator()
-                        {
-                        @Override
-                        conditional Element next()
-                            {
-                            if (Element e := unfrozen.next())
-                                {
-                                return True, e.is(immutable Object) ? e : e.freeze();
-                                }
-                            return False;
-                            }
-                        };
-                    }
-                };
-
-            return constructor.invoke(Tuple:(frozenContents))[0].freeze(true);
-            }
+        Empty e = d2;
         }
 
     mixin Silly(Int i, String s)

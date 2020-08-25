@@ -117,23 +117,37 @@ public class TypeInfo
         f_cacheById  = new ConcurrentHashMap<>(mapMethods);
         f_cacheByNid = new ConcurrentHashMap<>(mapVirtMethods);
 
+
+        boolean fExplicitAbstract = fSynthetic || !isClass() || struct.isExplicitlyAbstract() ||
+                TypeInfo.containsAnnotation(aannoClass, "Abstract");
+
+        boolean fImplicitAbstract = false;
+        boolean fMissingConstruct = false;
         for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
             MethodInfo info = entry.getValue();
 
             info.populateCache(entry.getKey(), f_cacheById, f_cacheByNid);
+
+            if (info.isVirtualConstructor())
+                {
+                // constructors must come from "this" structure; otherwise they are un-implemented
+                // virtual constructors
+                fMissingConstruct |= info.isVirtualConstructorImplemented(this);
+                }
+            else
+                {
+                // unfortunately, there is no "||=" operator in Java
+                fImplicitAbstract = fImplicitAbstract || info.isAbstract();
+                }
             }
 
-        // REVIEW: consider calculating the "abstract" flags lazily
-        boolean fExplicitAbstract = fSynthetic || !isClass() || struct.isExplicitlyAbstract() ||
-                TypeInfo.containsAnnotation(aannoClass, "Abstract");
-
-        boolean fImplicitAbstract = fExplicitAbstract ||
-                mapProps.values().stream().anyMatch(PropertyInfo::isExplicitlyAbstract) ||
-                mapMethods.values().stream().anyMatch(MethodInfo::isAbstract);
+        fImplicitAbstract = fImplicitAbstract ||
+            mapProps.values().stream().anyMatch(PropertyInfo::isExplicitlyAbstract);
 
         m_fExplicitAbstract = fExplicitAbstract;
         m_fImplicitAbstract = fImplicitAbstract;
+        m_fMissingConstruct = fMissingConstruct;
 
         assert cInvalidations == 0 // necessary for TYPEINFO_PLACEHOLDER construction
             || cInvalidations <= type.getConstantPool().getInvalidationCount();
@@ -176,6 +190,7 @@ public class TypeInfo
 
         m_fExplicitAbstract = true;
         m_fImplicitAbstract = infoConstraint.m_fImplicitAbstract;
+        m_fMissingConstruct = false;
 
         assert cInvalidations <= typeFormal.getConstantPool().getInvalidationCount();
         }
@@ -597,7 +612,7 @@ public class TypeInfo
      */
     public boolean isAbstract()
         {
-        return m_fImplicitAbstract || m_fExplicitAbstract;
+        return m_fImplicitAbstract || m_fExplicitAbstract || m_fMissingConstruct;
         }
 
     /**
@@ -2412,6 +2427,11 @@ public class TypeInfo
      * Whether this type is abstract due to a presence of abstract properties or methods.
      */
     private final boolean m_fImplicitAbstract;
+
+    /**
+     * Whether this type is abstract due to an absence of a virtual constructor.
+     */
+    private final boolean m_fMissingConstruct;
 
     /**
      * The type parameters for this TypeInfo key'ed by a String or Nid.

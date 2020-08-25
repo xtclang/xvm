@@ -215,6 +215,10 @@ public abstract class OpCallable extends Op
 
             MethodInfo info = infoTarget.getMethodBySignature(
                 constructor.getIdentityConstant().getSignature());
+            if (info == null)
+                {
+                return null;
+                }
             constructor = info.getTopmostMethodStructure(infoTarget);
             }
 

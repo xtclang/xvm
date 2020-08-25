@@ -1339,10 +1339,6 @@ public class MethodStructure
             // however, we may need to limit this functionality later int the cycle, for example
             // during the function compilation (e.g. MethodDeclarationStatement##compile)
             }
-        else if (isConstructor())
-            {
-            return false;
-            }
 
         return getParent().isAutoNarrowingAllowed();
         }

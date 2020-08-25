@@ -415,6 +415,13 @@ public class MethodDeclarationStatement
                         return;
                         }
 
+                    if (fConstructor && body != null &&
+                            container.getFormat() == Component.Format.INTERFACE)
+                        {
+                        log(errs, Severity.ERROR, Compiler.ILLEGAL_VIRTUAL_CONSTRUCTOR);
+                        return;
+                        }
+
                     method = container.createMethod(fFunction, access, aAnnotations,
                             aReturns, sName, aParams, body != null, fUsesSuper);
 
