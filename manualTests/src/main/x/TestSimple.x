@@ -23,17 +23,38 @@ module TestSimple
         Empty e = d2;
         }
 
-    mixin Silly(Int i, String s)
-            into Var
+    class Base(Int i)
+            implements ecstasy.Duplicable
         {
+        construct(Int i)
+            {
+            console.println($"constructing {&this.actualType} {i}");
+            }
+        construct(Base b)
+            {
+            console.println($"copy {&this.actualType} {b}");
+            this.i = b.i + 1;
+            }
         }
-// TODO
-//    @Link(second) Int first = 1;
-//    Int second = 5;
-//
-//    mixin Link(Property next)
-//            into Var
-//        {
-//        }
+
+    class Derived(Int i)
+            extends Base
+        {
+        construct(Int i)
+            {
+            construct Base(i);
+            }
+
+        // comment the constructor below to test the compiler error
+        construct(Derived d)
+            {
+            construct Base(d);
+            }
+        }
+
+    interface Empty
+        {
+        construct();
+        }
     }
 
