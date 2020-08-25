@@ -1234,7 +1234,7 @@ public class Compiler
      */
     public static final String NO_OUTER_METHOD                     = "COMPILER-160";
     /**
-     * Virtual constructor must be abstract.
+     * Virtual constructor must be public and abstract.
      */
     public static final String ILLEGAL_VIRTUAL_CONSTRUCTOR         = "COMPILER-161";
     /**

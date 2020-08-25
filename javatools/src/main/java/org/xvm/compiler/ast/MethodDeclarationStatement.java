@@ -415,8 +415,8 @@ public class MethodDeclarationStatement
                         return;
                         }
 
-                    if (fConstructor && body != null &&
-                            container.getFormat() == Component.Format.INTERFACE)
+                    if (fConstructor && container.getFormat() == Component.Format.INTERFACE &&
+                            (body != null || access != Access.PUBLIC))
                         {
                         log(errs, Severity.ERROR, Compiler.ILLEGAL_VIRTUAL_CONSTRUCTOR);
                         return;

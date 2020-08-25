@@ -2447,7 +2447,11 @@ public class ClassStructure
 
                     SignatureConstant sig = method.getIdentityConstant().getSignature();
 
-                    if (method.isFunction())
+                    if (method.isVirtualConstructor())
+                        {
+                        setMiss.add(sig);
+                        }
+                    else if (method.isFunction())
                         {
                         if (!typeRight.containsSubstitutableMethod(sig,
                                 Access.PUBLIC, true, Collections.EMPTY_LIST))
