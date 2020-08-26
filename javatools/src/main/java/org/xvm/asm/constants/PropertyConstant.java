@@ -248,12 +248,13 @@ public class PropertyConstant
     @Override
     public TypeConstant getValueType(TypeConstant typeTarget)
         {
+        ConstantPool pool = getConstantPool();
+
         if (typeTarget == null)
             {
-            typeTarget = getClassIdentity().getType();
+            typeTarget = pool.ensureAccessTypeConstant(getClassIdentity().getType(), Access.PRIVATE);
             }
 
-        ConstantPool pool         = getConstantPool();
         TypeInfo     infoTarget   = typeTarget.ensureTypeInfo();
         PropertyInfo infoProp     = infoTarget.findProperty(this);
         TypeConstant typeReferent = infoProp.getType();
