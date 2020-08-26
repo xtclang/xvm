@@ -2,11 +2,12 @@ module TestCollections
     {
     @Inject ecstasy.io.Console console;
 
-    void run( )
+    void run(  )
         {
         console.println("Collection tests");
 
-        testLinkedList();
+        testLinkedList1();
+        testLinkedList2();
         }
 
     class Phone(String desc, String number)
@@ -25,16 +26,15 @@ module TestCollections
             }
         }
 
-// TODO GG
-//    class Person(String name, Date dob)
-//        {
-//        // scenario #2 - ancestors, starting with this person's parent (assume asexual reproduction,
-//        // since this is linked list structure, instead of a tree)
-//        @LinkedList(omitThis=True) Person? parent;
-//        List<Person> ancestors.get()
-//            {
-//            return &parent;
-//            }
+    class Person(String name, Int age)
+        {
+        // scenario #2 - ancestors, starting with this person's parent (assume asexual reproduction,
+        // since this is linked list structure, instead of a tree)
+        @LinkedList(omitThis=True) Person? parent;
+        List<Person> ancestors.get()
+            {
+            return &parent;
+            }
 //
 //        // scenario #3 - all siblings, including this person
 //        @LinkedList(prev=prevSibling) Person? nextSibling;
@@ -57,17 +57,41 @@ module TestCollections
 //            {
 //            return &phone;
 //            }
-//        }
 
-    void testLinkedList()
+        @Override
+        String toString()
+            {
+            return name + " " + age;
+            }
+        }
+
+    void testLinkedList1()
         {
+        console.println("Scenario 1");
+
         Phone       first = new Phone("home", "555-1212");
         List<Phone> list  = first.list;
 
-        list.add(new Phone("work", "555-3456"));
+        list +=  new Phone("work", "555-3456");
         list.add(new Phone("cell", "555-9876"));
 
         Loop: for (Phone p : list)
+            {
+            console.println($"[{Loop.count}] {p}");
+            }
+        }
+
+    void testLinkedList2()
+        {
+        console.println("Scenario 2");
+
+        Person       george    = new Person("George III", 5);
+        List<Person> ancestors = george.ancestors;
+
+        ancestors += new Person("George II", 25);
+        ancestors += new Person("George I" , 48);
+
+        Loop: for (Person p : ancestors)
             {
             console.println($"[{Loop.count}] {p}");
             }

@@ -486,7 +486,7 @@ mixin LinkedList<Element>
         if (node == Null)
             {
             assert thisHeadVar;
-            set(node);
+            set(value);
             return this;
             }
 
