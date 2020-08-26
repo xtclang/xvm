@@ -2896,12 +2896,49 @@ public class Parser
      */
     Expression parseEqualityExpression()
         {
-        Expression expr = parseRelationalExpression();
+        Expression            expr     = parseRelationalExpression();
+        ArrayList<Expression> listExpr = null;
+        ArrayList<Token>      listOps  = null;
+        Token.Id              idPrev   = null;
+        boolean               fErr     = false;
         while (peek().getId() == Id.COMP_EQ || peek().getId() == Id.COMP_NEQ)
             {
-            expr = new CmpExpression(expr, current(), parseRelationalExpression());
+            Token      tokCmp   = current();
+            Expression exprNext = parseRelationalExpression();
+            if (idPrev == null)
+                {
+                expr = new CmpExpression(expr, tokCmp, exprNext);
+                }
+            else
+                {
+                if (listExpr == null)
+                    {
+                    listExpr = new ArrayList<>();
+                    listOps  = new ArrayList<>();
+                    CmpExpression exprPrev = (CmpExpression) expr;
+                    listExpr.add(exprPrev.getExpression1());
+                    listOps .add(exprPrev.getOperator());
+                    listExpr.add(exprPrev.getExpression2());
+                    expr = null;
+                    }
+
+                listOps.add(tokCmp);
+                listExpr.add(exprNext);
+
+                Token.Id idCur = tokCmp.getId();
+                if (idPrev != null && idCur != idPrev && !fErr)
+                    {
+                    expr.log(m_errorListener, Severity.ERROR, BAD_CHAINED_EQ);
+                    fErr = true;
+                    }
+                }
+
+            idPrev = tokCmp.getId();
             }
-        return expr;
+
+        return expr == null
+                ? new CmpChainExpression(listExpr.toArray(new Expression[0]), listOps.toArray(new Token[0]))
+                : expr;
         }
 
     /**
@@ -2910,11 +2947,11 @@ public class Parser
      * <p/><code><pre>
      * RelationalExpression
      *     RangeExpression
+     *     RangeExpression      "<=>" RangeExpression
      *     RelationalExpression "<"   RangeExpression
-     *     RelationalExpression ">"   RangeExpression
      *     RelationalExpression "<="  RangeExpression
+     *     RelationalExpression ">"   RangeExpression
      *     RelationalExpression ">="  RangeExpression
-     *     RelationalExpression "<=>" RangeExpression
      * </pre></code>
      *
      * @return an expression
@@ -2922,20 +2959,67 @@ public class Parser
     Expression parseRelationalExpression()
         {
         Expression expr = parseRangeExpression();
+        Unchained: switch (peek().getId())
+            {
+            case COMP_LT:
+            case COMP_LTEQ:
+            case COMP_GT:
+            case COMP_GTEQ:
+                expr = new CmpExpression(expr, current(), parseRangeExpression());
+                switch (peek().getId())
+                    {
+                    case COMP_LT:
+                    case COMP_LTEQ:
+                    case COMP_GT:
+                    case COMP_GTEQ:
+                        // it's a chained comparison
+                        break Unchained;
+                    }
+                return expr;
+
+            case COMP_ORD:
+                return new CmpExpression(expr, current(), parseRangeExpression());
+
+            default:
+                return expr;
+            }
+
+
+        ArrayList<Expression> listExpr = new ArrayList<>();
+        ArrayList<Token>      listOps  = new ArrayList<>();
+        CmpExpression exprPrev = (CmpExpression) expr;
+        listExpr.add(exprPrev.getExpression1());
+        listOps .add(exprPrev.getOperator());
+        listExpr.add(exprPrev.getExpression2());
+        boolean fFirstAscending = exprPrev.isAscending();
+
+        boolean fErr = false;
         while (true)
             {
+            boolean fThisAscending;
             switch (peek().getId())
                 {
                 case COMP_LT:
-                case COMP_GT:
                 case COMP_LTEQ:
+                    fThisAscending = true;
+                    break;
+
+                case COMP_GT:
                 case COMP_GTEQ:
-                case COMP_ORD:
-                    expr = new CmpExpression(expr, current(), parseRangeExpression());
+                    fThisAscending = false;
                     break;
 
                 default:
-                    return expr;
+                    return new CmpChainExpression(listExpr.toArray(new Expression[0]), listOps.toArray(new Token[0]));
+                }
+
+            listOps .add(current());
+            listExpr.add(parseRangeExpression());
+
+            if (fThisAscending != fFirstAscending && !fErr)
+                {
+                expr.log(m_errorListener, Severity.ERROR, BAD_CHAINED_CMP);
+                fErr = true;
                 }
             }
         }
@@ -5922,6 +6006,14 @@ public class Parser
      * Invalid path: {0}.
      */
     public static final String INVALID_PATH      = "PARSER-24";
+    /**
+     * Incompatible comparison operator for equality.
+     */
+    public static final String BAD_CHAINED_EQ    = "PARSER-25";
+    /**
+     * Incompatible comparison operator for ordering.
+     */
+    public static final String BAD_CHAINED_CMP   = "PARSER-26";
 
 
     // ----- data members --------------------------------------------------------------------------

@@ -637,11 +637,11 @@ EqualityExpression
 
 RelationalExpression
     RangeExpression
+    RangeExpression      "<=>" RangeExpression
     RelationalExpression "<"   RangeExpression
-    RelationalExpression ">"   RangeExpression
     RelationalExpression "<="  RangeExpression
+    RelationalExpression ">"   RangeExpression
     RelationalExpression ">="  RangeExpression
-    RelationalExpression "<=>" RangeExpression
 
 RangeExpression
     BitwiseExpression

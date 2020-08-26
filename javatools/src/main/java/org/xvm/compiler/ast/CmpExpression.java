@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.HashSet;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -33,6 +34,7 @@ import org.xvm.asm.op.JumpNull;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -106,6 +108,12 @@ public class CmpExpression
         return id == Id.COMP_EQ | id == Id.COMP_NEQ;
         }
 
+    public boolean isAscending()
+        {
+        Id id = operator.getId();
+        return id == Id.COMP_LT | id == Id.COMP_LTEQ;
+        }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -124,6 +132,9 @@ public class CmpExpression
 
         // attempt to guess the types that are being compared
         TypeConstant type1 = expr1.getImplicitType(ctx);
+
+// TODO remove
+TypeConstant typeTest = CmpChainExpression.chooseCommonType(ctx, new Expression[] {expr1, expr2}, !usesEquals(), false, new HashSet<>(), errs);
 
         // allow the second expression to resolve names based on the first value type's
         // contributions
@@ -241,6 +252,14 @@ public class CmpExpression
                 fValid      = checkNullComparison(ctx, (NameExpression) expr2New, errs);
                 }
             }
+
+if (fValid && m_typeCommon != null && !m_typeCommon.equals(typeTest))
+    {
+    System.err.println("** " + getSource().getFileName() + " "
+            + Source.calculateLine(getStartPosition()) + ':'
+            + Source.calculateOffset(getStartPosition())
+            + " common type=" + m_typeCommon + ", test type=" + typeTest);
+    }
 
         return finishValidation(ctx, typeRequired, typeResult,
                 fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
