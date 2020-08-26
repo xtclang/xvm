@@ -121,8 +121,8 @@ public class IfStatement
                     {
                     // AssignmentStatement implicitly introduces a new scope that is only applicable
                     // to the "then" portion of the "if"
-                    ctx = ctx.enterAnd();
-                    cExits++;
+                    ctx = ctx.enterAnd().enterIf();
+                    cExits += 2;
                     }
 
                 AssignmentStatement stmtOld = (AssignmentStatement) cond;

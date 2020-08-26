@@ -2085,6 +2085,12 @@ public class Context
             }
 
         @Override
+        public void narrowIffBranch(String sName, TypeConstant type)
+            {
+            getOuterContext().narrowIffBranch(sName, type);
+            }
+
+        @Override
         protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
             {
             // the "when false" portion of this context is combined with the the "when false"
@@ -2493,6 +2499,12 @@ public class Context
 
             errs.merge();
             return arg;
+            }
+
+        @Override
+        public void narrowIffBranch(String sName, TypeConstant type)
+            {
+            getOuterContext().narrowIffBranch(sName, type);
             }
 
         @Override

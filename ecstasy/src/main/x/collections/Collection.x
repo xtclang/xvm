@@ -181,8 +181,6 @@ interface Collection<Element>
         if (Orderer? thisOrder := this.orderedBy(), Orderer? thatOrder := values.orderedBy(),
                 thisOrder? == thatOrder?)
             {
-            assert thisOrder != Null; // TODO GG - should not be needed
-
             Iterator<Element> iterThat = values.iterator();
             Iterator<Element> iterThis = this  .iterator();
             assert Element    valThis := iterThis.next();
