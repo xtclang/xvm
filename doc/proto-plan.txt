@@ -12,8 +12,6 @@
    - assignment w/ multi-LVal needs to testFit for Tuple if testFit for multi fails
      (and use Expression.packedExpression and unpackedExpressions for code gen?)
 
-- finish nesting call chain support
-
 - Lazy property on an immutable object must not produce a mutable value
 
 - compiler to verify that const properties are Orderable
@@ -44,12 +42,6 @@
         }
     }
 
-- allow NEW_G to use dynamic type; that would allow the following:
-    Array createArray(Type type)
-        {
-        return new Array<type.DataType>();
-        }
-
 - run-time to validate that immutable objects passing through the "membrane" belongs to the
   recipient's type system
 
@@ -66,6 +58,11 @@
   type according to the content as Type<X>.
 
 - optimize TypeConstant.resolveTypedef()
+
+- TypeInfo.findCallable doesn't account for named arguments
+
+- AstNode.validateExpressions doesn't account for named arguments, producing wrong indexes for them
+
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
