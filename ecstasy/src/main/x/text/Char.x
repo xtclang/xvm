@@ -113,7 +113,7 @@ const Char
     conditional Int isDigit()
         {
         Int codepoint = this.codepoint.toInt();
-        return codepoint <= 0x39 && codepoint >= 0x30
+        return 0x30 <= codepoint <= 0x39
                 ? (True, codepoint - 0x30)
                 : False;
         }
@@ -289,8 +289,7 @@ const Char
         // optimize for the ASCII range
         if (codepoint <= 0x7F)
             {
-            return codepoint <= 0x20
-                && codepoint >= 0x09
+            return 0x09 <= codepoint <= 0x20
                                      // 2               1      0
                                      // 0FEDCBA9876543210FEDCBA9
                 && 1.as(Int) << codepoint-9 & 0b111110100000000000011111 != 0;
@@ -348,7 +347,7 @@ const Char
             //   U+000B  11  VT   Vertical Tab
             //   U+000C  12  FF   Form Feed
             //   U+000D  13  CR   Carriage Return
-            return codepoint >= 0x0A && codepoint <= 0x0D;
+            return 0x0A <= codepoint <= 0x0D;
             }
 
         // this handles the following cases:

@@ -810,9 +810,9 @@ class Lexer
                 }
             }
 
-        if (!((hours >= 0 && hours <= 23 || hours == 24 && minutes == 0 && seconds == 0)
-                && (minutes >= 0 && minutes <= 59)
-                && (seconds >= 0 && seconds <= 59 || minutes == 59 && seconds == 60)))
+        if (!((0 <= hours <= 23 || hours == 24 && minutes == 0 && seconds == 0)
+                && (0 <= minutes <= 59)
+                && (0 <= seconds <= 59 || minutes == 59 && seconds == 60)))
             {
             TextPosition end  = reader.position;
             String       time = reader[start..end);

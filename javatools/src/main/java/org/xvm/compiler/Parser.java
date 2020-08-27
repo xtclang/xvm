@@ -2937,7 +2937,7 @@ public class Parser
             }
 
         return expr == null
-                ? new CmpChainExpression(listExpr.toArray(new Expression[0]), listOps.toArray(new Token[0]))
+                ? new CmpChainExpression(listExpr, listOps.toArray(new Token[0]))
                 : expr;
         }
 
@@ -3010,7 +3010,7 @@ public class Parser
                     break;
 
                 default:
-                    return new CmpChainExpression(listExpr.toArray(new Expression[0]), listOps.toArray(new Token[0]));
+                    return new CmpChainExpression(listExpr, listOps.toArray(new Token[0]));
                 }
 
             listOps .add(current());

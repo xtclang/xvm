@@ -2,59 +2,17 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run( )
         {
         console.println("Starting");
 
-        Int n = 0;
+        Int i = 0;
+        Int j = 3;
 
-        Base b = new Base(1);
-        console.println(b);
-
-        Base b2 = b.new(b);
-        console.println(b2);
-
-        Base d = new Derived(2);
-        console.println(d);
-
-        Base d2 = d.new(d);
-        console.println(d2);
-
-        Empty e = d2;
-        }
-
-    class Base(Int i)
-            implements ecstasy.Duplicable
-        {
-        construct(Int i)
-            {
-            console.println($"constructing {&this.actualType} {i}");
-            }
-        construct(Base b)
-            {
-            console.println($"copy {&this.actualType} {b}");
-            this.i = b.i + 1;
-            }
-        }
-
-    class Derived(Int i)
-            extends Base
-        {
-        construct(Int i)
-            {
-            construct Base(i);
-            }
-
-        // comment the constructor below to test the compiler error
-        construct(Derived d)
-            {
-            construct Base(d);
-            }
-        }
-
-    interface Empty
-        {
-        construct();
+        Boolean f1 = i < 1 < j < 5;
+        Boolean f2 = i <= j < 5;
+        Boolean f3 = Int.minvalue <= i <= Int.maxvalue;
+        console.println($"{f1} {f2} {f3} ");
         }
     }
 

@@ -350,7 +350,7 @@ const Path
         {
         Int lower = indexes.effectiveLowerBound;
         Int upper = indexes.effectiveUpperBound;
-        assert:bounds lower <= upper && lower >= 0 && upper < size;
+        assert:bounds 0 <= lower <= upper < size;
 
         if (lower == 0)
             {

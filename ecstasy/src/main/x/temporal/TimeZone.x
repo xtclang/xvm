@@ -86,7 +86,7 @@ const TimeZone(Int picos, String? name = Null)
                     }
                 }
 
-            if (hours >= 0 && hours <= 16 && mins >= 0 && mins <= 59)
+            if (0 <= hours <= 16 && 0 <= mins <= 59)
                 {
                 Int offset = (hours * Time.PICOS_PER_HOUR + mins * Time.PICOS_PER_MINUTE);
                 construct TimeZone((tz[0]=='-' ? -1 : +1) * offset);

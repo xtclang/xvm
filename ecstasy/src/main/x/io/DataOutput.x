@@ -372,7 +372,7 @@ interface DataOutput
     static Int packedIntLength(Int n)
         {
         // test for Tiny
-        if (n <= 63 && n >= -64)
+        if (-64 <= n <= 63)
             {
             return 1;
             }
@@ -397,7 +397,7 @@ interface DataOutput
      */
     static Int packedVarIntLength(VarInt n)
         {
-        return n >= Int.minvalue && n <= Int.maxvalue
+        return Int.minvalue <= n <= Int.maxvalue
                 ? packedIntLength(n.toInt())
                 : 1 + n.toByteArray().size;
         }
@@ -410,7 +410,7 @@ interface DataOutput
      *
      * * **Tiny**: For a value in the range -64..63 (7 bits), the value can be encoded in one byte.
      *   The least significant 7 bits of the value are shifted left by 1 bit, and the 0x1 bit is set
-     *   to 1. When writeing in a packed integer, if bit 0x1 of the first byte is 1, then it's Tiny.
+     *   to 1. When writing in a packed integer, if bit 0x1 of the first byte is 1, then it's Tiny.
      *
      * * **Small**: For a value in the range -4096..4095 (13 bits), the value can be encoded in two
      *   bytes. The first byte contains the value 0x2 in the least significant 3 bits (010), and
@@ -448,7 +448,7 @@ interface DataOutput
     static void writePackedInt(DataOutput out, Int n)
         {
         // test for Tiny
-        if (n <= 63 && n >= -64)
+        if (-64 <= n <= 63)
             {
             out.writeByte((n << 1 | 0x01).toByteArray()[7]);
             return;
@@ -492,14 +492,14 @@ interface DataOutput
      */
     static void writePackedVarInt(DataOutput out, VarInt n)
         {
-        if (n >= Int.minvalue && n <= Int.maxvalue)
+        if (Int.minvalue <= n <= Int.maxvalue)
             {
             writePackedInt(out, n.toInt());
             }
 
         Byte[] bytes     = n.toByteArray();
         Int    byteCount = bytes.size;
-        assert:bounds byteCount > 8 && byteCount <= 64;
+        assert:bounds 8 < byteCount <= 64;
 
         // write out using large format
         out.writeByte(byteCount-1 << 2);
@@ -681,7 +681,7 @@ interface DataOutput
         for (Char ch : s)
             {
             UInt32 codepoint = ch.codepoint;
-            Byte   byte      = codepoint > 0 && codepoint <= 0x7F ? codepoint : convToAscii(ch);
+            Byte   byte      = 0 < codepoint <= 0x7F ? codepoint : convToAscii(ch);
             out.writeByte(byte);
             if (byte == 0)
                 {

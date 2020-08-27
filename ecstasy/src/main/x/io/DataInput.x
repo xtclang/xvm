@@ -74,7 +74,7 @@ interface DataInput
     <EnumType extends Enum> EnumType readEnum(Enumeration<EnumType> enumeration)
         {
         Int n = readInt();
-        assert n >= 0 && n < enumeration.count;
+        assert 0 <= n < enumeration.count;
         return enumeration.values[n];
         }
 

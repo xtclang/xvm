@@ -319,7 +319,7 @@ class ListMap<Key, Value>
                     // the immediately previously iterated key is allowed to be deleted
                     if (deletes != prevDeletes)
                         {
-                        if (deletes - prevDeletes == 1 && index > 0 && index < stop && listKeys[index-1] != key)
+                        if (deletes - prevDeletes == 1 && 0 < index < stop && listKeys[index-1] != key)
                             {
                             --stop;
                             --index;
@@ -574,7 +574,7 @@ class ListMap<Key, Value>
                     // the immediately previously iterated key is allowed to be deleted
                     if (deletes != prevDeletes)
                         {
-                        if (deletes - prevDeletes == 1 && index > 0 && index < stop && !entry.exists)
+                        if (deletes - prevDeletes == 1 && 0 < index < stop && !entry.exists)
                             {
                             --stop;
                             --index;
@@ -649,7 +649,7 @@ class ListMap<Key, Value>
             if (entry.is(CursorEntry))
                 {
                 index = entry.index;
-                if (index >= 0 && index < size && listKeys[index] == key)
+                if (0 <= index < size && listKeys[index] == key)
                     {
                     found = True;
                     }
@@ -699,7 +699,7 @@ class ListMap<Key, Value>
                     // the immediately previously iterated key is allowed to be deleted
                     if (deletes != prevDeletes)
                         {
-                        if (deletes - prevDeletes == 1 && index > 0 && index < stop && listKeys[index-1] != key)
+                        if (deletes - prevDeletes == 1 && 0 < index < stop && listKeys[index-1] != key)
                             {
                             --stop;
                             --index;

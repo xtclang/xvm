@@ -249,8 +249,8 @@ const Date(Int epochDay)
         {
         // Gregorian dates did not exist before 15 October 1582
         return (year > 1582 || year == 1582 && (month == 10 && day >= 15 || month > 10))
-                && month >= 1 && month <= 12
-                && day >= 1 && day <= daysInMonth(year, month);
+                && 1 <= month <= 12
+                && 1 <= day <= daysInMonth(year, month);
         }
 
     /**
@@ -385,7 +385,7 @@ const Date(Int epochDay)
      */
     static (Int month, Int day) calcDate(Int year, Int dayOfYear)
         {
-        assert dayOfYear >= 1 && dayOfYear <= daysInYear(year);
+        assert 1 <= dayOfYear <= daysInYear(year);
 
         Int month = (dayOfYear - 1) / 31 + 1;
         if (daysInYearAtEndOf(year, month) < dayOfYear)
@@ -456,7 +456,7 @@ const Date(Int epochDay)
      */
     static Int daysInMonth(Int year, Int month)
         {
-        assert month >= 1 && month <= 12;
+        assert 1 <= month <= 12;
         return (isLeapYear(year) ? MONTH_DAYS_LEAP : MONTH_DAYS) [month-1];
         }
 
@@ -471,7 +471,7 @@ const Date(Int epochDay)
      */
     static Int daysInYearBefore(Int year, Int month)
         {
-        assert month >= 1 && month <= 12;
+        assert 1 <= month <= 12;
         return (isLeapYear(year) ? SUM_DAYS_LEAP : SUM_DAYS) [month-1];
         }
 
@@ -487,7 +487,7 @@ const Date(Int epochDay)
      */
     static Int daysInYearAtEndOf(Int year, Int month)
         {
-        assert month >= 1 && month <= 12;
+        assert 1 <= month <= 12;
         return (isLeapYear(year) ? SUM_DAYS_LEAP : SUM_DAYS) [month];
         }
 
