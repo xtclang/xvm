@@ -161,6 +161,12 @@ class ObjectOutputStream(Schema schema, Writer writer)
             canWrite = False;
             ParentOutput parent = this.parent;
             current = parent;
+
+            // TODO GG: uncommenting the line below causes this error:
+            // VERIFY-67: Property information for "Json:ElementOutput.ParentOutput" contains conflicting types
+            // "Type<Json:ObjectOutputStream.ArrayOutputStream.ParentOutput, Object>" and
+            // "Type<Nullable | Json:ObjectOutputStream.ElementOutputStream | Json:ObjectOutputStream.ArrayOutputStream | Json:ObjectOutputStream.FieldOutputStream, Object>".
+            // parent.toString();
             return parent;
             }
 
