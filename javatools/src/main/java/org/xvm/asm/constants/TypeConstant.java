@@ -4945,7 +4945,7 @@ public abstract class TypeConstant
      */
     protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
-        return typeRight.findContribution(this);
+        return typeRight.calculateRelationToContribution(this);
         }
 
     /**
@@ -4954,7 +4954,7 @@ public abstract class TypeConstant
      *
      * @return a relation between this and the specified types
      */
-    protected Relation findContribution(TypeConstant typeLeft)
+    protected Relation calculateRelationToContribution(TypeConstant typeLeft)
         {
         TypeConstant typeRight = this;
 
@@ -4976,7 +4976,7 @@ public abstract class TypeConstant
                     ((IdentityConstant) constIdRight).getComponent();
 
                 // continue recursively with the right side analysis
-                return clzRight.findContribution(typeLeft, typeRight, true);
+                return clzRight.calculateRelation(typeLeft, typeRight, true);
                 }
 
             case Property:
@@ -5078,7 +5078,7 @@ public abstract class TypeConstant
 
                 ClassStructure clzRight = (ClassStructure)
                         idRight.getDeclarationLevelClass().getComponent();
-                return clzRight.findContribution(typeLeft, typeRight, true);
+                return clzRight.calculateRelation(typeLeft, typeRight, true);
                 }
 
             case UnresolvedName:

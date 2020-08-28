@@ -32,6 +32,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeParameterConstant;
+import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
@@ -1034,47 +1035,102 @@ public class ClassStructure
 
         for (Contribution contrib : getContributionsAsList())
             {
-            TypeConstant typeContrib = contrib.getTypeConstant();
+            TypeConstant typeContrib  = contrib.getTypeConstant();
+            Contribution contribMatch = null;
 
-            if (   typeContrib.containsUnresolved()           // this question cannot be answered yet
-               || !typeContrib.isExplicitClassIdentity(true)) // disregard relational type contributions
+            if (typeContrib.isExplicitClassIdentity(true))
                 {
-                continue;
-                }
-
-            switch (contrib.getComposition())
-                {
-                case Into:
-                    if (!fAllowInto)
+                switch (contrib.getComposition())
+                    {
+                    case Into:
+                        if (!fAllowInto)
+                            {
+                            break;
+                            }
+                        // fall through
+                    case Annotation:
+                    case Implements:
+                    case Incorporates:
+                    case Extends:
+                    case Delegates:
                         {
+                        contribMatch = checkContribution(contrib, typeContrib, idContrib);
                         break;
                         }
-                    // fall through
-                case Annotation:
-                case Implements:
-                case Incorporates:
-                case Extends:
-                case Delegates:
-                    {
-                    IdentityConstant idContribNext = typeContrib.getSingleUnderlyingClass(true);
-                    if (idContribNext.equals(idContrib))
-                        {
-                        return contrib;
-                        }
-                    ClassStructure clzContrib  = (ClassStructure) idContribNext.getComponent();
-                    Contribution   contribNext = clzContrib.findContributionImpl(idContrib, false);
-                    if (contribNext != null)
-                        {
-                        return contribNext;
-                        }
-                    }
 
-                default:
-                    // ignore any other contributions
-                    break;
+                    default:
+                        // ignore any other contributions
+                        break;
+                    }
+                }
+            else if (typeContrib instanceof UnionTypeConstant)
+                {
+                // the only relational type contributions we can process further are the union types
+                contribMatch = checkUnionContribution(contrib, (UnionTypeConstant) typeContrib, idContrib);
+                }
+
+            if (contribMatch != null)
+                {
+                return contribMatch;
                 }
             }
         return null;
+        }
+
+    /**
+     * Check whether or not the specified contribution or any of its descendants matches the
+     * specified identity.
+     *
+     * @param contrib      the contribution
+     * @param typeContrib  the type of the contribution or one of its composing types (in the case
+     *                     of a union type)
+     * @param idTest       the identity to test with
+     *
+     * @return the contribution that matches the specified identity
+     */
+    private Contribution checkContribution(Contribution contrib,
+                                           TypeConstant typeContrib, IdentityConstant idTest)
+        {
+        IdentityConstant idContrib = typeContrib.getSingleUnderlyingClass(true);
+        if (idContrib.equals(idTest))
+            {
+            return contrib;
+            }
+
+        ClassStructure clzContrib = (ClassStructure) idContrib.getComponent();
+        return clzContrib.findContributionImpl(idTest, false);
+        }
+
+    /**
+     * Check whether or not the specified contribution of the union type or any of its
+     * descendants matches the specified identity.
+     *
+     * @param contrib      the contribution
+     * @param typeContrib  the type of the contribution
+     * @param idTest       the identity to test with
+     *
+     * @return the contribution that matches the specified identity
+     */
+    private Contribution checkUnionContribution(Contribution contrib,
+                                                UnionTypeConstant typeContrib, IdentityConstant idTest)
+        {
+        TypeConstant type1    = typeContrib.getUnderlyingType();
+        Contribution contrib1 = type1.isExplicitClassIdentity(true)
+                ? checkContribution(contrib, type1, idTest)
+                : type1 instanceof UnionTypeConstant
+                    ? checkUnionContribution(contrib, (UnionTypeConstant) type1, idTest)
+                    : null;
+        if (contrib1 != null)
+            {
+            return contrib1;
+            }
+
+        TypeConstant type2 = typeContrib.getUnderlyingType2();
+        return type2.isExplicitClassIdentity(true)
+                ? checkContribution(contrib, type2, idTest)
+                : type2 instanceof UnionTypeConstant
+                    ? checkUnionContribution(contrib, (UnionTypeConstant) type2, idTest)
+                    : null;
         }
 
     /**
@@ -1857,17 +1913,17 @@ public class ClassStructure
         }
 
     /**
-     * For this class structure representing an R-Value, find a contribution assignable to the
-     * specified L-Value type.
+     * For this class structure representing an R-Value, find the best "isA" relation among all its
+     * contributions to the specified L-Value type.
      *
      * @param typeLeft    the L-Value type
      * @param typeRight   the R-Value type that this ClassStructure is for
      * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
      *
-     * @return the relation
+     * @return the best "isA" relation
      */
-    public Relation findContribution(TypeConstant typeLeft,
-                                     TypeConstant typeRight, boolean fAllowInto)
+    public Relation calculateRelation(TypeConstant typeLeft,
+                                      TypeConstant typeRight, boolean fAllowInto)
         {
         assert typeLeft.isSingleDefiningConstant();
 
@@ -1920,7 +1976,7 @@ public class ClassStructure
             case ParentClass:
             case ChildClass:
                 assert typeLeft.isAutoNarrowing(false);
-                return findContribution(typeLeft.resolveAutoNarrowing(pool, false, null), typeRight, fAllowInto);
+                return calculateRelation(typeLeft.resolveAutoNarrowing(pool, false, null), typeRight, fAllowInto);
 
             case UnresolvedName:
                 return Relation.INCOMPATIBLE;
@@ -1936,7 +1992,7 @@ public class ClassStructure
                 typeRebase.getSingleUnderlyingClass(true).getComponent();
 
             // rebase types are never parameterized and therefor cannot be "weak"
-            if (clzRebase.findContribution(typeLeft, clzRebase.getCanonicalType(), fAllowInto) == Relation.IS_A)
+            if (clzRebase.calculateRelation(typeLeft, clzRebase.getCanonicalType(), fAllowInto) == Relation.IS_A)
                 {
                 return Relation.IS_A;
                 }
@@ -1988,7 +2044,7 @@ public class ClassStructure
                     if (typeResolved != null)
                         {
                         relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
-                            findContribution(typeLeft, typeResolved, false));
+                            calculateRelation(typeLeft, typeResolved, false));
                         if (relation == Relation.IS_A)
                             {
                             return Relation.IS_A;

@@ -3137,7 +3137,7 @@ public class ConstantPool
             {
             // compare the "naked" contribution
             ClassStructure clzRight = (ClassStructure) idRight.getComponent();
-            if (clzRight.findContribution(typeFunction(), idRight.getType(), true) != Relation.IS_A)
+            if (clzRight.calculateRelation(typeFunction(), idRight.getType(), true) != Relation.IS_A)
                 {
                 return Relation.INCOMPATIBLE;
                 }
@@ -3166,7 +3166,7 @@ public class ConstantPool
             {
             // compare the "naked" contribution
             ClassStructure clzRight = (ClassStructure) idRight.getComponent();
-            if (clzRight.findContribution(typeMethod(), idRight.getType(), true) != Relation.IS_A)
+            if (clzRight.calculateRelation(typeMethod(), idRight.getType(), true) != Relation.IS_A)
                 {
                 return Relation.INCOMPATIBLE;
                 }

@@ -53,7 +53,7 @@ mixin ListFreezer<Element extends ImmutableAble>
                 }
             else
                 {
-                List<Element>.Cursor cur = cursor(); // TODO GG Cursor cur = cursor();
+                Cursor cur = cursor();
                 while (cur.exists)
                     {
                     Element e = cur.value;
