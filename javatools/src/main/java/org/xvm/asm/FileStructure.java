@@ -172,6 +172,21 @@ public class FileStructure
         {
         moduleName = module.getName();
 
+        // connect fingerprints with real modules to allow component resolution
+        // during "registerConstant" phase
+        for (Component child : module.getFileStructure().children())
+            {
+            ModuleStructure moduleChild = (ModuleStructure) child;
+            if (moduleChild.isFingerprint())
+                {
+                ModuleStructure moduleReal = getModule(moduleChild.getName());
+                if (moduleReal != null)
+                    {
+                    moduleChild.setFingerprintOrigin(moduleReal);
+                    }
+                }
+            }
+
         ModuleStructure moduleClone = module.cloneBody();
         moduleClone.setContaining(this);
 
