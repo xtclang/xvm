@@ -271,7 +271,7 @@ const TypeSystem
 
         if (!hideExceptions && failure != Null)
             {
-            throw (exception?.is(InvalidType) : False)
+            throw exception.is(InvalidType)
                     ? exception
                     : new InvalidType(failure, cause = exception);
             }

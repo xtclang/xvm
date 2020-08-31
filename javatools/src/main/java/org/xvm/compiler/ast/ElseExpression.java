@@ -129,6 +129,11 @@ public class ElseExpression
             constVal = expr1New.toConstant();
             }
 
+        if (m_labelElse != null)
+            {
+            m_labelElse.restoreNarrowed(ctx);
+            }
+
         return finishValidation(ctx, typeRequired, typeResult, fit, constVal, errs);
         }
 

@@ -1,12 +1,10 @@
 package org.xvm.compiler.ast;
 
 
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
@@ -69,23 +67,25 @@ public abstract class Statement
     public Label ensureBreakLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
         Context ctxDest = ensureValidationContext();
+        Label   label   = getEndLabel();
+
         if (ctxOrigin.isReachable())
             {
             // generate a delta of assignment information for the jump
-            addBreak(nodeOrigin, ctxOrigin.prepareJump(ctxDest));
+            addBreak(nodeOrigin, ctxOrigin.prepareJump(ctxDest), label);
             }
 
-        return getEndLabel();
+        return label;
         }
 
-    protected void addBreak(AstNode nodeOrigin, Map<String, Assignment> mapAsn)
+    protected void addBreak(AstNode nodeOrigin, Map<String, Assignment> mapAsn, Label label)
         {
         // record the jump that landed on this statement by recording its assignment impact
         if (m_listBreaks == null)
             {
             m_listBreaks = new ArrayList<>();
             }
-        m_listBreaks.add(new SimpleEntry<>(nodeOrigin, mapAsn));
+        m_listBreaks.add(new Break(nodeOrigin, mapAsn, label));
         }
 
     /**
@@ -140,17 +140,21 @@ public abstract class Statement
 
         if (m_listBreaks != null)
             {
-            for (Iterator<Entry<AstNode, Map<String, Assignment>>> iter = m_listBreaks.iterator();
-                    iter.hasNext(); )
+            for (Iterator<Break> iter = m_listBreaks.iterator(); iter.hasNext(); )
                 {
-                Map.Entry<AstNode, Map<String, Assignment>> entry = iter.next();
-                if (entry.getKey().isDiscarded())
+                Break breakInfo = iter.next();
+                if (breakInfo.node.isDiscarded())
                     {
                     iter.remove();
                     }
                 else
                     {
-                    ctx.merge(entry.getValue());
+                    ctx.merge(breakInfo.mapAssign);
+
+                    if (breakInfo.label != null)
+                        {
+                        breakInfo.label.restoreNarrowed(ctx);
+                        }
                     }
                 }
 
@@ -235,6 +239,23 @@ public abstract class Statement
     protected abstract boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs);
 
 
+    /**
+     * The break info.
+     */
+    private class Break
+        {
+        Break(AstNode node, Map<String, Assignment> mapAssign, Label label)
+            {
+            this.node      = node;
+            this.mapAssign = mapAssign;
+            this.label     = label;
+            }
+        public final AstNode node;
+        public final Map<String, Assignment> mapAssign;
+        public final Label label;
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**
@@ -250,5 +271,5 @@ public abstract class Statement
     /**
      * Generally null, unless there is a break that jumps to this statement's exit label.
      */
-    private transient List<Map.Entry<AstNode, Map<String, Assignment>>> m_listBreaks;
+    private transient List<Break> m_listBreaks;
     }

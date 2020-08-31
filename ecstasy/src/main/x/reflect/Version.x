@@ -297,7 +297,7 @@ const Version
 
         // for a non-GA parent, only a version number indicator can be added, and only if the last
         // indicator of the parent is the pre-release indicator
-        assert parent?.GA || parent?.form != Number;   // TODO GG the second "parent?" should be just "parent"
+        assert parent?.GA || parent.form != Number;
 
         for (Char ch : build?)
             {
@@ -488,7 +488,7 @@ const Version
             case (True, False):
                 // "this" is a GA, and "that" is a pre-release, so "this" satisfies "that" iff
                 // "this" satisfies the GA version of "that"; for example, both "1.3" and "1.4"
-                // satisfy the requrest for "1.3-beta"
+                // satisfy the request for "1.3-beta"
                 assert Version? thatGA := that.prereleaseOf();
                 return thatGA == Null || this.satisfies(thatGA);
 

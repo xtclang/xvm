@@ -263,7 +263,7 @@ public class SwitchStatement
                 {
                 if (!entry.getKey().isDiscarded())
                     {
-                    addBreak(entry.getKey(), entry.getValue());
+                    addBreak(entry.getKey(), entry.getValue(), m_labelContinue);
                     }
                 }
             m_listContinues = null;

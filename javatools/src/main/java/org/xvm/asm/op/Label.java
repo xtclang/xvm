@@ -1,7 +1,13 @@
 package org.xvm.asm.op;
 
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.xvm.asm.Op;
+import org.xvm.asm.Register;
+
+import org.xvm.compiler.ast.Context;
 
 
 /**
@@ -41,6 +47,39 @@ public class Label
         return m_sName;
         }
 
+    /**
+     * Save off the original register to be restored when this label is reached,
+     *
+     * @param sName  the register name
+     * @param reg    the register
+     */
+    public void addRestore(String sName, Register reg)
+        {
+        Map<String, Register> map = m_mapRestore;
+        if (map == null)
+            {
+            m_mapRestore = map = new HashMap<>();
+            }
+        map.putIfAbsent(sName, reg);
+        }
+
+    /**
+     * Restore the original registers at the specified context.
+     *
+     * @param context  the current compilation context
+     */
+    public void restoreNarrowed(Context context)
+        {
+        Map<String, Register> map = m_mapRestore;
+        if (map != null)
+            {
+            for (Map.Entry<String, Register> entry : map.entrySet())
+                {
+                context.restoreArgument(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
     @Override
     public String toString()
         {
@@ -68,4 +107,9 @@ public class Label
      * discarded on assembly, like the label itself.
      */
     transient String m_sName;
+
+    /**
+     * Saved off registers to be restored when the label is reached.
+     */
+    transient Map<String, Register> m_mapRestore;
     }

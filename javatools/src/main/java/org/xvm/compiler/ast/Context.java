@@ -488,39 +488,6 @@ public class Context
         }
 
     /**
-     * When this context is used by a short-circuiting statement, there are scenarios when a
-     * variable type is known to be narrowed when the evaluation does not short-circuit.
-     * Consider the following example:
-     * <pre><code>
-     *  void foo(Int[]? args)
-     *      {
-     *      if (args?.size > 0)
-     *          {
-     *          console.println(args[0]);
-     *          }
-     *      ...
-     *      }
-     * </code></pre>
-     * The "args" var is known to be not-nullable inside of the "then" branch.
-     * <p/>
-     * That same short-circuiting expression, however, would have no impact beyond it's enclosing
-     * statement, like in the following case:
-     * <pre><code>
-     *  void foo(Int[]? args)
-     *      {
-     *      assert args?.size > 0;
-     *      ...
-     *      }
-     * </code></pre>
-     *
-     * @param sName  the var name
-     * @param type   the narrowing type
-     */
-    public void narrowIffBranch(String sName, TypeConstant type)
-        {
-        }
-
-    /**
      * Copy variable assignment information from this scope to the specified outer scope.
      *
      * @param ctxOuter  the context to copy the assignment information into
@@ -1321,6 +1288,25 @@ public class Context
         }
 
     /**
+     * Restore the existing argument using the saved off original register.
+     *
+     * @param sName    the argument name
+     * @param regOrig  the original register
+     */
+    public void restoreArgument(String sName, Register regOrig)
+        {
+        Map<String, Argument> map = ensureNameMap();
+        if (isVarDeclaredInThisScope(sName))
+            {
+            map.put(sName, regOrig);
+            }
+        else
+            {
+            map.remove(sName);
+            }
+        }
+
+    /**
      * Replace (narrow) the generic type of the specified name in this context with the specified
      * target's type.
      */
@@ -1771,23 +1757,6 @@ public class Context
             }
 
         @Override
-        public void narrowIffBranch(String sName, TypeConstant type)
-            {
-            Argument arg = getVar(sName);
-            if (arg instanceof Register)
-                {
-                TypeConstant typeCurr = arg.getType();
-
-                if (!typeCurr.isA(type))
-                    {
-                    assert type.isA(typeCurr);
-
-                    narrowLocalRegister(sName, (Register) arg, Branch.WhenTrue, type);
-                    }
-                }
-            }
-
-        @Override
         protected void markVarWrite(String sName, Token tokName, boolean fCond, ErrorListener errs)
             {
             if (getVar(sName) != null && isVarWritable(sName))
@@ -2082,12 +2051,6 @@ public class Context
             return getDefiniteAssignments().containsKey(sName)
                     ? asn
                     : asn.whenTrue(); // "&&" only uses the true branch of the left side
-            }
-
-        @Override
-        public void narrowIffBranch(String sName, TypeConstant type)
-            {
-            getOuterContext().narrowIffBranch(sName, type);
             }
 
         @Override
@@ -2499,12 +2462,6 @@ public class Context
 
             errs.merge();
             return arg;
-            }
-
-        @Override
-        public void narrowIffBranch(String sName, TypeConstant type)
-            {
-            getOuterContext().narrowIffBranch(sName, type);
             }
 
         @Override

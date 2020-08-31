@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -14,6 +15,8 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
+
+import org.xvm.compiler.ast.Context.Branch;
 
 import org.xvm.util.Severity;
 
@@ -84,55 +87,68 @@ public class NotNullExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeFit      fit  = TypeFit.Fit;
-        TypeConstant type = null;
-
-        TypeConstant typeRequest = typeRequired == null
-                ? null
-                : typeRequired.ensureNullable();
+        TypeConstant typeRequest = typeRequired == null ? null : typeRequired.ensureNullable();
         Expression   exprNew     = expr.validate(ctx, typeRequest, errs);
         if (exprNew == null)
             {
-            fit = TypeFit.NoFit;
+            return null;
             }
-        else
+
+        expr = exprNew;
+
+        TypeConstant type = exprNew.getType();
+
+        // the second check is for not-nullable type that is still allowed to be assigned from null
+        // (e.g. Object or Const)
+        if (!type.isNullable() && !pool().typeNull().isA(type.resolveConstraints()))
             {
-            expr = exprNew;
-            type = exprNew.getType();
+            exprNew.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
+            return replaceThisWith(exprNew);
+            }
 
-            // the second check is for not-nullable type that is still allowed to be assigned from null
-            // (e.g. Object or Const)
-            if (!type.isNullable() && !pool().typeNull().isA(type.resolveConstraints()))
+        AstNode parent = getParent();
+
+        if (!parent.allowsShortCircuit(this))
+            {
+            exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ILLEGAL);
+            return null;
+            }
+
+        if (exprNew.isConstantNull())
+            {
+            exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ALWAYS_NULL);
+            }
+
+        m_labelShort = parent.ensureShortCircuitLabel(this, ctx);
+
+        TypeConstant typeNotNull = type.removeNullable();
+
+        if (exprNew instanceof NameExpression)
+            {
+            NameExpression exprName = (NameExpression) exprNew;
+            if (exprName.left == null)
                 {
-                exprNew.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
-                return replaceThisWith(exprNew);
-                }
-
-            if (!getParent().allowsShortCircuit(this))
-                {
-                exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ILLEGAL);
-                return null;
-                }
-
-            if (exprNew.isConstantNull())
-                {
-                exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ALWAYS_NULL);
-                }
-
-            m_labelShort = getParent().ensureShortCircuitLabel(this, ctx);
-            type         = type.removeNullable();
-
-            if (exprNew instanceof NameExpression)
-                {
-                NameExpression exprName = (NameExpression) exprNew;
-                if (exprName.left == null)
+                String   sName = exprName.getName();
+                Argument arg   = ctx.getVar(sName);
+                if (arg instanceof Register)
                     {
-                    ctx.narrowIffBranch(exprName.getName(), type);
+                    TypeConstant typeCurr = arg.getType();
+
+                    if (!typeCurr.isA(typeNotNull))
+                        {
+                        assert typeNotNull.isA(typeCurr);
+
+                        Register regCurr = (Register) arg;
+
+                        // add the narrowing for this context and safe off the current register
+                        ctx.narrowLocalRegister(sName, regCurr, Branch.Always, typeNotNull);
+                        m_labelShort.addRestore(sName, regCurr);
+                        }
                     }
                 }
             }
 
-        return finishValidation(ctx, typeRequired, type, fit, null, errs);
+        return finishValidation(ctx, typeRequired, typeNotNull, TypeFit.Fit, null, errs);
         }
 
     @Override

@@ -88,7 +88,7 @@ const Path
         this.name   = name;
 
         assert form != Root || parent == Null;
-        assert parent?.relative || parent?.depth + form.depth >= 0;
+        assert parent?.relative || parent.depth + form.depth >= 0;
 
         size     = 1 + (parent?.size : 0);
         absolute = parent?.absolute : form == Root;
