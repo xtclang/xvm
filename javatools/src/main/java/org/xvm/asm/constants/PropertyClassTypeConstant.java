@@ -292,9 +292,9 @@ public class PropertyClassTypeConstant
         ListMap<String       , ChildInfo   > mapContribChildren = new ListMap<>();
         ArrayList<PropertyConstant>          listExplode        = new ArrayList<>();
 
-        IdentityConstant constId = (IdentityConstant) infoBase.getType().getDefiningConstant();
+        IdentityConstant idBase = (IdentityConstant) infoBase.getType().getDefiningConstant();
 
-        collectChildInfo(constId, false, prop, mapTypeParams,
+        collectChildInfo(idBase, false, prop, mapTypeParams,
             mapContribProps, mapContribMethods, mapContribChildren, listExplode, 0, errs);
 
         if (!listExplode.isEmpty())
@@ -321,11 +321,11 @@ public class PropertyClassTypeConstant
             for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
                 {
                 PropertyConstant idContrib = entry.getKey();
-                PropertyConstant idReplace = pool.ensurePropertyConstant(constId, idContrib.getName());
+                PropertyConstant idReplace = pool.ensurePropertyConstant(idBase, idContrib.getName());
                 mapContrib.put(idReplace, entry.getValue());
                 }
 
-            layerOnProps(constId, true, null, mapProps, mapVirtProps, this, mapContrib, errs);
+            layerOnProps(idBase, true, null, mapProps, mapVirtProps, this, mapContrib, errs);
             }
 
         if (!mapContribMethods.isEmpty())
@@ -335,10 +335,10 @@ public class PropertyClassTypeConstant
             for (Map.Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
                 {
                 MethodConstant idContrib = entry.getKey();
-                MethodConstant idReplace = pool.ensureMethodConstant(constId, idContrib.getSignature());
+                MethodConstant idReplace = pool.ensureMethodConstant(idBase, idContrib.getSignature());
                 mapContrib.put(idReplace, entry.getValue());
                 }
-            layerOnMethods(constId, true, false, null, mapMethods, mapVirtMethods, this, mapContrib, errs);
+            layerOnMethods(idBase, true, false, null, mapMethods, mapVirtMethods, this, mapContrib, errs);
             }
 
         if (!mapContribChildren.isEmpty())
@@ -347,7 +347,7 @@ public class PropertyClassTypeConstant
             }
 
         return new TypeInfo(this, cInvals, infoBase.getClassStructure(),
-                0, false, mapTypeParams,
+                idBase.getNestedDepth() + 1, false, mapTypeParams,
                 Annotation.NO_ANNOTATIONS,
                 typeBase, null, null,
                 Collections.EMPTY_LIST, ListMap.EMPTY, ListMap.EMPTY,

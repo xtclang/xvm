@@ -251,17 +251,31 @@ public class PropertyComposition
     @Override
     public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        assert f_infoProp.getIdentity().getNestedIdentity().equals(idProp.getNestedIdentity());
+        RefHandle hRef = (RefHandle) hTarget;
 
-        return ((xRef) getTemplate()).getReferent(frame, (RefHandle) hTarget, iReturn);
+        if (idProp.getNestedDepth() == 1)
+            {
+            xRef template = (xRef) getTemplate();
+            return f_infoProp.getIdentity().equals(idProp)
+                    ? template.getReferent(frame, hRef, iReturn)
+                    : template.getFieldValue(frame, hRef, idProp, iReturn);
+            }
+        return f_clzRef.getTemplate().getFieldValue(frame, hRef.getReferentHolder(), idProp, iReturn);
         }
 
     @Override
     public int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
         {
-        assert f_infoProp.getIdentity().getNestedIdentity().equals(idProp.getNestedIdentity());
+        RefHandle hRef = (RefHandle) hTarget;
 
-        return ((xRef) getTemplate()).setReferent(frame, (RefHandle) hTarget, hValue);
+        if (idProp.getNestedDepth() == 1)
+            {
+            xRef template = (xRef) getTemplate();
+            return f_infoProp.getIdentity().equals(idProp)
+                    ? template.setReferent(frame, hRef, hValue)
+                    : template.setFieldValue(frame, hRef, idProp, hValue);
+            }
+        return f_clzRef.getTemplate().setFieldValue(frame, hRef.getReferentHolder(), idProp, hValue);
         }
 
     @Override

@@ -502,50 +502,47 @@ public class ClassComposition
             {
             PropertyConstant idProp   = entry.getKey();
             PropertyInfo     infoProp = entry.getValue();
+            boolean          fField   = infoProp.hasField();
 
-            if (infoProp.hasField())
+            if (fField && idProp.getNestedDepth() > 1)
                 {
-                if (idProp.getNestedDepth() > 1)
+                IdentityConstant idParent = idProp.getParentConstant();
+                switch (idParent.getFormat())
                     {
-                    IdentityConstant idParent = idProp.getParentConstant();
-                    switch (idParent.getFormat())
-                        {
-                        case Property:
-                            if (!infoProp.getIdentity().getParentConstant().equals(idParent))
-                                {
-                                // the property is defined by the underlying type; currently those
-                                // nested properties are stored in the corresponding Refs "box"
-                                // REVIEW: consider having this helper at the PropertyInfo
-                                continue;
-                                }
-                            break;
+                    case Property:
+                        if (!infoProp.getIdentity().getParentConstant().equals(idParent))
+                            {
+                            // the property is defined by the underlying type; currently those
+                            // nested properties are stored in the corresponding Refs "box"
+                            // REVIEW: consider having this helper at the PropertyInfo
+                            continue;
+                            }
+                        break;
 
-                        case Method:
-                            break;
-                        }
+                    case Method:
+                        break;
                     }
+                }
 
-                TypeComposition clzRef = null;
-                if (infoProp.isRefAnnotated())
+            TypeComposition clzRef = null;
+            if (infoProp.isRefAnnotated())
+                {
+                if (infoProp.isCustomLogic())
                     {
-                    if (infoProp.isCustomLogic())
-                        {
-                        clzRef = new PropertyComposition(this, infoProp);
-                        }
-                    else if (!infoProp.isSimpleUnassigned())
-                        {
-                        clzRef = f_template.f_templates.resolveClass(infoProp.getBaseRefType());
-                        }
+                    clzRef = new PropertyComposition(this, infoProp);
                     }
+                else if (!infoProp.isSimpleUnassigned())
+                    {
+                    clzRef = f_template.f_templates.resolveClass(infoProp.getBaseRefType());
+                    }
+                }
 
+            if (fField || clzRef != null)
+                {
                 mapFields.put(idProp.getNestedIdentity(), clzRef);
                 }
-            else
-                {
-                // TODO: what if the prop is annotated
-                assert !infoProp.isRefAnnotated();
-                }
             }
+
         m_mapFields = mapFields.isEmpty() ? Collections.EMPTY_MAP : mapFields;
         }
 

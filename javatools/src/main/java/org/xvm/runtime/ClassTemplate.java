@@ -780,8 +780,7 @@ public abstract class ClassTemplate
             }
 
         TypeComposition clzTarget = hTarget.getComposition();
-
-        CallChain chain = clzTarget.getPropertyGetterChain(idProp);
+        CallChain       chain     = clzTarget.getPropertyGetterChain(idProp);
 
         if (chain == null)
             {
@@ -795,7 +794,7 @@ public abstract class ClassTemplate
 
         if (clzTarget.isStruct() || chain.isField())
             {
-            return getFieldValue(frame, hTarget, idProp, iReturn);
+            return clzTarget.getFieldValue(frame, hTarget, idProp, iReturn);
             }
 
         MethodStructure method = chain.getTop();
@@ -960,7 +959,8 @@ public abstract class ClassTemplate
             return setFieldValue(frame, hTarget, idProp, hValue);
             }
 
-        CallChain chain = hTarget.getComposition().getPropertySetterChain(idProp);
+        TypeComposition clzTarget = hTarget.getComposition();
+        CallChain       chain     = clzTarget.getPropertySetterChain(idProp);
 
         if (chain == null)
             {
@@ -980,11 +980,11 @@ public abstract class ClassTemplate
 
         if (chain.isField())
             {
-            return setFieldValue(frame, hTarget, idProp, hValue);
+            return clzTarget.setFieldValue(frame, hTarget, idProp, hValue);
             }
 
         MethodStructure method = chain.getTop();
-        ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
+        ObjectHandle[]  ahVar  = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hValue;
 
         if (hTarget.isInflated(idProp))

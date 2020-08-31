@@ -590,6 +590,17 @@ public class TypeInfo
         }
 
     /**
+     * @return an identity of ths structure this info represents
+     */
+    public IdentityConstant getIdentity()
+        {
+        // this info may represent a property
+        return f_type instanceof PropertyClassTypeConstant
+            ? ((PropertyClassTypeConstant) f_type).getProperty()
+            : f_struct.getIdentityConstant();
+        }
+
+    /**
      * @return the format of the topmost structure that the TypeConstant refers to, or
      *         {@code INTERFACE} for any non-class / non-mixin type (such as a difference type)
      */
@@ -901,7 +912,7 @@ public class TypeInfo
                 PropertyInfo     prop = entry.getValue();
 
                 // only include the non-nested properties
-                if (id.getNestedDepth() == f_cDepth + 1)
+                if (id.getNestedDepth() == 1)
                     {
                     // have to pick one that is more visible than the other
                     map.compute(prop.getName(), (sName, propPrev) ->
@@ -1147,13 +1158,20 @@ public class TypeInfo
             }
 
         IdentityConstant idParent = id.getClassIdentity();
-        if (!idParent.equals(getClassStructure().getIdentityConstant()))
+        if (!idParent.equals(getIdentity()))
             {
             PropertyStructure prop = (PropertyStructure) id.getComponent();
             if (prop != null && prop.getAccess() == Access.PRIVATE)
                 {
                 // drill down to the TypeInfo for the corresponding class in the hierarchy
-                TypeConstant typeParent = f_listmapClassChain.get(idParent).getType();
+                // that has this non-virtual private property
+                Origin origin = f_listmapClassChain.get(idParent);
+                if (origin == null)
+                    {
+                    return null;
+                    }
+
+                TypeConstant typeParent = origin.getType();
                 TypeInfo     infoParent = pool().ensureAccessTypeConstant(
                                             typeParent, Access.PRIVATE).ensureTypeInfo();
                 return infoParent.findProperty(id);
@@ -1245,7 +1263,7 @@ public class TypeInfo
                 MethodConstant idMethod = entry.getKey();
 
                 // only include the non-nested Methods
-                if (idMethod.getNestedDepth() == f_cDepth + 2)
+                if (idMethod.getNestedDepth() == 2)
                     {
                     map.put(idMethod.getSignature(), entry.getValue());
                     }
@@ -1299,7 +1317,7 @@ public class TypeInfo
                 }
 
             // only include non-nested methods
-            if (idTest.getNestedDepth() != f_cDepth + 2)
+            if (idTest.getNestedDepth() != 2)
                 {
                 continue;
                 }
@@ -1830,7 +1848,7 @@ public class TypeInfo
                 MethodConstant idMethod = entry.getKey();
 
                 // only include the non-nested Methods
-                if (idMethod.getName().equals(sName) && idMethod.getNestedDepth() == f_cDepth + 2)
+                if (idMethod.getName().equals(sName) && idMethod.getNestedDepth() == 2)
                     {
                     mapCandidates.put(idMethod, entry.getValue());
                     }

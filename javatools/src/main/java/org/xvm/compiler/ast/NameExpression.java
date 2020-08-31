@@ -1849,8 +1849,15 @@ public class NameExpression
                     case Property:
                         if (constFormal == null)
                             {
+                            PropertyInfo infoProp = infoLeft.findProperty((PropertyConstant) idChild);
+                            if (infoProp == null)
+                                {
+                                // TODO GG: basically an assert; need a better error?
+                                log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
+                                return null;
+                                }
                             m_arg         = idChild;
-                            m_fAssignable = infoLeft.findProperty((PropertyConstant) idChild).isVar();
+                            m_fAssignable = infoProp.isVar();
                             }
                         else
                             {
