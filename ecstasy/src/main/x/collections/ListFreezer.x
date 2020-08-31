@@ -67,11 +67,6 @@ mixin ListFreezer<Element extends ImmutableAble>
             return makeImmutable();
             }
 
-        // TODO GG get rid of all .as()
-        function Element (Element) transform =
-            e -> e.is(immutable Element)
-                ? e
-                : e.as(Freezable).freeze().as(immutable Element);
-        return duplicate(transform).as(immutable ListFreezer);
+        return duplicate(e -> e.is(immutable Element) ? e : e.freeze()).makeImmutable();
         }
     }

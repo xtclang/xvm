@@ -92,17 +92,7 @@ public class TestConnector
             }
 
         ModuleRepository repository = new LinkedRepository(true, aRepo);
-
-        if (System.getProperties().containsKey("DEBUG"))
-            {
-            ModuleStructure module = repository.loadModule(asNames[0]);
-            if (module != null)
-                {
-                module.visitChildren(Disassembler::dump, false, true);
-                }
-            }
-
-        Connector connector = new Connector(repository);
+        Connector        connector  = new Connector(repository);
 
         for (String sModule : asNames)
             {
@@ -110,6 +100,16 @@ public class TestConnector
 
             // +++ that is the actual use +++
             connector.loadModule(sModule);
+
+            if (System.getProperties().containsKey("DEBUG"))
+                {
+                ModuleStructure module = (ModuleStructure)
+                        connector.getContainer().getModule().getComponent();
+                if (module != null)
+                    {
+                    module.visitChildren(Disassembler::dump, false, true);
+                    }
+                }
 
             // configuration of the container happens here
 

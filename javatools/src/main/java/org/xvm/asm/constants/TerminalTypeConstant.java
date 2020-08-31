@@ -906,10 +906,14 @@ public class TerminalTypeConstant
                  *      }
                  */
 
-                if (that.isImmutabilitySpecified() && that.removeImmutable().equals(this))
+                if (that.isImmutabilitySpecified())
                     {
-                    return typeConstraint.andNot(pool,
-                        pool.ensureImmutableTypeConstant(pool.typeObject()));
+                    TypeConstant thatBase = that.removeImmutable();
+                    if (thatBase.equals(this) ||
+                        thatBase.isFormalType() && thatBase.resolveConstraints().equals(typeConstraint))
+                        {
+                        that = pool.ensureImmutableTypeConstant(pool.typeObject());
+                        }
                     }
 
                 TypeConstant typeR = typeConstraint.andNot(pool, that);

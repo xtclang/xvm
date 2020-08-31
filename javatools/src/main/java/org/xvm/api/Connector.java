@@ -117,6 +117,14 @@ public class Connector
         }
 
     /**
+     * Obtain the container associated with this Connector.
+     */
+    public CoreContainer getContainer()
+        {
+        return m_container;
+        }
+
+    /**
      * Start the Runtime and the main Container.
      */
     public void start()
