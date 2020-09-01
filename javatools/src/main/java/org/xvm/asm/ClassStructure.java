@@ -1696,12 +1696,8 @@ public class ClassStructure
                 //    List<Object> <-- List
                 // However, the following is not allowed:
                 //    Logger<Object> <-- Logger
-                // The only exception from that rule is Type, so the following is allowed:
-                //    Type<Exception, Object> <-- Type<Exception>
-                //    Type<Object> <-- Type
                 typeRight    = typeCanonical;
-                fProduces    = fTuple || getIdentityConstant().equals(pool.clzType()) ||
-                               producesFormalType(sName, accessLeft, listLeft);
+                fProduces    = fTuple || producesFormalType(sName, accessLeft, listLeft);
                 fLeftIsRight = false;
                 }
 
