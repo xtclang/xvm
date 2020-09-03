@@ -1652,10 +1652,8 @@ public class ClassStructure
             if (i >= cParamsLeft)
                 {
                 // if an assignment C<L1> = C<R1> is allowed, then an assignment
-                // C<L1> = C<R1, R2> is allowed for any R2, but it could be "weak"
-                if (fTuple ||
-                    (producesFormalType(sName, accessLeft, listLeft) &&
-                     consumesFormalType(sName, accessLeft, listLeft)))
+                // C<L1> = C<R1, R2> is allowed for any R2, but is "weak" for consumers
+                if (fTuple || consumesFormalType(sName, accessLeft, listLeft))
                     {
                     fWeak = true;
                     }
