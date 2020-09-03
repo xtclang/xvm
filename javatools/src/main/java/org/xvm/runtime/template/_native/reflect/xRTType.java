@@ -891,9 +891,10 @@ public class xRTType
             {
             MethodConstant idMethod = entry.getKey();
             MethodInfo     info     = entry.getValue();
-            if (!info.isFunction() && !info.isConstructor() && idMethod.getNestedDepth() == 2)
+            if (!info.isCapped() && !info.isFunction() && !info.isConstructor()
+                    && idMethod.getNestedDepth() == 2)
                 {
-                listHandles.add(xRTMethod.makeHandle(typeTarget, idMethod));
+                listHandles.add(xRTMethod.makeHandle(typeTarget, info.getIdentity()));
                 }
             }
         MethodHandle[] ahMethods = listHandles.toArray(new MethodHandle[0]);
