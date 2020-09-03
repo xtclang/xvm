@@ -58,6 +58,12 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public TypeConstant resolveConstraints()
+        {
+        return this;
+        }
+
+    @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
         return this;

@@ -362,6 +362,13 @@ public class PropertyDeclarationStatement
                 return;
                 }
 
+            TypeConstant type = prop.getType();
+            if (type.containsUnresolved())
+                {
+                mgr.requestRevisit();
+                return;
+                }
+
             if (prop.hasInitialValue())
                 {
                 if (isInMethod() && !isStatic())
@@ -387,13 +394,6 @@ public class PropertyDeclarationStatement
                     }
                 else
                     {
-                    TypeConstant type = prop.getType();
-                    if (type.containsUnresolved())
-                        {
-                        mgr.requestRevisit();
-                        return;
-                        }
-
                     // create a clone of ourselves
                     PropertyDeclarationStatement stmtClone = (PropertyDeclarationStatement) clone();
 

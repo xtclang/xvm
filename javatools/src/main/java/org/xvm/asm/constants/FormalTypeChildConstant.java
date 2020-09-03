@@ -104,6 +104,11 @@ public class FormalTypeChildConstant
         // is not encoded into the constant itself
         if (typeConstraint.containsGenericParam(getName()))
             {
+            if (typeConstraint.isTuple())
+                {
+                return m_typeConstraint = getConstantPool().typeTuple();
+                }
+
             TypeConstant type = typeConstraint.getSingleUnderlyingClass(true).getFormalType().
                                     resolveFormalType(this);
             assert type.isGenericType();

@@ -2121,9 +2121,9 @@ public class NameExpression
                 TypeConstant      type   = prop.getType();
 
                 // use the type inference to differentiate between a property dereferencing
-                // and the Property instance itself
-                if (typeDesired != null && typeDesired.isA(pool.typeProperty()) &&
-                        !type.isA(pool.typeProperty()))
+                // and the Property instance itself (check for both Property and Property? types)
+                if (typeDesired != null && typeDesired.removeNullable().isA(pool.typeProperty()) &&
+                        !type.removeNullable().isA(pool.typeProperty()))
                     {
                     if (fSuppressDeref)
                         {
@@ -2151,20 +2151,11 @@ public class NameExpression
                 TypeConstant typeLeft;
                 if (left == null)
                     {
-                    PropertyInfo infoProp = null;
+                    PropertyInfo infoProp;
                     if (m_targetInfo == null)
                         {
                         typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
-
-                        // resolve the property type
-                        ClassStructure clz = ctx.getThisClass();
-                        if (clz != prop.getParent())
-                            {
-                            // the property may originate in a contribution
-                            // (e.g. Interval.x refers to Range.upperBound)
-                            infoProp = clz.getFormalType().
-                                    ensureTypeInfo(errs).findProperty(idProp);
-                            }
+                        infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
                         }
                     else
                         {
@@ -2173,10 +2164,14 @@ public class NameExpression
                         infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
                         }
 
-                    if (infoProp != null)
+                    if (infoProp == null)
                         {
-                        type = infoProp.getType();
+                        log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY,
+                                prop.getName(), typeLeft.getValueString());
+                        return null;
                         }
+
+                    type = infoProp.getType();
 
                     // check for a narrowed property type
                     Argument argNarrowed = ctx.getVar(prop.getName());
@@ -2193,12 +2188,18 @@ public class NameExpression
                     {
                     typeLeft = left.getImplicitType(ctx);
 
-                    TypeInfo     infoLeft = getTypeInfo(ctx, typeLeft, errs);
+                    TypeInfo infoLeft = typeLeft.isFormalType()
+                        ? getTypeInfo(ctx, typeLeft.resolveConstraints(), errs)
+                        : getTypeInfo(ctx, typeLeft, errs);
                     PropertyInfo infoProp = infoLeft.findProperty(idProp);
-                    if (infoProp != null)
+                    if (infoProp == null)
                         {
-                        type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft);
+                        log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
+                                prop.getName(), typeLeft.getValueString());
+                        return null;
                         }
+
+                    type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft);
                     }
 
                 // Consider the following statements:

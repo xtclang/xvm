@@ -1238,6 +1238,10 @@ public class Compiler
      */
     public static final String ILLEGAL_VIRTUAL_CONSTRUCTOR         = "COMPILER-161";
     /**
+     * Property {0} on the {1} type is not accessible.
+     */
+    public static final String PROPERTY_INACCESSIBLE               = "COMPILER-162";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

@@ -117,7 +117,7 @@ public class AssignmentStatement
                     }
                 aDecls = list.isEmpty()
                         ? VariableDeclarationStatement.NONE
-                        : list.toArray(new VariableDeclarationStatement[list.size()]);
+                        : list.toArray(VariableDeclarationStatement.NONE);
                 }
             else
                 {
