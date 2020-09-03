@@ -93,6 +93,15 @@ interface Property<Target, Referent, Implementation extends Ref<Referent>>
     Implementation of(Target target);
 
     /**
+     * Given a [Ref] or [Var], determine if the [Ref] or [Var] corresponds to this property, and if
+     * it does, obtain the target object reference that the [Ref] or [Var] is bound to.
+     *
+     * @return True iff the specified `Ref` is "of" this property
+     * @return (conditional) the target object to which the property is bound
+     */
+    conditional Target isOrigin(Ref ref);
+
+    /**
      * Given an object reference of a type that contains this property, obtain the value of the
      * property.
      */

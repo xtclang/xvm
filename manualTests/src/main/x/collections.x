@@ -2,12 +2,11 @@ module TestCollections
     {
     @Inject ecstasy.io.Console console;
 
-    void run(  )
+    void run()
         {
         console.println("Collection tests");
 
-        testLinkedList1();
-        testLinkedList2();
+        testLinkedList();
         }
 
     class Phone(String desc, String number)
@@ -35,28 +34,28 @@ module TestCollections
             {
             return &parent;
             }
-//
-//        // scenario #3 - all siblings, including this person
-//        @LinkedList(prev=prevSibling) Person? nextSibling;
-//        Person? prevSibling;
-//        List<Person> siblings.get()
-//            {
-//            return &nextSibling;
-//            }
-//
-//        // scenario #4 - all children of this person
-//        @LinkedList(next=nextSibling, prev=prevSibling, omitThis=True) Person? child;
-//        List<Person> children.get()
-//            {
-//            return &child;
-//            }
-//
-//        // scenario #5 - all phone numbers of this person
-//        @LinkedList(Phone.next) Phone? phone; // scenario #5
-//        List<Phone> phoneNumbers.get()
-//            {
-//            return &phone;
-//            }
+
+        // scenario #3 - all siblings, including this person
+        @LinkedList(prev=prevSibling) Person? nextSibling;
+        Person? prevSibling;
+        List<Person> siblings.get()
+            {
+            return &nextSibling;
+            }
+
+        // scenario #4 - all children of this person
+        @LinkedList(next=nextSibling, prev=prevSibling, omitThis=True) Person? child;
+        List<Person> children.get()
+            {
+            return &child;
+            }
+
+        // scenario #5 - all phone numbers of this person
+        @LinkedList(Phone.next) Phone? phone; // scenario #5
+        List<Phone> phoneNumbers.get()
+            {
+            return &phone;
+            }
 
         @Override
         String toString()
@@ -65,33 +64,62 @@ module TestCollections
             }
         }
 
-    void testLinkedList1()
+    void testLinkedList()
         {
-        console.println("Scenario 1");
+        console.println("LinkedList scenario 1");
 
-        Phone       first = new Phone("home", "555-1212");
-        List<Phone> list  = first.list;
+        Phone       first  = new Phone("home", "555-1212");
+        List<Phone> phones = first.list;
 
-        list +=  new Phone("work", "555-3456");
-        list.add(new Phone("cell", "555-9876"));
+        phones +=  new Phone("work", "555-3456");
+        phones.add(new Phone("cell", "555-9876"));
 
-        Loop: for (Phone p : list)
+        Loop: for (Phone p : phones)
             {
             console.println($"[{Loop.count}] {p}");
             }
-        }
 
-    void testLinkedList2()
-        {
-        console.println("Scenario 2");
+        Person george1 = new Person("George I", 48);
+        Person george2 = new Person("George II", 25);
+        Person albert3 = new Person("Albert III", 5);
+        Person brian3  = new Person("Brian III", 7);
+        Person chad3   = new Person("Chad III", 11);
 
-        Person       george    = new Person("George III", 5);
-        List<Person> ancestors = george.ancestors;
+        albert3.ancestors.add(george2);
+        george2.ancestors.add(george1);
 
-        ancestors += new Person("George II", 25);
-        ancestors += new Person("George I" , 48);
+        george2.children.add(albert3);
+        george2.children.add(brian3);
+        george2.children.add(chad3);
 
-        Loop: for (Person p : ancestors)
+        george1.phoneNumbers.add(new Phone("home", "555-1212"));
+        george1.phoneNumbers.add(new Phone("work", "555-3456"));
+        george1.phoneNumbers.add(new Phone("cell", "555-9876"));
+
+        console.println("LinkedList scenario 2");
+
+        Loop: for (Person p : albert3.ancestors)
+            {
+            console.println($"[{Loop.count}] {p}");
+            }
+
+        console.println("LinkedList scenario 3");
+
+        Loop: for (Person p : albert3.siblings)
+            {
+            console.println($"[{Loop.count}] {p}");
+            }
+
+        console.println("LinkedList scenario 4");
+
+        Loop: for (Person p : george2.children)
+            {
+            console.println($"[{Loop.count}] {p}");
+            }
+
+        console.println("LinkedList scenario 5");
+
+        Loop: for (Phone p : george1.phoneNumbers)
             {
             console.println($"[{Loop.count}] {p}");
             }

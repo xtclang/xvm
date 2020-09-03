@@ -718,7 +718,9 @@ public class NameExpression
 
                                 TypeConstant typeParent = left == null
                                         ? ctx.getThisType()
-                                        : left.getType();
+                                        : m_fClassAttribute
+                                                ? left.getType()
+                                                : left.getType().getParamType(0);
                                 constVal = pool.ensurePropertyClassTypeConstant(typeParent, id);
                                 break;
                                 }
@@ -2119,9 +2121,14 @@ public class NameExpression
                 PropertyConstant  idProp = (PropertyConstant) argRaw;
                 PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
                 TypeConstant      type   = prop.getType();
+                TargetInfo        target = m_targetInfo;
+                boolean           fClass = m_fClassAttribute; // the class of Class?
+                PropertyInfo      infoProp;
+                TypeConstant      typeLeft;
 
                 // use the type inference to differentiate between a property dereferencing
                 // and the Property instance itself (check for both Property and Property? types)
+                TypeOfProperty:
                 if (typeDesired != null && typeDesired.removeNullable().isA(pool.typeProperty()) &&
                         !type.removeNullable().isA(pool.typeProperty()))
                     {
@@ -2130,8 +2137,39 @@ public class NameExpression
                         log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
                         return null;
                         }
+
+                    if (left == null)
+                        {
+                        typeLeft = target == null ? ctx.getThisType() : target.getTargetType();
+                        infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
+                        }
+                    else
+                        {
+                        typeLeft = left.getImplicitType(ctx);
+                        if (fClass || isIdentityMode(ctx, false))
+                            {
+                            assert typeLeft.isA(pool.typeClass());
+                            if (!fClass)
+                                {
+                                typeLeft = typeLeft.getParamType(0);
+                                }
+                            infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
+                            }
+                        else
+                            {
+                            break TypeOfProperty;
+                            }
+                        }
+
+                    if (infoProp == null)
+                        {
+                        log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
+                                prop.getName(), typeLeft.getValueString());
+                        return null;
+                        }
+
                     m_plan = Plan.PropertySelf;
-                    return idProp.getValueType(null);
+                    return idProp.getValueType(typeLeft);
                     }
 
                 if (idProp.isTypeSequenceTypeParameter())
@@ -2148,92 +2186,88 @@ public class NameExpression
                     return type;
                     }
 
-                TypeConstant typeLeft;
                 if (left == null)
                     {
-                    PropertyInfo infoProp;
-                    if (m_targetInfo == null)
+                    if (target == null)
                         {
                         typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
                         infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
                         }
                     else
                         {
-                        idProp   = (PropertyConstant) m_targetInfo.getId();
-                        typeLeft = m_targetInfo.getTargetType();
+                        idProp   = (PropertyConstant) target.getId();
+                        typeLeft = target.getTargetType();
                         infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
                         }
 
-                    if (infoProp == null)
+                    if (infoProp != null)
                         {
-                        log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY,
-                                prop.getName(), typeLeft.getValueString());
-                        return null;
-                        }
-
-                    type = infoProp.getType();
-
-                    // check for a narrowed property type
-                    Argument argNarrowed = ctx.getVar(prop.getName());
-                    if (argNarrowed instanceof TargetInfo)
-                        {
-                        type = argNarrowed.getType();
-                        }
-                    else
-                        {
-                        type = type.resolveAutoNarrowing(pool, false, typeLeft);
+                        // check for a narrowed property type
+                        Argument argNarrowed = ctx.getVar(prop.getName());
+                        type = argNarrowed instanceof TargetInfo
+                                ? argNarrowed.getType()
+                                : infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft);
                         }
                     }
                 else
                     {
+                    // Consider the following statements:
+                    //     val c = Boolean.count;
+                    //     val r = Boolean.&count
+                    // It's quite clear that "c" is an Int and "r" is a Ref<Int>;
+                    // however it leaves no [syntax] room to specify a property "count" on Boolean class.
+                    // For that case we will need the l-value to direct us:
+                    //     Property p = Boolean.count;
+                    // using the same syntax as in a case of a non-singleton class:
+                    //     val p = Person.name;
+
                     typeLeft = left.getImplicitType(ctx);
+                    if (fClass && typeDesired != null && typeDesired.isA(pool.typeProperty())
+                            || !fClass && isIdentityMode(ctx, false))
+                        {
+                        if (fSuppressDeref)
+                            {
+                            log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
+                            return null;
+                            }
+
+                        assert typeLeft.isA(pool.typeClass());
+                        if (!fClass)
+                            {
+                            typeLeft = typeLeft.getParamType(0);
+                            }
+                        if (getTypeInfo(ctx, typeLeft, errs).findProperty(idProp) == null)
+                            {
+                            log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
+                                    prop.getName(), typeLeft.getValueString());
+                            return null;
+                            }
+
+                        m_plan = Plan.None;
+                        return idProp.getValueType(typeLeft);
+                        }
 
                     TypeInfo infoLeft = typeLeft.isFormalType()
                         ? getTypeInfo(ctx, typeLeft.resolveConstraints(), errs)
                         : getTypeInfo(ctx, typeLeft, errs);
-                    PropertyInfo infoProp = infoLeft.findProperty(idProp);
-                    if (infoProp == null)
-                        {
-                        log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
-                                prop.getName(), typeLeft.getValueString());
-                        return null;
-                        }
 
-                    type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft);
+                    infoProp = infoLeft.findProperty(idProp);
+                    if (infoProp != null)
+                        {
+                        type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft);
+                        }
                     }
 
-                // Consider the following statements:
-                //     val c = Boolean.count;
-                //     val r = Boolean.&count
-                // It's quite clear that "c" is an Int and "r" is a Ref<Int>;
-                // however it leaves no [syntax] room to specify a property "count" on Boolean class.
-                // For that case we will need the l-value to direct us:
-                //     Property p = Boolean.count;
-                // using the same syntax as in a case of a non-singleton class:
-                //     val p = Person.name;
-
-                boolean fClass = m_fClassAttribute; // the class of Class?
-                if (fClass && typeDesired != null && typeDesired.isA(pool.typeProperty())
-                        || !fClass && isIdentityMode(ctx, false))
+                if (infoProp == null)
                     {
-                    if (fSuppressDeref)
-                        {
-                        log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
-                        return null;
-                        }
-                    assert typeLeft.isA(pool.typeClass());
-
-                    m_plan = Plan.None;
-                    return idProp.getValueType(fClass ? typeLeft : typeLeft.getParamType(0));
+                    log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
+                            prop.getName(), typeLeft.getValueString());
+                    return null;
                     }
 
                 if (fSuppressDeref)
                     {
                     m_plan = Plan.PropertyRef;
-
-                    TypeInfo     infoLeft = getTypeInfo(ctx, typeLeft, errs);
-                    PropertyInfo infoProp = infoLeft.findProperty(idProp);
-
                     return infoProp.isCustomLogic()
                             ? pool.ensurePropertyClassTypeConstant(typeLeft, idProp)
                             : infoProp.getBaseRefType();

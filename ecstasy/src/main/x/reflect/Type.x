@@ -414,7 +414,10 @@ interface Type<DataType, OuterType>
         }
 
     /**
-     * Produces OuterType TODO CP
+     * Given a object of this type, determine if it has an "outer" object it is bound to.
+     *
+     * @return True iff the object has an outer reference
+     * @return (conditional) the outer object reference
      */
     conditional OuterType hasOuter(DataType o);
 

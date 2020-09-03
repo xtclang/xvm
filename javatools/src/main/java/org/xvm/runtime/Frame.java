@@ -2176,7 +2176,7 @@ public class Frame
             PropertyConstant constProperty = (PropertyConstant) frame.getConstant(iPropId);
             TypeConstant     typeTarget    = frame.getLocalType(nTargetReg, null);
 
-            return typeTarget.containsGenericParam(constProperty.getName())
+            return constProperty.isFormalType()
                 ? constProperty.getFormalType().resolveGenerics(pool, typeTarget).getType()
                 : constProperty.getType().resolveGenerics(pool, typeTarget);
             }
