@@ -2,69 +2,18 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run(    )
+    void run()
         {
         console.println("Starting");
 
-        TestProperty t = new TestProperty();
-        console.println(t.value1);
+        Map<Int, String> map = Map:[0="zero", 1="one", 2="two"];
+        Test t = new Test(map);
 
-        t.value2 = 7;
-        console.println(t.value2);
+        console.println(t.count);
         }
 
-    class TestProperty
+    class Test<K, V> (Map<K, V> map)
         {
-        @Lazy Int value1.get()
-            {
-            if (!assigned)
-                {
-                return 0;
-                }
-            return super();
-            }
-
-        @Stupid Int value2
-            {
-            Int base = 1;
-            @Override
-            Int get()
-                {
-                if (assigned)
-                    {
-                    base++;
-                    return super() + base;
-                    }
-                return base;
-                }
-
-            @Override
-            void set(Int i)
-                {
-                base = i;
-                super(i);
-                }
-            }
-
-        Int value3
-            {
-            Int base = 1;
-
-            @Override
-            Int get()
-                {
-                return base++;
-                }
-            }
-        }
-
-    mixin Stupid<Referent>
-            into Var<Referent>
-        {
-        @Override
-        void set(Referent i)
-            {
-            super(i);
-            }
+        Int count = map.size; // compilation error
         }
     }

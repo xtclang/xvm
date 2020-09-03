@@ -160,6 +160,14 @@ public class MethodStructure
         }
 
     /**
+     * @return true iff this is a property initializer
+     */
+    public boolean isPropertyInitializer()
+        {
+        return getName().equals("=") && getParent().getParent() instanceof PropertyStructure;
+        }
+
+    /**
      * @return true iff this is an auto-generated "wrapper" constructor of an anonymous class
      */
     public boolean isAnonymousClassWrapperConstructor()

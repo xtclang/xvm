@@ -1595,17 +1595,17 @@ public class NameExpression
                     case Property:
                         {
                         TypeConstant typeTarget = target.getTargetType();
-                        TypeInfo     info       = typeTarget.ensureTypeInfo(errs);
+                        TypeInfo     infoTarget = typeTarget.ensureTypeInfo(errs);
 
                         // TODO still some work here to mark the this (and out this's) as being used
-                        PropertyInfo prop = info.findProperty((PropertyConstant) id);
+                        PropertyInfo prop = infoTarget.findProperty((PropertyConstant) id);
                         if (prop == null)
                             {
                             throw new IllegalStateException("missing property: " + id + " on " + typeTarget);
                             }
 
-                        if (info.isTopLevel() && info.isStatic() &&
-                                !info.getClassStructure().equals(ctx.getThisClass()))
+                        if (infoTarget.isTopLevel() && infoTarget.isStatic() &&
+                                !infoTarget.getClassStructure().equals(ctx.getThisClass()))
                             {
                             m_propAccessPlan = PropertyAccess.SingletonParent;
                             }
@@ -1615,6 +1615,15 @@ public class NameExpression
                             }
                         else if (target.getStepsOut() == 0)
                             {
+                            if (!prop.isConstant() && prop.getHead().getStructure().isSynthetic() &&
+                                    ctx.getMethod().isPropertyInitializer())
+                                {
+                                // synthetic properties (shorthand declaration) are known not to be
+                                // computed until all initializers are done
+                                log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
+                                        prop.getName(), typeTarget.removeAccess().getValueString());
+                                return null;
+                                }
                             m_propAccessPlan = PropertyAccess.This;
                             }
                         else
