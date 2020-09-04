@@ -1,17 +1,21 @@
 /**
- * TODO
+ * A ContextToken is used to "annotate" a conceptual thread of execution with contextual information
+ * that will then be accessible at any subsequent point of execution from within that scope of
+ * execution.
+ *
+ *   using (new ContextToken("userid", id))
+ *       {
+ *       requestHandler.handle(request, response);
+ *       }
  */
-const ContextToken<TokenType extends immutable Object>
+const ContextToken<Value extends Service | immutable Object>
         implements Closeable
     {
-    construct(String name, TokenType value)
+    construct(String name, Value value)
         {
         // store off the previous contextToken; it will be replaced by this contextToken, and restored when
         // this contextToken is closed
         previousContextToken = this:service.findContextToken(name);
-
-//        startTime = clock.time;
-//        deadline  = startTime + duration;
         }
     finally
         {
@@ -31,7 +35,7 @@ const ContextToken<TokenType extends immutable Object>
     /**
      * The value of the token.
      */
-    TokenType value;
+    Value value;
 
     /**
      * Find a contextToken for a given name for the current service.
