@@ -54,4 +54,8 @@ interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tup
      */
     @Op("()")
     ReturnTypes invoke(ParamTypes args);
+
+    // TODO new methods:
+    // Function, Map<Parameter, Object> unbind()
+    // conditional (Target, Method, Map<Parameter, Object>) isMethod()
     }
