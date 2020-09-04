@@ -212,6 +212,11 @@ public class xArray
             ahValue[i] = hValue;
             }
 
+        if (typeArray.containsFormalType(true))
+            {
+            typeArray = typeArray.resolveGenerics(frame.poolContext(), frame.getGenericsResolver());
+            }
+
         ClassComposition clzArray = f_templates.resolveClass(typeArray);
         if (fDeferred)
             {
