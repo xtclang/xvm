@@ -7,11 +7,10 @@
  * This implementation uses a CircularArray for its storage, and adds an optional size limit.
  *
  * The Appender interface provided by the ArrayDeque appends to the end of the array, and the Queue
- * interface provided by the ArrayDeque is the corresponding FIFO queue. To prepend to the queue,
- * obtain the [prepender]. To use LIFO instead of FIFO, obtain the [lifoQueue].
+ * interface provided by the ArrayDeque is the corresponding FIFO queue. To prepend to the queue, or
+ * to use LIFO instead of FIFO, obtain the [lifoQueue].
  */
 class ArrayDeque<Element>
-        implements Appender<Element>
         implements Queue<Element>
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -167,19 +166,11 @@ class ArrayDeque<Element>
         }
 
     /**
-     * A LIFO view of the dequeue; it takes from the tail.
+     * A LIFO view of the dequeue; it adds to the head and takes from the tail.
      */
-    @Lazy Queue<Element> lifoQueue.calc()
+    @Lazy Queue<Element> reversed.calc()
         {
         return new LifoQueue();
-        }
-
-    /**
-     * An "Appender" that prepends to the dequeue; it adds to the head.
-     */
-    @Lazy Appender<Element> prepender.calc()
-        {
-        return new Prepender();
         }
 
 
@@ -334,17 +325,17 @@ class ArrayDeque<Element>
         }
 
 
-    // ----- Prepender inner class -----------------------------------------------------------------
+    // ----- LIFO Queue inner class ----------------------------------------------------------------
 
     /**
-     * A prepender is an Appender that appends to the front of the underlying array, in reverse
-     * order.
+     * A LIFO queue is one that takes from the end and "appends" to the beginning of the underlying
+     * array.
      */
-    protected class Prepender
-            implements Appender<Element>
+    protected class LifoQueue
+            implements Queue<Element>
         {
         @Override
-        Prepender add(Element v)
+        LifoQueue add(Element v)
             {
             if (Consumer consume := pendingPipe())
                 {
@@ -360,22 +351,12 @@ class ArrayDeque<Element>
             }
 
         @Override
-        Prepender ensureCapacity(Int count)
+        LifoQueue ensureCapacity(Int count)
             {
             this.ArrayDeque.ensureCapacity(count);
             return this;
             }
-        }
 
-
-    // ----- LIFO Queue inner class ----------------------------------------------------------------
-
-    /**
-     * A LIFO queue is one that takes from the end of the underlying array.
-     */
-    protected class LifoQueue
-            implements Queue<Element>
-        {
         @Override
         conditional Element next()
             {

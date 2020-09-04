@@ -22,6 +22,7 @@
  * indicating that the Queue was closed).
  */
 interface Queue<Element>
+        extends Appender<Element>
     {
     /**
      * Test for the presence of an element in the queue, and take the first element if the queue
