@@ -1529,13 +1529,11 @@ public class TypeInfo
      * @param aArgs       an optional array of the types of the arguments being provided (some of
      *                    which may be null to indicate "unknown" in a pre-validation stage, or
      *                    "non-binding unknown")
-     * @param asArgNames  an optional array of argument names, each (if provided) corresponding to
-     *                    an element in {@code aArgs}
      *
      * @return the id of a matching method or function (null if none found)
      */
     public MethodConstant findCallable(String sName, boolean fMethod, boolean fFunction,
-                                       TypeConstant[] aRedundant, TypeConstant[] aArgs, String[] asArgNames)
+                                       TypeConstant[] aRedundant, TypeConstant[] aArgs)
         {
         int cRedundant = aRedundant == null ? 0 : aRedundant.length;
         int cArgs      = aArgs      == null ? 0 : aArgs     .length;
@@ -1547,13 +1545,11 @@ public class TypeInfo
             {
             // 1) including only method and/or functions as appropriate;
             // 2) matching the name;
-            // 3) for each named argument, having a matching parameter name on the method/function; // TODO
-            // 4) after accounting for named arguments, having at least as many parameters as the
-            //    number of provided arguments, and no more required parameters than the number of
-            //    provided arguments;
-            // 5) having each argument from steps (3) and (4) be isA() or @Auto convertible to the
+            // 3) having at least as many parameters as the number of provided arguments, and no
+            //    more required parameters than the number of provided arguments;
+            // 4) having each argument from steps (3) and (4) be isA() or @Auto convertible to the
             //    type of each corresponding parameter; and
-            // 6) matching (i.e. isA()) any specified redundant return types
+            // 5) matching (i.e. isA()) any specified redundant return types
             MethodConstant id   = entry.getKey();
             MethodInfo     info = entry.getValue();
             if (id.getNestedDepth() == 2
@@ -1646,16 +1642,14 @@ public class TypeInfo
     /**
      * Find a constructor that best matches the specified requirements.
      *
-     * @param aArgs       the types of the arguments being provided (some of which may be null to
-     *                    indicate "unknown" in a pre-validation stage, or "non-binding unknown")
-     * @param asArgNames  an optional array of argument names, each (if provided) corresponding to
-     *                    an element in {@code aArgs}
+     * @param aArgs  the types of the arguments being provided (some of which may be null to
+     *               indicate "unknown" in a pre-validation stage, or "non-binding unknown")
      *
      * @return the matching constructor id (null if none found)
      */
-    public MethodConstant findConstructor(TypeConstant[] aArgs, String[] asArgNames)
+    public MethodConstant findConstructor(TypeConstant[] aArgs)
         {
-        return findCallable("construct", false, false, TypeConstant.NO_TYPES, aArgs, asArgNames);
+        return findCallable("construct", false, false, TypeConstant.NO_TYPES, aArgs);
         }
 
 

@@ -101,7 +101,7 @@ public class ToIntExpression
                 {
                 // at least one of these does NOT have an @Auto method that converts to<Int>()
                 MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
-                        "toInt", true, false, getTypes(), TypeConstant.NO_TYPES, null);
+                        "toInt", true, false, getTypes(), TypeConstant.NO_TYPES);
                 assert id != null;
                 return id;
                 }
@@ -185,7 +185,7 @@ public class ToIntExpression
             case "numbers.VarUInt":
                 // most of these do NOT have an @Auto method that converts to<Int>()
                 MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
-                        "toInt", true, false, getTypes(), TypeConstant.NO_TYPES, null);
+                        "toInt", true, false, getTypes(), TypeConstant.NO_TYPES);
                 assert id != null;
                 return id;
 

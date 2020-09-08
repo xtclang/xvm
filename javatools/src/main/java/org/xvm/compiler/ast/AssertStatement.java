@@ -448,9 +448,7 @@ public class AssertStatement
      */
     public static MethodConstant findExceptionConstructor(ConstantPool pool, String sName, ErrorListener errs)
         {
-        return pool.ensureEcstasyTypeConstant(sName)
-                .ensureTypeInfo(errs)
-                .findConstructor(null, null);
+        return pool.ensureEcstasyTypeConstant(sName).ensureTypeInfo(errs).findConstructor(null);
         }
 
     /**

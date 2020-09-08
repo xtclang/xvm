@@ -181,7 +181,7 @@ public abstract class Container
                 }
             }
 
-        return infoModule.findCallable(sMethod, true, false, TypeConstant.NO_TYPES, atypeArg, null);
+        return infoModule.findCallable(sMethod, true, false, TypeConstant.NO_TYPES, atypeArg);
         }
 
     /**
