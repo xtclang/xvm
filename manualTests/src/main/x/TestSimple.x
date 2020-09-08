@@ -4,16 +4,19 @@ module TestSimple
 
     void run()
         {
-        console.println("Starting");
-
-        Map<Int, String> map = Map:[0="zero", 1="one", 2="two"];
-        Test t = new Test(map);
-
-        console.println(t.count);
         }
 
-    class Test<K, V> (Map<K, V> map)
+    const Test<Key, Value>
         {
-        Int count = map.size; // compilation error
+        void foo(function Boolean match(Map<Key, Value>.Entry), HashMap<Key, Value> map)
+            {
+            Loop: for ((Key k, Value v) : map)
+                {
+                if (match(Loop.entry))
+                    {
+                    console.println(k);
+                    }
+                }
+            }
         }
     }
