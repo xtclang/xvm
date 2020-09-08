@@ -57,31 +57,23 @@ const RTType<DataType, OuterType>
     @Override
     @Lazy Map<String, MultiMethod<DataType>> multimethods.calc()
         {
-        import ecstasy.collections.HashMap;
-
-        Map<String, MultiMethod<DataType>> multis = new HashMap();
-
-        Map<String, MultiMethod<DataType>>.Entry append(
-                MultiMethod<DataType>.Callable           callable,
-                Map<String, MultiMethod<DataType>>.Entry entry)
+        // the code below is identical to the code in Type.multimethods.get(), but we needed to copy
+        // it here since RTType declares the "multimethods" property as @Lazy, which could not be
+        // done on the interface, and as a result the code on the interface is not reachable
+        ListMap<String, MultiMethod<DataType>> map = new ListMap();
+        for (Method<DataType> m : methods)
             {
-            entry.value = entry.exists
-                    ? entry.value + callable
-                    : new MultiMethod<DataType>(callable.name, [callable]);
-            return entry;
+            String name = m.name;
+            MultiMethod<DataType> mm = map.getOrCompute(name, () -> new MultiMethod<DataType>(name, []));
+            map.put(name, mm + m);
             }
-
-        for (Method<DataType> method : methods)
+        for (Function f : functions)
             {
-            multis.process(method.name, append(method, _));
+            String name = f.name;
+            MultiMethod<DataType> mm = map.getOrCompute(name, () -> new MultiMethod<DataType>(name, []));
+            map.put(name, mm + f);
             }
-
-        for (Function func : functions)
-            {
-            multis.process(func.name, append(func, _));
-            }
-
-        return multis; // .freeze(True);
+        return map.freeze(True);
         }
 
 

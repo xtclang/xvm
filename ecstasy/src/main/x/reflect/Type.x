@@ -127,7 +127,7 @@ interface Type<DataType, OuterType>
             MultiMethod<DataType> mm = map.getOrCompute(name, () -> new MultiMethod<DataType>(name, []));
             map.put(name, mm + f);
             }
-        return map;
+        return map.freeze(True);
         }
 
     /**
