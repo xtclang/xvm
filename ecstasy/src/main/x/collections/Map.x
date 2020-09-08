@@ -175,6 +175,57 @@ interface Map<Key, Value>
         return new maps.KeyEntries<Key, Value>(this);
         }
 
+    /**
+     * Filter this `Map` based on its entries' keys and values.
+     *
+     * @param match  a function that evaluates a `Key` and `Value` for inclusion
+     *
+     * @return a Map containing entries indicated by the keys and values that matched the function
+     */
+    Map! filter(function Boolean(Entry) match)
+        {
+        return entries.filter(match).associate(entryAssociator());
+        ListMap<Key, Value> result = new ListMap();
+        Loop: for ((Key k, Value v) : this)
+            {
+            if (match(Loop.entry))
+                {
+                result.put(k, v);
+                }
+            }
+        return result;
+        }
+
+    /**
+     * Create a sorted `Map` from this `Map`.
+     *
+     * @param orderer  an optional [Orderer] to control the sort order; `Null` means to use the
+     *                 Map Value's natural order
+     *
+     * @return a sorted Map
+     *
+     * @throws UnsupportedOperation  if no [Orderer] is provided and [Value] is not [Orderable]
+     */
+    Map! sorted(function Ordered (Entry, Entry)? orderer = Null)
+        {
+        return entries.sorted(orderer).associate(entryAssociator());
+        }
+
+    function Boolean(Entry) valueMatches(function Boolean(Value) match)
+        {
+        return e -> match(e.value);
+        }
+
+    function Ordered (Entry, Entry) entryOrderer(function Ordered (Value, Value) orderer)
+        {
+        return (e1, e2) -> orderer(e1.value, e2.value);
+        }
+
+    function (Key, Value) (Entry) entryAssociator()
+        {
+        return e -> (e.key, e.value);
+        }
+
 
     // ----- write operations ----------------------------------------------------------------------
 
@@ -398,8 +449,8 @@ interface Map<Key, Value>
      * @throws ReadOnly  if the map does not support in-place mutation and the `compute` function
      *                   attempts to modify an entry
      */
-    <Result> Map!<Key, Result> project(Iterable<Key>          keys,
-                                       function Result(Entry) compute)
+    <Result> Map!<Key, Result> processAll(Iterable<Key>          keys,
+                                          function Result(Entry) compute)
         {
         ListMap<Key, Result> result = new ListMap(keys.size);
         for (Key key : keys)
