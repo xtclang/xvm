@@ -185,15 +185,6 @@ interface Map<Key, Value>
     Map! filter(function Boolean(Entry) match)
         {
         return entries.filter(match).associate(entryAssociator());
-        ListMap<Key, Value> result = new ListMap();
-        Loop: for ((Key k, Value v) : this)
-            {
-            if (match(Loop.entry))
-                {
-                result.put(k, v);
-                }
-            }
-        return result;
         }
 
     /**

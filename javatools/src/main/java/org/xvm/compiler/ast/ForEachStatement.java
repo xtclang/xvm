@@ -187,6 +187,14 @@ public class ForEachStatement
         }
 
     /**
+     * @return true iff there is a label this "for" statement
+     */
+    private boolean isLabeled()
+        {
+        return getParent() instanceof LabeledStatement;
+        }
+
+    /**
      * @return the name of the label that labels this "for" statement
      */
     private String getLabelName()
@@ -269,7 +277,7 @@ public class ForEachStatement
             TypeConstant type;
             switch (sName)
                 {
-                case "first": type = pool.typeBoolean()      ; break;
+                case "first":
                 case "last" : type = pool.typeBoolean()      ; break;
                 case "count": type = pool.typeInt()          ; break;
                 case "entry": type = getEntryType()          ; break;
@@ -444,6 +452,16 @@ public class ForEachStatement
 
                     case MAP:
                         aTypeLVals = new TypeConstant[] { getKeyType(), getValueType() };
+
+                        if (isLabeled())
+                            {
+                            Register regLabel = (Register) ctx.getVar(getLabelName());
+                            if (regLabel != null)
+                                {
+                                regLabel.specifyActualType(pool.ensureParameterizedTypeConstant(
+                                        regLabel.getType(), aTypeLVals));
+                                }
+                            }
                         break;
                     }
 
@@ -513,30 +531,34 @@ public class ForEachStatement
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
             }
 
-        ConstantPool pool = pool();
-        if (m_regFirst != null)
+        if (isLabeled())
             {
-            code.add(new Var_IN(m_regFirst, toConst(getLabelName() + ".first"), pool.valTrue()));
-            }
-        if (m_regCount != null)
-            {
-            code.add(new Var_IN(m_regCount, toConst(getLabelName() + ".count"), pool.val0()));
-            }
-        if (m_regLast != null)
-            {
-            code.add(new Var_N(m_regLast, toConst(getLabelName() + ".last")));
-            }
-        if (m_regEntry != null)
-            {
-            code.add(new Var_N(m_regEntry, toConst(getLabelName() + ".entry")));
-            }
-        if (m_regKeyType != null)
-            {
-            code.add(new Var_N(m_regKeyType, toConst(getLabelName() + ".Key")));
-            }
-        if (m_regValType != null)
-            {
-            code.add(new Var_N(m_regValType, toConst(getLabelName() + ".Value")));
+            ConstantPool pool   = pool();
+            String       sLabel = getLabelName();
+            if (m_regFirst != null)
+                {
+                code.add(new Var_IN(m_regFirst, toConst(sLabel + ".first"), pool.valTrue()));
+                }
+            if (m_regCount != null)
+                {
+                code.add(new Var_IN(m_regCount, toConst(sLabel + ".count"), pool.val0()));
+                }
+            if (m_regLast != null)
+                {
+                code.add(new Var_N(m_regLast, toConst(sLabel + ".last")));
+                }
+            if (m_regEntry != null)
+                {
+                code.add(new Var_N(m_regEntry, toConst(sLabel + ".entry")));
+                }
+            if (m_regKeyType != null)
+                {
+                code.add(new Var_N(m_regKeyType, toConst(sLabel + ".Key")));
+                }
+            if (m_regValType != null)
+                {
+                code.add(new Var_N(m_regValType, toConst(sLabel + ".Value")));
+                }
             }
 
         switch (m_plan)
