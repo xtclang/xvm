@@ -1242,6 +1242,10 @@ public class Compiler
      */
     public static final String PROPERTY_INACCESSIBLE               = "COMPILER-162";
     /**
+     * Illegal literal value: {0}.
+     */
+    public static final String BAD_LITERAL                         = "COMPILER-163";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

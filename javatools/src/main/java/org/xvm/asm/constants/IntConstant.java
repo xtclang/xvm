@@ -135,7 +135,7 @@ public class IntConstant
                 throw new IllegalStateException("value exceeds " + cBytes + " bytes: " + pint);
                 }
             }
-        else  if (pint.getSignedByteSize() > cBytes)
+        else if (pint.getSignedByteSize() > cBytes)
             {
             throw new IllegalStateException("value exceeds " + cBytes + " bytes: " + pint);
             }

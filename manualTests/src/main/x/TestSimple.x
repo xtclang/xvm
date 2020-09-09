@@ -4,19 +4,8 @@ module TestSimple
 
     void run()
         {
-        }
-
-    const Test<Key, Value>
-        {
-        void foo(function Boolean match(Map<Key, Value>.Entry), HashMap<Key, Value> map)
-            {
-            Loop: for ((Key k, Value v) : map)
-                {
-                if (match(Loop.entry))
-                    {
-                    console.println(k);
-                    }
-                }
-            }
+        console.println(Byte:1);
+        console.println(Int8:-1);
+        console.println(Int128:12345678901234567890);
         }
     }

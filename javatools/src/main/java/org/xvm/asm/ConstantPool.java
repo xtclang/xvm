@@ -321,10 +321,10 @@ public class ConstantPool
 
     public LiteralConstant ensureLiteralConstant(Format format, String s)
         {
-        return ensureLiteralConstant(format, s, null);
+        return (LiteralConstant) ensureLiteralConstant(format, s, null);
         }
 
-    public LiteralConstant ensureLiteralConstant(Format format, String s, Object oValue)
+    public Constant ensureLiteralConstant(Format format, String s, Object oValue)
         {
         switch (format)
             {
@@ -341,6 +341,22 @@ public class ConstantPool
                     constant = (LiteralConstant) register(new LiteralConstant(this, format, s, oValue));
                     }
                 return constant;
+
+            case Int16:
+            case Int32:
+            case Int64:
+            case Int128:
+            case UInt16:
+            case UInt32:
+            case UInt64:
+            case UInt128:
+                return ensureIntConstant((PackedInteger) oValue, format);
+
+            case Int8:
+                return ensureInt8Constant(((PackedInteger) oValue).getInt());
+
+            case UInt8:
+                return ensureUInt8Constant(((PackedInteger) oValue).getInt());
 
             default:
                 throw new IllegalStateException("unsupported format: " + format);

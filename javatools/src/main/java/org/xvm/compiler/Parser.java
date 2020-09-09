@@ -5938,7 +5938,7 @@ public class Parser
      */
     public static final String BAD_HEX_LITERAL   = "PARSER-05";
     /**
-     * Unsupported custom literal.
+     * Unsupported custom literal type: {0}.
      */
     public static final String BAD_CUSTOM        = "PARSER-06";
     /**

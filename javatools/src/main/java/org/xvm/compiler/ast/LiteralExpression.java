@@ -222,7 +222,17 @@ public class LiteralExpression
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         TypeConstant typeActual = getImplicitType(ctx);
-        Constant     constVal   = getLiteralConstant();
+        Constant     constVal;
+
+        try
+            {
+            constVal = getLiteralConstant();
+            }
+        catch (RuntimeException e)
+            {
+            log(errs, Severity.ERROR, Compiler.BAD_LITERAL, toString());
+            return null;
+            }
 
         assert constVal != null;
         return finishValidation(ctx, typeRequired, typeActual, TypeFit.Fit, constVal, errs);

@@ -67,14 +67,26 @@ public class UInt8Constant
         switch (format)
             {
             case Bit:
+                if ((bVal & ~0x01) != 0)
+                    {
+                    throw new IllegalArgumentException("Bit must be in range 0..1");
+                    }
                 bVal = bVal == 0 ? 0 : 1;
                 break;
 
             case Nibble:
+                if ((bVal & ~0x0F) != 0)
+                    {
+                    throw new IllegalArgumentException("Nibble must be in range 0..15");
+                    }
                 bVal &= 0x0F;
                 break;
 
             case UInt8:
+                if ((bVal & ~0xFF) != 0)
+                    {
+                    throw new IllegalArgumentException("Byte must be in range 0..255");
+                    }
                 bVal &= 0xFF;
                 break;
 
