@@ -140,6 +140,8 @@ public class TemplateRegistry
             template.registerNativeTemplates();
             }
 
+        Utils.initNative(this);
+
         for (ClassTemplate template : f_mapTemplatesByType.values())
             {
             template.initNative();

@@ -395,7 +395,7 @@ public class xRTClass
      *
      * @return the TypeConstant for the Class
      */
-    protected TypeConstant getClassType(ObjectHandle hTarget)
+    protected static TypeConstant getClassType(ObjectHandle hTarget)
         {
         return hTarget.getComposition().getType().getParamType(0);
         }
@@ -470,7 +470,8 @@ public class xRTClass
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeClassArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeClass());
+            TypeConstant typeClassArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                    pool.typeClass());
             ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeClassArray);
             assert clz != null;
             }

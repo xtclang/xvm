@@ -9,11 +9,14 @@ import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -29,17 +32,21 @@ import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction;
-import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
-
 import org.xvm.runtime.template.annotations.xFutureVar;
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+
+import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
+import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 
 /**
@@ -47,33 +54,18 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  */
 public abstract class Utils
     {
-    public final static int[] ARGS_NONE = new int[0];
-    public final static ObjectHandle[] OBJECTS_NONE = new ObjectHandle[0];
-
-    public static void log(Frame frame, String sMsg)
+    /**
+     * Collect necessary constants for future use.
+     *
+     * @param templates the template registry
+     */
+    public static void initNative(TemplateRegistry templates)
         {
-        if (sMsg.charAt(0) == '\n')
-            {
-            System.out.println();
-            sMsg = sMsg.substring(1);
-            }
-
-        ServiceContext ctx;
-        long lFiberId;
-
-        if (frame == null)
-            {
-            ctx = ServiceContext.getCurrentContext();
-            lFiberId = -1;
-            }
-        else
-            {
-            ctx = frame.f_context;
-            lFiberId = frame.f_fiber.getId();
-            }
-
-        System.out.println(new Timestamp(System.currentTimeMillis())
-            + " " + ctx + ", fiber " + lFiberId + ": " + sMsg);
+        REGISTRY             = templates;
+        ANNOTATION_TEMPLATE  = templates.getTemplate("reflect.Annotation");
+        ARGUMENT_TEMPLATE    = templates.getTemplate("reflect.Argument");
+        ANNOTATION_CONSTRUCT = ANNOTATION_TEMPLATE.getStructure().findMethod("construct", 2);
+        ARGUMENT_CONSTRUCT   = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
         }
 
     /**
@@ -203,8 +195,37 @@ public abstract class Utils
         return frame.assignDeferredValue(iReturn, ensureInitializedEnum(frame, hEnum));
         }
 
+    /**
+     * Log a given message for a given frame to System.out.
+     */
+    public static void log(Frame frame, String sMsg)
+        {
+        if (sMsg.charAt(0) == '\n')
+            {
+            System.out.println();
+            sMsg = sMsg.substring(1);
+            }
 
-    // ----- "local property or DeferredCallHandle as an argument" support -----
+        ServiceContext ctx;
+        long lFiberId;
+
+        if (frame == null)
+            {
+            ctx = ServiceContext.getCurrentContext();
+            lFiberId = -1;
+            }
+        else
+            {
+            ctx = frame.f_context;
+            lFiberId = frame.f_fiber.getId();
+            }
+
+        System.out.println(new Timestamp(System.currentTimeMillis())
+            + " " + ctx + ", fiber " + lFiberId + ": " + sMsg);
+        }
+
+
+    // ----- "local property or DeferredCallHandle as an argument" support -------------------------
 
     public static class GetArguments
                 implements Frame.Continuation
@@ -425,7 +446,7 @@ public abstract class Utils
         }
 
 
-    // ----- comparison support -----
+    // ----- comparison support --------------------------------------------------------------------
 
     public static int callEqualsSequence(Frame frame, TypeConstant type1, TypeConstant type2,
                                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
@@ -501,7 +522,7 @@ public abstract class Utils
         }
 
 
-    // ----- toString support -----
+    // ----- toString support ----------------------------------------------------------------------
 
     public static class TupleToString
             implements Frame.Continuation
@@ -600,7 +621,8 @@ public abstract class Utils
         protected int index = -1;
         }
 
-    // ----- various run-time support -----
+
+    // ----- various run-time support --------------------------------------------------------------
 
     /**
      * Ensure that all SingletonConstants in the specified list are initialized and proceed
@@ -1230,4 +1252,280 @@ public abstract class Utils
         BinaryAction XOR = (frameCaller, hValue, hArg) ->
             hValue.getOpSupport().invokeXor(frameCaller, hValue, hArg, Op.A_STACK);
         }
+
+    /**
+     * Helper class for collecting the annotations.
+     */
+    public static class CreateAnnos
+            implements Frame.Continuation
+        {
+        public CreateAnnos(Annotation[] aAnno, int iReturn)
+            {
+            this.aAnno   = aAnno;
+            this.ahAnno  = new ObjectHandle[aAnno.length];
+            this.iReturn = iReturn;
+            stageNext    = Stage.Mixin;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            switch (stageNext)
+                {
+                case Mixin:
+                    assert iAnno >= 0;
+                    ahAnno[iAnno] = frameCaller.popStack();
+                    break;
+
+                case ArgumentArray:
+                    hMixin = frameCaller.popStack();
+                    break;
+
+                case Argument:
+                    hValue = frameCaller.popStack();
+                    break;
+
+                case Value:
+                    assert iArg >= 0;
+                    ahAnnoArg[iArg] = frameCaller.popStack();
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+
+            return doNext(frameCaller);
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            NextStep:
+            while (true)
+                {
+                switch (stageNext)
+                    {
+                    case Mixin:
+                        {
+                        // start working on a next Annotation
+                        assert hMixin    == null;
+                        assert ahAnnoArg == null;
+
+                        if (++iAnno == aAnno.length)
+                            {
+                            // we are done
+                            break NextStep;
+                            }
+
+                        Annotation    anno   = aAnno[iAnno];
+                        ClassConstant idAnno = (ClassConstant) anno.getAnnotationClass();
+
+                        hMixin    = frameCaller.getConstHandle(idAnno);
+                        stageNext = Stage.ArgumentArray;
+
+                        if (Op.isDeferred(hMixin))
+                            {
+                            return hMixin.proceed(frameCaller, this);
+                            }
+                        // fall through;
+                        }
+
+                    case ArgumentArray:
+                        {
+                        assert hMixin    != null;
+                        assert ahAnnoArg == null;
+
+                        // start working on the Annotation arguments
+                        Annotation anno  = aAnno[iAnno];
+                        int        cArgs = anno.getParams().length;
+
+                        ClassConstant  idAnno      = (ClassConstant) anno.getAnnotationClass();
+                        ClassStructure structMixin = (ClassStructure) idAnno.getComponent();
+
+                        // should be one and only one constructor
+                        constructMixin = structMixin.findMethod("construct", m -> true);
+                        if (constructMixin == null || cArgs > constructMixin.getParamCount())
+                            {
+                            return frameCaller.raiseException("Unknown annotation: " + idAnno
+                                + " with " + cArgs + " parameters");
+                            }
+
+                        int cParamsAll      = constructMixin.getParamCount();
+                        int cParamsDefault  = constructMixin.getDefaultParamCount();
+                        int cParamsRequired = cParamsAll - cParamsDefault;
+                        if (cParamsRequired > cArgs)
+                            {
+                            return frameCaller.raiseException("Missing arguments for: " + idAnno
+                                + "; required=" + cParamsRequired + "; actual=" + cArgs);
+                            }
+                        if (cArgs > cParamsAll)
+                            {
+                            return frameCaller.raiseException("Unknown arguments for: " + idAnno
+                                + "; required=" + cParamsAll + "; actual=" + cArgs);
+                            }
+
+                        if (cParamsAll == 0)
+                            {
+                            ahAnnoArg = OBJECTS_NONE;
+                            stageNext = Stage.Annotation;
+                            break;
+                            }
+
+                        ahAnnoArg = new ObjectHandle[cParamsAll];
+                        iArg      = -1;
+                        stageNext = Stage.Value;
+                        // break through
+                        }
+
+                    case Value:
+                        {
+                        assert ahAnnoArg != null;
+
+                        if (++iArg == constructMixin.getParamCount())
+                            {
+                            // all arguments are collected; construct the annotation
+                            stageNext = Stage.Annotation;
+                            continue NextStep;
+                            }
+
+                        Constant[] aconstArg = aAnno[iAnno].getParams();
+                        Constant   constArg  = iArg < aconstArg.length
+                            ? aconstArg[iArg]
+                            : constructMixin.getParam(iArg).getDefaultValue();
+
+                        hValue    = frameCaller.getConstHandle(constArg);
+                        stageNext = Stage.Argument;
+
+                        if (Op.isDeferred(hValue))
+                            {
+                            return hValue.proceed(frameCaller, this);
+                            }
+                        // fall through
+                        }
+
+                    case Argument:
+                        {
+                        assert ahAnnoArg      != null;
+                        assert constructMixin != null;
+                        assert hValue         != null;
+
+                        // constructing Argument<Referent extends immutable Const>
+                        //                  (Referent value, String? name = Null)
+                        MethodStructure constructor = ARGUMENT_CONSTRUCT;
+                        Parameter       param       = constructMixin.getParam(iArg);
+                        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
+                        ahArg[0] = hValue;
+                        ahArg[1] = xString.makeHandle(param.getName());
+
+                        ClassComposition clzArg = ARGUMENT_TEMPLATE.
+                            ensureParameterizedClass(frameCaller.poolContext(), param.getType());
+                        int iResult = ARGUMENT_TEMPLATE.construct(frameCaller, constructor,
+                                            clzArg, null, ahArg, Op.A_STACK);
+                        if (iResult == Op.R_CALL)
+                            {
+                            frameCaller.m_frameNext.addContinuation(this);
+
+                            stageNext = Stage.Value;
+                            }
+                        else
+                            {
+                            assert iResult == Op.R_EXCEPTION;
+                            }
+                        return iResult;
+                        }
+
+                    case Annotation:
+                        {
+                        assert hMixin    != null;
+                        assert ahAnnoArg != null;
+
+                        MethodStructure constructor = ANNOTATION_CONSTRUCT;
+                        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
+                        ahArg[0] = hMixin;
+                        ahArg[1] = makeArgumentArrayHandle(frameCaller.poolContext(), ahAnnoArg);
+
+                        ClassTemplate templateAnno = ANNOTATION_TEMPLATE;
+                        int iResult = templateAnno.construct(frameCaller, constructor,
+                                templateAnno.getCanonicalClass(), null, ahArg, Op.A_STACK);
+                        if (iResult == Op.R_CALL)
+                            {
+                            frameCaller.m_frameNext.addContinuation(this);
+
+                            // when constructed, proceed() will insert the Annotation instance
+                            // at iAnno index and continue to the next one
+                            hMixin         = null;
+                            ahAnnoArg      = null;
+                            constructMixin = null;
+                            stageNext      = Stage.Mixin;
+                            }
+                        else
+                            {
+                            assert iResult == Op.R_EXCEPTION;
+                            }
+                        return iResult;
+                        }
+                    }
+                }
+            return frameCaller.assignValue(iReturn,
+                    makeAnnoArrayHandle(frameCaller.poolContext(), ahAnno));
+            }
+
+        enum Stage {Mixin, ArgumentArray, Value, Argument, Annotation};
+        private Stage stageNext;
+
+        private final Annotation[]   aAnno;
+        private final int            iReturn;
+        private final ObjectHandle[] ahAnno;
+
+        private int             iAnno = -1;
+        private ObjectHandle    hMixin;
+        private MethodStructure constructMixin;
+        private ObjectHandle[]  ahAnnoArg;
+        private ObjectHandle    hValue;
+        private int             iArg  = -1;
+        }
+
+    /**
+     * @return a constant Annotation array handle
+     */
+    public static ObjectHandle.ArrayHandle makeAnnoArrayHandle(ConstantPool pool, ObjectHandle[] ahAnno)
+        {
+        if (ANNOTATION_ARRAY_CLZ == null)
+            {
+            TypeConstant typeArray = pool.ensureParameterizedTypeConstant(
+                pool.typeArray(), pool.ensureEcstasyTypeConstant("reflect.Annotation"));
+            ANNOTATION_ARRAY_CLZ = REGISTRY.resolveClass(typeArray);
+            }
+
+        return new GenericArrayHandle(ANNOTATION_ARRAY_CLZ, ahAnno, xArray.Mutability.Constant);
+        }
+
+    /**
+     * @return a constant Argument array handle
+     */
+    public static ObjectHandle.ArrayHandle makeArgumentArrayHandle(ConstantPool pool, ObjectHandle[] ahArg)
+        {
+        if (ARGUMENT_ARRAY_CLZ == null)
+            {
+            TypeConstant typeArray = pool.ensureParameterizedTypeConstant(
+                pool.typeArray(), pool.ensureEcstasyTypeConstant("reflect.Argument"));
+            ARGUMENT_ARRAY_CLZ = REGISTRY.resolveClass(typeArray);
+            }
+
+        return new GenericArrayHandle(ARGUMENT_ARRAY_CLZ, ahArg, xArray.Mutability.Constant);
+        }
+
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    public final static ObjectHandle[] OBJECTS_NONE = new ObjectHandle[0];
+
+    public static TemplateRegistry  REGISTRY;
+
+    public static ClassTemplate     ANNOTATION_TEMPLATE;
+    public static MethodStructure   ANNOTATION_CONSTRUCT;
+    public static ClassTemplate     ARGUMENT_TEMPLATE;
+    public static MethodStructure   ARGUMENT_CONSTRUCT;
+
+    private static ClassComposition ANNOTATION_ARRAY_CLZ;
+    private static ClassComposition ARGUMENT_ARRAY_CLZ;
     }

@@ -1,4 +1,5 @@
 import ecstasy.reflect.Access;
+import ecstasy.reflect.Annotation;
 
 /**
  * The native Method implementation.
@@ -8,6 +9,7 @@ const RTMethod<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends
         implements Method<Target, ParamTypes, ReturnTypes>
     {
     @Override @RO Access access                                           .get() { TODO("native"); }
+    @Override @RO Annotation[] annotations                                .get() { TODO("native"); }
 
     @Override conditional String[] formalParamNames(Int i)                       { TODO("native"); }
     @Override conditional String[] formalReturnNames(Int i)                      { TODO("native"); }

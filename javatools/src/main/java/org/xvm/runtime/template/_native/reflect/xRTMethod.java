@@ -1,12 +1,12 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -53,6 +53,7 @@ public class xRTMethod
     public void initNative()
         {
         markNativeProperty("access");
+        markNativeProperty("annotations");
 
         markNativeMethod("formalParamNames" , null, null);
         markNativeMethod("formalReturnNames", null, null);
@@ -98,6 +99,9 @@ public class xRTMethod
             {
             case "access":
                 return getPropertyAccess(frame, hMethod, iReturn);
+
+            case "annotations":
+                return getPropertyAnnotations(frame, hMethod, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -189,6 +193,20 @@ public class xRTMethod
         Constants.Access access  = hMethod.getMethodInfo().getAccess();
         ObjectHandle     hAccess = xRTType.makeAccessHandle(frame, access);
         return frame.assignValue(iReturn, hAccess);
+        }
+
+    /**
+     * Implements property: annotations.get()
+     */
+    public int getPropertyAnnotations(Frame frame, MethodHandle hMethod, int iReturn)
+        {
+        MethodStructure method = hMethod.getMethod();
+        Annotation[]    aAnno  = method.getAnnotations();
+
+        return aAnno.length > 0
+                ? new Utils.CreateAnnos(aAnno, iReturn).doNext(frame)
+                : frame.assignValue(iReturn,
+                    Utils.makeAnnoArrayHandle(frame.poolContext(), Utils.OBJECTS_NONE));
         }
 
 

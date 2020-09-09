@@ -1,6 +1,7 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -55,6 +56,7 @@ public class xRTProperty
     public void initNative()
         {
         markNativeProperty("abstract");
+        markNativeProperty("annotations");
         markNativeProperty("atomic");
         markNativeProperty("formal");
         markNativeProperty("hasField");
@@ -97,6 +99,9 @@ public class xRTProperty
             {
             case "abstract":
                 return getPropertyAbstract(frame, hThis, iReturn);
+
+            case "annotations":
+                return getPropertyAnnotations(frame, hThis, iReturn);
 
             case "atomic":
                 return getPropertyAtomic(frame, hThis, iReturn);
@@ -229,6 +234,20 @@ public class xRTProperty
         {
         ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().isAbstract());
         return frame.assignValue(iReturn, hValue);
+        }
+
+    /**
+     * Implements property: annotations.get()
+     */
+    public int getPropertyAnnotations(Frame frame, PropertyHandle hProp, int iReturn)
+        {
+        PropertyInfo prop  = hProp.getPropertyInfo();
+        Annotation[] aAnno = prop.getPropertyAnnotations();
+
+        return aAnno.length > 0
+                ? new Utils.CreateAnnos(aAnno, iReturn).doNext(frame)
+                : frame.assignValue(iReturn,
+                    Utils.makeAnnoArrayHandle(frame.poolContext(), Utils.OBJECTS_NONE));
         }
 
     /**
