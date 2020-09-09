@@ -2480,12 +2480,14 @@ public class Parser
                 }
 
             // the expression has to be the L-Value
-            if (LVal instanceof Expression && !LVal.isLValueSyntax())
+            if (!LVal.isLValueSyntax())
                 {
                 log(Severity.ERROR, NOT_ASSIGNABLE, LVal.getStartPosition(), LVal.getEndPosition());
                 }
-
-            listLVals.add(LVal);
+            else
+                {
+                listLVals.add(LVal);
+                }
 
             if (!fFirst && match(Id.R_PAREN) != null)
                 {
