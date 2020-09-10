@@ -232,6 +232,18 @@ public class TypeSequenceTypeConstant
         return Relation.INCOMPATIBLE;
         }
 
+    @Override
+    protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
+        {
+        return Usage.NO;
+        }
+
+    @Override
+    protected Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
+        {
+        return Usage.NO;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -276,7 +288,4 @@ public class TypeSequenceTypeConstant
         {
         return "Tuple<...>";
         }
-
-
-    // ----- data fields ---------------------------------------------------------------------------
     }

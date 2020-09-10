@@ -223,6 +223,11 @@ public class TupleExpression
             if (typeRequired.isTuple())
                 {
                 atypeRequired = typeRequired.getParamTypesArray();
+                if (atypeRequired.length == 0)
+                    {
+                    // any tuple is assignable to an empty tuple
+                    return TypeFit.Fit;
+                    }
                 }
             else
                 {
