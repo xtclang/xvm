@@ -4,10 +4,6 @@ module TestSimple
 
     void run()
         {
-        import ecstasy.reflect.Parameter;
-
-        console.println("");
-
         typedef function Int(String) FunSI;
         typedef function Int()       FunVI;
 

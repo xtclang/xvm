@@ -2474,16 +2474,21 @@ public class NameExpression
                         }
                     }
 
+                IdentityConstant id = getIdentity(ctx);
+                if (id instanceof TypedefConstant)
+                    {
+                    return false;
+                    }
+
                 if (fSoft)
                     {
-                    IdentityConstant id = getIdentity(ctx);
                     if (id instanceof ModuleConstant || id instanceof PackageConstant)
                         {
                         return true;
                         }
                     }
 
-                return isSuppressDeref() || !((ClassStructure) getIdentity(ctx).getComponent()).isSingleton();
+                return isSuppressDeref() || !((ClassStructure) id.getComponent()).isSingleton();
                 }
 
             case Property:
