@@ -32,13 +32,11 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.runtime.template._native.reflect.xRTClass;
-
-import org.xvm.runtime.template.collections.xArray;
-
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
+
+import org.xvm.runtime.template._native.reflect.xRTClass;
 
 
 /**
@@ -170,7 +168,7 @@ public class xPackage
                 {
                 ArrayHandle hClasses = xRTClass.ensureArrayTemplate().createArrayHandle(
                     xRTClass.ensureArrayComposition(), ahClasses);
-                return xArray.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
+                return Utils.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
                 };
 
             return new Utils.GetArguments(ahClasses, stepNext).doNext(frame);
@@ -178,7 +176,7 @@ public class xPackage
 
         ArrayHandle hClasses = xRTClass.ensureArrayTemplate().createArrayHandle(
             xRTClass.ensureArrayComposition(), ahClasses);
-        return xArray.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
+        return Utils.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
         }
 
 

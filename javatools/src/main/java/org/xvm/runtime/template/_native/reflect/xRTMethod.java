@@ -236,7 +236,8 @@ public class xRTMethod
 
         return chain.isNative()
                 ? hTarget.getTemplate().invokeNativeT(frame, chain.getTop(), hTarget, ahPass, iReturn)
-                : hTarget.getTemplate().invokeT(frame, chain, hTarget, ahPass, iReturn);
+                : hTarget.getTemplate().invokeT(frame, chain, hTarget,
+                        Utils.ensureSize(ahPass, chain.getMaxVars()), iReturn);
         }
 
     /**

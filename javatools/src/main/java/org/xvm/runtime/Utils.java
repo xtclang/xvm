@@ -25,11 +25,13 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
@@ -37,6 +39,8 @@ import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
+
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
@@ -61,11 +65,14 @@ public abstract class Utils
      */
     public static void initNative(TemplateRegistry templates)
         {
-        REGISTRY             = templates;
-        ANNOTATION_TEMPLATE  = templates.getTemplate("reflect.Annotation");
-        ARGUMENT_TEMPLATE    = templates.getTemplate("reflect.Argument");
-        ANNOTATION_CONSTRUCT = ANNOTATION_TEMPLATE.getStructure().findMethod("construct", 2);
-        ARGUMENT_CONSTRUCT   = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
+        REGISTRY               = templates;
+        ANNOTATION_TEMPLATE    = templates.getTemplate("reflect.Annotation");
+        ARGUMENT_TEMPLATE      = templates.getTemplate("reflect.Argument");
+        RT_PARAMETER_TEMPLATE  = templates.getTemplate("_native.reflect.RTParameter");
+        ANNOTATION_CONSTRUCT   = ANNOTATION_TEMPLATE.getStructure().findMethod("construct", 2);
+        ARGUMENT_CONSTRUCT     = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
+        RT_PARAMETER_CONSTRUCT = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
+        LIST_MAP_CONSTRUCT     = templates.getClassStructure("collections.ListMap").findMethod("construct", 2);
         }
 
     /**
@@ -1487,7 +1494,7 @@ public abstract class Utils
     /**
      * @return a constant Annotation array handle
      */
-    public static ObjectHandle.ArrayHandle makeAnnoArrayHandle(ConstantPool pool, ObjectHandle[] ahAnno)
+    public static ArrayHandle makeAnnoArrayHandle(ConstantPool pool, ObjectHandle[] ahAnno)
         {
         if (ANNOTATION_ARRAY_CLZ == null)
             {
@@ -1502,7 +1509,7 @@ public abstract class Utils
     /**
      * @return a constant Argument array handle
      */
-    public static ObjectHandle.ArrayHandle makeArgumentArrayHandle(ConstantPool pool, ObjectHandle[] ahArg)
+    public static ArrayHandle makeArgumentArrayHandle(ConstantPool pool, ObjectHandle[] ahArg)
         {
         if (ARGUMENT_ARRAY_CLZ == null)
             {
@@ -1514,18 +1521,124 @@ public abstract class Utils
         return new GenericArrayHandle(ARGUMENT_ARRAY_CLZ, ahArg, xArray.Mutability.Constant);
         }
 
+    /**
+     * Helper class for constructing Parameters.
+     */
+    public static class CreateParameters
+                implements Frame.Continuation
+        {
+        public CreateParameters(Parameter[] aParam, ObjectHandle[] ahParam,
+                                Frame.Continuation continuation)
+            {
+            this.aParam       = aParam;
+            this.ahParam      = ahParam;
+            this.continuation = continuation;
+            typeRTParameter   = RT_PARAMETER_TEMPLATE.getClassConstant().getType();
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            updateResult(frameCaller);
+
+            return doNext(frameCaller);
+            }
+
+        protected void updateResult(Frame frameCaller)
+            {
+            // replace a property handle with the value
+            ahParam[index] = frameCaller.popStack();
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (++index < aParam.length)
+                {
+                Parameter    param        = aParam[index];
+                TypeConstant type         = param.getType();
+                String       sName        = param.getName();
+                boolean      fFormal      = param.isTypeParameter();
+                Constant     constDefault = param.getDefaultValue();
+
+                ConstantPool     pool      = frameCaller.poolContext();
+                ClassTemplate    template  = RT_PARAMETER_TEMPLATE;
+                TypeConstant     typeParam = pool.ensureParameterizedTypeConstant(typeRTParameter, type);
+                ClassComposition clzParam  = pool.ensureClassComposition(typeParam, template);
+
+                MethodStructure  construct = RT_PARAMETER_CONSTRUCT;
+                ObjectHandle[]   ahArg     = new ObjectHandle[construct.getMaxVars()];
+                ahArg[0] = xInt64.makeHandle(index); // ordinal
+                ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
+                ahArg[2] = xBoolean.makeHandle(fFormal);
+                if (constDefault == null)
+                    {
+                    ahArg[3] = xBoolean.FALSE;
+                    ahArg[4] = xNullable.NULL;
+                    }
+                else
+                    {
+                    ahArg[3] = xBoolean.TRUE;
+                    ahArg[4] = frameCaller.getConstHandle(constDefault);
+                    }
+
+                int iResult = template.construct(frameCaller, construct, clzParam, null, ahArg, Op.A_STACK);
+                if (iResult != Op.R_EXCEPTION)
+                    {
+                    assert iResult == Op.R_CALL;
+                    frameCaller.m_frameNext.addContinuation(this);
+                    return iResult;
+                    }
+                }
+
+            return continuation.proceed(frameCaller);
+            }
+
+        private final Parameter[]    aParam;
+        private final ObjectHandle[] ahParam;
+        private final Frame.Continuation continuation;
+        private final TypeConstant  typeRTParameter;
+        private int index = -1;
+        }
+
+    /**
+     * Construct a ListMap based on the arrays of keys and values.
+     *
+     * @param frame     the current frame
+     * @param clzMap    the ListMap class
+     * @param haKeys    the array of keys
+     * @param haValues  the array of values
+     * @param iReturn   the register to place the ListMap handle into
+     *
+     * @return R_CALL or R_EXCEPTION
+     */
+    public static int constructListMap(Frame frame, ClassComposition clzMap,
+                                       ArrayHandle haKeys, ArrayHandle haValues, int iReturn)
+        {
+        MethodStructure constructor = LIST_MAP_CONSTRUCT;
+        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
+        ahArg[0] = haKeys;
+        ahArg[1] = haValues;
+
+        return clzMap.getTemplate().construct(frame, constructor, clzMap, null, ahArg, iReturn);
+        }
+
 
     // ----- constants -----------------------------------------------------------------------------
 
     public final static ObjectHandle[] OBJECTS_NONE = new ObjectHandle[0];
 
-    public static TemplateRegistry  REGISTRY;
+    private static TemplateRegistry REGISTRY;
 
-    public static ClassTemplate     ANNOTATION_TEMPLATE;
-    public static MethodStructure   ANNOTATION_CONSTRUCT;
-    public static ClassTemplate     ARGUMENT_TEMPLATE;
-    public static MethodStructure   ARGUMENT_CONSTRUCT;
+    // assigned by initNative()
+    private static ClassTemplate    ANNOTATION_TEMPLATE;
+    private static MethodStructure  ANNOTATION_CONSTRUCT;
+    private static ClassTemplate    ARGUMENT_TEMPLATE;
+    private static MethodStructure  ARGUMENT_CONSTRUCT;
+    private static ClassTemplate    RT_PARAMETER_TEMPLATE;
+    private static MethodStructure  RT_PARAMETER_CONSTRUCT;
+    private static MethodStructure  LIST_MAP_CONSTRUCT;
 
+    // assigned lazily
     private static ClassComposition ANNOTATION_ARRAY_CLZ;
     private static ClassComposition ARGUMENT_ARRAY_CLZ;
     }

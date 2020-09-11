@@ -132,9 +132,6 @@ public class xArray
         // cache "Iterable.toArray()" method
         ITERABLE_TO_ARRAY = f_templates.getClassStructure("Iterable").findMethod("toArray", 1);
 
-        // cache "ListMap.construct(Key[], Value[])" constructor
-        LIST_MAP_CONSTRUCT = f_templates.getClassStructure("collections.ListMap").findMethod("construct", 2);
-
         // cache Mutability template
         MUTABILITY = (xEnum) f_templates.getTemplate("collections.Array.Mutability");
 
@@ -1137,28 +1134,6 @@ public class xArray
     // ----- ObjectHandle helpers ------------------------------------------------------------------
 
     /**
-     * Construct a ListMap based on the arrays of keys and values.
-     *
-     * @param frame     the current frame
-     * @param clzMap    the ListMap class
-     * @param haKeys    the array of keys
-     * @param haValues  the array of values
-     * @param iReturn   the register to place the ListMap handle into
-     *
-     * @return R_CALL or R_EXCEPTION
-     */
-    public static int constructListMap(Frame frame, ClassComposition clzMap,
-                                       ArrayHandle haKeys, ArrayHandle haValues, int iReturn)
-        {
-        MethodStructure constructor = LIST_MAP_CONSTRUCT;
-        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
-        ahArg[0] = haKeys;
-        ahArg[1] = haValues;
-
-        return clzMap.getTemplate().construct(frame, constructor, clzMap, null, ahArg, iReturn);
-        }
-
-    /**
      * @return an immutable String array handle
      */
     public static ArrayHandle makeStringArrayHandle(StringHandle[] ahValue)
@@ -1260,7 +1235,6 @@ public class xArray
     // array of constructors
     private static MethodConstant[] CONSTRUCTORS = new MethodConstant[4];
     private static MethodStructure  ITERABLE_TO_ARRAY;
-    private static MethodStructure  LIST_MAP_CONSTRUCT;
 
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};
     protected static final String[] ARRAY        = new String[] {"collections.Array!<Element>"};

@@ -55,7 +55,23 @@ interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tup
     @Op("()")
     ReturnTypes invoke(ParamTypes args);
 
-    // TODO new methods:
-    // Function, Map<Parameter, Object> unbind()
-    // conditional (Target, Method, Map<Parameter, Object>) isMethod()
+    /**
+     * Performs an operation that is inverse to the "bind" on a function.
+     *
+     * @return True if this Function can be "unbound" to a Function that [has a template](hasTemplate)
+     * @return (optional) the Function that [has a template](hasTemplate)
+     * @return (optional) a map of parameter values
+     */
+    conditional (Function!<>, Map<Parameter, Object>) isFunction();
+
+    /**
+     * Performs an operation that is inverse to the "bind" on a method, potentially followed by
+     * a bind on the resulting Function.
+     *
+     * @return True if this Function can be "unbound" to a Method that [has a template](hasTemplate)
+     * @return (optional) the target reference
+     * @return (optional) the Method for that target that [has a template](hasTemplate)
+     * @return (optional) a map of parameter values
+     */
+    <Target> conditional (Target, Method<Target>, Map<Parameter, Object>) isMethod();
     }

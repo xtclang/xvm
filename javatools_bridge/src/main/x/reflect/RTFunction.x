@@ -13,6 +13,11 @@ const RTFunction<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple
                 Parameter<ParamType> param, ParamType value)      { TODO("native"); }
     @Override Function!<> bind(Map<Parameter, Object> params)     { TODO("native"); }
     @Override @Op("()") ReturnTypes invoke(ParamTypes args)       { TODO("native"); }
+    @Override conditional (Function, Map<Parameter, Object>)
+                isFunction()                                      { TODO("native"); }
+    @Override <Target> conditional
+              (Target, Method<Target>, Map<Parameter, Object>)
+                isMethod()                                        { TODO("native"); }
 
     /**
      * Helper function used by the native code.

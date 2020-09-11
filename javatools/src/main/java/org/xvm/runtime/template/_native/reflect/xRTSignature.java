@@ -208,7 +208,7 @@ public class xRTSignature
     /**
      * @return the TypeConstant for a Return
      */
-    public TypeConstant ensureReturnType()
+    public static TypeConstant ensureReturnType()
         {
         TypeConstant type = RETURN_TYPE;
         if (type == null)
@@ -223,12 +223,12 @@ public class xRTSignature
     /**
      * @return the TypeConstant for an RTReturn
      */
-    public TypeConstant ensureRTReturnType()
+    public static TypeConstant ensureRTReturnType()
         {
         TypeConstant type = RTRETURN_TYPE;
         if (type == null)
             {
-            RTRETURN_TYPE = type = f_templates.getComponent("_native.reflect.RTReturn").
+            RTRETURN_TYPE = type = INSTANCE.f_templates.getComponent("_native.reflect.RTReturn").
                     getIdentityConstant().getType();
             assert type != null;
             }
@@ -238,7 +238,7 @@ public class xRTSignature
     /**
      * @return the TypeConstant for a Parameter
      */
-    public TypeConstant ensureParamType()
+    public static TypeConstant ensureParamType()
         {
         TypeConstant type = PARAM_TYPE;
         if (type == null)
@@ -253,12 +253,12 @@ public class xRTSignature
     /**
      * @return the TypeConstant for an RTParameter
      */
-    public TypeConstant ensureRTParamType()
+    public static TypeConstant ensureRTParamType()
         {
         TypeConstant type = RTPARAM_TYPE;
         if (type == null)
             {
-            RTPARAM_TYPE = type = f_templates.getComponent("_native.reflect.RTParameter").
+            RTPARAM_TYPE = type = INSTANCE.f_templates.getComponent("_native.reflect.RTParameter").
                     getIdentityConstant().getType();
             assert type != null;
             }
@@ -268,12 +268,12 @@ public class xRTSignature
     /**
      * @return the ClassTemplate for an RTReturn
      */
-    public xConst ensureRTReturnTemplate()
+    public static xConst ensureRTReturnTemplate()
         {
         xConst template = RTRETURN_TEMPLATE;
         if (template == null)
             {
-            RTRETURN_TEMPLATE = template = (xConst) f_templates.getTemplate(ensureRTReturnType());
+            RTRETURN_TEMPLATE = template = (xConst) INSTANCE.f_templates.getTemplate(ensureRTReturnType());
             assert template != null;
             }
         return template;
@@ -282,12 +282,12 @@ public class xRTSignature
     /**
      * @return the ClassTemplate for an RTParameter
      */
-    public xConst ensureRTParamTemplate()
+    public static xConst ensureRTParamTemplate()
         {
         xConst template = RTPARAM_TEMPLATE;
         if (template == null)
             {
-            RTPARAM_TEMPLATE = template = (xConst) f_templates.getTemplate(ensureRTParamType());
+            RTPARAM_TEMPLATE = template = (xConst) INSTANCE.f_templates.getTemplate(ensureRTParamType());
             assert template != null;
             }
         return template;
@@ -296,7 +296,7 @@ public class xRTSignature
     /**
      * @return the ClassTemplate for an Array of Return
      */
-    public xArray ensureReturnArrayTemplate()
+    public static xArray ensureReturnArrayTemplate()
         {
         xArray template = RETURN_ARRAY_TEMPLATE;
         if (template == null)
@@ -304,7 +304,7 @@ public class xRTSignature
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                     ensureReturnType());
-            RETURN_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeTypeArray));
+            RETURN_ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeTypeArray));
             assert template != null;
             }
         return template;
@@ -313,7 +313,7 @@ public class xRTSignature
     /**
      * @return the ClassTemplate for an Array of Parameter
      */
-    public xArray ensureParamArrayTemplate()
+    public static xArray ensureParamArrayTemplate()
         {
         xArray template = PARAM_ARRAY_TEMPLATE;
         if (template == null)
@@ -321,7 +321,7 @@ public class xRTSignature
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                     ensureParamType());
-            PARAM_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeTypeArray));
+            PARAM_ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeTypeArray));
             assert template != null;
             }
         return template;
@@ -330,27 +330,29 @@ public class xRTSignature
     /**
      * @return the ClassComposition for an RTReturn of the specified type
      */
-    public ClassComposition ensureRTReturn(TypeConstant typeValue)
+    public static ClassComposition ensureRTReturn(TypeConstant typeValue)
         {
         assert typeValue != null;
-        TypeConstant typeRTReturn = pool().ensureParameterizedTypeConstant(ensureRTReturnType(), typeValue);
-        return f_templates.resolveClass(typeRTReturn);
+        TypeConstant typeRTReturn = INSTANCE.pool().
+                ensureParameterizedTypeConstant(ensureRTReturnType(), typeValue);
+        return INSTANCE.f_templates.resolveClass(typeRTReturn);
         }
 
     /**
      * @return the ClassComposition for a RTParameter of the specified type
      */
-    public ClassComposition ensureRTParameter(TypeConstant typeValue)
+    public static ClassComposition ensureRTParameter(TypeConstant typeValue)
         {
         assert typeValue != null;
-        TypeConstant typeRTParam = pool().ensureParameterizedTypeConstant(ensureRTParamType(), typeValue);
-        return f_templates.resolveClass(typeRTParam);
+        TypeConstant typeRTParam = INSTANCE.pool().
+                ensureParameterizedTypeConstant(ensureRTParamType(), typeValue);
+        return INSTANCE.f_templates.resolveClass(typeRTParam);
         }
 
     /**
      * @return the ClassComposition for an Array of Return
      */
-    public ClassComposition ensureReturnArray()
+    public static ClassComposition ensureReturnArray()
         {
         ClassComposition clz = RETURN_ARRAY;
         if (clz == null)
@@ -358,7 +360,7 @@ public class xRTSignature
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeReturnArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                     ensureReturnType());
-            RETURN_ARRAY = clz = f_templates.resolveClass(typeReturnArray);
+            RETURN_ARRAY = clz = INSTANCE.f_templates.resolveClass(typeReturnArray);
             assert clz != null;
             }
         return clz;
@@ -367,7 +369,7 @@ public class xRTSignature
     /**
      * @return the ClassComposition for an Array of Parameter
      */
-    public ClassComposition ensureParamArray()
+    public static ClassComposition ensureParamArray()
         {
         ClassComposition clz = PARAM_ARRAY;
         if (clz == null)
@@ -375,7 +377,7 @@ public class xRTSignature
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeParamArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                     ensureParamType());
-            PARAM_ARRAY = clz = f_templates.resolveClass(typeParamArray);
+            PARAM_ARRAY = clz = INSTANCE.f_templates.resolveClass(typeParamArray);
             assert clz != null;
             }
         return clz;
@@ -559,20 +561,21 @@ public class xRTSignature
     /**
      * A continuation helper to create an array of natural RTReturn or RTParameter objects.
      */
-    class RTArrayConstructor
+    static class RTArrayConstructor
             implements Frame.Continuation
         {
         protected RTArrayConstructor(SignatureHandle hMethod, boolean fRetVals, int iReturn)
             {
-            this.hMethod    = hMethod;
-            this.fRetVals   = fRetVals;
-            this.template   = fRetVals ? ensureRTReturnTemplate() : ensureRTParamTemplate();
-            this.cElements  = fRetVals ? hMethod.getReturnCount() : hMethod.getParamCount();
-            this.ahElement  = new ObjectHandle[cElements];
-            this.construct  = template.getStructure().findMethod("construct", fRetVals ? 2 : 5);
-            this.ahParams   = new ObjectHandle[fRetVals ? 2 : 5];
-            this.index      = -1;
-            this.iReturn    = iReturn;
+            this.hMethod   = hMethod;
+            this.fRetVals  = fRetVals;
+            this.template  = fRetVals ? ensureRTReturnTemplate() : ensureRTParamTemplate();
+            this.cElements = fRetVals ? hMethod.getReturnCount() : hMethod.getParamCount();
+            this.ahElement = new ObjectHandle[cElements];
+            this.construct = template.getStructure().findMethod("construct", fRetVals ? 2 : 5);
+            this.ahParams  = new ObjectHandle[fRetVals ? 2 : 5];
+            this.iReturn   = iReturn;
+
+            index = -1;
             }
 
         @Override
@@ -631,14 +634,14 @@ public class xRTSignature
             return frameCaller.assignValue(iReturn, hArray);
             }
 
-        private SignatureHandle hMethod;
-        private int             cElements;
-        private boolean         fRetVals;
-        private ObjectHandle[]  ahElement;
-        private xConst          template;
-        private MethodStructure construct;
-        private ObjectHandle[]  ahParams;
-        private int             index;
-        private int             iReturn;
+        private final SignatureHandle hMethod;
+        private final int             cElements;
+        private final boolean         fRetVals;
+        private final ObjectHandle[]  ahElement;
+        private final xConst          template;
+        private final MethodStructure construct;
+        private final ObjectHandle[]  ahParams;
+        private final int             iReturn;
+        private       int             index;
         }
     }

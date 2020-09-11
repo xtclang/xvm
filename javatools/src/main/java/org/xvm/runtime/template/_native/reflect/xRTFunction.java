@@ -29,13 +29,13 @@ import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
-import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
-
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xIntArray.IntArrayHandle;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
+
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**
@@ -64,6 +64,8 @@ public class xRTFunction
         markNativeMethod("bind", new String[] {"reflect.Type<Object>", "reflect.Parameter", "Object"}, null);
         markNativeMethod("bind", new String[] {"collections.Map<reflect.Parameter, Object>"}, null);
         markNativeMethod("invoke", null, null);
+        markNativeMethod("isFunction", null, null);
+        markNativeMethod("isMethod", null, null);
 
         super.initNative();
         }
@@ -139,6 +141,23 @@ public class xRTFunction
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method,
+                              ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        FunctionHandle hFunc = (FunctionHandle) hTarget;
+        switch (method.getName())
+            {
+            case "isFunction":
+                return invokeIsFunction(frame, hFunc, aiReturn);
+
+            case "isMethod":
+                return invokeIsMethod(frame, hFunc, aiReturn);
+            }
+
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
     @Override
@@ -283,6 +302,72 @@ public class xRTFunction
         return hFunc.callT(frame, null, ahVar, iReturn);
         }
 
+    /**
+     * Method implementation: `conditional (Function!<>, Map<Parameter, Object>) isFunction()`
+     */
+    public int invokeIsFunction(Frame frame, FunctionHandle hFunc, int[] aiReturn)
+        {
+        MethodStructure method = hFunc.getMethod();
+        if (method != null && method.isFunction())
+            {
+            int            cParams = method.getParamCount();
+            ObjectHandle[] ahParam = new ObjectHandle[cParams];
+            ObjectHandle[] ahValue = new ObjectHandle[cParams];
+
+            hFunc.addBoundArguments(ahValue);
+
+            frame.assignValue(aiReturn[0], xBoolean.TRUE);
+            frame.assignValue(aiReturn[1], makeHandle(method));
+
+            Frame.Continuation stepNext = frameCaller ->
+                constructListMap(frameCaller, ahParam, ahValue, aiReturn[2]);
+            return new Utils.CreateParameters(method.getParamArray(), ahParam, stepNext).doNext(frame);
+            }
+
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        }
+
+    private int constructListMap(Frame frame,
+                                 ObjectHandle[] ahParam, ObjectHandle[] ahValue, int iReturn)
+        {
+        ArrayHandle haParams = xArray.INSTANCE.createArrayHandle(
+                xRTSignature.ensureParamArray(), ahParam);
+
+        ArrayHandle haValues = xArray.makeObjectArrayHandle(
+                ahValue, xArray.Mutability.Constant);
+
+        return Utils.constructListMap(frame, ensureListMap(), haParams, haValues, iReturn);
+        }
+
+    /**
+     * Method implementation: `<Target> conditional (Target, Method<Target>, Map<Parameter, Object>) isMethod();`
+     */
+    public int invokeIsMethod(Frame frame, FunctionHandle hFunc, int[] aiReturn)
+        {
+        MethodStructure method = hFunc.getMethod();
+        if (method != null && !method.isFunction())
+            {
+            int            cParams = method.getParamCount();
+            ObjectHandle[] ahParam = new ObjectHandle[cParams];
+            ObjectHandle[] ahValue = new ObjectHandle[cParams];
+
+            hFunc.addBoundArguments(ahValue);
+
+            ObjectHandle hTarget = hFunc.getTarget();
+
+            frame.assignValue(aiReturn[0], xBoolean.TRUE);
+            frame.assignValue(aiReturn[1], hTarget);
+            frame.assignValue(aiReturn[2],
+                    xRTMethod.makeHandle(hTarget.getType(), method.getIdentityConstant()));
+
+            Frame.Continuation stepNext = frameCaller ->
+                constructListMap(frameCaller, ahParam, ahValue, aiReturn[3]);
+            return new Utils.CreateParameters(method.getParamArray(), ahParam, stepNext).doNext(frame);
+            }
+
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        }
+
 
     // ----- Object handle -------------------------------------------------------------------------
 
@@ -328,7 +413,7 @@ public class xRTFunction
             }
 
 
-        // ----- FunctionHandle interface -----
+        // ----- FunctionHandle interface ----------------------------------------------------------
 
         // call with one return value to be placed into the specified slot
         // return either R_CALL, R_NEXT or R_EXCEPTION
@@ -434,7 +519,7 @@ public class xRTFunction
             return new FullyBoundHandle(this, ahArg);
             }
 
-        // ----- internal implementation -----
+        // ----- internal implementation -----------------------------------------------------------
 
         protected ObjectHandle[] prepareVars(ObjectHandle[] ahArg)
             {
@@ -481,6 +566,19 @@ public class xRTFunction
                     : frame.callN(f_method, hTarget, ahVar, aiReturn);
             }
 
+        /**
+         * @return a target this function has bound
+         */
+        protected ObjectHandle getTarget()
+            {
+            return null;
+            }
+
+        /**
+         * Place all bounds arguments to the specified array.
+         *
+         * @param ahVar  the argument array to place the arguments to
+         */
         protected void addBoundArguments(ObjectHandle[] ahVar)
             {
             }
@@ -517,7 +615,7 @@ public class xRTFunction
 
         protected DelegatingHandle(TypeConstant type, FunctionHandle hDelegate)
             {
-            super(type, hDelegate == null ? null : hDelegate.f_method);
+            super(type, hDelegate == null ? null : hDelegate.getMethod());
 
             m_hDelegate = hDelegate;
             m_fMutable  = hDelegate != null && hDelegate.isMutable();
@@ -542,7 +640,13 @@ public class xRTFunction
             }
 
         @Override
-        protected void addBoundArguments(ObjectHandle[] ahVar)
+        public ObjectHandle getTarget()
+            {
+            return m_hDelegate.getTarget();
+            }
+
+        @Override
+        public void addBoundArguments(ObjectHandle[] ahVar)
             {
             m_hDelegate.addBoundArguments(ahVar);
             }
@@ -699,7 +803,13 @@ public class xRTFunction
             }
 
         @Override
-        protected void addBoundArguments(ObjectHandle[] ahVar)
+        public ObjectHandle getTarget()
+            {
+            return m_iArg == -1 ? m_hArg : super.getTarget();
+            }
+
+        @Override
+        public void addBoundArguments(ObjectHandle[] ahVar)
             {
             if (m_iArg >= 0)
                 {
@@ -777,7 +887,7 @@ public class xRTFunction
             }
 
         @Override
-        protected void addBoundArguments(ObjectHandle[] ahVar)
+        public void addBoundArguments(ObjectHandle[] ahVar)
             {
             super.addBoundArguments(ahVar);
 
@@ -1140,20 +1250,27 @@ public class xRTFunction
         }
 
     /**
-     * @return the handle for an empty Array of Function
+     * @return the ClassComposition for a ListMap<Parameter, Object>
      */
-    public static ArrayHandle ensureEmptyArray()
+    public static ClassComposition ensureListMap()
         {
-        if (ARRAY_EMPTY == null)
+        ClassComposition clz = LISTMAP_CLZCOMP;
+        if (clz == null)
             {
-            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
-                ensureArrayComposition(), new ObjectHandle[0]);
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeListMap   = pool.ensureEcstasyTypeConstant("collections.ListMap");
+            TypeConstant typeParameter = pool.ensureEcstasyTypeConstant("reflect.Parameter");
+
+            typeListMap = pool.ensureParameterizedTypeConstant(typeListMap, typeParameter, pool.typeObject());
+            LISTMAP_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeListMap);
+            assert clz != null;
             }
-        return ARRAY_EMPTY;
+        return clz;
         }
 
+
     /**
-     * @return the TypeConstant for a Constructor
+     * @return the TypeConstant for a default Constructor on the specified target
      */
     public static TypeConstant ensureConstructorType(TypeConstant typeTarget, TypeConstant typeParent)
         {
@@ -1185,10 +1302,11 @@ public class xRTFunction
 
     private static xArray           ARRAY_TEMPLATE;
     private static ClassComposition ARRAY_CLZCOMP;
-    private static ArrayHandle      ARRAY_EMPTY;
+    private static ClassComposition LISTMAP_CLZCOMP;
 
     /**
-     * static (Int[], Object[]) toArray(Map<Parameter, Object> params)
+     * RTFunction:
+     *      static (Int[], Object[]) toArray(Map<Parameter, Object> params)
      */
-    protected static MethodStructure TO_ARRAY;
+    private static MethodStructure TO_ARRAY;
     }

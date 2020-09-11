@@ -176,7 +176,7 @@ public class xModule
         int cModules = mapModulePaths.size() - 1;
         if (cModules == 0)
             {
-            return xArray.constructListMap(frame, clzMap,
+            return Utils.constructListMap(frame, clzMap,
                     xString.ensureEmptyArray(), ensureEmptyArray(), iReturn);
             }
 
@@ -206,14 +206,14 @@ public class xModule
                 {
                 ArrayHandle hModules = ensureArrayTemplate().createArrayHandle(
                         ensureArrayComposition(), ahModules);
-                return xArray.constructListMap(frame, clzMap, hPaths, hModules, iReturn);
+                return Utils.constructListMap(frame, clzMap, hPaths, hModules, iReturn);
                 };
             return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
             }
 
         ArrayHandle hModules = ensureArrayTemplate().createArrayHandle(
                 ensureArrayComposition(), ahModules);
-        return xArray.constructListMap(frame, clzMap, hPaths, hModules, iReturn);
+        return Utils.constructListMap(frame, clzMap, hPaths, hModules, iReturn);
         }
 
 
