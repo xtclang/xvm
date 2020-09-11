@@ -105,7 +105,7 @@ mixin Interval<Element extends immutable Sequential>
      */
     @Op("[]") Element getElement(Int index)
         {
-        assert:bounds index >= 0 && index < size;
+        assert:bounds 0 <= index < size;
         return effectiveFirst.skip(descending ? -index : index);
         }
 
