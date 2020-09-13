@@ -2061,7 +2061,7 @@ public class InvocationExpression
             {
             if (tokName.isSpecial())
                 {
-                tokName.log(errs, getSource(), Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
+                tokName.log(errs, getSource(), Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, tokName.getValueText());
                 return null;
                 }
 

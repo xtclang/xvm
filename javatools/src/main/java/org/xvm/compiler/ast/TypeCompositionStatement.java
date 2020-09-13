@@ -1002,7 +1002,7 @@ public class TypeCompositionStatement
                     // "import" not allowed (only used by packages)
                     if (format != Format.PACKAGE)
                         {
-                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
+                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
                         break;
                         }
 
@@ -1170,7 +1170,7 @@ public class TypeCompositionStatement
                     else
                         {
                         // "into" not allowed (only used by mixins)
-                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
+                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
                         }
                     break;
 
@@ -1178,7 +1178,7 @@ public class TypeCompositionStatement
                     if (format == Format.INTERFACE)
                         {
                         // interface can't implement
-                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
+                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
                         }
                     else
                         {
@@ -1208,7 +1208,7 @@ public class TypeCompositionStatement
                     if (format == Format.INTERFACE)
                         {
                         // interface can't incorporate
-                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
+                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
                         }
                     else
                         {

@@ -991,7 +991,7 @@ public class Parser
                                     }
                                 // fall through
                             default:
-                                modifier.log(m_errorListener, m_source, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
+                                modifier.log(m_errorListener, m_source, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, modifier.getValueText());
                                 break;
                             }
                         }
