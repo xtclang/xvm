@@ -402,7 +402,7 @@ if (User user := ecommerce.users.find(123))
     }
 
 // old
-@Inject Database ecommerce;
+//@Inject Database ecommerce;
 User user = ecommerce.tableFor(User).find(123);// "users" doesn't give me type info, but "User" does
 ecommerce.tableFor(Item).add(new Item(456, "AM-G7-XYZ", "Best whoozymawhatzit ever!", 1.99, 0.1, []));
 // obvious question: how to mutate existing entries?
@@ -447,3 +447,443 @@ ecommerce.tableFor(Item).add(new Item(456, "AM-G7-XYZ", "Best whoozymawhatzit ev
 
 
 
+--
+
+@OODB.Schema
+module EcommerceDBModule
+    {
+    package OODB import OODB.xtclang.org;
+
+    @OODB.Schema2
+    interface EcommerceDB
+            extends Database
+        {
+        @RO Map<Int, Customer> customers;
+        @RO Map<Int, Order> orders;
+
+        @RO Queue<Order> reviewOrders;
+        @RO List<Order> problemOrders;
+
+        function Boolean(Order) notShipped = o -> o.shipped == null && o.canceled == null;
+
+        @DBView(orders, notShipped) Map<Int, Order> pendingOrders;
+
+        @Filter(orders, o -> o.shipped == Null && o.canceled == Null) DBView<Int, Order> processing;
+        }
+
+    @OODB.Schema3
+    const Customer
+        {
+        @DBList L
+        }
+
+    const Order
+        {
+        DateTime created;
+        DateTime? shipped;
+        DateTime? canceled;
+        Line[] lines;
+        const Line(Int item, Int quantity, Dec price);
+        }
+
+    @DBTrigger(orders, ...)
+        {
+        }
+    }
+
+module Petstore
+    {
+    package mydatabase import EcommerceDBModule;
+    import mydatabase.EcommerceDB;
+
+    void foo()
+        {
+        @Inject EcommerceDB db;
+        using (db.createTransaction())
+            {
+            if (Customer cust := db.customers.values.filter(c -> c.email == email).iterator().next())
+                {
+                db.customers[cust.id] = cust.with(lastUpdate = clock.now);
+                }
+            }
+
+        using (db.createTransaction())
+            {
+            db.createBundle()
+              .process(acct1, remove(amt))
+              .process(acct2, add(amt))
+              .execute();
+            }
+
+        using (db.createTransaction())
+            {
+            accounts.process(acct1, debit(amt))
+                    .thenDo(accounts.process(acct2, credit(amt)));
+            }
+        }
+    }
+
+
+    {
+    Account acct1 = ...
+    Account acct2
+
+    Bundle b = db.createBundle();
+    b.withTable("orders").withKeys([o1, o2]);
+    b.withTable("customers").withKeys([c1, c2]);
+
+    db.proceess(Bundle b ->
+        {
+        BackTable t = b.getTable("orders");
+        Key[] keys = b.get...
+        .add(new Order(...))
+        })
+
+    for each: key -> act(ctx, entry(key))
+    }
+
+// worst case scenario
+for (val entry : accts.entries)
+    {
+    Account acct = entry.value;
+    if (acct.needsInterestToBeApplied())
+        {
+        entry.value = acct.with(balance = acct.balance * rate);
+        }
+    }
+
+// still bad case scenario
+for (val entry : accts.entries.filter(needsInterestToBeApplied()))
+    {
+    Account acct = entry.value;
+    entry.value = acct.with(balance = acct.balance * rate);
+    }
+
+// not quite as bad case scenario
+for (val entry : accts.entries.filter(needsInterestToBeApplied()))
+    {
+    accts.process(entry.key, a -> a.with(balance = acct.balance * rate));
+    }
+
+// "almost-best" case scenario
+val ids = accts.values.filter(a -> a.needsInterestToBeApplied()).map(a -> a.id);
+accts.project(ids, a -> a.balance *= rate);
+
+// hypothetical
+accts.do(a -> a.needsInterestToBeApplied(), a -> a.applyInterest());
+
+// maybe..
+accts.filterByValue(a -> a.needsInterestToBeApplied()).processAll(a -> a.applyInterest());
+
+
+Condition
+Predicate
+Notification
+
+Composition
+    Scalar
+        Consts - Numbers, String, Range/Interval, ...
+    Container<Composition>
+        Collection
+        List/Array
+        Set (of Scalars) e.g. enum-set
+        Map<K,V>
+        Queue
+
+TableTrigger<Key, Value>
+    {
+    typedef function Map<Key, Value>.Entry Entry;
+
+    String  name;
+
+    Boolean active;
+    }
+
+TransactionalTableTrigger<Key, Value>
+        extends TableTrigger<Key, Value>
+    {
+    function Boolean(Entry, Entry) process;
+    }
+
+ExPostFactoTableTrigger<Key, Value>
+    {
+    function Boolean(Entry, Entry) matches;
+
+    Duration? delay;
+
+    function void(Entry, Entry) process;
+    }
+
+DeferredTableAction
+    {
+    Duration? delay;
+    function void(Entry, Entry) process;
+    }
+
+EntryAction
+    {
+    String name;
+
+    Entry initial;
+    Entry current;
+
+    Duration delay;
+    DateTime scheduled;
+
+    cancelOn
+    refreshOn
+    rescheduleOn
+    }
+
+interface ???
+    {
+    EntryAction create(String name);
+    EntryAction ensure(String name);
+    void delete(String name);
+    }
+
+map
+---
+insert
+update
+delete
+*any
+
+collection
+----------
+add
+remove
+*any
+
+Map:   (Entry prevEntry, Entry newEntry)
+List:  (List prevList, List newList, List added, List removed)
+Set:   (Set prevSet, Set newSet, Set added, Set removed)
+Queue: (List added, List taken)
+
+Transaction
+  UInt id
+  User
+  Transaction origin
+  DateTime
+  State (Active, Committing, Committed, RolledBack)
+  Conditions
+  Contents
+
+
+module ContactsDB
+    {
+    package db import OODB.xtclang.org;
+
+    const Contact(String firstName, String lastName, Email[] emails = [], Phone[] phones = [])
+        {
+        @db.PKey String rolodexName.get()
+            {
+            return lastName + ", " + firstName;
+            }
+
+        String fullName.get()
+            {
+            return firstName + ' ' + lastName;
+            }
+
+        Contact withPhone(Phone phone)
+            {
+            return new Contact(firstName, lastName, emails, phones + phone);
+            }
+
+        Contact addEmail(Email email)
+            {
+            return new Contact(firstName, lastName, emails + email, phones);
+            }
+
+        Contact eliminateDuplicates()
+            {
+            // first, go through phone #s and look for duplicates
+            // ...
+
+            // now, go through email addresses and look for duplicates
+            // ...
+            }
+        }
+
+    enum EmailCat {Home, Work, Other}
+
+    const Email(EmailCat category, String email);
+
+    enum PhoneCat {Home, Work, Mobile, Fax, Other}
+
+    const Phone(PhoneCat category, String number);
+
+    mixin MyContacts
+            into Table<String, Contact>
+        {
+        void eliminateDuplicates()
+            {
+            project(keys, e ->
+                {
+                e.value = e.value.eliminateDuplicates();
+// would work the same way as:
+//                Contact orig = e.value;
+//                Contact mod  = orig.eliminateDuplicates();
+//                if (&orig != &mod)
+//                    {
+//                    e.value = mod;
+//                    }
+                return Null;
+                });
+            }
+        }
+
+    @db.Schema interface Contacts
+        {
+        @RO @MyContacts Table<String, Contact> contacts;
+        // NO: @RO MyContacts<String, Contact> contacts; // where MyContacts implements Table
+        }
+    }
+
+module ContactsApp
+    {
+    package contactsDB import ContactsDB;
+
+    void run()
+        {
+        @Inject contactsDB.Contacts db;
+        @Inject Console console;
+
+        console.println("Contacts:");
+        for (Contact contact : db.contacts.values)
+            {
+            console.println(contact);
+            }
+        }
+    }
+
+// a processor (stored procedure, function, etc.) runs inside the database, in a transactional
+// context
+// - has to be in the database's type system (otherwise it can't run there)
+// - might be a named procedure (registered in a table of procedures), in which case it can be
+//   executed by name (possibly with parameters)
+// - fully bound functions (procedures requiring no parameters) can be scheduled, set up for post
+//   transaction trigger, etc.
+//   - but we need to be able to capture the arguments! because they need to be stored (e.g in the
+//     tx that commits, if the execution is a post-tx trigger)
+//   - the function, and all of the args for the function, need to be in the type system of the db
+//
+
+// how to decompose the type system?
+// how to store pending function calls?
+
+User
+Schema
+- Table
+- List
+- Queue
+- Counter
+
+Identity
+
+TypeSystem + Version
+Type
+Action
+Condition
+Transaction
+
+static @DBFunc("foo") void foo() {...}
+
+// only some things are DBObject containers
+// - Database
+// - entries in a Map
+
+// how to tie functions to DBObjects,
+
+Database
+
+names
+=============
+|Name |Count|
+|-----|-----|
+| Bob |  3  |
+| Sue |  2  |
+|-----|-----|
+
+@Inject Database db;
+Int count = db.tableFor("names").get("Sue").as(Int);
+
+@Inject Table<String, Int> names;
+Int count = names.get("Sue");
+
+
+//
+
+List<CustId>
+List<@ByRef Customer>
+List<Customer>
+
+List<CustId>
+List<@ByRef Customer>
+List<Customer>
+
+
+// ---
+
+// db is a schema
+// tx is a schema
+// a table (etc.) reference comes from a schema
+// - table from a tx is usable while that tx is still active
+// - table from a db always "ensures tx" to issue commands to the database, which is likely more
+//   expensive (context token lookup, I assume)
+
+// ---
+
+// simplest database
+
+module ContactsDB
+    {
+    package db import OODB.xtclang.org;
+
+    Map<String, String> contacts
+    }
+
+// ---
+
+mixin Contacts
+        into DBMap<Int, Contact>
+    {
+    @dbo Contact rename(Int key, String name)
+        {
+        if (Contact oldContact := get(key))
+            {
+            Contact newContact = oldContact.with(name=name);
+            put(key, newContact);
+            }
+        else
+            {
+            // ...
+            }
+        }
+    }
+
+interface ContactsDB
+        extends Schema
+    {
+    @RO Contacts contacts;
+    }
+
+
+const ContactsDBSchemaClientImpl // or service
+        implements ContactsDB
+    {
+    Contacts contacts = new ContactsClientImpl()
+    }
+
+const ContactsClientImpl // or service
+        extends GenericMapClientImpl
+        incorporates Contacts
+    {
+    @Override
+    @dbo Contact rename(Int key, String name)
+        {
+        Tuple result = dbInvoke("rename", (key, name));
+        return result[0].as(Contact);
+        }
+    }

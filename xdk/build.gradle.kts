@@ -6,11 +6,13 @@ val ecstasy      = project(":ecstasy")
 val javatools    = project(":javatools")
 val bridge       = project(":javatools_bridge")
 val json         = project(":lib_json");
+val oodb         = project(":lib_oodb");
 
 val ecstasyMain  = "${ecstasy.projectDir}/src/main"
 val bridgeMain   = "${bridge.projectDir}/src/main"
 val javatoolsJar = "${javatools.buildDir}/libs/javatools.jar"
 val jsonMain     = "${json.projectDir}/src/main";
+val oodbMain     = "${oodb.projectDir}/src/main";
 
 tasks.register("clean") {
     group       = "Build"
@@ -77,6 +79,21 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
     main = "org.xvm.tool.Compiler"
 }
 
+val compileOODB = tasks.register<JavaExec>("compileOODB") {
+    group       = "Execution"
+    description = "Build OODB.xtc module"
+
+    shouldRunAfter(compileEcstasy)
+
+    classpath(javatoolsJar)
+    args("-verbose",
+            "-o", "$buildDir/xdk/lib",
+            "-L", "${buildDir}/xdk/lib/Ecstasy.xtc",
+            "-L", "${buildDir}/xdk/javatools/javatools_bridge.xtc",
+            "$oodbMain/x/module.x")
+    main = "org.xvm.tool.Compiler"
+}
+
 tasks.register("build") {
     group       = "Build"
     description = "Build the XDK"
@@ -104,6 +121,15 @@ tasks.register("build") {
 
     if (jsonSrc > jsonDest) {
         dependsOn(compileJson)
+        }
+
+    // compile OODB
+    val oodbSrc = fileTree(oodbMain).getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val oodbDest = file("$buildDir/xdk/lib/OODB.xtc").lastModified()
+
+    if (oodbSrc > oodbDest) {
+        dependsOn(compileOODB)
         }
 
     doLast {
