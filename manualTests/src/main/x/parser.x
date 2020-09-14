@@ -39,7 +39,7 @@ module TestParser
             "immutable a.b!<c.d>",
             "String?",
             "collections.HashMap<String?,IntNumber|IntLiteral>",
-            "collections.Map<String?,Int>.Entry<SomeType>",
+            "collections.Map<String?, Int>.Entry<SomeType>",
             "Int[]",
             "String?[?,?]",
             "(Int|Float)[?,?,?]",
@@ -56,13 +56,25 @@ module TestParser
             "Ecstasy.xtclang.org:collections.HashMap",
             "Ecstasy.xtclang.org:collections.List<Ecstasy.xtclang.org:numbers.Int64>",
             "@Ecstasy.xtclang.org:annotations.Unchecked Ecstasy.xtclang.org:collections.List<@Ecstasy.xtclang.org:annotations.Unchecked Ecstasy.xtclang.org:numbers.Int64>",
+            "Function<Tuple<String>, Tuple<Int>>", // TODO CP - ParseFailed CompareGT required, ShiftRight found
             ];
 
         for (String test : tests)
             {
-            Parser parser = new Parser(test, allowModuleNames=True);
-            val    type   = parser.parseTypeExpression();
-            console.println($"serious errs: {parser.errs.seriousCount}, severity={parser.errs.severity}, eof={parser.eof}, {test.quoted()}={type}");
+            try
+                {
+                Parser parser = new Parser(test, allowModuleNames=True);
+                val    type   = parser.parseTypeExpression();
+                String parsed = type.toString();
+                if (test != parsed)
+                    {
+                    console.println($"serious errs: {parser.errs.seriousCount}, severity={parser.errs.severity}, eof={parser.eof}, {test.quoted()}={parsed}");
+                    }
+                }
+            catch (Exception e)
+                {
+                console.println($"Exception: {e} for {test.quoted()}");
+                }
             }
         }
 
@@ -95,7 +107,10 @@ module TestParser
             {
             if (Class clz := typeSystem.classForName(test))
                 {
-                console.println($"class for {test.quoted()}={clz}");
+                if (test != clz.toString())
+                    {
+                    console.println($"class for {test.quoted()}={clz}");
+                    }
                 }
             else
                 {
