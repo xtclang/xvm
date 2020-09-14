@@ -59,10 +59,11 @@ interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tup
      * Performs an operation that is inverse to the "bind" on a function.
      *
      * @return True if this Function can be "unbound" to a Function that [has a template](hasTemplate)
+     * @return (optional) the MethodTemplate for the Function
      * @return (optional) the Function that [has a template](hasTemplate)
      * @return (optional) a map of parameter values
      */
-    conditional (Function!<>, Map<Parameter, Object>) isFunction();
+    conditional (MethodTemplate, Function!<>, Map<Parameter, Object>) isFunction();
 
     /**
      * Performs an operation that is inverse to the "bind" on a method, potentially followed by

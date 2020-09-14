@@ -48,6 +48,14 @@ public class xRTComponentTemplate
     @Override
     public void initNative()
         {
+        TemplateRegistry registry = f_templates;
+
+        // register templates for "RT*" classes that don't have any specialized native behaviors
+        registerNativeTemplate(new xRTComponentTemplate(registry, (ClassStructure)
+                registry.getComponent("_native.reflect.RTMultiMethodTemplate"), true));
+        registerNativeTemplate(new xRTComponentTemplate(registry, (ClassStructure)
+                registry.getComponent("_native.reflect.RTMethodTemplate"), true));
+
         markNativeProperty("access");
         markNativeProperty("doc");
         markNativeProperty("format");
@@ -106,9 +114,6 @@ public class xRTComponentTemplate
             {
             case "children":
                 return invokeChildren(frame, hComponent, iReturn);
-
-            case "toString":
-                return invokeToString(frame, hComponent, iReturn);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -187,8 +192,28 @@ public class xRTComponentTemplate
      */
     public int getPropertyParent(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component     component = hComponent.getComponent();
-        GenericHandle hParent   = null; // TODO
+        Component    parent  = hComponent.getComponent().getParent();
+        ObjectHandle hParent;
+        if (parent == null)
+            {
+            hParent = xNullable.NULL;
+            }
+        else
+            {
+            switch (parent.getFormat())
+                {
+                case MULTIMETHOD:
+                    hParent = new ComponentTemplateHandle(ensureMultiMethodTemplateComposition(), parent);
+                    break;
+
+                case CLASS:
+                    hParent = xRTClassTemplate.makeHandle((ClassStructure) parent);
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException();
+                }
+            }
         return frame.assignValue(iReturn, hParent);
         }
 
@@ -230,32 +255,28 @@ public class xRTComponentTemplate
         throw new UnsupportedOperationException();
         }
 
-    /**
-     * Implementation for: {@code String toString()}.
-     */
-    public int invokeToString(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+    @Override
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        Component component = hComponent.getComponent();
-        String    sResult   = component.toString();
+        Component component = ((ComponentTemplateHandle) hTarget).getComponent();
+        String    sResult   = component.getIdentityConstant().getValueString();
         return frame.assignValue(iReturn, xString.makeHandle(sResult));
         }
 
 
     // ----- Type and Template caching -------------------------------------------------------------
 
-    private static xArray           COMPONENT_ARRAY_TEMPLATE;
-    private static ClassComposition COMPONENT_ARRAY_TYPE;
-
     /**
      * @return the ClassTemplate for an Array of ComponentTemplate
      */
-    public xArray ensureComponentArrayTemplate()
+    public static xArray ensureComponentArrayTemplate()
         {
         xArray template = COMPONENT_ARRAY_TEMPLATE;
         if (template == null)
             {
             TypeConstant typeTypeArray = ensureComponentArrayType().getType();
-            COMPONENT_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeTypeArray));
+            COMPONENT_ARRAY_TEMPLATE = template =
+                    ((xArray) INSTANCE.f_templates.getTemplate(typeTypeArray));
             assert template != null;
             }
         return template;
@@ -264,15 +285,49 @@ public class xRTComponentTemplate
     /**
      * @return the ClassComposition for an Array of ComponentTemplate
      */
-    public ClassComposition ensureComponentArrayType()
+    public static ClassComposition ensureComponentArrayType()
         {
-        ClassComposition clz = COMPONENT_ARRAY_TYPE;
+        ClassComposition clz = COMPONENT_ARRAY_COMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                     pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
-            COMPONENT_ARRAY_TYPE = clz = f_templates.resolveClass(typeTypeArray);
+            COMPONENT_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeTypeArray);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    /**
+     * @return the ClassComposition for an RTMethodTemplate
+     */
+    public static ClassComposition ensureMethodTemplateComposition()
+        {
+        ClassComposition clz = METHOD_TEMPLATE_COMP;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            ClassTemplate templateRT   = INSTANCE.f_templates.getTemplate("_native.reflect.RTMethodTemplate");
+            TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
+            METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(typeTemplate);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    /**
+     * @return the ClassComposition for an RTMultiMethodTemplate
+     */
+    public static ClassComposition ensureMultiMethodTemplateComposition()
+        {
+        ClassComposition clz = MULTI_METHOD_TEMPLATE_COMP;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            ClassTemplate templateRT   = INSTANCE.f_templates.getTemplate("_native.reflect.RTMultiMethodTemplate");
+            TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MultiMethodTemplate");
+            MULTI_METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(typeTemplate);
             assert clz != null;
             }
         return clz;
@@ -333,6 +388,18 @@ public class xRTComponentTemplate
             }
         }
 
+    /**
+     * Create a handle for a MethodTemplate class.
+     *
+     * @param method  the corresponding MethodStructure
+     *
+     * @return the newly created handle
+     */
+    static ComponentTemplateHandle makeMethodHandle(MethodStructure method)
+        {
+        return new ComponentTemplateHandle(ensureMethodTemplateComposition(), method);
+        }
+
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
@@ -346,15 +413,23 @@ public class xRTComponentTemplate
             {
             super(clz);
 
-            m_struct   = component;
+            f_struct   = component;
             m_fMutable = false;
             }
 
         public Component getComponent()
             {
-            return m_struct;
+            return f_struct;
             }
 
-        private Component m_struct;
+        private final Component f_struct;
         }
+
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    private static xArray           COMPONENT_ARRAY_TEMPLATE;
+    private static ClassComposition COMPONENT_ARRAY_COMP;
+    private static ClassComposition METHOD_TEMPLATE_COMP;
+    private static ClassComposition MULTI_METHOD_TEMPLATE_COMP;
     }

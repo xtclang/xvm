@@ -303,7 +303,7 @@ public class xRTFunction
         }
 
     /**
-     * Method implementation: `conditional (Function!<>, Map<Parameter, Object>) isFunction()`
+     * Method implementation: `conditional (MethodTemplate, Function!<>, Map<Parameter, Object>) isFunction()`
      */
     public int invokeIsFunction(Frame frame, FunctionHandle hFunc, int[] aiReturn)
         {
@@ -317,10 +317,11 @@ public class xRTFunction
             hFunc.addBoundArguments(ahValue);
 
             frame.assignValue(aiReturn[0], xBoolean.TRUE);
-            frame.assignValue(aiReturn[1], makeHandle(method));
+            frame.assignValue(aiReturn[1], xRTComponentTemplate.makeMethodHandle(method));
+            frame.assignValue(aiReturn[2], makeHandle(method));
 
             Frame.Continuation stepNext = frameCaller ->
-                constructListMap(frameCaller, ahParam, ahValue, aiReturn[2]);
+                constructListMap(frameCaller, ahParam, ahValue, aiReturn[3]);
             return new Utils.CreateParameters(method.getParamArray(), ahParam, stepNext).doNext(frame);
             }
 

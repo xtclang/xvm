@@ -334,7 +334,7 @@ public class xRTTypeTemplate
         }
 
     /**
-     * Implementation for: {@code conditional Composition fromClass()}.
+     * Implementation for: {@code conditional Class fromClass()}.
      */
     public int invokeFromClass(Frame frame, TypeTemplateHandle hType, int[] aiReturn)
         {
