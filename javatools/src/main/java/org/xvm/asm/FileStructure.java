@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -66,10 +67,10 @@ public class FileStructure
             throw new IllegalStateException("module already exists");
             }
 
-        this.pool       = pool;
-        this.moduleName = sModule;
-        this.nMajorVer  = VERSION_MAJOR_CUR;
-        this.nMinorVer  = VERSION_MINOR_CUR;
+        m_pool        = pool;
+        m_sModuleName = sModule;
+        m_nMajorVer   = VERSION_MAJOR_CUR;
+        m_nMinorVer   = VERSION_MINOR_CUR;
         }
 
     /**
@@ -97,7 +98,8 @@ public class FileStructure
             throws IOException
         {
         this(toInputStream(file), true, fLazy);
-        this.file = file;
+
+        m_file = file;
         }
 
     /**
@@ -128,7 +130,7 @@ public class FileStructure
         {
         super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
 
-        fLazyDeser = fLazy;
+        m_fLazyDeser = fLazy;
         try
             {
             disassemble(new DataInputStream(in));
@@ -156,9 +158,10 @@ public class FileStructure
         super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
 
         FileStructure fileStructure = module.getFileStructure();
-        nMajorVer  = fileStructure.nMajorVer;
-        nMinorVer  = fileStructure.nMinorVer;
-        pool       = new ConstantPool(this);
+
+        m_nMajorVer = fileStructure.m_nMajorVer;
+        m_nMinorVer = fileStructure.m_nMinorVer;
+        m_pool      = new ConstantPool(this);
 
         merge(module);
         }
@@ -170,7 +173,7 @@ public class FileStructure
      */
     public void merge(ModuleStructure module)
         {
-        moduleName = module.getName();
+        m_sModuleName = module.getName();
 
         // connect fingerprints with real modules to allow component resolution
         // during "registerConstant" phase
@@ -193,7 +196,7 @@ public class FileStructure
         addChild(moduleClone);
         moduleClone.cloneChildren(module.children());
 
-        ConstantPool pool = this.getConstantPool();
+        ConstantPool pool = m_pool;
 
         moduleClone.registerConstants(pool);
         moduleClone.registerChildrenConstants(pool);
@@ -232,7 +235,8 @@ public class FileStructure
             throws IOException
         {
         FileOutputStream fos = new FileOutputStream(file);
-        this.file = file;
+
+        m_file = file;
         try
             {
             BufferedOutputStream bos = new BufferedOutputStream(fos);
@@ -291,7 +295,7 @@ public class FileStructure
      */
     public ModuleStructure getModule()
         {
-        return (ModuleStructure) getChild(moduleName);
+        return (ModuleStructure) getChild(m_sModuleName);
         }
 
     /**
@@ -301,7 +305,7 @@ public class FileStructure
      */
     public String getModuleName()
         {
-        return moduleName;
+        return m_sModuleName;
         }
 
     /**
@@ -346,7 +350,7 @@ public class FileStructure
         ModuleStructure module = getModule(sName);
         if (module == null)
             {
-            module = new ModuleStructure(this, pool.ensureModuleConstant(sName));
+            module = new ModuleStructure(this, m_pool.ensureModuleConstant(sName));
             addChild(module);
             }
         return module;
@@ -368,74 +372,93 @@ public class FileStructure
         return linkModules(repository, new HashSet<>(), fRuntime);
         }
 
-    private String linkModules(ModuleRepository repository, Set<FileStructure> setVisited, boolean fRuntime)
+    private String linkModules(ModuleRepository repository, Set<String> setFilesDone, boolean fRuntime)
         {
-        String sMissing = null;
-
-        Set<FileStructure> setLinkLater = null;
-        for (String sModule : moduleNames())
+        if (!setFilesDone.add(getModuleName()))
             {
-            if (!sModule.equals(getModuleName()))
+            return null;
+            }
+
+        ArrayList<FileStructure> listFilesTodo   = new ArrayList<>();
+        ArrayList<String>        listModulesTodo = new ArrayList<>(moduleNames());
+        Set<String>              setModulesDone  = new HashSet<>();
+        String                   sMissing        = null;
+
+        // the primary module is implicitly linked already
+        setModulesDone.add(getModuleName());
+
+        // "recursive" link of all downstream modules
+        for (int iNextTodo = 0; iNextTodo < listModulesTodo.size(); ++iNextTodo)
+            {
+            // only need to link it once (each node in the graph gets visited once)
+            String sModule = listModulesTodo.get(iNextTodo);
+            if (!setModulesDone.add(sModule))
                 {
-                ModuleStructure structFingerprint = getModule(sModule);
-                if (!structFingerprint.isFingerprint())
-                    {
-                    continue;
-                    }
+                continue;
+                }
 
-                if (structFingerprint.getFingerprintOrigin() == null)
+            ModuleStructure structFingerprint = getModule(sModule);
+            if (structFingerprint != null && (!structFingerprint.isFingerprint()
+                    || structFingerprint.getFingerprintOrigin() != null))
+                {
+                // this module is already in our FileStructure as a real, fully loaded and
+                // linked module
+                continue;
+                }
+
+            // load the module against which the compilation will occur
+            if (repository.getModuleNames().contains(sModule))
+                {
+                ModuleStructure structUnlinked = repository.loadModule(sModule); // TODO versions etc.
+                if (fRuntime)
                     {
-                    // load the module against which the compilation will occur
-                    if (repository.getModuleNames().contains(sModule))
+                    ConstantPool    pool         = m_pool;
+                    ModuleStructure structLinked = structUnlinked.cloneBody();
+                    structLinked.setContaining(this);
+                    structLinked.cloneChildren(structUnlinked.children());
+                    structLinked.registerConstants(pool);
+                    structLinked.registerChildrenConstants(pool);
+
+                    if (structFingerprint == null)
                         {
-                        ModuleStructure structActual = repository.loadModule(sModule); // TODO versions etc.
-
-                        if (fRuntime)
-                            {
-                            ModuleStructure structClone = structActual.cloneBody();
-                            structFingerprint.setFingerprintOrigin(structClone);
-
-                            structClone.setContaining(this);
-                            structClone.cloneChildren(structActual.children());
-                            structClone.registerConstants(pool);
-                            structClone.registerChildrenConstants(pool);
-                            }
-                        else
-                            {
-                            structFingerprint.setFingerprintOrigin(structActual);
-                            }
-
-
-                        FileStructure structToLink = structActual.getFileStructure();
-                        if (setVisited.add(structToLink))
-                            {
-                            if (setLinkLater == null)
-                                {
-                                setLinkLater = new HashSet<>();
-                                }
-                            setLinkLater.add(structToLink);
-                            }
+                        this.addChild(structLinked);
                         }
-                    else if (sMissing == null)
+                    else
                         {
-                        // no error is logged here; the package that imports the module will detect
-                        // the error when it is asked to resolve global names; see
-                        // TypeCompositionStatement
-                        sMissing = sModule;
+                        this.replaceChild(structFingerprint, structLinked);
+                        }
+
+                    // TODO eventually we need to handle the case that these are actual modules and not just pointers to the modules
+                    listModulesTodo.addAll(structUnlinked.getFileStructure().moduleNames());
+                    }
+                else // compile-time
+                    {
+                    assert structFingerprint != null;
+                    structFingerprint.setFingerprintOrigin(structUnlinked);
+
+                    FileStructure fileDownstream = structUnlinked.getFileStructure();
+                    if (!setFilesDone.contains(sModule))
+                        {
+                        listFilesTodo.add(fileDownstream);
                         }
                     }
                 }
+            else if (sMissing == null)
+                {
+                // no error is logged here; the package that imports the module will detect
+                // the error when it is asked to resolve global names; see
+                // TypeCompositionStatement
+                sMissing = sModule;
+                }
             }
 
-        if (setLinkLater != null)
+        for (FileStructure fileDownstream : listFilesTodo)
             {
-            for (FileStructure struct : setLinkLater)
+            assert !fRuntime;
+            String sMissingDownstream = fileDownstream.linkModules(repository, setFilesDone, false);
+            if (sMissingDownstream != null && sMissing == null)
                 {
-                String sMissingDownstream = struct.linkModules(repository, setVisited, fRuntime);
-                if (sMissingDownstream != null && sMissing == null)
-                    {
-                    sMissing = sMissingDownstream;
-                    }
+                sMissing = sMissingDownstream;
                 }
             }
 
@@ -689,7 +712,7 @@ public class FileStructure
      */
     public AssemblerContext getContext()
         {
-        return ctx;
+        return m_ctx;
         }
 
     /**
@@ -700,10 +723,10 @@ public class FileStructure
      */
     protected AssemblerContext ensureContext()
         {
-        AssemblerContext ctx = this.ctx;
+        AssemblerContext ctx = m_ctx;
         if (ctx == null)
             {
-            this.ctx = ctx = new AssemblerContext(getConstantPool());
+            m_ctx = ctx = new AssemblerContext(m_pool);
             }
         return ctx;
         }
@@ -719,7 +742,7 @@ public class FileStructure
      */
     public int getFileMajorVersion()
         {
-        return nMajorVer;
+        return m_nMajorVer;
         }
 
     /**
@@ -733,7 +756,7 @@ public class FileStructure
      */
     public int getFileMinorVersion()
         {
-        return nMinorVer;
+        return m_nMinorVer;
         }
 
     /**
@@ -800,9 +823,9 @@ public class FileStructure
     @Override
     public String getName()
         {
-        return file == null
+        return m_file == null
                 ? getModule().getIdentityConstant().getUnqualifiedName() + ".xtc"
-                : file.getName();
+                : m_file.getName();
         }
 
     @Override
@@ -843,14 +866,14 @@ public class FileStructure
     @Override
     public ConstantPool getConstantPool()
         {
-        return pool;
+        return m_pool;
         }
 
     @Override
     public Iterator<? extends XvmStructure> getContained()
         {
         return new LinkedIterator(
-                Collections.singleton(pool).iterator(),
+                Collections.singleton(m_pool).iterator(),
                 getChildByNameMap().values().iterator());
         }
 
@@ -884,20 +907,20 @@ public class FileStructure
         // history of evolution of the Ecstasy language and the XVM specification), as versions will
         // initially be ascending-only, but at some point, only up-to-specific-minor-versions of
         // specific-major-versions are likely to be supported
-        nMajorVer = in.readUnsignedShort();
-        nMinorVer = in.readUnsignedShort();
-        if (!isFileVersionSupported(nMajorVer, nMinorVer))
+        m_nMajorVer = in.readUnsignedShort();
+        m_nMinorVer = in.readUnsignedShort();
+        if (!isFileVersionSupported(m_nMajorVer, m_nMinorVer))
             {
-            throw new IOException("unsupported version: " + nMajorVer + "." + nMinorVer);
+            throw new IOException("unsupported version: " + m_nMajorVer + "." + m_nMinorVer);
             }
 
         // read in the constant pool
         ConstantPool pool = new ConstantPool(this);
-        this.pool = pool;
+        m_pool = pool;
         pool.disassemble(in);
 
-        moduleName = ((ModuleConstant) pool.getConstant(readIndex(in))).getName();
-        disassembleChildren(in, fLazyDeser);
+        m_sModuleName = ((ModuleConstant) pool.getConstant(readIndex(in))).getName();
+        disassembleChildren(in, m_fLazyDeser);
 
         // must be at least one module (the first module is considered to be the "main" module)
         if (getModule() == null)
@@ -911,7 +934,7 @@ public class FileStructure
      */
     public void reregisterConstants(boolean fOptimize)
         {
-        ConstantPool pool = this.pool;
+        ConstantPool pool = m_pool;
         pool.preRegisterAll();
         registerConstants(pool);
         pool.postRegisterAll(fOptimize);
@@ -931,7 +954,7 @@ public class FileStructure
         out.writeInt(FILE_MAGIC);
         out.writeShort(VERSION_MAJOR_CUR);
         out.writeShort(VERSION_MINOR_CUR);
-        pool.assemble(out);
+        m_pool.assemble(out);
         writePackedLong(out, getModule().getIdentityConstant().getPosition());
         assembleChildren(out);
         }
@@ -983,7 +1006,7 @@ public class FileStructure
         out.print(sIndent);
         out.println(toString());
 
-        final ConstantPool pool = this.pool;
+        final ConstantPool pool = m_pool;
         if (pool != null)
             {
             pool.dump(out, nextIndent(sIndent));
@@ -997,7 +1020,7 @@ public class FileStructure
      */
     public boolean validateConstants()
         {
-        assert pool.getNakedRefType() != null;
+        assert m_pool.getNakedRefType() != null;
 
         Consumer<Component> visitor = component ->
             {
@@ -1005,7 +1028,7 @@ public class FileStructure
                 {
                 component.getContributionsAsList().forEach(contrib ->
                     {
-                    assert contrib.getTypeConstant().getConstantPool() == pool;
+                    assert contrib.getTypeConstant().getConstantPool() == m_pool;
                     });
                 }
             else if (component instanceof MethodStructure)
@@ -1016,7 +1039,7 @@ public class FileStructure
                     {
                     for (Constant constant : aconst)
                         {
-                        assert constant.getConstantPool() == pool;
+                        assert constant.getConstantPool() == m_pool;
                         }
                     }
                 }
@@ -1059,11 +1082,11 @@ public class FileStructure
             FileStructure that = (FileStructure) obj;
             // ignore the constant pool, since its only purpose is to be
             // referenced from the nested XVM structures
-            return this.nMajorVer == that.nMajorVer
-                    && this.nMinorVer == that.nMinorVer
-                    && this.moduleName.equals(that.moduleName)
+            return this.m_nMajorVer == that.m_nMajorVer
+                    && this.m_nMinorVer == that.m_nMinorVer
+                    && this.m_sModuleName.equals(that.m_sModuleName)
                     && this.getChildByNameMap().equals(
-                    that.getChildByNameMap()); // TODO need "childrenEquals()"?
+                       that.getChildByNameMap()); // TODO need "childrenEquals()"?
             }
 
         return false;
@@ -1075,19 +1098,19 @@ public class FileStructure
     /**
      * The file that the file structure was loaded from.
      */
-    private File file;
+    private File m_file;
 
     /**
      * The indicator that deserialization of components should be done lazily (deferred).
      */
-    private boolean fLazyDeser;
+    private boolean m_fLazyDeser;
 
     /**
      * The name of the main module that the FileStructure represents. There may be additional
      * modules in the FileStructure, but generally, they only represent imports (included embedded
      * modules) of the main module.
      */
-    private String moduleName;
+    private String m_sModuleName;
 
     /**
      * Tree of versions held by this FileStructure.
@@ -1107,24 +1130,24 @@ public class FileStructure
     /**
      * The ConstantPool for the FileStructure.
      */
-    private ConstantPool pool;
+    private ConstantPool m_pool;
 
     /**
      * The AssemblerContext that is associated with this FileStructure.
      */
-    private AssemblerContext ctx;
+    private AssemblerContext m_ctx;
 
     /**
      * If the structure was disassembled from a binary, this is the major version of the Ecstasy/XVM
      * specification that the binary was assembled with. Otherwise, it is the current version.
      */
-    private int nMajorVer;
+    private int m_nMajorVer;
 
     /**
      * If the structure was disassembled from a binary, this is the minor version of the Ecstasy/XVM
      * specification that the binary was assembled with. Otherwise, it is the current version.
      */
-    private int nMinorVer;
+    private int m_nMinorVer;
 
     private transient ErrorListener m_errs;
     }
