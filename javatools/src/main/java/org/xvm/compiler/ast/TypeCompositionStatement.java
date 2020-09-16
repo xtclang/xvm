@@ -1205,7 +1205,8 @@ public class TypeCompositionStatement
                     break;
 
                 case INCORPORATES:
-                    if (format == Format.INTERFACE)
+                    Incorporates incorp = (Incorporates) composition;
+                    if (format == Format.INTERFACE && !incorp.isAnnotation())
                         {
                         // interface can't incorporate
                         composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
@@ -1213,7 +1214,6 @@ public class TypeCompositionStatement
                     else
                         {
                         // these are all OK; other checks will be done after the types are resolvable
-                        Incorporates incorp = (Incorporates) composition;
                         if (incorp.isAnnotation())
                             {
                             for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
