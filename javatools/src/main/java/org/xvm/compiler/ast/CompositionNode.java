@@ -64,7 +64,12 @@ public abstract class CompositionNode
     @Override
     public Source getSource()
         {
-        return condition == null ? type.getSource() : condition.getSource();
+        Source source = super.getSource();
+        if (source == null)
+            {
+            source = condition == null ? type.getSource() : condition.getSource();
+            }
+        return source;
         }
 
     @Override
