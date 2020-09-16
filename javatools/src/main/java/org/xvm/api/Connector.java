@@ -100,7 +100,11 @@ public class Connector
             }
 
         FileStructure structApp = f_templates.createFileStructure(moduleApp);
-        structApp.linkModules(m_repository, true);
+        String        sMissing  = structApp.linkModules(m_repository, true);
+        if (sMissing != null)
+            {
+            throw new IllegalStateException("Unable to load module \"" + sMissing + "\"");
+            }
 
         ModuleConstant idApp = (ModuleConstant) structApp.
                 getChild(moduleApp.getName()).getIdentityConstant();

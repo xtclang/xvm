@@ -124,9 +124,13 @@ public class xContainerLinker
                 FileStructure   structApp = f_templates.createFileStructure(moduleApp);
 
                 // TODO GG: this needs to be replaced with linking to the passed in repo
-                structApp.linkModules(f_templates.f_repository, true);
+                String sMissing = structApp.linkModules(f_templates.f_repository, true);
+                if (sMissing != null)
+                    {
+                    return frame.raiseException("Unable to load module \"" + sMissing + "\"");
+                    }
 
-                ModuleConstant  idModule = (ModuleConstant)
+                ModuleConstant idModule = (ModuleConstant)
                         structApp.getChild(moduleApp.getName()).getIdentityConstant();
 
                 SimpleContainer container = new SimpleContainer(frame.f_context, idModule);
