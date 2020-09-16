@@ -72,6 +72,24 @@ tasks.register<JavaExec>("runAll") {
     main = "org.xvm.runtime.TestConnector"
 }
 
+val compileOne = tasks.register<JavaExec>("compileOne") {
+    description = "Compile a \"testName\" test"
+
+    dependsOn(xdk.tasks["build"])
+
+    val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
+
+    classpath(javatoolsJar)
+
+    args("-verbose",
+         "-o", "$buildDir",
+         "-L", "${xdk.buildDir}/xdk/lib",
+         "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
+         "-L", "$buildDir",
+         "src/main/x/$name.x")
+    main = "org.xvm.tool.Compiler"
+}
+
 val compileRunner = tasks.register<JavaExec>("compileRunner") {
     description = "Compile TestRunner"
 
@@ -99,6 +117,7 @@ val hostOneRun = tasks.register<JavaExec>("hostOneRun") {
     val opts = listOf<String>(
         "-L", "${xdk.buildDir}/xdk/lib/",
         "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
+        "-L", "$buildDir",
         "build/TestRunner.xtc")
 
     args(opts + "build/$name.xtc")
@@ -130,6 +149,7 @@ tasks.register<JavaExec>("hostAll") {
         "-verbose",
         "-L", "${xdk.buildDir}/xdk/lib/",
         "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
+        "-L", "$buildDir",
         "build/TestRunner.xtc")
 
     val names = listOf<String>(

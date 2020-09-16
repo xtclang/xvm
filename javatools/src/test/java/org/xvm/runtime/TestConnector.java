@@ -41,18 +41,21 @@ public class TestConnector
         // the working directory is assumed to be:
         //      $prj/manualTests
         // the build directory would be:
-        //      $prj/build
+        //      $prj/manualTests/build
         // and the system libraries then could be found at :
         //      $prj/xdk/build/xdk/lib,
         //      $prj/xdk/build/xdk/javatools/javatools_bridge.xtc
 
+        int cLibs    = 3;
         int cModules = asArg.length;
 
-        List<String> listCompileArgs = new ArrayList<>(6 + cModules);
+        List<String> listCompileArgs = new ArrayList<>(cLibs*2 + 2 + cModules);
         listCompileArgs.add("-L");
         listCompileArgs.add("../xdk/build/xdk/lib");
         listCompileArgs.add("-L");
         listCompileArgs.add("../xdk/build/xdk/javatools/javatools_bridge.xtc");
+        listCompileArgs.add("-L");
+        listCompileArgs.add("./build");
         listCompileArgs.add("-o");
         listCompileArgs.add("./build");
         listCompileArgs.addAll(Arrays.asList(asArg));
@@ -67,11 +70,11 @@ public class TestConnector
             asNames[i] = compiler.getModuleName(listSrcFile.get(i));
             }
 
-        ModuleRepository[] aRepo = new ModuleRepository[3 + cModules];
+        ModuleRepository[] aRepo = new ModuleRepository[1 + cLibs + cModules];
         aRepo[0] = new BuildRepository();
 
         List<File> listSysPaths = compiler.options().getModulePath();
-        for (int i = 0; i < 2; ++i)
+        for (int i = 0; i < cLibs; ++i)
             {
             File file = listSysPaths.get(i);
             aRepo[1 + i] = file.isDirectory()
@@ -86,7 +89,7 @@ public class TestConnector
             {
             File file = new File(dirBuild, asNames[i] + ".xtc");
 
-            aRepo[3 + i] = file.isDirectory()
+            aRepo[1 + cLibs + i] = file.isDirectory()
                 ? new DirRepository(file, true)
                 : new FileRepository(file, true);
             }
