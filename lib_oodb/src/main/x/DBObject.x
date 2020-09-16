@@ -233,12 +233,12 @@ interface DBObject
     @RO Boolean transactional;
 
     /**
-     * Represents a change within to a transactional database object.
+     * Represents a change within a transactional database object.
      */
     interface Change
         {
         /**
-         * The state of othe `DBOject`, before this change was made.
+         * The state of of the `DBObject`, before this change was made.
          *
          * The returned `DBObject` does not allow mutation.
          *
