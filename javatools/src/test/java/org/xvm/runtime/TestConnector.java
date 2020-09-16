@@ -46,17 +46,16 @@ public class TestConnector
         //      $prj/xdk/build/xdk/lib,
         //      $prj/xdk/build/xdk/javatools/javatools_bridge.xtc
 
-        int cLibs    = 3;
         int cModules = asArg.length;
 
-        List<String> listCompileArgs = new ArrayList<>(cLibs*2 + 2 + cModules);
+        List<String> listCompileArgs = new ArrayList<>(8 + cModules);
+        listCompileArgs.add("-o");
+        listCompileArgs.add("./build");
         listCompileArgs.add("-L");
         listCompileArgs.add("../xdk/build/xdk/lib");
         listCompileArgs.add("-L");
         listCompileArgs.add("../xdk/build/xdk/javatools/javatools_bridge.xtc");
         listCompileArgs.add("-L");
-        listCompileArgs.add("./build");
-        listCompileArgs.add("-o");
         listCompileArgs.add("./build");
         listCompileArgs.addAll(Arrays.asList(asArg));
 
@@ -70,10 +69,12 @@ public class TestConnector
             asNames[i] = compiler.getModuleName(listSrcFile.get(i));
             }
 
+        List<File> listSysPaths = compiler.options().getModulePath();
+        int        cLibs        = listSysPaths.size();
+
         ModuleRepository[] aRepo = new ModuleRepository[1 + cLibs + cModules];
         aRepo[0] = new BuildRepository();
 
-        List<File> listSysPaths = compiler.options().getModulePath();
         for (int i = 0; i < cLibs; ++i)
             {
             File file = listSysPaths.get(i);

@@ -953,7 +953,7 @@ public abstract class Launcher
                                                 {
                                                 repo.add(file);
                                                 }
-                                            else
+                                            else if (file.exists())
                                                 {
                                                 log(Severity.ERROR, (file.isDirectory() ? "Directory"
                                                         : "File") + " not readable: \"" + file + "\"");
