@@ -81,4 +81,27 @@ interface DBLog<Element>
      * @param retainSize  the maximum number of bytes to retain
      */
     void truncateExcept(UInt retainSize);
+
+    /**
+     * Represents additions to a transactional database log.
+     */
+    @Override
+    interface Change
+        {
+        /**
+         * The elements appended to the `Log`.
+         *
+         * The returned `List` does not allow mutation, but if the transaction is still processing,
+         * any items subsequently logged within the transaction _may_ appear in the list.
+         */
+        List<Element> added;
+
+        /**
+         * The elements removed from the `Log`, if any log truncation occurred.
+         *
+         * The returned `List` does not allow mutation, but if the transaction is still processing,
+         * any items subsequently logged within the transaction _may_ appear in the list.
+         */
+        List<Element> removed;
+        }
     }

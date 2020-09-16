@@ -154,4 +154,21 @@ interface DBCounter
         decrement();
         return result;
         }
+
+    /**
+     * Represents values emitted and/or operations conducted by a transactional database counter.
+     */
+    @Override
+    interface Change
+        {
+        /**
+         * True iff the counter was read during the transaction.
+         */
+        @RO Boolean valueRead;
+
+        /**
+         * True iff the counter was written during the transaction.
+         */
+        @RO Boolean valueModified;
+        }
     }

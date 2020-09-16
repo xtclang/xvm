@@ -231,4 +231,76 @@ interface DBObject
      * * A [DBSchema] is stateless, and thus it is non-transactional.
      */
     @RO Boolean transactional;
+
+    /**
+     * Represents a change within to a transactional database object.
+     */
+    interface Change
+        {
+        /**
+         * The state of othe `DBOject`, before this change was made.
+         *
+         * The returned `DBObject` does not allow mutation.
+         *
+         * When evaluating a historical change, this property may be expensive to obtain.
+         */
+        @RO DBObject pre;
+
+        /**
+         * The contents of the `DBObject`, after this change was made.
+         *
+         * The returned `DBObject` does not allow mutation.
+         *
+         * When evaluating a historical change, this property may be expensive to obtain.
+         */
+        @RO DBObject post;
+        }
+
+    /**
+     * Represents an automatic response to a change that occurs when a transaction commits.
+     */
+    interface Trigger
+        {
+        /**
+         * `True` iff the trigger is interested in changes made by other triggers. It is possible
+         * for cascading triggers to result in infinite loops; in such a case, the database will be
+         * killed (if the database engine is well implemented) or lock up (if it is not).
+         */
+        @RO Boolean cascades.get()
+            {
+            // when possible, a trigger should not cascade
+            return False;
+            }
+
+        /**
+         * Determine if this Trigger applies to the specified change. This method must **not** make
+         * any further modifications to the database.
+         *
+         * @param change  the change being evaluated
+         *
+         * @return `True` iff the trigger is interested in the specified change
+         */
+        Boolean appliesTo(Change change)
+            {
+            return True;
+            }
+
+        /**
+         * `True` iff the trigger functionality is supposed to fire _after_ the transaction commits.
+         */
+        @RO Boolean async.get()
+            {
+            // when possible, a trigger should be asynchronous, but the typical use case is a
+            // trigger that needs to execute within a transaction in order to be able to prevent
+            // the transaction from committing if something about the transaction is wrong
+            return False;
+            }
+
+        /**
+         * Execute the Trigger functionality. This method may make modifications to the database.
+         *
+         * @param change  the change that the Trigger is firing in response to
+         */
+        void process(Change change);
+        }
     }

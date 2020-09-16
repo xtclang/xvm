@@ -37,39 +37,39 @@ interface DBMap<Key, Value>
         }
 
     /**
-     * An interface representing a generic trigger on a `DBMap`.
+     * Represents a change to a database `Map`. Changes are represented by the key/value pairs that
+     * are added and/or removed from the map:
+     *
+     * * An "insert" is represented by an entry in the [added] map;
+     * * An "update" is represented by an entry in both the [added] and the [removed] map;
+     * * A "delete" is represented by an entry in the [removed] map;
      */
-    interface Trigger
+    @Override
+    interface Change
         {
         /**
-         * `True` iff the trigger is interested in changes made by other triggers. It is possible
-         * for cascading triggers to result in infinite loops; in such a case, the database will be
-         * killed (if the database engine is well implemented) or lock up (if it is not).
+         * The key/value pairs inserted-into/updated-in the `DBMap`.
+         *
+         * The returned `Map` does not allow mutation, but if the transaction is still processing,
+         * any items subsequently added or updated within the transaction _may_ appear in the `Map`.
+         *
+         * To construct the [post] map from the [pre] map, make a copy of the [pre] map, then remove
+         * the key/value pairs specified by [removed] from that map, then add the key/value pairs
+         * specified by [added] into that map.
          */
-        @RO Boolean cascades;
+        @RO Map<Key, Value> added;
 
         /**
-         * Determine if this Trigger applies to the specified change. This method must **not** make
-         * any further modifications to the database.
+         * The key/value pairs updated-in/deleted-from the `Map`.
          *
-         * @param oldEntry  the old value
-         * @param newEntry  the new value
+         * The returned `Map` does not allow mutation, but if the transaction is still processing,
+         * any items subsequently updated or removed within the transaction _may_ appear in the
+         * `Map`.
          *
-         * @return `True` iff the trigger is interested in the specified change
+         * To construct the [post] map from the [pre] map, make a copy of the [pre] map, then remove
+         * the key/value pairs specified by [removed] from that map, then add the key/value pairs
+         * specified by [added] into that map.
          */
-        Boolean appliesTo(Entry oldEntry, Entry newEntry);
-
-        /**
-         * `True` iff the trigger fires _after_ the transaction commits.
-         */
-        @RO Boolean async;
-
-        /**
-         * Execute the Trigger functionality. This method may make modifications to the database.
-         *
-         * @param oldEntry  the old value
-         * @param newEntry  the new value
-         */
-        void process(Entry oldEntry, Entry newEntry);
+        @RO Map<Key, Value> removed;
         }
     }

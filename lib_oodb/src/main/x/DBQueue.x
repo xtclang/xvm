@@ -31,4 +31,30 @@ interface DBQueue<Element>
         {
         return True;
         }
+
+    /**
+     * Represents a change to a database queue.
+     *
+     * The contents of the "pre" and "post" queues may not be available, or may be extremely
+     * expensive to provide to the caller.
+     */
+    @Override
+    interface Change
+        {
+        /**
+         * The elements appended to the `Queue`.
+         *
+         * The returned `List` does not allow mutation, but if the transaction is still processing,
+         * any items subsequently added within the transaction _may_ appear in the list.
+         */
+        List<Element> added;
+
+        /**
+         * The elements taken from the `Queue`.
+         *
+         * The returned `List` does not allow mutation, but if the transaction is still processing,
+         * any items subsequently taken within the transaction _may_ appear in the list.
+         */
+        List<Element> removed;
+        }
     }
