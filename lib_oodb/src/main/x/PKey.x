@@ -1,0 +1,4 @@
+mixin PKey
+        into Property
+    {
+    }

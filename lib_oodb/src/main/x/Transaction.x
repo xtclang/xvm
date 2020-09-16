@@ -121,7 +121,7 @@ interface Transaction
      * The user that initiated this transaction, or `Null` if the transaction was initiated by the
      * database.
      */
-    @RO Database.User? user;
+    @RO Connection.User? user;
 
     /**
      * A list of transaction _conditions_ that indicate additional requirements that must be met for
@@ -312,7 +312,7 @@ interface Transaction
          * any items subsequently logged within the transaction _may_ appear in the list.
          *
          * In the historical transaction record, this information is likely to be discarded, and
-         * thus is likely to beunavailable.
+         * thus is likely to be unavailable.
          */
         List<Element> added;
         }

@@ -213,7 +213,10 @@ interface DBObject
      *                          reference is passed that is either unregistered with the database or
      *                          has unsupported argument types
      */
-    Tuple dbInvoke(String | Function fn, Tuple args = Tuple:(), (Duration|DateTime)? when = Null);
+    Tuple dbInvoke(String | Function fn, Tuple args = Tuple:(), (Duration|DateTime)? when = Null)
+        {
+        throw new IllegalArgument($"Function does not exists: {fn}");
+        }
 
     /**
      * Indicates whether the database object is both stateful and transactional, meaning that

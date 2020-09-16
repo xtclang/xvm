@@ -1,7 +1,7 @@
 /**
  * A database.
  */
-interface Database
+interface Connection<Schema extends DBSchema>
         extends DBSchema
     {
     /**
@@ -146,11 +146,11 @@ interface Database
      *
      * @throws IllegalState  if a Transaction already exists
      */
-    Transaction createTransaction(Duration? timeout     = Null,
-                                  String?   name        = Null,
-                                  UInt?     id          = Null,
-                                  Priority  priority    = Normal,
-                                  Int       retryCount  = 0);
+    Transaction+Schema createTransaction(Duration? timeout     = Null,
+                                         String?   name        = Null,
+                                         UInt?     id          = Null,
+                                         Priority  priority    = Normal,
+                                         Int       retryCount  = 0);
 
     /**
      * Determine if there is already a transaction, and if there is, obtain it.
@@ -158,7 +158,7 @@ interface Database
      * @return True iff there is an existing transaction
      * @return (conditional) the [Transaction] object
      */
-    conditional Transaction currentTransaction();
+    conditional Transaction+Schema currentTransaction();
 
     /**
      * Obtain the existing transaction, or create one if one does not already exist.
@@ -172,13 +172,13 @@ interface Database
      *
      * @return the [Transaction] object
      */
-    Transaction ensureTransaction(Duration? timeout     = Null,
-                                  String?   name        = Null,
-                                  UInt?     id          = Null,
-                                  Priority  priority    = Normal,
-                                  Int       retryCount  = 0)
+    Transaction+Schema ensureTransaction(Duration? timeout     = Null,
+                                         String?   name        = Null,
+                                         UInt?     id          = Null,
+                                         Priority  priority    = Normal,
+                                         Int       retryCount  = 0)
         {
-        if (Transaction tx := currentTransaction())
+        if (Transaction+Schema tx := currentTransaction())
             {
             return tx;
             }
