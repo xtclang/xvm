@@ -66,7 +66,9 @@ public class Child
         ServiceHandle hService = getService((GenericHandle) hTarget);
         return hService == null || hService.f_context == frame.f_context || hTarget.isAtomic(idProp)
             ? super.getPropertyValue(frame, hTarget, idProp, iReturn)
-            : hService.f_context.sendProperty01Request(frame, idProp, iReturn, this::getPropertyValue);
+            : hService.f_context.sendProperty01Request(frame, idProp, iReturn,
+                    (frameCaller, hSvc, id, hVal) ->
+                        super.getPropertyValue(frameCaller, hTarget, id, hVal));
         }
 
     @Override
@@ -87,7 +89,9 @@ public class Child
         ServiceHandle hService = getService((GenericHandle) hTarget);
         return hService == null || hService.f_context == frame.f_context || hTarget.isAtomic(idProp)
             ? super.setPropertyValue(frame, hTarget, idProp, hValue)
-            : hService.f_context.sendProperty10Request(frame, idProp, hValue, this::setPropertyValue);
+            : hService.f_context.sendProperty10Request(frame, idProp, hValue,
+                    (frameCaller, hSvc, id, hVal) ->
+                        super.setPropertyValue(frameCaller, hTarget, id, hVal));
         }
 
     @Override
