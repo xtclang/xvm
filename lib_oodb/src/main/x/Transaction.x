@@ -1,10 +1,22 @@
 /**
  * A database transaction.
  */
-interface Transaction
-        extends DBSchema
+interface Transaction<Schema extends RootSchema>
         extends Closeable
     {
+    /**
+     * The root database schema. The difference between `DBObject`s obtained from this `Schema` and
+     * `DBObject`s obtained from the [connection] property is that the DBObjects obtained from this
+     * `Schema` are implicitly (and potentially explicitly) tied to this transaction, and should not
+     * be used outside of the context of this transaction.
+     */
+    @RO Schema schema;
+
+    /**
+     * The database connection. This property is only available from within an `Active` transaction.
+     */
+    @RO (Connection<Schema> + Schema) connection;
+
     enum Status {Active, Committing, Committed, RolledBack}
 
     /**
@@ -48,11 +60,15 @@ interface Transaction
      * Commit the transaction.
      *
      * @return `True` iff the commit succeeded
+     *
+     * @throws IllegalState  if the Transaction has already rolled back
      */
     Boolean commit();
 
     /**
      * Roll back the transaction.
+     *
+     * @throws IllegalState  if the Transaction has already committed
      */
     void rollback();
 
@@ -121,18 +137,23 @@ interface Transaction
      * The user that initiated this transaction, or `Null` if the transaction was initiated by the
      * database.
      */
-    @RO Connection.User? user;
-
-    /**
-     * A list of transaction _conditions_ that indicate additional requirements that must be met for
-     * the transaction to be able to commit. The conditions are not expected to be retained in the
-     * historical transaction record.
-     */
-    @RO List<function Boolean()> conditions;
+    @RO DBUser? user;
 
     /**
      * The contents of the transaction, which define the total net change represented by the
      * transaction.
      */
     @RO Map<String, DBObject.Change> contents;
+
+    /**
+     * Add a transaction _condition_ that indicates additional requirements that must be met for
+     * the transaction to be able to commit.
+     *
+     * @param condition  the condition that can be evaluated to determine if the transaction will be
+     *                   permitted to commit (`True` result) or forced to roll back (`False` result)
+     *
+     * @throws IllegalArgument  if a `function` is provided from which no corresponding [DBFunction]
+     *                          object can be inferred
+     */
+    void addCondition(Condition condition);
     }
