@@ -369,10 +369,11 @@ public class FileStructure
      */
     public String linkModules(ModuleRepository repository, boolean fRuntime)
         {
-        return linkModules(repository, new HashSet<>(), fRuntime);
+        return linkModules(repository, this, new HashSet<>(), fRuntime);
         }
 
-    private String linkModules(ModuleRepository repository, Set<String> setFilesDone, boolean fRuntime)
+    private String linkModules(ModuleRepository repository, FileStructure structTop,
+                               Set<String> setFilesDone, boolean fRuntime)
         {
         if (!setFilesDone.add(getModuleName()))
             {
@@ -436,6 +437,11 @@ public class FileStructure
                     assert structFingerprint != null;
                     structFingerprint.setFingerprintOrigin(structUnlinked);
 
+                    if (structTop.getChild(sModule) == null)
+                        {
+                        structTop.addChild(structFingerprint);
+                        }
+
                     FileStructure fileDownstream = structUnlinked.getFileStructure();
                     if (!setFilesDone.contains(sModule))
                         {
@@ -455,7 +461,8 @@ public class FileStructure
         for (FileStructure fileDownstream : listFilesTodo)
             {
             assert !fRuntime;
-            String sMissingDownstream = fileDownstream.linkModules(repository, setFilesDone, false);
+            String sMissingDownstream = fileDownstream.linkModules(repository, structTop,
+                                                setFilesDone, false);
             if (sMissingDownstream != null && sMissing == null)
                 {
                 sMissing = sMissingDownstream;
