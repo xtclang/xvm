@@ -27,6 +27,7 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.template.Child;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
@@ -364,7 +365,9 @@ public class TemplateRegistry
 
                 case CLASS:
                 case INTERFACE:
-                    template = new xObject(this, structClass, false);
+                    template = structClass.isVirtualChild()
+                        ? new Child(this, structClass, false)
+                        : new xObject(this, structClass, false);
                     break;
 
                 case SERVICE:
