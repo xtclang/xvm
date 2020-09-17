@@ -330,7 +330,10 @@ public class Compiler
      */
     public void logRemainingDeferredAsErrors()
         {
-        m_mgr.logDeferredAsErrors(m_errs);
+        if (!m_errs.hasSeriousErrors())
+            {
+            m_mgr.logDeferredAsErrors(m_errs);
+            }
         }
 
     /**

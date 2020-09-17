@@ -572,14 +572,15 @@ public class NamedTypeExpression
                     }
 
                 Constant constId = resolver.getConstant();
+                Format   format  = constId.getFormat();
                 boolean fProceed = true;
-                if (!constId.getFormat().isTypeable())
+                if (!format.isTypeable())
                     {
                     errsTemp.merge();
                     log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, constId.getValueString());
                     fProceed = false;
                     }
-                else if (constId.getFormat() == Format.Property)
+                else if (format == Format.Property || format == Format.Typedef)
                     {
                     if (paramTypes != null)
                         {
@@ -587,7 +588,7 @@ public class NamedTypeExpression
                         log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                         fProceed = false;
                         }
-                    else if (((PropertyConstant) constId).isFormalType()
+                    else if (format == Format.Property && ((PropertyConstant) constId).isFormalType()
                             && names != null && names.size() > 1)
                         {
                         errsTemp.merge();
