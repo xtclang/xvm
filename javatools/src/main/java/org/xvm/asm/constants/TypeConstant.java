@@ -3579,12 +3579,15 @@ public abstract class TypeConstant
                 if (idDelegate != null)
                     {
                     // ensure that the delegating body "belongs" to this layer in the chain
-                    MethodBody     head         = methodResult.getHead();
-                    MethodConstant idMethod     = head.getIdentity().ensureNestedIdentity(pool, constId);
-                    MethodBody     bodyDelegate = new MethodBody(
-                        idMethod, head.getSignature(), Implementation.Delegating, idDelegate);
-
-                    methodResult = new MethodInfo(Handy.appendHead(methodResult.getChain(), bodyDelegate));
+                    MethodBody     head     = methodResult.getHead();
+                    MethodConstant idMethod = head.getIdentity().ensureNestedIdentity(pool, constId);
+                    if (idMethod.getNestedDepth() == 2)
+                        {
+                        MethodBody bodyDelegate = new MethodBody(
+                            idMethod, head.getSignature(), Implementation.Delegating, idDelegate);
+                        methodResult = new MethodInfo(
+                            Handy.appendHead(methodResult.getChain(), bodyDelegate));
+                        }
                     }
                 }
 

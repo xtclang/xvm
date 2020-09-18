@@ -1099,8 +1099,11 @@ public class PropertyInfo
                 {
                 idGet = (MethodConstant) idNested.appendNestedIdentity(pool(), idGet.getSignature());
                 }
-            m_chainGet = chain =
-                augmentPropertyChain(infoType.getOptimizedMethodChain(idGet), infoType, idGet);
+
+            m_chainGet = chain = isDelegating()
+                    ? createDelegatingChain(infoType, idGet)
+                    : augmentPropertyChain(
+                            infoType.getOptimizedMethodChain(idGet), infoType, idGet);
             }
 
         return chain;
@@ -1136,8 +1139,11 @@ public class PropertyInfo
                 {
                 idSet = (MethodConstant) idNested.appendNestedIdentity(pool(), idSet.getSignature());
                 }
-            m_chainSet = chain =
-                augmentPropertyChain(infoType.getOptimizedMethodChain(idSet), infoType, idSet);
+
+            m_chainSet = chain = isDelegating()
+                    ? createDelegatingChain(infoType, idSet)
+                    : augmentPropertyChain(
+                            infoType.getOptimizedMethodChain(idSet), infoType, idSet);
             }
 
         return chain;
@@ -1222,7 +1228,7 @@ public class PropertyInfo
      *
      * @return the method chain iff the property exists; otherwise null
      */
-    public MethodBody[] augmentPropertyChain(MethodBody[] chain, TypeInfo infoType, MethodConstant idMethod)
+    protected MethodBody[] augmentPropertyChain(MethodBody[] chain, TypeInfo infoType, MethodConstant idMethod)
         {
         if (chain == null || chain.length == 0)
             {
@@ -1251,20 +1257,6 @@ public class PropertyInfo
                     new MethodBody(idMethod, idMethod.getSignature(),
                             Implementation.Field, getHead().getIdentity())
                     };
-                }
-            else if (isDelegating())
-                {
-                PropertyStructure prop   = getHead().getStructure();
-                ClassStructure    clz    = infoType.getClassStructure();
-                MethodStructure   method = clz.ensurePropertyDelegation(prop, idMethod.getSignature(),
-                        getDelegate().getName());
-
-                MethodConstant idDelegate = method.getIdentityConstant();
-                MethodBody     body       = new MethodBody(idDelegate,
-                        idDelegate.getSignature(), Implementation.Explicit);
-                body.setMethodStructure(method);
-
-                chain = new MethodBody[]{body};
                 }
             else
                 {
@@ -1306,6 +1298,29 @@ public class PropertyInfo
                 }
             }
         return chain;
+        }
+
+    /**
+     * Augment the method chain for a delegating property accessor represented by this property info.
+     *
+     * @param infoType  the enclosing TypeInfo
+     * @param idMethod  the accessor method constant
+     *
+     * @return the delegating method chain
+     */
+    protected MethodBody[] createDelegatingChain(TypeInfo infoType, MethodConstant idMethod)
+        {
+        PropertyStructure prop   = getHead().getStructure();
+        ClassStructure    clz    = infoType.getClassStructure();
+        MethodStructure   method = clz.ensurePropertyDelegation(prop, idMethod.getSignature(),
+                getDelegate().getName());
+
+        MethodConstant idDelegate = method.getIdentityConstant();
+        MethodBody     body       = new MethodBody(idDelegate,
+                idDelegate.getSignature(), Implementation.Explicit);
+        body.setMethodStructure(method);
+
+        return new MethodBody[]{body};
         }
 
     /**
