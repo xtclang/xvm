@@ -8,7 +8,7 @@ interface DBObject
     /**
      * The parent database object, or `Null` if this is the root (the database itself).
      */
-    @RO DBObject? dbParent;
+    @RO DBObject!? dbParent;
 
     /**
      * Each `DBObject` has a uniquely identifying `String` name that identifies it within its parent
@@ -36,7 +36,7 @@ interface DBObject
      * Each `DBObject` potentially contains nested database objects. This `Map` represents all of
      * the nested database objects, keyed by the [dbName] of each nested `DBObject`.
      */
-    @RO Map<String, DBObject> dbChildren;
+    @RO Map<String, DBObject!> dbChildren;
 
     /**
      * Obtain the specified `DBObject` by its [dbName], or by its [dbPath] relative to the `dbPath`
@@ -46,7 +46,7 @@ interface DBObject
      *
      * @return the specified `DBObject`, or `Null` if the path or name did not identify a `DBObject`
      */
-    DBObject? dbObjectFor(String path)
+    DBObject!? dbObjectFor(String path)
         {
         if (DBObject dbo := dbChildren.get(path))
             {
