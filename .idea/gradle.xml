@@ -15,6 +15,7 @@
             <option value="$PROJECT_DIR$/javatools_bridge" />
             <option value="$PROJECT_DIR$/javatools_launcher" />
             <option value="$PROJECT_DIR$/lib_json" />
+            <option value="$PROJECT_DIR$/lib_jsondb" />
             <option value="$PROJECT_DIR$/lib_oodb" />
             <option value="$PROJECT_DIR$/manualTests" />
             <option value="$PROJECT_DIR$/unicode" />
