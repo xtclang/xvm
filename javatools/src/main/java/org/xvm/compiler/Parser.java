@@ -4224,11 +4224,8 @@ public class Parser
      *
      * CollectionLiteral
      *     "[" ExpressionList-opt "]"                               # compile/runtime type is Array
-     *     TypeExpression ":[" ExpressionList-opt "]"               # type must be Collection, List,
-     *                                                              # Sequence, or Array
-     *
-     * TODO Set
-     *
+     *     TypeExpression ":[" ExpressionList-opt "]"               # type must be Collection, Set,
+     *                                                              # List, or Array
      * MapLiteral
      *     "[" Entries-opt "]"                                      # compile/runtime type is Map
      *     TypeExpression ":[" Entries-opt "]"                      # type must be Map
@@ -4270,6 +4267,7 @@ public class Parser
                 // this could be either an array or a range
                 // (fall through)
             case "Collection":
+            case "Set":
             case "List":
             case "Array":
                 {

@@ -141,7 +141,7 @@ public abstract class OpVar
     /**
      * Helper method to calculate a ClassComposition for a sequence class.
      *
-     * @param frame         the current frame
+     * @param frame     the current frame
      * @param typeList  the sequence type
      *
      * @return the corresponding class composition

@@ -31,8 +31,6 @@ import org.xvm.asm.op.Var_SN;
  *     "Collection:[" ExpressionList-opt "]"
  *     "List:[" ExpressionList-opt "]"
  *     "Array:[" ExpressionList-opt "]"
- *
- * also TODO:
  *     "Set:[" ExpressionList-opt "]"
  * </pre>
  */

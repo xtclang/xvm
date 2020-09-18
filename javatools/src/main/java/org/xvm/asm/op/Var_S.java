@@ -124,7 +124,7 @@ public class Var_S
     protected int complete(Frame frame, int iPC, ObjectHandle[] ahArg)
         {
         TypeConstant     typeList = frame.resolveType(m_nType);
-        ClassComposition clzArray     = getArrayClass(frame, typeList);
+        ClassComposition clzArray = getArrayClass(frame, typeList);
 
         ArrayHandle hArray = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahArg);
 
