@@ -94,10 +94,10 @@ class ConstHelper
         }
 
     /**
-     * Helper function to create an immutable ListMap out of two arrays
+     * Helper function to create an immutable ListSet out of an array.
      */
-//    static <Key, Value> immutable ListMap<Key, Value> crateListMap(Key[] keys, Value[] values)
-//        {
-//        return new ListMap<Key, Value>(keys, values).freeze(True);
-//        }
+    static <Element> immutable ListSet<Element> createListSet(immutable Element[] values)
+        {
+        return new ListSet<Element>(values).makeImmutable();
+        }
     }

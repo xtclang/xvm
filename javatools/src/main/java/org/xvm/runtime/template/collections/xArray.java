@@ -135,6 +135,10 @@ public class xArray
         // cache Mutability template
         MUTABILITY = (xEnum) f_templates.getTemplate("collections.Array.Mutability");
 
+        // cache "ConstHelper.createListSet" method
+        ClassStructure clzHelper = f_templates.getClassStructure("_native.ConstHelper");
+        CREATE_LIST_SET = clzHelper.findMethod("createListSet", 2);
+
         // mark native properties and methods
         markNativeProperty("capacity");
         markNativeProperty("mutability");
@@ -190,7 +194,20 @@ public class xArray
         {
         ArrayConstant constArray = (ArrayConstant) constant;
 
-        assert constArray.getFormat() == Constant.Format.Array;
+        boolean fSet;
+        switch (constArray.getFormat())
+            {
+            case Array:
+                fSet = false;
+                break;
+
+            case Set:
+                fSet = true;
+                break;
+
+            default:
+                throw new IllegalStateException();
+            }
 
         TypeConstant typeArray = constArray.getType();
         Constant[]   aconst    = constArray.getValue();
@@ -215,15 +232,44 @@ public class xArray
             }
 
         ClassComposition clzArray = f_templates.resolveClass(typeArray);
-        if (fDeferred)
+        if (fSet)
             {
-            Frame.Continuation stepNext = frameCaller -> frameCaller.pushStack(
-                    ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
-            return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-            }
+            TypeConstant typeEl = typeArray.getParamType(0);
 
-        return frame.pushStack(
-                ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
+            if (fDeferred)
+                {
+                Frame.Continuation stepNext = frameCaller ->
+                    createListSet(frameCaller, typeEl, ahValue);
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                }
+
+            return createListSet(frame, typeEl, ahValue);
+            }
+        else
+            {
+            if (fDeferred)
+                {
+                Frame.Continuation stepNext = frameCaller -> frameCaller.pushStack(
+                        ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                }
+
+            return frame.pushStack(
+                    ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
+            }
+        }
+
+    private int createListSet(Frame frame, TypeConstant typeEl, ObjectHandle[] ahValue)
+        {
+        ConstantPool     pool      = frame.poolContext();
+        TypeConstant     typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeEl);
+        ClassComposition clzArray  = f_templates.resolveClass(typeArray);
+
+        ObjectHandle[] ahVar = new ObjectHandle[CREATE_LIST_SET.getMaxVars()];
+        ahVar[0] = typeEl.getTypeHandle();
+        ahVar[1] = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue);
+
+        return frame.call1(CREATE_LIST_SET, null, ahVar, Op.A_STACK);
         }
 
     /**
@@ -1242,4 +1288,6 @@ public class xArray
     private static ClassComposition s_clzStringArray;
     private static ClassComposition s_clzObjectArray;
     private static Map<TypeConstant, xArray> ARRAY_TEMPLATES;
+
+    private static MethodStructure CREATE_LIST_SET;
     }

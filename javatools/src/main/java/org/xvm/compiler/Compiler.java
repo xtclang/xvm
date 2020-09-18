@@ -1249,6 +1249,10 @@ public class Compiler
      */
     public static final String BAD_LITERAL                         = "COMPILER-163";
     /**
+     * The Set constant contains duplicate values: {0}.
+     */
+    public static final String SET_VALUES_DUPLICATE                = "COMPILER-164";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
