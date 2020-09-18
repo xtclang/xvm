@@ -121,7 +121,7 @@ public class ListExpression
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         int cElements = exprs.size();
-        if (cElements > 0 && typeRequired != null && typeRequired.isA(pool().typeList()))
+        if (cElements > 0 && typeRequired != null && typeRequired.isA(pool().typeCollection()))
             {
             TypeConstant typeElement = typeRequired.resolveGenericType("Element");
             TypeFit      fit         = TypeFit.Fit;
@@ -148,8 +148,8 @@ public class ListExpression
             }
 
         ConstantPool pool = pool();
-        if (typeOut != null && typeOut.isA(pool.typeList()) &&
-            typeIn  != null && typeIn .isA(pool.typeList()))
+        if (typeOut != null && typeOut.isA(pool.typeCollection()) &&
+            typeIn  != null && typeIn .isA(pool.typeCollection()))
             {
             typeOut = typeOut.resolveGenericType("Element");
             typeIn  = typeIn .resolveGenericType("Element");
@@ -182,10 +182,13 @@ public class ListExpression
             typeElement = pool.typeObject();
             }
 
+        TypeConstant typeActual = typeRequired == null || !typeRequired.isA(pool.typeSet())
+                ? pool.typeArray()
+                : pool.typeSet();
         TypeExpression exprTypeOld = type;
         if (exprTypeOld != null)
             {
-            TypeConstant   typeSeqType = pool.typeList().getType();
+            TypeConstant   typeSeqType = pool.typeCollection().getType();
             TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, typeSeqType, errs);
             if (exprTypeNew == null)
                 {
@@ -198,8 +201,10 @@ public class ListExpression
                     {
                     type = exprTypeNew;
                     }
-                TypeConstant typeElementNew = exprTypeNew.ensureTypeConstant(ctx).
-                    resolveAutoNarrowingBase().resolveGenericType("Element");
+
+                typeActual = exprTypeNew.ensureTypeConstant(ctx).resolveAutoNarrowingBase();
+
+                TypeConstant typeElementNew = typeActual.resolveGenericType("Element");
                 if (typeElementNew != null)
                     {
                     typeElement = typeElementNew;
@@ -207,7 +212,7 @@ public class ListExpression
                 }
             }
 
-        TypeConstant typeActual = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeElement);
+        typeActual = pool.ensureParameterizedTypeConstant(typeActual, typeElement);
         if (cExprs > 0)
             {
             ctx = ctx.enterList();
@@ -237,8 +242,9 @@ public class ListExpression
         if (fConstant)
             {
             TypeConstant typeImpl = pool.ensureImmutableTypeConstant(
-                    pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                    typeElement == null ? pool.typeObject() : typeElement));
+                    pool.ensureParameterizedTypeConstant(
+                        typeActual.isA(pool.typeSet()) ? pool.typeSet() : pool.typeArray(),
+                        typeElement == null ? pool.typeObject() : typeElement));
             if (typeRequired == null || typeImpl.isA(typeRequired)) // Array<Element> or List<Element>
                 {
                 Constant[] aconstVal = new Constant[cExprs];

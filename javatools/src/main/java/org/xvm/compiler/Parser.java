@@ -3672,7 +3672,7 @@ public class Parser
                     }
 
                 // test to see if this is a tuple literal of the form "Tuple:(", or some other
-                // type literal of the form "type:{"
+                // type literal of the form "type:["
                 if (peek().getId() == Id.COLON)
                     {
                     Token colon = expect(Id.COLON);

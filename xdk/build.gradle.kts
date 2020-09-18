@@ -108,6 +108,7 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
             "-o", "$buildDir/xdk/lib",
             "-L", "${buildDir}/xdk/lib/Ecstasy.xtc",
             "-L", "${buildDir}/xdk/javatools/javatools_bridge.xtc",
+            "-L", "${buildDir}/xdk/lib/",
             "$jsondbMain/x/module.x")
     main = "org.xvm.tool.Compiler"
 }

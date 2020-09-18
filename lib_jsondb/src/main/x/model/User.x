@@ -1,3 +1,6 @@
+import oodb.DBUser;
+import oodb.Permission;
+
 /**
  * A database user or group.
  */
@@ -51,5 +54,7 @@ const User(UInt            id,
     @Override
     Boolean isAllowed(Permission request)
         {
+        // TODO
+        return True;
         }
     }
