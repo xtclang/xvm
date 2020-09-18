@@ -193,6 +193,10 @@ public class ObjectHeap
                 break;
 
             case Set:
+                // see xArray.createConstHandle()
+                sComponent = "collections.Array";
+                break;
+
             case MapEntry:
                 throw new UnsupportedOperationException("TODO: " + constValue);
 

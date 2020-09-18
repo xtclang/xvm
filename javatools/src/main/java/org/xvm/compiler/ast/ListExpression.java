@@ -20,6 +20,11 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Var_S;
 import org.xvm.asm.op.Var_SN;
 
+import org.xvm.compiler.Compiler;
+
+import org.xvm.util.ListSet;
+import org.xvm.util.Severity;
+
 
 /**
  * A list expression is an expression containing some number (0 or more) expressions of some common
@@ -182,9 +187,19 @@ public class ListExpression
             typeElement = pool.typeObject();
             }
 
-        TypeConstant typeActual = typeRequired == null || !typeRequired.isA(pool.typeSet())
-                ? pool.typeArray()
-                : pool.typeSet();
+        TypeConstant typeActual;
+        boolean      fSet;
+        if (typeRequired != null && typeRequired.isA(pool.typeSet()))
+            {
+            typeActual = pool.typeSet();
+            fSet       = true;
+            }
+        else
+            {
+            typeActual = pool.typeArray();
+            fSet       = false;
+            }
+
         TypeExpression exprTypeOld = type;
         if (exprTypeOld != null)
             {
@@ -243,17 +258,34 @@ public class ListExpression
             {
             TypeConstant typeImpl = pool.ensureImmutableTypeConstant(
                     pool.ensureParameterizedTypeConstant(
-                        typeActual.isA(pool.typeSet()) ? pool.typeSet() : pool.typeArray(),
+                        fSet ? pool.typeSet() : pool.typeArray(),
                         typeElement == null ? pool.typeObject() : typeElement));
-            if (typeRequired == null || typeImpl.isA(typeRequired)) // Array<Element> or List<Element>
+            if (typeRequired == null || typeImpl.isA(typeRequired)) // [Array | List | Set]<Element>
                 {
-                Constant[] aconstVal = new Constant[cExprs];
-                for (int i = 0; i < cExprs; ++i)
+                if (fSet)
                     {
-                    aconstVal[i] = listExprs.get(i).toConstant();
-                    }
+                    ListSet<Constant> listVal = new ListSet<>(cExprs);
+                    for (int i = 0; i < cExprs; ++i)
+                        {
+                        Constant constEl = listExprs.get(i).toConstant();
+                        if (!listVal.add(constEl))
+                            {
+                            log(errs, Severity.ERROR, Compiler.SET_VALUES_DUPLICATE,
+                                    constEl.getValueString());
+                            }
+                        }
 
-                constVal = pool.ensureArrayConstant(typeImpl, aconstVal);
+                    constVal = pool.ensureSetConstant(typeImpl, listVal.toArray(Constant.NO_CONSTS));
+                    }
+                else
+                    {
+                    Constant[] aconstVal = new Constant[cExprs];
+                    for (int i = 0; i < cExprs; ++i)
+                        {
+                        aconstVal[i] = listExprs.get(i).toConstant();
+                        }
+                    constVal = pool.ensureArrayConstant(typeImpl, aconstVal);
+                    }
                 }
             }
 

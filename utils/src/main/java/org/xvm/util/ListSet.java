@@ -148,7 +148,6 @@ public class ListSet<E>
         if (fNew)
             {
             addInternal(o);
-            return true;
             }
 
         return fNew;
