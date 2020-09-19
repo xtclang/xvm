@@ -21,7 +21,6 @@ module AddressBookApp
         contacts.addContact(new db.Contact("John", "Adams"));
 
         console.println("Contacts:");
-assert:debug ;
         for (db.Contact contact : contacts.values)
             {
             console.println(contact);

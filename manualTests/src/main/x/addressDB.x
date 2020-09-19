@@ -204,6 +204,12 @@ module AddressBookDB
             map = new HashMap<Key, Value>();
             }
 
+        @Override
+        @RO Collection<Value> values.get()
+            {
+            return new Array<Value>(Constant, map.values);
+            }
+
         private Map<Key, Value> map;
         }
 
