@@ -1310,15 +1310,19 @@ public class PropertyInfo
      */
     protected MethodBody[] createDelegatingChain(TypeInfo infoType, MethodConstant idMethod)
         {
-        PropertyStructure prop   = getHead().getStructure();
-        ClassStructure    clz    = infoType.getClassStructure();
-        MethodStructure   method = clz.ensurePropertyDelegation(prop, idMethod.getSignature(),
-                getDelegate().getName());
-
-        MethodConstant idDelegate = method.getIdentityConstant();
-        MethodBody     body       = new MethodBody(idDelegate,
-                idDelegate.getSignature(), Implementation.Explicit);
+        PropertyStructure propDelegate = getHead().getStructure();
+        PropertyStructure propTarget   = (PropertyStructure) getDelegate().getComponent();
+        ClassStructure    clz          = propTarget.getContainingClass();
+        MethodStructure   method       = clz.ensurePropertyDelegation(propDelegate, propTarget,
+                                            idMethod.getSignature());
+        MethodConstant    idDelegate   = method.getIdentityConstant();
+        SignatureConstant sigDelegate  = idDelegate.getSignature();
+        MethodBody        body         = new MethodBody(idDelegate, sigDelegate,
+                                            Implementation.Explicit);
         body.setMethodStructure(method);
+
+        assert sigDelegate.resolveGenericTypes(pool(), infoType.getType()).equals(
+                idMethod.getSignature());
 
         return new MethodBody[]{body};
         }

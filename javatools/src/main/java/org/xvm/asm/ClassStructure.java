@@ -2818,13 +2818,13 @@ public class ClassStructure
      * method on the specified property.
      *
      * @param prop         the property to delegate to
+     * @param propTarget   the delegation target property
      * @param sigAccessor  the delegating accessor's signature (getter vs. setter)
-     * @param sDelegate    the delegating property name
      *
      * @return a synthetic MethodStructure that has the auto-generated delegating code
      */
-    public MethodStructure ensurePropertyDelegation(PropertyStructure prop,
-                                                    SignatureConstant sigAccessor, String sDelegate)
+    public MethodStructure ensurePropertyDelegation(
+            PropertyStructure prop, PropertyStructure propTarget, SignatureConstant sigAccessor)
         {
         PropertyStructure propHost = (PropertyStructure) getChild(prop.getName());
         if (propHost == null)
@@ -2837,13 +2837,8 @@ public class ClassStructure
         MethodStructure methodDelegate = propHost.findMethod(sigAccessor);
         if (methodDelegate == null)
             {
-            ConstantPool pool         = getConstantPool();
-            TypeConstant typeFormal   = getFormalType();
-            TypeConstant typePrivate  = pool.ensureAccessTypeConstant(typeFormal, Access.PRIVATE);
-            TypeInfo     infoPrivate  = typePrivate.ensureTypeInfo();
-            PropertyInfo infoDelegate = infoPrivate.findProperty(sDelegate);
-            TypeConstant typeDelegate = infoDelegate.getType();
-            TypeConstant typeProp     = prop.getType();
+            ConstantPool pool     = getConstantPool();
+            TypeConstant typeProp = prop.getType();
 
             boolean      fGet;
             Parameter[]  aParams;
@@ -2852,39 +2847,38 @@ public class ClassStructure
                 {
                 fGet     = true;
                 aParams  = Parameter.NO_PARAMS;
-                aReturns = new Parameter[] {new Parameter(pool, typeProp, null, null, true, 0, false)};
+                aReturns = new Parameter[] {new Parameter(pool, typeProp,
+                                null, null, true, 0, false)};
                 }
             else
                 {
                 fGet     = false;
-                aParams  = new Parameter[] {new Parameter(pool, typeProp, prop.getName(), null, false, 0, false)};
+                aParams  = new Parameter[] {new Parameter(pool, typeProp,
+                                prop.getName(), null, false, 0, false)};
                 aReturns = Parameter.NO_PARAMS;
                 }
 
             methodDelegate = createMethod(false, prop.getAccess(), null,
                     aReturns, sigAccessor.getName(), aParams, true, false);
 
-            assert methodDelegate.getIdentityConstant().getSignature().equals(sigAccessor);
-
             MethodStructure.Code code       = methodDelegate.createCode();
             PropertyConstant     idDelegate = prop.getIdentityConstant();
 
-            Register regProp = new Register(typeDelegate);
-
-            code.add(new L_Get(infoDelegate.getIdentity(), regProp));
+            Register regTarget = new Register(propTarget.getType());
+            code.add(new L_Get(propTarget.getIdentityConstant(), regTarget));
 
             if (fGet)
                 {
                 Register regReturn = new Register(typeProp, Op.A_STACK);
 
-                code.add(new P_Get(idDelegate, regProp, regReturn));
+                code.add(new P_Get(idDelegate, regTarget, regReturn));
                 code.add(new Return_1(regReturn));
                 }
             else // "set"
                 {
                 Register regArg = new Register(typeProp, 0);
 
-                code.add(new P_Set(idDelegate, regProp, regArg));
+                code.add(new P_Set(idDelegate, regTarget, regArg));
                 code.add(new Return_0());
                 }
 
