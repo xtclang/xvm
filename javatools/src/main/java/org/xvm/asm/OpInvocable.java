@@ -168,7 +168,7 @@ public abstract class OpInvocable extends Op
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceMethodReturnVar(m_nRetValue, convertId(m_nMethodId), 0);
+            frame.introduceMethodReturnVar(m_nRetValue, m_nMethodId, 0);
             }
         }
 
@@ -183,7 +183,7 @@ public abstract class OpInvocable extends Op
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceMethodReturnVar(m_nRetValue, convertId(m_nMethodId), -1);
+            frame.introduceMethodReturnVar(m_nRetValue, m_nMethodId, -1);
             }
         }
 
@@ -201,7 +201,7 @@ public abstract class OpInvocable extends Op
             {
             if (frame.isNextRegister(anRet[i]))
                 {
-                frame.introduceMethodReturnVar(anRet[i], convertId(m_nMethodId), i);
+                frame.introduceMethodReturnVar(anRet[i], m_nMethodId, i);
                 }
             }
         }

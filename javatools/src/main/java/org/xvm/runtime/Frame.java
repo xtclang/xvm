@@ -1531,7 +1531,7 @@ public class Frame
      * Note: this method increments the "nextVar" index.
      *
      * @param nVar       the variable to introduce
-     * @param nMethodId  the method id (absolute)
+     * @param nMethodId  the method id (if negative - frame specific; otherwise - absolute)
      * @param index      the return value index (-1 for a Tuple)
      */
     public void introduceMethodReturnVar(int nVar, int nMethodId, int index)
@@ -2185,7 +2185,8 @@ public class Frame
     protected static final VarTypeResolver METHOD_RESOLVER = new VarTypeResolver()
         {
         /**
-         * @param nTargetReg  the method constant id (absolute) to use the return signature of
+         * @param nTargetReg  the method constant id to use the return signature of
+         *                    (if negative - frame specific; otherwise - absolute)
          * @param iAuxId      the return value index (-1 for a Tuple)
          */
         @Override
@@ -2193,7 +2194,10 @@ public class Frame
             {
             ConstantPool pool = frame.poolContext();
 
-            MethodConstant idMethod = (MethodConstant) pool.getConstant(nTargetReg);
+            MethodConstant idMethod = (MethodConstant) (nTargetReg < 0
+                ? frame.getConstant(nTargetReg)
+                : pool.getConstant(nTargetReg));
+
             return iAuxId >= 0
                 ? idMethod.getRawReturns()[iAuxId].
                     resolveGenerics(pool, frame.getGenericsResolver())
