@@ -28,9 +28,9 @@ interface Connection<Schema extends RootSchema>
      *
      * @throws IllegalState  if a Transaction already exists
      */
-    Transaction<Schema> createTransaction(Duration?            timeout     = Null,
-                                          String?              name        = Null,
-                                          UInt?                id          = Null,
-                                          Transaction.Priority priority    = Normal,
-                                          Int                  retryCount  = 0);
+    (Transaction<Schema> + Schema) createTransaction(Duration?            timeout     = Null,
+                                                     String?              name        = Null,
+                                                     UInt?                id          = Null,
+                                                     Transaction.Priority priority    = Normal,
+                                                     Int                  retryCount  = 0);
     }
