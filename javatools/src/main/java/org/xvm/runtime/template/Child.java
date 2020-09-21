@@ -2,6 +2,7 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 
 import org.xvm.asm.constants.PropertyConstant;
 
@@ -26,11 +27,25 @@ public class Child
     public Child(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
+
+        assert structure.isVirtualChild();
         }
 
     @Override
     public void initNative()
         {
+        }
+
+    @Override
+    public boolean isService()
+        {
+        ClassStructure parent = getStructure().getVirtualParent();
+        while (parent.isVirtualChild())
+            {
+            parent = parent.getVirtualParent();
+            }
+
+        return parent.getFormat() == Component.Format.SERVICE;
         }
 
     @Override

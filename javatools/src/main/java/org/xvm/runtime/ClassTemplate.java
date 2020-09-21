@@ -317,7 +317,8 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Specifies whether or not this template represents a service.
+     * Specifies whether or not this template represents a non-constant object that is allowed to
+     * be passed across service boundaries.
      */
     public boolean isService()
         {

@@ -52,7 +52,6 @@ public class IsService
     @Override
     protected int completeUnaryOp(Frame frame, ObjectHandle hValue)
         {
-        return frame.assignValue(m_nRetValue,
-            xBoolean.makeHandle(hValue.getTemplate().isService()));
+        return frame.assignValue(m_nRetValue, xBoolean.makeHandle(hValue.isService()));
         }
     }

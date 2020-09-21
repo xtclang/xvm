@@ -189,7 +189,8 @@ public abstract class ObjectHandle
         }
 
     /**
-     * @return true iff the handle represents a service
+     * @return true iff the handle is a non-constant object that is allowed to be passed across
+     *         service boundaries
      */
     public boolean isService()
         {

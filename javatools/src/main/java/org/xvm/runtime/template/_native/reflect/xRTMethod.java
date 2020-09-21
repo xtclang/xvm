@@ -219,7 +219,7 @@ public class xRTMethod
         {
         CallChain chain = hMethod.getCallChain(frame, hArg);
 
-        return frame.assignValue(iReturn, hArg.getTemplate().isService()
+        return frame.assignValue(iReturn, hArg.isService()
                 ? xRTFunction.makeAsyncHandle(chain).bindTarget(hArg)
                 : xRTFunction.makeHandle(chain, 0).bindTarget(hArg));
         }
