@@ -9,16 +9,19 @@ module AddressBookApp
 
         db.Connection dbc = db.simulateInjection();
 
-//        using (val tx = dbc.createTransaction())
-//            {
-//            tx.contacts.addContact(new db.Contact("George", "Washington"));
-//            tx.contacts.addContact(new db.Contact("John", "Adams"));
-//            }
-
         db.Contacts contacts = dbc.contacts;
 
-        contacts.addContact(new db.Contact("George", "Washington"));
-        contacts.addContact(new db.Contact("John", "Adams"));
+        db.Contact george = new db.Contact("George", "Washington");
+        db.Contact john   = new db.Contact("John", "Adams");
+
+        contacts.put(george.rolodexName, george);
+        contacts.addContact(john);
+
+        using (val tx = dbc.createTransaction())
+            {
+            tx.contacts.addPhone(george.rolodexName, new db.Phone(Work, "202-555-0000"));
+            tx.contacts.addPhone(george.rolodexName, new db.Phone(Home, "202-555-0001"));
+            }
 
         console.println("Contacts:");
         for (db.Contact contact : contacts.values)
@@ -29,4 +32,10 @@ module AddressBookApp
 
     // ----- AUTO-GENERATED PROXY ------------------------------------------------------------------
 
+
+    const ConnectionFront(db.Connection backConnection)
+            implements db.Connection
+        {
+
+        }
     }
