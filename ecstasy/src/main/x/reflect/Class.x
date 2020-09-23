@@ -12,12 +12,12 @@ import reflect.ClassTemplate.Composition;
  *   that would have resulted, does not come into existence, and never existed.
  * * An object that comes into existence knows the Class that created it. The object is _of_ that
  *   Class.
- * * From inside an object, the Class of the object is `this:class`. From outside of the object,
- *   the class may be obtained from the object's type iff the type is _classy_; for example, one
- *   one can obtain the Class for an object `o`: `Class c = &o.actualClass;`.
- *   However, an object that is injected into a container may hide the _classy_ `actualType` and
- *   only expose an interface type, which results in the class of the injected object being hidden
- *   from the code running inside the container.
+ * * From inside an object, the Class of the object is `this:class`. From outside of the object, the
+ *   class may be obtained from the object's type iff the type is _classy_; for example, one can
+ *   obtain the Class for an object `o`: `Class c = &o.actualClass;`. However, an object that is
+ *   injected into a container may hide the _classy_ `actualType` and only expose an interface type,
+ *   which results in the class of the injected object being hidden from the code running inside the
+ *   container.
  * * Since _everything is an object_, it follows that everything -- all objects -- were created,
  *   each from its own Class, and therefore each _of_ its own Class.
  * * Each Class is itself an object. Like all objects, each Class object is itself _of a_ Class. As
