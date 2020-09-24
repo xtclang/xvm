@@ -1033,6 +1033,12 @@ public class NamedTypeExpression
                         ClassConstant  idBase  = ((ClassConstant) idClass).getOutermost();
                         ClassStructure clzBase = (ClassStructure) idBase.getComponent();
 
+                        if (clzBase.containsUnresolvedContribution())
+                            {
+                            return new UnresolvedTypeConstant(pool,
+                                new UnresolvedNameConstant(pool, clzTarget.getName()));
+                            }
+
                         // Note: keep the formal types when in a constructor
                         boolean fFormalParent = !(component instanceof MethodStructure &&
                                             ((MethodStructure) component).isFunction());
@@ -1067,6 +1073,11 @@ public class NamedTypeExpression
                     ClassConstant  idBase  = idTarget.getAutoNarrowingBase();
                     ClassStructure clzBase = (ClassStructure) idBase.getComponent();
 
+                    if (clzBase.containsUnresolvedContribution())
+                        {
+                        return new UnresolvedTypeConstant(pool,
+                                new UnresolvedNameConstant(pool, clzTarget.getName()));
+                        }
                     typeTarget = pool.ensureVirtualTypeConstant(clzBase, clzTarget, false, false, false);
                     }
 

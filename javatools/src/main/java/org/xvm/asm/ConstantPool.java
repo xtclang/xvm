@@ -1598,6 +1598,8 @@ public class ConstantPool
         ClassStructure   clzParent = (ClassStructure) clzChild.getParent();
         IdentityConstant idParent  = clzParent.getIdentityConstant();
 
+        assert !clzBase.containsUnresolvedContribution();
+
         TypeConstant typeParent;
         TypeConstant typeTarget;
         if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent, true))
