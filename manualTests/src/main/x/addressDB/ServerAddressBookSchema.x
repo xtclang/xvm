@@ -18,6 +18,8 @@ static service ServerAddressBookSchema
         return new ClientAddressBookSchema();
         }
 
+    @Inject Clock clock;
+
     @Unassigned ServerContacts contacts;
 
     class ServerContacts
@@ -37,9 +39,35 @@ static service ServerAddressBookSchema
         }
 
     /**
-     * TODO should this be exposed?
+     * TODO how should this be exposed?
      */
     class ServerTransaction
+            implements db.DBTransaction
         {
+        construct()
+            {
+            status   = Active;
+            created  = clock.now;
+            priority = Normal;
+            contents = new HashMap();
+            }
+
+        @Override
+        Duration transactionTime.get()
+            {
+            return clock.now - created;
+            }
+
+        @Override
+        Duration commitTime.get()
+            {
+            TODO
+            }
+
+        @Override
+        Int retryCount.get()
+            {
+            TODO
+            }
         }
     }

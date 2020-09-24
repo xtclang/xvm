@@ -41,10 +41,10 @@ interface DBLog<Element>
         @RO DateTime datetime;
 
         /**
-         * The `Transaction` within which the item was logged. Note that it may be expensive to
+         * The [DBTransaction] within which the item was logged. Note that it may be expensive to
          * obtain historical transactional data.
          */
-        @RO Transaction transaction;
+        @RO DBTransaction transaction;
 
         /**
          * The element that was logged.

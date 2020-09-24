@@ -19,7 +19,7 @@ service ClientAddressBookSchema
     @Unassigned Contacts contacts;
 
     @Override
-    @Unassigned db.DBUser user;
+    @Unassigned db.DBUser dbUser;
 
     @Override
     public/protected ClientAddressBookTransaction? transaction;
@@ -27,7 +27,7 @@ service ClientAddressBookSchema
     @Override
     ClientAddressBookTransaction createTransaction(
                 Duration? timeout = Null, String? name = Null,
-                UInt? id = Null, db.Transaction.Priority priority = Normal,
+                UInt? id = Null, db.DBTransaction.Priority priority = Normal,
                 Int retryCount = 0)
         {
         ClientAddressBookTransaction tx = new ClientAddressBookTransaction();
@@ -107,12 +107,6 @@ service ClientAddressBookSchema
 
         @Override
         (db.Connection<AddressBookSchema> + AddressBookSchema) connection.get()
-            {
-            return this.ClientAddressBookSchema;
-            }
-
-        @Override
-        AddressBookSchema schema.get()
             {
             return this.ClientAddressBookSchema;
             }

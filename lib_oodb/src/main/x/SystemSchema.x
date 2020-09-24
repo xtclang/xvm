@@ -91,7 +91,7 @@ interface SystemSchema
     @RO DBList<DBInvoke> pending;
 
     /**
-     * A [DBLog] of [Transaction] objects.
+     * A [DBLog] of [DBTransaction] objects.
      */
-    @RO DBLog<Transaction> transactions;
+    @RO DBLog<DBTransaction> transactions;
     }

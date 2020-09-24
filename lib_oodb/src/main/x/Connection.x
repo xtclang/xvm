@@ -7,12 +7,12 @@ interface Connection<Schema extends RootSchema>
     /**
      * The [DBUser] that this `Connection` represents.
      */
-    @RO DBUser user;
+    @RO DBUser dbUser;
 
     /**
      * The current [Transaction] for this Connection, or `Null` if no `Transaction` is active.
      */
-    @RO Transaction? transaction;
+    @RO (Transaction<Schema> + Schema)? transaction;
 
     /**
      * Create a new transaction.
@@ -28,9 +28,9 @@ interface Connection<Schema extends RootSchema>
      *
      * @throws IllegalState  if a Transaction already exists
      */
-    (Transaction<Schema> + Schema) createTransaction(Duration?            timeout     = Null,
-                                                     String?              name        = Null,
-                                                     UInt?                id          = Null,
-                                                     Transaction.Priority priority    = Normal,
-                                                     Int                  retryCount  = 0);
+    (Transaction<Schema> + Schema) createTransaction(Duration?              timeout     = Null,
+                                                     String?                name        = Null,
+                                                     UInt?                  id          = Null,
+                                                     DBTransaction.Priority priority    = Normal,
+                                                     Int                    retryCount  = 0);
     }

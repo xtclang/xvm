@@ -45,8 +45,8 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
     @Override
     @RO Collection<Value> values.get()
         {
-        // TODO: this should return a proxy interface
-        return new Array<Value>(Constant, serverDBMap.values);
+        TODO
+        // return new Collection<Value>(Constant, serverDBMap.values);
         }
 
     void commit()
@@ -176,6 +176,18 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
             {
             added   = new HashMap();
             removed = new HashMap();
+            }
+
+        @Override
+        ClientDBMap pre.get()
+            {
+            TODO("read-only new ClientDBMap(...)");
+            }
+
+        @Override
+        ClientDBMap post.get()
+            {
+            TODO("read-only this.ClientDBMap");
             }
 
         @Override
