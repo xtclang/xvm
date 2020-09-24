@@ -133,7 +133,7 @@ public class Child
                 return null;
                 }
 
-            if (hParent.isService())
+            if (hParent instanceof ServiceHandle)
                 {
                 return (ServiceHandle) hParent;
                 }
