@@ -352,6 +352,18 @@ public abstract class ObjectHandle
             }
 
         @Override
+        public boolean isService()
+            {
+            if (getTemplate().isService())
+                {
+                return true;
+                }
+
+            ObjectHandle hOuter = getField(OUTER);
+            return hOuter != null && hOuter.isService();
+            }
+
+        @Override
         public ObjectHandle cloneAs(TypeComposition clazz)
             {
             // when we clone a struct into a non-struct, we need to update the inflated
