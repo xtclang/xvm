@@ -4,4 +4,5 @@
 module JsonDB.xtclang.org
     {
     package oodb import OODB.xtclang.org;
+    package json import Json.xtclang.org;
     }
