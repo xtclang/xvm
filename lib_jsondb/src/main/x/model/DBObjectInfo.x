@@ -1,5 +1,5 @@
 /**
- * Metadata information about a particular `DBOBject`.
+ * Metadata information about a particular `DBObject`.
  */
 const DBObjectInfo(Catalog  catalog,
                    Int      id,
