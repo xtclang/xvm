@@ -126,29 +126,25 @@ public class xOSFileStore
                 String       sDest = ((StringHandle) ahArg[3]).getStringValue();
                 boolean      fMove = ((xBoolean.BooleanHandle) ahArg[4]).get();
 
-                Path pathSrc = Paths.get(sSrc);
+                Path    pathSrc = Paths.get(sSrc);
+                boolean fDir    = Files.isDirectory(pathSrc);
                 if (Files.notExists(pathSrc))
                     {
                     return frame.raiseException(xException.fileNotFoundException(frame, "Could not find file or directory: " + sSrc, hSrc));
                     }
 
                 Path pathDest = Paths.get(sDest);
-                if (Files.exists(pathDest))
+                if (Files.exists(pathDest) && !Files.isDirectory(pathDest))
                     {
                     return frame.raiseException(xException.fileAlreadyExistsException(frame, "Could not overwrite file or directory: " + sDest, hDest));
                     }
 
-                boolean fDir = Files.isDirectory(pathSrc);
+                Path pathResult;
                 try
                     {
-                    if (fMove)
-                        {
-                        Files.move(pathSrc, pathDest);
-                        }
-                    else
-                        {
-                        Files.copy(pathSrc, pathDest);
-                        }
+                    pathResult = fMove
+                            ? Files.move(pathSrc, pathDest)
+                            : Files.copy(pathSrc, pathDest);
                     }
                 catch (NoSuchFileException | FileNotFoundException e)
                     {
@@ -167,7 +163,7 @@ public class xOSFileStore
                     return frame.raiseException(xException.ioException(frame, e.getMessage()));
                     }
 
-                return OSFileNode.createHandle(frame, hTarget, pathDest, fDir, iReturn);
+                return OSFileNode.createHandle(frame, hTarget, pathResult, fDir, iReturn);
                 }
             }
 

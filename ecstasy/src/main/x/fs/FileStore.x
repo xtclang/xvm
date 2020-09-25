@@ -189,9 +189,9 @@ interface FileStore
      * @param buf        the Appender to emit the listing to
      * @param recursive  True to have the listing recurse through sub-directories
      */
-    void emitListing(Appender<Char> buf, Boolean recursive = True)
+    Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = True)
         {
         buf.addAll("FileStore:\n");
-        root.emitListing(buf, recursive, "");
+        return root.emitListing(buf, recursive, "");
         }
     }

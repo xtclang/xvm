@@ -19,13 +19,13 @@ const OSFileNode
         }
 
     @Override
-    @RO String name.get()
+    String name.get()
         {
         return path.form == Root ? "" : path.name;
         }
 
     @Override
-    @RO Boolean exists;
+    Boolean exists.get() { TODO("native"); }
 
     @Override
     conditional File linkAsFile()
@@ -53,10 +53,10 @@ const OSFileNode
         }
 
     @Override
-    @RO Boolean readable;
+    Boolean readable.get() { TODO("native"); }
 
     @Override
-    @RO Boolean writable;
+    Boolean writable.get() { TODO("native"); }
 
     @Override
     Boolean create()

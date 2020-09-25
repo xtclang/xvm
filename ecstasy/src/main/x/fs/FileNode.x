@@ -133,5 +133,5 @@ interface FileNode
      * @param recursive  (optional) True to have the listing recurse through sub-directories
      * @param indent     (optional) indentation for this item in the hierarchical listing
      */
-    void emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "");
+    Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "");
     }

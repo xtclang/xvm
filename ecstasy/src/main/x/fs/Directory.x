@@ -79,7 +79,7 @@ interface Directory
     Cancellable watchRecursively(FileWatcher watcher);
 
     @Override
-    void emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "")
+    Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "")
         {
         Boolean root = indent == "";
 
@@ -113,5 +113,7 @@ interface Directory
                 file.emitListing(buf, recursive, nextIndent);
                 }
             }
+
+        return buf;
         }
     }

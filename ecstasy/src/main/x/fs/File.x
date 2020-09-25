@@ -162,9 +162,9 @@ interface File
     FileChannel open(ReadOption read=Read, WriteOption[] write = [Write]);
 
     @Override
-    void emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "")
+    Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "")
         {
-        buf.addAll(indent)
+        return buf.addAll(indent)
            .addAll(name)
            .add('\n');
         }

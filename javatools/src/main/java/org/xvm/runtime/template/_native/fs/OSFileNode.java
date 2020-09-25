@@ -49,6 +49,8 @@ public abstract class OSFileNode
         markNativeProperty("store");
         markNativeProperty("pathString");
         markNativeProperty("exists");
+        markNativeProperty("readable");
+        markNativeProperty("writable");
         markNativeProperty("createdMillis");
         markNativeProperty("accessedMillis");
         markNativeProperty("modifiedMillis");
@@ -69,6 +71,12 @@ public abstract class OSFileNode
 
             case "exists":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hNode.f_path.toFile().exists()));
+
+            case "readable":
+                return frame.assignValue(iReturn, xBoolean.makeHandle(hNode.f_path.toFile().canRead()));
+
+            case "writable":
+                return frame.assignValue(iReturn, xBoolean.makeHandle(hNode.f_path.toFile().canWrite()));
 
             case "createdMillis":
                 {

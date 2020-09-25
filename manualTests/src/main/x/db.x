@@ -16,14 +16,10 @@ module db
         Directory dataDir = curDir.dirFor("scratch").ensure();
 
         console.println("file names:");
-        for (String s : dataDir.names())
-            {
-            console.println($" - {s}");
-            }
+        console.println(dataDir.emitListing(new StringBuffer()));
 
         File file1 = dataDir.fileFor("test1.txt");
         file1.contents = [0x43, 0x61, 0x6D];
-
         storage.copy(file1.path, dataDir.fileFor("test2.txt").path);
         storage.move(file1.path, dataDir.fileFor("test3.txt").path);
 
