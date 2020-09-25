@@ -2,7 +2,13 @@ package org.xvm.runtime.template._native.fs;
 
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
+import java.nio.file.AccessDeniedException;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -14,6 +20,9 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
@@ -40,6 +49,7 @@ public class xOSFileStore
 
         markNativeMethod("dirFor", STRING, null);
         markNativeMethod("fileFor", STRING, null);
+        markNativeMethod("copyOrMove", null, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -101,6 +111,67 @@ public class xOSFileStore
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "copyOrMove":
+                {
+                ObjectHandle hSrc  = ahArg[0];
+                String       sSrc  = ((StringHandle) ahArg[1]).getStringValue();
+                ObjectHandle hDest = ahArg[2];
+                String       sDest = ((StringHandle) ahArg[3]).getStringValue();
+                boolean      fMove = ((xBoolean.BooleanHandle) ahArg[4]).get();
+
+                Path pathSrc = Paths.get(sSrc);
+                if (Files.notExists(pathSrc))
+                    {
+                    return frame.raiseException(xException.fileNotFoundException(frame, "Could not find file or directory: " + sSrc, hSrc));
+                    }
+
+                Path pathDest = Paths.get(sDest);
+                if (Files.exists(pathDest))
+                    {
+                    return frame.raiseException(xException.fileAlreadyExistsException(frame, "Could not overwrite file or directory: " + sDest, hDest));
+                    }
+
+                boolean fDir = Files.isDirectory(pathSrc);
+                try
+                    {
+                    if (fMove)
+                        {
+                        Files.move(pathSrc, pathDest);
+                        }
+                    else
+                        {
+                        Files.copy(pathSrc, pathDest);
+                        }
+                    }
+                catch (NoSuchFileException | FileNotFoundException e)
+                    {
+                    return frame.raiseException(xException.fileNotFoundException(frame, e.getMessage(), hSrc));
+                    }
+                catch (FileAlreadyExistsException e)
+                    {
+                    return frame.raiseException(xException.fileAlreadyExistsException(frame, e.getMessage(), hDest));
+                    }
+                catch (SecurityException | AccessDeniedException e)
+                    {
+                    return frame.raiseException(xException.accessDeniedException(frame, e.getMessage(), hDest));
+                    }
+                catch (IOException e)
+                    {
+                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
+                    }
+
+                return OSFileNode.createHandle(frame, hTarget, pathDest, fDir, iReturn);
+                }
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
 

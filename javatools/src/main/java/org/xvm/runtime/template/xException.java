@@ -40,18 +40,21 @@ public class xException
         if (this == INSTANCE)
             {
             // cache all the well-known exception classes
-            s_clzException            = INSTANCE.getCanonicalClass();
-            s_clzIllegalArgument      = f_templates.getTemplate("IllegalArgument"              ).getCanonicalClass();
-            s_clzIllegalState         = f_templates.getTemplate("IllegalState"                 ).getCanonicalClass();
-            s_clzInvalidType          = f_templates.getTemplate("reflect.InvalidType"          ).getCanonicalClass();
-            s_clzOutOfBounds          = f_templates.getTemplate("OutOfBounds"                  ).getCanonicalClass();
-            s_clzReadOnly             = f_templates.getTemplate("ReadOnly"                     ).getCanonicalClass();
-            s_clzTimedOut             = f_templates.getTemplate("TimedOut"                     ).getCanonicalClass();
-            s_clzTypeMismatch         = f_templates.getTemplate("TypeMismatch"                 ).getCanonicalClass();
-            s_clzUnsupportedOperation = f_templates.getTemplate("UnsupportedOperation"         ).getCanonicalClass();
-            s_clzDivisionByZero       = f_templates.getTemplate("numbers.Number.DivisionByZero").getCanonicalClass();
-            s_clzPathException        = f_templates.getTemplate("fs.PathException"             ).getCanonicalClass();
-            s_clzIOException          = f_templates.getTemplate("io.IOException"               ).getCanonicalClass();
+            s_clzException                  = INSTANCE.getCanonicalClass();
+            s_clzIllegalArgument            = f_templates.getTemplate("IllegalArgument"              ).getCanonicalClass();
+            s_clzIllegalState               = f_templates.getTemplate("IllegalState"                 ).getCanonicalClass();
+            s_clzInvalidType                = f_templates.getTemplate("reflect.InvalidType"          ).getCanonicalClass();
+            s_clzOutOfBounds                = f_templates.getTemplate("OutOfBounds"                  ).getCanonicalClass();
+            s_clzReadOnly                   = f_templates.getTemplate("ReadOnly"                     ).getCanonicalClass();
+            s_clzTimedOut                   = f_templates.getTemplate("TimedOut"                     ).getCanonicalClass();
+            s_clzTypeMismatch               = f_templates.getTemplate("TypeMismatch"                 ).getCanonicalClass();
+            s_clzUnsupportedOperation       = f_templates.getTemplate("UnsupportedOperation"         ).getCanonicalClass();
+            s_clzDivisionByZero             = f_templates.getTemplate("numbers.Number.DivisionByZero").getCanonicalClass();
+            s_clzPathException              = f_templates.getTemplate("fs.PathException"             ).getCanonicalClass();
+            s_clzFileNotFoundException      = f_templates.getTemplate("fs.FileNotFound"              ).getCanonicalClass();
+            s_clzAccessDeniedException      = f_templates.getTemplate("fs.AccessDenied"              ).getCanonicalClass();
+            s_clzFileAlreadyExistsException = f_templates.getTemplate("fs.FileAlreadyExists"         ).getCanonicalClass();
+            s_clzIOException                = f_templates.getTemplate("io.IOException"               ).getCanonicalClass();
 
             METHOD_FORMAT_EXCEPTION = getStructure().findMethod("formatExceptionString", 2);
 
@@ -173,6 +176,27 @@ public class xException
         return hException;
         }
 
+    public static ExceptionHandle fileNotFoundException(Frame frame, String sMsg, ObjectHandle path)
+        {
+        ExceptionHandle hException = makeHandle(frame, s_clzFileNotFoundException, sMsg);
+        hException.setField("path", path);
+        return hException;
+        }
+
+    public static ExceptionHandle accessDeniedException(Frame frame, String sMsg, ObjectHandle path)
+        {
+        ExceptionHandle hException = makeHandle(frame, s_clzAccessDeniedException, sMsg);
+        hException.setField("path", path);
+        return hException;
+        }
+
+    public static ExceptionHandle fileAlreadyExistsException(Frame frame, String sMsg, ObjectHandle path)
+        {
+        ExceptionHandle hException = makeHandle(frame, s_clzFileAlreadyExistsException, sMsg);
+        hException.setField("path", path);
+        return hException;
+        }
+
     public static ExceptionHandle ioException(Frame frame, String sMsg)
         {
         return makeHandle(frame, s_clzIOException, sMsg);
@@ -233,6 +257,10 @@ public class xException
     private static ClassComposition s_clzUnsupportedOperation;
     private static ClassComposition s_clzDivisionByZero;
     private static ClassComposition s_clzPathException;
+    private static ClassComposition s_clzFileNotFoundException;
+    private static ClassComposition s_clzAccessDeniedException;
+    private static ClassComposition s_clzFileAlreadyExistsException;
+
     private static ClassComposition s_clzIOException;
 
     private static MethodStructure METHOD_FORMAT_EXCEPTION;

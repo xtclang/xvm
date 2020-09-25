@@ -49,13 +49,13 @@ class OSFileStore
     @Override
     Directory|File copy(Path source, Path dest)
         {
-        TODO
+        return copyOrMove(source, source.toString(), dest, dest.toString(), false);
         }
 
     @Override
     Directory|File move(Path source, Path dest)
         {
-        TODO
+        return copyOrMove(source, source.toString(), dest, dest.toString(), true);
         }
 
     @Override
@@ -128,6 +128,11 @@ class OSFileStore
         }
 
     OSFile fileFor(String pathString)
+        {
+        TODO native
+        }
+
+    OSDirectory|OSFile copyOrMove(Path sourcePath, String sourceStr, Path destPath, String destStr, Boolean move)
         {
         TODO native
         }

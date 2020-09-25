@@ -179,15 +179,8 @@ public class xOSStorage
                     return frame.assignValue(iReturn, xBoolean.FALSE);
                     }
 
-                try
-                    {
-                    return frame.assignValue(iReturn,
-                        xBoolean.makeHandle(path.toFile().createNewFile()));
-                    }
-                catch (IOException e)
-                    {
-                    return raisePathException(frame, e, path.toString());
-                    }
+                return frame.assignValue(iReturn,
+                    xBoolean.makeHandle(path.toFile().mkdirs()));
                 }
 
             case "delete":  // (pathString)
