@@ -639,6 +639,10 @@ public class MethodStructure
                 if (typeActual != null)
                     {
                     TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
+                    if (!fAllowFormal && typeResolved != null && typeResolved.containsUnresolved())
+                        {
+                        continue NextParameter;
+                        }
                     if (checkConflict(typeResolved, sName, mapTypeParams))
                         {
                         continue NextParameter;
@@ -654,6 +658,10 @@ public class MethodStructure
                 if (typeActual != null)
                     {
                     TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sName);
+                    if (!fAllowFormal && typeResolved != null && typeResolved.containsUnresolved())
+                        {
+                        continue NextParameter;
+                        }
                     if (checkConflict(typeResolved, sName, mapTypeParams))
                         {
                         continue NextParameter;

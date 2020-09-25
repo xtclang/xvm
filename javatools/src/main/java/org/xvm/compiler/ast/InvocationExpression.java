@@ -803,7 +803,7 @@ public class InvocationExpression
                         System.arraycopy(atypeParams, cTypeParams, atype, 0, cParams);
 
                         GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method,
-                                fCall || atypeReturn == null
+                                fCall || atypeReturn == null || atypeReturn.length == 0
                                     ? atypeReturn
                                     : pool.extractFunctionReturns(atypeReturn[0]));
                         atypeParams = resolveTypes(resolver, atype);
@@ -855,7 +855,7 @@ public class InvocationExpression
                         {
                         // re-resolve against the validated types
                         mapTypeParams = method.resolveTypeParameters(atypeArgs,
-                                fCall || atypeReturn == null
+                                fCall || atypeReturn == null || atypeReturn.length == 0
                                     ? atypeReturn
                                     : pool.extractFunctionReturns(atypeReturn[0]),
                                 false);

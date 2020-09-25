@@ -226,16 +226,19 @@ public class TernaryExpression
 
                     use = Usage.Intersection;
 
-                    TypeConstant[] atypeCommonR = selectCommonTypes(atypeThenR, atypeElseR);
-                    if (exprThen.testFitMulti(ctxThen, atypeCommonR, null).isFit() &&
-                        exprElse.testFitMulti(ctxElse, atypeCommonR, null).isFit() )
+                    if (atypeThenR != null && atypeElseR != null)
                         {
-                        atypeThen = atypeElse = atypeCommonR;
-                        break;
+                        TypeConstant[] atypeCommonR = selectCommonTypes(atypeThenR, atypeElseR);
+                        if (exprThen.testFitMulti(ctxThen, atypeCommonR, null).isFit() &&
+                            exprElse.testFitMulti(ctxElse, atypeCommonR, null).isFit() )
+                            {
+                            atypeThen = atypeElse = atypeCommonR;
+                            break;
+                            }
                         }
 
                     // continue to validation with a regular intersection (which is most likely to fail now)
-                    atypeThen = atypeElse = selectCommonTypes(atypeThen, atypeThen);
+                    atypeThen = atypeElse = selectCommonTypes(atypeThen, atypeElse);
                     break;
                     }
                 finally

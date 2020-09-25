@@ -511,7 +511,7 @@ public class TypeCollector
             }
 
         TypeConstant typeCommon = aTypes[0];
-        if (typeCommon == null)
+        if (typeCommon == null || typeCommon.containsUnresolved())
             {
             return null;
             }

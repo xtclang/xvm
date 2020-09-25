@@ -19,23 +19,25 @@ const OSDirectory
     @Override
     Iterator<Directory> dirs()
         {
-        return names().map(name ->
-                                {
-                                assert File|Directory node := find(name);
-                                return node.is(Directory) ? node : Null;
-                                }
-                ).filter(node -> node != Null);
+        Iterator<Directory?> nodes = names().map(name ->
+            {
+            assert File|Directory node := find(name);
+            return node.is(Directory) ? node : Null;
+            });
+
+        return nodes.filter(node -> node != Null).as(Iterator<Directory>);
         }
 
     @Override
     Iterator<File> files()
         {
-        return names().map(name ->
-                                {
-                                assert File|Directory node := find(name);
-                                return node.is(File) ? node : Null;
-                                }
-                ).filter(node -> node != Null);
+        Iterator<File?> nodes = names().map(name ->
+            {
+            assert File|Directory node := find(name);
+            return node.is(File) ? node : Null;
+            });
+
+        return nodes.filter(node -> node != Null).as(Iterator<File>);
         }
 
     @Override
