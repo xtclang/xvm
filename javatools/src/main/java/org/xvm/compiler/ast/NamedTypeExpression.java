@@ -361,6 +361,20 @@ public class NamedTypeExpression
         }
 
     /**
+     * @return true iff this expression fully specifies a virtual child class identity
+     */
+    protected boolean isFullyQualifiedChild()
+        {
+        assert m_resolver != null && m_resolver.getResult() == NameResolver.Result.RESOLVED;
+
+        IdentityConstant idFirst = (IdentityConstant) m_resolver.getBaseConstant();
+
+        // module and package are always "fully qualified" and so are non-child classes
+        return !(idFirst instanceof ClassConstant)
+            || !((ClassStructure) idFirst.getComponent()).isVirtualChild();
+        }
+
+    /**
      * Determine if this NamedTypeExpression could be a module name.
      *
      * @return true iff this NamedTypeExpression is just a name, and that name is a legal name for
@@ -1030,9 +1044,10 @@ public class NamedTypeExpression
                     {
                     if (clzTarget.isVirtualChild())
                         {
-                        ClassConstant  idBase  = ((ClassConstant) idClass).getOutermost();
+                        ClassConstant idBase = isFullyQualifiedChild()
+                                ? idTarget.getAutoNarrowingBase()
+                                : ((ClassConstant) idClass).getOutermost();
                         ClassStructure clzBase = (ClassStructure) idBase.getComponent();
-
                         if (clzBase.containsUnresolvedContribution())
                             {
                             return new UnresolvedTypeConstant(pool,

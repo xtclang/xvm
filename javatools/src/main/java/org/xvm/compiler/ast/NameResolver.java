@@ -280,9 +280,14 @@ public class NameResolver
                         }
                     else
                         {
-                        resolvedComponent(component);
+                        if (resolvedComponent(component) != ResolutionResult.RESOLVED)
+                            {
+                            return Result.ERROR;
+                            }
+                        assert m_constant != null;
                         }
                     }
+                m_constantFirst = m_constant;
 
                 // first name has been resolved
                 m_stage = Stage.RESOLVE_DOT_NAME;
@@ -608,6 +613,15 @@ public class NameResolver
         }
 
     /**
+     * @return the Constant that the NameResolver has resolved the first part of the name to;
+     *         this value can only be depended on after stage value is RESOLVE_FIRST_NAME
+     */
+    public Constant getBaseConstant()
+        {
+        return m_constantFirst;
+        }
+
+    /**
      * @return the Constant that the NameResolver has resolved to thus far; this value can only be
      *         depended on after the NameResolver result is RESOLVED
      */
@@ -791,6 +805,12 @@ public class NameResolver
      * The node that the import was registered with, if any possible import match was found.
      */
     private StatementBlock m_blockImport;
+
+    /**
+     * The constant representing what the first node has resolved to. This is information
+     * is used to determine whether or not a virtual child name was fully qualified.
+     */
+    private Constant m_constantFirst;
 
     /**
      * The constant representing what the node has thus far resolved to.
