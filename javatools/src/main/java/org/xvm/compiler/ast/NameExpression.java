@@ -2060,14 +2060,17 @@ public class NameExpression
                             }
                         else
                             {
-                            if (idTarget.isNestMateOf(idThis) && clzTarget.isVirtualChild())
+                            if (clzTarget.isVirtualChild())
                                 {
-                                ClassConstant  idBase  = ((ClassConstant) idTarget).getOutermost();
+                                boolean        fMate   = idTarget.isNestMateOf(idThis);
+                                ClassConstant  idBase  = fMate
+                                    ? ((ClassConstant) idThis).getOutermost()
+                                    : ((ClassConstant) idTarget).getAutoNarrowingBase();
                                 ClassStructure clzBase = (ClassStructure) idBase.getComponent();
                                 boolean        fFormal = !(component instanceof MethodStructure &&
                                                          ((MethodStructure) component).isFunction());
                                 type = pool.ensureVirtualTypeConstant(clzBase, clzTarget,
-                                    fFormal, /*fParameterize*/ false, /*fAutoNarrowing*/ false);
+                                    fFormal && fMate, /*fParameterize*/ false, /*fAutoNarrowing*/ false);
                                 }
                             }
                         }

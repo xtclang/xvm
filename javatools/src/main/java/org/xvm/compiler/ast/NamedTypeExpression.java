@@ -1057,10 +1057,10 @@ public class NamedTypeExpression
                         // Note: keep the formal types when in a constructor
                         boolean fFormalParent = !(component instanceof MethodStructure &&
                                             ((MethodStructure) component).isFunction());
-                        boolean fFormalChIld = fFormalParent && fAllowFormalVirtual && paramTypes == null;
+                        boolean fFormalChild = fFormalParent && fAllowFormalVirtual && paramTypes == null;
 
                         typeTarget = pool.ensureVirtualTypeConstant(
-                                clzBase, clzTarget, fFormalParent, fFormalChIld, fThisClass);
+                                clzBase, clzTarget, fFormalParent, fFormalChild, fThisClass);
                         assert typeTarget != null;
                         }
                     else if (idTarget.equals(idClass) || clzClass.isVirtualChild())
