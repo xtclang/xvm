@@ -29,6 +29,24 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
         }
 
     @Override
+    conditional Value get(Key key)
+        {
+        ClientChange? change = this.change;
+        if (change != Null)
+            {
+            if (change.added.contains(key))
+                {
+                return change.added.get(key);
+                }
+            if (change.removed.contains(key))
+                {
+                return False;
+                }
+            }
+        return serverDBMap.get(key);
+        }
+
+    @Override
     ClientDBMap put(Key key, Value value)
         {
         if (autoCommit)
@@ -45,31 +63,8 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
     @Override
     @RO Collection<Value> values.get()
         {
-        TODO
-        // return new Collection<Value>(Constant, serverDBMap.values);
-        }
-
-    void commit()
-        {
-        ClientChange? change = this.change;
-        if (change == Null)
-            {
-            return;
-            }
-
-        Map<Key, Value> map = serverDBMap;
-        for (Key key : change.removed.keys)
-            {
-            map.remove(key);
-            }
-        map.putAll(change.added);
-
-        change = Null;
-        }
-
-    void rollback()
-        {
-        change = Null;
+        // TODO GG: this should return a proxy interface
+        return new Array<Value>(Constant, serverDBMap.values);
         }
 
     class CursorEntry
@@ -200,6 +195,23 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
             {
             removed.remove(key);
             added.put(key, value);
+            }
+
+        void apply()
+            {
+            Map<Key, Value> map = serverDBMap;
+            for (Key key : removed.keys)
+                {
+                map.remove(key);
+                }
+            map.putAll(added);
+
+            change = Null;
+            }
+
+        void discard()
+            {
+            change = Null;
             }
         }
     }

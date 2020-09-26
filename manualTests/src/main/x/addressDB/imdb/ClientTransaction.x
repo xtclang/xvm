@@ -2,10 +2,14 @@ class ClientTransaction<Schema extends db.RootSchema>
         extends ClientDBObject
         implements db.Transaction<Schema>
     {
-    construct(ServerRootSchema dbSchema)
+    construct(ServerRootSchema dbSchema, db.DBTransaction dbTransaction)
         {
         construct ClientDBObject(dbSchema);
+
+        this.dbTransaction = dbTransaction;
         }
+
+    db.DBTransaction dbTransaction;
 
 // ++ TODO GG: the property below is not needed
 
@@ -19,13 +23,25 @@ class ClientTransaction<Schema extends db.RootSchema>
     @Override
     Boolean commit()
         {
-        // TODO
+        for (db.DBObject.Change change : dbTransaction.contents.values)
+            {
+            if (change.is(ClientDBMap.ClientChange))
+                {
+                change.apply();
+                }
+            }
         return True;
         }
 
     @Override
     void rollback()
         {
-        TODO
+        for (db.DBObject.Change change : dbTransaction.contents.values)
+            {
+            if (change.is(ClientDBMap.ClientChange))
+                {
+                change.discard();
+                }
+            }
         }
     }

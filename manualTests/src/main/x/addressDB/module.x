@@ -2,6 +2,7 @@ module AddressBookDB
     {
     package db import OODB.xtclang.org;
 
+    // @DBSchemaDDL
     interface AddressBookSchema
             extends db.RootSchema
         {

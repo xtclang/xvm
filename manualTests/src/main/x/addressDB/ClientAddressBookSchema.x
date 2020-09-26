@@ -1,7 +1,4 @@
-/**
- * This is the thing that will get injected as Connection.
- */
-service ClientAddressBookSchema
+class ClientAddressBookSchema
         extends imdb.ClientRootSchema
         implements AddressBookSchema
         implements db.Connection<AddressBookSchema>
@@ -59,6 +56,19 @@ service ClientAddressBookSchema
                 }
             }
 
+        @Override
+        void addPhone(String name, Phone phone)
+            {
+            (Boolean autoCommit, db.Transaction tx) = ensureTransaction();
+
+            super(name, phone);
+
+            if (autoCommit)
+                {
+                tx.commit();
+                }
+            }
+
         // ----- class specific --------------------------------------------------------------------
 
         protected (Boolean, db.Transaction) ensureTransaction()
@@ -88,6 +98,21 @@ service ClientAddressBookSchema
                 }
             throw new UnsupportedOperation(fn.toString());
             }
+
+        @Override
+        class ClientChange
+            {
+            construct()
+                {
+                construct imdb.ClientDBMap.ClientChange();
+                }
+            finally
+                {
+                ClientAddressBookTransaction? tx = this.ClientAddressBookSchema.transaction;
+                assert tx != Null;
+                tx.dbTransaction.contents.put("Contacts", this);
+                }
+            }
         }
 
     class ClientAddressBookTransaction
@@ -96,7 +121,8 @@ service ClientAddressBookSchema
         {
         construct()
             {
-            construct imdb.ClientTransaction(ServerAddressBookSchema);
+            construct imdb.ClientTransaction(
+                ServerAddressBookSchema, ServerAddressBookSchema.createDBTransaction());
             }
 
         @Override
@@ -120,15 +146,19 @@ service ClientAddressBookSchema
         @Override
         Boolean commit()
             {
+            super();
+
             this.ClientAddressBookSchema.transaction = Null;
-            return super();
+            return True;
             }
 
         @Override
         void rollback()
             {
+            super();
+
             this.ClientAddressBookSchema.transaction = Null;
-            TODO
+            dbTransaction.rollbackOnly = True;
             }
         }
     }

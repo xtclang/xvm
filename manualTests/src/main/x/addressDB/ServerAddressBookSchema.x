@@ -13,14 +13,28 @@ static service ServerAddressBookSchema
         contacts = new ServerContacts();
         }
 
+    @Unassigned ServerContacts contacts;
+
+    @Inject Clock clock;
+
     (db.Connection<AddressBookSchema> + AddressBookSchema) createConnection()
         {
         return new ClientAddressBookSchema();
         }
 
-    @Inject Clock clock;
+    db.DBTransaction createDBTransaction()
+        {
+        return new ServerTransaction();
+        }
 
-    @Unassigned ServerContacts contacts;
+    /**
+     * This is the thing that will get injected as Connection. As a child, it's collocated with
+     * the IMDB RootSchema service.
+     */
+    class ClientAddressBookSchema
+            extends AddressBookDB.ClientAddressBookSchema
+        {
+        }
 
     class ServerContacts
             extends imdb.ServerDBMap<String, Contact>
@@ -42,7 +56,7 @@ static service ServerAddressBookSchema
      * TODO how should this be exposed?
      */
     class ServerTransaction
-            implements db.DBTransaction
+            implements db.DBTransaction<ServerAddressBookSchema>
         {
         construct()
             {
@@ -50,6 +64,12 @@ static service ServerAddressBookSchema
             created  = clock.now;
             priority = Normal;
             contents = new HashMap();
+            }
+
+        @Override
+        ServerAddressBookSchema schema.get()
+            {
+            return ServerAddressBookSchema;
             }
 
         @Override
@@ -66,6 +86,12 @@ static service ServerAddressBookSchema
 
         @Override
         Int retryCount.get()
+            {
+            TODO
+            }
+
+        @Override
+        void addCondition(db.Condition condition)
             {
             TODO
             }
