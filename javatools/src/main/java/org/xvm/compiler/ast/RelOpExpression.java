@@ -298,7 +298,7 @@ public class RelOpExpression
                     {
                     idBest = idMethod;
                     }
-                else if (!idBest.getRawParams()[0].isA(type))
+                else if (!idBest.getRawParams()[0].isAssignableTo(type))
                     {
                     // ambiguous at this point
                     mapBest.put(idBest  .getSignature(), idBest  );
