@@ -25,9 +25,9 @@ class ClientTransaction<Schema extends db.RootSchema>
         {
         for (db.DBObject.Change change : dbTransaction.contents.values)
             {
-            if (change.is(ClientDBMap.ClientChange))
+            if (change.is(ClientDBMap.ClientChange) && !change.apply())
                 {
-                change.apply();
+                return False;
                 }
             }
         return True;
@@ -43,5 +43,6 @@ class ClientTransaction<Schema extends db.RootSchema>
                 change.discard();
                 }
             }
+        dbTransaction.rollbackOnly = True;
         }
     }

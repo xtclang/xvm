@@ -34,11 +34,11 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
         ClientChange? change = this.change;
         if (change != Null)
             {
-            if (change.added.contains(key))
+            if (Value value := change.internalAdded.get(key))
                 {
-                return change.added.get(key);
+                return True, value;
                 }
-            if (change.removed.contains(key))
+            if (change.internalRemoved.contains(key))
                 {
                 return False;
                 }
@@ -169,9 +169,12 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
         {
         construct()
             {
-            added   = new HashMap();
-            removed = new HashMap();
+            internalAdded   = new HashMap();
+            internalRemoved = new HashMap();
             }
+
+        protected HashMap<Key, Value> internalAdded;
+        protected HashMap<Key, Value> internalRemoved;
 
         @Override
         ClientDBMap pre.get()
@@ -186,27 +189,34 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
             }
 
         @Override
-        public/private Map<Key, Value> added;
+        Map<Key, Value> added.get()
+            {
+            return internalAdded.freeze(False);
+            }
 
         @Override
-        public/private Map<Key, Value> removed;
+        Map<Key, Value> removed.get()
+            {
+            return internalRemoved.freeze(False);
+            }
 
         void put(Key key, Value value)
             {
-            removed.remove(key);
-            added.put(key, value);
+            internalRemoved.remove(key);
+            internalAdded.put(key, value);
             }
 
-        void apply()
+        Boolean apply()
             {
             Map<Key, Value> map = serverDBMap;
-            for (Key key : removed.keys)
+            for (Key key : internalRemoved.keys)
                 {
                 map.remove(key);
                 }
-            map.putAll(added);
+            map.putAll(internalAdded);
 
             change = Null;
+            return True;
             }
 
         void discard()

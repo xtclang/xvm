@@ -104,6 +104,7 @@ class ClientAddressBookSchema
             {
             construct()
                 {
+                 // TODO CP - would be nice if it read "construct super();"
                 construct imdb.ClientDBMap.ClientChange();
                 }
             finally
@@ -146,19 +147,27 @@ class ClientAddressBookSchema
         @Override
         Boolean commit()
             {
-            super();
-
-            this.ClientAddressBookSchema.transaction = Null;
-            return True;
+            try
+                {
+                return super();
+                }
+            finally
+                {
+                this.ClientAddressBookSchema.transaction = Null;
+                }
             }
 
         @Override
         void rollback()
             {
-            super();
-
-            this.ClientAddressBookSchema.transaction = Null;
-            dbTransaction.rollbackOnly = True;
+            try
+                {
+                super();
+                }
+            finally
+                {
+                this.ClientAddressBookSchema.transaction = Null;
+                }
             }
         }
     }
