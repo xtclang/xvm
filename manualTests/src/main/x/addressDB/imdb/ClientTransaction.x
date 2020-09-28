@@ -1,3 +1,4 @@
+@Abstract
 class ClientTransaction<Schema extends db.RootSchema>
         extends ClientDBObject
         implements db.Transaction<Schema>
@@ -9,16 +10,7 @@ class ClientTransaction<Schema extends db.RootSchema>
         this.dbTransaction = dbTransaction;
         }
 
-    db.DBTransaction dbTransaction;
-
-// ++ TODO GG: the property below is not needed
-
-@Override
-@Abstract @RO (db.Connection<Schema> + Schema) connection;
-
-@Override
-@Abstract @RO db.SystemSchema sys;
-// --
+    protected db.DBTransaction dbTransaction;
 
     @Override
     Boolean commit()

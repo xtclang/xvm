@@ -40,6 +40,7 @@ package imdb
 
     // ---- client side ----------------------------------------------------------------------------
 
+    @Abstract
     class ClientDBObject
             implements db.DBObject
             delegates db.DBObject(dbObject)
