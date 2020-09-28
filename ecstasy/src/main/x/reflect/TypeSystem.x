@@ -82,7 +82,7 @@ const TypeSystem
      * kernel, whose namesake is the bottom turtle in the technical documentation by Dr. Seuss.
      * (Apologies to Richard Rashid.)
      */
-    static String MackKernel = "Ecstasy.xtclang.org";
+    static String MackKernel = "ecstasy.xtclang.org";
 
     /**
      * The reserved package import name for the core Ecstasy module. This package name automatically
@@ -135,7 +135,7 @@ const TypeSystem
      * This could occur if a module that is not depended upon is explicitly loaded as part of the
      * type system, for whatever reason. In such a case, the classes within the module would only be
      * identifiable using the explicit module qualification format, such as
-     * `"Ecstasy.xtclang.org:collections.HashMap"`.
+     * `"ecstasy.xtclang.org:collections.HashMap"`.
      */
     ListMap<Module, String> modulePaths;
 

@@ -216,8 +216,8 @@ module TestMisc
         IntLiteral? a = Null;
         Int b = 7;
         console.println("a=" + a + ", b=" + b + ", a?.toInt():b=" + (a?.toInt():b));
-        // [11] VAR #-238, Ecstasy:Int64 #2                             // create temp var "#2" to hold the result of the else expression (ok!)
-        // [12] VAR #-256, Ecstasy:Nullable | Ecstasy:IntLiteral #3     // create temp var #3 to hold ... um ... wrong! (wasted)     TODO?
+        // [11] VAR #-238, ecstasy:Int64 #2                             // create temp var "#2" to hold the result of the else expression (ok!)
+        // [12] VAR #-256, ecstasy:Nullable | ecstasy:IntLiteral #3     // create temp var #3 to hold ... um ... wrong! (wasted)     TODO?
         // [13] MOV #0, #3                                              // ... and here's proof: it's just a one-time-use, read-only copy
         // [14] JMP_NULL #3 :else1                                      // here is the '?' operator (ok!)
         // [15] NVOK_01 #3.to() -> #4                                   // here is the toInt() (ok!)
@@ -231,8 +231,8 @@ module TestMisc
             a = 4;
             }
         console.println("a=" + a + ", b=" + b + ", a?.toInt():b=" + (a?.toInt():b));
-        // [28] VAR #-238, Ecstasy:Int64 #5                             // create temp var "#5" to hold the result of the else expression (ok!)
-        // [29] VAR #-256, Ecstasy:Nullable | Ecstasy:IntLiteral #6     // create temp var #6 to hold ... um ... wrong! (wasted)
+        // [28] VAR #-238, ecstasy:Int64 #5                             // create temp var "#5" to hold the result of the else expression (ok!)
+        // [29] VAR #-256, ecstasy:Nullable | ecstasy:IntLiteral #6     // create temp var #6 to hold ... um ... wrong! (wasted)
         // [30] MOV #0, #6                                              // ... and here's proof: it's just a one-time-use, read-only copy
         // [31] JMP_NULL #6 :else2                                      // here is the '?' operator (ok!)
         // [32] NVOK_01 #6.to() -> #7                                   // here is the toInt() (ok!)
@@ -242,7 +242,7 @@ module TestMisc
         // [36] :end2: GP_ADD this:stack, #5, this:stack                // all done; do some string concat (ok!)
         //
         // Line [33] generates:
-        //      Suspicious assignment from: Ecstasy:Int64 to: Ecstasy:Nullable | Ecstasy:IntLiteral
+        //      Suspicious assignment from: ecstasy:Int64 to: ecstasy:Nullable | ecstasy:IntLiteral
         }
 
     void testLoop()

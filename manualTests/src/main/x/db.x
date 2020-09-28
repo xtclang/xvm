@@ -3,9 +3,9 @@ module db
     {
     @Inject Console console;
 
-    package json import Json.xtclang.org;
-    package oodb import OODB.xtclang.org;
-    package jsondb import JsonDB.xtclang.org;
+    package json import json.xtclang.org;
+    package oodb import oodb.xtclang.org;
+    package jsondb import jsondb.xtclang.org;
 
     void run()
         {

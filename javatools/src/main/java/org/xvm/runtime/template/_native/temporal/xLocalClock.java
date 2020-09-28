@@ -40,7 +40,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle
 public class xLocalClock
         extends xService
     {
-    public static Timer TIMER = new Timer("Ecstasy:LocalClock", true);
+    public static Timer TIMER = new Timer("ecstasy:LocalClock", true);
 
     public xLocalClock(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {

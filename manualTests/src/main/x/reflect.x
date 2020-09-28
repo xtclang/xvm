@@ -538,11 +538,11 @@ module TestReflection
                 "bob",                         // shouldn't find it
                 "Point.Bob",                   // shouldn't find it
                 "TestReflection:Point",        // with explicit module name
-                "Ecstasy:collections.HashMap",
-                "Ecstasy.xtclang.org:collections.HashMap",
+                "ecstasy:collections.HashMap",
+                "ecstasy.xtclang.org:collections.HashMap",
                 "TestReflection:",             // just explicit module name
-                "Ecstasy:",
-                "Ecstasy.xtclang.org:",
+                "ecstasy:",
+                "ecstasy.xtclang.org:",
                 "@Unchecked Int",
                 "HashMap<String?, @Unchecked Int>",
                 "HashMap<String?, @Unchecked Int>.Entry",

@@ -1,7 +1,7 @@
 /*
  * Build file for the Ecstasy core library of the XDK.
  *
- * This project does NOT build the Ecstasy.xtc file. (The :xdk project builds it.)
+ * This project does NOT build the ecstasy.xtc file. (The :xdk project builds it.)
  *
  * This project can update the Unicode data files, if a Unicode release has occurred and provided
  * a new `ucd.all.flat.zip`; that is the only time that the Unicode data files have to be updated.

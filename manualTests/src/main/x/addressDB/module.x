@@ -1,6 +1,6 @@
 module AddressBookDB
     {
-    package db import OODB.xtclang.org;
+    package db import oodb.xtclang.org;
 
     // @DBSchemaDDL
     interface AddressBookSchema

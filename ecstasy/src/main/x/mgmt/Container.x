@@ -82,7 +82,7 @@ service Container
      *                          `TypeSystem` that should also be used, as-is, within the new
      *                          container's `TypeSystem`; these modules will transitively close over
      *                          their dependencies and bring those additional modules into the new
-     *                          container as well; by default, the `Ecstasy.xtclang.org` module is
+     *                          container as well; by default, the `ecstasy.xtclang.org` module is
      *                          automatically shared, and if the model is `Lightweight`, then all of
      *                          the modules from the current `TypeSystem` are automatically shared
      * @param additionalModules if any additional modules are required in the new container, but

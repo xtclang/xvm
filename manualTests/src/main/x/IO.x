@@ -15,7 +15,7 @@ module TestIO
     import ecstasy.io.Writer;
     import ecstasy.io.UTF8Reader;
 
-    package json import Json.xtclang.org;
+    package json import json.xtclang.org;
 
     import json.Doc;
     import json.ElementInput;

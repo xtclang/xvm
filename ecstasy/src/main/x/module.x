@@ -15,7 +15,7 @@
  *
  * @Copyright 2016-2020 xqiz.it
  */
-module Ecstasy.xtclang.org
+module ecstasy.xtclang.org
     {
     /**
      * The Nullable type is the only type that can contain the value Null.

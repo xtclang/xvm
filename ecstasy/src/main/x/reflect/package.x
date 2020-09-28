@@ -105,7 +105,7 @@ package reflect
             extends Package
         {
         /**
-         * The simple qualified name of the module, such as "Ecstasy".
+         * The simple qualified name of the module, such as "ecstasy".
          */
         @RO String simpleName.get()
             {
@@ -113,7 +113,7 @@ package reflect
             }
 
         /**
-         * The fully qualified name of the module, such as "Ecstasy.xtclang.org".
+         * The fully qualified name of the module, such as "ecstasy.xtclang.org".
          */
         @RO String qualifiedName.get()
             {

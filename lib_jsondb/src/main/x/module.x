@@ -1,8 +1,8 @@
 /**
  * JSON-based database implementation of the OODB API, with storage in a FileSystem.
  */
-module JsonDB.xtclang.org
+module jsondb.xtclang.org
     {
-    package oodb import OODB.xtclang.org;
-    package json import Json.xtclang.org;
+    package oodb import oodb.xtclang.org;
+    package json import json.xtclang.org;
     }

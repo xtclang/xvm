@@ -1,4 +1,4 @@
-module Json.xtclang.org
+module json.xtclang.org
         implements ecstasy.io.TextFormat
     {
     import ecstasy.io.IOException;

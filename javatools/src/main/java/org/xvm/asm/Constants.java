@@ -34,7 +34,7 @@ public interface Constants
      * dependencies (other than a conceptual dependency in the compiler on the prototype module,
      * due to the "turtles" problem of Ref.x having properties which are themselves refs).
      */
-    public static final String ECSTASY_MODULE = "Ecstasy.xtclang.org";
+    public static final String ECSTASY_MODULE = "ecstasy.xtclang.org";
 
     /**
      * The name of the package within every module that imports the Ecstasy core module.

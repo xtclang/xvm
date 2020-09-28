@@ -5,7 +5,7 @@
 tasks.register("build") {
     group       = "Build"
     description = "Build this project"
-    // the Json project doesn't build anything itself
+    // the JSON project doesn't build anything itself
 }
 
 tasks.register<JavaExec>("compileJson") {
@@ -23,7 +23,7 @@ tasks.register<JavaExec>("compileJson") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$buildDir",
-            "-L", "${xdk.buildDir}/xdk/lib/Ecstasy.xtc",
+            "-L", "${xdk.buildDir}/xdk/lib/ecstasy.xtc",
             "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
             "src/main/x/module.x")
     main = "org.xvm.tool.Compiler"

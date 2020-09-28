@@ -53,9 +53,9 @@ module TestParser
             "@None @Zero() @One(1) Map",
             "@None @Zero() @One(1) @Two(-1, \"hello\") Map",
             "@None @Zero() @One(1) @Two(-1, \"hello\") Map<@Junk('a') String, @Expires(Date:2020-12-25) util.Password>",
-            "Ecstasy.xtclang.org:collections.HashMap",
-            "Ecstasy.xtclang.org:collections.List<Ecstasy.xtclang.org:numbers.Int64>",
-            "@Ecstasy.xtclang.org:annotations.Unchecked Ecstasy.xtclang.org:collections.List<@Ecstasy.xtclang.org:annotations.Unchecked Ecstasy.xtclang.org:numbers.Int64>",
+            "ecstasy.xtclang.org:collections.HashMap",
+            "ecstasy.xtclang.org:collections.List<ecstasy.xtclang.org:numbers.Int64>",
+            "@ecstasy.xtclang.org:annotations.Unchecked ecstasy.xtclang.org:collections.List<@ecstasy.xtclang.org:annotations.Unchecked ecstasy.xtclang.org:numbers.Int64>",
             "Function<Tuple<String>, Tuple<Int>>", // TODO CP - ParseFailed CompareGT required, ShiftRight found
             ];
 

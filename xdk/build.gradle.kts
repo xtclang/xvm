@@ -45,7 +45,7 @@ val copyJavatools = tasks.register<Copy>("copyJavatools") {
 
 val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
     group       = "Execution"
-    description = "Build Ecstasy.xtc and _native.xtc modules"
+    description = "Build ecstasy.xtc and _native.xtc modules"
 
     dependsOn(javatools.tasks["build"])
     dependsOn(copyJavatools)
@@ -68,14 +68,14 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
 
 val compileJson = tasks.register<JavaExec>("compileJson") {
     group       = "Execution"
-    description = "Build Json.xtc module"
+    description = "Build json.xtc module"
 
     shouldRunAfter(compileEcstasy)
 
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$buildDir/xdk/lib",
-            "-L", "${buildDir}/xdk/lib/Ecstasy.xtc",
+            "-L", "${buildDir}/xdk/lib/ecstasy.xtc",
             "-L", "${buildDir}/xdk/javatools/javatools_bridge.xtc",
             "$jsonMain/x/module.x")
     main = "org.xvm.tool.Compiler"
@@ -83,14 +83,14 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
 
 val compileOODB = tasks.register<JavaExec>("compileOODB") {
     group       = "Execution"
-    description = "Build OODB.xtc module"
+    description = "Build oodb.xtc module"
 
     shouldRunAfter(compileEcstasy)
 
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$buildDir/xdk/lib",
-            "-L", "${buildDir}/xdk/lib/Ecstasy.xtc",
+            "-L", "${buildDir}/xdk/lib/ecstasy.xtc",
             "-L", "${buildDir}/xdk/javatools/javatools_bridge.xtc",
             "$oodbMain/x/module.x")
     main = "org.xvm.tool.Compiler"
@@ -98,7 +98,7 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
 
 val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     group       = "Execution"
-    description = "Build JsonDB.xtc module"
+    description = "Build jsondb.xtc module"
 
     shouldRunAfter(compileJson)
     shouldRunAfter(compileOODB)
@@ -106,7 +106,7 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$buildDir/xdk/lib",
-            "-L", "${buildDir}/xdk/lib/Ecstasy.xtc",
+            "-L", "${buildDir}/xdk/lib/ecstasy.xtc",
             "-L", "${buildDir}/xdk/javatools/javatools_bridge.xtc",
             "-L", "${buildDir}/xdk/lib/",
             "$jsondbMain/x/module.x")
@@ -125,7 +125,7 @@ tasks.register("build") {
     // compile Ecstasy
     val coreSrc = fileTree(ecstasyMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val coreDest = file("$buildDir/xdk/lib/Ecstasy.xtc").lastModified()
+    val coreDest = file("$buildDir/xdk/lib/ecstasy.xtc").lastModified()
 
     if (coreSrc > coreDest) {
         dependsOn(compileEcstasy)
@@ -133,10 +133,10 @@ tasks.register("build") {
         dependsOn(copyJavatools)
     }
 
-    // compile Json
+    // compile JSON
     val jsonSrc = fileTree(jsonMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val jsonDest = file("$buildDir/xdk/lib/Json.xtc").lastModified()
+    val jsonDest = file("$buildDir/xdk/lib/json.xtc").lastModified()
 
     if (jsonSrc > jsonDest) {
         dependsOn(compileJson)
@@ -145,16 +145,16 @@ tasks.register("build") {
     // compile OODB
     val oodbSrc = fileTree(oodbMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val oodbDest = file("$buildDir/xdk/lib/OODB.xtc").lastModified()
+    val oodbDest = file("$buildDir/xdk/lib/oodb.xtc").lastModified()
 
     if (oodbSrc > oodbDest) {
         dependsOn(compileOODB)
         }
 
-    // compile Json
+    // compile JSON-DB
     val jsondbSrc = fileTree(jsondbMain).getFiles().stream().
     mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val jsondbDest = file("$buildDir/xdk/lib/JsonDB.xtc").lastModified()
+    val jsondbDest = file("$buildDir/xdk/lib/jsondb.xtc").lastModified()
 
     if (jsondbSrc > jsondbDest) {
         dependsOn(compileJsonDB)

@@ -3330,7 +3330,7 @@ public class ClassStructure
                 TypeConstant constType = entry.getValue();
 
                 // if constType is unresolved, we cannot call constType.isEcstasy("Object")
-                if (!constType.getValueString().equals("Ecstasy:Object"))
+                if (!constType.getValueString().equals("ecstasy:Object"))
                     {
                     sb.append(" extends ")
                       .append(constType);

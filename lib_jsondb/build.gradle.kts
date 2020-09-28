@@ -23,7 +23,7 @@ tasks.register<JavaExec>("compileJsonDB") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$buildDir",
-            "-L", "${xdk.buildDir}/xdk/lib/Ecstasy.xtc",
+            "-L", "${xdk.buildDir}/xdk/lib/ecstasy.xtc",
             "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
             "src/main/x/module.x")
     main = "org.xvm.tool.Compiler"

@@ -1,7 +1,7 @@
 /**
  * This module contains the Object Oriented Database (OODB) APIs.
  */
-module OODB.xtclang.org
+module oodb.xtclang.org
     {
     typedef (DBInvoke<<>, <Boolean>> | function Boolean()) Condition;
 

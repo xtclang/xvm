@@ -91,7 +91,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      * @param allocateStruct   the function that is used to allocate an initial structure that can
      *                         be populated and used to instantiate an object of this class
      * @param implicitName     for a small number of commonly used classes in the
-     *                         `Ecstasy.xtclang.org` module, an implicit name is provided to make
+     *                         `ecstasy.xtclang.org` module, an implicit name is provided to make
      *                         the usage of the class as simple as having imported the class "as"
      *                         the implicit name
      */

@@ -449,12 +449,12 @@ ecommerce.tableFor(Item).add(new Item(456, "AM-G7-XYZ", "Best whoozymawhatzit ev
 
 --
 
-@OODB.Schema
+@oodb.Schema
 module EcommerceDBModule
     {
-    package OODB import OODB.xtclang.org;
+    package oodb import oodb.xtclang.org;
 
-    @OODB.Schema2
+    @oodb.Schema2
     interface EcommerceDB
             extends Database
         {
@@ -471,7 +471,7 @@ module EcommerceDBModule
         @Filter(orders, o -> o.shipped == Null && o.canceled == Null) DBView<Int, Order> processing;
         }
 
-    @OODB.Schema3
+    @oodb.Schema3
     const Customer
         {
         @DBList L
@@ -672,7 +672,7 @@ Transaction
 
 module ContactsDB
     {
-    package db import OODB.xtclang.org;
+    package db import oodb.xtclang.org;
 
     const Contact(String firstName, String lastName, Email[] emails = [], Phone[] phones = [])
         {
@@ -839,7 +839,7 @@ List<Customer>
 
 module ContactsDB
     {
-    package db import OODB.xtclang.org;
+    package db import oodb.xtclang.org;
 
     Map<String, String> contacts
     }
