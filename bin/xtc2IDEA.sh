@@ -4,27 +4,31 @@
 
 binDir=$(dirname "$BASH_SOURCE")
 
-ideaDir=~/Library/Preferences/IdeaIC2019.2
-if [ ! -d ${ideaDir} ]
+ideaDir=~/Library/Application\ Support/JetBrains/IdeaIC2020.2
+if [ ! -d "${ideaDir}" ]
 then
-  ideaDir=~/Library/Preferences/IdeaIC2019.1
+  ideaDir=~/Library/Preferences/IdeaIC2019.2
   if [ ! -d ${ideaDir} ]
   then
-    ideaDir=~/Library/Preferences/IdeaIC2018.3
+    ideaDir=~/Library/Preferences/IdeaIC2019.1
     if [ ! -d ${ideaDir} ]
     then
-      echo "***" Intellij IDEA is not installed "***"
-      exit
+      ideaDir=~/Library/Preferences/IdeaIC2018.3
+      if [ ! -d ${ideaDir} ]
+      then
+        echo "***" Intellij IDEA is not installed "***"
+        exit
+      fi
     fi
   fi
 fi
 
 typesDir=${ideaDir}/filetypes
 
-if [ ! -d ${typesDir} ]
+if [ ! -d "${typesDir}" ]
 then
-  mkdir ${typesDir}
+  mkdir "${typesDir}"
 fi
-cp ${binDir}/Ecstasy.xml ${typesDir}
+cp ${binDir}/Ecstasy.xml "${typesDir}"
 
 echo "***" restart the IntelliJ "***"
