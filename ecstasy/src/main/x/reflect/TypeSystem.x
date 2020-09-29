@@ -101,8 +101,6 @@ const TypeSystem
 
         String                source     = $/implicit.x;
         Parser                parser     = new Parser(source);
-        // TODO GG - this should not have compiled (accessing non-static field from static context)
-        // assert Module         mackModule := moduleByQualifiedName.get(MackKernel);
         Module                mackModule = this:module;
         ListMap<String, Type> implicits  = new ListMap();
         NextImport: while (!parser.eof)

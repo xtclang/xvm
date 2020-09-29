@@ -4,32 +4,16 @@ module TestSimple
 
     void run()
         {
-        Iface d = new Delegator(new Base());
-        console.println(d.value);
+        console.println(Base.value);
         }
 
-    interface Iface
+    class Base(Int value0)
         {
-        @RO Int value.get()
+        Int value0;
+
+        static Int value =
             {
-            console.println("default");
-            return 1;
-            }
-        }
-
-    class Base
-            implements Iface
-        {
-        @Override
-        @RO Int value.get()
-            {
-            console.println("base");
-            return 2;
-            }
-        }
-
-    class Delegator(Base base)
-            delegates Iface(base)
-        {
+            return value0;
+            };
         }
     }

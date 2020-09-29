@@ -1334,12 +1334,14 @@ public class StatementBlock
         @Override
         public boolean isFunction()
             {
-            if (isConstructor())
+            MethodStructure method = m_method;
+            if (method.isValidator() ||
+                    method.isConstructor() && !method.isPropertyInitializer())
                 {
                 return false;
                 }
 
-            Component parent = m_method;
+            Component parent = method;
             while (true)
                 {
                 switch (parent.getFormat())
