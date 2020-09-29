@@ -140,12 +140,6 @@ mixin LinkedList<Element>
         // TODO assert Referent == Element?
         // TODO assert Referent == Nullable|Element;
         // TODO GG: assert Type<Referent> == Type<Element?>;
-
-// TODO remove? - no longer necessary now that the TypeDef is being used
-//        // if the next and/or previous properties are specified, then their type must be the element
-//        // type, and they must be present as properties on that same element type
-//        assert nextLink?.Target == Type<Element> && nextLink.Referent == Type<Element>;
-//        assert prevLink?.Target == Type<Element> && prevLink.Referent == Type<Element>;
         }
     finally
         {
@@ -412,7 +406,6 @@ mixin LinkedList<Element>
             {
             // drag the nodeVar behind the node, because in a singly linked list we need to keep a
             // reference to the node that will point to the newly inserted node
-            // Loop: for (Var<Element> nodeVar = this; // TODO GG bad err message:
             Loop: for (Var<Element?> nodeVar = this;
                     node != Null;
                     nodeVar = nextLink.of(node), node = nodeVar.get())
