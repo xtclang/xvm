@@ -202,6 +202,7 @@ module TestRunner.xtclang.org
             @Inject Directory homeDir;
             @Inject Directory tmpDir;
             @Inject Linker    linker;
+            @Inject Random    random;
 
             Boolean wrongName = False;
             switch (type)
@@ -263,6 +264,14 @@ module TestRunner.xtclang.org
                     if (name == "linker")
                         {
                         return linker;
+                        }
+                    wrongName = True;
+                    break;
+
+                case Random:
+                    if (name == "random")
+                        {
+                        return random;
                         }
                     wrongName = True;
                     break;

@@ -11,7 +11,7 @@ const Exception
     {
     construct(String? text = Null, Exception? cause = Null)
         {
-        @Inject Iterable<StackFrame> stack;
+        // @Inject Iterable<StackFrame> stack;
 
         this.text = text;
         this.cause = cause;

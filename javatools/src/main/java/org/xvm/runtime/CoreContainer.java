@@ -344,7 +344,10 @@ public class CoreContainer
             xContainerLinker templateRTLinker = (xContainerLinker) f_templates.getTemplate("_native.mgmt.ContainerLinker");
             if (templateRTLinker != null)
                 {
-                TypeConstant typeLinker = frame.poolContext().ensureEcstasyTypeConstant("mgmt.Container.Linker");
+                ConstantPool pool       = frame.poolContext();
+                TypeConstant typeLinker = pool.ensureUnionTypeConstant(
+                        pool.ensureEcstasyTypeConstant("mgmt.Container.Linker"),
+                        pool.typeService());
                 m_hLinker = hLinker = templateRTLinker.createServiceHandle(
                     createServiceContext("Linker"),
                     templateRTLinker.getCanonicalClass(), typeLinker);

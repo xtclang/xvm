@@ -8,7 +8,7 @@ import ecstasy.mgmt.ResourceProvider;
 import ecstasy.reflect.FileTemplate;
 import ecstasy.reflect.ModuleTemplate;
 
-class ContainerLinker
+service ContainerLinker
         implements Container.Linker
     {
     // TODO remove temporary methods
