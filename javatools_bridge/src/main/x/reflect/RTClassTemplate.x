@@ -23,7 +23,6 @@ class RTClassTemplate
     @Override @RO PropertyTemplate[]    properties;
     @Override @RO Boolean               singleton;
     @Override @RO SourceCodeInfo?       sourceInfo;
-    @Override @RO ClassTemplate         template;
     @Override @RO TypeTemplate          type;
     @Override @RO TypeParameter[]       typeParams;
     @Override @RO Boolean               virtualChild;

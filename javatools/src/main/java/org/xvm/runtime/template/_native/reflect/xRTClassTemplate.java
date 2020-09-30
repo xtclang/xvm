@@ -49,7 +49,6 @@ public class xRTClassTemplate
             markNativeProperty("properties");
             markNativeProperty("singleton");
             markNativeProperty("sourceInfo");
-            markNativeProperty("template");
             markNativeProperty("type");
             markNativeProperty("typeParams");
             markNativeProperty("virtualChild");
@@ -89,9 +88,6 @@ public class xRTClassTemplate
 
             case "sourceInfo":
                 return getPropertySourceInfo(frame, hComponent, iReturn);
-
-            case "template":
-                return getPropertyTemplate(frame, hComponent, iReturn);
 
             case "type":
                 return getPropertyType(frame, hComponent, iReturn);
@@ -205,16 +201,6 @@ public class xRTClassTemplate
         ClassStructure clz   = (ClassStructure) hComponent.getComponent();
         GenericHandle  hInfo = null; // TODO
         return frame.assignValue(iReturn, hInfo);
-        }
-
-    /**
-     * Implements property: template.get()
-     */
-    public int getPropertyTemplate(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
-        {
-        // the template of a Composition that is a ClassTemplate is itself:
-        //   return this;
-        return frame.assignValue(iReturn, hComponent);
         }
 
     /**

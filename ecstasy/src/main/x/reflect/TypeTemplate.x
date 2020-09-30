@@ -303,7 +303,8 @@ interface TypeTemplate // TODO move
                        .addAll(annotation.template.name)
                        .add(' ');
                     }
-                buf.addAll(cmp.template.name);
+                assert cmp.is(ClassTemplate);
+                buf.addAll(cmp.name);
                 fParams = True;
                 break;
 

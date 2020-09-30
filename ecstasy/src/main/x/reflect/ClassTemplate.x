@@ -23,8 +23,19 @@ interface ClassTemplate
         /**
          * The underlying ClassTemplate representing the basis of the class composition.
          */
-        @RO ClassTemplate template;
-
+        @RO ClassTemplate baseTemplate.get()
+            {
+            Composition base = this;
+            while ((AnnotationTemplate annotation, base) := base.deannotate())
+                {
+                }
+            assert base.is(ClassTemplate);
+            return base;
+            }
+        
+        /**
+         * The TypeTemplate representing the type of this composition.
+         */
         @RO TypeTemplate type;
 
         /**
@@ -93,8 +104,11 @@ interface ClassTemplate
          */
         Boolean extends(Composition! composition)
             {
+            Format thisFormat = baseTemplate.format;
+            Format thatFormat = composition.baseTemplate.format;
+
             // interfaces do not extend and cannot be extended
-            if (this.template.format == Interface || composition.template.format == Interface)
+            if (thisFormat == Interface || thatFormat == Interface)
                 {
                 return False;
                 }
@@ -125,7 +139,7 @@ interface ClassTemplate
                 }
 
             // test whether it is possible for this to extend whatever the class template represents
-            switch (this.template.format, composition.format)
+            switch (thisFormat, thatFormat)
                 {
                 // any class can extend a class
                 case (Class    , Class):
@@ -158,7 +172,7 @@ interface ClassTemplate
                 }
 
             // search through the composition of this class to find the specified super class
-            for (val contrib : this.template.contribs)
+            for (val contrib : baseTemplate.contribs)
                 {
                 if (contrib.ingredient.extends(composition))
                     {
@@ -179,11 +193,13 @@ interface ClassTemplate
          */
         conditional Boolean incorporates(Composition! composition)
             {
+            Format  thisFormat   = baseTemplate.format;
+            Format  thatFormat   = composition.baseTemplate.format;
             Boolean fConditional = False;
 
             // interfaces do not incorporate and cannot be incorporated; only a mixin can be
             // incorporated
-            if (this.template.format == Interface || composition.template.format != Mixin)
+            if (thisFormat == Interface || thatFormat != Mixin)
                 {
                 return False;
                 }
@@ -194,9 +210,10 @@ interface ClassTemplate
                 }
 
             // unwrap any annotations from the composition that we are testing extension of
-            while ((AnnotationTemplate annotation, composition) := composition.deannotate())
+            Composition baseThat = composition;
+            while ((AnnotationTemplate annoThat, baseThat) := baseThat.deannotate())
                 {
-                if (Boolean fCond := this.incorporates(annotation.template))
+                if (Boolean fCond := this.incorporates(annoThat.template))
                     {
                     fConditional |= fCond;
                     }
@@ -205,21 +222,44 @@ interface ClassTemplate
                     return False;
                     }
 
-                if (&this == &composition)
+                if (&this == &baseThat)
                     {
                     return True, fConditional;
                     }
                 }
 
-            if (!composition.is(ClassTemplate))
+            if (!baseThat.is(ClassTemplate))
+                {
+                return False;
+                }
+
+            Composition baseThis = this;
+            while ((AnnotationTemplate annoThis, baseThis) := baseThis.deannotate())
+                {
+                if (Boolean fCond := annoThis.template.incorporates(baseThat))
+                    {
+                    fConditional |= fCond;
+                    }
+                else
+                    {
+                    return False;
+                    }
+
+                if (&baseThis == &baseThat)
+                    {
+                    return True, fConditional;
+                    }
+                }
+
+            if (!baseThis.is(ClassTemplate))
                 {
                 return False;
                 }
 
             // search through the composition of this class to find the specified mixin
-            for (val contrib : this.template.contribs)
+            for (val contrib : baseThis.contribs)
                 {
-                if (Boolean fCond := contrib.ingredient.incorporates(composition))
+                if (Boolean fCond := contrib.ingredient.incorporates(baseThat))
                     {
                     fConditional |= fCond |
                             (contrib.action == Incorporates && contrib.constraints != Null);
@@ -302,7 +342,7 @@ interface ClassTemplate
          */
         conditional ClassTemplate hasSuper()
             {
-            if (template.format == Interface)
+            if (baseTemplate.format == Interface)
                 {
                 return False;
                 }
@@ -365,10 +405,9 @@ interface ClassTemplate
     static const AnnotatingComposition(AnnotationTemplate annotation, Composition composition)
             implements Composition
         {
-        @Override
-        ClassTemplate template.get()
+        assert()
             {
-            return composition.template;
+            assert composition.is(ClassTemplate) || composition.is(AnnotatingComposition);
             }
 
         @Override

@@ -131,7 +131,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     @RO String name.get()
         {
-        return composition.template.name;
+        return baseTemplate.name;
         }
 
     /**
@@ -147,7 +147,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     @RO String path.get()
         {
-        return composition.template.path;
+        return baseTemplate.path;
         }
 
     /**
@@ -215,6 +215,19 @@ const Class<PublicType, ProtectedType extends PublicType,
      * The composition of the class.
      */
     Composition composition;
+
+    /**
+     * The underlying ClassTemplate of this Class. For example, given a composition
+     * `@A1 @A2 C`, the `baseTemplate` property would retrun `C`.
+     */
+     ClassTemplate baseTemplate.get()
+        {
+        (Class!<> baseClass, _) = deannotate();
+
+        Composition baseComposition = baseClass.composition;
+        assert baseComposition.is(ClassTemplate);
+        return baseComposition;
+        }
 
     /**
      * Obtain the deannotated form of this class, and the annotations, if any, that were added to
@@ -367,7 +380,7 @@ const Class<PublicType, ProtectedType extends PublicType,
     private @Lazy PublicType singletonInstance.calc()
         {
         function StructType()? alloc = allocateStruct;
-        assert composition.template.singleton && alloc != Null;
+        assert baseTemplate.singleton && alloc != Null;
         PublicType instance = instantiate(alloc());
         assert &instance.isConst || &instance.isService;
         return instance;
@@ -378,7 +391,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     @RO Boolean abstract.get()
         {
-        return composition.template.isAbstract; // TODO the composition itself should have abstract as a property
+        return baseTemplate.isAbstract; // TODO the composition itself should have abstract as a property
         }
 
     /**
@@ -386,7 +399,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     Boolean virtualChild.get()
         {
-        return composition.template.virtualChild;
+        return baseTemplate.virtualChild;
         }
 
     /**
@@ -399,7 +412,7 @@ const Class<PublicType, ProtectedType extends PublicType,
     Boolean extends(Class!<> clz)
         {
         // one can only "extend" a class (or a mixin extend a mixin)
-        if (clz.composition.template.format == Interface)
+        if (clz.baseTemplate.format == Interface)
             {
             return False;
             }
@@ -417,7 +430,7 @@ const Class<PublicType, ProtectedType extends PublicType,
     Boolean incorporates(Class!<> clz)
         {
         // one can only "incorporate" a mixin
-        if (clz.composition.template.format != Mixin)
+        if (clz.baseTemplate.format != Mixin)
             {
             return False;
             }
@@ -443,7 +456,7 @@ const Class<PublicType, ProtectedType extends PublicType,
     Boolean implements(Class!<> clz)
         {
         // one can only "implement" an interface
-        if (clz.composition.template.format != Interface)
+        if (clz.baseTemplate.format != Interface)
             {
             return False;
             }
@@ -497,7 +510,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     conditional PublicType isSingleton()
         {
-        return composition.template.singleton && allocateStruct != Null
+        return baseTemplate.singleton && allocateStruct != Null
                 ? (True, singletonInstance)
                 : False;
         }
@@ -507,9 +520,9 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     conditional StructType allocate()
         {
-        ClassTemplate template = composition.template;
+        ClassTemplate baseTemplate = this.baseTemplate;
         function StructType()? alloc = allocateStruct;
-        return template.isAbstract || composition.template.singleton || alloc == Null
+        return baseTemplate.isAbstract || baseTemplate.singleton || alloc == Null
                 ? False
                 : (True, alloc());
         }
