@@ -9,5 +9,10 @@ interface ModuleTemplate
      */
     @RO String qualifiedName;
 
+    /**
+     * The modules that this module depends on by linkage, both directly and indirectly.
+     */
+    @RO immutable Map<String, ModuleTemplate> modulesByPath;
+
     // TODO
     }

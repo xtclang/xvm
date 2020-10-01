@@ -1,19 +1,36 @@
 package org.xvm.runtime.template._native.reflect;
 
 
-import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
-import org.xvm.asm.MethodStructure;
+import java.util.List;
+import java.util.Map;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
+
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.collections.xArray;
+
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xNullable;
+
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**
@@ -39,8 +56,14 @@ public class xRTClassTemplate
         {
         if (this == INSTANCE)
             {
-            CLASS_TEMPLATE_COMPOSITION = ensureClass(getCanonicalType(),
+            CLASS_TEMPLATE_CLZCOMP = ensureClass(getCanonicalType(),
                 pool().ensureEcstasyTypeConstant("reflect.ClassTemplate"));
+            CONTRIBUTION_CLZCOMP = f_templates.resolveClass(
+                pool().ensureEcstasyTypeConstant("reflect.ClassTemplate.Composition.Contribution"));
+
+            ACTION = (xEnum) f_templates.getTemplate("reflect.ClassTemplate.Composition.Action");
+
+            CREATE_CONTRIB_METHOD = getStructure().findMethod("createContribution", 5);
 
             markNativeProperty("classes");
             markNativeProperty("contribs");
@@ -148,9 +171,98 @@ public class xRTClassTemplate
      */
     public int getPropertyContribs(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz    = (ClassStructure) hComponent.getComponent();
-        GenericHandle  hArray = null; // TODO
-        return frame.assignValue(iReturn, hArray);
+        ClassStructure     clz         = (ClassStructure) hComponent.getComponent();
+        List<Contribution> listContrib = clz.getContributionsAsList();
+
+        Utils.ValueSupplier supplier = (frameCaller, index) ->
+            {
+            ConstantPool pool        = frameCaller.poolContext();
+            Contribution contrib     = listContrib.get(index);
+            TypeConstant typeContrib = (TypeConstant) pool.register(contrib.getTypeConstant());
+            ObjectHandle hDelegatee  = xNullable.NULL; // TODO
+            ObjectHandle haNames     = xNullable.NULL;
+            ObjectHandle haTypes     = xNullable.NULL;
+
+            String       sAction;
+            switch (contrib.getComposition())
+                {
+                case Annotation:
+                    sAction = "AnnotatedBy";
+                    break;
+                case Extends:
+                    sAction = "Extends";
+                    break;
+                case Implements:
+                    sAction = "Implements";
+                    break;
+                case Delegates:
+                    sAction = "Delegates";
+                    break;
+                case Into:
+                    sAction = "MixesInto";
+                    break;
+                case Incorporates:
+                    {
+                    Map<StringConstant, TypeConstant> mapConstraints = contrib.getTypeParams();
+                    int cConstraints = mapConstraints.size();
+                    if (cConstraints > 0)
+                        {
+                        StringHandle[] ahNames = new StringHandle[cConstraints];
+                        TypeHandle[]   ahTypes = new TypeHandle[cConstraints];
+                        int            i = 0;
+                        for (Map.Entry<StringConstant, TypeConstant> entry : mapConstraints.entrySet())
+                            {
+                            String       sName = entry.getKey().getValue();
+                            TypeConstant type  = entry.getValue();
+
+                            ahNames[i] = xString.makeHandle(sName);
+                            ahTypes[i] = ((TypeConstant) pool.register(type)).getTypeHandle();
+                            i++;
+                            }
+                        haNames = xArray.makeStringArrayHandle(ahNames);
+                        haTypes = xRTType.ensureArrayTemplate().createArrayHandle(
+                                    xRTType.ensureTypeArrayComposition(), ahTypes);
+                        }
+                    sAction = "Incorporates";
+                    break;
+                    }
+                default:
+                    throw new IllegalStateException();
+                }
+
+            ObjectHandle[] ahVar = new ObjectHandle[CREATE_CONTRIB_METHOD.getMaxVars()];
+            ahVar[0] = Utils.ensureInitializedEnum(frameCaller, ACTION.getEnumByName(sAction));
+            ahVar[1] = typeContrib.getTypeHandle();
+            ahVar[2] = hDelegatee;
+            ahVar[3] = haNames;
+            ahVar[3] = haTypes;
+
+            return frameCaller.call1(CREATE_CONTRIB_METHOD, null, ahVar, Op.A_STACK);
+            };
+
+        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(ensureContribArrayComposition(),
+                listContrib.size(), xArray.Mutability.Fixed);
+
+        switch (new Utils.FillArray(hArray, supplier, iReturn).doNext(frame))
+            {
+            case Op.R_NEXT:
+                hArray.m_mutability = xArray.Mutability.Constant;
+                return Op.R_NEXT;
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    {
+                    hArray.m_mutability = xArray.Mutability.Constant;
+                    return Op.R_NEXT;
+                    });
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     /**
@@ -268,11 +380,32 @@ public class xRTClassTemplate
     public static ComponentTemplateHandle makeHandle(ClassStructure structClz)
         {
         // note: no need to initialize the struct because there are no natural fields
-        return new ComponentTemplateHandle(CLASS_TEMPLATE_COMPOSITION, structClz);
+        return new ComponentTemplateHandle(CLASS_TEMPLATE_CLZCOMP, structClz);
+        }
+
+    /**
+     * @return the ClassComposition for an Array of Contributions
+     */
+    private static ClassComposition ensureContribArrayComposition()
+        {
+        ClassComposition clz = CONTRIBUTION_ARRAY_CLZCOMP;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeContribArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                CONTRIBUTION_CLZCOMP.getType());
+            CONTRIBUTION_ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeContribArray);
+            assert clz != null;
+            }
+        return clz;
         }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static ClassComposition CLASS_TEMPLATE_COMPOSITION;
+    private static ClassComposition CLASS_TEMPLATE_CLZCOMP;
+    private static ClassComposition CONTRIBUTION_CLZCOMP;
+    private static ClassComposition CONTRIBUTION_ARRAY_CLZCOMP;
+    private static xEnum            ACTION;
+    private static MethodStructure  CREATE_CONTRIB_METHOD;
     }

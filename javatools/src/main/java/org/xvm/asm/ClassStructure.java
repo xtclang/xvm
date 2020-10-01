@@ -23,6 +23,7 @@ import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -780,6 +781,54 @@ public class ClassStructure
         return cActual == cFormal
             ? atypeActual
             : resolveType(pool, Arrays.asList(atypeActual)).getParamTypesArray();
+        }
+
+    /**
+     * Given this structure being a module or a package, build a list of all of the module
+     * dependencies, and the shortest path to each.
+     *
+     * @param sModulePath     pass "" for the primary module
+     * @param mapModulePaths  pass a map containing all previously encountered modules (including
+     *                        the current one)
+     */
+    protected void collectDependencies(String sModulePath, Map<ModuleConstant, String> mapModulePaths)
+        {
+        for (Component child : children())
+            {
+            if (child instanceof PackageStructure)
+                {
+                PackageStructure pkg = (PackageStructure) child;
+                if (pkg.isModuleImport())
+                    {
+                    ModuleStructure moduleDep  = pkg.getImportedModule();
+                    ModuleConstant  idDep      = moduleDep.getIdentityConstant();
+                    String          sOldPath   = mapModulePaths.get(idDep);
+                    String          sLocalPath = pkg.getIdentityConstant().getPathString();
+                    String          sNewPath   = sModulePath.length() == 0
+                                               ? sLocalPath
+                                               : sModulePath + '.' + sLocalPath;
+                    if (sOldPath == null)
+                        {
+                        mapModulePaths.put(idDep, sNewPath);
+                        moduleDep.collectDependencies(sNewPath, mapModulePaths);
+                        }
+                    else if (sNewPath.length() < sOldPath.length())
+                        {
+                        mapModulePaths.put(idDep, sNewPath);
+
+                        // replace everything else using the new path that was already registered
+                        // as being reached via the old path
+                        mapModulePaths.entrySet().stream()
+                                .filter(e -> e.getValue().startsWith(sOldPath + '.'))
+                                .forEach(e -> e.setValue(sNewPath + e.getValue().substring(sOldPath.length())));
+                        }
+                    }
+                else
+                    {
+                    pkg.collectDependencies(sModulePath, mapModulePaths);
+                    }
+                }
+            }
         }
 
 

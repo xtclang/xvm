@@ -37,4 +37,28 @@ class RTClassTemplate
     //   Boolean derivesFrom(Composition composition)
     //   conditional ClassTemplate hasSuper()
     //   Composition! annotate(AnnotationTemplate annotation)
+
+    // helper function to create a Contribution
+    static Contribution createContribution(Action           action,
+                                          Type              ingredientType,
+                                          PropertyTemplate? delegatee,
+                                          String[]?         constraintNames,
+                                          Type[]?           constraintTypes)
+        {
+        assert Composition         ingredient := ingredientType.template.fromClass();
+        Map<String, TypeTemplate>? constraints = Null;
+
+        if (constraintNames != Null && constraintTypes != null)
+            {
+            Int count = constraintNames.size;
+
+            assert count == constraintTypes.size;
+
+            TypeTemplate[] constraintTemplates =
+                    new Array<TypeTemplate> (count, i -> constraintTypes[i].template);
+            constraints = new ListMap(constraintNames, constraintTemplates);
+            }
+
+        return new Contribution(action, ingredient, delegatee, constraints);
+        }
     }

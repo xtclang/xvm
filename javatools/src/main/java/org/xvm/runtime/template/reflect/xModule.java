@@ -1,11 +1,9 @@
 package org.xvm.runtime.template.reflect;
 
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorList;
@@ -13,7 +11,6 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.PackageStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -172,7 +169,7 @@ public class xModule
         ClassComposition clzMap   = ensureListMapComposition();
 
         // starting with this module, find all module dependencies, and the shortest path to each
-        Map<ModuleConstant, String> mapModulePaths = collectDependencies(module);
+        Map<ModuleConstant, String> mapModulePaths = module.collectDependencies();
         int cModules = mapModulePaths.size() - 1;
         if (cModules == 0)
             {
@@ -200,19 +197,20 @@ public class xModule
         ArrayHandle hPaths = xString.ensureArrayTemplate().createArrayHandle(
             xString.ensureArrayComposition(), ahPaths);
 
+        ClassComposition clzArray = ensureArrayComposition();
+        xArray           template = (xArray) clzArray.getTemplate();
+
         if (fDeferred)
             {
             Frame.Continuation stepNext = frameCaller ->
                 {
-                ArrayHandle hModules = ensureArrayTemplate().createArrayHandle(
-                        ensureArrayComposition(), ahModules);
+                ArrayHandle hModules = template.createArrayHandle(clzArray, ahModules);
                 return Utils.constructListMap(frame, clzMap, hPaths, hModules, iReturn);
                 };
             return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
             }
 
-        ArrayHandle hModules = ensureArrayTemplate().createArrayHandle(
-                ensureArrayComposition(), ahModules);
+        ArrayHandle hModules = template.createArrayHandle(clzArray, ahModules);
         return Utils.constructListMap(frame, clzMap, hPaths, hModules, iReturn);
         }
 
@@ -262,72 +260,6 @@ public class xModule
             }
 
         return frame.raiseException((String) oResult);
-        }
-
-    /**
-     * Given a module, build a list of all of the module dependencies, and the shortest path to
-     * each.
-     *
-     * @param module   pass the primary module
-     *
-     * @return  a map containing all of the module dependencies, and the shortest path to each
-     */
-    public static Map<ModuleConstant, String> collectDependencies(ModuleStructure module)
-        {
-        Map<ModuleConstant, String> mapModulePaths = new HashMap<>();
-        mapModulePaths.put(module.getIdentityConstant(), "");
-        collectDependencies("", module, mapModulePaths);
-        return mapModulePaths;
-        }
-
-    /**
-     * Given a module, build a list of all of the module dependencies, and the shortest path to
-     * each.
-     *
-     * @param sModulePath     pass "" for the primary module
-     * @param moduleOrPkg     pass the primary module
-     * @param mapModulePaths  pass a map containing all previously encountered modules (including
-     *                        the current one)
-     */
-    private static void collectDependencies(String sModulePath, ClassStructure moduleOrPkg,
-                                            Map<ModuleConstant, String> mapModulePaths)
-        {
-        for (Component child : moduleOrPkg.children())
-            {
-            if (child instanceof PackageStructure)
-                {
-                PackageStructure pkg = (PackageStructure) child;
-                if (pkg.isModuleImport())
-                    {
-                    ModuleStructure moduleDep  = pkg.getImportedModule();
-                    ModuleConstant  idDep      = moduleDep.getIdentityConstant();
-                    String          sOldPath   = mapModulePaths.get(idDep);
-                    String          sLocalPath = pkg.getIdentityConstant().getPathString();
-                    String          sNewPath   = sModulePath.length() == 0
-                                               ? sLocalPath
-                                               : sModulePath + '.' + sLocalPath;
-                    if (sOldPath == null)
-                        {
-                        mapModulePaths.put(idDep, sNewPath);
-                        collectDependencies(sNewPath, moduleDep, mapModulePaths);
-                        }
-                    else if (sNewPath.length() < sOldPath.length())
-                        {
-                        mapModulePaths.put(idDep, sNewPath);
-
-                        // replace everything else using the new path that was already registered
-                        // as being reached via the old path
-                        mapModulePaths.entrySet().stream()
-                                .filter(e -> e.getValue().startsWith(sOldPath + '.'))
-                                .forEach(e -> e.setValue(sNewPath + e.getValue().substring(sOldPath.length())));
-                        }
-                    }
-                else
-                    {
-                    collectDependencies(sModulePath, pkg, mapModulePaths);
-                    }
-                }
-            }
         }
 
     /**
@@ -409,22 +341,6 @@ public class xModule
     // ----- Template, Composition, and handle caching ---------------------------------------------
 
     /**
-     * @return the ClassTemplate for an Array of Module
-     */
-    public static xArray ensureArrayTemplate()
-        {
-        xArray template = ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeModuleArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeModule());
-            ARRAY_TEMPLATE = template = (xArray) INSTANCE.f_templates.getTemplate(typeModuleArray);
-            assert template != null;
-            }
-        return template;
-        }
-
-    /**
      * @return the ClassComposition for an Array of Module
      */
     public static ClassComposition ensureArrayComposition()
@@ -447,8 +363,9 @@ public class xModule
         {
         if (ARRAY_EMPTY == null)
             {
-            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
-                ensureArrayComposition(), Utils.OBJECTS_NONE);
+            ClassComposition clzArray = ensureArrayComposition();
+            xArray           template = (xArray) clzArray.getTemplate();
+            ARRAY_EMPTY = template.createArrayHandle(clzArray, Utils.OBJECTS_NONE);
             }
         return ARRAY_EMPTY;
         }
@@ -475,7 +392,6 @@ public class xModule
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static xArray           ARRAY_TEMPLATE;
     private static ClassComposition ARRAY_CLZ;
     private static ArrayHandle      ARRAY_EMPTY;
     }

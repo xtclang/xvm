@@ -372,7 +372,14 @@ public class xArray
                         }
                     else
                         {
-                        return new Fill(this, hArray, cSize, (FunctionHandle) hSupplier, iReturn).doNext(frame);
+                        FunctionHandle      hfnSupplier = (FunctionHandle) hSupplier;
+                        ObjectHandle[]      ahArg       = new ObjectHandle[hfnSupplier.getVarCount()];
+                        Utils.ValueSupplier supplier    = (frameCaller, index) ->
+                            {
+                            ahArg[0] = xInt64.makeHandle(index);
+                            return hfnSupplier.call1(frameCaller, null, ahArg, Op.A_STACK);
+                            };
+                        return new Utils.FillArray(hArray, supplier, iReturn).doNext(frame);
                         }
                     }
                 return frame.assignValue(iReturn, hArray);
@@ -1049,67 +1056,6 @@ public class xArray
         }
 
     // ----- helper classes ------------------------------------------------------------------------
-
-    /**
-     * Helper class for array initialization.
-     */
-    protected static class Fill
-            implements Frame.Continuation
-        {
-        private final xArray template;
-        private final ArrayHandle hArray;
-        private final long cCapacity;
-        private final FunctionHandle hSupplier;
-        private final int iReturn;
-
-        private final ObjectHandle[] ahVar;
-        private int index = -1;
-
-        public Fill(xArray template, ArrayHandle hArray, long cCapacity,
-                    FunctionHandle hSupplier, int iReturn)
-            {
-            this.template = template;
-            this.hArray = hArray;
-            this.cCapacity = cCapacity;
-            this.hSupplier = hSupplier;
-            this.iReturn = iReturn;
-
-            this.ahVar = new ObjectHandle[hSupplier.getVarCount()];
-            }
-
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            return template.assignArrayValue(frameCaller, hArray, index, frameCaller.popStack())
-                    == Op.R_EXCEPTION ?
-                Op.R_EXCEPTION : doNext(frameCaller);
-            }
-
-        public int doNext(Frame frameCaller)
-            {
-            while (++index < cCapacity)
-                {
-                ahVar[0] = xInt64.makeHandle(index);
-
-                switch (hSupplier.call1(frameCaller, null, ahVar, Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        break;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                }
-            return frameCaller.assignValue(iReturn, hArray);
-            }
-        }
 
     /**
      * Helper class for equals() implementation.

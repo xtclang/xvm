@@ -129,10 +129,7 @@ public class xRTComponentTemplate
         {
         Component    component = hComponent.getComponent();
         Access       access    = component.getAccess();
-        ObjectHandle hEnum     = Utils.ensureInitializedEnum(frame,
-                xRTType.makeAccessHandle(frame, access));
-
-        return frame.assignDeferredValue(iReturn, hEnum);
+        return Utils.assignInitializedEnum(frame, xRTType.makeAccessHandle(frame, access), iReturn);
         }
 
     /**

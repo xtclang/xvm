@@ -7,7 +7,9 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -229,6 +231,19 @@ public class ModuleStructure
     public ModuleStructure getFingerprintOrigin()
         {
         return moduleActual;
+        }
+
+    /**
+     * Build a list of all of the module dependencies, and the shortest path to each.
+     *
+     * @return  a map containing all of the module dependencies, and the shortest path to each
+     */
+    public Map<ModuleConstant, String> collectDependencies()
+        {
+        Map<ModuleConstant, String> mapModulePaths = new HashMap<>();
+        mapModulePaths.put(getIdentityConstant(), "");
+        collectDependencies("", mapModulePaths);
+        return mapModulePaths;
         }
 
 

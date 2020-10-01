@@ -31,6 +31,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xService;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xBooleanArray;
 
 import org.xvm.runtime.template.reflect.xModule;
@@ -240,7 +241,7 @@ public abstract class Container
             ModuleConstant  idModule = getModule();
             ModuleStructure module   = (ModuleStructure) idModule.getComponent();
 
-            Map<ModuleConstant, String> mapModules = xModule.collectDependencies(module);
+            Map<ModuleConstant, String> mapModules = module.collectDependencies();
             int                         cModules   = mapModules.size();
             ObjectHandle[]              ahModules  = new ObjectHandle[cModules];
             BooleanHandle[]             ahShared   = new BooleanHandle[cModules];
@@ -266,20 +267,20 @@ public abstract class Container
             ahArg[1] = xBooleanArray.INSTANCE.createArrayHandle(
                     xBooleanArray.INSTANCE.getCanonicalClass(), ahShared);
 
+            ClassComposition clzArray = xModule.ensureArrayComposition();
+            xArray           template = (xArray) clzArray.getTemplate();
             if (fDeferred)
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     {
-                    ahArg[0] = xModule.ensureArrayTemplate().createArrayHandle(
-                            xModule.ensureArrayComposition(), ahModules);
+                    ahArg[0] = template.createArrayHandle(clzArray, ahModules);
                     return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
                     };
 
                 return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
                 }
 
-            ahArg[0] = xModule.ensureArrayTemplate().createArrayHandle(
-                    xModule.ensureArrayComposition(), ahModules);
+            ahArg[0] = template.createArrayHandle(clzArray, ahModules);
             return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
             }
         return frame.assignValue(iReturn, hTS);

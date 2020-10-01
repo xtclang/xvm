@@ -1622,6 +1622,68 @@ public abstract class Utils
         return clzMap.getTemplate().construct(frame, constructor, clzMap, null, ahArg, iReturn);
         }
 
+    /**
+     * Helper classes for array initialization.
+     */
+    @FunctionalInterface
+    public interface ValueSupplier
+        {
+        int get(Frame frame, int index);
+        }
+
+    public static class FillArray
+            implements Frame.Continuation
+        {
+        private final ArrayHandle   hArray;
+        private final xArray        template;
+        private final long          cSize;
+        private final ValueSupplier supplier;
+        private final int           iReturn;
+
+        private int index = -1;
+
+        public FillArray(ArrayHandle hArray, ValueSupplier supplier, int iReturn)
+            {
+            this.hArray   = hArray;
+            this.template = (xArray) hArray.getTemplate();
+            this.cSize    = hArray.getCapacity();
+            this.supplier = supplier;
+            this.iReturn  = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            return template.assignArrayValue(
+                frameCaller, hArray, index, frameCaller.popStack()) == Op.R_EXCEPTION
+                    ? Op.R_EXCEPTION
+                    : doNext(frameCaller);
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (++index < cSize)
+                {
+                switch (supplier.get(frameCaller, index))
+                    {
+                    case Op.R_NEXT:
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.addContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+            return frameCaller.assignValue(iReturn, hArray);
+            }
+        }
+
 
     // ----- constants -----------------------------------------------------------------------------
 
