@@ -16,6 +16,11 @@ val jsonMain     = "${json.projectDir}/src/main";
 val jsondbMain   = "${jsondb.projectDir}/src/main";
 val oodbMain     = "${oodb.projectDir}/src/main";
 
+
+val libDir       = "$buildDir/xdk/lib"
+val coreLib      = "$libDir/ecstasy.xtc"
+val bridgeLib    = "$buildDir/xdk/javatools/javatools_bridge.xtc"
+
 tasks.register("clean") {
     group       = "Build"
     description = "Delete previous build results"
@@ -54,14 +59,14 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
 
     classpath(javatoolsJar)
     args("-verbose",
-            "-o", "$buildDir/xdk/lib",
+            "-o", "$libDir",
             "$ecstasyMain/x/module.x",
             "$bridgeMain/x/module.x")
     main = "org.xvm.tool.Compiler"
 
     doLast {
-        file("$buildDir/xdk/lib/_native.xtc").
-           renameTo(file("$buildDir/xdk/javatools/javatools_bridge.xtc"))
+        file("$libDir/_native.xtc").
+           renameTo(file("$bridgeLib"))
         println("Finished task: compileEcstasy")
     }
 }
@@ -74,9 +79,9 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
 
     classpath(javatoolsJar)
     args("-verbose",
-            "-o", "$buildDir/xdk/lib",
-            "-L", "${buildDir}/xdk/lib/ecstasy.xtc",
-            "-L", "${buildDir}/xdk/javatools/javatools_bridge.xtc",
+            "-o", "$libDir",
+            "-L", "$coreLib",
+            "-L", "$bridgeLib",
             "$jsonMain/x/module.x")
     main = "org.xvm.tool.Compiler"
 }
@@ -89,9 +94,9 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
 
     classpath(javatoolsJar)
     args("-verbose",
-            "-o", "$buildDir/xdk/lib",
-            "-L", "${buildDir}/xdk/lib/ecstasy.xtc",
-            "-L", "${buildDir}/xdk/javatools/javatools_bridge.xtc",
+            "-o", "$libDir",
+            "-L", "$coreLib",
+            "-L", "$bridgeLib",
             "$oodbMain/x/module.x")
     main = "org.xvm.tool.Compiler"
 }
@@ -105,10 +110,10 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
 
     classpath(javatoolsJar)
     args("-verbose",
-            "-o", "$buildDir/xdk/lib",
-            "-L", "${buildDir}/xdk/lib/ecstasy.xtc",
-            "-L", "${buildDir}/xdk/javatools/javatools_bridge.xtc",
-            "-L", "${buildDir}/xdk/lib/",
+            "-o", "$libDir",
+            "-L", "$coreLib",
+            "-L", "$bridgeLib",
+            "-L", "$libDir",
             "$jsondbMain/x/module.x")
     main = "org.xvm.tool.Compiler"
 }
@@ -125,9 +130,13 @@ tasks.register("build") {
     // compile Ecstasy
     val coreSrc = fileTree(ecstasyMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val coreDest = file("$buildDir/xdk/lib/ecstasy.xtc").lastModified()
+    val coreDest = file("$coreLib").lastModified()
 
-    if (coreSrc > coreDest) {
+    val bridgeSrc = fileTree(bridgeMain).getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val bridgeDest = file("$bridgeLib").lastModified()
+
+    if (coreSrc > coreDest || bridgeSrc > bridgeDest) {
         dependsOn(compileEcstasy)
     } else {
         dependsOn(copyJavatools)
@@ -136,7 +145,7 @@ tasks.register("build") {
     // compile JSON
     val jsonSrc = fileTree(jsonMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val jsonDest = file("$buildDir/xdk/lib/json.xtc").lastModified()
+    val jsonDest = file("$libDir/json.xtc").lastModified()
 
     if (jsonSrc > jsonDest) {
         dependsOn(compileJson)
@@ -145,7 +154,7 @@ tasks.register("build") {
     // compile OODB
     val oodbSrc = fileTree(oodbMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val oodbDest = file("$buildDir/xdk/lib/oodb.xtc").lastModified()
+    val oodbDest = file("$libDir/oodb.xtc").lastModified()
 
     if (oodbSrc > oodbDest) {
         dependsOn(compileOODB)
@@ -154,7 +163,7 @@ tasks.register("build") {
     // compile JSON-DB
     val jsondbSrc = fileTree(jsondbMain).getFiles().stream().
     mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val jsondbDest = file("$buildDir/xdk/lib/jsondb.xtc").lastModified()
+    val jsondbDest = file("$libDir/jsondb.xtc").lastModified()
 
     if (jsondbSrc > jsondbDest) {
         dependsOn(compileJsonDB)
