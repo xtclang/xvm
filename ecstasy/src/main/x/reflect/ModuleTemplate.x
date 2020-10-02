@@ -11,8 +11,9 @@ interface ModuleTemplate
 
     /**
      * The modules that this module depends on by linkage, both directly and indirectly.
+     * The map's key is a module path; the value is the module qualified name.
      */
-    @RO immutable Map<String, ModuleTemplate> modulesByPath;
+    @RO immutable Map<String, String> moduleNamesByPath;
 
     // TODO
     }

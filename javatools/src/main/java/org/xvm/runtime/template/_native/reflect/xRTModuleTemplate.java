@@ -50,7 +50,7 @@ public class xRTModuleTemplate
                 pool().ensureEcstasyTypeConstant("reflect.ModuleTemplate"));
 
             markNativeProperty("qualifiedName");
-            markNativeProperty("modulesByPath");
+            markNativeProperty("moduleNamesByPath");
             }
         }
 
@@ -67,7 +67,7 @@ public class xRTModuleTemplate
                     xString.makeHandle(module.getIdentityConstant().getName()));
                 }
 
-            case "modulesByPath":
+            case "moduleNamesByPath":
                 return getPropertyModulesByPath(frame, hTemplate, iReturn);
             }
 
@@ -89,75 +89,40 @@ public class xRTModuleTemplate
         if (cModules == 0)
             {
             return Utils.constructListMap(frame, clzMap,
-                    xString.ensureEmptyArray(), ensureEmptyArray(), iReturn);
+                    xString.ensureEmptyArray(), xString.ensureEmptyArray(), iReturn);
             }
 
-        StringHandle[] ahPaths     = new StringHandle[cModules];
-        ObjectHandle[] ahTemplates = new ObjectHandle[cModules];
+        StringHandle[] ahPaths = new StringHandle[cModules];
+        StringHandle[] ahNames = new StringHandle[cModules];
         int            index       = 0;
         for (Map.Entry<ModuleConstant, String> entry : mapModulePaths.entrySet())
             {
             ModuleConstant idDep = entry.getKey();
             if (!idDep.equals(module.getIdentityConstant()))
                 {
-                ahPaths    [index] = xString.makeHandle(entry.getValue());
-                ahTemplates[index] = makeHandle((ModuleStructure) idDep.getComponent());
+                ahPaths[index] = xString.makeHandle(entry.getValue());
+                ahNames[index] = xString.makeHandle(idDep.getName());
                 ++index;
                 }
             }
 
-        ClassComposition clzArray = ensureArrayComposition();
-        xArray           template = (xArray) clzArray.getTemplate();
+        ArrayHandle haPaths = xArray.makeStringArrayHandle(ahPaths);
+        ArrayHandle haNames = xArray.makeStringArrayHandle(ahNames);
 
-        ArrayHandle haPaths     = xArray.makeStringArrayHandle(ahPaths);
-        ArrayHandle haTemplates = template.createArrayHandle(clzArray, ahTemplates);
-
-        return Utils.constructListMap(frame, clzMap, haPaths, haTemplates, iReturn);
+        return Utils.constructListMap(frame, clzMap, haPaths, haNames, iReturn);
         }
 
     /**
-     * @return the ClassComposition for an Array of Module
-     */
-    public static ClassComposition ensureArrayComposition()
-        {
-        ClassComposition clz = ARRAY_CLZ;
-        if (clz == null)
-            {
-            ConstantPool pool            = INSTANCE.pool();
-            TypeConstant typeTemplate    = pool.ensureEcstasyTypeConstant("reflect.ModuleTemplate");
-            TypeConstant typeModuleArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeTemplate);
-            ARRAY_CLZ = clz = INSTANCE.f_templates.resolveClass(typeModuleArray);
-            assert clz != null;
-            }
-        return clz;
-        }
-
-    /**
-     * @return the handle for an empty Array of ModuleTemplate
-     */
-    public static ArrayHandle ensureEmptyArray()
-        {
-        if (ARRAY_EMPTY == null)
-            {
-            ClassComposition clzArray = ensureArrayComposition();
-            xArray           template = (xArray) clzArray.getTemplate();
-            ARRAY_EMPTY = template.createArrayHandle(clzArray, Utils.OBJECTS_NONE);
-            }
-        return ARRAY_EMPTY;
-        }
-
-    /**
-     * @return the ClassComposition for ListMap<String, ModuleTemplate>
+     * @return the ClassComposition for ListMap<String, String>
      */
     private static ClassComposition ensureListMapComposition()
         {
         ClassComposition clz = LISTMAP_CLZ;
         if (clz == null)
             {
-            ConstantPool pool         = INSTANCE.pool();
-            TypeConstant typeList     = pool.ensureEcstasyTypeConstant("collections.ListMap");
-            TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.ModuleTemplate");
-            typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), typeTemplate);
+            ConstantPool pool     = INSTANCE.pool();
+            TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
+            typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeString());
             LISTMAP_CLZ = clz = INSTANCE.f_templates.resolveClass(typeList);
             assert clz != null;
             }
@@ -184,7 +149,5 @@ public class xRTModuleTemplate
     // ----- constants -----------------------------------------------------------------------------
 
     private static ClassComposition MODULE_TEMPLATE_COMPOSITION;
-    private static ClassComposition ARRAY_CLZ;
     private static ClassComposition LISTMAP_CLZ;
-    private static ArrayHandle      ARRAY_EMPTY;
     }

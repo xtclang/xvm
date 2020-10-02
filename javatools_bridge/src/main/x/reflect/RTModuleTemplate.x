@@ -9,8 +9,8 @@ class RTModuleTemplate
         implements ModuleTemplate
     {
     @Override
-    String qualifiedName.get()                                  {TODO("native");}
+    String qualifiedName.get()                            {TODO("native");}
 
     @Override
-    immutable Map<String, ModuleTemplate> modulesByPath.get()   {TODO("native");}
+    immutable Map<String, String> moduleNamesByPath.get() {TODO("native");}
     }

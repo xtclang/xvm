@@ -32,7 +32,7 @@ interface ClassTemplate
             assert base.is(ClassTemplate);
             return base;
             }
-        
+
         /**
          * The TypeTemplate representing the type of this composition.
          */
@@ -91,7 +91,6 @@ interface ClassTemplate
 
         /**
          * A composition is represented by a sequence of contributions.
-         * REVIEW can we use Contribution... instead?
          */
         @RO Contribution[] contribs;
 

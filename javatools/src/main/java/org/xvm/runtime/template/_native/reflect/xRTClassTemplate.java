@@ -204,7 +204,7 @@ public class xRTClassTemplate
                 case Incorporates:
                     {
                     Map<StringConstant, TypeConstant> mapConstraints = contrib.getTypeParams();
-                    int cConstraints = mapConstraints.size();
+                    int cConstraints = mapConstraints == null ? 0 : mapConstraints.size();
                     if (cConstraints > 0)
                         {
                         StringHandle[] ahNames = new StringHandle[cConstraints];
