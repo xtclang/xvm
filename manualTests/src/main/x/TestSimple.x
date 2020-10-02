@@ -4,16 +4,9 @@ module TestSimple
 
     void run()
         {
-        console.println(Base.value);
-        }
-
-    class Base(Int value0)
-        {
-        Int value0;
-
-        static Int value =
+        for ((Int i, String s) : trash)
             {
-            return value0;
-            };
+            console.println($"{i}: {s}");
+            }
         }
     }

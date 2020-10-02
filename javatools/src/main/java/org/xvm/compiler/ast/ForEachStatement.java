@@ -386,6 +386,8 @@ public class ForEachStatement
         ConstantPool pool      = pool();
         Plan         plan      = null;
         TypeConstant typeRVal  = null;
+        boolean      fFoundFit = false;
+
         for (int i = Plan.ITERATOR.ordinal(); i <= Plan.ITERABLE.ordinal(); ++i)
             {
             plan = Plan.valueOf(i);
@@ -393,7 +395,7 @@ public class ForEachStatement
                 {
                 case ITERATOR: typeRVal = pool.typeIterator(); break;
                 case RANGE   : typeRVal = pool.typeRange()   ; break;
-                case SEQUENCE: typeRVal = pool.typeList(); break;
+                case SEQUENCE: typeRVal = pool.typeList()    ; break;
                 case MAP     : typeRVal = pool.typeMap()     ; break;
                 case ITERABLE: typeRVal = pool.typeIterable(); break;
 
@@ -402,7 +404,7 @@ public class ForEachStatement
 
             if (exprRVal.testFit(ctx, typeRVal, null).isFit())
                 {
-                // found something that fits!
+                fFoundFit = true;
                 break;
                 }
             }
@@ -410,7 +412,7 @@ public class ForEachStatement
         // to validate with that required type (i.e. treat Iterable as the default required type)
         m_plan = plan;
 
-        if (fValid)
+        if (fValid && fFoundFit)
             {
             // get as specific as possible with the required type for the R-Value
             TypeConstant[] atypeLVals = exprLVal.getTypes();
