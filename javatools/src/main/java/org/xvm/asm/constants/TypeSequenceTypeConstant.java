@@ -34,6 +34,12 @@ public class TypeSequenceTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
+    public boolean isShared(ConstantPool poolOther)
+        {
+        return true;
+        }
+
+    @Override
     public TypeConstant resolveTypedefs()
         {
         return this;

@@ -560,6 +560,21 @@ public abstract class IdentityConstant
     public abstract IdentityConstant appendTrailingSegmentTo(IdentityConstant that);
 
     /**
+     * Determine if this IdentityConstant references a structure that is shared between its pool
+     * and the specified pool.
+     *
+     * @param poolOther  the constant pool to check
+     *
+     * @return true iff this IdentityConstant references a structure that is shared with the
+     *        specified constant pool
+     */
+    public boolean isShared(ConstantPool poolOther)
+        {
+        return poolOther == getConstantPool() ||
+                poolOther.getFileStructure().getChild(getModuleConstant()) != null;
+        }
+
+    /**
      * @return the Component structure that is identified by this IdentityConstant
      */
     public Component getComponent()

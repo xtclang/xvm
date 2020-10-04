@@ -67,6 +67,12 @@ public abstract class AbstractDependantTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
+    public boolean isShared(ConstantPool poolOther)
+        {
+        return m_typeParent.isShared(poolOther);
+        }
+
+    @Override
     public boolean isImmutabilitySpecified()
         {
         return false;

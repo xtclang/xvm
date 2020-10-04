@@ -102,30 +102,59 @@ public class TerminalTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
+    public boolean isShared(ConstantPool poolOther)
+        {
+        Constant constant = m_constId;
+        switch (constant.getFormat())
+            {
+            case NativeClass:
+                return true;
+
+            case Module:
+            case Package:
+            case Class:
+                return ((IdentityConstant) constant).isShared(poolOther);
+
+            case Property:
+            case TypeParameter:
+            case FormalTypeChild:
+                return ((FormalConstant) constant).getParentConstant().isShared(poolOther);
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                return ((PseudoConstant) constant).getDeclarationLevelClass().isShared(poolOther);
+
+            case Typedef:
+                return ((TypedefConstant) constant).getParentConstant().isShared(poolOther);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+        }
+
+    @Override
     public boolean isComposedOfAny(Set<IdentityConstant> setIds)
         {
-        if (!isSingleDefiningConstant())
-            {
-            // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().isComposedOfAny(setIds);
-            }
-
-        Constant constant = getDefiningConstant();
+        Constant constant = ensureResolvedConstant();
         switch (constant.getFormat())
             {
             case Module:
             case Package:
             case Class:
-                return setIds.contains(constant);
+                return setIds.contains((IdentityConstant) constant);
 
-            case NativeClass:
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+                return setIds.contains(((FormalConstant) constant).getParentConstant());
+
             case ThisClass:
             case ParentClass:
             case ChildClass:
+                return setIds.contains(((PseudoConstant) constant).getDeclarationLevelClass());
+
+            case NativeClass:
             case UnresolvedName:
                 return false;
 

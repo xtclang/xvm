@@ -183,9 +183,21 @@ public abstract class TypeConstant
         }
 
     /**
+     * Determine if this TypeConstant is shared between its pool and the specified pool.
+     *
+     * @param poolOther  the constant pool to check
+     *
+     * @return true iff this TypeConstant is shared between its pool and the specified pool
+     */
+    public boolean isShared(ConstantPool poolOther)
+        {
+        return poolOther == getConstantPool() || getUnderlyingType().isShared(poolOther);
+        }
+
+    /**
      * Determine if this TypeConstant is composed of any of the specified identities.
      *
-     * @param setIds the set of class IdentityConstants
+     * @param setIds  the set of class IdentityConstants
      *
      * @return true iff this TypeConstant references any of the specified IdentityConstants for its
      *         composition
@@ -6010,6 +6022,8 @@ public abstract class TypeConstant
     @Override
     protected void setContaining(XvmStructure pool)
         {
+        assert isShared((ConstantPool) pool);
+
         super.setContaining(pool);
 
         // clear any cached constants

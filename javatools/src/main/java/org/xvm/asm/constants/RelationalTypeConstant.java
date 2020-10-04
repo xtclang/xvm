@@ -126,6 +126,12 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public boolean isShared(ConstantPool poolOther)
+        {
+        return m_constType1.isShared(poolOther) && m_constType2.isShared(poolOther);
+        }
+
+    @Override
     public boolean isComposedOfAny(Set<IdentityConstant> setIds)
         {
         return m_constType1.isComposedOfAny(setIds) || m_constType2.isComposedOfAny(setIds);

@@ -245,6 +245,12 @@ public class AnnotatedTypeConstant
         }
 
     @Override
+    public boolean isShared(ConstantPool poolOther)
+        {
+        return super.isShared(poolOther) && getAnnotationClass().isShared(poolOther);
+        }
+
+    @Override
     public boolean isAnnotated()
         {
         return true;

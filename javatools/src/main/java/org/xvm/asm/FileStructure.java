@@ -198,6 +198,19 @@ public class FileStructure
 
         ConstantPool pool = m_pool;
 
+        // add fingerprints
+        for (Component child : module.getFileStructure().children())
+            {
+            ModuleStructure moduleChild = (ModuleStructure) child;
+            if (moduleChild.isFingerprint() && getModule(moduleChild.getName()) == null)
+                {
+                ModuleStructure moduleChildClone = moduleChild.cloneBody();
+                moduleChildClone.setContaining(this);
+                addChild(moduleChildClone);
+                moduleChildClone.registerConstants(pool);
+                }
+            }
+
         moduleClone.registerConstants(pool);
         moduleClone.registerChildrenConstants(pool);
 
@@ -205,19 +218,6 @@ public class FileStructure
         if (typeNakedRef != null)
             {
             pool.setNakedRefType(typeNakedRef);
-            }
-
-        // add fingerprints
-        for (Component child : module.getFileStructure().children())
-            {
-            ModuleStructure moduleChild = (ModuleStructure) child;
-            if (moduleChild.isFingerprint() && getModule(moduleChild.getName()) == null)
-                {
-                moduleClone = moduleChild.cloneBody();
-                moduleClone.setContaining(this);
-                addChild(moduleClone);
-                moduleClone.registerConstants(pool);
-                }
             }
         }
 
