@@ -41,9 +41,10 @@ const TimeZone(Int picos, String? name = Null)
      * Construct a TimeZone from an ISO-8601 timezone indicator string of one of the following
      * offset formats:
      *
-     *   ±hh:mm
-     *   ±hhmm
-     *   ±hh
+     *     Z
+     *     ±hh:mm
+     *     ±hhmm
+     *     ±hh
      *
      * @param name   the name of the TimeZone
      * @param rules  an optional Sequence of Rules to translate information from UTC to other
@@ -59,6 +60,12 @@ const TimeZone(Int picos, String? name = Null)
         static Int parseInt(String s, Int of)
             {
             return valOf(s[of]) * 10 + valOf(s[of+1]);
+            }
+
+        if (tz == "Z")
+            {
+            construct TimeZone(0);
+            return;
             }
 
         if (tz.size >= 2 && (tz[0]=='+' || tz[0]=='-'))
@@ -272,6 +279,7 @@ const TimeZone(Int picos, String? name = Null)
         return new DateTime(orig.epochPicos, this);
         }
 
+
     // ----- operators -----------------------------------------------------------------------------
 
     @Op("+") TimeZone add(Duration duration)
@@ -320,82 +328,93 @@ const TimeZone(Int picos, String? name = Null)
         return new Duration(difference.toUInt128());
         }
 
+
     // ----- Stringable ----------------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
+    String toString(Boolean iso8601 = False)
         {
-        Int nameLength   = name?.size : 0;
-        Int offsetLength = 0;
-        if (resolved)
-            {
-            if (picos != 0)
-                {
-                if (picos % Time.PICOS_PER_MINUTE == 0)
-                    {
-                    // +00:00
-                    offsetLength = 6;
-                    }
-                else
-                    {
-                    // we would have to do something like this to get a real estimate:
-                    //   new Duration(picos.abs().toUInt128()).estimateStringLength();
-                    // so make a guess instead
-                    offsetLength = 10;
-                    }
-                }
-            }
-
-// TODO
-//        return switch (nameLength > 0, offsetLength > 0)
-//            {
-//            case (True , True ): nameLength + offsetLength + 3;
-//            case (True , False): nameLength;
-//            case (False, True ): offsetLength;
-//            case (False, False): 6;
-//            }
-// or
-//        return switch ()
-//            {
-//            case nameLength > 0 && offsetLength > 0: nameLength + offsetLength + 3;
-//            case nameLength > 0: nameLength;
-//            case offsetLength > 0: offsetLength;
-//            default: 6;
-//            };
-
-        if (nameLength > 0 && offsetLength > 0)
-            {
-            return nameLength + offsetLength + 3;
-            }
-        if (nameLength > 0)
-            {
-            return nameLength;
-            }
-        if (offsetLength > 0)
-            {
-            return offsetLength;
-            }
-        return 6;
+        return appendTo(new StringBuffer(estimateStringLength(iso8601)), iso8601).toString();
         }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
+    Int estimateStringLength(Boolean iso8601 = False)
         {
-        Boolean showPicos = resolved;
-        String? name      = this.name;
-        if (name != Null)
+        if (iso8601)
             {
-            name.appendTo(buf);
-
-            showPicos &&= picos != 0;
-            if (showPicos)
+            assert resolved;
+            if (picos == 0)
                 {
-                buf.addAll(" (");
+                return isNoTZ ? 0 : 1; // "Z"
                 }
+
+            return 6;
+            }
+
+        Boolean showPicos = resolved;
+        Boolean showName  = !iso8601 && name != Null;
+        Int     size      = 0;
+        if (showName)
+            {
+            size += name?.size;
+            showPicos &&= picos != 0;
             }
 
         if (showPicos)
             {
+            // " (...)"
+            if (showName)
+                {
+                size += 3;
+                }
+
+            // +hh:mm or -hh:mm
+            size += 6;
+
+            if (picos % Time.PICOS_PER_MINUTE != 0)
+                {
+                Int remainder = (picos - hours * Time.PICOS_PER_HOUR - minutes * Time.PICOS_PER_MINUTE).abs();
+                Int seconds   = remainder / Time.PICOS_PER_SECOND;
+                size += 3;
+
+                remainder -= seconds * Time.PICOS_PER_SECOND;
+                if (remainder > 0)
+                    {
+                    size += 1 + Duration.picosFractionalLength(remainder);
+                    }
+                }
+            }
+
+        return size;
+        }
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf, Boolean iso8601 = False)
+        {
+        if (iso8601)
+            {
+            assert resolved;
+            if (picos == 0)
+                {
+                return isNoTZ ? buf : buf.add('Z');
+                }
+            }
+
+        Boolean showPicos = resolved;
+        Boolean showName  = !iso8601 && name != Null;
+        if (showName)
+            {
+            name?.appendTo(buf);
+            showPicos &&= picos != 0;
+            }
+
+        if (showPicos)
+            {
+            if (showName)
+                {
+                " (".appendTo(buf);
+                }
+
             buf.add(picos < 0 ? '-' : '+');
             Int hours   = this.hours.abs();
             Int minutes = this.minutes.abs();
@@ -413,6 +432,8 @@ const TimeZone(Int picos, String? name = Null)
 
             if (picos % Time.PICOS_PER_MINUTE != 0)
                 {
+                assert !iso8601;
+
                 Int remainder = (picos - hours * Time.PICOS_PER_HOUR - minutes * Time.PICOS_PER_MINUTE).abs();
                 Int seconds   = remainder / Time.PICOS_PER_SECOND;
                 buf.add(':');
@@ -430,7 +451,7 @@ const TimeZone(Int picos, String? name = Null)
                     }
                 }
 
-            if (name != Null)
+            if (showName)
                 {
                 buf.add(')');
                 }

@@ -24,6 +24,9 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
 
     /**
      * Construct a DateTime from an ISO-8601 date and time string with optional timezone.
+     *
+     * @param dt  the date time value in an ISO-8601 format (or alternatively, in the format
+     *            produced by the [toString] method)
      */
     construct(String dt)
         {
@@ -63,10 +66,21 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
                 }
             }
 
+        String[] parts = dt.split(' ');
+        if (2 <= parts.size <= 3)
+            {
+            Date     date = new Date(parts[0]);
+            Time     time = new Time(parts[1]);
+            TimeZone zone = parts.size == 3 ? new TimeZone(parts[2]) : TimeZone.NoTZ;
+            construct DateTime(date, time, zone);
+            return;
+            }
+
         throw new IllegalArgument($"invalid ISO-8601 datetime: \"{dt}\"");
         }
 
     static DateTime EPOCH = new DateTime(0, UTC);
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -112,6 +126,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
         {
         return TimeZone.UTC.adopt(this);
         }
+
 
     // ----- operators -----------------------------------------------------------------------------
 
@@ -162,22 +177,50 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
         return value1.epochPicos == value2.epochPicos;
         }
 
+
     // ----- Stringable ----------------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
+    String toString(Boolean iso8601 = False)
         {
-        // assume "yyyy-mm-dd hh:mm:ss tz"
-        return 20 + timezone.estimateStringLength();
+        return appendTo(new StringBuffer(estimateStringLength(iso8601)), iso8601).toString();
         }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
+    Int estimateStringLength(Boolean iso8601 = False)
+        {
+        // assume "2020-10-02T20:02:12+00:00" for ISO8601
+        // assume "yyyy-mm-dd hh:mm:ss tz" otherwise
+
+        TimeZone tz = this.timezone;
+        if (!tz.resolved)
+            {
+            tz = tz.resolve(this);
+            }
+        Int tzSize = iso8601 || tz.picos != 0 ? (iso8601 ? 0 : 1) + tz.estimateStringLength(iso8601) : 0;
+
+        Int fraction = (epochPicos % Duration.PICOS_PER_SECOND).toInt();
+        Int fractionSize = fraction == 0 ? 0 : 1 + Duration.picosFractionalLength(fraction);
+
+        return 19 + fractionSize + tzSize;
+        }
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf, Boolean iso8601 = False)
         {
         date.appendTo(buf);
-        buf.add(' ');
+        buf.add(iso8601 ? 'T' : ' ');
         time.appendTo(buf);
-        buf.add(' ');
-        return timezone.appendTo(buf);
+
+        if (iso8601 || timezone.picos != 0)
+            {
+            if (!iso8601)
+                {
+                buf.add(' ');
+                }
+            timezone.appendTo(buf, iso8601);
+            }
+
+        return buf;
         }
     }
