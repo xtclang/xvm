@@ -113,7 +113,7 @@ public class xContainerControl
 
         if (idMethod == null)
             {
-            return frame.raiseException("Missing " + idMethod.getValueString() +
+            return frame.raiseException("Missing " + sMethod +
                 " method for " + idModule.getValueString());
             }
 

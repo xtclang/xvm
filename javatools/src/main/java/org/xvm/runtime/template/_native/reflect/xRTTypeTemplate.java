@@ -181,15 +181,15 @@ public class xRTTypeTemplate
         protected TypeTemplateHandle(ClassComposition clz, TypeConstant type)
             {
             super(clz);
-            m_type = type;
+            f_type = type;
             }
 
         public TypeConstant getDataType()
             {
-            return m_type;
+            return f_type;
             }
 
-        private TypeConstant m_type;
+        final private TypeConstant f_type;
         }
 
 
@@ -384,10 +384,27 @@ public class xRTTypeTemplate
     /**
      * Implementation for: {@code Boolean isA(TypeTemplate that)}.
      */
-    public int invokeIsA(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+    public int invokeIsA(Frame frame, TypeTemplateHandle hType, ObjectHandle hArg, int iReturn)
         {
-        // TODO
-        throw new UnsupportedOperationException();
+        TypeConstant typeThis = hType.getDataType();
+        TypeConstant typeThat = ((TypeTemplateHandle) hArg).getDataType();
+        boolean      fIsA     = false;
+
+        ConstantPool poolThis = typeThis.getConstantPool();
+        ConstantPool poolThat = typeThat.getConstantPool();
+        if (poolThis == poolThat)
+            {
+            fIsA = typeThis.isA(typeThis);
+            }
+        else if (typeThis.isShared(poolThat))
+            {
+            fIsA = typeThis.isA(((TypeConstant) poolThat.register(typeThis)));
+            }
+        else if (typeThat.isShared(poolThis))
+            {
+            fIsA = ((TypeConstant) poolThat.register(typeThis)).isA(typeThat);
+            }
+        return frame.assignValue(iReturn, xBoolean.makeHandle(fIsA));
         }
 
     /**
@@ -395,7 +412,7 @@ public class xRTTypeTemplate
      */
     public int invokeModifying(Frame frame, TypeTemplateHandle hType, int[] aiReturn)
         {
-        TypeConstant type  = hType.getDataType();
+        TypeConstant type = hType.getDataType();
         return type.isModifyingType()
                 ? frame.assignValues(aiReturn, xBoolean.TRUE, makeHandle(type.getUnderlyingType()))
                 : frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -412,9 +429,9 @@ public class xRTTypeTemplate
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
-        TypeConstant[] atypes  = type.getParamTypesArray();
-        int            cTypes  = atypes.length;
-        TypeTemplateHandle[]   ahTypes = new TypeTemplateHandle[cTypes];
+        TypeConstant[]       atypes  = type.getParamTypesArray();
+        int                  cTypes  = atypes.length;
+        TypeTemplateHandle[] ahTypes = new TypeTemplateHandle[cTypes];
         for (int i = 0; i < cTypes; ++i)
             {
             ahTypes[i] = makeHandle(atypes[i]);
