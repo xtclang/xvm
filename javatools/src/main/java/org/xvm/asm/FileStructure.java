@@ -369,6 +369,14 @@ public class FileStructure
      */
     public String linkModules(ModuleRepository repository, boolean fRuntime)
         {
+        if (fRuntime)
+            {
+            if (m_fLinked)
+                {
+                return null;
+                }
+            m_fLinked = true;
+            }
         return linkModules(repository, this, new HashSet<>(), fRuntime);
         }
 
@@ -473,6 +481,14 @@ public class FileStructure
         }
 
     /**
+     * @return true iff the FileStructure has been fully linked
+     */
+    public boolean isLinked()
+        {
+        return m_fLinked;
+        }
+
+    /**
      * @return a read-only tree of versions in this FileStructure
      */
     public VersionTree<Boolean> getVersionTree()
@@ -483,7 +499,7 @@ public class FileStructure
     /**
      * Determine if the FileStructure contains version information.
      *
-     * @return true if this contains version label(s) for the contained module(s)
+     * @return true if this FileStructure contains version label(s) for the contained module(s)
      */
     boolean isVersioned()
         {
@@ -509,7 +525,7 @@ public class FileStructure
      * @param ver     a version number
      * @param fExact  true if the version has to match exactly
      *
-     * @return true if this module structure supports the specified version
+     * @return true if this FileStructure supports the specified version
      */
     public boolean supportsVersion(Version ver, boolean fExact)
         {
@@ -1111,6 +1127,11 @@ public class FileStructure
      * The indicator that deserialization of components should be done lazily (deferred).
      */
     private boolean m_fLazyDeser;
+
+    /**
+     * The indicator that the file structure has been linked by the run-time.
+     */
+    private boolean m_fLinked;
 
     /**
      * The name of the main module that the FileStructure represents. There may be additional

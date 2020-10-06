@@ -121,19 +121,21 @@ public class xContainerLinker
                 ArrayHandle             hConditions = (ArrayHandle) ahArg[6];
 
                 ModuleStructure moduleApp = (ModuleStructure) hTemplate.getComponent();
-                FileStructure   structApp = f_templates.createFileStructure(moduleApp);
-
-                // TODO GG: this needs to be replaced with linking to the passed in repo
-                String sMissing = structApp.linkModules(f_templates.f_repository, true);
-                if (sMissing != null)
+                if (!moduleApp.getFileStructure().isLinked())
                     {
-                    return frame.raiseException("Unable to load module \"" + sMissing + "\"");
+                    FileStructure fileApp = f_templates.createFileStructure(moduleApp);
+
+                    // TODO GG: this needs to be replaced with linking to the passed in repo
+                    String sMissing = fileApp.linkModules(f_templates.f_repository, true);
+                    if (sMissing != null)
+                        {
+                        return frame.raiseException("Unable to load module \"" + sMissing + "\"");
+                        }
+                    moduleApp = fileApp.getModule(moduleApp.getName());
                     }
 
-                ModuleConstant idModule = (ModuleConstant)
-                        structApp.getChild(moduleApp.getName()).getIdentityConstant();
-
-                SimpleContainer container = new SimpleContainer(frame.f_context, idModule);
+                SimpleContainer container =
+                        new SimpleContainer(frame.f_context, moduleApp.getIdentityConstant());
 
                 return new CollectResources(container, hInjector, aiReturn).doNext(frame);
                 }

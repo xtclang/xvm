@@ -68,16 +68,16 @@ public class xRTModuleTemplate
                 }
 
             case "moduleNamesByPath":
-                return getPropertyModulesByPath(frame, hTemplate, iReturn);
+                return getPropertyModuleNamesByPath(frame, hTemplate, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     /**
-     * Implements property: modulesByPath.get()
+     * Implements property: moduleNamesByPath.get()
      */
-    public int getPropertyModulesByPath(Frame frame, ComponentTemplateHandle hTemplate, int iReturn)
+    public int getPropertyModuleNamesByPath(Frame frame, ComponentTemplateHandle hTemplate, int iReturn)
         {
         // TODO GG: how to cache the result?
         ModuleStructure  module = (ModuleStructure) hTemplate.getComponent();

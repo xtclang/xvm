@@ -28,6 +28,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
@@ -171,7 +172,12 @@ public class xRTClassTemplate
      */
     public int getPropertyContribs(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure     clz         = (ClassStructure) hComponent.getComponent();
+        ClassStructure clz = (ClassStructure) hComponent.getComponent();
+        if (!clz.getFileStructure().isLinked())
+            {
+            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
+            }
+
         List<Contribution> listContrib = clz.getContributionsAsList();
 
         Utils.ValueSupplier supplier = (frameCaller, index) ->
