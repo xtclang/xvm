@@ -1980,6 +1980,14 @@ public class ClassStructure
         Constant         constIdLeft = typeLeft.getDefiningConstant();
         IdentityConstant idClzRight  = getIdentityConstant();
 
+        // virtual children implement an implicit "Inner" interface, and are contained inside a
+        // container class that implements an implicit "Outer" interface
+        if (containsVirtualChild() && typeLeft.equals(pool.typeOuter()) ||
+            isVirtualChild()       && typeLeft.equals(pool.typeInner()))
+            {
+            return Relation.IS_A;
+            }
+
         switch (constIdLeft.getFormat())
             {
             case Module:

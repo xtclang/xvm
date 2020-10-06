@@ -77,7 +77,7 @@ class ConstHelper
         for (Int i = 0, Int c = fields.size; i < c; i++)
             {
             Object field = fields[i];
-            if (!field.is(immutable Object) && !field.is(Service))
+            if (!field.is(immutable Object) && !isProxied(field))
                 {
                 if (field.is(Freezable))
                     {
@@ -91,6 +91,11 @@ class ConstHelper
                 }
             }
         return result;
+        }
+
+    static Boolean isProxied(Object field)
+        {
+        return field.is(Service) || (field.is(Inner) && isProxied(field.outer));
         }
 
     /**

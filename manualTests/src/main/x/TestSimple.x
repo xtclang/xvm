@@ -4,9 +4,29 @@ module TestSimple
 
     void run()
         {
-        for ((Int i, String s) : trash)
+        Parent p = new Parent();
+        Parent.Child c = p.child();
+
+        if (c.is(Inner))
             {
-            console.println($"{i}: {s}");
+            Object outer = c.outer;
+            console.println(outer.is(Service));
+            }
+        }
+
+    service Parent()
+        {
+        class Child
+            {
+            Int foo()
+                {
+                return 1;
+                }
+            }
+
+        Child child()
+            {
+            return new Child();
             }
         }
     }

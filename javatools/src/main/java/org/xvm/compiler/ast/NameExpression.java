@@ -2043,7 +2043,7 @@ public class NameExpression
                     }
 
                 // determine the type of the class
-                if (aTypeParams != null || (typeDesired != null && typeDesired.isA(pool.typeType())))
+                if (aTypeParams != null || fTypeDesired)
                     {
                     TypeConstant     type      = null;
                     IdentityConstant idTarget  = (IdentityConstant) constant;
