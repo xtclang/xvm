@@ -10,10 +10,7 @@ interface Mapping<Serializable>
      * metadata, or allows the Mapping to be identified in the metadata related to objects
      * emitted by this Mapping.
      */
-    @RO String? typeName.get()
-        {
-        return Null;
-        }
+    @RO String typeName;
 
     /**
      * Read a value of type `Serializable` from the provided `ElementInput`.

@@ -5,6 +5,12 @@ const LiteralMapping<Serializable extends Doc>
         implements Mapping<Serializable>
     {
     @Override
+    String typeName.get()
+        {
+        return Serializable.toString();
+        }
+
+    @Override
     Serializable read(ElementInput in)
         {
         Doc value = in.readDoc();

@@ -87,7 +87,7 @@ const Schema
         for (Mapping mapping : mappings)
             {
             mappingByType.putIfAbsent(mapping.Serializable, mapping);
-            typeByName.putIfAbsent(mapping.typeName?, mapping.Serializable);
+            typeByName.putIfAbsent(mapping.typeName, mapping.Serializable);
             }
 
         this.mappingByType = mappingByType;

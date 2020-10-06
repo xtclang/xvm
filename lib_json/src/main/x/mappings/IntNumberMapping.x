@@ -18,6 +18,12 @@ const IntNumberMapping<Serializable extends IntNumber>
     function Serializable(IntLiteral) convert;
 
     @Override
+    String typeName.get()
+        {
+        return Serializable.toString();
+        }
+
+    @Override
     Serializable read(ElementInput in)
         {
         return convert(in.readIntLiteral());
