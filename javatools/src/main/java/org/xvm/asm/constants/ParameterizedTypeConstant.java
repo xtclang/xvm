@@ -145,6 +145,25 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public boolean isShared(ConstantPool poolOther)
+        {
+        if (!super.isShared(poolOther))
+            {
+            return false;
+            }
+
+        for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+            {
+            if (!m_atypeParams[i].isShared(poolOther))
+                {
+                return false;
+                }
+            }
+
+        return true;
+        }
+
+    @Override
     public boolean isParamsSpecified()
         {
         return true;

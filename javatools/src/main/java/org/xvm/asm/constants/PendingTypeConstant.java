@@ -25,11 +25,17 @@ public class PendingTypeConstant
         {
         super(pool);
 
-        m_typeConstraint = typeConstraint == null ? pool.typeObject() : typeConstraint;
+        f_typeConstraint = typeConstraint == null ? pool.typeObject() : typeConstraint;
         }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
+
+    @Override
+    public boolean isShared(ConstantPool poolOther)
+        {
+        return f_typeConstraint.isShared(poolOther);
+        }
 
     @Override
     public TypeConstant resolveTypedefs()
@@ -137,13 +143,13 @@ public class PendingTypeConstant
     @Override
     public TypeConstant resolveConstraints()
         {
-        return m_typeConstraint;
+        return f_typeConstraint;
         }
 
     @Override
     public TypeInfo ensureTypeInfo(ErrorListener errs)
         {
-        return m_typeConstraint.ensureTypeInfo(errs);
+        return f_typeConstraint.ensureTypeInfo(errs);
         }
 
     @Override
@@ -155,7 +161,7 @@ public class PendingTypeConstant
     @Override
     protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
-        return typeRight.calculateRelation(m_typeConstraint);
+        return typeRight.calculateRelation(f_typeConstraint);
         }
 
     @Override
@@ -221,13 +227,13 @@ public class PendingTypeConstant
     public boolean equals(Object that)
         {
         return that instanceof PendingTypeConstant &&
-            m_typeConstraint.equals(((PendingTypeConstant) that).m_typeConstraint);
+            f_typeConstraint.equals(((PendingTypeConstant) that).f_typeConstraint);
         }
 
     @Override
     public int hashCode()
         {
-        return m_typeConstraint.hashCode();
+        return f_typeConstraint.hashCode();
         }
 
     @Override
@@ -239,5 +245,5 @@ public class PendingTypeConstant
 
     // ----- data fields ---------------------------------------------------------------------------
 
-    private TypeConstant m_typeConstraint;
+    private final TypeConstant f_typeConstraint;
     }
