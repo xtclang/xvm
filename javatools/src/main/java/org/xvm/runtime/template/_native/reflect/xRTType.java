@@ -460,99 +460,6 @@ public class xRTType
         }
 
 
-    // ----- TypeHandle support --------------------------------------------------------------------
-
-    /**
-     * Obtain a {@link TypeHandle} for the specified type.
-     *
-     * @param type     the {@link TypeConstant} to obtain a {@link TypeHandle} for
-     * @param fShared  if false, the handle represents a "foreign" type external to the
-     *                 type system that will use the handle
-     *
-     * @return the resulting {@link TypeHandle}
-     */
-    public static TypeHandle makeHandle(TypeConstant type, boolean fShared)
-        {
-        // unfortunately, "makeHandle" is called from places where we cannot easily invoke the
-        // default initializer, so we need to do it by hand
-        TypeHandle hType = fShared
-            ? new TypeHandle(INSTANCE.ensureClass(type.getType()), null)
-            : new TypeHandle(INSTANCE.getCanonicalClass(), type.getType());
-        GenericHandle hMulti = (GenericHandle) hType.getField("multimethods");
-        hMulti.setField(GenericHandle.OUTER, hType);
-        hMulti.setField("calculate",  xNullable.NULL);
-        hMulti.setField("assignable", xBoolean.FALSE);
-        return hType;
-        }
-
-    /**
-     * Inner class: TypeHandle. This is a handle to a native type.
-     */
-    public static class TypeHandle
-            extends GenericHandle
-        {
-        protected TypeHandle(ClassComposition clazz, TypeConstant typeForeign)
-            {
-            super(clazz);
-
-            f_typeForeign = typeForeign;
-            m_fMutable    = false;
-            }
-
-        @Override
-        public TypeConstant getType()
-            {
-            return f_typeForeign == null
-                ? super.getType()
-                : f_typeForeign;
-            }
-
-        public boolean isForeign()
-            {
-            return f_typeForeign != null;
-            }
-
-        public TypeConstant getDataType()
-            {
-            return getType().getParamType(0);
-            }
-
-        public TypeConstant getOuterType()
-            {
-            return getType().getParamType(1);
-            }
-
-        @Override
-        public boolean isNativeEqual()
-            {
-            return true;
-            }
-
-        @Override
-        public int compareTo(ObjectHandle that)
-            {
-            return that instanceof TypeHandle
-                    ? this.getDataType().compareTo(((TypeHandle) that).getDataType())
-                    : 1;
-            }
-
-        @Override
-        public int hashCode()
-            {
-            return getDataType().hashCode();
-            }
-
-        @Override
-        public boolean equals(Object obj)
-            {
-            return obj instanceof TypeHandle &&
-                    this.getDataType().equals(((TypeHandle) obj).getDataType());
-            }
-
-        private final TypeConstant f_typeForeign;
-        }
-
-
     // ----- property implementations --------------------------------------------------------------
 
     /**
@@ -1528,6 +1435,99 @@ public class xRTType
                 ensureArgumentArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARGUMENT_ARRAY_EMPTY;
+        }
+
+
+    // ----- TypeHandle support --------------------------------------------------------------------
+
+    /**
+     * Obtain a {@link TypeHandle} for the specified type.
+     *
+     * @param type     the {@link TypeConstant} to obtain a {@link TypeHandle} for
+     * @param fShared  if false, the handle represents a "foreign" type external to the
+     *                 type system that will use the handle
+     *
+     * @return the resulting {@link TypeHandle}
+     */
+    public static TypeHandle makeHandle(TypeConstant type, boolean fShared)
+        {
+        // unfortunately, "makeHandle" is called from places where we cannot easily invoke the
+        // default initializer, so we need to do it by hand
+        TypeHandle hType = fShared
+            ? new TypeHandle(INSTANCE.ensureClass(type.getType()), null)
+            : new TypeHandle(INSTANCE.getCanonicalClass(), type.getType());
+        GenericHandle hMulti = (GenericHandle) hType.getField("multimethods");
+        hMulti.setField(GenericHandle.OUTER, hType);
+        hMulti.setField("calculate",  xNullable.NULL);
+        hMulti.setField("assignable", xBoolean.FALSE);
+        return hType;
+        }
+
+    /**
+     * Inner class: TypeHandle. This is a handle to a native type.
+     */
+    public static class TypeHandle
+            extends GenericHandle
+        {
+        protected TypeHandle(ClassComposition clazz, TypeConstant typeForeign)
+            {
+            super(clazz);
+
+            f_typeForeign = typeForeign;
+            m_fMutable    = false;
+            }
+
+        @Override
+        public TypeConstant getType()
+            {
+            return f_typeForeign == null
+                ? super.getType()
+                : f_typeForeign;
+            }
+
+        public boolean isForeign()
+            {
+            return f_typeForeign != null;
+            }
+
+        public TypeConstant getDataType()
+            {
+            return getType().getParamType(0);
+            }
+
+        public TypeConstant getOuterType()
+            {
+            return getType().getParamType(1);
+            }
+
+        @Override
+        public boolean isNativeEqual()
+            {
+            return true;
+            }
+
+        @Override
+        public int compareTo(ObjectHandle that)
+            {
+            return that instanceof TypeHandle
+                    ? this.getDataType().compareTo(((TypeHandle) that).getDataType())
+                    : 1;
+            }
+
+        @Override
+        public int hashCode()
+            {
+            return getDataType().hashCode();
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            return obj instanceof TypeHandle &&
+                    this.getDataType().equals(((TypeHandle) obj).getDataType());
+            }
+
+        private final TypeConstant f_typeForeign;
         }
 
 
