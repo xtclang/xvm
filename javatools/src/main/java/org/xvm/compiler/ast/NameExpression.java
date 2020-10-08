@@ -1049,7 +1049,7 @@ public class NameExpression
                     {
                     MethodConstant idMethod  = (MethodConstant) argRaw;
                     Argument       argTarget = left == null
-                            ? new Register(ctx.getThisType(), Op.A_TARGET)
+                            ? new Register(ctx.getThisType(), Op.A_THIS)
                             : left.generateArgument(ctx, code, true, true, errs);
 
                     if (m_mapTypeParams == null)
@@ -1288,7 +1288,7 @@ public class NameExpression
                 {
                 MethodConstant idMethod  = (MethodConstant) argRaw;
                 Argument       argTarget = left == null
-                        ? new Register(ctx.getThisType(), Op.A_TARGET)
+                        ? new Register(ctx.getThisType(), Op.A_THIS)
                         : left.generateArgument(ctx, code, true, true, errs);
 
                 Register regFn = createRegister(idMethod.getType(), fUsedOnce);
@@ -1330,7 +1330,7 @@ public class NameExpression
                 }
 
             case This:
-                return new Register(ctx.getThisType(), Op.A_TARGET);
+                return new Register(ctx.getThisType(), Op.A_THIS);
 
             case Left:
                 assert !idProp.getComponent().isStatic();
@@ -1414,7 +1414,7 @@ public class NameExpression
                             }
 
                         case This:
-                            argTarget = new Register(clz.getFormalType(), Op.A_TARGET);
+                            argTarget = new Register(clz.getFormalType(), Op.A_THIS);
                             break;
 
                         case Outer:

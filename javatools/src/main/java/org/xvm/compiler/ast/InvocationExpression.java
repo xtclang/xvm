@@ -1235,8 +1235,7 @@ public class InvocationExpression
                                     }
                                 else
                                     {
-                                    argTarget = new Register(typeTarget,
-                                        method.isConstructor() ? Op.A_STRUCT : Op.A_TARGET);
+                                    argTarget = new Register(typeTarget, Op.A_THIS);
                                     }
                                 }
                             }
@@ -1885,6 +1884,7 @@ public class InvocationExpression
                     // report specific error messages for incorrect "this" or "super" use
                     switch (reg.getIndex())
                         {
+                        case Op.A_THIS:
                         case Op.A_TARGET:
                         case Op.A_PUBLIC:
                         case Op.A_PROTECTED:

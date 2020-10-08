@@ -1950,69 +1950,74 @@ public abstract class Op
     public static final int A_DEFAULT   = -3;
 
     /**
+     * Pre-defined argument: {@code this}
+     */
+    public static final int A_THIS      = -4;
+
+    /**
      * Pre-defined argument: {@code this:target}
      */
-    public static final int A_TARGET    = -4;
+    public static final int A_TARGET    = -5;
 
     /**
      * Pre-defined argument: {@code this:public}
      */
-    public static final int A_PUBLIC    = -5;
+    public static final int A_PUBLIC    = -6;
 
     /**
      * Pre-defined argument: {@code this:protected}
      */
-    public static final int A_PROTECTED = -6;
+    public static final int A_PROTECTED = -7;
 
     /**
      * Pre-defined argument: {@code this:private}
      */
-    public static final int A_PRIVATE   = -7;
+    public static final int A_PRIVATE   = -8;
 
     /**
      * Pre-defined argument: {@code this:struct}
      */
-    public static final int A_STRUCT    = -8;
+    public static final int A_STRUCT    = -9;
 
     /**
      * Pre-defined argument: {@code this:class}
      */
-    public static final int A_CLASS     = -9;
+    public static final int A_CLASS     = -10;
 
     /**
      * Pre-defined argument: {@code this:service}
      */
-    public static final int A_SERVICE   = -10;
+    public static final int A_SERVICE   = -11;
 
     /**
      * Pre-defined argument: {@code super} (function).
      */
-    public static final int A_SUPER     = -11;
+    public static final int A_SUPER     = -12;
 
     /**
      * Pre-defined argument: an indicator for a "blocking wait" return value. It's similar to
      * {@link #A_IGNORE}, but effectively turns on the "forbidden" reentrancy.
      */
-    public static final int A_BLOCK     = -12;
+    public static final int A_BLOCK     = -13;
 
     /**
      * Pre-defined argument: an indicator for "multiple return values" (internal)
      */
-    public final static int A_MULTI     = -13;
+    public final static int A_MULTI     = -14;
     /**
      * Pre-defined argument: an indicator for a "tuple return" (internal)
      */
-    public final static int A_TUPLE     = -14;
+    public final static int A_TUPLE     = -15;
     /**
      * Pre-defined and compile-time only argument: A label.
      */
-    public final static int A_LABEL     = -15;
+    public final static int A_LABEL     = -16;
 
     /**
      * The first constant, constant #0, is at this index (which is a negative). For a constant whose
      * index is {@code i}, it is encoded as: {@code CONSTANT_OFFSET - i}
      */
-    public static final int CONSTANT_OFFSET = -16;
+    public static final int CONSTANT_OFFSET = -17;
 
 
     // ----- return values from the Op.process() method --------------------------------------------

@@ -2822,7 +2822,7 @@ public class ClassStructure
                     }
                 else
                     {
-                    code.add(new Invoke_01(new Register(typeStruct, Op.A_TARGET), idInit, idField));
+                    code.add(new Invoke_01(new Register(typeStruct, Op.A_THIS), idInit, idField));
                     }
                 }
 
@@ -3266,7 +3266,7 @@ public class ClassStructure
                 //    {
                 //    return this.toString().appendTo(appender);
                 //    }
-                Register regThis     = new Register(typeAppender, Op.A_TARGET);
+                Register regThis     = new Register(typeAppender, Op.A_THIS);
                 Register regAppender = new Register(typeAppender, 0);
                 Register regStack    = new Register(typeAppender, Op.A_STACK);
                 Register regResult   = new Register(typeAppender, Op.A_STACK);

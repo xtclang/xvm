@@ -84,6 +84,7 @@ public class MoveRef
             {
             switch (m_nFromValue)
                 {
+                case A_THIS:
                 case A_TARGET:
                 case A_STRUCT:
                     {

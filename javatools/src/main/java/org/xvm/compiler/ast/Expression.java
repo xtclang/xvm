@@ -1809,6 +1809,7 @@ public abstract class Expression
         TypeConstant    type         = method.getContainingClass().getFormalType();
         switch (nReg)
             {
+            case Op.A_THIS:
             case Op.A_TARGET:
                 break;
 
@@ -1986,10 +1987,18 @@ public abstract class Expression
                 Register reg = (Register) argTarget;
                 if (reg.isPredefined())
                     {
-                    int index = ((Register) argTarget).getIndex();
-                    m_form = index == Op.A_TARGET || index == Op.A_STRUCT
-                            ? AssignForm.LocalProp
-                            : AssignForm.TargetProp;
+                    switch (((Register) argTarget).getIndex())
+                        {
+                        case Op.A_THIS:
+                        case Op.A_TARGET:
+                        case Op.A_STRUCT:
+                            m_form = AssignForm.LocalProp;
+                            break;
+
+                        default:
+                            m_form = AssignForm.TargetProp;
+                            break;
+                        }
                     }
                 else
                     {

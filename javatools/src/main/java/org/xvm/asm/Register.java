@@ -243,6 +243,7 @@ public class Register
             case Op.A_PUBLIC:
             case Op.A_PROTECTED:
             case Op.A_PRIVATE:
+            case Op.A_THIS:
             case Op.A_TARGET:
             case Op.A_STRUCT:
             case Op.A_CLASS:
@@ -264,14 +265,6 @@ public class Register
     public boolean isPredefined()
         {
         return m_iArg < 0 && m_iArg != UNKNOWN;
-        }
-
-    /**
-     * @return true iff the register represents "this:target" pre-defined argument
-     */
-    public boolean isTarget()
-        {
-        return m_iArg == Op.A_TARGET;
         }
 
     /**
@@ -447,6 +440,7 @@ public class Register
             case Op.A_PUBLIC:
             case Op.A_PROTECTED:
             case Op.A_PRIVATE:
+            case Op.A_THIS:
             case Op.A_TARGET:
             case Op.A_STRUCT:
             case Op.A_CLASS:
@@ -483,6 +477,9 @@ public class Register
 
             case Op.A_DEFAULT:
                 return "<default>";
+
+            case Op.A_THIS:
+                return "this";
 
             case Op.A_TARGET:
                 return "this:target";
@@ -624,12 +621,6 @@ public class Register
         public boolean isPredefined()
             {
             return Register.this.isPredefined();
-            }
-
-        @Override
-        public boolean isTarget()
-            {
-            return Register.this.isTarget();
             }
 
         @Override

@@ -950,7 +950,7 @@ public class NewExpression
                     {
                     if (m_nVirtualParentSteps == 0)
                         {
-                        argOuter = new Register(ctx.getThisType(), Op.A_TARGET);
+                        argOuter = new Register(ctx.getThisType(), Op.A_THIS);
                         }
                     else
                         {
