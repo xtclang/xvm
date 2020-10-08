@@ -61,41 +61,19 @@ class ConstHelper
         }
 
     /**
-     * Helper function to "freeze" all the fields for a Const class.
-     *
-     * Note: we don't want to throw a natural exception from here as it will show the native
-     *       class in the stack trace
-     *
-     * @return -1 if all objects were immutable; -2 if a copy needs to be made and a positive;
-     *         a positive number for a field index that is not freezable
+     * Helper function to "freeze" all the Freezable fields for a Const class.
      */
-    static Int freeze(Object[] fields)
+    static void freeze(Object[] fields)
         {
         import ecstasy.collections.Freezable;
 
-        Int result = -1;
-        for (Int i = 0, Int c = fields.size; i < c; i++)
+        Freeze:
+        for (Object field : fields)
             {
-            Object field = fields[i];
-            if (!field.is(immutable Object) && !isProxied(field))
-                {
-                if (field.is(Freezable))
-                    {
-                    fields[i] = field.freeze();
-                    result = -2;
-                    }
-                else
-                    {
-                    return i;
-                    }
-                }
-            }
-        return result;
-        }
+            assert field.is(Freezable);
 
-    static Boolean isProxied(Object field)
-        {
-        return field.is(Service) || (field.is(Inner) && isProxied(field.outer));
+            fields[Freeze.count] = field.freeze();
+            }
         }
 
     /**

@@ -1,6 +1,7 @@
 package org.xvm.runtime.template;
 
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -106,6 +107,8 @@ public class xConst
 
             HASH_SIG = f_templates.getClassStructure("collections.Hashable").
                 findMethod("hashCode", 2).getIdentityConstant().getSignature();
+
+            TYPE_FREEZABLE = pool.ensureEcstasyTypeConstant("collections.Freezable");
             }
         }
 
@@ -212,63 +215,84 @@ public class xConst
                 {
                 ClassComposition clz      = (ClassComposition) hStruct.getComposition();
                 ObjectHandle[]   ahFields = clz.getFieldValueArray(hConst);
-                if (ahFields.length > 0)
+                int              cFields  = ahFields.length;
+                if (cFields > 0)
                     {
-                    GenericArrayHandle hValues = (GenericArrayHandle)
-                        xArray.makeObjectArrayHandle(ahFields, xArray.Mutability.Fixed);
+                    List<String> listFieldNames = clz.getFieldNames();
+                    assert listFieldNames.size() == cFields;
 
-                    ObjectHandle[] ahVars = new ObjectHandle[FN_FREEZE.getMaxVars()];
-                    ahVars[0] = hValues;
+                    // remove all immutable and proxied (services and services' children);
+                    // collect all freezable into a "freezable" list along with their indexes
+                    List<ObjectHandle> listFreezable = null;
+                    List<String>       listName      = null;
 
-                    Frame frameFreeze = frame.createFrame1(FN_FREEZE, null, ahVars, Op.A_STACK);
-
-                    frameFreeze.addContinuation(frameCaller ->
+                    for (int i = 0; i < cFields; i++)
                         {
-                        int iResult = (int) ((JavaLong) frameCaller.popStack()).getValue();
-                        switch (iResult)
+                        ObjectHandle hField = ahFields[i];
+                        if (!hField.isMutable() || hField.isService())
                             {
-                            case -1: // all objects were immutable
-                                break;
-
-                            case -2: // a copy needs to be made
-                                {
-                                List<String> listNames = clz.getFieldNames();
-                                for (int i = 0, c = listNames.size(); i < c; i++)
-                                    {
-                                    // verify that "freeze" didn't widen the type
-                                    String       sField  = listNames.get(i);
-                                    ObjectHandle hNew    = hValues.m_ahValue[i];
-                                    TypeConstant typeOld = hConst.getField(sField).getType();
-                                    TypeConstant typeNew = hNew.getType();
-                                    if (typeNew.isA(typeOld))
-                                        {
-                                        hConst.setField(sField, hNew);
-                                        }
-                                    else
-                                        {
-                                        TypeConstant typeExpected = frameCaller.poolContext().
-                                            ensureImmutableTypeConstant(typeOld);
-                                        return frameCaller.raiseException("The freeze() result type for the \"" +
-                                            sField + "\" field was illegally changed; \"" +
-                                            typeExpected.getValueString() + "\" expected, \"" +
-                                            typeNew.getValueString() + "\" returned");
-                                        }
-                                    }
-                                break;
-                                }
-
-                            default: // iResult is an index for a not freezable field
-                                {
-                                String sField = clz.getFieldNames().get(iResult);
-                                return frame.raiseException("Field \"" + sField + "\" is not freezable");
-                                }
+                            continue;
                             }
 
-                        hConst.makeImmutable();
-                        return Op.R_NEXT;
-                        });
+                        String sField = listFieldNames.get(i);
+                        if (hField.getType().isA(TYPE_FREEZABLE))
+                            {
+                            if (listFreezable == null)
+                                {
+                                listFreezable = new ArrayList<>();
+                                listName      = new ArrayList<>();
+                                }
+                            listFreezable.add(hField);
+                            listName.add(sField);
+                            }
+                        else
+                            {
+                            return frame.raiseException("Field \"" + sField + "\" is not freezable");
+                            }
+                        }
 
-                    return frame.callInitialized(frameFreeze);
+                    if (listFreezable != null)
+                        {
+                        ObjectHandle[]     ahFreezable = listFreezable.toArray(Utils.OBJECTS_NONE);
+                        String[]           asName      = listName.toArray(new String[0]);
+                        GenericArrayHandle hValues     = (GenericArrayHandle)
+                            xArray.makeObjectArrayHandle(ahFreezable, xArray.Mutability.Fixed);
+
+                        ObjectHandle[] ahVars = new ObjectHandle[FN_FREEZE.getMaxVars()];
+                        ahVars[0] = hValues;
+
+                        Frame frameFreeze = frame.createFrame1(FN_FREEZE, null, ahVars, Op.A_IGNORE);
+                        frameFreeze.addContinuation(frameCaller ->
+                            {
+                            for (int i = 0, c = asName.length; i < c; i++)
+                                {
+                                // verify that "freeze" didn't widen the type
+                                String       sField  = asName[i];
+                                ObjectHandle hNew    = hValues.m_ahValue[i];
+                                TypeConstant typeOld = hConst.getField(sField).getType();
+                                TypeConstant typeNew = hNew.getType();
+                                if (typeNew.isA(typeOld))
+                                    {
+                                    hConst.setField(sField, hNew);
+                                    }
+                                else
+                                    {
+                                    TypeConstant typeExpected = frameCaller.poolContext().
+                                        ensureImmutableTypeConstant(typeOld);
+                                    return frameCaller.raiseException(
+                                        "The freeze() result type for the \"" + sField +
+                                        "\" field was illegally changed; \"" +
+                                        typeExpected.getValueString() + "\" expected, \"" +
+                                        typeNew.getValueString() + "\" returned");
+                                    }
+                                }
+
+                            hConst.makeImmutable();
+                            return Op.R_NEXT;
+                            });
+
+                        return frame.callInitialized(frameFreeze);
+                        }
                     }
                 }
             hConst.makeImmutable();
@@ -706,4 +730,6 @@ public class xConst
     private static MethodStructure PATH_CONSTRUCT;
 
     private static SignatureConstant HASH_SIG;
+
+    private static TypeConstant TYPE_FREEZABLE;
     }
