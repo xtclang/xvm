@@ -388,23 +388,7 @@ public class xRTTypeTemplate
         {
         TypeConstant typeThis = hType.getDataType();
         TypeConstant typeThat = ((TypeTemplateHandle) hArg).getDataType();
-        boolean      fIsA     = false;
-
-        ConstantPool poolThis = typeThis.getConstantPool();
-        ConstantPool poolThat = typeThat.getConstantPool();
-        if (poolThis == poolThat)
-            {
-            fIsA = typeThis.isA(typeThis);
-            }
-        else if (typeThis.isShared(poolThat))
-            {
-            fIsA = typeThis.isA(((TypeConstant) poolThat.register(typeThis)));
-            }
-        else if (typeThat.isShared(poolThis))
-            {
-            fIsA = ((TypeConstant) poolThat.register(typeThis)).isA(typeThat);
-            }
-        return frame.assignValue(iReturn, xBoolean.makeHandle(fIsA));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(typeThis.isA(typeThat)));
         }
 
     /**
