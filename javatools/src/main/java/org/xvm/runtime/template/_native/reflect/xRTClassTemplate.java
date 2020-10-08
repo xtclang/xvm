@@ -184,7 +184,7 @@ public class xRTClassTemplate
             {
             ConstantPool pool        = frameCaller.poolContext();
             Contribution contrib     = listContrib.get(index);
-            TypeConstant typeContrib = (TypeConstant) pool.register(contrib.getTypeConstant());
+            TypeConstant typeContrib = contrib.getTypeConstant();
             ObjectHandle hDelegatee  = xNullable.NULL; // TODO
             ObjectHandle haNames     = xNullable.NULL;
             ObjectHandle haTypes     = xNullable.NULL;
@@ -222,7 +222,7 @@ public class xRTClassTemplate
                             TypeConstant type  = entry.getValue();
 
                             ahNames[i] = xString.makeHandle(sName);
-                            ahTypes[i] = ((TypeConstant) pool.register(type)).getTypeHandle();
+                            ahTypes[i] = type.ensureTypeHandle(pool);
                             i++;
                             }
                         haNames = xArray.makeStringArrayHandle(ahNames);
@@ -238,7 +238,7 @@ public class xRTClassTemplate
 
             ObjectHandle[] ahVar = new ObjectHandle[CREATE_CONTRIB_METHOD.getMaxVars()];
             ahVar[0] = Utils.ensureInitializedEnum(frameCaller, ACTION.getEnumByName(sAction));
-            ahVar[1] = typeContrib.getTypeHandle();
+            ahVar[1] = typeContrib.ensureTypeHandle(pool);
             ahVar[2] = hDelegatee;
             ahVar[3] = haNames;
             ahVar[3] = haTypes;

@@ -266,7 +266,7 @@ public class xArray
         ClassComposition clzArray  = f_templates.resolveClass(typeArray);
 
         ObjectHandle[] ahVar = new ObjectHandle[CREATE_LIST_SET.getMaxVars()];
-        ahVar[0] = typeEl.getTypeHandle();
+        ahVar[0] = typeEl.ensureTypeHandle(pool);
         ahVar[1] = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue);
 
         return frame.call1(CREATE_LIST_SET, null, ahVar, Op.A_STACK);

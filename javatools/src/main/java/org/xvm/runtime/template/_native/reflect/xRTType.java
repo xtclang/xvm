@@ -37,7 +37,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
@@ -141,6 +140,14 @@ public class xRTType
         }
 
     @Override
+    public TypeConstant getCanonicalType()
+        {
+        ConstantPool pool = pool();
+        return pool.ensureParameterizedTypeConstant(
+            pool.typeType(), pool.typeObject(), pool.typeObject());
+        }
+
+    @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof TypeConstant)
@@ -152,7 +159,7 @@ public class xRTType
 
             TypeConstant typeData = typeTarget.getParamType(0).
                     resolveGenerics(pool, frame.getGenericsResolver());
-            return frame.pushStack(typeData.normalizeParameters().getTypeHandle());
+            return frame.pushStack(typeData.normalizeParameters().ensureTypeHandle(pool));
             }
 
         return super.createConstHandle(frame, constant);
@@ -170,7 +177,7 @@ public class xRTType
 
             return typeValue == null
                 ? frame.raiseException("Unknown formal type: " + idProp.getName())
-                : frame.assignValue(iReturn, typeValue.getTypeHandle());
+                : frame.assignValue(iReturn, typeValue.ensureTypeHandle(frame.poolContext()));
             }
 
         return super.getPropertyValue(frame, hTarget, idProp, iReturn);
@@ -298,16 +305,16 @@ public class xRTType
         // hArg may be a Type, a Method, or a Property
         if (hArg instanceof TypeHandle)
             {
+            ConstantPool pool     = frame.poolContext();
             TypeConstant typeThis = ((TypeHandle) hTarget).getDataType();
             TypeConstant typeThat = ((TypeHandle) hArg   ).getDataType();
-            ConstantPool pool     = selectPool(typeThis, typeThat);
-            if (pool == null)
+            if (!typeThis.isShared(pool) || !typeThat.isShared(pool))
                 {
                 return frame.raiseException("no common TypeSystem for ("
                         + typeThis + " + " + typeThat + ")");
                 }
             TypeConstant typeResult = pool.ensureUnionTypeConstant(typeThis, typeThat);
-            return frame.assignValue(iReturn, typeResult.getTypeHandle());
+            return frame.assignValue(iReturn, typeResult.ensureTypeHandle(pool));
             }
         else if (hArg instanceof MethodHandle)
             {
@@ -329,16 +336,15 @@ public class xRTType
         // hArg may be a Type, a Method, or a Property
         if (hArg instanceof TypeHandle)
             {
+            ConstantPool pool     = frame.poolContext();
             TypeConstant typeThis = ((TypeHandle) hTarget).getDataType();
             TypeConstant typeThat = ((TypeHandle) hArg   ).getDataType();
-            ConstantPool pool     = selectPool(typeThis, typeThat);
-            if (pool == null)
+            if (typeThis.isShared(pool) && typeThat.isShared(pool))
                 {
-                return frame.raiseException("no common TypeSystem for ("
-                    + typeThis + " - " + typeThat + ")");
+                TypeConstant typeResult = pool.ensureDifferenceTypeConstant(typeThis, typeThat);
+                return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.poolContext()));
                 }
-            TypeConstant typeResult = pool.ensureDifferenceTypeConstant(typeThis, typeThat);
-            return frame.assignValue(iReturn, typeResult.getTypeHandle());
+            return frame.raiseException("no common TypeSystem for (" + typeThis + " - " + typeThat + ")");
             }
         else if (hArg instanceof MethodHandle)
             {
@@ -360,18 +366,17 @@ public class xRTType
         // hArg is a Type
         if (hArg instanceof TypeHandle)
             {
+            ConstantPool pool     = frame.poolContext();
             TypeConstant typeThis = ((TypeHandle) hTarget).getDataType();
             TypeConstant typeThat = ((TypeHandle) hArg   ).getDataType();
-            ConstantPool pool     = selectPool(typeThis, typeThat);
-            if (pool == null)
+            if (typeThis.isShared(pool) && typeThat.isShared(pool))
                 {
-                return frame.raiseException("no common TypeSystem for ("
-                    + typeThis + " & " + typeThat + ")");
+                // TODO
+                // TypeConstant typeResult = pool.ensure???TypeConstant(typeThis, typeThat);
+                // return frame.assignValue(iReturn, typeResult.getTypeHandle());
+                throw new UnsupportedOperationException();
                 }
-            // TODO
-            // TypeConstant typeResult = pool.ensure???TypeConstant(typeThis, typeThat);
-            // return frame.assignValue(iReturn, typeResult.getTypeHandle());
-            throw new UnsupportedOperationException();
+            return frame.raiseException("no common TypeSystem for (" + typeThis + " & " + typeThat + ")");
             }
 
         return super.invokeOr(frame, hTarget, hArg, iReturn);
@@ -383,16 +388,15 @@ public class xRTType
         // hArg is a Type
         if (hArg instanceof TypeHandle)
             {
+            ConstantPool pool     = frame.poolContext();
             TypeConstant typeThis = ((TypeHandle) hTarget).getDataType();
             TypeConstant typeThat = ((TypeHandle) hArg   ).getDataType();
-            ConstantPool pool     = selectPool(typeThis, typeThat);
-            if (pool == null)
+            if (typeThis.isShared(pool) && typeThat.isShared(pool))
                 {
-                return frame.raiseException("no common TypeSystem for ("
-                    + typeThis + " | " + typeThat + ")");
+                TypeConstant typeResult = pool.ensureIntersectionTypeConstant(typeThis, typeThat);
+                return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.poolContext()));
                 }
-            TypeConstant typeResult = pool.ensureIntersectionTypeConstant(typeThis, typeThat);
-            return frame.assignValue(iReturn, typeResult.getTypeHandle());
+            return frame.raiseException("no common TypeSystem for (" + typeThis + " | " + typeThat + ")");
             }
 
         return super.invokeOr(frame, hTarget, hArg, iReturn);
@@ -438,7 +442,7 @@ public class xRTType
         int          nIndex = (int) lIndex;
 
         return nIndex >= 0 && nIndex < type.getParamsCount()
-            ? frame.assignValue(iReturn, type.getParamType(nIndex).getTypeHandle())
+            ? frame.assignValue(iReturn, type.getParamType(nIndex).ensureTypeHandle(frame.poolContext()))
             : frame.raiseException(xException.outOfBounds(frame, lIndex, type.getParamsCount()));
         }
 
@@ -461,15 +465,19 @@ public class xRTType
     /**
      * Obtain a {@link TypeHandle} for the specified type.
      *
-     * @param type  the {@link TypeConstant} to obtain a {@link TypeHandle} for
+     * @param type     the {@link TypeConstant} to obtain a {@link TypeHandle} for
+     * @param fShared  if false, the handle represents a "foreign" type external to the
+     *                 type system that will use the handle
      *
      * @return the resulting {@link TypeHandle}
      */
-    public static TypeHandle makeHandle(TypeConstant type)
+    public static TypeHandle makeHandle(TypeConstant type, boolean fShared)
         {
         // unfortunately, "makeHandle" is called from places where we cannot easily invoke the
         // default initializer, so we need to do it by hand
-        TypeHandle    hType  = new TypeHandle(INSTANCE.ensureClass(type.getType()));
+        TypeHandle hType = fShared
+            ? new TypeHandle(INSTANCE.ensureClass(type.getType()), null)
+            : new TypeHandle(INSTANCE.getCanonicalClass(), type.getType());
         GenericHandle hMulti = (GenericHandle) hType.getField("multimethods");
         hMulti.setField(GenericHandle.OUTER, hType);
         hMulti.setField("calculate",  xNullable.NULL);
@@ -483,11 +491,25 @@ public class xRTType
     public static class TypeHandle
             extends GenericHandle
         {
-        protected TypeHandle(TypeComposition clazz)
+        protected TypeHandle(ClassComposition clazz, TypeConstant typeForeign)
             {
             super(clazz);
 
-            m_fMutable = false;
+            f_typeForeign = typeForeign;
+            m_fMutable    = false;
+            }
+
+        @Override
+        public TypeConstant getType()
+            {
+            return f_typeForeign == null
+                ? super.getType()
+                : f_typeForeign;
+            }
+
+        public boolean isForeign()
+            {
+            return f_typeForeign != null;
             }
 
         public TypeConstant getDataType()
@@ -526,6 +548,8 @@ public class xRTType
             return obj instanceof TypeHandle &&
                     this.getDataType().equals(((TypeHandle) obj).getDataType());
             }
+
+        private final TypeConstant f_typeForeign;
         }
 
 
@@ -981,7 +1005,7 @@ public class xRTType
         TypeHandle[] ahTypes = new TypeHandle[aUnderlying.length];
         for (int i = 0, c = ahTypes.length; i < c; ++i)
             {
-            ahTypes[i] = aUnderlying[i].getTypeHandle();
+            ahTypes[i] = aUnderlying[i].ensureTypeHandle(frame.poolContext());
             }
 
         ArrayHandle hArray = ensureArrayTemplate().
@@ -1030,7 +1054,7 @@ public class xRTType
 
         TypeConstant typeAnno = pool.ensureAnnotatedTypeConstant(typeThis, anno);
 
-        return frame.assignValue(iReturn, typeAnno.getTypeHandle());
+        return frame.assignValue(iReturn, typeAnno.ensureTypeHandle(frame.poolContext()));
         }
 
     /**
@@ -1116,7 +1140,7 @@ public class xRTType
         // REVIEW CP: include PropertyClassTypeConstant?
         if (typeTarget.isVirtualChild() || typeTarget.isAnonymousClass())
             {
-            TypeHandle hParent = typeTarget.getParentType().getTypeHandle();
+            TypeHandle hParent = typeTarget.getParentType().ensureTypeHandle(frame.poolContext());
             return frame.assignValues(aiReturn, xBoolean.TRUE, hParent);
             }
         else
@@ -1168,9 +1192,10 @@ public class xRTType
      */
     public int invokeModifying(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        TypeConstant type  = hType.getDataType();
+        TypeConstant type = hType.getDataType();
         return type.isModifyingType()
-                ? frame.assignValues(aiReturn, xBoolean.TRUE, type.getUnderlyingType().getTypeHandle())
+                ? frame.assignValues(aiReturn, xBoolean.TRUE,
+                        type.getUnderlyingType().ensureTypeHandle(frame.poolContext()))
                 : frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
@@ -1228,7 +1253,7 @@ public class xRTType
         TypeHandle[]   ahTypes = new TypeHandle[cTypes];
         for (int i = 0; i < cTypes; ++i)
             {
-            ahTypes[i] = atypes[i].normalizeParameters().getTypeHandle();
+            ahTypes[i] = atypes[i].normalizeParameters().ensureTypeHandle(frame.poolContext());
             }
 
         ArrayHandle hArray = ensureArrayTemplate().
@@ -1267,16 +1292,17 @@ public class xRTType
             atypeParams[i] = ((TypeHandle) ahFormalTypes[i]).getDataType();
             }
 
+        ConstantPool pool = frame.poolContext();
         TypeConstant typeResult;
         try
             {
-            typeResult = typeThis.adoptParameters(typeThis.getConstantPool(), atypeParams);
+            typeResult = typeThis.adoptParameters(pool, atypeParams);
             }
         catch (RuntimeException e)
             {
             return frame.raiseException(xException.invalidType(frame, e.getMessage()));
             }
-        return frame.assignValue(iReturn, typeResult.getTypeHandle());
+        return frame.assignValue(iReturn, typeResult.ensureTypeHandle(pool));
         }
 
     /**
@@ -1292,11 +1318,12 @@ public class xRTType
      */
     public int invokeRelational(Frame frame, TypeHandle hType, int[] aiReturn)
         {
+        ConstantPool pool = frame.poolContext();
         TypeConstant type = hType.getDataType();
         return type.isRelationalType()
                 ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                        type.getUnderlyingType().getTypeHandle(),
-                        type.getUnderlyingType2().getTypeHandle())
+                        type.getUnderlyingType().ensureTypeHandle(pool),
+                        type.getUnderlyingType2().ensureTypeHandle(pool))
                 : frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
@@ -1423,36 +1450,6 @@ public class xRTType
             default:
                 throw new IllegalStateException("unsupported type: " + type);
             }
-        }
-
-    /**
-     * Determine the pool to use with the two specified types.
-     *
-     * @param type1
-     * @param type2
-     *
-     * @return a pool that can work with both specified types, or null
-     */
-    protected ConstantPool selectPool(TypeConstant type1, TypeConstant type2)
-        {
-        ConstantPool pool1 = type1.getConstantPool();
-        ConstantPool pool2 = type2.getConstantPool();
-        if (pool1 == pool2)
-            {
-            return pool1;
-            }
-
-        if (pool1.getConstant(type2) != null)
-            {
-            return pool1;
-            }
-
-        if (pool2.getConstant(type1) != null)
-            {
-            return pool2;
-            }
-
-        return null;
         }
 
 

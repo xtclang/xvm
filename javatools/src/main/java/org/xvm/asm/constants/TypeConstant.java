@@ -5903,16 +5903,28 @@ public abstract class TypeConstant
         }
 
     /**
+     * Obtain a run-time handle representing this type.
+     *
+     * @param pool  the ConstantPool to make the handle for
+     *
      * @return a handle for the Type object represented by this TypeConstant
      */
-    public TypeHandle getTypeHandle()
+    public TypeHandle ensureTypeHandle(ConstantPool pool)
         {
-        TypeHandle hType = m_handle;
-        if (hType == null)
+        if (isShared(pool))
             {
-            hType = m_handle = xRTType.makeHandle(this);
+            TypeHandle hType = m_handle;
+            if (hType == null)
+                {
+                hType = m_handle = xRTType.makeHandle((TypeConstant) pool.register(this), true);
+                }
+            return hType;
             }
-        return hType;
+        else
+            {
+            // don't cache a "foreign" handle
+            return xRTType.makeHandle(this, false);
+            }
         }
 
     /**

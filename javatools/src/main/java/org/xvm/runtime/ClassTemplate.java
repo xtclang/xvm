@@ -1050,7 +1050,7 @@ public abstract class ClassTemplate
             {
             TypeConstant type = hTarget.getType().resolveGenericType(sPropName);
 
-            return frame.assignValue(iReturn, type.getTypeHandle());
+            return frame.assignValue(iReturn, type.ensureTypeHandle(frame.poolContext()));
             }
 
         return frame.raiseException("Unknown native property: \"" + sPropName + "\" on " + this);
@@ -1483,7 +1483,7 @@ public abstract class ClassTemplate
         if (functionEq != null && !functionEq.isNative())
             {
             ObjectHandle[] ahVars = new ObjectHandle[functionEq.getMaxVars()];
-            ahVars[0] = type.getTypeHandle();
+            ahVars[0] = type.ensureTypeHandle(frame.poolContext());
             ahVars[1] = hValue1;
             ahVars[2] = hValue2;
             return frame.call1(functionEq, null, ahVars, iReturn);
@@ -1526,7 +1526,7 @@ public abstract class ClassTemplate
         if (functionCmp != null && !functionCmp.isNative())
             {
             ObjectHandle[] ahVars = new ObjectHandle[functionCmp.getMaxVars()];
-            ahVars[0] = type.getTypeHandle();
+            ahVars[0] = type.ensureTypeHandle(frame.poolContext());
             ahVars[1] = hValue1;
             ahVars[2] = hValue2;
             return frame.call1(functionCmp, null, ahVars, iReturn);

@@ -119,7 +119,7 @@ public class xRef
             {
             case "actualType":
                 return actOnReferent(frame, hRef,
-                    h -> frame.assignValue(iReturn, h.getType().getTypeHandle()));
+                    h -> frame.assignValue(iReturn, h.getType().ensureTypeHandle(frame.poolContext())));
 
             case "actualClass":
                 return actOnReferent(frame, hRef, h ->
@@ -130,7 +130,7 @@ public class xRef
                         type = type.removeImmutable();
                         }
                     return frame.assignDeferredValue(iReturn, frame.getConstHandle(
-                            type.getConstantPool().ensureClassConstant(type)));
+                            frame.poolContext().ensureClassConstant(type)));
                     });
 
             case "annotations":

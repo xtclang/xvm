@@ -337,7 +337,7 @@ public class xRTClass
             for (int i = 0; i < cParams; ++i)
                 {
                 ahNames[i] = xString.makeHandle("ElementTypes[" + i + "]");
-                ahTypes[i] = atypeParam[i].getTypeHandle();
+                ahTypes[i] = atypeParam[i].ensureTypeHandle(frame.poolContext());
                 }
             }
         else
@@ -347,7 +347,7 @@ public class xRTClass
             for (int i = 0; i < cParams; ++i)
                 {
                 ahNames[i] = xString.makeHandle(iterNames.next().getValue());
-                ahTypes[i] = atypeParam[i].getTypeHandle();
+                ahTypes[i] = atypeParam[i].ensureTypeHandle(frame.poolContext());
                 }
             }
 

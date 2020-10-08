@@ -451,7 +451,8 @@ public class xConst
 
         public int doNext(Frame frameCaller)
             {
-            ClassComposition clz = (ClassComposition) hValue1.getComposition();
+            ConstantPool     pool = frameCaller.poolContext();
+            ClassComposition clz  = (ClassComposition) hValue1.getComposition();
             while (iterFields.hasNext())
                 {
                 String sProp = iterFields.next();
@@ -470,7 +471,7 @@ public class xConst
                     }
 
                 TypeConstant typeProp = clz.getFieldType(sProp).
-                    resolveGenerics(frameCaller.poolContext(), frameCaller.getGenericsResolver());
+                    resolveGenerics(pool, frameCaller.getGenericsResolver());
 
                 switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_STACK))
                     {
@@ -618,7 +619,8 @@ public class xConst
 
         protected int doNext(Frame frameCaller)
             {
-            ClassComposition clz = (ClassComposition) hConst.getComposition();
+            ConstantPool     pool = frameCaller.poolContext();
+            ClassComposition clz  = (ClassComposition) hConst.getComposition();
             while (iterFields.hasNext())
                 {
                 String sProp = iterFields.next();
@@ -635,7 +637,7 @@ public class xConst
                     }
 
                 TypeConstant typeProp = clz.getFieldType(sProp).
-                    resolveGenerics(frameCaller.poolContext(), frameCaller.getGenericsResolver());
+                    resolveGenerics(pool, frameCaller.getGenericsResolver());
 
                 MethodStructure methodHash = typeProp.findCallable(HASH_SIG);
                 if (methodHash == null)
@@ -648,12 +650,12 @@ public class xConst
                 if (methodHash.isNative())
                     {
                     iResult = hProp.getTemplate().invokeNativeN(frameCaller, methodHash, null,
-                        new ObjectHandle[] {typeProp.getTypeHandle(), hProp}, Op.A_STACK);
+                        new ObjectHandle[] {typeProp.ensureTypeHandle(pool), hProp}, Op.A_STACK);
                     }
                 else
                     {
                     ObjectHandle[] ahVar = new ObjectHandle[methodHash.getMaxVars()];
-                    ahVar[0] = typeProp.getTypeHandle();
+                    ahVar[0] = typeProp.ensureTypeHandle(pool);
                     ahVar[1] = hProp;
                     iResult = frameCaller.call1(methodHash, null, ahVar, Op.A_STACK);
                     }
