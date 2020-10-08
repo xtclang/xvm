@@ -1,14 +1,17 @@
 module TestRunner.xtclang.org
     {
+    package oodb import oodb.xtclang.org;
+
     import ecstasy.io.IOException;
 
     import ecstasy.mgmt.Container;
-    import ecstasy.mgmt.InstantRepository;
     import ecstasy.mgmt.ModuleRepository;
     import ecstasy.mgmt.ResourceProvider;
 
+    import ecstasy.reflect.ClassTemplate;
     import ecstasy.reflect.FileTemplate;
     import ecstasy.reflect.ModuleTemplate;
+    import ecstasy.reflect.TypeTemplate;
 
     import Injector.ConsoleBuffer as Buffer;
 
@@ -104,18 +107,86 @@ module TestRunner.xtclang.org
         @Inject Container.Linker linker;
         @Inject ModuleRepository repository;
 
-        FileTemplate fileTemplate = linker.loadFileTemplate(bytes);
+        FileTemplate   fileTemplate   = linker.loadFileTemplate(bytes).resolve(repository);
+        ModuleTemplate moduleTemplate = fileTemplate.mainModule;
 
-        InstantRepository repo = new InstantRepository(fileTemplate.mainModule, repository);
+        if (String dbModuleName := detectDatabase(fileTemplate))
+            {
+            console.println($"found {dbModuleName}");
+            ModuleTemplate dbModuleTemplate = repository.getModule(dbModuleName);
 
-        Injector  injector  = new Injector();
-        Container container = new Container(repo.moduleName, Lightweight, repo, injector);
-        Buffer    buffer    = injector.consoleBuffer;
+            Injector  dbInjector  = new Injector();
+            Container dbContainer = new Container(dbModuleTemplate, Lightweight, repository, dbInjector);
 
-        buffer.println($"++++++ Loading module: {repo.moduleName} +++++++\n");
+            Tuple connTuple = dbContainer.invoke("simulateInjection", Tuple:());
+            oodb.Connection connection = connTuple[0].as(oodb.Connection);
 
-        @Future Tuple result = container.invoke("run", Tuple:());
-        return (&result, buffer);
+            // TODO GG: inlining the DBAppInjector class throws an assertion
+            // Injector  injector  = new Injector() {...}
+            Injector  injector  = new DBAppInjector(connection);
+            Container container = new Container(moduleTemplate, Lightweight, repository, injector);
+            Buffer    buffer    = injector.consoleBuffer;
+
+            buffer.println($"++++++ Loading module: {moduleTemplate.qualifiedName} +++++++\n");
+
+            @Future Tuple result = container.invoke("run", Tuple:());
+            return (&result, buffer);
+            }
+        else
+            {
+            Injector  injector  = new Injector();
+            Container container = new Container(moduleTemplate, Lightweight, repository, injector);
+            Buffer    buffer    = injector.consoleBuffer;
+
+            buffer.println($"++++++ Loading module: {moduleTemplate.qualifiedName} +++++++\n");
+
+            @Future Tuple result = container.invoke("run", Tuple:());
+            return (&result, buffer);
+            }
+        }
+
+    /**
+     * @return True iff the primary module for the specified FileTemplate depends on a Database
+     *         module
+     * @return (optional) the Database module name
+     */
+    conditional String detectDatabase(FileTemplate fileTemplate)
+        {
+        import ClassTemplate.Contribution;
+
+        TypeTemplate dbTypeTemplate = oodb.Database.as(Type).template;
+
+        for ((String name, String dependsOn) : fileTemplate.mainModule.moduleNamesByPath)
+            {
+            if (dependsOn != TypeSystem.MackKernel)
+                {
+                ModuleTemplate depModule = fileTemplate.getModule(dependsOn);
+
+                for (Contribution contrib : depModule.contribs)
+                    {
+                    if (contrib.action == Incorporates &&
+                            contrib.ingredient.type == dbTypeTemplate)
+                        {
+                        return True, dependsOn;
+                        }
+                    }
+                }
+            }
+        return False;
+        }
+
+    const DBAppInjector(oodb.Connection connection)
+            extends Injector
+        {
+        @Override
+        Object getResource(Type type, String name)
+            {
+            if (type.isA(oodb.Connection))
+                {
+                return connection;
+                }
+            return super(type, name);
+            }
         }
 
     const Injector

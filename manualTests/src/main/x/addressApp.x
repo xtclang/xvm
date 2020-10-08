@@ -5,9 +5,9 @@ module AddressBookApp
     void run()
         {
         @Inject Console console;
-        // @Inject db.Connection dbc;
+        @Inject db.Connection dbc;
 
-        db.Connection dbc = db.simulateInjection();
+        console.println($"actualType=({&dbc.actualType})");
 
         db.Contacts contacts = dbc.contacts;
 

@@ -21,4 +21,9 @@ module oodb.xtclang.org
          */
         static String AllActions = "*";
         }
+
+    mixin Database
+            into Module
+        {
+        }
     }

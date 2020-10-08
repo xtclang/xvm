@@ -1,4 +1,5 @@
 module AddressBookDB
+        incorporates db.Database
     {
     package db import oodb.xtclang.org;
 
@@ -79,8 +80,9 @@ module AddressBookDB
     const Phone(PhoneCat category, String number);
 
     // !!! TEMPORARY !!!
-    static Connection simulateInjection()
+    Connection simulateInjection()
         {
-        return ServerAddressBookSchema.createConnection();
+        Connection connection = ServerAddressBookSchema.createConnection();
+        return &connection.maskAs<Connection>();
         }
     }
