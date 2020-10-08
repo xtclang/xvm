@@ -309,7 +309,8 @@ public class AnonymousClassTypeConstant
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
                                                boolean fFunction, List<TypeConstant> listParams)
         {
-        return getChildStructure().containsSubstitutableMethod(signature, access, fFunction, listParams);
+        return getChildStructure().containsSubstitutableMethod(
+                getConstantPool(), signature, access, fFunction, listParams);
         }
 
     @Override

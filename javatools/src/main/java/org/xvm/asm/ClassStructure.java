@@ -868,16 +868,16 @@ public class ClassStructure
      */
     public Relation findTupleContribution(TypeConstant tupleLeft, List<TypeConstant> listRight)
         {
+        ConstantPool pool = tupleLeft.getConstantPool();
         if (getIdentityConstant().equals(tupleLeft.getSingleUnderlyingClass(true)))
             {
-            return calculateAssignability(tupleLeft.getParamTypes(), Access.PUBLIC, listRight);
+            return calculateAssignability(pool, tupleLeft.getParamTypes(), Access.PUBLIC, listRight);
             }
 
         for (Contribution contrib : getContributionsAsList())
             {
             if (contrib.getComposition() == Composition.Into)
                 {
-                ConstantPool pool        = ConstantPool.getCurrentPool();
                 TypeConstant typeContrib = contrib.resolveGenerics(pool, new SimpleTypeResolver(listRight));
 
                 if (typeContrib != null && typeContrib.isTuple())
@@ -895,14 +895,13 @@ public class ClassStructure
     /**
      * When this class represents a Tuple or a Tuple mixin, get the resulting Tuple type parameters
      *
+     * @param pool        the ConstantPool to use
      * @param listParams  the list of actual generic parameters for this class
      *
      * @return the list of types
      */
-    public List<TypeConstant> getTupleParamTypes(List<TypeConstant> listParams)
+    public List<TypeConstant> getTupleParamTypes(ConstantPool pool, List<TypeConstant> listParams)
         {
-        ConstantPool pool = ConstantPool.getCurrentPool();
-
         if (getIdentityConstant().equals(pool.clzTuple()))
             {
             return listParams;
@@ -1662,11 +1661,10 @@ public class ClassStructure
      *
      *  C<L1, L2, ...> lvalue = (C<R1, R2, ...>) rvalue;
      */
-    public Relation calculateAssignability(List<TypeConstant> listLeft, Access accessLeft,
+    public Relation calculateAssignability(ConstantPool pool,
+                                           List<TypeConstant> listLeft, Access accessLeft,
                                            List<TypeConstant> listRight)
         {
-        ConstantPool pool = getConstantPool();
-
         int cParamsLeft  = listLeft.size();
         int cParamsRight = listRight.size();
         boolean fTuple   = isTuple();
@@ -1708,7 +1706,7 @@ public class ClassStructure
                 {
                 // if an assignment C<L1> = C<R1> is allowed, then an assignment
                 // C<L1> = C<R1, R2> is allowed for any R2, but is "weak" for consumers
-                if (fTuple || consumesFormalType(sName, accessLeft, listLeft))
+                if (fTuple || consumesFormalType(pool, sName, accessLeft, listLeft))
                     {
                     fWeak = true;
                     }
@@ -1729,7 +1727,7 @@ public class ClassStructure
                     continue;
                     }
 
-                fProduces    = fTuple || producesFormalType(sName, accessLeft, listLeft);
+                fProduces    = fTuple || producesFormalType(pool, sName, accessLeft, listLeft);
                 fLeftIsRight = typeLeft.isA(typeRight);
 
                 if (fLeftIsRight && !fProduces)
@@ -1750,7 +1748,7 @@ public class ClassStructure
                 // However, the following is not allowed:
                 //    Logger<Object> <-- Logger
                 typeRight    = typeCanonical;
-                fProduces    = fTuple || producesFormalType(sName, accessLeft, listLeft);
+                fProduces    = fTuple || producesFormalType(pool, sName, accessLeft, listLeft);
                 fLeftIsRight = false;
                 }
 
@@ -1766,7 +1764,7 @@ public class ClassStructure
                     continue;
                     }
 
-                boolean fConsumes = fTuple || consumesFormalType(sName, accessLeft, listLeft);
+                boolean fConsumes = fTuple || consumesFormalType(pool, sName, accessLeft, listLeft);
                 if (fProduces || !fConsumes)
                     {
                     // there are some producing methods; rule 1.2.2.2
@@ -1976,7 +1974,7 @@ public class ClassStructure
         {
         assert typeLeft.isSingleDefiningConstant();
 
-        ConstantPool     pool        = ConstantPool.getCurrentPool();
+        ConstantPool     pool        = typeLeft.getConstantPool();
         Constant         constIdLeft = typeLeft.getDefiningConstant();
         IdentityConstant idClzRight  = getIdentityConstant();
 
@@ -2006,8 +2004,8 @@ public class ClassStructure
 
                 if (constIdLeft.equals(idClzRight))
                     {
-                    Relation relation = calculateAssignability(
-                        typeLeft.getParamTypes(), typeLeft.getAccess(), typeRight.getParamTypes());
+                    Relation relation = calculateAssignability(pool, typeLeft.getParamTypes(),
+                            typeLeft.getAccess(), typeRight.getParamTypes());
                     if (relation == Relation.INCOMPATIBLE || !isVirtualChild())
                         {
                         return relation;
@@ -2130,9 +2128,8 @@ public class ClassStructure
     public Relation findIntersectionContribution(IntersectionTypeConstant typeLeft,
                                                  List<TypeConstant> listRight)
         {
-        ConstantPool pool = ConstantPool.getCurrentPool();
-
-        Relation relation = Relation.INCOMPATIBLE;
+        ConstantPool pool     = typeLeft.getConstantPool();
+        Relation     relation = Relation.INCOMPATIBLE;
 
         for (Contribution contrib : getContributionsAsList())
             {
@@ -2193,17 +2190,17 @@ public class ClassStructure
      * Determine if this template consumes a formal type with the specified name for the specified
      * access policy.
      */
-    public boolean consumesFormalType(String sName, Access access, List<TypeConstant> listActual)
+    public boolean consumesFormalType(ConstantPool pool,
+                                      String sName, Access access, List<TypeConstant> listActual)
         {
-        return consumesFormalTypeImpl(sName, access, listActual, true);
+        return consumesFormalTypeImpl(pool, sName, access, listActual, true);
         }
 
-    protected boolean consumesFormalTypeImpl(String sName, Access access,
+    protected boolean consumesFormalTypeImpl(ConstantPool pool, String sName, Access access,
                                              List<TypeConstant> listActual, boolean fAllowInto)
         {
         assert indexOfGenericParameter(sName) >= 0;
 
-        ConstantPool pool = ConstantPool.getCurrentPool();
         NextChild:
         for (Component child : children())
             {
@@ -2317,10 +2314,12 @@ public class ClassStructure
                     String sFormal = iterNames.next().getValue();
 
                     if (constParam.producesFormalType(sName, access)
-                            && clzContrib.consumesFormalTypeImpl(sFormal, access, listContribActual, false)
+                            && clzContrib.consumesFormalTypeImpl(
+                                    pool, sFormal, access, listContribActual, false)
                         ||
                         constParam.consumesFormalType(sName, access)
-                            && clzContrib.producesFormalTypeImpl(sFormal, access, listContribActual, false))
+                            && clzContrib.producesFormalTypeImpl(
+                                    pool, sFormal, access, listContribActual, false))
                         {
                         return true;
                         }
@@ -2345,17 +2344,17 @@ public class ClassStructure
      * Determine if this template produces a formal type with the specified name for the
      * specified access policy.
      */
-    public boolean producesFormalType(String sName, Access access, List<TypeConstant> listActual)
+    public boolean producesFormalType(ConstantPool pool, String sName, Access access,
+                                      List<TypeConstant> listActual)
         {
-        return producesFormalTypeImpl(sName, access, listActual, true);
+        return producesFormalTypeImpl(pool, sName, access, listActual, true);
         }
 
-    protected boolean producesFormalTypeImpl(String sName, Access access,
+    protected boolean producesFormalTypeImpl(ConstantPool pool, String sName, Access access,
                                              List<TypeConstant> listActual, boolean fAllowInto)
         {
         assert indexOfGenericParameter(sName) >= 0;
 
-        ConstantPool pool = ConstantPool.getCurrentPool();
         NextChild:
         for (Component child : children())
             {
@@ -2469,10 +2468,12 @@ public class ClassStructure
                     String sFormal = iterNames.next().getValue();
 
                     if (constParam.producesFormalType(sName, access)
-                            && clzContrib.producesFormalTypeImpl(sFormal, access, listContribActual, false)
+                            && clzContrib.producesFormalTypeImpl(
+                                    pool, sFormal, access, listContribActual, false)
                         ||
                         constParam.consumesFormalType(sName, access)
-                            && clzContrib.consumesFormalTypeImpl(sFormal, access, listContribActual, false))
+                            && clzContrib.consumesFormalTypeImpl(
+                                    pool, sFormal, access, listContribActual, false))
                         {
                         return true;
                         }
@@ -2506,7 +2507,7 @@ public class ClassStructure
     public Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
                                                             List<TypeConstant> listLeft)
         {
-        ConstantPool           pool     = ConstantPool.getCurrentPool();
+        ConstantPool           pool     = typeRight.getConstantPool();
         Set<SignatureConstant> setMiss  = new HashSet<>();
         GenericTypeResolver    resolver = null;
 
@@ -2616,6 +2617,7 @@ public class ClassStructure
     /**
      * Check recursively if this class contains a matching (substitutable) method or property.
      *
+     * @param pool        the ConstantPool to use
      * @param signature   the signature to look for the match for (formal parameters resolved)
      * @param access      the access level to limit the check to
      * @param fFunction   if true, the signature represents a function
@@ -2623,19 +2625,20 @@ public class ClassStructure
      *
      * @return true iff there is a matching method or property
      */
-    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
-                                               boolean fFunction, List<TypeConstant> listParams)
+    public boolean containsSubstitutableMethod(ConstantPool pool, SignatureConstant signature,
+                                               Access access, boolean fFunction,
+                                               List<TypeConstant> listParams)
         {
-        return containsSubstitutableMethodImpl(signature, access, fFunction,
+        return containsSubstitutableMethodImpl(pool, signature, access, fFunction,
                 listParams, getIdentityConstant(), true);
         }
 
-    protected boolean containsSubstitutableMethodImpl(SignatureConstant signature, Access access,
-                                                      boolean fFunction, List<TypeConstant> listParams,
+    protected boolean containsSubstitutableMethodImpl(ConstantPool pool, SignatureConstant signature,
+                                                      Access access, boolean fFunction,
+                                                      List<TypeConstant> listParams,
                                                       IdentityConstant idClass, boolean fAllowInto)
         {
-        ConstantPool pool  = ConstantPool.getCurrentPool();
-        Component    child = getChild(signature.getName());
+        Component child = getChild(signature.getName());
 
         if (signature.isProperty())
             {
@@ -2724,7 +2727,7 @@ public class ClassStructure
                     ClassStructure clzContrib = (ClassStructure)
                         typeResolved.getSingleUnderlyingClass(true).getComponent();
 
-                    if (clzContrib.containsSubstitutableMethodImpl(signature, access, fFunction,
+                    if (clzContrib.containsSubstitutableMethodImpl(pool, signature, access, fFunction,
                             typeResolved.getParamTypes(), idClass, false))
                         {
                         return true;

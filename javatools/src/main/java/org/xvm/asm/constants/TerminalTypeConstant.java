@@ -1632,7 +1632,8 @@ public class TerminalTypeConstant
                 IdentityConstant idThis  = (IdentityConstant) constIdThis;
                 ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
 
-                return clzThis.containsSubstitutableMethod(signature, access, fFunction, listParams);
+                return clzThis.containsSubstitutableMethod(
+                        getConstantPool(), signature, access, fFunction, listParams);
                 }
 
             case Property:
@@ -1691,11 +1692,12 @@ public class TerminalTypeConstant
                     }
                 else if (!listParams.isEmpty())
                     {
-                    ClassStructure clz = (ClassStructure) ((IdentityConstant) constId).getComponent();
+                    ConstantPool   pool = getConstantPool();
+                    ClassStructure clz  = (ClassStructure) ((IdentityConstant) constId).getComponent();
 
                     Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
 
-                    listParams = clz.normalizeParameters(ConstantPool.getCurrentPool(), listParams);
+                    listParams = clz.normalizeParameters(pool, listParams);
 
                     Iterator<TypeConstant>   iterParams = listParams.iterator();
                     Iterator<StringConstant> iterNames  = mapFormal.keySet().iterator();
@@ -1706,10 +1708,10 @@ public class TerminalTypeConstant
                         String       sFormal    = iterNames.next().getValue();
 
                         if (constParam.consumesFormalType(sTypeName, access)
-                                && clz.producesFormalType(sFormal, access, listParams)
+                                && clz.producesFormalType(pool, sFormal, access, listParams)
                             ||
                             constParam.producesFormalType(sTypeName, access)
-                                && clz.consumesFormalType(sFormal, access, listParams))
+                                && clz.consumesFormalType(pool, sFormal, access, listParams))
                             {
                             return Usage.YES;
                             }
@@ -1769,11 +1771,12 @@ public class TerminalTypeConstant
                     }
                 else if (!listParams.isEmpty())
                     {
-                    ClassStructure clz = (ClassStructure) ((IdentityConstant) constId).getComponent();
+                    ConstantPool   pool = getConstantPool();
+                    ClassStructure clz  = (ClassStructure) ((IdentityConstant) constId).getComponent();
 
                     Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
 
-                    listParams = clz.normalizeParameters(ConstantPool.getCurrentPool(), listParams);
+                    listParams = clz.normalizeParameters(pool, listParams);
 
                     Iterator<TypeConstant>   iterParams = listParams.iterator();
                     Iterator<StringConstant> iterNames  = mapFormal.keySet().iterator();
@@ -1784,10 +1787,10 @@ public class TerminalTypeConstant
                         String       sFormal    = iterNames.next().getValue();
 
                         if (constParam.producesFormalType(sTypeName, access)
-                                && clz.producesFormalType(sFormal, access, listParams)
+                                && clz.producesFormalType(pool, sFormal, access, listParams)
                             ||
                             constParam.consumesFormalType(sTypeName, access)
-                                && clz.consumesFormalType(sFormal, access, listParams))
+                                && clz.consumesFormalType(pool, sFormal, access, listParams))
                             {
                             return Usage.YES;
                             }

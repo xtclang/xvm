@@ -374,7 +374,7 @@ public class DifferenceTypeConstant
             TypeConstant typeCR = ((FormalConstant) m_constType1.getDefiningConstant()).getConstraintType();
             TypeConstant typeCL = ((FormalConstant) typeLeft.getDefiningConstant()).getConstraintType();
 
-            TypeConstant typeSubR = typeCR.andNot(ConstantPool.getCurrentPool(), m_constType2);
+            TypeConstant typeSubR = typeCR.andNot(getConstantPool(), m_constType2);
             return typeSubR.calculateRelation(typeCL);
             }
 

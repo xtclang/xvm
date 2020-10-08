@@ -383,7 +383,8 @@ public class VirtualChildTypeConstant
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
                                                boolean fFunction, List<TypeConstant> listParams)
         {
-        return getChildStructure().containsSubstitutableMethod(signature, access, fFunction, listParams);
+        return getChildStructure().containsSubstitutableMethod(
+                getConstantPool(), signature, access, fFunction, listParams);
         }
 
     @Override
@@ -391,11 +392,12 @@ public class VirtualChildTypeConstant
         {
         if (!listParams.isEmpty())
             {
-            ClassStructure clz = getChildStructure();
+            ConstantPool   pool = getConstantPool();
+            ClassStructure clz  = getChildStructure();
 
             Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
 
-            listParams = clz.normalizeParameters(ConstantPool.getCurrentPool(), listParams);
+            listParams = clz.normalizeParameters(pool, listParams);
 
             Iterator<TypeConstant> iterParams = listParams.iterator();
             Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
@@ -406,10 +408,10 @@ public class VirtualChildTypeConstant
                 String       sFormal    = iterNames.next().getValue();
 
                 if (constParam.consumesFormalType(sTypeName, access)
-                        && clz.producesFormalType(sFormal, access, listParams)
+                        && clz.producesFormalType(pool, sFormal, access, listParams)
                     ||
                     constParam.producesFormalType(sTypeName, access)
-                        && clz.consumesFormalType(sFormal, access, listParams))
+                        && clz.consumesFormalType(pool, sFormal, access, listParams))
                     {
                     return Usage.YES;
                     }
@@ -423,11 +425,12 @@ public class VirtualChildTypeConstant
         {
         if (!listParams.isEmpty())
             {
-            ClassStructure clz = getChildStructure();
+            ConstantPool   pool = getConstantPool();
+            ClassStructure clz  = getChildStructure();
 
             Map<StringConstant, TypeConstant> mapFormal = clz.getTypeParams();
 
-            listParams = clz.normalizeParameters(ConstantPool.getCurrentPool(), listParams);
+            listParams = clz.normalizeParameters(pool, listParams);
 
             Iterator<TypeConstant>   iterParams = listParams.iterator();
             Iterator<StringConstant> iterNames  = mapFormal.keySet().iterator();
@@ -438,10 +441,10 @@ public class VirtualChildTypeConstant
                 String       sFormal    = iterNames.next().getValue();
 
                 if (constParam.producesFormalType(sTypeName, access)
-                        && clz.producesFormalType(sFormal, access, listParams)
+                        && clz.producesFormalType(pool, sFormal, access, listParams)
                     ||
                     constParam.consumesFormalType(sTypeName, access)
-                        && clz.consumesFormalType(sFormal, access, listParams))
+                        && clz.consumesFormalType(pool, sFormal, access, listParams))
                     {
                     return Usage.YES;
                     }
