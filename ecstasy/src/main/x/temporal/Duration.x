@@ -365,6 +365,7 @@ const Duration(UInt128 picoseconds)
      */
     UInt128 picoseconds;
 
+
     // ----- partial measures ----------------------------------------------------------------------
 
     /**
@@ -496,9 +497,64 @@ const Duration(UInt128 picoseconds)
         return new Duration(this.picoseconds / divisor.toUInt128());
         }
 
+
+    // ----- Stringable ----------------------------------------------------------------------------
+
     @Override
-    Int estimateStringLength()
+    String toString(Boolean iso8601 = False)
         {
+        return appendTo(new StringBuffer(estimateStringLength(iso8601)), iso8601).toString();
+        }
+
+    @Override
+    Int estimateStringLength(Boolean iso8601 = False)
+        {
+        if (iso8601)                                            // PnDTnHnMn.nS
+            {
+            if (picoseconds == 0)
+                {
+                return 4; // PT0S
+                }
+
+            Int size = 1;                                       // P
+
+            Int days = this.days;
+            if (days != 0)
+                {
+                size += days.estimateStringLength() + 1;        // nD
+                }
+
+            Int hours   = this.hoursPart;
+            Int minutes = this.minutesPart;
+            Int seconds = this.secondsPart;
+            Int picos   = this.picosecondsPart;
+            if (hours != 0 && minutes != 0 && seconds != 0 && picos != 0)
+                {
+                ++size;                                         // T
+
+                if (hours != 0)
+                    {
+                    size += hours.estimateStringLength() + 1;   // nH
+                    }
+
+                if (minutes != 0)
+                    {
+                    size += minutes.estimateStringLength() + 1; // nM
+                    }
+
+                if (seconds != 0 || picos != 0)
+                    {
+                    size += seconds.estimateStringLength() + 1; // nS
+                    if (picos != 0)
+                        {
+                        size += 1+picosFractionalLength(picos); // n.nS
+                        }
+                    }
+                }
+
+            return size;
+            }
+
         // format: ...###:00:00.###...
         // format:        ##:00.###...
         // format:           ##.###...
@@ -509,12 +565,65 @@ const Duration(UInt128 picoseconds)
             default                             : seconds.estimateStringLength();
             };
 
-        return length + picosFractionalLength(picoseconds);
+        Int picos = picosecondsPart;
+        if (picos != 0)
+            {
+            length += 1 + picosFractionalLength(picos);
+            }
+        return length;
         }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf, Boolean iso8601 = False)
         {
+        if (iso8601)                                            // PnDTnHnMn.nS
+            {
+            if (picoseconds == 0)
+                {
+                return "PT0S".appendTo(buf);
+                }
+
+            buf.add('P');
+
+            Int days = this.days;
+            if (days != 0)
+                {
+                days.appendTo(buf).add('D');
+                }
+
+            Int hours   = this.hoursPart;
+            Int minutes = this.minutesPart;
+            Int seconds = this.secondsPart;
+            Int picos   = this.picosecondsPart;
+            if (hours != 0 && minutes != 0 && seconds != 0 && picos != 0)
+                {
+                buf.add('T');
+
+                if (hours != 0)
+                    {
+                    hours.appendTo(buf).add('H');
+                    }
+
+                if (minutes != 0)
+                    {
+                    minutes.appendTo(buf).add('M');
+                    }
+
+                if (seconds != 0 || picos != 0)
+                    {
+                    seconds.appendTo(buf);
+                    if (picos != 0)
+                        {
+                        buf.add('.');
+                        picosFractional(picos).appendTo(buf);
+                        }
+                    buf.add('S');
+                    }
+                }
+
+            return buf;
+            }
+
         Boolean zerofill = False;
 
         if (picoseconds >= PICOS_PER_HOUR)
@@ -550,18 +659,12 @@ const Duration(UInt128 picoseconds)
         if (picos > 0)
             {
             buf.add('.');
-
-            Int length = picos.estimateStringLength();
-            Int fill   = 12 - length;
-            while (fill-- > 0)
-                {
-                buf.add('0');
-                }
             picosFractional(picos).appendTo(buf);
             }
 
         return buf;
         }
+
 
     // ----- helpers -------------------------------------------------------------------------------
 
