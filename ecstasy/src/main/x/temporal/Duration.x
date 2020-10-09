@@ -612,11 +612,7 @@ const Duration(UInt128 picoseconds)
                 if (seconds != 0 || picos != 0)
                     {
                     seconds.appendTo(buf);
-                    if (picos != 0)
-                        {
-                        buf.add('.');
-                        picosFractional(picos).appendTo(buf);
-                        }
+                    Duration.appendPicosFractional(buf, picos);
                     buf.add('S');
                     }
                 }
@@ -655,14 +651,7 @@ const Duration(UInt128 picoseconds)
             }
         part.appendTo(buf);
 
-        Int picos = picosecondsPart;
-        if (picos > 0)
-            {
-            buf.add('.');
-            picosFractional(picos).appendTo(buf);
-            }
-
-        return buf;
+        return Duration.appendPicosFractional(buf, picosecondsPart);
         }
 
 
@@ -707,27 +696,50 @@ const Duration(UInt128 picoseconds)
      * Calculate an Int value to use as the number to follow a decimal point to represent a
      * picosecond fraction of a second.
      */
-    static Int picosFractional(Int picos)
+    static (Int leadingZeroes, Int value) picosFractional(Int picos)
         {
         assert picos > 0;
+
+        Int chopped = 0;
 
         // drop any trailing zeros
         if (picos % 100_000_000 == 0)
             {
-            picos /= 100_000_000;
+            picos   /= 100_000_000;
+            chopped += 8;
             }
         if (picos % 10_000 == 0)
             {
-            picos /= 10_000;
+            picos   /= 10_000;
+            chopped += 4;
             }
         if (picos % 100 == 0)
             {
             picos /= 100;
+            chopped += 2;
             }
         if (picos % 10 == 0)
             {
             picos /= 10;
+            ++chopped;
             }
-        return picos;
+
+        return 12 - picos.estimateStringLength() - chopped, picos;
+        }
+
+    static Appender<Char> appendPicosFractional(Appender<Char> buf, Int picos)
+        {
+        if (picos == 0)
+            {
+            return buf;
+            }
+
+        buf.add('.');
+        (Int leadingZeroes, Int digits) = Duration.picosFractional(picos);
+        while (leadingZeroes-- > 0)
+            {
+            buf.add('0');
+            }
+        return digits.appendTo(buf);
         }
     }

@@ -442,13 +442,7 @@ const TimeZone(Int picos, String? name = Null)
                     buf.add('0');
                     }
                 seconds.appendTo(buf);
-                remainder -= seconds * Time.PICOS_PER_SECOND;
-
-                if (remainder > 0)
-                    {
-                    buf.add('.');
-                    Duration.picosFractional(remainder).appendTo(buf);
-                    }
+                Duration.appendPicosFractional(buf, remainder - seconds * Time.PICOS_PER_SECOND);
                 }
 
             if (showName)

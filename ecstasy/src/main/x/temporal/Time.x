@@ -268,14 +268,6 @@ const Time(Int picos)
             buf.add('0');
             }
         second.appendTo(buf);
-
-        Int fraction = picoseconds;
-        if (fraction != 0)
-            {
-            buf.add('.');
-            Duration.picosFractional(fraction).appendTo(buf);
-            }
-
-        return buf;
+        return Duration.appendPicosFractional(buf, picoseconds);
         }
     }
