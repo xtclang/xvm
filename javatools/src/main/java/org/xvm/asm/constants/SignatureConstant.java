@@ -576,7 +576,7 @@ public class SignatureConstant
     @Override
     protected synchronized int compareDetails(Constant obj)
         {
-        if (!(obj instanceof SignatureConstant))
+        if (!(obj instanceof SignatureConstant) || containsUnresolved())
             {
             return -1;
             }

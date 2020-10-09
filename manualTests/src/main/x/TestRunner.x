@@ -109,6 +109,7 @@ module TestRunner.xtclang.org
 
         FileTemplate   fileTemplate   = linker.loadFileTemplate(bytes).resolve(repository);
         ModuleTemplate moduleTemplate = fileTemplate.mainModule;
+        Injector       injector;
 
         if (String dbModuleName := detectDatabase(fileTemplate))
             {
@@ -121,28 +122,32 @@ module TestRunner.xtclang.org
             Tuple connTuple = dbContainer.invoke("simulateInjection", Tuple:());
             oodb.Connection connection = connTuple[0].as(oodb.Connection);
 
-            // TODO GG: inlining the DBAppInjector class throws an assertion
-            // Injector  injector  = new Injector() {...}
-            Injector  injector  = new DBAppInjector(connection);
-            Container container = new Container(moduleTemplate, Lightweight, repository, injector);
-            Buffer    buffer    = injector.consoleBuffer;
+            injector = new Injector()
+                {
+                @Override
+                Object getResource(Type type, String name)
+                    {
+                    if (type.isA(oodb.Connection))
+                        {
+                        return connection;
+                        }
+                    return super(type, name);
+                    }
+                };
 
-            buffer.println($"++++++ Loading module: {moduleTemplate.qualifiedName} +++++++\n");
-
-            @Future Tuple result = container.invoke("run", Tuple:());
-            return (&result, buffer);
             }
         else
             {
-            Injector  injector  = new Injector();
-            Container container = new Container(moduleTemplate, Lightweight, repository, injector);
-            Buffer    buffer    = injector.consoleBuffer;
-
-            buffer.println($"++++++ Loading module: {moduleTemplate.qualifiedName} +++++++\n");
-
-            @Future Tuple result = container.invoke("run", Tuple:());
-            return (&result, buffer);
+            injector = new Injector();
             }
+
+        Container container = new Container(moduleTemplate, Lightweight, repository, injector);
+        Buffer    buffer    = injector.consoleBuffer;
+
+        buffer.println($"++++++ Loading module: {moduleTemplate.qualifiedName} +++++++\n");
+
+        @Future Tuple result = container.invoke("run", Tuple:());
+        return (&result, buffer);
         }
 
     /**
@@ -173,20 +178,6 @@ module TestRunner.xtclang.org
                 }
             }
         return False;
-        }
-
-    const DBAppInjector(oodb.Connection connection)
-            extends Injector
-        {
-        @Override
-        Object getResource(Type type, String name)
-            {
-            if (type.isA(oodb.Connection))
-                {
-                return connection;
-                }
-            return super(type, name);
-            }
         }
 
     const Injector
