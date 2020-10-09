@@ -327,10 +327,6 @@ module TestLiterals
 
         duration = new Duration("10.5S");
         console.println($"10.5S duration={duration} or {Duration:10.5S}");
-
-        console.println($"200 millis={Duration.ofMillis(200)}");
-        console.println($"20 millis={Duration.ofMillis(20)}");
-        console.println($"2 millis={Duration.ofMillis(2)}");
         }
 
     void testLexer()
