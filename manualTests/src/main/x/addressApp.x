@@ -29,13 +29,4 @@ module AddressBookApp
             console.println(contact);
             }
         }
-
-    // ----- AUTO-GENERATED PROXY ------------------------------------------------------------------
-
-
-    const ConnectionFront(db.Connection backConnection)
-            implements db.Connection
-        {
-
-        }
     }
