@@ -361,6 +361,16 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
+        {
+        if (isTypeResolved())
+            {
+            return getResolvedType().ensureTypeInfo(idClass, errs);
+            }
+        throw new IllegalStateException();
+        }
+
+    @Override
     public TypeInfo ensureTypeInfo(ErrorListener errs)
         {
         if (isTypeResolved())

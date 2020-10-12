@@ -25,8 +25,7 @@ const RangeMapping<Element extends Orderable>(Mapping<Element> underlying)
         }
 
     @Override
-    // TODO GG void write(ElementOutput out, Serializable value)
-    void write(ElementOutput out, Range<Element> value)
+    void write(ElementOutput out, Serializable value)
         {
         using (val obj = out.openObject())
             {

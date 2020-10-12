@@ -1408,6 +1408,31 @@ public class TerminalTypeConstant
             return constId.getReferredToType().ensureTypeInfo(idClass, errs);
             }
 
+        if (isFormalType())
+            {
+            // check if the formal type could be resolved in the context of the specified class
+            ConstantPool pool    = getConstantPool();
+            int          cInvals = pool.getInvalidationCount();
+            TypeConstant typeR   = this.resolveGenerics(pool, idClass.getFormalType());
+            TypeInfo     infoR;
+            if (typeR.isFormalType())
+                {
+                TypeConstant typeConstraint = ((FormalConstant) getDefiningConstant()).getConstraintType();
+
+                if (typeConstraint.isAutoNarrowing())
+                    {
+                    typeConstraint = typeConstraint.resolveAutoNarrowingBase();
+                    }
+                infoR = typeConstraint.ensureTypeInfo(idClass, errs);
+                }
+            else
+                {
+                infoR = typeR.ensureTypeInfo(idClass, errs);
+                }
+            assert isComplete(infoR);
+            return new TypeInfo(this, infoR, cInvals);
+            }
+
         return super.ensureTypeInfo(idClass, errs);
         }
 
@@ -1487,12 +1512,6 @@ public class TerminalTypeConstant
                 }
             }
         return super.calculateRelationToLeft(typeLeft);
-        }
-
-    @Override
-    public boolean isCovariantReturn(TypeConstant typeBase, TypeConstant typeCtx)
-        {
-        return super.isCovariantReturn(typeBase, typeCtx);
         }
 
     @Override

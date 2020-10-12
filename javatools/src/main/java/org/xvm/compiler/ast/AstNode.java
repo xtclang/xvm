@@ -1364,7 +1364,7 @@ public abstract class AstNode
 
             if (fit.isFit() && cReturns > 0)
                 {
-                fit = calculateReturnFit(typeTarget, sigMethod, fCall, atypeReturn, errsTemp);
+                fit = calculateReturnFit(sigMethod, fCall, atypeReturn, ctx.getThisType(), errsTemp);
                 }
 
             if (!fit.isFit())
@@ -1520,16 +1520,16 @@ public abstract class AstNode
     /**
      * Calculate the fit for the method return values.
      *
-     * @param typeTarget    the target type
-     * @param sigMethod     the method signature
-     * @param fCall         if true, the method will be called; otherwise it will be bound
-     * @param atypeReturn   the array of required return types
-     * @param errs          listener to log any errors to
+     * @param sigMethod    the method signature
+     * @param fCall        if true, the method will be called; otherwise it will be bound
+     * @param atypeReturn  the array of required return types
+     * @param typeCtx      the type within which context the covariance is to be determined
+     * @param errs         listener to log any errors to
      *
      * @return a TypeFit value
      */
-    protected TypeFit calculateReturnFit(TypeConstant typeTarget, SignatureConstant sigMethod,
-                                         boolean fCall, TypeConstant[] atypeReturn,
+    protected TypeFit calculateReturnFit(SignatureConstant sigMethod, boolean fCall,
+                                         TypeConstant[] atypeReturn, TypeConstant typeCtx,
                                          ErrorListener errs)
         {
         TypeConstant[] atypeMethodReturn = sigMethod.getRawReturns();
@@ -1575,7 +1575,7 @@ public abstract class AstNode
             TypeConstant typeReturn       = atypeReturn[i];
             TypeConstant typeMethodReturn = atypeMethodReturn[i];
 
-            if (!typeMethodReturn.isCovariantReturn(typeReturn, typeTarget))
+            if (!typeMethodReturn.isCovariantReturn(typeReturn, typeCtx))
                 {
                 if (typeMethodReturn.getConverterTo(typeReturn) != null)
                     {
@@ -1588,8 +1588,8 @@ public abstract class AstNode
                     //    Int f() {...}
                     //    Tuple t = f();
                     if (fCall && cReturns == 1 && cMethodReturns == 1
-                        && typeReturn.isTuple() && typeReturn.getParamsCount() <= 1 &&
-                        typeMethodReturn.isCovariantReturn(typeReturn.getParamType(0), typeTarget))
+                        && typeReturn.isTuple() && typeReturn.getParamsCount() <= 1
+                        && typeMethodReturn.isCovariantReturn(typeReturn.getParamType(0), typeCtx))
                         {
                         return TypeFit.Pack;
                         }

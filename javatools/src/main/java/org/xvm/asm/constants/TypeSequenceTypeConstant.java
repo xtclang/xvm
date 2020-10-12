@@ -143,6 +143,18 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public boolean isGenericType()
+        {
+        return false;
+        }
+
+    @Override
+    public boolean isTypeParameter()
+        {
+        return false;
+        }
+
+    @Override
     public boolean containsGenericType(boolean fAllowParams)
         {
         return fAllowParams;

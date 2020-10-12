@@ -13,8 +13,7 @@ const TimeZoneMapping
         }
 
     @Override
-    TimeZone read(ElementInput in)
-    // TODO GG: Serializable read(ElementInput in)
+    Serializable read(ElementInput in)
         {
         return TimeZoneCache.find(in.readString(""));
         }

@@ -5131,7 +5131,7 @@ public abstract class TypeConstant
      * Determine whether M2 could be invoked via a signature of M1, and M2 could then "super" to M1.
      *
      * @param typeBase  the type to determine the covariance with
-     * @param typeCtx   the type within which context the covariance is to be determined
+     * @param typeCtx   (optional) the type within which context the covariance is to be determined
      */
     public boolean isCovariantReturn(TypeConstant typeBase, TypeConstant typeCtx)
         {
@@ -5149,6 +5149,15 @@ public abstract class TypeConstant
             return typeThisR.isA(typeBaseR);
             }
 
+        if (typeCtx != null && typeBase.isFormalType())
+            {
+            // check if the formal type could be resolved in the specified context
+            TypeConstant typeBaseR = typeBase.resolveGenerics(getConstantPool(), typeCtx);
+            if (typeBaseR != typeBase)
+                {
+                return isCovariantReturn(typeBaseR, typeCtx);
+                }
+            }
         return false;
         }
 
@@ -5169,7 +5178,7 @@ public abstract class TypeConstant
      * Note: despite the name this method also handling the auto-narrowing covariance.
      *
      * @param typeBase  the type to determine the contravariance with
-     * @param typeCtx   the type within which context the covariance is to be determined
+     * @param typeCtx   (optional) the type within which context the covariance is to be determined
      */
     public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx)
         {
@@ -5188,6 +5197,16 @@ public abstract class TypeConstant
             TypeConstant typeBaseR = typeBase.resolveAutoNarrowing(pool, false, typeCtx);
 
             return typeBaseR.isA(typeThisR) && typeThisR.isA(typeBaseR);
+            }
+
+        if (typeCtx != null && typeBase.isFormalType())
+            {
+            // check if the formal type could be resolved in the specified context
+            TypeConstant typeBaseR = typeBase.resolveGenerics(getConstantPool(), typeCtx);
+            if (typeBaseR != typeBase)
+                {
+                return isContravariantParameter(typeBaseR, typeCtx);
+                }
             }
         return false;
         }

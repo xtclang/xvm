@@ -20,8 +20,7 @@ const NullableMapping<NotNullable>(Mapping<NotNullable> underlying)
         {
         return in.isNull()
                 ? Null
-//TODO GG       : underlying.read(in);
-                : underlying.read(in).as(Serializable);
+                : underlying.read(in);
         }
 
     @Override
@@ -33,8 +32,7 @@ const NullableMapping<NotNullable>(Mapping<NotNullable> underlying)
             }
         else
             {
-// TODO GG  underlying.write(out, value);
-            underlying.write(out, value.as(NotNullable));
+            underlying.write(out, value);
             }
         }
     }

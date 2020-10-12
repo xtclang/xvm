@@ -165,7 +165,7 @@ public class StatementExpression
                 }
             for (int i = 0; i < cRequiredTypes; ++i)
                 {
-                if (!aActualTypes[i].isA(atypeRequired[i]))
+                if (!isA(ctx, aActualTypes[i], atypeRequired[i]))
                     {
                     return TypeFit.NoFit;
                     }

@@ -776,7 +776,7 @@ public class NameExpression
 
                     if (idProp.isFormalType())
                         {
-                        ctx.useGenericType(getName(), errs);
+                        ctx.useGenericType(idProp.getName(), errs);
                         }
                     else if (!idProp.getComponent().isStatic() && m_plan != Plan.PropertySelf)
                         {
@@ -801,6 +801,16 @@ public class NameExpression
                 String sLabel = ((NameExpression) left).getName();
                 log(errs, Severity.ERROR, Compiler.LABEL_VARIABLE_ILLEGAL, sVar, sLabel);
                 return finishValidation(ctx, typeRequired, null, TypeFit.NoFit, null, errs);
+                }
+            }
+
+        // if the type could fully be resolved in the current context, do it now
+        if (type != null && type.isGenericType())
+            {
+            TypeConstant typeResolved = type.resolveGenerics(pool, ctx.getThisType());
+            if (!typeResolved.isGenericType())
+                {
+                type = typeResolved;
                 }
             }
 
@@ -1804,19 +1814,6 @@ public class NameExpression
                             }
                         }
                     }
-                else if (typeLeft.isFormalType() && !typeLeft.isFormalTypeSequence())
-                    {
-                    // Example (Enum.x):
-                    //   static <CompileType extends Enum> Ordered compare(CompileType value1, CompileType value2)
-                    //   {
-                    //   return value1.ordinal <=> value2.ordinal;
-                    //   }
-                    //
-                    // "this" is value1.ordinal
-                    // typeLeft is the "CompileType" type parameter
-
-                    typeLeft = ((FormalConstant) typeLeft.getDefiningConstant()).getConstraintType();
-                    }
 
                 // TODO support or properties nested under something other than a class (need nested type infos?)
                 TypeInfo         infoLeft = getTypeInfo(ctx, typeLeft, errs);
@@ -1956,7 +1953,7 @@ public class NameExpression
                 // there is a possibility that the register type in this context is narrower than
                 // its original type; we can return it only if it fits the desired type
                 TypeConstant typeLocal = reg.getType();
-                return isRValue() || typeDesired != null && typeLocal.isA(typeDesired)
+                return isRValue() || typeDesired != null && isA(ctx, typeLocal, typeDesired)
                         ? typeLocal
                         : reg.getOriginalType();
                 }
@@ -2259,11 +2256,7 @@ public class NameExpression
                         return idProp.getValueType(typeLeft);
                         }
 
-                    TypeInfo infoLeft = typeLeft.isFormalType()
-                        ? getTypeInfo(ctx, typeLeft.resolveConstraints(), errs)
-                        : getTypeInfo(ctx, typeLeft, errs);
-
-                    infoProp = infoLeft.findProperty(idProp);
+                    infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                     if (infoProp != null)
                         {
                         type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft);

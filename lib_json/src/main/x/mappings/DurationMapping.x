@@ -17,8 +17,7 @@ const DurationMapping
         }
 
     @Override
-    // TODO GG void write(ElementOutput out, Serializable value)
-    void write(ElementOutput out, Duration value)
+    void write(ElementOutput out, Serializable value)
         {
         out.add(value.toString(iso8601=True));
         }

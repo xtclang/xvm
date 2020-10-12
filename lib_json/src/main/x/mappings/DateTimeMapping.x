@@ -17,8 +17,7 @@ const DateTimeMapping
         }
 
     @Override
-    // TODO GG void write(ElementOutput out, Serializable value)
-    void write(ElementOutput out, DateTime value)
+    void write(ElementOutput out, Serializable value)
         {
         out.add(value.toString(True));
         }

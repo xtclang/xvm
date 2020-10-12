@@ -931,8 +931,8 @@ public class InvocationExpression
                             // check for Tuple conversion for the return value; we know that the
                             // method should fit, so the only thing to figure out is whether
                             // "packing" to a Tuple is necessary
-                            if (calculateReturnFit(typeLeft, sigMethod, fCall,
-                                    atypeReturn, ErrorListener.BLACKHOLE).isPacking())
+                            if (calculateReturnFit(sigMethod, fCall, atypeReturn, ctx.getThisType(),
+                                    ErrorListener.BLACKHOLE).isPacking())
                                 {
                                 TypeConstant typePacked = pool.ensureParameterizedTypeConstant(
                                         pool.typeTuple(), atypeResult);
@@ -946,7 +946,7 @@ public class InvocationExpression
                         if (fCondReturn)
                             {
                             log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
-                                method.getIdentityConstant().getValueString());
+                                    method.getIdentityConstant().getValueString());
                             break Validate;
                             }
 
