@@ -1044,18 +1044,6 @@ interface List<Element>
          *                      beyond the end of the list
          */
         Element value;
-// TODO GG CP discuss
-//            {
-//            Element get()
-//                {
-//                return list.getElement(index);
-//                }
-//
-//            void set(Element e)
-//                {
-//                list.setElement(index, e);
-//                }
-//            }
 
         /**
          * Move the cursor so that it points to the _next_ element in the list. If there are no more
