@@ -653,7 +653,7 @@ public class MethodDeclarationStatement
         if (!errs.isSilent() && !method.isConstructor())
             {
             ClassStructure clz  = method.getContainingClass();
-            TypeConstant   type = pool().ensureAccessTypeConstant(clz.getCanonicalType(), Access.PRIVATE);
+            TypeConstant   type = pool().ensureAccessTypeConstant(clz.getFormalType(), Access.PRIVATE);
             TypeInfo       info = type.ensureTypeInfo(errs);
             PropertyInfo   prop = info.findProperty(method.getName());
             if (prop != null &&

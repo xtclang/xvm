@@ -651,28 +651,42 @@ public class ClassStructure
             ConstantPool     pool        = getConstantPool();
             IdentityConstant constantClz = getIdentityConstant();
 
-            if (isVirtualChild())
+            if (isAnonInnerClass())
                 {
-                TypeConstant typeParent = ((ClassStructure) getParent()).getFormalType();
-                typeFormal = pool.ensureVirtualChildTypeConstant(typeParent, getName());
+                typeFormal = constantClz.getType();
+
+                // for anonymous inner class the constraints are the formal types
+                if (isParameterized())
+                    {
+                    typeFormal = pool.ensureParameterizedTypeConstant(typeFormal,
+                        m_mapParams.values().toArray(TypeConstant.NO_TYPES));
+                    }
                 }
             else
                 {
-                typeFormal = constantClz.getType();
-                }
-
-            if (isParameterized())
-                {
-                Map<StringConstant, TypeConstant> mapThis = m_mapParams;
-                TypeConstant[] aTypes = new TypeConstant[mapThis.size()];
-                int ix = 0;
-                for (StringConstant constName : mapThis.keySet())
+                if (isVirtualChild())
                     {
-                    PropertyStructure prop = (PropertyStructure) getChild(constName.getValue());
-                    aTypes[ix++] = prop.getIdentityConstant().getFormalType();
+                    TypeConstant typeParent = ((ClassStructure) getParent()).getFormalType();
+                    typeFormal = pool.ensureVirtualChildTypeConstant(typeParent, getName());
+                    }
+                else
+                    {
+                    typeFormal = constantClz.getType();
                     }
 
-                typeFormal = pool.ensureParameterizedTypeConstant(typeFormal, aTypes);
+                if (isParameterized())
+                    {
+                    Map<StringConstant, TypeConstant> mapThis = m_mapParams;
+                    TypeConstant[] aTypes = new TypeConstant[mapThis.size()];
+                    int ix = 0;
+                    for (StringConstant constName : mapThis.keySet())
+                        {
+                        PropertyStructure prop = (PropertyStructure) getChild(constName.getValue());
+                        aTypes[ix++] = prop.getIdentityConstant().getFormalType();
+                        }
+
+                    typeFormal = pool.ensureParameterizedTypeConstant(typeFormal, aTypes);
+                    }
                 }
 
             m_typeFormal = typeFormal;

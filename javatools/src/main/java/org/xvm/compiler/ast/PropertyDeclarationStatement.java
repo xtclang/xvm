@@ -522,7 +522,7 @@ public class PropertyDeclarationStatement
             {
             PropertyStructure   prop = (PropertyStructure) getComponent();
             ClassStructure      clz  = prop.getContainingClass();
-            TypeConstant        type = pool().ensureAccessTypeConstant(clz.getCanonicalType(), Access.PRIVATE);
+            TypeConstant        type = pool().ensureAccessTypeConstant(clz.getFormalType(), Access.PRIVATE);
             TypeInfo            info = type.ensureTypeInfo(errs);
             Set<MethodConstant> set  = info.findMethods(prop.getName(), -1, MethodKind.Any);
             if (!set.isEmpty())
