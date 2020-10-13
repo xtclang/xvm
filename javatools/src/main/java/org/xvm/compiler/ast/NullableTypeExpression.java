@@ -84,9 +84,7 @@ public class NullableTypeExpression
             }
         type = exprNew;
 
-        ConstantPool pool       = pool();
-        TypeConstant typeActual = pool.ensureIntersectionTypeConstant(
-                                        pool.typeNullable(), exprNew.ensureTypeConstant(ctx));
+        TypeConstant typeActual = pool().ensureNullableTypeConstant(exprNew.ensureTypeConstant(ctx));
         TypeConstant typeType   = typeActual.getType();
 
         return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, typeType, errs);
@@ -98,12 +96,7 @@ public class NullableTypeExpression
     @Override
     public String toString()
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(type)
-          .append("?");
-
-        return sb.toString();
+        return type + "?";
         }
 
     @Override

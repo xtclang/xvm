@@ -111,6 +111,11 @@ public abstract class Expression
         }
 
     /**
+     * Convert this expression into a TypeExpression.
+     *
+     * Note: if this node is already linked (i.e. has a parent) it has a responsibility of
+     * connecting any newly created node to its parent.
+     *
      * @return this expression, converted to a type expression
      */
     public TypeExpression toTypeExpression()
@@ -441,6 +446,32 @@ public abstract class Expression
             }
 
         throw notImplemented();
+        }
+
+    /**
+     * Convert this expression into a TypeExpression and validate it.
+     *
+     * @param ctx           the compilation context for the statement
+     * @param typeRequired  the type that the expression is expected to be able to provide
+     * @param errs          the error list to log any errors to
+     *
+     * @return the resulting expression, or null if compilation cannot proceed
+     */
+    protected Expression validateAsType(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        TypeExpression exprType = toTypeExpression();
+
+        if (new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20))
+            {
+            ErrorListener errsTemp = errs.branch();
+            Expression    exprNew  = exprType.validate(ctx, typeRequired, errsTemp);
+            if (exprNew != null)
+                {
+                errsTemp.merge();
+                return exprNew;
+                }
+            }
+        return null;
         }
 
     /**

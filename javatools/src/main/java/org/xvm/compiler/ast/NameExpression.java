@@ -450,6 +450,8 @@ public class NameExpression
     @Override
     public TypeExpression toTypeExpression()
         {
+        TypeExpression exprType = null;
+
         NameExpressions:
         if (left instanceof NameExpression)
             {
@@ -485,10 +487,16 @@ public class NameExpression
 
             NamedTypeExpression exprLeftType = (NamedTypeExpression) exprPrev.toTypeExpression();
 
-            return new NamedTypeExpression(exprLeftType, tokens, params, lEndPos);
+            exprType = new NamedTypeExpression(exprLeftType, tokens, params, lEndPos);
             }
 
-        return new NamedTypeExpression(null, getNameTokens(), null, null, params, lEndPos);
+        if (exprType == null)
+            {
+            exprType = new NamedTypeExpression(null, getNameTokens(), null, null, params, lEndPos);
+            }
+
+        exprType.setParent(getParent());
+        return exprType;
         }
 
     @Override

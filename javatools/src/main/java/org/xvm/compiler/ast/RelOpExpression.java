@@ -116,8 +116,8 @@ public class RelOpExpression
                 throw new IllegalArgumentException("operator: " + operator);
             }
 
-        m_tokBefore = tokBefore;
-        m_tokAfter  = tokAfter;
+        f_tokBefore = tokBefore;
+        f_tokAfter  = tokAfter;
         }
 
 
@@ -126,13 +126,13 @@ public class RelOpExpression
     @Override
     public long getStartPosition()
         {
-        return m_tokBefore == null ? super.getStartPosition() : m_tokBefore.getStartPosition();
+        return f_tokBefore == null ? super.getStartPosition() : f_tokBefore.getStartPosition();
         }
 
     @Override
     public long getEndPosition()
         {
-        return m_tokAfter == null ? super.getEndPosition() : m_tokAfter.getEndPosition();
+        return f_tokAfter == null ? super.getEndPosition() : f_tokAfter.getEndPosition();
         }
 
     @Override
@@ -141,8 +141,14 @@ public class RelOpExpression
         switch (operator.getId())
             {
             case ADD:
+            case SUB:
             case BIT_OR:
-                return new BiTypeExpression(expr1.toTypeExpression(), operator, expr2.toTypeExpression());
+                {
+                TypeExpression exprType = new BiTypeExpression(
+                        expr1.toTypeExpression(), operator, expr2.toTypeExpression());
+                exprType.setParent(getParent());
+                return exprType;
+                }
 
             default:
                 return super.toTypeExpression();
@@ -322,6 +328,15 @@ public class RelOpExpression
         //
         // this logic must conform to the rules used by validate()
 
+        if (typeRequired != null && typeRequired.isTypeOfType())
+            {
+            TypeFit fit = toTypeExpression().testFit(ctx, typeRequired, ErrorListener.BLACKHOLE);
+            if (fit.isFit())
+                {
+                return fit;
+                }
+            }
+
         TypeConstant typeLeft = expr1.getImplicitType(ctx);
         if (typeLeft == null)
             {
@@ -448,6 +463,15 @@ public class RelOpExpression
         TypeConstant typeRequired = atypeRequired != null && atypeRequired.length >= 1
                 ? atypeRequired[0]
                 : null;
+
+        if (typeRequired != null && typeRequired.isTypeOfType())
+            {
+            Expression exprType = validateAsType(ctx, typeRequired, errs);
+            if (exprType != null)
+                {
+                return exprType;
+                }
+            }
 
         // using the inferred types (if any), validate the expressions
         TypeConstant type1Req = guessLeftType(ctx, typeRequired);
@@ -1001,15 +1025,15 @@ public class RelOpExpression
                     {
                     super.generateAssignments(ctx, code, aLVal, errs);
                     }
-                return;
+                break;
 
             case 1:
                 generateAssignment(ctx, code, aLVal[0], errs);
-                return;
+                break;
 
             case 0:
                 generateAssignment(ctx, code, new Assignable(), errs);
-                return;
+                break;
             }
         }
 
@@ -1021,7 +1045,7 @@ public class RelOpExpression
      */
     boolean isExcluding()
         {
-        return operator.getId() == Id.DOTDOT && m_tokAfter != null && m_tokAfter.getId() == Id.R_PAREN;
+        return operator.getId() == Id.DOTDOT && f_tokAfter != null && f_tokAfter.getId() == Id.R_PAREN;
         }
 
     /**
@@ -1092,9 +1116,9 @@ public class RelOpExpression
     @Override
     public String toString()
         {
-        return m_tokBefore == null || m_tokAfter == null
+        return f_tokBefore == null || f_tokAfter == null
                 ? super.toString()
-                : m_tokBefore.getId().TEXT + super.toString() + m_tokAfter.getId().TEXT;
+                : f_tokBefore.getId().TEXT + super.toString() + f_tokAfter.getId().TEXT;
         }
 
 
@@ -1103,10 +1127,10 @@ public class RelOpExpression
     /**
      * An optional "opening" token, used for "[x..y)" style expressions.
      */
-    private Token m_tokBefore;
+    private final Token f_tokBefore;
 
     /**
      * An optional "closing" token, used for "[x..y)" style expressions.
      */
-    private Token m_tokAfter;
+    private final Token f_tokAfter;
     }

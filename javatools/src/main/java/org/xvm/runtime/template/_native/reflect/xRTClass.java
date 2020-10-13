@@ -30,13 +30,16 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xNullable;
-
-import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
+import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
 
+import org.xvm.runtime.template.numbers.xInt64;
+
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
+
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**
@@ -99,7 +102,8 @@ public class xRTClass
         if (constant instanceof ClassConstant || constant instanceof DecoratedClassConstant)
             {
             IdentityConstant idClz    = (IdentityConstant) constant;
-            TypeConstant     typeClz  = idClz.getValueType(null);
+            TypeConstant     typeClz  = idClz.getValueType(null).
+                resolveGenerics(frame.poolContext(), frame.getGenericsResolver());
             ClassComposition clz      = ensureClass(typeClz);
             ClassTemplate    template = clz.getTemplate();
 
@@ -177,6 +181,28 @@ public class xRTClass
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+        }
+
+    @Override
+    protected int callEqualsImpl(Frame frame, ClassComposition clazz,
+                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return frame.assignValue(iReturn,
+            xBoolean.makeHandle(getClassType(hValue1).equals(getClassType(hValue2))));
+        }
+
+    @Override
+    protected int callCompareImpl(Frame frame, ClassComposition clazz,
+                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return frame.assignValue(iReturn,
+            xOrdered.makeHandle(getClassType(hValue1).compareTo(getClassType(hValue2))));
+        }
+
+    @Override
+    protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+        {
+        return frame.assignValue(iReturn, xInt64.makeHandle(getClassType(hTarget).hashCode()));
         }
 
 

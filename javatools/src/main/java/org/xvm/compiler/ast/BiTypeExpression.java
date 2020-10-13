@@ -136,9 +136,18 @@ public class BiTypeExpression
             type2 = exprNew;
             }
 
-        return fValid
-                ? super.validate(ctx, typeRequired, errs)
-                : null;
+        if (fValid)
+            {
+            if (type1.isConstant() && type2.isConstant())
+                {
+                return super.validate(ctx, typeRequired, errs);
+                }
+
+            // this can happen when we attempt to convert expressions to type expressions
+            log(errs, Severity.ERROR, Compiler.INVALID_OPERATION);
+            }
+
+        return  null;
         }
 
 
@@ -147,15 +156,7 @@ public class BiTypeExpression
     @Override
     public String toString()
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(type1)
-          .append(' ')
-          .append(operator.getId().TEXT)
-          .append(' ')
-          .append(type2);
-
-        return sb.toString();
+        return String.valueOf(type1) + ' ' + operator.getId().TEXT + ' ' + type2;
         }
 
     @Override

@@ -68,15 +68,17 @@ public class AnnotationExpression
     @Override
     public NamedTypeExpression toTypeExpression()
         {
-        NamedTypeExpression expr = type;
-        if (expr == null)
+        NamedTypeExpression exprType = type;
+        if (exprType == null)
             {
             assert m_node != null && m_anno != null;
             List<Token> names = Collections.singletonList(new Token(lStartPos, lEndPos,
                     Id.IDENTIFIER, ((IdentityConstant) m_anno.getAnnotationClass()).getName()));
-            type = expr = new NamedTypeExpression(null, names, null, null, null, lEndPos);
+            exprType = new NamedTypeExpression(null, names, null, null, null, lEndPos);
+            exprType.setParent(getParent());
+            type = exprType;
             }
-        return expr;
+        return exprType;
         }
 
     public List<Expression> getArguments()

@@ -48,7 +48,10 @@ public class NotNullExpression
         if (operator.getId() == Token.Id.COND)
             {
             // convert "expr?" to "type?"
-            return new NullableTypeExpression(expr.toTypeExpression(), getEndPosition());
+            TypeExpression exprType = new NullableTypeExpression(
+                    expr.toTypeExpression(), getEndPosition());
+            exprType.setParent(getParent());
+            return exprType;
             }
 
         return super.toTypeExpression();
@@ -85,8 +88,31 @@ public class NotNullExpression
         }
 
     @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        if (typeRequired != null && typeRequired.isTypeOfType())
+            {
+            TypeFit fit = toTypeExpression().testFit(ctx, typeRequired, ErrorListener.BLACKHOLE);
+            if (fit.isFit())
+                {
+                return fit;
+                }
+            }
+        return super.testFit(ctx, typeRequired, errs);
+        }
+
+    @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        if (typeRequired != null && typeRequired.isTypeOfType())
+            {
+            Expression exprType = validateAsType(ctx, typeRequired, errs);
+            if (exprType != null)
+                {
+                return exprType;
+                }
+            }
+
         TypeConstant typeRequest = typeRequired == null ? null : typeRequired.ensureNullable();
         Expression   exprNew     = expr.validate(ctx, typeRequest, errs);
         if (exprNew == null)
@@ -193,12 +219,7 @@ public class NotNullExpression
     @Override
     public String toString()
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(expr)
-          .append(operator.getId().TEXT);
-
-        return sb.toString();
+        return expr + operator.getId().TEXT;
         }
 
     @Override

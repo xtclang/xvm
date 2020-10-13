@@ -287,6 +287,12 @@ public class CmpExpression
                                                    TypeConstant type2, boolean fConst2,
                                                    boolean fCheck)
         {
+        if (type1 != null && type1.containsUnresolved() ||
+            type2 != null && type2.containsUnresolved())
+            {
+            return null;
+            }
+
         TypeConstant typeCommon = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
 
         if (type1 == null || type2 == null)

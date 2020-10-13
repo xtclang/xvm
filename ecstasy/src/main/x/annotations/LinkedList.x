@@ -137,9 +137,8 @@ mixin LinkedList<Element>
               Boolean readOnly = False)
         {
         // the property that this is mixed into must be of the element type (but can be Null).
-        // TODO assert Referent == Element?
-        // TODO assert Referent == Nullable|Element;
-        // TODO GG: assert Type<Referent> == Type<Element?>;
+        assert Referent == Element?;
+        TODO GG make sure it is called
         }
     finally
         {
@@ -148,8 +147,7 @@ mixin LinkedList<Element>
         assert (Property prop, val container) := isProperty();
 
         // the property must be of the type `Element?` (Null or an Element)
-        // TODO assert prop.Referent == Element?;
-        // TODO GG: assert Type<prop.Referent> == Type<Element?>;
+        assert prop.Referent == Element?;
 
         // if the container type is not an element, then it can't be the head of the list and this
         // property can't be the implicit "next", so verify that either the container could be the

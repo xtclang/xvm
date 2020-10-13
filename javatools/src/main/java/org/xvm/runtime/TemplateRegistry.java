@@ -35,6 +35,7 @@ import org.xvm.runtime.template.Mixin;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
+import org.xvm.runtime.template._native.reflect.xRTClass;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTType;
 
@@ -132,6 +133,7 @@ public class TemplateRegistry
         // add run-time templates
         f_mapTemplatesByType.put(pool.typeFunction(), xRTFunction.INSTANCE);
         f_mapTemplatesByType.put(pool.typeType()    , xRTType    .INSTANCE);
+        f_mapTemplatesByType.put(pool.typeClass()   , xRTClass   .INSTANCE);
 
         // clone the map since the loop below can add to it
         Set<ClassTemplate> setTemplates = new HashSet<>(f_mapTemplatesByType.values());

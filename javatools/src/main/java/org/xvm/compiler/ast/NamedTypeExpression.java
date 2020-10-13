@@ -150,18 +150,6 @@ public class NamedTypeExpression
         return sb.toString();
         }
 
-    public String[] getModuleNames()
-        {
-        List<Token> list = module;
-        int         c    = list.size();
-        String[]    as   = new String[c];
-        for (int i = 0; i < c; ++i)
-            {
-            as[i] = list.get(i).getValueText();
-            }
-        return as;
-        }
-
     /**
      * Assemble the qualified name.
      *
@@ -759,6 +747,11 @@ public class NamedTypeExpression
             else
                 {
                 type = calculateDefaultType(ctx, m_constId, errs);
+                if (type.containsUnresolved())
+                    {
+                    log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, getName());
+                    return null;
+                    }
                 }
 
             if (type.containsGenericType(false))
@@ -797,8 +790,7 @@ public class NamedTypeExpression
                     if (type == null)
                         {
                         log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
-                        fValid = false;
-                        break;
+                        return null;
                         }
                     }
                 }
@@ -809,16 +801,16 @@ public class NamedTypeExpression
             TypeConstant[] atypeParams = validateParameters(ctx, listParams, errs);
             if (atypeParams == null)
                 {
-                fValid = false;
+                return null;
                 }
-            else if (type.isParamsSpecified())
+            if (type.isParamsSpecified())
                 {
                 TypeConstant[] atypeActual = type.getParamTypesArray();
                 if (!Arrays.equals(atypeActual, atypeParams))
                     {
                     // this can happen for example, if m_constId is a typedef for a function
                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
-                    fValid = false;
+                    return null;
                     }
                 }
             else
@@ -845,6 +837,7 @@ public class NamedTypeExpression
                 else
                     {
                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                    return null;
                     }
                 }
             }
@@ -987,21 +980,27 @@ public class NamedTypeExpression
                 case Property:
                     {
                     PropertyConstant idProp = (PropertyConstant) constTarget;
-                    assert idProp.isFormalType();
-
-                    if (ctx != null)
+                    if (idProp.isFormalType())
                         {
-                        // see if the FormalType was narrowed
-                        Argument arg = ctx.getVar(idProp.getName());
-                        if (arg != null)
+                        if (ctx != null)
                             {
-                            TypeConstant typeType = arg.getType();
-                            assert typeType.isTypeOfType();
-                            return typeType.getParamType(0);
+                            // see if the FormalType was narrowed
+                            Argument arg = ctx.getVar(idProp.getName());
+                            if (arg != null)
+                                {
+                                TypeConstant typeType = arg.getType();
+                                assert typeType.isTypeOfType();
+                                return typeType.getParamType(0);
+                                }
                             }
-                        }
 
-                    return idProp.getFormalType();
+                        return idProp.getFormalType();
+                        }
+                    else
+                        {
+                        return new UnresolvedTypeConstant(pool,
+                            new UnresolvedNameConstant(pool, idProp.getName()));
+                        }
                     }
 
                 case Typedef:

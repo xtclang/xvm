@@ -60,7 +60,10 @@ public class ArrayAccessExpression
     public TypeExpression toTypeExpression()
         {
         assert tokClose.getId() == Id.R_SQUARE;
-        return new ArrayTypeExpression(expr.toTypeExpression(), indexes, tokClose.getEndPosition());
+        TypeExpression exprType = new ArrayTypeExpression(
+                expr.toTypeExpression(), indexes, tokClose.getEndPosition());
+        exprType.setParent(getParent());
+        return exprType;
         }
 
     @Override

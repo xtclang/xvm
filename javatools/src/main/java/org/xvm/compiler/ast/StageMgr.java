@@ -94,9 +94,9 @@ public class StageMgr
                     return true;
                     }
                 }
+            ++m_cIters;
             }
 
-        ++m_cIters;
         return m_listRevisit == null;
         }
 
