@@ -5150,9 +5150,9 @@ public abstract class TypeConstant
             return typeThisR.isA(typeBaseR);
             }
 
-        if (typeCtx != null && typeBase.isFormalType())
+        if (typeCtx != null && typeBase.containsGenericType(true))
             {
-            // check if the formal type could be resolved in the specified context
+            // check if generic types could be resolved in the specified context
             TypeConstant typeBaseR = typeBase.resolveGenerics(getConstantPool(), typeCtx);
             if (typeBaseR != typeBase)
                 {
@@ -5200,9 +5200,9 @@ public abstract class TypeConstant
             return typeBaseR.isA(typeThisR) && typeThisR.isA(typeBaseR);
             }
 
-        if (typeCtx != null && typeBase.isFormalType())
+        if (typeCtx != null && typeBase.containsGenericType(true))
             {
-            // check if the formal type could be resolved in the specified context
+            // check if generic types could be resolved in the specified context
             TypeConstant typeBaseR = typeBase.resolveGenerics(getConstantPool(), typeCtx);
             if (typeBaseR != typeBase)
                 {

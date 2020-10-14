@@ -1075,7 +1075,7 @@ public abstract class AstNode
         Set<MethodConstant> setConvert = new HashSet<>();
         ErrorListener       errsTemp   = errs.branch();
 
-        collectMatchingMethods(ctx, typeTarget, infoTarget, setMethods, listExprArgs, fCall,
+        collectMatchingMethods(ctx, infoTarget, setMethods, listExprArgs, fCall,
                 mapNamedExpr, atypeReturn, setIs, setConvert, errsTemp);
 
         // now choose the best match
@@ -1094,7 +1094,7 @@ public abstract class AstNode
             setMethods = infoTarget.findMethods(sMethodName, typeTupleArg.getParamsCount(), kind);
 
             ErrorListener errsTempT = errs.branch();
-            collectMatchingMethods(ctx, typeTarget, infoTarget, setMethods, listExprArgs, fCall,
+            collectMatchingMethods(ctx, infoTarget, setMethods, listExprArgs, fCall,
                     mapNamedExpr, atypeReturn, setIs, setConvert, errsTempT);
 
             if (!setIs.isEmpty())
@@ -1200,7 +1200,6 @@ public abstract class AstNode
      */
     private void collectMatchingMethods(
             Context                 ctx,
-            TypeConstant            typeTarget,
             TypeInfo                infoTarget,
             Set<MethodConstant>     setMethods,
             List<Expression>        listExprArgs,

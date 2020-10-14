@@ -684,6 +684,27 @@ public class InvocationExpression
                 break Validate;
                 }
 
+            // transform the return types using the current context if possible
+            if (atypeReturn != null)
+                {
+                for (int i = 0, c = atypeReturn.length; i < c; i++)
+                    {
+                    TypeConstant typeRet = atypeReturn[i];
+                    if (typeRet != null && typeRet.containsGenericType(true))
+                        {
+                        TypeConstant typeRetR = typeRet.resolveGenerics(pool, ctx.getThisType());
+                        if (typeRetR != typeRet)
+                            {
+                            if (atypeReturn == atypeRequired)
+                                {
+                                atypeReturn = atypeRequired.clone();
+                                }
+                            atypeReturn[i] = typeRetR;
+                            }
+                        }
+                    }
+                }
+
             // resolving the name will yield a method, a function, or something else that needs
             // to yield a function, such as a property or variable that holds a function or
             // something that can be converted to a function
@@ -2209,7 +2230,7 @@ public class InvocationExpression
                             // idProp.getFormalType() is NaturalHasher.Value
 
                             TypeConstant type     = nameLeft.getImplicitType(ctx).getParamType(0);
-                            TypeInfo     infoType = type.ensureTypeInfo(errs);
+                            TypeInfo     infoType = getTypeInfo(ctx, type, errs);
 
                             ErrorListener errsTemp = errs.branch();
 
@@ -2258,35 +2279,6 @@ public class InvocationExpression
                             return arg;
                             }
                         break;
-                        }
-
-                    case Variable:
-                        {
-                        Register reg = (Register) nameLeft.resolveRawArgument(ctx, false, errs);
-                        if (!reg.isUnknown())
-                            {
-                            int             iReg   = reg.getIndex();
-                            MethodStructure method = ctx.getMethod();
-                            if (method.isTypeParameter(iReg))
-                                {
-                                TypeConstant  type     = reg.getType().getParamType(0);
-                                TypeInfo      infoType = typeLeft.ensureTypeInfo(errs);
-                                ErrorListener errsTemp = errs.branch();
-
-                                Argument  arg = findCallable(ctx, type, infoType, sName, MethodKind.Function,
-                                    false, atypeReturn, errsTemp);
-                                if (arg instanceof MethodConstant)
-                                    {
-                                    m_argMethod   = arg;
-                                    m_method      = getMethod(infoType, arg);
-                                    m_fBindTarget = false;
-                                    m_idFormal    = method.getParam(iReg).
-                                            asTypeParameterConstant(method.getIdentityConstant());
-                                    errsTemp.merge();
-                                    return arg;
-                                    }
-                                }
-                            }
                         }
                     }
                 }
@@ -2597,7 +2589,7 @@ public class InvocationExpression
                 {
                 TypeConstant typeFnRet = atypeFnRet[i];
                 TypeConstant typeReq   = atypeReturn[i];
-                if (!typeFnRet.isA(typeReq))
+                if (!isA(ctx, typeFnRet, typeReq))
                     {
                     log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                             typeReq.getValueString(), typeFnRet.getValueString());

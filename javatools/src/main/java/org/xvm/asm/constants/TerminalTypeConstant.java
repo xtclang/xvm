@@ -1410,27 +1410,28 @@ public class TerminalTypeConstant
 
         if (isFormalType())
             {
-            // check if the formal type could be resolved in the context of the specified class
             ConstantPool pool    = getConstantPool();
             int          cInvals = pool.getInvalidationCount();
-            TypeConstant typeR   = this.resolveGenerics(pool, idClass.getFormalType());
-            TypeInfo     infoR;
-            if (typeR.isFormalType())
+            if (isGenericType())
                 {
-                TypeConstant typeConstraint = ((FormalConstant) getDefiningConstant()).getConstraintType();
-
-                if (typeConstraint.isAutoNarrowing())
+                // check if the formal type could be resolved in the context of the specified class
+                TypeConstant typeR = this.resolveGenerics(pool, idClass.getFormalType());
+                if (!typeR.isGenericType())
                     {
-                    typeConstraint = typeConstraint.resolveAutoNarrowingBase();
+                    TypeInfo infoR = typeR.ensureTypeInfo(idClass, errs);
+                    assert isComplete(infoR);
+                    return new TypeInfo(this, infoR, cInvals);
                     }
-                infoR = typeConstraint.ensureTypeInfo(idClass, errs);
                 }
-            else
+
+            TypeConstant typeConstraint = ((FormalConstant) getDefiningConstant()).getConstraintType();
+            if (typeConstraint.isAutoNarrowing())
                 {
-                infoR = typeR.ensureTypeInfo(idClass, errs);
+                typeConstraint = typeConstraint.resolveAutoNarrowingBase();
                 }
-            assert isComplete(infoR);
-            return new TypeInfo(this, infoR, cInvals);
+            TypeInfo infoConstraint = typeConstraint.ensureTypeInfo(idClass, errs);
+            assert isComplete(infoConstraint);
+            return new TypeInfo(this, infoConstraint, cInvals);
             }
 
         return super.ensureTypeInfo(idClass, errs);

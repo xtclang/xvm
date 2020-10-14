@@ -661,6 +661,21 @@ public class ParameterizedTypeConstant
         return result;
         }
 
+    @Override
+    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
+        {
+        if (containsGenericType(true))
+            {
+            // check if generic types could be resolved in the context of the specified class
+            TypeConstant typeR = this.resolveGenerics(getConstantPool(), idClass.getFormalType());
+            if (typeR != this)
+                {
+                return typeR.ensureTypeInfo(idClass, errs);
+                }
+            }
+        return super.ensureTypeInfo(idClass, errs);
+        }
+
 
     // ----- type comparison support --------------------------------------------------------------
 

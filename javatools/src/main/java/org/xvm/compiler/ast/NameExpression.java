@@ -1613,7 +1613,7 @@ public class NameExpression
                     case Property:
                         {
                         TypeConstant typeTarget = target.getTargetType();
-                        TypeInfo     infoTarget = typeTarget.ensureTypeInfo(errs);
+                        TypeInfo     infoTarget = getTypeInfo(ctx, typeTarget, errs);
 
                         // TODO still some work here to mark the this (and out this's) as being used
                         PropertyInfo prop = infoTarget.findProperty((PropertyConstant) id);
@@ -2170,7 +2170,7 @@ public class NameExpression
                                 {
                                 typeLeft = typeLeft.getParamType(0);
                                 }
-                            infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
+                            infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                             }
                         else
                             {
@@ -2208,13 +2208,13 @@ public class NameExpression
                     if (target == null)
                         {
                         typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
-                        infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
+                        infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                         }
                     else
                         {
                         idProp   = (PropertyConstant) target.getId();
                         typeLeft = target.getTargetType();
-                        infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
+                        infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                         }
 
                     if (infoProp != null)
