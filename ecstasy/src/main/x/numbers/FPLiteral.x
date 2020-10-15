@@ -13,7 +13,7 @@ const FPLiteral(String text)
     /**
      * Convert the number to a variable-length binary radix floating point number.
      */
-    @Auto VarFloat toVarFloat()
+    @Auto FloatN toFloatN()
         {
         TODO
         }
@@ -23,7 +23,7 @@ const FPLiteral(String text)
      */
     @Auto BFloat16 toBFloat16()
         {
-        return toVarFloat().toBFloat16();
+        return toFloatN().toBFloat16();
         }
 
     /**
@@ -31,7 +31,7 @@ const FPLiteral(String text)
      */
     @Auto Float16 toFloat16()
         {
-        return toVarFloat().toFloat16();
+        return toFloatN().toFloat16();
         }
 
     /**
@@ -39,7 +39,7 @@ const FPLiteral(String text)
      */
     @Auto Float32 toFloat32()
         {
-        return toVarFloat().toFloat32();
+        return toFloatN().toFloat32();
         }
 
     /**
@@ -47,7 +47,7 @@ const FPLiteral(String text)
      */
     @Auto Float64 toFloat64()
         {
-        return toVarFloat().toFloat64();
+        return toFloatN().toFloat64();
         }
 
     /**
@@ -55,13 +55,13 @@ const FPLiteral(String text)
      */
     @Auto Float128 toFloat128()
         {
-        return toVarFloat().toFloat128();
+        return toFloatN().toFloat128();
         }
 
     /**
      * Convert the number to a variable-length decimal radix floating point number.
      */
-    @Auto VarDec toVarDec()
+    @Auto DecN toDecN()
         {
         TODO
         }
@@ -71,7 +71,7 @@ const FPLiteral(String text)
      */
     @Auto Dec32 toDec32()
         {
-        return toVarDec().toDec32();
+        return toDecN().toDec32();
         }
 
     /**
@@ -79,7 +79,7 @@ const FPLiteral(String text)
      */
     @Auto Dec64 toDec64()
         {
-        return toVarDec().toDec64();
+        return toDecN().toDec64();
         }
 
     /**
@@ -87,7 +87,7 @@ const FPLiteral(String text)
      */
     @Auto Dec128 toDec128()
         {
-        return toVarDec().toDec128();
+        return toDecN().toDec128();
         }
 
     @Override

@@ -1,7 +1,7 @@
 /**
  * A signed integer (using twos-complement) with a variable number of bytes.
  */
-const VarInt
+const IntN
         extends IntNumber
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -47,19 +47,19 @@ const VarInt
         }
 
     @Override
-    VarUInt magnitude.get()
+    UIntN magnitude.get()
         {
-        return abs().toVarUInt();
+        return abs().toUIntN();
         }
 
     @Override
-    VarInt leftmostBit.get()
+    IntN leftmostBit.get()
         {
         TODO
         }
 
     @Override
-    VarInt rightmostBit.get()
+    IntN rightmostBit.get()
         {
         TODO
         }
@@ -69,125 +69,109 @@ const VarInt
 
     @Override
     @Op("-#")
-    VarInt neg()
+    IntN neg()
         {
         return ~this + 1;
         }
 
     @Override
     @Op("+")
-    VarInt add(VarInt n)
+    IntN add(IntN n)
         {
-        TODO return new VarInt(bitAdd(bits, n.bits));
+        TODO return new IntN(bitAdd(bits, n.bits));
         }
 
     @Override
     @Op("-")
-    VarInt sub(VarInt n)
+    IntN sub(IntN n)
         {
         return this + ~n + 1;
         }
 
     @Override
     @Op("*")
-    VarInt mul(VarInt n)
+    IntN mul(IntN n)
         {
         return this * n;
         }
 
     @Override
     @Op("/")
-    VarInt div(VarInt n)
+    IntN div(IntN n)
         {
         return this / n;
         }
 
     @Override
     @Op("%")
-    VarInt mod(VarInt n)
+    IntN mod(IntN n)
         {
         return this % n;
         }
 
     @Override
     @Op("&")
-    VarInt and(VarInt n)
+    IntN and(IntN n)
         {
-        return new VarInt(this.bits & n.bits);
+        return new IntN(this.bits & n.bits);
         }
 
     @Override
     @Op("|")
-    VarInt or(VarInt n)
+    IntN or(IntN n)
         {
-        return new VarInt(this.bits | n.bits);
+        return new IntN(this.bits | n.bits);
         }
 
     @Override
     @Op("^")
-    VarInt xor(VarInt n)
+    IntN xor(IntN n)
         {
-        return new VarInt(this.bits ^ n.bits);
+        return new IntN(this.bits ^ n.bits);
         }
 
     @Override
     @Op("~")
-    VarInt not()
+    IntN not()
         {
-        return new VarInt(~bits);
+        return new IntN(~bits);
         }
 
     @Override
     @Op("<<")
-    VarInt shiftLeft(Int count)
+    IntN shiftLeft(Int count)
         {
-        return new VarInt(bits << count);
+        return new IntN(bits << count);
         }
 
     @Override
     @Op(">>")
-    VarInt shiftRight(Int count)
+    IntN shiftRight(Int count)
         {
-        return new VarInt(bits >> count);
+        return new IntN(bits >> count);
         }
 
     @Override
     @Op(">>>")
-    VarInt shiftAllRight(Int count)
+    IntN shiftAllRight(Int count)
         {
-        return new VarInt(bits >>> count);
+        return new IntN(bits >>> count);
         }
 
     @Override
-    VarInt rotateLeft(Int count)
+    IntN rotateLeft(Int count)
         {
-        return new VarInt(bits.rotateLeft(count));
+        return new IntN(bits.rotateLeft(count));
         }
 
     @Override
-    VarInt rotateRight(Int count)
+    IntN rotateRight(Int count)
         {
-        return new VarInt(bits.rotateRight(count));
+        return new IntN(bits.rotateRight(count));
         }
 
     @Override
-    VarInt retainLSBits(Int count)
-        {
-        if (count <= 0)
-            {
-            return 0;
-            }
-
-        if (count >= bitLength)
-            {
-            return this;
-            }
-
-        return new VarInt(bits.fill(0, [0..bitLength-count)));
-        }
-
-    @Override
-    VarInt retainMSBits(Int count)
+    IntN retainLSBits(Int count)
         {
         if (count <= 0)
             {
@@ -199,31 +183,47 @@ const VarInt
             return this;
             }
 
-        return new VarInt(bits.fill(0, [count..bitLength)));
+        return new IntN(bits.fill(0, [0..bitLength-count)));
         }
 
     @Override
-    VarInt reverseBits()
+    IntN retainMSBits(Int count)
         {
-        return new VarInt(bits.reversed());
+        if (count <= 0)
+            {
+            return 0;
+            }
+
+        if (count >= bitLength)
+            {
+            return this;
+            }
+
+        return new IntN(bits.fill(0, [count..bitLength)));
         }
 
     @Override
-    VarInt reverseBytes()
+    IntN reverseBits()
         {
-        return new VarInt(toByteArray().reversed());
+        return new IntN(bits.reversed());
         }
 
     @Override
-    VarInt abs()
+    IntN reverseBytes()
+        {
+        return new IntN(toByteArray().reversed());
+        }
+
+    @Override
+    IntN abs()
         {
         return this < 0 ? -this : this;
         }
 
     @Override
-    VarInt pow(VarInt n)
+    IntN pow(IntN n)
         {
-        VarInt result = 1;
+        IntN result = 1;
 
         while (n-- > 0)
             {
@@ -237,13 +237,13 @@ const VarInt
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
-    conditional VarInt next()
+    conditional IntN next()
         {
         return True, this + 1;
         }
 
     @Override
-    conditional VarInt prev()
+    conditional IntN prev()
         {
         return True, this - 1;
         }
@@ -264,15 +264,15 @@ const VarInt
         }
 
     @Override
-    VarInt! toChecked()
+    IntN! toChecked()
         {
-        return this.is(Unchecked) ? new VarInt(bits) : this;
+        return this.is(Unchecked) ? new IntN(bits) : this;
         }
 
     @Override
-    @Unchecked VarInt toUnchecked()
+    @Unchecked IntN toUnchecked()
         {
-        return this.is(Unchecked) ? this : new @Unchecked VarInt(bits);
+        return this.is(Unchecked) ? this : new @Unchecked IntN(bits);
         }
 
     @Override
@@ -346,26 +346,26 @@ const VarInt
         }
 
     @Override
-    @Auto VarInt toVarInt()
+    @Auto IntN toIntN()
         {
         return this;
         }
 
     @Override
-    @Auto VarUInt toVarUInt()
+    @Auto UIntN toUIntN()
         {
         assert:bounds this >= 0;
-        return new VarUInt(bits);
+        return new UIntN(bits);
         }
 
     @Override
-    @Auto VarFloat toVarFloat()
+    @Auto FloatN toFloatN()
         {
         TODO
         }
 
     @Override
-    @Auto VarDec toVarDec()
+    @Auto DecN toDecN()
         {
         TODO
         }

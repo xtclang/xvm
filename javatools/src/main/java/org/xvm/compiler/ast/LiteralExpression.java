@@ -292,7 +292,7 @@ public class LiteralExpression
                 break;
 
             case LIT_INTN:
-                format = Format.VarInt;
+                format = Format.IntN;
                 break;
 
             case LIT_UINT8:
@@ -316,7 +316,7 @@ public class LiteralExpression
                 break;
 
             case LIT_UINTN:
-                format = Format.VarUInt;
+                format = Format.UIntN;
                 break;
 
             case LIT_DEC:
@@ -337,7 +337,7 @@ public class LiteralExpression
                 break;
 
             case LIT_DECN:
-                format = Format.VarDec;
+                format = Format.DecN;
                 break;
 
             case LIT_FLOAT16:
@@ -357,7 +357,7 @@ public class LiteralExpression
                 break;
 
             case LIT_FLOATN:
-                format = Format.VarFloat;
+                format = Format.FloatN;
                 break;
 
             case LIT_BFLOAT16:

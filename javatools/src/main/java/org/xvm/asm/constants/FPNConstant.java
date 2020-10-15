@@ -14,7 +14,7 @@ import static org.xvm.util.Handy.byteArrayToHexString;
 /**
  * Represent a variable-length floating point constant.
  */
-public class VarFPConstant
+public class FPNConstant
         extends ValueConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -28,7 +28,7 @@ public class VarFPConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public VarFPConstant(ConstantPool pool, Format format, DataInput in)
+    public FPNConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         this(pool, format, readVarBytes(in));
@@ -40,7 +40,7 @@ public class VarFPConstant
      * @param pool   the ConstantPool that will contain this Constant
      * @param abVal  the floating point value, provided as an array of 16 bytes
      */
-    public VarFPConstant(ConstantPool pool, Format format, byte[] abVal)
+    public FPNConstant(ConstantPool pool, Format format, byte[] abVal)
         {
         super(pool);
 
@@ -52,11 +52,11 @@ public class VarFPConstant
         int cbMin;
         switch (format)
             {
-            case VarDec:
+            case DecN:
                 cbMin = 4;
                 break;
 
-            case VarFloat:
+            case FloatN:
                 cbMin = 2;
                 break;
 
@@ -122,7 +122,7 @@ public class VarFPConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        if (!(that instanceof VarFPConstant))
+        if (!(that instanceof FPNConstant))
             {
             return -1;
             }
@@ -130,7 +130,7 @@ public class VarFPConstant
         // point values represented by the bytes
 
         byte[] abThis = this.m_abVal;
-        byte[] abThat = ((VarFPConstant) that).m_abVal;
+        byte[] abThat = ((FPNConstant) that).m_abVal;
 
         int cbThis = abThis.length;
         int cbThat = abThat.length;

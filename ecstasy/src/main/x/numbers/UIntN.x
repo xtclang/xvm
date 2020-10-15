@@ -1,7 +1,7 @@
 /**
  * An unsigned integer with a power-of-2 number of bits (at least 8).
  */
-const VarUInt
+const UIntN
         extends UIntNumber
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -40,13 +40,13 @@ const VarUInt
         }
 
     @Override
-    VarUInt leftmostBit.get()
+    UIntN leftmostBit.get()
         {
         TODO
         }
 
     @Override
-    VarUInt rightmostBit.get()
+    UIntN rightmostBit.get()
         {
         TODO
         }
@@ -56,102 +56,102 @@ const VarUInt
 
     @Override
     @Op("+")
-    VarUInt add(VarUInt n)
+    UIntN add(UIntN n)
         {
         return this + n;
         }
 
     @Override
     @Op("-")
-    VarUInt sub(VarUInt n)
+    UIntN sub(UIntN n)
         {
         return this - n;
         }
 
     @Override
     @Op("*")
-    VarUInt mul(VarUInt n)
+    UIntN mul(UIntN n)
         {
         return this * n;
         }
 
     @Override
     @Op("/")
-    VarUInt div(VarUInt n)
+    UIntN div(UIntN n)
         {
         return this / n;
         }
 
     @Override
     @Op("%")
-    VarUInt mod(VarUInt n)
+    UIntN mod(UIntN n)
         {
         return this % n;
         }
 
     @Override
     @Op("&")
-    VarUInt and(VarUInt n)
+    UIntN and(UIntN n)
         {
-        return new VarUInt(this.bits & n.bits);
+        return new UIntN(this.bits & n.bits);
         }
 
     @Override
     @Op("|")
-    VarUInt or(VarUInt n)
+    UIntN or(UIntN n)
         {
-        return new VarUInt(this.bits | n.bits);
+        return new UIntN(this.bits | n.bits);
         }
 
     @Override
     @Op("^")
-    VarUInt xor(VarUInt n)
+    UIntN xor(UIntN n)
         {
-        return new VarUInt(this.bits ^ n.bits);
+        return new UIntN(this.bits ^ n.bits);
         }
 
     @Override
     @Op("~")
-    VarUInt not()
+    UIntN not()
         {
-        return new VarUInt(~bits);
+        return new UIntN(~bits);
         }
 
     @Override
     @Op("<<")
-    VarUInt shiftLeft(Int count)
+    UIntN shiftLeft(Int count)
         {
-        return new VarUInt(bits << count);
+        return new UIntN(bits << count);
         }
 
     @Override
     @Op(">>")
-    VarUInt shiftRight(Int count)
+    UIntN shiftRight(Int count)
         {
-        return new VarUInt(bits >> count);
+        return new UIntN(bits >> count);
         }
 
     @Override
     @Op(">>>")
-    VarUInt shiftAllRight(Int count)
+    UIntN shiftAllRight(Int count)
         {
-        return new VarUInt(bits >>> count);
+        return new UIntN(bits >>> count);
         }
 
     @Override
-    VarUInt rotateLeft(Int count)
+    UIntN rotateLeft(Int count)
         {
-        return new VarUInt(bits.rotateLeft(count));
+        return new UIntN(bits.rotateLeft(count));
         }
 
     @Override
-    VarUInt rotateRight(Int count)
+    UIntN rotateRight(Int count)
         {
-        return new VarUInt(bits.rotateRight(count));
+        return new UIntN(bits.rotateRight(count));
         }
 
     @Override
-    VarUInt retainLSBits(Int count)
+    UIntN retainLSBits(Int count)
         {
         if (count <= 0)
             {
@@ -163,11 +163,11 @@ const VarUInt
             return this;
             }
 
-        return new VarUInt(bits.fill(0, [0..bitLength-count)));
+        return new UIntN(bits.fill(0, [0..bitLength-count)));
         }
 
     @Override
-    VarUInt retainMSBits(Int count)
+    UIntN retainMSBits(Int count)
         {
         if (count <= 0)
             {
@@ -179,25 +179,25 @@ const VarUInt
             return this;
             }
 
-        return new VarUInt(bits.fill(0, [count..bitLength)));
+        return new UIntN(bits.fill(0, [count..bitLength)));
         }
 
     @Override
-    VarUInt reverseBits()
+    UIntN reverseBits()
         {
-        return new VarUInt(bits.reversed());
+        return new UIntN(bits.reversed());
         }
 
     @Override
-    VarUInt reverseBytes()
+    UIntN reverseBytes()
         {
-        return new VarUInt(toByteArray().reversed());
+        return new UIntN(toByteArray().reversed());
         }
 
     @Override
-    VarUInt pow(VarUInt n)
+    UIntN pow(UIntN n)
         {
-        VarUInt result = 1;
+        UIntN result = 1;
 
         while (n-- > 0)
             {
@@ -211,13 +211,13 @@ const VarUInt
     // ----- Sequential interface ------------------------------------------------------------------
 
     @Override
-    conditional VarUInt next()
+    conditional UIntN next()
         {
         return True, this + 1;
         }
 
     @Override
-    conditional VarUInt prev()
+    conditional UIntN prev()
         {
         if (this > 0)
             {
@@ -243,15 +243,15 @@ const VarUInt
         }
 
     @Override
-    VarUInt! toChecked()
+    UIntN! toChecked()
         {
-        return this.is(Unchecked) ? new VarUInt(bits) : this;
+        return this.is(Unchecked) ? new UIntN(bits) : this;
         }
 
     @Override
-    @Unchecked VarUInt toUnchecked()
+    @Unchecked UIntN toUnchecked()
         {
-        return this.is(Unchecked) ? this : new @Unchecked VarUInt(bits);
+        return this.is(Unchecked) ? this : new @Unchecked UIntN(bits);
         }
 
     @Override
@@ -345,30 +345,30 @@ const VarUInt
         }
 
     @Override
-    @Auto VarInt toVarInt()
+    @Auto IntN toIntN()
         {
         Bit[] bits = this.bits;
         if (bits[0] == 1)
             {
             bits = new Array<Bit>(bits.size + 8, i -> (i < 8 ? 0 : bits[i-8]));
             }
-        return new VarInt(bits);
+        return new IntN(bits);
         }
 
     @Override
-    @Auto VarUInt toVarUInt()
+    @Auto UIntN toUIntN()
         {
         return this;
         }
 
     @Override
-    @Auto VarFloat toVarFloat()
+    @Auto FloatN toFloatN()
         {
         TODO
         }
 
     @Override
-    @Auto VarDec toVarDec()
+    @Auto DecN toDecN()
         {
         TODO
         }

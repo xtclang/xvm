@@ -486,7 +486,7 @@ const Duration(UInt128 picoseconds)
      */
     @Op("*") Duration mul(Dec factor)
         {
-        return new Duration((this.picoseconds.toVarDec() * factor.toVarDec()).toUInt128());
+        return new Duration((this.picoseconds.toDecN() * factor.toDecN()).toUInt128());
         }
 
     /**

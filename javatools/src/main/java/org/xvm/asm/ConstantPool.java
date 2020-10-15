@@ -438,8 +438,8 @@ public class ConstantPool
      * @param pint    the PackedInteger value
      * @param format  the format of the integer constant, one of {@link Format#Int16},
      *                {@link Format#Int32}, {@link Format#Int64}, {@link Format#Int128},
-     *                {@link Format#VarInt}, {@link Format#UInt16}, {@link Format#UInt32},
-     *                {@link Format#UInt64}, {@link Format#UInt128}, or {@link Format#VarUInt}
+     *                {@link Format#IntN}, {@link Format#UInt16}, {@link Format#UInt32},
+     *                {@link Format#UInt64}, {@link Format#UInt128}, or {@link Format#UIntN}
      *
      * @return an IntConstant for the passed PackedInteger value
      */
@@ -451,12 +451,12 @@ public class ConstantPool
             case Int32:
             case Int64:
             case Int128:
-            case VarInt:
+            case IntN:
             case UInt16:
             case UInt32:
             case UInt64:
             case UInt128:
-            case VarUInt:
+            case UIntN:
                 // check the pre-existing constants first
                 IntConstant constant = (IntConstant) ensureLocatorLookup(format).get(pint);
                 if (constant == null)
@@ -477,7 +477,7 @@ public class ConstantPool
      *
      * @return a DecimalConstant for the passed decimal value
      */
-    public DecimalConstant ensureDecimalConstant(Decimal dec)
+    public DecimalConstant ensureDecConstant(Decimal dec)
         {
         Format format;
         switch (dec.getBitLength())
@@ -505,15 +505,15 @@ public class ConstantPool
 
     /**
      * Given the specified decimal floating point value (stored in a byte array), obtain a
-     * VarFPConstant that represents it.
+     * FPNConstant that represents it.
      *
      * @param abVal  the floating point value encoded in 2, 4, 8, 16, 32 (and so on) bytes
      *
-     * @return a VarFPConstant for the passed floating point value
+     * @return a FPNConstant for the passed floating point value
      */
-    public VarFPConstant ensureVarDecimalConstant(byte[] abVal)
+    public FPNConstant ensureDecNConstant(byte[] abVal)
         {
-        return (VarFPConstant) register(new VarFPConstant(this, Format.VarDec, abVal));
+        return (FPNConstant) register(new FPNConstant(this, Format.DecN, abVal));
         }
 
     /**
@@ -599,15 +599,15 @@ public class ConstantPool
 
     /**
      * Given the specified binary floating point value (stored in a byte array), obtain a
-     * VarFPConstant that represents it.
+     * FPNConstant that represents it.
      *
      * @param abVal  the floating point value encoded in 2, 4, 8, 16, 32 (and so on) bytes
      *
-     * @return a VarFPConstant for the passed floating point value
+     * @return a FPNConstant for the passed floating point value
      */
-    public VarFPConstant ensureVarFloatConstant(byte[] abVal)
+    public FPNConstant ensureFloatNConstant(byte[] abVal)
         {
-        return (VarFPConstant) register(new VarFPConstant(this, Format.VarFloat, abVal));
+        return (FPNConstant) register(new FPNConstant(this, Format.FloatN, abVal));
         }
 
     /**
@@ -2401,12 +2401,12 @@ public class ConstantPool
                 case Int32:
                 case Int64:
                 case Int128:
-                case VarInt:
+                case IntN:
                 case UInt16:
                 case UInt32:
                 case UInt64:
                 case UInt128:
-                case VarUInt:
+                case UIntN:
                     constant = new IntConstant(this, format, in);
                     break;
 
@@ -2436,9 +2436,9 @@ public class ConstantPool
                     constant = new DecimalConstant(this, format, in);
                     break;
 
-                case VarFloat:
-                case VarDec:
-                    constant = new VarFPConstant(this, format, in);
+                case FloatN:
+                case DecN:
+                    constant = new FPNConstant(this, format, in);
                     break;
 
                 case Char:

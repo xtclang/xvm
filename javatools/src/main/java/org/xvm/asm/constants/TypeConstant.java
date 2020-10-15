@@ -5764,13 +5764,13 @@ public abstract class TypeConstant
             case "numbers.Int32":
             case "numbers.Int64":
             case "numbers.Int128":
-            case "numbers.VarInt":
+            case "numbers.IntN":
             case "numbers.UInt8":
             case "numbers.UInt16":
             case "numbers.UInt32":
             case "numbers.UInt64":
             case "numbers.UInt128":
-            case "numbers.VarUInt":
+            case "numbers.UIntN":
                 return true;
 
             default:
@@ -5812,8 +5812,8 @@ public abstract class TypeConstant
             case "numbers.UInt64":
             case "numbers.Int128":
             case "numbers.UInt128":
-            case "numbers.VarInt":
-            case "numbers.VarUInt":
+            case "numbers.IntN":
+            case "numbers.UIntN":
                 return Integer.MAX_VALUE;
 
             default:
@@ -5870,8 +5870,8 @@ public abstract class TypeConstant
             case "numbers.UInt64":
             case "numbers.Int128":
             case "numbers.UInt128":
-            case "numbers.VarInt":
-            case "numbers.VarUInt":
+            case "numbers.IntN":
+            case "numbers.UIntN":
                 return null;
 
             default:

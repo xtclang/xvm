@@ -80,10 +80,10 @@ public class xIntLiteral
         markNativeMethod("toUInt"    , VOID, new String[]{"numbers.UInt64"});
         markNativeMethod("toUInt128" , VOID, new String[]{"numbers.UInt128"});
 
-        markNativeMethod("toVarInt"  , VOID, new String[]{"numbers.VarInt"});
-        markNativeMethod("toVarUInt" , VOID, new String[]{"numbers.VarUInt"});
-        markNativeMethod("toVarFloat", VOID, new String[]{"numbers.VarFloat"});
-        markNativeMethod("toVarDec"  , VOID, new String[]{"numbers.VarDec"});
+        markNativeMethod("toIntN"  , VOID, new String[]{"numbers.IntN"});
+        markNativeMethod("toUIntN" , VOID, new String[]{"numbers.UIntN"});
+        markNativeMethod("toFloatN", VOID, new String[]{"numbers.FloatN"});
+        markNativeMethod("toDecN"  , VOID, new String[]{"numbers.DecN"});
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -99,7 +99,7 @@ public class xIntLiteral
         {
         LiteralConstant constVal = (LiteralConstant) constant;
         StringHandle hText       = (StringHandle) frame.getConstHandle(constVal.getStringConstant());
-        VarIntHandle hIntLiteral = makeIntLiteral(constVal.getPackedInteger(), hText);
+        IntNHandle hIntLiteral = makeIntLiteral(constVal.getPackedInteger(), hText);
 
         return frame.pushStack(hIntLiteral);
         }
@@ -131,7 +131,7 @@ public class xIntLiteral
         switch (idProp.getName())
             {
             case "text":
-                return frame.assignValue(iReturn, ((VarIntHandle) hTarget).getText());
+                return frame.assignValue(iReturn, ((IntNHandle) hTarget).getText());
             }
         return frame.raiseException("not supported field: " + idProp.getName());
         }
@@ -139,8 +139,8 @@ public class xIntLiteral
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.add(pi2)));
         }
@@ -148,8 +148,8 @@ public class xIntLiteral
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.sub(pi2)));
         }
@@ -157,8 +157,8 @@ public class xIntLiteral
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.mul(pi2)));
         }
@@ -166,8 +166,8 @@ public class xIntLiteral
     @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.div(pi2)));
         }
@@ -175,8 +175,8 @@ public class xIntLiteral
     @Override
     public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.mod(pi2)));
         }
@@ -184,7 +184,7 @@ public class xIntLiteral
     @Override
     public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi    = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi    = ((IntNHandle) hTarget).getValue();
         long          count = ((JavaLong) hArg).getValue();
 
         if (count > Integer.MAX_VALUE)
@@ -197,7 +197,7 @@ public class xIntLiteral
     @Override
     public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi    = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi    = ((IntNHandle) hTarget).getValue();
         long          count = ((JavaLong) hArg).getValue();
 
         if (count > Integer.MAX_VALUE)
@@ -210,7 +210,7 @@ public class xIntLiteral
     @Override
     public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi    = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi    = ((IntNHandle) hTarget).getValue();
         long          count = ((JavaLong) hArg).getValue();
 
         if (count > Integer.MAX_VALUE)
@@ -223,8 +223,8 @@ public class xIntLiteral
     @Override
     public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.and(pi2)));
         }
@@ -232,8 +232,8 @@ public class xIntLiteral
     @Override
     public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.or(pi2)));
         }
@@ -241,8 +241,8 @@ public class xIntLiteral
     @Override
     public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi1.xor(pi2)));
         }
@@ -250,7 +250,7 @@ public class xIntLiteral
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        PackedInteger pi = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi = ((IntNHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi.negate()));
         }
@@ -258,7 +258,7 @@ public class xIntLiteral
     @Override
     public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        PackedInteger pi = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi = ((IntNHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, makeIntLiteral(pi.complement()));
         }
@@ -310,7 +310,7 @@ public class xIntLiteral
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        VarIntHandle hLiteral = (VarIntHandle) hTarget;
+        IntNHandle hLiteral = (IntNHandle) hTarget;
         switch (method.getName())
             {
             case "not":
@@ -326,10 +326,10 @@ public class xIntLiteral
             case "toUInt32":
             case "toUInt":
             case "toUInt128":
-            case "toVarInt":
-            case "toVarUInt":
-            case "toVarFloat":
-            case "toVarDec":
+            case "toIntN":
+            case "toUIntN":
+            case "toFloatN":
+            case "toDecN":
                 TypeConstant  typeRet  = method.getReturn(0).getType();
                 ClassTemplate template = f_templates.getTemplate(typeRet);
                 PackedInteger piValue  = hLiteral.getValue();
@@ -356,20 +356,20 @@ public class xIntLiteral
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
-    protected VarIntHandle makeIntLiteral(PackedInteger piValue)
+    protected IntNHandle makeIntLiteral(PackedInteger piValue)
         {
-        return new VarIntHandle(getCanonicalClass(), piValue, null);
+        return new IntNHandle(getCanonicalClass(), piValue, null);
         }
 
-    protected VarIntHandle makeIntLiteral(PackedInteger piValue, StringHandle hText)
+    protected IntNHandle makeIntLiteral(PackedInteger piValue, StringHandle hText)
         {
-        return new VarIntHandle(getCanonicalClass(), piValue, hText);
+        return new IntNHandle(getCanonicalClass(), piValue, hText);
         }
 
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        VarIntHandle hLiteral = (VarIntHandle) hTarget;
+        IntNHandle hLiteral = (IntNHandle) hTarget;
         return frame.assignValue(iReturn, hLiteral.getText());
         }
 
@@ -380,8 +380,8 @@ public class xIntLiteral
     public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        VarIntHandle h1 = (VarIntHandle) hValue1;
-        VarIntHandle h2 = (VarIntHandle) hValue2;
+        IntNHandle h1 = (IntNHandle) hValue1;
+        IntNHandle h2 = (IntNHandle) hValue2;
 
         return frame.assignValue(iReturn, xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
         }
@@ -390,19 +390,19 @@ public class xIntLiteral
     public int callCompare(Frame frame, ClassComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        VarIntHandle h1 = (VarIntHandle) hValue1;
-        VarIntHandle h2 = (VarIntHandle) hValue2;
+        IntNHandle h1 = (IntNHandle) hValue1;
+        IntNHandle h2 = (IntNHandle) hValue2;
 
         return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue().cmp(h2.getValue())));
         }
 
     /**
-     * This handle type is used by VarInt, VarUInt as well as IntLiteral.
+     * This handle type is used by IntN, UIntN as well as IntLiteral.
      */
-    public static class VarIntHandle
+    public static class IntNHandle
             extends ObjectHandle
         {
-        public VarIntHandle(TypeComposition clazz, PackedInteger piValue, StringHandle hText)
+        public IntNHandle(TypeComposition clazz, PackedInteger piValue, StringHandle hText)
             {
             super(clazz);
 
@@ -432,7 +432,7 @@ public class xIntLiteral
         @Override
         public boolean equals(Object obj)
             {
-            return obj instanceof VarIntHandle && m_piValue.equals(((VarIntHandle) obj).m_piValue);
+            return obj instanceof IntNHandle && m_piValue.equals(((IntNHandle) obj).m_piValue);
             }
 
         @Override

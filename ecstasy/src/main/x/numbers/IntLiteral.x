@@ -76,7 +76,7 @@ const IntLiteral(String text)
             }
 
         // digits
-        VarUInt magnitude = 0;
+        UIntN magnitude = 0;
         Int     digits    = 0;
         while (of < text.length)
             {
@@ -101,7 +101,7 @@ const IntLiteral(String text)
                 }
 
             assert nch < radix;
-            magnitude = magnitude * radix + nch.toVarInt();
+            magnitude = magnitude * radix + nch.toIntN();
             ++digits;
             underscoreOk = True;
             }
@@ -124,9 +124,9 @@ const IntLiteral(String text)
     Int radix = 10;
 
     /**
-     * This is the value of the literal in VarInt form.
+     * This is the value of the literal in IntN form.
      */
-    VarUInt magnitude;
+    UIntN magnitude;
 
     /**
      * The literal text.
@@ -304,7 +304,7 @@ const IntLiteral(String text)
     @Op("+")
     IntLiteral add(IntLiteral n)
         {
-        return new IntLiteral((this.toVarInt() + n.toVarInt()).toString());
+        return new IntLiteral((this.toIntN() + n.toIntN()).toString());
         }
 
     /**
@@ -313,7 +313,7 @@ const IntLiteral(String text)
     @Op("-")
     IntLiteral sub(IntLiteral n)
         {
-        return new IntLiteral((this.toVarInt() - n.toVarInt()).toString());
+        return new IntLiteral((this.toIntN() - n.toIntN()).toString());
         }
 
     /**
@@ -322,7 +322,7 @@ const IntLiteral(String text)
     @Op("*")
     IntLiteral mul(IntLiteral n)
         {
-        return new IntLiteral((this.toVarInt() * n.toVarInt()).toString());
+        return new IntLiteral((this.toIntN() * n.toIntN()).toString());
         }
 
     /**
@@ -331,7 +331,7 @@ const IntLiteral(String text)
     @Op("/")
     IntLiteral div(IntLiteral n)
         {
-        return new IntLiteral((this.toVarInt() / n.toVarInt()).toString());
+        return new IntLiteral((this.toIntN() / n.toIntN()).toString());
         }
 
     /**
@@ -340,7 +340,7 @@ const IntLiteral(String text)
     @Op("%")
     IntLiteral mod(IntLiteral n)
         {
-        return new IntLiteral((this.toVarInt() % n.toVarInt()).toString());
+        return new IntLiteral((this.toIntN() % n.toIntN()).toString());
         }
 
 
@@ -390,7 +390,7 @@ const IntLiteral(String text)
     /**
      * Convert the number to a variable-length signed integer.
      */
-    @Auto VarInt toVarInt()
+    @Auto IntN toIntN()
         {
         TODO
         }
@@ -401,7 +401,7 @@ const IntLiteral(String text)
      */
     @Auto Int8 toInt8()
         {
-        return toVarInt().toInt8();
+        return toIntN().toInt8();
         }
 
     /**
@@ -410,7 +410,7 @@ const IntLiteral(String text)
      */
     @Auto Int16 toInt16()
         {
-        return toVarInt().toInt16();
+        return toIntN().toInt16();
         }
 
     /**
@@ -419,7 +419,7 @@ const IntLiteral(String text)
      */
     @Auto Int32 toInt32()
         {
-        return toVarInt().toInt32();
+        return toIntN().toInt32();
         }
 
     /**
@@ -428,7 +428,7 @@ const IntLiteral(String text)
      */
     @Auto Int64 toInt()
         {
-        return toVarInt().toInt();
+        return toIntN().toInt();
         }
 
     /**
@@ -437,13 +437,13 @@ const IntLiteral(String text)
      */
     @Auto Int128 toInt128()
         {
-        return toVarInt().toInt128();
+        return toIntN().toInt128();
         }
 
     /**
      * Convert the number to a variable-length unsigned integer.
      */
-    @Auto VarUInt toVarUInt()
+    @Auto UIntN toUIntN()
         {
         TODO
         }
@@ -454,7 +454,7 @@ const IntLiteral(String text)
      */
     @Auto UInt8 toByte()
         {
-        return toVarUInt().toByte();
+        return toUIntN().toByte();
         }
 
     /**
@@ -463,7 +463,7 @@ const IntLiteral(String text)
      */
     @Auto UInt16 toUInt16()
         {
-        return toVarUInt().toUInt16();
+        return toUIntN().toUInt16();
         }
 
     /**
@@ -472,7 +472,7 @@ const IntLiteral(String text)
      */
     @Auto UInt32 toUInt32()
         {
-        return toVarUInt().toUInt32();
+        return toUIntN().toUInt32();
         }
 
     /**
@@ -481,7 +481,7 @@ const IntLiteral(String text)
      */
     @Auto UInt64 toUInt()
         {
-        return toVarUInt().toUInt();
+        return toUIntN().toUInt();
         }
 
     /**
@@ -490,13 +490,13 @@ const IntLiteral(String text)
      */
     @Auto UInt128 toUInt128()
         {
-        return toVarInt().toUInt128();
+        return toIntN().toUInt128();
         }
 
     /**
      * Convert the number to a variable-length binary radix floating point number.
      */
-    @Auto VarFloat toVarFloat()
+    @Auto FloatN toFloatN()
         {
         TODO
         }
@@ -506,7 +506,7 @@ const IntLiteral(String text)
      */
     @Auto Float16 toFloat16()
         {
-        return toVarFloat().toFloat16();
+        return toFloatN().toFloat16();
         }
 
     /**
@@ -514,7 +514,7 @@ const IntLiteral(String text)
      */
     @Auto BFloat16 toBFloat16()
         {
-        return toVarFloat().toBFloat16();
+        return toFloatN().toBFloat16();
         }
 
     /**
@@ -522,7 +522,7 @@ const IntLiteral(String text)
      */
     @Auto Float32 toFloat32()
         {
-        return toVarFloat().toFloat32();
+        return toFloatN().toFloat32();
         }
 
     /**
@@ -530,7 +530,7 @@ const IntLiteral(String text)
      */
     @Auto Float64 toFloat64()
         {
-        return toVarFloat().toFloat64();
+        return toFloatN().toFloat64();
         }
 
     /**
@@ -538,13 +538,13 @@ const IntLiteral(String text)
      */
     @Auto Float128 toFloat128()
         {
-        return toVarFloat().toFloat128();
+        return toFloatN().toFloat128();
         }
 
     /**
      * Convert the number to a variable-length decimal radix floating point number.
      */
-    @Auto VarDec toVarDec()
+    @Auto DecN toDecN()
         {
         TODO
         }
@@ -554,7 +554,7 @@ const IntLiteral(String text)
      */
     @Auto Dec32 toDec32()
         {
-        return toVarDec().toDec32();
+        return toDecN().toDec32();
         }
 
     /**
@@ -562,7 +562,7 @@ const IntLiteral(String text)
      */
     @Auto Dec64 toDec64()
         {
-        return toVarDec().toDec64();
+        return toDecN().toDec64();
         }
 
     /**
@@ -570,7 +570,7 @@ const IntLiteral(String text)
      */
     @Auto Dec128 toDec128()
         {
-        return toVarDec().toDec128();
+        return toDecN().toDec128();
         }
 
     /**

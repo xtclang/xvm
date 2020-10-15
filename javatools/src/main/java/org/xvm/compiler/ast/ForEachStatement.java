@@ -681,13 +681,13 @@ public class ForEachStatement
                 case "numbers.Int32":
                 case "numbers.Int64":
                 case "numbers.Int128":
-                case "numbers.VarInt":
+                case "numbers.IntN":
                 case "numbers.UInt8":
                 case "numbers.UInt16":
                 case "numbers.UInt32":
                 case "numbers.UInt64":
                 case "numbers.UInt128":
-                case "numbers.VarUInt":
+                case "numbers.UIntN":
                     return emitConstantRange(ctx, fReachable, code, errs);
                 }
             }

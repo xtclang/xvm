@@ -14,10 +14,10 @@ import numbers.UInt8;
 import numbers.UInt16;
 import numbers.UInt32;
 import numbers.UInt128;
-import numbers.VarDec;
-import numbers.VarFloat;
-import numbers.VarInt;
-import numbers.VarUInt;
+import numbers.DecN;
+import numbers.FloatN;
+import numbers.IntN;
+import numbers.UIntN;
 
 /**
  * The DataOutput interface represents a output stream of values of various fundamental Ecstasy
@@ -163,11 +163,11 @@ interface DataOutput
         }
 
     /**
-     * Write a VarInt value to the stream.
+     * Write a IntN value to the stream.
      *
-     * @param value  a value of type VarInt to write to the stream
+     * @param value  a value of type IntN to write to the stream
      */
-    void writeVarInt(VarInt value)
+    void writeIntN(IntN value)
         {
         Byte[] bytes = value.toByteArray();
         writeInt(bytes.size);
@@ -175,11 +175,11 @@ interface DataOutput
         }
 
     /**
-     * Write a VarUInt value to the stream.
+     * Write a UIntN value to the stream.
      *
-     * @param value  a value of type VarUInt to write to the stream
+     * @param value  a value of type UIntN to write to the stream
      */
-    void writeVarUInt(VarUInt value)
+    void writeUIntN(UIntN value)
         {
         Byte[] bytes = value.toByteArray();
         writeInt(bytes.size);
@@ -217,11 +217,11 @@ interface DataOutput
         }
 
     /**
-     * Write a VarDec value to the stream.
+     * Write a DecN value to the stream.
      *
-     * @param value  a value of type VarDec to write to the stream
+     * @param value  a value of type DecN to write to the stream
      */
-    void writeVarDec(VarDec value)
+    void writeDecN(DecN value)
         {
         Byte[] bytes = value.toByteArray();
         writeInt(bytes.size);
@@ -279,11 +279,11 @@ interface DataOutput
         }
 
     /**
-     * Write a VarFloat value to the stream.
+     * Write a FloatN value to the stream.
      *
-     * @param value  a value of type VarFloat to write to the stream
+     * @param value  a value of type FloatN to write to the stream
      */
-    void writeVarFloat(VarFloat value)
+    void writeFloatN(FloatN value)
         {
         Byte[] bytes = value.toByteArray();
         writeInt(bytes.size);
@@ -391,11 +391,11 @@ interface DataOutput
      * Calculate the number of bytes required to write an integer to a stream, encoding it using the
      * packed integer format.
      *
-     * @param n  the `VarInt` value
+     * @param n  the `IntN` value
      *
      * @return the number of bytes required to write the value as a packed value
      */
-    static Int packedVarIntLength(VarInt n)
+    static Int packedIntNLength(IntN n)
         {
         return Int.minvalue <= n <= Int.maxvalue
                 ? packedIntLength(n.toInt())
@@ -488,9 +488,9 @@ interface DataOutput
      * See the notes on `writePackedInt()`.
      *
      * @param out  the DataOutput stream to write to
-     * @param n    the VarInt value to write to the stream
+     * @param n    the IntN value to write to the stream
      */
-    static void writePackedVarInt(DataOutput out, VarInt n)
+    static void writePackedIntN(DataOutput out, IntN n)
         {
         if (Int.minvalue <= n <= Int.maxvalue)
             {

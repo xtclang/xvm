@@ -49,12 +49,12 @@ public class xFPLiteral
 
         markNativeMethod("toString", VOID, STRING);
 
-        markNativeMethod("toVarFloat"  , VOID, new String[]{"numbers.VarFloat"});
+        markNativeMethod("toFloatN"  , VOID, new String[]{"numbers.FloatN"});
         markNativeMethod("toFloat16"   , VOID, new String[]{"numbers.Float16"});
         markNativeMethod("toFloat32"   , VOID, new String[]{"numbers.Float32"});
         markNativeMethod("toFloat64"   , VOID, new String[]{"numbers.Float64"});
         markNativeMethod("toFloat128"  , VOID, new String[]{"numbers.Float128"});
-        markNativeMethod("toVarDec"    , VOID, new String[]{"numbers.VarDec"});
+        markNativeMethod("toDecN"    , VOID, new String[]{"numbers.DecN"});
         markNativeMethod("toDec32"     , VOID, new String[]{"numbers.Dec32"});
         markNativeMethod("toDec64"     , VOID, new String[]{"numbers.Dec64"});
         markNativeMethod("toDec128"    , VOID, new String[]{"numbers.Dec128"});
@@ -73,7 +73,7 @@ public class xFPLiteral
         {
         LiteralConstant constVal    = (LiteralConstant) constant;
         StringHandle    hText       = (StringHandle) frame.getConstHandle(constVal.getStringConstant());
-        VarFPHandle     hFPLiteral  = makeFPLiteral(constVal.getBigDecimal(), hText);
+        FPNHandle     hFPLiteral  = makeFPLiteral(constVal.getBigDecimal(), hText);
 
         return frame.pushStack(hFPLiteral);
         }
@@ -101,7 +101,7 @@ public class xFPLiteral
         switch (idProp.getName())
             {
             case "text":
-                return frame.assignValue(iReturn, ((VarFPHandle) hTarget).getText());
+                return frame.assignValue(iReturn, ((FPNHandle) hTarget).getText());
             }
         return frame.raiseException("not supported field: " + idProp.getName());
         }
@@ -109,8 +109,8 @@ public class xFPLiteral
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        BigDecimal dec1 = ((VarFPHandle) hTarget).getValue();
-        BigDecimal dec2 = ((VarFPHandle) hArg).getValue();
+        BigDecimal dec1 = ((FPNHandle) hTarget).getValue();
+        BigDecimal dec2 = ((FPNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeFPLiteral(dec1.add(dec2)));
         }
@@ -118,8 +118,8 @@ public class xFPLiteral
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        BigDecimal dec1 = ((VarFPHandle) hTarget).getValue();
-        BigDecimal dec2 = ((VarFPHandle) hArg).getValue();
+        BigDecimal dec1 = ((FPNHandle) hTarget).getValue();
+        BigDecimal dec2 = ((FPNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeFPLiteral(dec1.subtract(dec2)));
         }
@@ -127,8 +127,8 @@ public class xFPLiteral
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        BigDecimal dec1 = ((VarFPHandle) hTarget).getValue();
-        BigDecimal dec2 = ((VarFPHandle) hArg).getValue();
+        BigDecimal dec1 = ((FPNHandle) hTarget).getValue();
+        BigDecimal dec2 = ((FPNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeFPLiteral(dec1.multiply(dec2)));
         }
@@ -136,8 +136,8 @@ public class xFPLiteral
     @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        BigDecimal dec1 = ((VarFPHandle) hTarget).getValue();
-        BigDecimal dec2 = ((VarFPHandle) hArg).getValue();
+        BigDecimal dec1 = ((FPNHandle) hTarget).getValue();
+        BigDecimal dec2 = ((FPNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeFPLiteral(dec1.divide(dec2)));
         }
@@ -146,7 +146,7 @@ public class xFPLiteral
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        VarFPHandle hLiteral = (VarFPHandle) hTarget;
+        FPNHandle hLiteral = (FPNHandle) hTarget;
         switch (method.getName())
             {
             case "toFloat16":
@@ -168,38 +168,38 @@ public class xFPLiteral
                         xDec64.INSTANCE.makeHandle(hLiteral.getValue().doubleValue()));
 
             case "toFloat128":
-            case "toVarFloat":
-            case "toVarDec":
+            case "toFloatN":
+            case "toDecN":
             case "toDec128":
                 throw new UnsupportedOperationException(); // TODO
             }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
-    protected VarFPHandle makeFPLiteral(BigDecimal decValue)
+    protected FPNHandle makeFPLiteral(BigDecimal decValue)
         {
-        return new VarFPHandle(getCanonicalClass(), decValue, null);
+        return new FPNHandle(getCanonicalClass(), decValue, null);
         }
 
-    protected VarFPHandle makeFPLiteral(BigDecimal decValue, StringHandle hText)
+    protected FPNHandle makeFPLiteral(BigDecimal decValue, StringHandle hText)
         {
-        return new VarFPHandle(getCanonicalClass(), decValue, hText);
+        return new FPNHandle(getCanonicalClass(), decValue, hText);
         }
 
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        VarFPHandle hLiteral = (VarFPHandle) hTarget;
+        FPNHandle hLiteral = (FPNHandle) hTarget;
         return frame.assignValue(iReturn, hLiteral.getText());
         }
 
     /**
-     * This handle type is used by VarInt, VarUInt as well as IntLiteral.
+     * This handle type is used by IntN, UIntN as well as IntLiteral.
      */
-    public static class VarFPHandle
+    public static class FPNHandle
             extends ObjectHandle
         {
-        public VarFPHandle(TypeComposition clazz, BigDecimal decValue, StringHandle hText)
+        public FPNHandle(TypeComposition clazz, BigDecimal decValue, StringHandle hText)
             {
             super(clazz);
 
@@ -229,7 +229,7 @@ public class xFPLiteral
         @Override
         public boolean equals(Object obj)
             {
-            return obj instanceof VarFPHandle && m_decValue.equals(((VarFPHandle) obj).m_decValue);
+            return obj instanceof FPNHandle && m_decValue.equals(((FPNHandle) obj).m_decValue);
             }
 
         @Override

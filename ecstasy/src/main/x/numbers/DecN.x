@@ -1,4 +1,4 @@
-const VarDec
+const DecN
         extends DecimalFPNumber
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -33,49 +33,49 @@ const VarDec
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
-    @Op VarDec add(VarDec n)
+    @Op DecN add(DecN n)
         {
         TODO
         }
 
     @Override
-    @Op VarDec sub(VarDec n)
+    @Op DecN sub(DecN n)
         {
         TODO
         }
 
     @Override
-    @Op VarDec mul(VarDec n)
+    @Op DecN mul(DecN n)
         {
         TODO
         }
 
     @Override
-    @Op VarDec div(VarDec n)
+    @Op DecN div(DecN n)
         {
         TODO
         }
 
     @Override
-    @Op VarDec mod(VarDec n)
+    @Op DecN mod(DecN n)
         {
         TODO
         }
 
     @Override
-    VarDec abs()
+    DecN abs()
         {
         return this < 0 ? -this : this;
         }
 
     @Override
-    @Op VarDec neg()
+    @Op DecN neg()
         {
         TODO
         }
 
     @Override
-    VarDec pow(VarDec n)
+    DecN pow(DecN n)
         {
         TODO
         }
@@ -84,7 +84,7 @@ const VarDec
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    @RO VarInt emax.get()
+    @RO IntN emax.get()
         {
         // from IEEE 754-2008:
         //   w    = k/16+4
@@ -93,13 +93,13 @@ const VarDec
         }
 
     @Override
-    VarInt emin.get()
+    IntN emin.get()
         {
         return 1 - emax;
         }
 
     @Override
-    VarInt bias.get()
+    IntN bias.get()
         {
         // from IEEE 754-2008:
         //   emax+p−2
@@ -110,169 +110,169 @@ const VarDec
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean signBit, VarInt significand, VarInt exponent) split()
+    (Boolean signBit, IntN significand, IntN exponent) split()
         {
         TODO
         }
 
     @Override
-    VarDec round(Rounding direction = TiesToAway)
+    DecN round(Rounding direction = TiesToAway)
         {
         TODO
         }
 
     @Override
-    VarDec floor()
+    DecN floor()
         {
         TODO
         }
 
     @Override
-    VarDec ceil()
+    DecN ceil()
         {
         TODO
         }
 
     @Override
-    VarDec exp()
+    DecN exp()
         {
         TODO
         }
 
     @Override
-    VarDec scaleByPow(Int n)
+    DecN scaleByPow(Int n)
         {
         TODO
         }
 
     @Override
-    VarDec log()
+    DecN log()
         {
         TODO
         }
 
     @Override
-    VarDec log2()
+    DecN log2()
         {
         TODO
         }
 
     @Override
-    VarDec log10()
+    DecN log10()
         {
         TODO
         }
 
     @Override
-    VarDec sqrt()
+    DecN sqrt()
         {
         TODO
         }
 
     @Override
-    VarDec cbrt()
+    DecN cbrt()
         {
         TODO
         }
 
     @Override
-    VarDec sin()
+    DecN sin()
         {
         TODO
         }
 
     @Override
-    VarDec cos()
+    DecN cos()
         {
         TODO
         }
 
     @Override
-    VarDec tan()
+    DecN tan()
         {
         TODO
         }
 
     @Override
-    VarDec asin()
+    DecN asin()
         {
         TODO
         }
 
     @Override
-    VarDec acos()
+    DecN acos()
         {
         TODO
         }
 
     @Override
-    VarDec atan()
+    DecN atan()
         {
         TODO
         }
 
     @Override
-    VarDec atan2(VarDec y)
+    DecN atan2(DecN y)
         {
         TODO
         }
 
     @Override
-    VarDec sinh()
+    DecN sinh()
         {
         TODO
         }
 
     @Override
-    VarDec cosh()
+    DecN cosh()
         {
         TODO
         }
 
     @Override
-    VarDec tanh()
+    DecN tanh()
         {
         TODO
         }
 
     @Override
-    VarDec asinh()
+    DecN asinh()
         {
         TODO
         }
 
     @Override
-    VarDec acosh()
+    DecN acosh()
         {
         TODO
         }
 
     @Override
-    VarDec atanh()
+    DecN atanh()
         {
         TODO
         }
 
     @Override
-    VarDec deg2rad()
+    DecN deg2rad()
         {
         TODO
         }
 
     @Override
-    VarDec rad2deg()
+    DecN rad2deg()
         {
         TODO
         }
 
     @Override
-    VarDec nextUp()
+    DecN nextUp()
         {
         TODO
         }
 
     @Override
-    VarDec nextDown()
+    DecN nextDown()
         {
         TODO
         }
@@ -281,25 +281,25 @@ const VarDec
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    VarInt toVarInt()
+    IntN toIntN()
         {
         TODO
         }
 
     @Override
-    VarUInt toVarUInt()
+    UIntN toUIntN()
         {
         TODO
         }
 
     @Override
-    VarFloat toVarFloat()
+    FloatN toFloatN()
         {
         TODO
         }
 
     @Override
-    VarDec! toVarDec()
+    DecN! toDecN()
         {
         return this;
         }

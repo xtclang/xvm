@@ -7,14 +7,14 @@ import org.xvm.runtime.TemplateRegistry;
 
 
 /**
- * Native VarInt support.
+ * Native IntN support.
  */
-public class xVarInt
+public class xIntN
         extends xUnconstrainedInteger
     {
-    public static xVarInt INSTANCE;
+    public static xIntN INSTANCE;
 
-    public xVarInt(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xIntN(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
 

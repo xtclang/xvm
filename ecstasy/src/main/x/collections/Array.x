@@ -18,10 +18,10 @@ import numbers.UInt16;
 import numbers.UInt32;
 import numbers.UInt64;
 import numbers.UInt128;
-import numbers.VarDec;
-import numbers.VarFloat;
-import numbers.VarInt;
-import numbers.VarUInt;
+import numbers.DecN;
+import numbers.FloatN;
+import numbers.IntN;
+import numbers.UIntN;
 
 /**
  * Array is the fundamental implementation of List; it is an Int-indexed container of elements of a
@@ -1416,7 +1416,7 @@ class Array<Element>
         /**
          * Convert the bit array to a variable-length signed integer.
          */
-        VarInt toVarInt()
+        IntN toIntN()
             {
             TODO
             }
@@ -1428,7 +1428,7 @@ class Array<Element>
          */
         Int8 toInt8()
             {
-            return toVarInt().toInt8();
+            return toIntN().toInt8();
             }
 
         /**
@@ -1438,7 +1438,7 @@ class Array<Element>
          */
         Int16 toInt16()
             {
-            return toVarInt().toInt16();
+            return toIntN().toInt16();
             }
 
         /**
@@ -1448,7 +1448,7 @@ class Array<Element>
          */
         Int32 toInt32()
             {
-            return toVarInt().toInt32();
+            return toIntN().toInt32();
             }
 
         /**
@@ -1458,7 +1458,7 @@ class Array<Element>
          */
         Int64 toInt()
             {
-            return toVarInt().toInt();
+            return toIntN().toInt();
             }
 
         /**
@@ -1468,13 +1468,13 @@ class Array<Element>
          */
         Int128 toInt128()
             {
-            return toVarInt().toInt128();
+            return toIntN().toInt128();
             }
 
         /**
          * Convert the bit array to a variable-length unsigned integer.
          */
-        VarUInt toVarUInt()
+        UIntN toUIntN()
             {
             TODO
             }
@@ -1486,7 +1486,7 @@ class Array<Element>
          */
         UInt8 toByte()
             {
-            return toVarUInt().toByte();
+            return toUIntN().toByte();
             }
 
         /**
@@ -1496,7 +1496,7 @@ class Array<Element>
          */
         UInt16 toUInt16()
             {
-            return toVarUInt().toUInt16();
+            return toUIntN().toUInt16();
             }
 
         /**
@@ -1506,7 +1506,7 @@ class Array<Element>
          */
         UInt32 toUInt32()
             {
-            return toVarUInt().toUInt32();
+            return toUIntN().toUInt32();
             }
 
         /**
@@ -1516,7 +1516,7 @@ class Array<Element>
          */
         UInt64 toUInt()
             {
-            return toVarUInt().toUInt();
+            return toUIntN().toUInt();
             }
 
         /**
@@ -1526,13 +1526,13 @@ class Array<Element>
          */
         UInt128 toUInt128()
             {
-            return toVarInt().toUInt128();
+            return toIntN().toUInt128();
             }
 
         /**
          * Convert the bit array to a variable-length binary radix floating point number.
          */
-        VarFloat toVarFloat()
+        FloatN toFloatN()
             {
             TODO
             }
@@ -1542,7 +1542,7 @@ class Array<Element>
          */
         Float16 toFloat16()
             {
-            return toVarFloat().toFloat16();
+            return toFloatN().toFloat16();
             }
 
         /**
@@ -1550,7 +1550,7 @@ class Array<Element>
          */
         BFloat16 toBFloat16()
             {
-            return toVarFloat().toBFloat16();
+            return toFloatN().toBFloat16();
             }
 
         /**
@@ -1558,7 +1558,7 @@ class Array<Element>
          */
         Float32 toFloat32()
             {
-            return toVarFloat().toFloat32();
+            return toFloatN().toFloat32();
             }
 
         /**
@@ -1566,7 +1566,7 @@ class Array<Element>
          */
         Float64 toFloat64()
             {
-            return toVarFloat().toFloat64();
+            return toFloatN().toFloat64();
             }
 
         /**
@@ -1574,13 +1574,13 @@ class Array<Element>
          */
         Float128 toFloat128()
             {
-            return toVarFloat().toFloat128();
+            return toFloatN().toFloat128();
             }
 
         /**
          * Convert the bit array to a variable-length decimal radix floating point number.
          */
-        VarDec toVarDec()
+        DecN toDecN()
             {
             TODO
             }
@@ -1590,7 +1590,7 @@ class Array<Element>
          */
         Dec32 toDec32()
             {
-            return toVarDec().toDec32();
+            return toDecN().toDec32();
             }
 
         /**
@@ -1598,7 +1598,7 @@ class Array<Element>
          */
         Dec64 toDec64()
             {
-            return toVarDec().toDec64();
+            return toDecN().toDec64();
             }
 
         /**
@@ -1606,7 +1606,7 @@ class Array<Element>
          */
         Dec128 toDec128()
             {
-            return toVarDec().toDec128();
+            return toDecN().toDec128();
             }
         }
 
@@ -1678,10 +1678,10 @@ class Array<Element>
          * @throws OutOfBounds  if the byte array is too large to be converted to a variable-length
          *                      signed integer
          */
-        VarInt toVarInt()
+        IntN toIntN()
             {
             assert:bounds size > 0;
-            return new VarInt(this);
+            return new IntN(this);
             }
 
         /**
@@ -1750,10 +1750,10 @@ class Array<Element>
          * @throws OutOfBounds  if the byte array is too large to be converted to a variable-length
          *                      unsigned integer
          */
-        VarUInt toVarUInt()
+        UIntN toUIntN()
             {
             assert:bounds size > 0;
-            return new VarUInt(this);
+            return new UIntN(this);
             }
 
         /**
@@ -1822,10 +1822,10 @@ class Array<Element>
          * @throws OutOfBounds  if the byte array is too large to be converted to a variable-length
          *                      radix-2 (binary) floating point number
          */
-        VarFloat toVarFloat()
+        FloatN toFloatN()
             {
             assert:bounds size >= 2 && size.bitCount == 1;
-            return new VarFloat(this);
+            return new FloatN(this);
             }
 
         /**
@@ -1894,10 +1894,10 @@ class Array<Element>
          * @throws OutOfBounds  if the byte array is too large to be converted to a variable-length
          *                      radix-10 (decimal) floating point number
          */
-        VarDec toVarDec()
+        DecN toDecN()
             {
             assert:bounds size >= 4 && size.bitCount == 1;
-            return new VarDec(this);
+            return new DecN(this);
             }
 
         /**

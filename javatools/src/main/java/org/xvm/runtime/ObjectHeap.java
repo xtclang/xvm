@@ -144,24 +144,24 @@ public class ObjectHeap
             case Int32:
             case Int64:
             case Int128:
-            case VarInt:
+            case IntN:
             case UInt8:
             case UInt16:
             case UInt32:
             case UInt64:
             case UInt128:
-            case VarUInt:
+            case UIntN:
             case FPLiteral:
             case BFloat16:
             case Float16:
             case Float32:
             case Float64:
             case Float128:
-            case VarFloat:
+            case FloatN:
             case Dec32:
             case Dec64:
             case Dec128:
-            case VarDec:
+            case DecN:
             case Array:
             case UInt8Array:
             case Tuple:

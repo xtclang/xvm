@@ -85,13 +85,13 @@ public class ToIntExpression
             case "numbers.Int32":
             case "numbers.Int64":
             case "numbers.Int128":
-            case "numbers.VarInt":
+            case "numbers.IntN":
             case "numbers.UInt8":
             case "numbers.UInt16":
             case "numbers.UInt32":
             case "numbers.UInt64":
             case "numbers.UInt128":
-            case "numbers.VarUInt":
+            case "numbers.UIntN":
                 // already an IntNumber
                 return null;
 
@@ -148,12 +148,12 @@ public class ToIntExpression
             case "numbers.Int16":
             case "numbers.Int32":
             case "numbers.Int128":
-            case "numbers.VarInt":
+            case "numbers.IntN":
             case "numbers.UInt16":
             case "numbers.UInt32":
             case "numbers.UInt64":
             case "numbers.UInt128":
-            case "numbers.VarUInt":
+            case "numbers.UIntN":
                 return pool.ensureIntConstant(pint, Format.valueOf(sFormat));
 
             case "numbers.Bit":     // converted by extract
@@ -176,13 +176,13 @@ public class ToIntExpression
             case "numbers.Int16":
             case "numbers.Int32":
             case "numbers.Int128":
-            case "numbers.VarInt":
+            case "numbers.IntN":
             case "numbers.UInt8":
             case "numbers.UInt16":
             case "numbers.UInt32":
             case "numbers.UInt64":
             case "numbers.UInt128":
-            case "numbers.VarUInt":
+            case "numbers.UIntN":
                 // most of these do NOT have an @Auto method that converts to<Int>()
                 MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
                         "toInt", true, false, getTypes(), TypeConstant.NO_TYPES);

@@ -110,8 +110,8 @@ import ecstasy.numbers.UInt32;
 import ecstasy.numbers.UInt64        as UInt;
 import ecstasy.numbers.UInt64;
 import ecstasy.numbers.UInt128;
-import ecstasy.numbers.VarInt;
-import ecstasy.numbers.VarUInt;
+import ecstasy.numbers.IntN;
+import ecstasy.numbers.UIntN;
 
 import ecstasy.reflect.Class;
 import ecstasy.reflect.Function;

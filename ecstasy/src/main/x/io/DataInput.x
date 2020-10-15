@@ -18,10 +18,10 @@ import numbers.UInt16;
 import numbers.UInt32;
 import numbers.UInt64;
 import numbers.UInt128;
-import numbers.VarDec;
-import numbers.VarFloat;
-import numbers.VarInt;
-import numbers.VarUInt;
+import numbers.DecN;
+import numbers.FloatN;
+import numbers.IntN;
+import numbers.UIntN;
 
 /**
  * The DataInput interface represents a stream of values of various fundamental Ecstasy types. It
@@ -151,19 +151,19 @@ interface DataInput
         }
 
     /**
-     * @return  a value of type VarInt read from the stream
+     * @return  a value of type IntN read from the stream
      */
-    VarInt readVarInt()
+    IntN readIntN()
         {
-        return new VarInt(readBytes(readInt()));
+        return new IntN(readBytes(readInt()));
         }
 
     /**
-     * @return  a value of type VarUInt read from the stream
+     * @return  a value of type UIntN read from the stream
      */
-    VarUInt readVarUInt()
+    UIntN readUIntN()
         {
-        return new VarUInt(readBytes(readInt()));
+        return new UIntN(readBytes(readInt()));
         }
 
     /**
@@ -191,11 +191,11 @@ interface DataInput
         }
 
     /**
-     * @return  a value of type VarDec read from the stream
+     * @return  a value of type DecN read from the stream
      */
-    VarDec readVarDec()
+    DecN readDecN()
         {
-        return new VarDec(readBytes(readInt()));
+        return new DecN(readBytes(readInt()));
         }
 
     /**
@@ -239,11 +239,11 @@ interface DataInput
         }
 
     /**
-     * @return  a value of type VarFloat read from the stream
+     * @return  a value of type FloatN read from the stream
      */
-    VarFloat readVarFloat()
+    FloatN readFloatN()
         {
-        return new VarFloat(readBytes(readInt()));
+        return new FloatN(readBytes(readInt()));
         }
 
     /**
@@ -381,13 +381,13 @@ interface DataInput
 
     /**
      * Read an integer value that is formatted using the packed integer format, and return it as
-     * a `VarInt`.
+     * a `IntN`.
      *
      * @param in  the DataInput stream containing the packed integer
      *
-     * @return the resulting VarInt value
+     * @return the resulting IntN value
      */
-    static VarInt readPackedVarInt(DataInput in)
+    static IntN readPackedIntN(DataInput in)
         {
         // use a signed byte to get auto sign-extension when converting to an int
         Int8 b = in.readInt8();
@@ -396,7 +396,7 @@ interface DataInput
         // in which the entire value is contained in the 7 MSBs
         if (b & 0x01 != 0)
             {
-            return (b >> 1).toVarInt();
+            return (b >> 1).toIntN();
             }
 
         // Small and Medium formats are indicated by the second bit (and differentiated by the third
@@ -413,7 +413,7 @@ interface DataInput
                 {
                 n = n << 8 | in.readByte().toInt();
                 }
-            return n.toVarInt();
+            return n.toIntN();
             }
 
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
@@ -428,11 +428,11 @@ interface DataInput
                 {
                 n = n << 8 | in.readByte().toInt();     // additional bytes remain bitwise intact
                 }
-            return n.toVarInt();
+            return n.toIntN();
             }
 
         Byte[] bytes = new Byte[size];
         in.readBytes(bytes, 0, size);
-        return new VarInt(bytes);
+        return new IntN(bytes);
         }
     }

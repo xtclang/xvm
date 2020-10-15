@@ -28,21 +28,21 @@ package mapping
         new IntNumberMapping<@Unchecked ecstasy.numbers.UInt64   >(),
         new IntNumberMapping<           ecstasy.numbers.UInt128  >(),
         new IntNumberMapping<@Unchecked ecstasy.numbers.UInt128  >(),
-        new IntNumberMapping<           ecstasy.numbers.VarInt   >(),
-        new IntNumberMapping<@Unchecked ecstasy.numbers.VarInt   >(),
-        new IntNumberMapping<           ecstasy.numbers.VarUInt  >(),
-        new IntNumberMapping<@Unchecked ecstasy.numbers.VarUInt  >(),
+        new IntNumberMapping<           ecstasy.numbers.IntN   >(),
+        new IntNumberMapping<@Unchecked ecstasy.numbers.IntN   >(),
+        new IntNumberMapping<           ecstasy.numbers.UIntN  >(),
+        new IntNumberMapping<@Unchecked ecstasy.numbers.UIntN  >(),
 
         new FPNumberMapping<ecstasy.numbers.Dec32   >(),
         new FPNumberMapping<ecstasy.numbers.Dec64   >(),
         new FPNumberMapping<ecstasy.numbers.Dec128  >(),
-        new FPNumberMapping<ecstasy.numbers.VarDec  >(),
+        new FPNumberMapping<ecstasy.numbers.DecN  >(),
         new FPNumberMapping<ecstasy.numbers.BFloat16>(),
         new FPNumberMapping<ecstasy.numbers.Float16 >(),
         new FPNumberMapping<ecstasy.numbers.Float32 >(),
         new FPNumberMapping<ecstasy.numbers.Float64 >(),
         new FPNumberMapping<ecstasy.numbers.Float128>(),
-        new FPNumberMapping<ecstasy.numbers.VarFloat>(),
+        new FPNumberMapping<ecstasy.numbers.FloatN>(),
 
 // TODO Bit
 // TODO Char

@@ -302,7 +302,7 @@ const Number
      *
      * @return the number as a signed integer of variable length
      */
-    VarInt toVarInt();
+    IntN toIntN();
 
     /**
      * Convert the number to a signed 8-bit integer.
@@ -313,7 +313,7 @@ const Number
      */
     Int8 toInt8()
         {
-        return toVarInt().toInt8();
+        return toIntN().toInt8();
         }
 
     /**
@@ -325,7 +325,7 @@ const Number
      */
     Int16 toInt16()
         {
-        return toVarInt().toInt16();
+        return toIntN().toInt16();
         }
 
     /**
@@ -337,7 +337,7 @@ const Number
      */
     Int32 toInt32()
         {
-        return toVarInt().toInt32();
+        return toIntN().toInt32();
         }
 
     /**
@@ -349,7 +349,7 @@ const Number
      */
     Int64 toInt()
         {
-        return toVarInt().toInt();
+        return toIntN().toInt();
         }
 
     /**
@@ -361,7 +361,7 @@ const Number
      */
     Int128 toInt128()
         {
-        return toVarInt().toInt128();
+        return toIntN().toInt128();
         }
 
     /**
@@ -369,7 +369,7 @@ const Number
      *
      * @return the number as an unsigned integer of variable length
      */
-    VarUInt toVarUInt();
+    UIntN toUIntN();
 
     /**
      * Convert the number to an unsigned 8-bit integer.
@@ -380,7 +380,7 @@ const Number
      */
     UInt8 toByte()
         {
-        return toVarUInt().toByte();
+        return toUIntN().toByte();
         }
 
     /**
@@ -392,7 +392,7 @@ const Number
      */
     UInt16 toUInt16()
         {
-        return toVarUInt().toUInt16();
+        return toUIntN().toUInt16();
         }
 
     /**
@@ -404,7 +404,7 @@ const Number
      */
     UInt32 toUInt32()
         {
-        return toVarUInt().toUInt32();
+        return toUIntN().toUInt32();
         }
 
     /**
@@ -416,7 +416,7 @@ const Number
      */
     UInt64 toUInt()
         {
-        return toVarUInt().toUInt();
+        return toUIntN().toUInt();
         }
 
     /**
@@ -428,7 +428,7 @@ const Number
      */
     UInt128 toUInt128()
         {
-        return toVarInt().toUInt128();
+        return toIntN().toUInt128();
         }
 
     /**
@@ -436,7 +436,7 @@ const Number
      *
      * @return the number as a binary floating point of variable length
      */
-    VarFloat toVarFloat();
+    FloatN toFloatN();
 
     /**
      * Convert the number to a 16-bit radix-2 (binary) "brain" floating point number.
@@ -445,7 +445,7 @@ const Number
      */
     BFloat16 toBFloat16()
         {
-        return toVarFloat().toBFloat16();
+        return toFloatN().toBFloat16();
         }
 
     /**
@@ -455,7 +455,7 @@ const Number
      */
     Float16 toFloat16()
         {
-        return toVarFloat().toFloat16();
+        return toFloatN().toFloat16();
         }
 
     /**
@@ -465,7 +465,7 @@ const Number
      */
     Float32 toFloat32()
         {
-        return toVarFloat().toFloat32();
+        return toFloatN().toFloat32();
         }
 
     /**
@@ -475,7 +475,7 @@ const Number
      */
     Float64 toFloat64()
         {
-        return toVarFloat().toFloat64();
+        return toFloatN().toFloat64();
         }
 
     /**
@@ -485,7 +485,7 @@ const Number
      */
     Float128 toFloat128()
         {
-        return toVarFloat().toFloat128();
+        return toFloatN().toFloat128();
         }
 
     /**
@@ -493,7 +493,7 @@ const Number
      *
      * @return the number as a decimal of variable length
      */
-    VarDec toVarDec();
+    DecN toDecN();
 
     /**
      * Convert the number to a 32-bit radix-10 (decimal) floating point number.
@@ -504,7 +504,7 @@ const Number
      */
     Dec32 toDec32()
         {
-        return toVarDec().toDec32();
+        return toDecN().toDec32();
         }
 
     /**
@@ -516,7 +516,7 @@ const Number
      */
     Dec64 toDec64()
         {
-        return toVarDec().toDec64();
+        return toDecN().toDec64();
         }
 
     /**
@@ -528,7 +528,7 @@ const Number
      */
     Dec128 toDec128()
         {
-        return toVarDec().toDec128();
+        return toDecN().toDec128();
         }
 
     /**

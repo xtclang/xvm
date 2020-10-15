@@ -58,7 +58,7 @@ const Int128
     @Override
     UInt128 magnitude.get()
         {
-        return toVarInt().abs().toUInt128();
+        return toIntN().abs().toUInt128();
         }
 
     @Override
@@ -364,26 +364,26 @@ const Int128
         }
 
     @Override
-    @Auto VarInt toVarInt()
+    @Auto IntN toIntN()
         {
-        return new VarInt(bits);
+        return new IntN(bits);
         }
 
     @Override
-    @Auto VarUInt toVarUInt()
+    @Auto UIntN toUIntN()
         {
         assert:bounds this >= 0;
-        return new VarUInt(bits);
+        return new UIntN(bits);
         }
 
     @Override
-    @Auto VarFloat toVarFloat()
+    @Auto FloatN toFloatN()
         {
         TODO
         }
 
     @Override
-    @Auto VarDec toVarDec()
+    @Auto DecN toDecN()
         {
         TODO
         }

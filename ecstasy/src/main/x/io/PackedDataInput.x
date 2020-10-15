@@ -4,8 +4,8 @@ import numbers.Int128;
 import numbers.UInt16;
 import numbers.UInt32;
 import numbers.UInt128;
-import numbers.VarInt;
-import numbers.VarUInt;
+import numbers.IntN;
+import numbers.UIntN;
 
 /**
  * The PackedDataInput mixin uses the packed integer format for integers and the UTF-8 encoding for
@@ -54,30 +54,30 @@ mixin PackedDataInput
     @Override
     UInt readUInt()
         {
-        return readVarInt().toUInt();
+        return readIntN().toUInt();
         }
 
     @Override
     Int128 readInt128()
         {
-        return readVarInt().toInt128();
+        return readIntN().toInt128();
         }
 
     @Override
     UInt128 readUInt128()
         {
-        return readVarInt().toUInt128();
+        return readIntN().toUInt128();
         }
 
     @Override
-    VarInt readVarInt()
+    IntN readIntN()
         {
-        return readPackedVarInt(this);
+        return readPackedIntN(this);
         }
 
     @Override
-    VarUInt readVarUInt()
+    UIntN readUIntN()
         {
-        return readVarInt().toVarUInt();
+        return readIntN().toUIntN();
         }
     }

@@ -113,7 +113,7 @@ public class DecimalConstant
                 throw new IllegalStateException();
             }
 
-        return getConstantPool().ensureDecimalConstant(decSum);
+        return getConstantPool().ensureDecConstant(decSum);
         }
 
 

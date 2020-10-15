@@ -598,10 +598,10 @@ public class LiteralConstant
         }
 
     /**
-     * @return the equivalent VarFPConstant of type VarFloat for this LiteralConstant holding a
+     * @return the equivalent FPNConstant of type FloatN for this LiteralConstant holding a
      *         FPLiteral value
      */
-    public VarFPConstant toVarFloatConstant()
+    public FPNConstant toFloatNConstant()
         {
         assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
 
@@ -628,7 +628,7 @@ public class LiteralConstant
 
         if (ab != null)
             {
-            return getConstantPool().ensureVarFloatConstant(ab);
+            return getConstantPool().ensureFloatNConstant(ab);
             }
 
         throw new UnsupportedOperationException();
@@ -641,14 +641,14 @@ public class LiteralConstant
     public DecimalConstant toDecimalConstant(Format format)
         {
         assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
-        return getConstantPool().ensureDecimalConstant(getDecimal(format));
+        return getConstantPool().ensureDecConstant(getDecimal(format));
         }
 
     /**
-     * @return the equivalent VarFPConstant of type VarFloat for this LiteralConstant holding a
+     * @return the equivalent FPNConstant of type FloatN for this LiteralConstant holding a
      *         FPLiteral value
      */
-    public VarFPConstant toVarDecConstant()
+    public FPNConstant toDecNConstant()
         {
         assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
 
@@ -675,7 +675,7 @@ public class LiteralConstant
 
         if (ab != null)
             {
-            return getConstantPool().ensureVarDecimalConstant(ab);
+            return getConstantPool().ensureDecNConstant(ab);
             }
 
         throw new UnsupportedOperationException();
@@ -965,21 +965,21 @@ public class LiteralConstant
             case "IntLiteral>=Int128":
             case "IntLiteral<=>Int128":
 
-            case "IntLiteral+VarInt":
-            case "IntLiteral-VarInt":
-            case "IntLiteral*VarInt":
-            case "IntLiteral/VarInt":
-            case "IntLiteral%VarInt":
-            case "IntLiteral&VarInt":
-            case "IntLiteral|VarInt":
-            case "IntLiteral^VarInt":
-            case "IntLiteral==VarInt":
-            case "IntLiteral!=VarInt":
-            case "IntLiteral<VarInt":
-            case "IntLiteral<=VarInt":
-            case "IntLiteral>VarInt":
-            case "IntLiteral>=VarInt":
-            case "IntLiteral<=>VarInt":
+            case "IntLiteral+IntN":
+            case "IntLiteral-IntN":
+            case "IntLiteral*IntN":
+            case "IntLiteral/IntN":
+            case "IntLiteral%IntN":
+            case "IntLiteral&IntN":
+            case "IntLiteral|IntN":
+            case "IntLiteral^IntN":
+            case "IntLiteral==IntN":
+            case "IntLiteral!=IntN":
+            case "IntLiteral<IntN":
+            case "IntLiteral<=IntN":
+            case "IntLiteral>IntN":
+            case "IntLiteral>=IntN":
+            case "IntLiteral<=>IntN":
 
             case "IntLiteral+UInt16":
             case "IntLiteral-UInt16":
@@ -1045,21 +1045,21 @@ public class LiteralConstant
             case "IntLiteral>=UInt128":
             case "IntLiteral<=>UInt128":
 
-            case "IntLiteral+VarUInt":
-            case "IntLiteral-VarUInt":
-            case "IntLiteral*VarUInt":
-            case "IntLiteral/VarUInt":
-            case "IntLiteral%VarUInt":
-            case "IntLiteral&VarUInt":
-            case "IntLiteral|VarUInt":
-            case "IntLiteral^VarUInt":
-            case "IntLiteral==VarUInt":
-            case "IntLiteral!=VarUInt":
-            case "IntLiteral<VarUInt":
-            case "IntLiteral<=VarUInt":
-            case "IntLiteral>VarUInt":
-            case "IntLiteral>=VarUInt":
-            case "IntLiteral<=>VarUInt":
+            case "IntLiteral+UIntN":
+            case "IntLiteral-UIntN":
+            case "IntLiteral*UIntN":
+            case "IntLiteral/UIntN":
+            case "IntLiteral%UIntN":
+            case "IntLiteral&UIntN":
+            case "IntLiteral|UIntN":
+            case "IntLiteral^UIntN":
+            case "IntLiteral==UIntN":
+            case "IntLiteral!=UIntN":
+            case "IntLiteral<UIntN":
+            case "IntLiteral<=UIntN":
+            case "IntLiteral>UIntN":
+            case "IntLiteral>=UIntN":
+            case "IntLiteral<=>UIntN":
                 return this.toIntConstant(that.getFormat()).apply(op, that);
 
             case "IntLiteral+Float16":
@@ -1182,29 +1182,29 @@ public class LiteralConstant
             case "FPLiteral<=>Float128":
                 return this.toFloat128Constant().apply(op, that);
 
-            case "IntLiteral+VarFloat":
-            case "IntLiteral-VarFloat":
-            case "IntLiteral*VarFloat":
-            case "IntLiteral/VarFloat":
-            case "IntLiteral==VarFloat":
-            case "IntLiteral!=VarFloat":
-            case "IntLiteral<VarFloat":
-            case "IntLiteral<=VarFloat":
-            case "IntLiteral>VarFloat":
-            case "IntLiteral>=VarFloat":
-            case "IntLiteral<=>VarFloat":
-            case "FPLiteral+VarFloat":
-            case "FPLiteral-VarFloat":
-            case "FPLiteral*VarFloat":
-            case "FPLiteral/VarFloat":
-            case "FPLiteral==VarFloat":
-            case "FPLiteral!=VarFloat":
-            case "FPLiteral<VarFloat":
-            case "FPLiteral<=VarFloat":
-            case "FPLiteral>VarFloat":
-            case "FPLiteral>=VarFloat":
-            case "FPLiteral<=>VarFloat":
-                return this.toVarFloatConstant().apply(op, that);
+            case "IntLiteral+FloatN":
+            case "IntLiteral-FloatN":
+            case "IntLiteral*FloatN":
+            case "IntLiteral/FloatN":
+            case "IntLiteral==FloatN":
+            case "IntLiteral!=FloatN":
+            case "IntLiteral<FloatN":
+            case "IntLiteral<=FloatN":
+            case "IntLiteral>FloatN":
+            case "IntLiteral>=FloatN":
+            case "IntLiteral<=>FloatN":
+            case "FPLiteral+FloatN":
+            case "FPLiteral-FloatN":
+            case "FPLiteral*FloatN":
+            case "FPLiteral/FloatN":
+            case "FPLiteral==FloatN":
+            case "FPLiteral!=FloatN":
+            case "FPLiteral<FloatN":
+            case "FPLiteral<=FloatN":
+            case "FPLiteral>FloatN":
+            case "FPLiteral>=FloatN":
+            case "FPLiteral<=>FloatN":
+                return this.toFloatNConstant().apply(op, that);
 
             case "IntLiteral+Dec32":
             case "IntLiteral-Dec32":
@@ -1276,29 +1276,29 @@ public class LiteralConstant
             case "FPLiteral<=>Dec128":
                 return this.toDecimalConstant(that.getFormat()).apply(op, that);
 
-            case "IntLiteral+VarDec":
-            case "IntLiteral-VarDec":
-            case "IntLiteral*VarDec":
-            case "IntLiteral/VarDec":
-            case "IntLiteral==VarDec":
-            case "IntLiteral!=VarDec":
-            case "IntLiteral<VarDec":
-            case "IntLiteral<=VarDec":
-            case "IntLiteral>VarDec":
-            case "IntLiteral>=VarDec":
-            case "IntLiteral<=>VarDec":
-            case "FPLiteral+VarDec":
-            case "FPLiteral-VarDec":
-            case "FPLiteral*VarDec":
-            case "FPLiteral/VarDec":
-            case "FPLiteral==VarDec":
-            case "FPLiteral!=VarDec":
-            case "FPLiteral<VarDec":
-            case "FPLiteral<=VarDec":
-            case "FPLiteral>VarDec":
-            case "FPLiteral>=VarDec":
-            case "FPLiteral<=>VarDec":
-                return this.toVarDecConstant().apply(op, that);
+            case "IntLiteral+DecN":
+            case "IntLiteral-DecN":
+            case "IntLiteral*DecN":
+            case "IntLiteral/DecN":
+            case "IntLiteral==DecN":
+            case "IntLiteral!=DecN":
+            case "IntLiteral<DecN":
+            case "IntLiteral<=DecN":
+            case "IntLiteral>DecN":
+            case "IntLiteral>=DecN":
+            case "IntLiteral<=>DecN":
+            case "FPLiteral+DecN":
+            case "FPLiteral-DecN":
+            case "FPLiteral*DecN":
+            case "FPLiteral/DecN":
+            case "FPLiteral==DecN":
+            case "FPLiteral!=DecN":
+            case "FPLiteral<DecN":
+            case "FPLiteral<=DecN":
+            case "FPLiteral>DecN":
+            case "FPLiteral>=DecN":
+            case "FPLiteral<=>DecN":
+                return this.toDecNConstant().apply(op, that);
 
             // case Date: // TODO can add a duration
             // case Time: // TODO can add a duration
@@ -1338,12 +1338,12 @@ public class LiteralConstant
             case "IntLiteral->Int32":
             case "IntLiteral->Int64":
             case "IntLiteral->Int128":
-            case "IntLiteral->VarInt":
+            case "IntLiteral->IntN":
             case "IntLiteral->UInt16":
             case "IntLiteral->UInt32":
             case "IntLiteral->UInt64":
             case "IntLiteral->UInt128":
-            case "IntLiteral->VarUInt":
+            case "IntLiteral->UIntN":
                 return toIntConstant(Format.valueOf(sSimpleName));
 
             case "IntLiteral->FPLiteral":
@@ -1369,9 +1369,9 @@ public class LiteralConstant
             case "FPLiteral->Float128":
                 return toFloat128Constant();
 
-            case "IntLiteral->VarFloat":
-            case "FPLiteral->VarFloat":
-                return toVarFloatConstant();
+            case "IntLiteral->FloatN":
+            case "FPLiteral->FloatN":
+                return toFloatNConstant();
 
             case "IntLiteral->Dec32":
             case "IntLiteral->Dec64":
@@ -1381,9 +1381,9 @@ public class LiteralConstant
             case "FPLiteral->Dec128":
                 return toDecimalConstant(Format.valueOf(sSimpleName));
 
-            case "IntLiteral->VarDec":
-            case "FPLiteral->VarDec":
-                return toVarDecConstant();
+            case "IntLiteral->DecN":
+            case "FPLiteral->DecN":
+                return toDecNConstant();
             }
 
         // handle conversions to unpredictable interface types
@@ -1403,7 +1403,7 @@ public class LiteralConstant
                     {
                     // go through the entire list of possibilities
                     for (Format format = Format.Bit;
-                            format.ordinal() <= Format.VarDec.ordinal(); format = format.next())
+                            format.ordinal() <= Format.DecN.ordinal(); format = format.next())
                         {
                         TypeConstant typeSupported = pool.ensureEcstasyTypeConstant(
                                 format.getEcstasyName());
@@ -1418,7 +1418,7 @@ public class LiteralConstant
             case "FPLiteral":
                 // go through the entire list of possibilities
                 for (Format format = Format.Float16;
-                        format.ordinal() <= Format.VarDec.ordinal(); format = format.next())
+                        format.ordinal() <= Format.DecN.ordinal(); format = format.next())
                     {
                     TypeConstant typeSupported = pool.ensureEcstasyTypeConstant(
                             format.getEcstasyName());

@@ -13,7 +13,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.runtime.template.numbers.xIntLiteral.VarIntHandle;
+import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -21,7 +21,7 @@ import org.xvm.util.PackedInteger;
 
 
 /**
- * Base class for VarInt/VarUInt integer types.
+ * Base class for IntN/UIntN integer types.
  */
 public abstract class xUnconstrainedInteger
         extends xConst
@@ -84,7 +84,7 @@ public abstract class xUnconstrainedInteger
             {
             case "abs":
                 {
-                PackedInteger pi = ((VarIntHandle) hTarget).getValue();
+                PackedInteger pi = ((IntNHandle) hTarget).getValue();
                 return frame.assignValue(iReturn, pi.compareTo(PackedInteger.ZERO) >= 0
                     ? hTarget : makeInt(PackedInteger.NEG_ONE));
                 }
@@ -99,8 +99,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
         PackedInteger pir = pi1.add(pi2);
 
         return frame.assignValue(iReturn, makeInt(pir));
@@ -109,8 +109,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
         PackedInteger pir = pi1.sub(pi2);
 
         return frame.assignValue(iReturn, makeInt(pir));
@@ -119,8 +119,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
         PackedInteger pir = pi1.mul(pi2);
 
 
@@ -130,7 +130,7 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        PackedInteger pi = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi = ((IntNHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, makeInt(pi.negate()));
         }
@@ -138,7 +138,7 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        PackedInteger pi = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi = ((IntNHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, makeInt(pi.previous()));
         }
@@ -146,7 +146,7 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        PackedInteger pi = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi = ((IntNHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, makeInt(pi.next()));
         }
@@ -154,8 +154,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.div(pi2)));
         }
@@ -163,8 +163,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         PackedInteger piMod = pi1.mod(pi2);
         if (piMod.compareTo(PackedInteger.ZERO) < 0)
@@ -178,8 +178,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((xIntLiteral.VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((xIntLiteral.IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.shl(pi2)));
         }
@@ -187,8 +187,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.shr(pi2)));
         }
@@ -196,8 +196,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.ushr(pi2)));
         }
@@ -205,8 +205,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.and(pi2)));
         }
@@ -214,8 +214,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.or(pi2)));
         }
@@ -223,8 +223,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         return frame.assignValue(iReturn, makeInt(pi1.xor(pi2)));
         }
@@ -232,8 +232,8 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
         {
-        PackedInteger pi1 = ((VarIntHandle) hTarget).getValue();
-        PackedInteger pi2 = ((VarIntHandle) hArg).getValue();
+        PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
+        PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 
         PackedInteger[] aQuoRem = pi1.divrem(pi2);
         return frame.assignValues(aiReturn, makeInt(aQuoRem[0]), makeInt(aQuoRem[1]));
@@ -242,7 +242,7 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        PackedInteger pi = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi = ((IntNHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, makeInt(pi.complement()));
         }
@@ -250,7 +250,7 @@ public abstract class xUnconstrainedInteger
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        VarIntHandle hThis = (VarIntHandle) hTarget;
+        IntNHandle hThis = (IntNHandle) hTarget;
 
         switch (sPropName)
             {
@@ -275,8 +275,8 @@ public abstract class xUnconstrainedInteger
     public int callEquals(Frame frame, ClassComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        VarIntHandle h1 = (xIntLiteral.VarIntHandle) hValue1;
-        VarIntHandle h2 = (VarIntHandle) hValue2;
+        IntNHandle h1 = (xIntLiteral.IntNHandle) hValue1;
+        IntNHandle h2 = (IntNHandle) hValue2;
 
         return frame.assignValue(iReturn, xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
         }
@@ -285,8 +285,8 @@ public abstract class xUnconstrainedInteger
     public int callCompare(Frame frame, ClassComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        VarIntHandle h1 = (VarIntHandle) hValue1;
-        VarIntHandle h2 = (VarIntHandle) hValue2;
+        IntNHandle h1 = (IntNHandle) hValue1;
+        IntNHandle h2 = (IntNHandle) hValue2;
 
         return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue().compareTo(h2.getValue())));
         }
@@ -296,16 +296,16 @@ public abstract class xUnconstrainedInteger
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        PackedInteger pi = ((VarIntHandle) hTarget).getValue();
+        PackedInteger pi = ((IntNHandle) hTarget).getValue();
 
         return frame.assignValue(iReturn, xString.makeHandle(pi.toString()));
         }
 
     /**
-     * NOTE: we are using the VarIntHandle for objects of UnconstrainedInteger types.
+     * NOTE: we are using the IntNHandle for objects of UnconstrainedInteger types.
      */
-    protected VarIntHandle makeInt(PackedInteger iValue)
+    protected IntNHandle makeInt(PackedInteger iValue)
         {
-        return new VarIntHandle(getCanonicalClass(), iValue, null);
+        return new IntNHandle(getCanonicalClass(), iValue, null);
         }
     }

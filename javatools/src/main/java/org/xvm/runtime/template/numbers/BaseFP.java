@@ -85,10 +85,10 @@ abstract public class BaseFP
         markNativeMethod("toInt"      , VOID, INT);
         markNativeMethod("toDec64"    , VOID, DEC64);
         markNativeMethod("toFloat64"  , VOID, FLOAT64);
-        markNativeMethod("toVarInt"   , VOID, VAR_INT);
-        markNativeMethod("toVarUInt"  , VOID, VAR_UINT);
-        markNativeMethod("toVarFloat" , VOID, VAR_FLOAT);
-        markNativeMethod("toVarDec"   , VOID, VAR_DEC);
+        markNativeMethod("toIntN"   , VOID, VAR_INT);
+        markNativeMethod("toUIntN"  , VOID, VAR_UINT);
+        markNativeMethod("toFloatN" , VOID, VAR_FLOAT);
+        markNativeMethod("toDecN"   , VOID, VAR_DEC);
         }
 
     @Override
@@ -178,10 +178,10 @@ abstract public class BaseFP
      */
     public static String[] DEC64     = new String[]{"numbers.Dec64"};
     public static String[] FLOAT64   = new String[]{"numbers.Float64"};
-    public static String[] VAR_INT   = new String[]{"numbers.VarInt"};
-    public static String[] VAR_UINT  = new String[]{"numbers.VarUInt"};
-    public static String[] VAR_FLOAT = new String[]{"numbers.VarFloat"};
-    public static String[] VAR_DEC   = new String[]{"numbers.VarDec"};
+    public static String[] VAR_INT   = new String[]{"numbers.IntN"};
+    public static String[] VAR_UINT  = new String[]{"numbers.UIntN"};
+    public static String[] VAR_FLOAT = new String[]{"numbers.FloatN"};
+    public static String[] VAR_DEC   = new String[]{"numbers.DecN"};
 
     /**
      * The number of bits for this Float type.

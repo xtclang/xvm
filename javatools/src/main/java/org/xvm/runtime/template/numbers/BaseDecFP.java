@@ -153,10 +153,10 @@ abstract public class BaseDecFP
                     ? frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(dec.toBigDecimal().doubleValue()))
                     : overflow(frame);
 
-            case "toVarInt":
-            case "toVarUInt":
-            case "toVarFloat":
-            case "toVarDec":
+            case "toIntN":
+            case "toUIntN":
+            case "toFloatN":
+            case "toDecN":
                 throw new UnsupportedOperationException(); // TODO
 
             case "neg":

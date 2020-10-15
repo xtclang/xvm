@@ -1,4 +1,4 @@
-const VarFloat
+const FloatN
         extends BinaryFPNumber
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -57,49 +57,49 @@ const VarFloat
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
-    @Op VarFloat add(VarFloat n)
+    @Op FloatN add(FloatN n)
         {
         TODO
         }
 
     @Override
-    @Op VarFloat sub(VarFloat n)
+    @Op FloatN sub(FloatN n)
         {
         TODO
         }
 
     @Override
-    @Op VarFloat mul(VarFloat n)
+    @Op FloatN mul(FloatN n)
         {
         TODO
         }
 
     @Override
-    @Op VarFloat div(VarFloat n)
+    @Op FloatN div(FloatN n)
         {
         TODO
         }
 
     @Override
-    @Op VarFloat mod(VarFloat n)
+    @Op FloatN mod(FloatN n)
         {
         TODO
         }
 
     @Override
-    VarFloat abs()
+    FloatN abs()
         {
         return this < 0 ? -this : this;
         }
 
     @Override
-    @Op VarFloat neg()
+    @Op FloatN neg()
         {
         TODO
         }
 
     @Override
-    VarFloat pow(VarFloat n)
+    FloatN pow(FloatN n)
         {
         TODO
         }
@@ -108,7 +108,7 @@ const VarFloat
     // ----- FPNumber properties -------------------------------------------------------------------
 
     @Override
-    VarInt emax.get()
+    IntN emax.get()
         {
         // 2^(k–p–1) – 1
         Int k = bitLength;
@@ -116,13 +116,13 @@ const VarFloat
         }
 
     @Override
-    VarInt emin.get()
+    IntN emin.get()
         {
         return 1 - emax;
         }
 
     @Override
-    VarInt bias.get()
+    IntN bias.get()
         {
         return emax;
         }
@@ -131,169 +131,169 @@ const VarFloat
     // ----- FPNumber operations -------------------------------------------------------------------
 
     @Override
-    (Boolean signBit, VarInt significand, VarInt exponent) split()
+    (Boolean signBit, IntN significand, IntN exponent) split()
         {
         TODO
         }
 
     @Override
-    VarFloat round(Rounding direction = TiesToAway)
+    FloatN round(Rounding direction = TiesToAway)
         {
         TODO
         }
 
     @Override
-    VarFloat floor()
+    FloatN floor()
         {
         TODO
         }
 
     @Override
-    VarFloat ceil()
+    FloatN ceil()
         {
         TODO
         }
 
     @Override
-    VarFloat exp()
+    FloatN exp()
         {
         TODO
         }
 
     @Override
-    VarFloat scaleByPow(Int n)
+    FloatN scaleByPow(Int n)
         {
         TODO
         }
 
     @Override
-    VarFloat log()
+    FloatN log()
         {
         TODO
         }
 
     @Override
-    VarFloat log2()
+    FloatN log2()
         {
         TODO
         }
 
     @Override
-    VarFloat log10()
+    FloatN log10()
         {
         TODO
         }
 
     @Override
-    VarFloat sqrt()
+    FloatN sqrt()
         {
         TODO
         }
 
     @Override
-    VarFloat cbrt()
+    FloatN cbrt()
         {
         TODO
         }
 
     @Override
-    VarFloat sin()
+    FloatN sin()
         {
         TODO
         }
 
     @Override
-    VarFloat cos()
+    FloatN cos()
         {
         TODO
         }
 
     @Override
-    VarFloat tan()
+    FloatN tan()
         {
         TODO
         }
 
     @Override
-    VarFloat asin()
+    FloatN asin()
         {
         TODO
         }
 
     @Override
-    VarFloat acos()
+    FloatN acos()
         {
         TODO
         }
 
     @Override
-    VarFloat atan()
+    FloatN atan()
         {
         TODO
         }
 
     @Override
-    VarFloat atan2(VarFloat y)
+    FloatN atan2(FloatN y)
         {
         TODO
         }
 
     @Override
-    VarFloat sinh()
+    FloatN sinh()
         {
         TODO
         }
 
     @Override
-    VarFloat cosh()
+    FloatN cosh()
         {
         TODO
         }
 
     @Override
-    VarFloat tanh()
+    FloatN tanh()
         {
         TODO
         }
 
     @Override
-    VarFloat asinh()
+    FloatN asinh()
         {
         TODO
         }
 
     @Override
-    VarFloat acosh()
+    FloatN acosh()
         {
         TODO
         }
 
     @Override
-    VarFloat atanh()
+    FloatN atanh()
         {
         TODO
         }
 
     @Override
-    VarFloat deg2rad()
+    FloatN deg2rad()
         {
         TODO
         }
 
     @Override
-    VarFloat rad2deg()
+    FloatN rad2deg()
         {
         TODO
         }
 
     @Override
-    VarFloat nextUp()
+    FloatN nextUp()
         {
         TODO
         }
 
     @Override
-    VarFloat nextDown()
+    FloatN nextDown()
         {
         TODO
         }
@@ -302,25 +302,25 @@ const VarFloat
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    VarInt toVarInt()
+    IntN toIntN()
         {
         TODO
         }
 
     @Override
-    VarUInt toVarUInt()
+    UIntN toUIntN()
         {
         TODO
         }
 
     @Override
-    VarFloat! toVarFloat()
+    FloatN! toFloatN()
         {
         return this;
         }
 
     @Override
-    VarDec toVarDec()
+    DecN toDecN()
         {
         TODO
         }

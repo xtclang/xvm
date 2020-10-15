@@ -236,22 +236,22 @@ public abstract class Constant
             case "numbers.Int32":
             case "numbers.Int64":
             case "numbers.Int128":
-            case "numbers.VarInt":
+            case "numbers.IntN":
             case "numbers.UInt16":
             case "numbers.UInt32":
             case "numbers.UInt64":
             case "numbers.UInt128":
-            case "numbers.VarUInt":
+            case "numbers.UIntN":
                 return pool.ensureIntConstant(PackedInteger.ZERO, Format.valueOf(
                         type.getEcstasyClassName().substring(8))); // omit "numbers."
 
             case "numbers.Dec32":
-                return pool.ensureDecimalConstant(Decimal32.POS_ZERO);
+                return pool.ensureDecConstant(Decimal32.POS_ZERO);
             case "numbers.Dec64":
-                return pool.ensureDecimalConstant(Decimal64.POS_ZERO);
+                return pool.ensureDecConstant(Decimal64.POS_ZERO);
             case "numbers.Dec128":
-                return pool.ensureDecimalConstant(Decimal128.POS_ZERO);
-            case "numbers.VarDec":
+                return pool.ensureDecConstant(Decimal128.POS_ZERO);
+            case "numbers.DecN":
                 throw new UnsupportedOperationException();
 
             case "numbers.BFloat16":
@@ -264,7 +264,7 @@ public abstract class Constant
                 return pool.ensureFloat64Constant(0.0);
             case "numbers.Float128":
                 return pool.ensureFloat128Constant(new byte[16]);
-            case "numbers.VarFloat":
+            case "numbers.FloatN":
                 throw new UnsupportedOperationException();
 
             // TODO arrays and lists and maps and tuples and so on
@@ -781,24 +781,24 @@ public abstract class Constant
         Int32     ("numbers"),
         Int64     ("numbers"),
         Int128    ("numbers"),
-        VarInt    ("numbers"),
+        IntN      ("numbers"),
         UInt8     ("numbers"),
         UInt16    ("numbers"),
         UInt32    ("numbers"),
         UInt64    ("numbers"),
         UInt128   ("numbers"),
-        VarUInt   ("numbers"),
+        UIntN     ("numbers"),
         FPLiteral ("numbers"),
         BFloat16  ("numbers"),
         Float16   ("numbers"),
         Float32   ("numbers"),
         Float64   ("numbers"),
         Float128  ("numbers"),
-        VarFloat  ("numbers"),
+        FloatN    ("numbers"),
         Dec32     ("numbers"),
         Dec64     ("numbers"),
         Dec128    ("numbers"),
-        VarDec    ("numbers"),
+        DecN      ("numbers"),
         Char      ("text"),
         String    ("text"),
         Date,               // ISO8601 YYYY-MM-DD date format

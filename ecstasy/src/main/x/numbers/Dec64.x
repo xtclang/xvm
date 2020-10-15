@@ -274,26 +274,26 @@ const Dec64
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    VarInt toVarInt()
+    IntN toIntN()
         {
         TODO
         }
 
     @Override
-    VarUInt toVarUInt()
+    UIntN toUIntN()
         {
         TODO
         }
 
     @Override
-    VarFloat toVarFloat()
+    FloatN toFloatN()
         {
         TODO
         }
 
     @Override
-    VarDec toVarDec()
+    DecN toDecN()
         {
-        return new VarDec(bits);
+        return new DecN(bits);
         }
     }

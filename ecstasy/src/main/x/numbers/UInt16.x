@@ -334,25 +334,25 @@ const UInt16
         }
 
     @Override
-    @Auto VarInt toVarInt()
+    @Auto IntN toIntN()
         {
-        return bits[0] == 0 ? new VarInt(bits) : toVarUInt().toVarInt();
+        return bits[0] == 0 ? new IntN(bits) : toUIntN().toIntN();
         }
 
     @Override
-    @Auto VarUInt toVarUInt()
+    @Auto UIntN toUIntN()
         {
-        return new VarUInt(bits);
+        return new UIntN(bits);
         }
 
     @Override
-    @Auto VarFloat toVarFloat()
+    @Auto FloatN toFloatN()
         {
         TODO
         }
 
     @Override
-    @Auto VarDec toVarDec()
+    @Auto DecN toDecN()
         {
         TODO
         }

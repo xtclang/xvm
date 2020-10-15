@@ -381,7 +381,7 @@ const FPNumber
     @Override
     IntLiteral toIntLiteral()
         {
-        return round(TowardZero).toVarInt().toIntLiteral();
+        return round(TowardZero).toIntN().toIntLiteral();
         }
 
     @Override

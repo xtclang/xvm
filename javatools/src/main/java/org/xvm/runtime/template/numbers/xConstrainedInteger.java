@@ -86,10 +86,10 @@ public abstract class xConstrainedInteger
 
         markNativeMethod("toInt128"      , VOID, new String[]{"numbers.Int128"});
         markNativeMethod("toUInt128"     , VOID, new String[]{"numbers.UInt128"});
-        markNativeMethod("toVarInt"      , VOID, new String[]{"numbers.VarInt"});
-        markNativeMethod("toVarUInt"     , VOID, new String[]{"numbers.VarUInt"});
-        markNativeMethod("toVarFloat"    , VOID, new String[]{"numbers.VarFloat"});
-        markNativeMethod("toVarDec"      , VOID, new String[]{"numbers.VarDec"});
+        markNativeMethod("toIntN"      , VOID, new String[]{"numbers.IntN"});
+        markNativeMethod("toUIntN"     , VOID, new String[]{"numbers.UIntN"});
+        markNativeMethod("toFloatN"    , VOID, new String[]{"numbers.FloatN"});
+        markNativeMethod("toDecN"      , VOID, new String[]{"numbers.DecN"});
         markNativeMethod("toChar"        , VOID, new String[]{"text.Char"});
         markNativeMethod("toBooleanArray", VOID, null);
         markNativeMethod("toBitArray"    , VOID, null);
@@ -357,10 +357,10 @@ public abstract class xConstrainedInteger
             case "toFloat16":
             case "toFloat32":
             case "toFloat64":
-            case "toVarInt":
-            case "toVarUInt":
-            case "toVarFloat":
-            case "toVarDec":
+            case "toIntN":
+            case "toUIntN":
+            case "toFloatN":
+            case "toDecN":
             case "toChar":
             case "toBooleanArray":
             case "toBitArray":

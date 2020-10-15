@@ -4,8 +4,8 @@ import numbers.Int128;
 import numbers.UInt16;
 import numbers.UInt32;
 import numbers.UInt128;
-import numbers.VarInt;
-import numbers.VarUInt;
+import numbers.IntN;
+import numbers.UIntN;
 
 /**
  * The DataOutput interface represents a output stream of values of various fundamental Ecstasy
@@ -56,30 +56,30 @@ mixin PackedDataOutput
     @Override
     void writeUInt(UInt value)
         {
-        writeVarInt(value.toVarInt());
+        writeIntN(value.toIntN());
         }
 
     @Override
     void writeInt128(Int128 value)
         {
-        writeVarInt(value.toVarInt());
+        writeIntN(value.toIntN());
         }
 
     @Override
     void writeUInt128(UInt128 value)
         {
-        writeVarInt(value.toVarInt());
+        writeIntN(value.toIntN());
         }
 
     @Override
-    void writeVarInt(VarInt value)
+    void writeIntN(IntN value)
         {
-        writePackedVarInt(this, value);
+        writePackedIntN(this, value);
         }
 
     @Override
-    void writeVarUInt(VarUInt value)
+    void writeUIntN(UIntN value)
         {
-        writeVarInt(value.toVarInt());
+        writeIntN(value.toIntN());
         }
     }
