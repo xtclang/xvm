@@ -307,7 +307,7 @@ public class Version
      *  "2.0" and "2.1" are not.</li>
      * <li>In the previous example, to use only one of the versions that begins with "1.2", the
      * requested version <tt>v<sub>R</sub></tt> should be specified as "1.2.0"; versions "1.2",
-     * "1.2.1", and "1.2.1.7" are subsitutes for 1.2.0, but versions "1.3", "2.0", and "2.1" are
+     * "1.2.1", and "1.2.1.7" are substitutes for 1.2.0, but versions "1.3", "2.0", and "2.1" are
      * not.</li>
      * </ul>
      *
@@ -332,7 +332,6 @@ public class Version
         int   cThisGA  = thisInts[cThis - 1] < 0 ? cThis - 1 : cThis >= 2 && thisInts[cThis - 2] < 0 ? cThis - 2 : cThis;
         int   cThat    = thatInts.length;
         int   cThatGA  = thatInts[cThat - 1] < 0 ? cThat - 1 : cThat >= 2 && thatInts[cThat - 2] < 0 ? cThat - 2 : cThat;
-        int   iLast    = Math.min(cThis, cThat) - 1;
         int   iLastGA  = Math.min(cThisGA, cThatGA) - 1;
         for (int i = 0; i < iLastGA; ++i)
             {

@@ -11,6 +11,7 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -33,7 +34,6 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
 
@@ -62,6 +62,8 @@ public class xModule
     @Override
     public void initNative()
         {
+        VERSION_DEFAULT = new VersionConstant(pool(), new Version("CI"));
+
         // while these properties are naturally implementable, they are accessed
         // by the TypeSystem constructor for modules that belong to the constructed
         // TypeSystem, creating "the chicken or the egg" problem
@@ -151,11 +153,11 @@ public class xModule
      */
     public int getPropertyVersion(Frame frame, PackageHandle hModule, int iReturn)
         {
-        VersionConstant ver = null; // TODO CP need version constant on linked ModuleStructure
+        ModuleStructure module = (ModuleStructure) hModule.getId().getComponent();
+        VersionConstant ver    = module.getVersion();
 
-        return ver == null
-                ? frame.assignValue(iReturn, xNullable.NULL)
-                : frame.assignDeferredValue(iReturn, frame.getConstHandle(ver));
+        return frame.assignDeferredValue(iReturn,
+            frame.getConstHandle(ver == null ? VERSION_DEFAULT : ver));
         }
 
     /**
@@ -394,4 +396,5 @@ public class xModule
 
     private static ClassComposition ARRAY_CLZ;
     private static ArrayHandle      ARRAY_EMPTY;
+    private static VersionConstant  VERSION_DEFAULT;
     }

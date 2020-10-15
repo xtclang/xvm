@@ -14,6 +14,7 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -52,6 +53,11 @@ import org.xvm.util.Severity;
  * for example:
  *
  * <p/>{@code  xtc -o ~/modules/}
+ *
+ * <p/>The version of the resulting module can be specified by using the {@code -version} option;
+ * for example:
+ *
+ * <p/>{@code  xtc -version 0.3-alpha}
  *
  * <p/>In addition to built-in Ecstasy modules and modules located in the Ecstasy runtime library,
  * it is possible to provide a search path for modules that will be used by the compiler. The search
@@ -368,9 +374,17 @@ public class Compiler
      */
     protected void emitModules(Map<File, Node> mapModules, ModuleRepository repoOutput)
         {
+        Version version = options().getVersion();
         for (Node nodeModule : mapModules.values())
             {
             ModuleStructure module = (ModuleStructure) nodeModule.type().getComponent();
+
+            assert !module.isFingerprint();
+            if (version != null)
+                {
+                module.setVersion(version);
+                }
+
             if (repoOutput != null)
                 {
                 repoOutput.storeModule(module);
@@ -460,14 +474,15 @@ public class Compiler
             {
             super();
 
-            addOption("rebuild", Form.Name, false, "Force rebuild");
-            addOption("strict",  Form.Name, false, "Treat warnings as errors");
-            addOption("nowarn",  Form.Name, false, "Suppress all warnings");
-            addOption("L",       Form.Repo, true , "Module path; a \"" + File.pathSeparator
+            addOption("rebuild", Form.Name,   false, "Force rebuild");
+            addOption("strict",  Form.Name,   false, "Treat warnings as errors");
+            addOption("nowarn",  Form.Name,   false, "Suppress all warnings");
+            addOption("L",       Form.Repo,   true , "Module path; a \"" + File.pathSeparator
                                                  + "\"-delimited list of file and/or directory names");
-            addOption("o",       Form.File, false, "File or directory to write output to");
-            addOption("qualify", Form.Name, false, "Use full module name for the output file name");
-            addOption(Trailing,  Form.File, true , "Source file name(s) and/or module location(s) to"
+            addOption("o",       Form.File,   false, "File or directory to write output to");
+            addOption("qualify", Form.Name,   false, "Use full module name for the output file name");
+            addOption("version", Form.String, false, "Use full module name for the output file name");
+            addOption(Trailing,  Form.File,   true , "Source file name(s) and/or module location(s) to"
                                                  + " compile");
             }
 
@@ -500,6 +515,15 @@ public class Compiler
         public File getOutputLocation()
             {
             return (File) values().get("o");
+            }
+
+        /**
+         * @return the version, or null if none specified
+         */
+        public Version getVersion()
+            {
+            String sVersion = (String) values().get("version");
+            return sVersion == null ? null : new Version(sVersion);
             }
 
         /**

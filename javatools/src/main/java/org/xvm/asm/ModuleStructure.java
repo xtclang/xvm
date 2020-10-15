@@ -96,6 +96,10 @@ public class ModuleStructure
         }
 
     /**
+     * Check if this is a fingerprint module, which is a secondary (not main) module in a file
+     * structure that represents the set of external dependencies on a particular imported module
+     * from the main module and any embedded modules.
+     *
      * @return true iff this module represents the "fingerprint" of an external module dependency
      */
     public boolean isFingerprint()
@@ -114,6 +118,27 @@ public class ModuleStructure
             default:
                 throw new IllegalStateException();
             }
+        }
+
+    /**
+     * @return a version of this module
+     */
+    public VersionConstant getVersion()
+        {
+        assert !isFingerprint();
+        return version;
+        }
+
+    /**
+     * Set the module version.
+     *
+     * @param version  the version constant
+     */
+    public void setVersion(Version version)
+        {
+        assert !isFingerprint();
+        markModified();
+        this.version = getConstantPool().ensureVersionConstant(version);
         }
 
     /**
@@ -319,10 +344,9 @@ public class ModuleStructure
 
         moduletype = ModuleType.valueOf(in.readUnsignedByte());
 
+        ConstantPool pool = getConstantPool();
         if (isFingerprint())
             {
-            ConstantPool pool = getConstantPool();
-
             VersionTree<Boolean> vtreeAllow = new VersionTree<>();
             for (int i = 0, c = readMagnitude(in); i < c; ++i)
                 {
@@ -344,6 +368,13 @@ public class ModuleStructure
             vtreeImportAllowVers = vtreeAllow;
             listImportPreferVers = listPrefer;
             }
+        else
+            {
+            if (in.readBoolean())
+                {
+                version = (VersionConstant) pool.getConstant(readMagnitude(in));
+                }
+            }
         }
 
     @Override
@@ -355,13 +386,17 @@ public class ModuleStructure
             {
             for (Version ver : vtreeImportAllowVers)
                 {
-                pool.register(pool.ensureVersionConstant(ver));
+                pool.ensureVersionConstant(ver);
                 }
 
             for (Version ver : listImportPreferVers)
                 {
-                pool.register(pool.ensureVersionConstant(ver));
+                pool.ensureVersionConstant(ver);
                 }
+            }
+        else if (version != null)
+            {
+            version = (VersionConstant) pool.register(version);
             }
         }
 
@@ -373,10 +408,10 @@ public class ModuleStructure
 
         out.writeByte(moduletype.ordinal());
 
+        ConstantPool pool = getConstantPool();
+
         if (isFingerprint())
             {
-            ConstantPool pool = getConstantPool();
-
             VersionTree<Boolean> vtreeAllow = vtreeImportAllowVers;
             writePackedLong(out, vtreeAllow.size());
             for (Version ver : vtreeAllow)
@@ -392,6 +427,18 @@ public class ModuleStructure
                 writePackedLong(out, pool.ensureVersionConstant(ver).getPosition());
                 }
             }
+        else
+            {
+            if (version == null)
+                {
+                out.writeBoolean(false);
+                }
+            else
+                {
+                out.writeBoolean(true);
+                writePackedLong(out, version.getPosition());
+                }
+            }
         }
 
     @Override
@@ -400,7 +447,7 @@ public class ModuleStructure
         StringBuilder sb = new StringBuilder();
         sb.append(super.getDescription());
 
-        sb.append(", moduletype=")
+        sb.append(", module type=")
                 .append(moduletype);
 
         if (isFingerprint())
@@ -439,6 +486,15 @@ public class ModuleStructure
                     }
 
                 sb.append('}');
+                }
+            }
+        else
+            {
+            if (version != null)
+                {
+                sb.append(", version={")
+                  .append(version.getVersion())
+                  .append('}');
                 }
             }
 
@@ -517,11 +573,14 @@ public class ModuleStructure
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * True iff this is a fingerprint module, which is a secondary (not main) module in a file
-     * structure that represents the set of external dependencies on a particular imported module
-     * from the main module and any embedded modules.
+     * Module type.
      */
     private ModuleType moduletype = ModuleType.Primary;
+
+    /**
+     * Module version; always null for fingerprints.
+     */
+    private VersionConstant version;
 
     /**
      * If this is a fingerprint, then this will be a non-null version tree (but potentially empty)

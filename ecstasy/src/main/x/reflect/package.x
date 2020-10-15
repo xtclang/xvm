@@ -121,9 +121,9 @@ package reflect
             }
 
         /**
-         * The version of the module, if the version is known.
+         * The version of the module.
          */
-        @RO Version? version;
+        @RO Version version;
 
         /**
          * The modules that this module depends on by linkage, both directly and indirectly. For

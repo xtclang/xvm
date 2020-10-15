@@ -191,9 +191,9 @@ public class xPackage
         if (pkg instanceof PackageStructure && ((PackageStructure) pkg).isModuleImport())
             {
             ModuleStructure module        = ((PackageStructure) pkg).getImportedModule();
-            ModuleConstant   idModule      = module.getIdentityConstant();
-            ConstantPool pool          = frame.poolContext();
-            Constant         constInstance = pool.ensureSingletonConstConstant(idModule);
+            ModuleConstant  idModule      = module.getIdentityConstant();
+            ConstantPool    pool          = frame.poolContext();
+            Constant        constInstance = pool.ensureSingletonConstConstant(idModule);
 
             return frame.assignConditionalDeferredValue(aiReturn,
                     frame.getConstHandle(constInstance));

@@ -1552,11 +1552,6 @@ public class NameExpression
                 switch (constant.getFormat())
                     {
                     case Package:
-                        PackageStructure pkg = (PackageStructure) ((IdentityConstant) constant).getComponent();
-                        if (pkg.isModuleImport())
-                            {
-                            arg = pkg.getImportedModule().getIdentityConstant();
-                            }
                     case Module:
                     case Class:
                     case Typedef:
@@ -1696,8 +1691,16 @@ public class NameExpression
                     && ((NameExpression) left).isIdentityMode(ctx, true);
             if (fIdMode)
                 {
-                NameExpression   exprLeft   = (NameExpression) left;
-                IdentityConstant idLeft     = exprLeft.getIdentity(ctx);
+                NameExpression   exprLeft = (NameExpression) left;
+                IdentityConstant idLeft   = exprLeft.getIdentity(ctx);
+                if (idLeft.getFormat() == Constant.Format.Package)
+                    {
+                    PackageStructure pkg = (PackageStructure) idLeft.getComponent();
+                    if (pkg.isModuleImport())
+                        {
+                        idLeft = pkg.getImportedModule().getIdentityConstant();
+                        }
+                    }
                 TypeInfo         info       = getTypeInfo(ctx, idLeft.getType(), errs);
                 IdentityConstant idChild    = info.findName(pool, sName);
                 TypeInfo         infoClz    = idLeft.getValueType(null).ensureTypeInfo(errs);

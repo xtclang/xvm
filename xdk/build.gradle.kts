@@ -16,10 +16,11 @@ val jsonMain     = "${json.projectDir}/src/main";
 val jsondbMain   = "${jsondb.projectDir}/src/main";
 val oodbMain     = "${oodb.projectDir}/src/main";
 
-
 val libDir       = "$buildDir/xdk/lib"
 val coreLib      = "$libDir/ecstasy.xtc"
 val bridgeLib    = "$buildDir/xdk/javatools/javatools_bridge.xtc"
+
+val version      = "0.3-alpha"
 
 tasks.register("clean") {
     group       = "Build"
@@ -60,6 +61,7 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
+            "-version", "$version",
             "$ecstasyMain/x/module.x",
             "$bridgeMain/x/module.x")
     main = "org.xvm.tool.Compiler"
@@ -80,6 +82,7 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
+            "-version", "$version",
             "-L", "$coreLib",
             "-L", "$bridgeLib",
             "$jsonMain/x/module.x")
@@ -95,6 +98,7 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
+            "-version", "$version",
             "-L", "$coreLib",
             "-L", "$bridgeLib",
             "$oodbMain/x/module.x")
@@ -111,6 +115,7 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
+            "-version", "$version",
             "-L", "$coreLib",
             "-L", "$bridgeLib",
             "-L", "$libDir",
