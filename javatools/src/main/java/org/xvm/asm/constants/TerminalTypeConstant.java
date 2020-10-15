@@ -1416,7 +1416,7 @@ public class TerminalTypeConstant
                 {
                 // check if the formal type could be resolved in the context of the specified class
                 TypeConstant typeR = this.resolveGenerics(pool, idClass.getFormalType());
-                if (!typeR.isGenericType())
+                if (typeR != this)
                     {
                     TypeInfo infoR = typeR.ensureTypeInfo(idClass, errs);
                     assert isComplete(infoR);
