@@ -21,6 +21,6 @@ const TimeZoneMapping
     @Override
     void write(ElementOutput out, Serializable value)
         {
-        out.add(value.toString());
+        out.add(value.name ?: value.toString(True));
         }
     }

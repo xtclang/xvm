@@ -19,6 +19,14 @@ const FPLiteral(String text)
         }
 
     /**
+     * Convert the number to a "brain" 16-bit radix-2 (binary) floating point number.
+     */
+    @Auto BFloat16 toBFloat16()
+        {
+        return toVarFloat().toBFloat16();
+        }
+
+    /**
      * Convert the number to a 16-bit radix-2 (binary) floating point number.
      */
     @Auto Float16 toFloat16()

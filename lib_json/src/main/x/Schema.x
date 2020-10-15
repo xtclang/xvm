@@ -15,7 +15,6 @@ import ecstasy.io.TextFormat;
  * TODO ReflectionMapping creation
  * TODO integrate with new TypeSystem API
  * TODO versioning support
- * TODO split out JSON library into its own (non-core) module
  */
 const Schema
         implements TextFormat
@@ -72,7 +71,7 @@ const Schema
         // store off specified options
         this.version          = version;
         this.randomAccess     = randomAccess;
-        this.enableMetadata   = enableMetadata | enablePointers;    // pointers require metadata
+        this.enableMetadata   = enableMetadata | enablePointers | enableReflection;
         this.typeKey          = typeKey;
         this.enablePointers   = enablePointers;
         this.pointerKey       = pointerKey;
@@ -82,14 +81,15 @@ const Schema
         this.typeSystem       = typeSystem ?: &this.actualType.typeSystem;
 
         // build indexes for the provided mappings
-        ListMap<Type, Mapping> mappingByType = new ListMap();
-        HashMap<String, Type>  typeByName    = new HashMap();
+        ListMap<Type, Mapping> mappingByType   = new ListMap();
+        HashMap<String, Type>  typeByName      = new HashMap();
+        Mapping[]              defaultMappings = mapping.DEFAULT_MAPPINGS;
+        mappings = mappings.empty ? defaultMappings : (new Mapping[]) + mappings + defaultMappings;
         for (Mapping mapping : mappings)
             {
             mappingByType.putIfAbsent(mapping.Serializable, mapping);
             typeByName.putIfAbsent(mapping.typeName, mapping.Serializable);
             }
-
         this.mappingByType = mappingByType;
         this.typeByName    = typeByName.makeImmutable();
         }
