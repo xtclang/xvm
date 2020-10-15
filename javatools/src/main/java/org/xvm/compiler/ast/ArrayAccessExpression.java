@@ -769,7 +769,7 @@ public class ArrayAccessExpression
             {
             SignatureConstant sig = idMethod.getSignature().resolveAutoNarrowing(pool(), typeTarget);
             if (!fTuple && typeReturn != null && (sig.getRawReturns().length < 1
-                    || !sig.getRawReturns()[0].isAssignableTo(typeReturn)))
+                    || !isAssignable(ctx, sig.getRawReturns()[0], typeReturn)))
                 {
                 continue NextOp;
                 }
@@ -795,7 +795,7 @@ public class ArrayAccessExpression
                 {
                 TypeConstant typeParam = atypeParams[i];
                 TypeConstant typeArg   = atypeArgs[i];
-                if (typeArg == null || !typeArg.isAssignableTo(typeParam))
+                if (typeArg == null || !isAssignable(ctx, typeArg, typeParam))
                     {
                     Expression exprArg = aexprArgs[i];
                     if (!exprArg.testFit(ctx, typeParam, null).isFit())
@@ -958,7 +958,7 @@ public class ArrayAccessExpression
 
                 for (int i = 0; i < cParams; ++i)
                     {
-                    if (atypeParams[i] != null && !atypeParams[i].isAssignableTo(atypeOpParams[i]))
+                    if (atypeParams[i] != null && !isAssignable(ctx, atypeParams[i], atypeOpParams[i]))
                         {
                         continue NextOp;
                         }
@@ -968,7 +968,7 @@ public class ArrayAccessExpression
             if (typeReturn != null)
                 {
                 TypeConstant[] atypeOpReturns = idOp.getRawReturns();
-                if (atypeOpReturns.length == 0 || !atypeOpReturns[0].isAssignableTo(typeReturn))
+                if (atypeOpReturns.length == 0 || isAssignable(ctx, atypeOpReturns[0], typeReturn))
                     {
                     continue NextOp;
                     }

@@ -656,7 +656,7 @@ public class NameExpression
             {
             fit = TypeFit.Fit;
 
-            if (typeRequired == null || type.isAssignableTo(typeRequired))
+            if (typeRequired == null || isAssignable(ctx, type, typeRequired))
                 {
                 switch (getMeaning())
                     {

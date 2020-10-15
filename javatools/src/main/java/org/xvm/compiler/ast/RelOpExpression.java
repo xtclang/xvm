@@ -354,12 +354,12 @@ public class RelOpExpression
             if (aRets.length >= 1)
                 {
                 TypeConstant typeResult = aRets[0];
-                if (typeResult.isA(typeRequired))
+                if (isA(ctx, typeResult, typeRequired))
                     {
                     // the "right" expression will be checked during validation
                     return TypeFit.Fit;
                     }
-                if (!fitVia.isFit() && typeResult.isAssignableTo(typeRequired))
+                if (!fitVia.isFit() && isAssignable(ctx, typeResult, typeRequired))
                     {
                     // there is a solution via conversion on the result of an operator
                     fitVia = TypeFit.Conv;
@@ -383,7 +383,7 @@ public class RelOpExpression
             for (MethodConstant idMethod : typeConv.ensureTypeInfo().findOpMethods(sMethod, sOp, 1))
                 {
                 TypeConstant[] aRets = idMethod.getRawReturns();
-                if (aRets.length >= 1 && aRets[0].isAssignableTo(typeRequired))
+                if (aRets.length >= 1 && isAssignable(ctx, aRets[0], typeRequired))
                     {
                     // there is a solution via an operator on the result of a conversion
                     return TypeFit.Conv;
@@ -418,13 +418,14 @@ public class RelOpExpression
             TypeConstant[] aRets = idMethod.getRawReturns();
             if (aRets.length >= 2)
                 {
-                if (aRets[0].isA(atypeRequired[0]) && aRets[1].isA(atypeRequired[1]))
+                if (isA(ctx, aRets[0], atypeRequired[0]) &&
+                    isA(ctx, aRets[1], atypeRequired[1]))
                     {
                     // the "right" expression will be checked during validation
                     return TypeFit.Fit;
                     }
-                if (!fitVia.isFit() && aRets[0].isAssignableTo(atypeRequired[0])
-                                    && aRets[1].isAssignableTo(atypeRequired[1]))
+                if (!fitVia.isFit() && isAssignable(ctx, aRets[0], atypeRequired[0])
+                                    && isAssignable(ctx, aRets[1], atypeRequired[1]))
                     {
                     // there is a solution via conversion on the result of an operator
                     fitVia = TypeFit.Conv;
@@ -443,8 +444,8 @@ public class RelOpExpression
             for (MethodConstant idMethod : infoConv.findOpMethods(sMethod, sOp, 1))
                 {
                 TypeConstant[] aRets = idMethod.getRawReturns();
-                if (aRets.length >= 2 && aRets[0].isAssignableTo(atypeRequired[0])
-                                      && aRets[1].isAssignableTo(atypeRequired[1]))
+                if (aRets.length >= 2 && isAssignable(ctx, aRets[0], atypeRequired[0])
+                                      && isAssignable(ctx, aRets[1], atypeRequired[1]))
                     {
                     // there is a solution via an operator on the result of a conversion
                     return TypeFit.Conv;
@@ -679,7 +680,7 @@ public class RelOpExpression
             for (MethodConstant idMethod : setOps)
                 {
                 if (expr2.testFit(ctx, idMethod.getRawParams()[0], null).isFit()
-                        && idMethod.getRawReturns()[0].isAssignableTo(typeRequired))
+                        && isAssignable(ctx, idMethod.getRawReturns()[0], typeRequired))
                     {
                     // TODO find best, not just the first
                     return typeRequired;
@@ -697,7 +698,7 @@ public class RelOpExpression
                     for (MethodConstant idMethod : setOps)
                         {
                         if (expr2.testFit(ctx, idMethod.getRawParams()[0], null).isFit()
-                                && idMethod.getRawReturns()[0].isAssignableTo(typeRequired))
+                                && isAssignable(ctx, idMethod.getRawReturns()[0], typeRequired))
                             {
                             // TODO find best, not just the first
                             return typeParam;
@@ -733,7 +734,8 @@ public class RelOpExpression
         for (MethodConstant idMethod : setOps)
             {
             if (expr2.testFit(ctx, idMethod.getRawParams()[0], null).isFit()
-                    && (typeRequired == null || idMethod.getRawReturns()[0].isAssignableTo(typeRequired)))
+                    && (typeRequired == null ||
+                        isAssignable(ctx, idMethod.getRawReturns()[0], typeRequired)))
                 {
                 // TODO find best, not just the first
                 return idMethod.getRawParams()[0];

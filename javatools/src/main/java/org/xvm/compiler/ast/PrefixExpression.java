@@ -107,7 +107,7 @@ public class PrefixExpression
             for (MethodConstant idMethod : setOps)
                 {
                 if (typeRequired != null &&
-                    !idMethod.getSignature().getRawReturns()[0].isAssignableTo(typeRequired))
+                        !isAssignable(ctx, idMethod.getSignature().getRawReturns()[0], typeRequired))
                     {
                     continue;
                     }

@@ -858,7 +858,7 @@ public abstract class Expression
         }
 
     /**
-     * @return true iff the "in" type is assignable to the "out" type in the specified context
+     * @return true iff the "in" type *isA* the "out" type in the specified context
      */
     protected boolean isA(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
         {
@@ -874,6 +874,25 @@ public abstract class Expression
 
         TypeConstant typeOutResolved = typeOut.resolveGenerics(pool(), ctx.getThisType());
         return typeOutResolved != typeOut && typeIn.isA(typeOutResolved);
+        }
+
+    /**
+     * @return true iff the "in" type is assignable to the "out" type in the specified context
+     */
+    protected boolean isAssignable(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
+        {
+        if (typeIn.isAssignableTo(typeOut))
+            {
+            return true;
+            }
+
+        if (ctx == null)
+            {
+            return false;
+            }
+
+        TypeConstant typeOutResolved = typeOut.resolveGenerics(pool(), ctx.getThisType());
+        return typeOutResolved != typeOut && typeIn.isAssignableTo(typeOutResolved);
         }
 
     /**
