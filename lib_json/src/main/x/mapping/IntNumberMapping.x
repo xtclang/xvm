@@ -8,14 +8,13 @@ const IntNumberMapping<Serializable extends IntNumber>
     {
     construct()
         {
-        assert function IntNumber(IntLiteral) fn := CONVERSION.get(Serializable);
-        convert = fn.as(function Serializable(IntLiteral));
+        assert convert := CONVERSION.get(Serializable);
         }
 
     /**
      * The function that converts an IntLiteral to the desired integer type.
      */
-    function Serializable(IntLiteral) convert;
+    function IntNumber(IntLiteral) convert;
 
     @Override
     String typeName.get()
@@ -26,7 +25,7 @@ const IntNumberMapping<Serializable extends IntNumber>
     @Override
     Serializable read(ElementInput in)
         {
-        return convert(in.readIntLiteral());
+        return convert(in.readIntLiteral()).as(Serializable);
         }
 
     @Override

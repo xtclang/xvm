@@ -8,14 +8,13 @@ const FPNumberMapping<Serializable extends FPNumber>
     {
     construct()
         {
-        assert function FPNumber(FPLiteral) fn := CONVERSION.get(Serializable);
-        convert = fn.as(function Serializable(FPLiteral));
+        assert convert := CONVERSION.get(Serializable);
         }
 
     /**
      * The function that converts an FPLiteral to the desired floating point type.
      */
-    function Serializable(FPLiteral) convert;
+    function FPNumber(FPLiteral) convert;
 
     @Override
     String typeName.get()
@@ -26,7 +25,7 @@ const FPNumberMapping<Serializable extends FPNumber>
     @Override
     Serializable read(ElementInput in)
         {
-        return convert(in.readFPLiteral());
+        return convert(in.readFPLiteral()).as(Serializable);
         }
 
     @Override
