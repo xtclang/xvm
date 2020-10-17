@@ -220,9 +220,9 @@ Int c = img1.size();                                    // Var Int // #28
 &img1.thenAccept(...)
 
 if (oldValue : replaceFailed(oldValue, newValue))
-    {
-    return newValue;
-    }
+        {
+        return newValue;
+        }
 
 T v;
 conditional T cv;

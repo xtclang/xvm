@@ -225,18 +225,18 @@ mixin DerivedMixin
 // ----- call chain
 
 // There are two parts on the call chain:
-//  1. The "declared" chain that consists of
-//   1.1 declared methods on the encapsulating mixins and traits (recursively)
-//   1.2 methods implemented by the class
-//   1.3 declared methods on the incorporated mixins, traits and delegates
-//   ... followed by the "declared" chain on the super class all the way down to Object (including)
+//    1. The "declared" chain that consists of
+//      1.1 declared methods on the encapsulating mixins and traits (recursively)
+//      1.2 methods implemented by the class
+//      1.3 declared methods on the incorporated mixins, traits and delegates
+//      ... followed by the "declared" chain on the super class all the way down to Object (including)
 //
-// 2. The "default" chain that consists of  
-//   2.1 default methods on the interfaces that are declared by encapsulating
-//          mixins and traits (recursively)
-//   2.2 default methods on the interfaces declared by the class (recursively)
-//   2.3 default methods on the interfaces that are declared by all other contributions (recursively)
-//   ... followed by the "default" chain on the super class all the way down to Object (excluding)
+// 2. The "default" chain that consists of
+//      2.1 default methods on the interfaces that are declared by encapsulating
+//                    mixins and traits (recursively)
+//      2.2 default methods on the interfaces declared by the class (recursively)
+//      2.3 default methods on the interfaces that are declared by all other contributions (recursively)
+//      ... followed by the "default" chain on the super class all the way down to Object (excluding)
 
 
 // ---- subtraction of interface

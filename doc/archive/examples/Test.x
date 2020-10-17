@@ -1,5 +1,5 @@
 module Test
-    {
+        {
 //    class C
 //        {
 //        construct()
@@ -137,14 +137,14 @@ module Test
 //        }
 //
 //    // problem #5 - not sure what this problem was, but it compiles now (the T0D0 was an issue)
-//    interface List<Element>
-//        {
-//        Element first;
+//        interface List<Element>
+//                {
+//                Element first;
 //
-//        void add(Element value);
+//                void add(Element value);
 //
-//        Iterator<Element> iterator();
-//        }
+//                Iterator<Element> iterator();
+//                }
 //
 //    class MyList<Element extends Int>
 //            implements List<Element>
@@ -659,4 +659,4 @@ module Test
 //        {
 //        return o;
 //        }
-    }
+      }
