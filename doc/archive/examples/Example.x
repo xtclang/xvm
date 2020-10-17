@@ -2748,11 +2748,11 @@ Type T2 is assignable to a Type T1 iff both of the following hold true:
 
 // This is a summary of all of the above, in a simple 2x2 matrix:
 //
-//                   widening                narrowing
-// C<T1> -> C<T2>    T1=String -> T2=Object  T1=Object -> T2=String
-// ----------------  ----------------------  -------------------------
-// !(C consumes T1)  ok                      Compile Time Error
-// !(C produces T1)  possible RTE            ok
+//                     widening                  narrowing
+// C<T1> -> C<T2>      T1=String -> T2=Object    T1=Object -> T2=String
+// ----------------    ----------------------    -------------------------
+// !(C consumes T1)    ok                        Compile Time Error
+// !(C produces T1)    possible RTE              ok
 
 
 // example covariance testing
@@ -2808,12 +2808,12 @@ C<String> cs;
 C<Object> co;
 C c;
 
-c = co;     // ok
-c = cs;     // ok
-cs = co;    // ok
-co = cs;    // err; requires cast (fails at runtime if T is *not* Object, e.g. if T is String)
-co = c;     // err; requires cast (fails at runtime if T is *not* Object, e.g. if T is String)
-cs = c;     // err; requires cast (fails at runtime if String is not assignable to T, i.e. String or Object)
+c = co;     // ok
+c = cs;     // ok
+cs = co;    // ok
+co = cs;    // err; requires cast (fails at runtime if T is *not* Object, e.g. if T is String)
+co = c;     // err; requires cast (fails at runtime if T is *not* Object, e.g. if T is String)
+cs = c;     // err; requires cast (fails at runtime if String is not assignable to T, i.e. String or Object)
 
 // for producer-consumer type PC:
 
@@ -2821,23 +2821,23 @@ PC<Object> pco;
 PC<String> pcs;
 PC pc;
 
-c = pc;     // ok
-c = pco;    // ok
-c = pcs;    // ok
+c = pc;     // ok
+c = pco;    // ok
+c = pcs;    // ok
 
-co = pc;    // err; requires cast (fails at runtime if T is *not* Object, e.g. if T is String)
-co = pco;   // ok (fails at runtime if T is *not* Object, e.g. if T is String)
-co = pcs;   // err; will not compile, even with a cast
+co = pc;    // err; requires cast (fails at runtime if T is *not* Object, e.g. if T is String)
+co = pco;   // ok (fails at runtime if T is *not* Object, e.g. if T is String)
+co = pcs;   // err; will not compile, even with a cast
 
-cs = pc;    // err; requires cast (fails at runtime if String is not assignable to T, i.e. String or Object)
-cs = pco;   // ok (fails at runtime if String is not assignable to T, i.e. String or Object)
-cs = pcs;   // ok (fails at runtime if T is *not* String)
+cs = pc;    // err; requires cast (fails at runtime if String is not assignable to T, i.e. String or Object)
+cs = pco;   // ok (fails at runtime if String is not assignable to T, i.e. String or Object)
+cs = pcs;   // ok (fails at runtime if T is *not* String)
 
-pco = cs;   // err; requires cast to PC or PC<Object> (fails if cs is not an instance of PC)
-pco = co;   // err; requires cast to PC or PC<Object> (fails if co is not an instance of PC)
+pco = cs;   // err; requires cast to PC or PC<Object> (fails if cs is not an instance of PC)
+pco = co;   // err; requires cast to PC or PC<Object> (fails if co is not an instance of PC)
 
-pcs = cs;   // err; requires cast to PC<String> (fails if cs is not an instance of PC and T is not String)
-pcs = co;   // err; will not compile, even with a cast
+pcs = cs;   // err; requires cast to PC<String> (fails if cs is not an instance of PC and T is not String)
+pcs = co;   // err; will not compile, even with a cast
 
 pc = pco;   // ok
 pc = pcs;   // ok
