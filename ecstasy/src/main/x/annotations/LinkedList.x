@@ -138,7 +138,6 @@ mixin LinkedList<Element>
         {
         // the property that this is mixed into must be of the element type (but can be Null).
         assert Referent == Element?;
-        TODO GG make sure it is called
         }
     finally
         {

@@ -54,11 +54,11 @@ public class PropertyComposition
         }
 
     /**
-     * Construct a PropertyComposition clone for the specified parent's clone.
+     * Construct a PropertyComposition clone that represents a "structure" view.
      */
-    private PropertyComposition(PropertyComposition clzInception, ClassComposition clzParent)
+    private PropertyComposition(PropertyComposition clzInception)
         {
-        f_clzParent    = clzParent;
+        f_clzParent    = clzInception.f_clzParent;
         f_infoProp     = clzInception.f_infoProp;
         f_clzRef       = clzInception.f_clzRef;
         f_infoParent   = clzInception.f_infoParent;
@@ -66,6 +66,7 @@ public class PropertyComposition
         f_mapGetters   = clzInception.f_mapGetters;
         f_mapSetters   = clzInception.f_mapSetters;
         m_clzInception = clzInception;
+        m_clzStruct    = this;
         }
 
 
@@ -92,6 +93,12 @@ public class PropertyComposition
         }
 
     @Override
+    public TypeConstant getBaseType()
+        {
+        return f_infoProp.getBaseRefType();
+        }
+
+    @Override
     public TypeComposition maskAs(TypeConstant type)
         {
         throw new UnsupportedOperationException();
@@ -114,26 +121,20 @@ public class PropertyComposition
         {
         assert handle.getComposition() == this;
 
-        return access == f_clzParent.getType().getAccess()
-            ? handle
-            : handle.cloneAs(ensureAccess(access));
+        return access == Access.STRUCT ^ isStruct()
+                ? handle.cloneAs(ensureAccess(access))
+                : handle;
         }
 
     @Override
     public TypeComposition ensureAccess(Access access)
         {
-        ClassComposition clzParent = f_clzParent.ensureAccess(access);
-        if (clzParent == f_clzParent)
-            {
-            return this;
-            }
-
         if (access == Access.STRUCT)
             {
             PropertyComposition clzStruct = m_clzStruct;
             if (clzStruct == null)
                 {
-                m_clzStruct = clzStruct = new PropertyComposition(this, clzParent);
+                m_clzStruct = clzStruct = new PropertyComposition(this);
                 }
             return clzStruct;
             }
@@ -145,7 +146,7 @@ public class PropertyComposition
     @Override
     public boolean isStruct()
         {
-        return f_clzParent.isStruct();
+        return m_clzStruct == this;
         }
 
     @Override

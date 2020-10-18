@@ -161,7 +161,7 @@ public class Annotation
     /**
      * Allows the caller to provide resolved Annotation parameters.
      *
-     * @param aParams  the new parameters (may include default pareameter values)
+     * @param aParams  the new parameters (may include default parameter values)
      */
     public void resolveParams(Constant[] aParams)
         {

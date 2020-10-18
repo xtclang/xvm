@@ -803,7 +803,16 @@ public abstract class ClassTemplate
 
         if (hTarget.isInflated(idProp))
             {
-            hTarget = ((GenericHandle) hTarget).getField(idProp);
+            GenericHandle hOuter = (GenericHandle) hTarget;
+            RefHandle     hRef   = (RefHandle) hOuter.getField(idProp);
+            if (hRef.getComposition().isStruct())
+                {
+                Frame.Continuation stepNext = frameCaller ->
+                    frameCaller.invoke1(chain, 0, frameCaller.popStack(), ahVar, iReturn);
+
+                return finishRefConstruction(frame, hRef, hOuter, idProp, stepNext);
+                }
+            hTarget = hRef;
             }
 
         return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
@@ -1437,9 +1446,15 @@ public abstract class ClassTemplate
             return frame.raiseException("Unknown property: \"" + idProp + "\" on " + f_sName);
             }
 
-        if (hTarget.isInflated(idProp))
+        if (hThis.isInflated(idProp))
             {
             RefHandle hRef = (RefHandle) hThis.getField(idProp);
+            if (hRef.getComposition().isStruct())
+                {
+                Frame.Continuation stepNext = frameCaller ->
+                    frameCaller.assignValue(iReturn, frameCaller.popStack());
+                return finishRefConstruction(frame, hRef, hThis, idProp, stepNext);
+                }
             return frame.assignValue(iReturn, hRef);
             }
 
@@ -1858,6 +1873,51 @@ public abstract class ClassTemplate
             frameTop.addContinuation(nextStep);
             }
         return frame.callInitialized(frameTop);
+        }
+
+    /**
+     * Finish the construction of a Ref-annotated property.
+     *
+     * @param frame         the current frame
+     * @param hRef          the RefHandle holding the "inflated" property structure
+     * @param hOuter        the property holder handle
+     * @param idProp        the property id
+     * @param continuation  the continuation to perform after the construction is done
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
+     */
+    protected int finishRefConstruction(Frame frame, RefHandle hRef, GenericHandle hOuter,
+                                        PropertyConstant idProp, Frame.Continuation continuation)
+        {
+        // call annotation constructors;
+        // hRef's type is "struct of annotated type" or PropertyClassTypeConstant
+        AnnotatedTypeConstant typeAnno  = (AnnotatedTypeConstant) hRef.getComposition().getBaseType();
+        TypeConstant          typeMixin = typeAnno.getAnnotationType();
+        ClassTemplate         mixin     = f_templates.getTemplate(typeMixin);
+
+        switch (mixin.proceedConstruction(frame, null, true, hRef, Utils.OBJECTS_NONE, Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                hRef = (RefHandle) frame.peekStack();
+                hOuter.setField(idProp, hRef);
+                return continuation.proceed(frame);
+
+            case Op.R_CALL:
+                Frame.Continuation stepNext = frameCaller ->
+                    {
+                    RefHandle hRefPublic = (RefHandle) frameCaller.peekStack();
+                    hOuter.setField(idProp, hRefPublic);
+                    return continuation.proceed(frameCaller);
+                    };
+                frame.m_frameNext.addContinuation(stepNext);
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
 

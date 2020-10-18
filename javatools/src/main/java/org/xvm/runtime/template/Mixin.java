@@ -84,10 +84,10 @@ public class Mixin
             this.ahVar       = ahVar;
             this.iReturn     = iReturn;
 
-            ClassComposition clz = (ClassComposition) hStruct.getComposition();
-            assert clz.getType().getAccess() == Access.STRUCT;
+            TypeComposition comp = hStruct.getComposition();
+            assert comp.isStruct();
 
-            typeNext = clz.getType().getUnderlyingType();
+            typeNext = comp.getBaseType();
             assert typeNext.isAnnotated();
 
             assert fInitStruct || constructor == null;

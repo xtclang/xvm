@@ -1821,7 +1821,9 @@ public class ClassStructure
         {
         return findMethod(sName, method ->
             {
-            if (method.getParamCount() != cArgs)
+            int cParamsAll     = method.getParamCount();
+            int cParamsDefault = method.getDefaultParamCount();
+            if (cArgs < cParamsAll - cParamsDefault || cArgs > cParamsAll)
                 {
                 return false;
                 }

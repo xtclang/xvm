@@ -7,9 +7,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -17,6 +19,7 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -135,6 +138,12 @@ public class ClassComposition
         }
 
     @Override
+    public TypeConstant getBaseType()
+        {
+        return getType().removeAccess();
+        }
+
+    @Override
     public ClassComposition maskAs(TypeConstant type)
         {
         return type.equals(f_typeRevealed) ? this :
@@ -234,8 +243,8 @@ public class ClassComposition
     @Override
     public boolean isConst()
         {
-        TypeConstant type = f_typeInception;
-        return ((ClassStructure) type.getSingleUnderlyingClass(false).getComponent()).isConst();
+        return ((ClassStructure) f_typeInception.
+                getSingleUnderlyingClass(false).getComponent()).isConst();
         }
 
     @Override
@@ -534,6 +543,32 @@ public class ClassComposition
                 else if (!infoProp.isSimpleUnassigned())
                     {
                     clzRef = f_template.f_templates.resolveClass(infoProp.getBaseRefType());
+                    }
+
+                if (clzRef != null)
+                    {
+                    AnyConstructor:
+                    for (Annotation anno : infoProp.getRefAnnotations())
+                        {
+                        TypeInfo infoAnno = anno.getAnnotationType().ensureTypeInfo();
+                        int      cArgs    = anno.getParams().length;
+
+                        Set<MethodConstant> setConstrId = infoAnno.findMethods("construct", cArgs,
+                                TypeInfo.MethodKind.Constructor);
+                        for (MethodConstant idConstruct : setConstrId)
+                            {
+                            MethodStructure method = infoAnno.getMethodById(idConstruct).
+                                getTopmostMethodStructure(infoAnno);
+
+                            if (!method.isSynthetic() || !method.ensureCode().isNoOp())
+                                {
+                                // this will serve as a flag to call annotation constructors
+                                // (see ClassTemplate.createPropertyRef() method)
+                                clzRef = clzRef.ensureAccess(Access.STRUCT);
+                                break AnyConstructor;
+                                }
+                            }
+                        }
                     }
                 }
 

@@ -61,6 +61,12 @@ public class ProxyComposition
         }
 
     @Override
+    public TypeConstant getBaseType()
+        {
+        return f_typeProxy;
+        }
+
+    @Override
     public ProxyComposition maskAs(TypeConstant type)
         {
         throw new UnsupportedOperationException();

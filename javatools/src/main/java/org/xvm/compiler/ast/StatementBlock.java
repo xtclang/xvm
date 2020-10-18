@@ -370,23 +370,27 @@ public class StatementBlock
                 // go through all of the parameters looking for any implicit de-reference params
                 // (a new local variable will be created for each, effectively hiding the original
                 // parameter)
-                for (org.xvm.asm.Parameter param : ctx.getMethod().getParamArray())
+                MethodStructure method = ctx.getMethod();
+                if (method != null)
                     {
-                    String   sName  = param.getName();
-                    Register regVar = (Register) ctx.getVar(sName);
-
-                    TypeConstant typeNarrowed = mapNarrowed.get(sName);
-                    if (typeNarrowed != null)
+                    for (org.xvm.asm.Parameter param : method.getParamArray())
                         {
-                        regVar.specifyActualType(typeNarrowed);
-                        }
+                        String   sName  = param.getName();
+                        Register regVar = (Register) ctx.getVar(sName);
 
-                    if (param.isImplicitDeref())
-                        {
-                        Assignment asnVar = ctx.getVarAssignment(sName);
-                        Register   regVal = param.deref(regVar);
-                        ctx.ensureNameMap().put(sName, regVal); // shadow using the capture
-                        ctx.setVarAssignment(sName, asnVar);    // ... and copy its assignment                    }
+                        TypeConstant typeNarrowed = mapNarrowed.get(sName);
+                        if (typeNarrowed != null)
+                            {
+                            regVar.specifyActualType(typeNarrowed);
+                            }
+
+                        if (param.isImplicitDeref())
+                            {
+                            Assignment asnVar = ctx.getVarAssignment(sName);
+                            Register   regVal = param.deref(regVar);
+                            ctx.ensureNameMap().put(sName, regVal); // shadow using the capture
+                            ctx.setVarAssignment(sName, asnVar);    // ... and copy its assignment                    }
+                            }
                         }
                     }
                 }

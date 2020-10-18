@@ -2,33 +2,42 @@ module TestSimple
     {
     @Inject Console console;
 
-    package json import json.xtclang.org;
-
     void run()
         {
-        reportModule(this:module);
-
-        reportPackage(ecstasy);
-        reportPackage(json);
-        reportPackage(ecstasy.reflect);
-        reportPackage(json.mapping);
+        new Test().report();
         }
 
-    void reportModule(Module m)
+    mixin Silly
+            into Var<Int>
         {
-        console.println($"module {m} version={m.version}");
         }
 
-    void reportPackage(Package p)
+    class Test
         {
-        if (Module m := p.isModuleImport())
+        @Lazy(() -> foo()) Int prop;
+
+        static Int foo()
             {
-            console.println($"import {m} version={m.version}");
-            }
-        else
-            {
-            console.println($"regular package {p}");
+            return 42;
             }
 
+        @Lazy Int prop2.calc()
+            {
+            return 48;
+            }
+
+        @Silly Int prop3 = 3;
+
+        void report()
+            {
+            console.println(prop);
+            console.println(&prop);
+
+            console.println(prop2);
+            console.println(&prop2);
+
+            console.println(prop3);
+            console.println(&prop3);
+            }
         }
     }

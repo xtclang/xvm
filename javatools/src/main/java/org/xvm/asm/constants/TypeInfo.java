@@ -1827,12 +1827,6 @@ public class TypeInfo
         Set<MethodConstant> setMethods = mapMethods.get(sKey);
         if (setMethods == null)
             {
-            if (cParams == -1)
-                {
-                // any number of parameters goes
-                cParams = Integer.MAX_VALUE;
-                }
-
             // the call to info.getTopmostMethodStructure(this) may change the content of
             // mapBySignature, so collect all the matching names first
             Map<MethodConstant, MethodInfo> mapCandidates = new HashMap<>();
@@ -1870,7 +1864,7 @@ public class TypeInfo
                 int cDefaults   = method.getDefaultParamCount();
                 int cRequired   = cAllParams - cTypeParams - cDefaults;
 
-                if (cParams >= cRequired)
+                if (cParams == -1 || cRequired <= cParams && cParams <= cAllParams)
                     {
                     if (setMethods == null)
                         {

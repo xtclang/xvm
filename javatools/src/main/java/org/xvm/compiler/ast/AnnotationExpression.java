@@ -488,7 +488,7 @@ public class AnnotationExpression
         @Override
         public MethodStructure getMethod()
             {
-            throw new IllegalStateException();
+            return null;
             }
 
         @Override

@@ -1962,6 +1962,15 @@ public class MethodStructure
             }
 
         /**
+         * @return true iff the code can be optimized out
+         */
+        public boolean isNoOp()
+            {
+            Op[] aOp = getAssembledOps();
+            return aOp.length == 0 || aOp[0].getOpCode() == Op.OP_RETURN_0;
+            }
+
+        /**
          * Create a clone of this code that will exist on the specified method structure.
          *
          * @param method  the method structure to graft a clone onto

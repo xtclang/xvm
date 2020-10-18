@@ -39,6 +39,12 @@ public interface TypeComposition
     TypeConstant getType();
 
     /**
+     * @return the underlying type of this TypeComposition; for ClassComposition the base type does
+     *         not include the access aspect; for PropertyComposition - it is a BaseRef type
+     */
+    TypeConstant getBaseType();
+
+    /**
      * Retrieve a TypeComposition that widens the current type to the specified type.
      *
      * Note that the underlying ClassTemplate doesn't change.
