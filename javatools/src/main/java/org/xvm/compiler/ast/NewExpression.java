@@ -1325,7 +1325,10 @@ public class NewExpression
 
         // call the default initializer
         assert constrThis.isAnonymousClassWrapperConstructor();
-        code.add(new SynInit());
+        if (!methodSuper.isAnonymousClassWrapperConstructor())
+            {
+            code.add(new SynInit());
+            }
 
         if (cParams == 1)
             {
@@ -1442,8 +1445,11 @@ public class NewExpression
             codeConstr.add(new L_Set(prop.getIdentityConstant(), reg));
             }
 
-        // call the default initializer
-        codeConstr.add(new SynInit());
+        if (!constrOld.isAnonymousClassWrapperConstructor())
+            {
+            // call the default initializer
+            codeConstr.add(new SynInit());
+            }
 
         // call the previous constructor
         MethodConstant idOld = constrOld.getIdentityConstant();

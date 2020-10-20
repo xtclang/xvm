@@ -2336,7 +2336,8 @@ public class TypeCompositionStatement
                     }
                 }
 
-            if (constructor.isAnonymousClassWrapperConstructor())
+            if (constructor.isAnonymousClassWrapperConstructor() &&
+                    !constructSuper.isAnonymousClassWrapperConstructor())
                 {
                  // call the default initializer
                 code.add(new SynInit());

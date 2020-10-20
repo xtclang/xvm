@@ -2176,7 +2176,7 @@ public abstract class ClassTemplate
                         if (constructor != null && constructor.isAnonymousClassWrapperConstructor())
                             {
                             // wrapper constructor calls the initializer itself; skip next two steps
-                            ixStep  = 2;
+                            ixStep  = 3;
                             iResult = frameCaller.call1(constructor, hStruct, ahVar, Op.A_IGNORE);
                             break;
                             }
