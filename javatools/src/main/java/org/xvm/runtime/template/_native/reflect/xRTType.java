@@ -176,7 +176,8 @@ public class xRTType
             TypeConstant typeValue  = typeTarget.resolveFormalType(idProp);
 
             return typeValue == null
-                ? frame.raiseException("Unknown formal type: " + idProp.getName())
+                ? frame.raiseException(xException.invalidType(frame,
+                    "Unknown formal type: " + idProp.getName()))
                 : frame.assignValue(iReturn, typeValue.ensureTypeHandle(frame.poolContext()));
             }
 
@@ -310,8 +311,8 @@ public class xRTType
             TypeConstant typeThat = ((TypeHandle) hArg   ).getDataType();
             if (!typeThis.isShared(pool) || !typeThat.isShared(pool))
                 {
-                return frame.raiseException("no common TypeSystem for ("
-                        + typeThis + " + " + typeThat + ")");
+                return frame.raiseException(xException.invalidType(frame,
+                    "No common TypeSystem for (" + typeThis + " + " + typeThat + ")"));
                 }
             TypeConstant typeResult = pool.ensureUnionTypeConstant(typeThis, typeThat);
             return frame.assignValue(iReturn, typeResult.ensureTypeHandle(pool));
@@ -344,7 +345,8 @@ public class xRTType
                 TypeConstant typeResult = pool.ensureDifferenceTypeConstant(typeThis, typeThat);
                 return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.poolContext()));
                 }
-            return frame.raiseException("no common TypeSystem for (" + typeThis + " - " + typeThat + ")");
+            return frame.raiseException(xException.invalidType(frame,
+                "No common TypeSystem for (" + typeThis + " - " + typeThat + ")"));
             }
         else if (hArg instanceof MethodHandle)
             {
@@ -376,7 +378,8 @@ public class xRTType
                 // return frame.assignValue(iReturn, typeResult.getTypeHandle());
                 throw new UnsupportedOperationException();
                 }
-            return frame.raiseException("no common TypeSystem for (" + typeThis + " & " + typeThat + ")");
+            return frame.raiseException(xException.invalidType(frame,
+                "No common TypeSystem for (" + typeThis + " & " + typeThat + ")"));
             }
 
         return super.invokeOr(frame, hTarget, hArg, iReturn);
@@ -396,7 +399,8 @@ public class xRTType
                 TypeConstant typeResult = pool.ensureIntersectionTypeConstant(typeThis, typeThat);
                 return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.poolContext()));
                 }
-            return frame.raiseException("no common TypeSystem for (" + typeThis + " | " + typeThat + ")");
+            return frame.raiseException(xException.invalidType(frame,
+                "No common TypeSystem for (" + typeThis + " | " + typeThat + ")"));
             }
 
         return super.invokeOr(frame, hTarget, hArg, iReturn);
@@ -467,6 +471,13 @@ public class xRTType
      */
     public int getPropertyChildTypes(Frame frame, TypeHandle hType, int iReturn)
         {
+        if (hType.isForeign())
+            {
+            // TODO GG: ask the type's container to answer
+            return Utils.constructListMap(frame, ensureListMapComposition(),
+                    xString.ensureEmptyArray(), ensureEmptyTypeArray(), iReturn);
+            }
+
         // bridge from one module to another if necessary
         TypeConstant typeTarget = hType.getDataType();
         if (typeTarget.isSingleUnderlyingClass(false))
@@ -504,6 +515,12 @@ public class xRTType
      */
     public int getPropertyConstants(Frame frame, TypeHandle hType, int iReturn)
         {
+        if (hType.isForeign())
+            {
+            // TODO GG: ask the type's container to answer
+            return frame.assignValue(iReturn, xRTProperty.ensureEmptyArray());
+            }
+
         TypeConstant                        typeTarget = hType.getDataType();
         TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
         Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
@@ -532,6 +549,12 @@ public class xRTType
      */
     public int getPropertyConstructors(Frame frame, TypeHandle hType, int iReturn)
         {
+        if (hType.isForeign())
+            {
+            // TODO GG: ask the type's container to answer
+            return frame.assignValue(iReturn, xRTFunction.ensureEmptyArray());
+            }
+
         // the actual construction process uses a "construct" function as a structural initializer
         // and an optional "finally" method as a post-object-instantiation (i.e. first time that
         // "this" object exists) method. reflection hides this complicated process, and instead
@@ -784,7 +807,7 @@ public class xRTType
     public int getPropertyForm(Frame frame, TypeHandle hType, int iReturn)
         {
         return Utils.assignInitializedEnum(frame,
-                makeFormHandle(frame, hType.getDataType()), iReturn);
+                makeFormHandle(frame, hType.isForeign() ? null : hType.getDataType()), iReturn);
         }
 
     /**
@@ -792,6 +815,12 @@ public class xRTType
      */
     public int getPropertyFunctions(Frame frame, TypeHandle hType, int iReturn)
         {
+        if (hType.isForeign())
+            {
+            // TODO GG: ask the type's container to answer
+            return frame.assignValue(iReturn, xRTFunction.ensureEmptyArray());
+            }
+
         TypeConstant                    typeTarget  = hType.getDataType();
         Map<MethodConstant, MethodInfo> mapMethods  = typeTarget.ensureTypeInfo().getMethods();
         ArrayList<FunctionHandle>       listHandles = new ArrayList<>(mapMethods.size());
@@ -815,6 +844,12 @@ public class xRTType
      */
     public int getPropertyMethods(Frame frame, TypeHandle hType, int iReturn)
         {
+        if (hType.isForeign())
+            {
+            // TODO GG: ask the type's container to answer
+            return frame.assignValue(iReturn, xRTMethod.ensureEmptyArray());
+            }
+
         TypeConstant                    typeTarget  = hType.getDataType();
         Map<MethodConstant, MethodInfo> mapMethods  = typeTarget.ensureTypeInfo().getMethods();
         ArrayList<MethodHandle>         listHandles = new ArrayList<>(mapMethods.size());
@@ -839,6 +874,12 @@ public class xRTType
      */
     public int getPropertyProperties(Frame frame, TypeHandle hType, int iReturn)
         {
+        if (hType.isForeign())
+            {
+            // TODO GG: ask the type's container to answer
+            return frame.assignValue(iReturn, xRTProperty.ensureEmptyArray());
+            }
+
         TypeConstant                        typeTarget = hType.getDataType();
         TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
         Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
@@ -894,6 +935,12 @@ public class xRTType
      */
     public int getPropertyUnderlyingTypes(Frame frame, TypeHandle hType, int iReturn)
         {
+        if (hType.isForeign())
+            {
+            // TODO GG: ask the type's container to answer
+            return frame.assignValue(iReturn, ensureEmptyTypeArray());
+            }
+
         TypeConstant   typeTarget  = hType.getDataType();
         TypeConstant[] aUnderlying = TypeConstant.NO_TYPES;
         if (typeTarget.isModifyingType())
@@ -944,24 +991,29 @@ public class xRTType
      */
     public int invokeAnnotate(Frame frame, TypeHandle hType, ObjectHandle hArg, int iReturn)
         {
-        ConstantPool pool     = frame.poolContext();
-        TypeConstant typeThis = hType.getDataType();
-
-        GenericHandle hAnno   = (GenericHandle) hArg;
-        ClassHandle   hClass  = (ClassHandle) hAnno.getField("mixinClass");
-        ArrayHandle   hArgs   = (ArrayHandle) hAnno.getField("arguments");
+        ConstantPool  pool     = frame.poolContext();
+        TypeConstant  typeThis = hType.getDataType();
+        GenericHandle hAnno    = (GenericHandle) hArg;
+        ClassHandle   hClass   = (ClassHandle) hAnno.getField("mixinClass");
+        ArrayHandle   hArgs    = (ArrayHandle) hAnno.getField("arguments");
 
         if (hArgs.m_cSize > 0)
             {
             // TODO args
             throw new UnsupportedOperationException();
             }
-        ClassConstant clzAnno = (ClassConstant) hClass.getType().getParamType(0).getDefiningConstant();
-        Annotation    anno    = pool.ensureAnnotation(clzAnno);
 
-        TypeConstant typeAnno = pool.ensureAnnotatedTypeConstant(typeThis, anno);
+        TypeConstant typeAnno = hClass.getType().getParamType(0);
+        if (typeThis.isShared(pool) && typeAnno.isShared(pool))
+            {
+            ClassConstant clzAnno = (ClassConstant) typeAnno.getDefiningConstant();
+            Annotation    anno    = pool.ensureAnnotation(clzAnno);
 
-        return frame.assignValue(iReturn, typeAnno.ensureTypeHandle(frame.poolContext()));
+            TypeConstant typeResult = pool.ensureAnnotatedTypeConstant(typeThis, anno);
+            return frame.assignValue(iReturn, typeResult.ensureTypeHandle(pool));
+            }
+        return frame.raiseException(xException.invalidType(frame,
+            "No common TypeSystem for (" + typeThis + " - " + typeAnno + ")"));
         }
 
     /**
@@ -969,6 +1021,12 @@ public class xRTType
      */
     public int invokeAnnotated(Frame frame, TypeHandle hType, int[] aiReturn)
         {
+        if (hType.isForeign())
+            {
+            // TODO GG: ask the type's container to answer
+            frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            }
+
         TypeConstant typeThis = hType.getDataType();
         if (typeThis.isAnnotated())
             {
@@ -1061,14 +1119,17 @@ public class xRTType
      */
     public int invokeFromClass(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        TypeConstant typeTarget = hType.getDataType();
-        if (typeTarget.isExplicitClassIdentity(true))
+        if (!hType.isForeign())
             {
-            typeTarget = typeTarget.removeAccess().removeImmutable();
+            TypeConstant typeTarget = hType.getDataType();
+            if (typeTarget.isExplicitClassIdentity(true))
+                {
+                typeTarget = typeTarget.removeAccess().removeImmutable();
 
-            IdentityConstant idClz = frame.poolContext().ensureClassConstant(typeTarget);
+                IdentityConstant idClz = frame.poolContext().ensureClassConstant(typeTarget);
 
-            return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(idClz));
+                return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(idClz));
+                }
             }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
@@ -1078,16 +1139,19 @@ public class xRTType
      */
     public int invokeFromProperty(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        TypeConstant type = hType.getDataType();
-        if (type.isSingleDefiningConstant())
+        if (!hType.isForeign())
             {
-            Constant constDef = type.getDefiningConstant();
-            if (constDef instanceof PropertyConstant)
+            TypeConstant type = hType.getDataType();
+            if (type.isSingleDefiningConstant())
                 {
-                TypeConstant   typeProperty = ((PropertyConstant) constDef).getValueType(null);
-                PropertyHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
+                Constant constDef = type.getDefiningConstant();
+                if (constDef instanceof PropertyConstant)
+                    {
+                    TypeConstant   typeProperty = ((PropertyConstant) constDef).getValueType(null);
+                    PropertyHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
 
-                return frame.assignValues(aiReturn, xBoolean.TRUE, hProperty);
+                    return frame.assignValues(aiReturn, xBoolean.TRUE, hProperty);
+                    }
                 }
             }
 
@@ -1113,7 +1177,6 @@ public class xRTType
         {
         String       sName = null;
         TypeConstant type  = hType.getDataType();
-
 
         if (type.isSingleDefiningConstant())
             {
@@ -1173,6 +1236,12 @@ public class xRTType
      */
     public int invokeParameterize(Frame frame, TypeHandle hType, ObjectHandle hArg, int iReturn)
         {
+        if (hType.isForeign())
+            {
+            return frame.raiseException(xException.invalidType(frame,
+                "Pure type " + hType.getDataType().getValueString()));
+            }
+
         ObjectHandle[] ahFormalTypes;
         int            cFormalTypes;
         if (hArg instanceof GenericArrayHandle)
@@ -1271,13 +1340,19 @@ public class xRTType
      * Given a TypeConstant, determine the Ecstasy "Form" value for the type.
      *
      * @param frame  the current frame
-     * @param type   a TypeConstant used at runtime
+     * @param type   a TypeConstant used at runtime (null for a foreign type)
      *
      * @return the handle to the appropriate Ecstasy {@code Type.Form} enum value
      */
     protected static EnumHandle makeFormHandle(Frame frame, TypeConstant type)
         {
         xEnum enumForm = (xEnum) INSTANCE.f_templates.getTemplate("reflect.Type.Form");
+
+        if (type == null)
+            {
+            // this is an indicator of a foreign type
+            return enumForm.getEnumByName("Pure");
+            }
 
         switch (type.getFormat())
             {
@@ -1437,6 +1512,22 @@ public class xRTType
         return ARGUMENT_ARRAY_EMPTY;
         }
 
+    /**
+     * @return the ClassComposition for ListMap<String, Type>
+     */
+    private static ClassComposition ensureListMapComposition()
+        {
+        ClassComposition clz = LISTMAP_CLZCOMP;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
+            typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeString());
+            LISTMAP_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeList);
+            assert clz != null;
+            }
+        return clz;
+        }
 
     // ----- TypeHandle support --------------------------------------------------------------------
 
@@ -1536,6 +1627,8 @@ public class xRTType
     private static xArray           ARRAY_TEMPLATE;
     private static ClassComposition TYPE_ARRAY_CLZCOMP;
     private static ArrayHandle      TYPE_ARRAY_EMPTY;
+    private static ClassComposition LISTMAP_CLZCOMP;
+
 
     private static ClassTemplate    ANNOTATION_TEMPLATE;
     private static MethodStructure  ANNOTATION_CONSTRUCT;

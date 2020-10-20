@@ -1251,6 +1251,19 @@ public class xRTFunction
         }
 
     /**
+     * @return the handle for an empty Array of Function
+     */
+    public static ArrayHandle ensureEmptyArray()
+        {
+        if (ARRAY_EMPTY == null)
+            {
+            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+                ensureArrayComposition(), new ObjectHandle[0]);
+            }
+        return ARRAY_EMPTY;
+        }
+
+    /**
      * @return the ClassComposition for a ListMap<Parameter, Object>
      */
     public static ClassComposition ensureListMap()
@@ -1268,7 +1281,6 @@ public class xRTFunction
             }
         return clz;
         }
-
 
     /**
      * @return the TypeConstant for a default Constructor on the specified target
@@ -1304,6 +1316,7 @@ public class xRTFunction
     private static xArray           ARRAY_TEMPLATE;
     private static ClassComposition ARRAY_CLZCOMP;
     private static ClassComposition LISTMAP_CLZCOMP;
+    private static ArrayHandle      ARRAY_EMPTY;
 
     /**
      * RTFunction:

@@ -90,9 +90,17 @@ public class TestConnector
             {
             File file = new File(dirBuild, asNames[i] + ".xtc");
 
-            aRepo[1 + cLibs + i] = file.isDirectory()
-                ? new DirRepository(file, true)
-                : new FileRepository(file, true);
+            try
+                {
+                aRepo[1 + cLibs + i] = file.isDirectory()
+                    ? new DirRepository(file, true)
+                    : new FileRepository(file, true);
+                }
+            catch (RuntimeException | Error e)
+                {
+                System.err.println("Failed to load " + file);
+                return;
+                }
             }
 
         ModuleRepository repository = new LinkedRepository(true, aRepo);
