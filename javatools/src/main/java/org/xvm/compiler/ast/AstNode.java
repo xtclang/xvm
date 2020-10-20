@@ -1230,8 +1230,21 @@ public abstract class AstNode
 
             if (cArgs > cParams || fCall && cArgs < cRequired)
                 {
-                // invalid number of arguments
+                log(errsTemp, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cArgs);
+                errsKeep = errsTemp;
                 continue;
+                }
+
+            int cMethodRets = method.getReturnCount();
+            if (cReturns > cMethodRets)
+                {
+                // the only allowed mismatch is a void method's return into a Tuple
+                if (cMethodRets != 0 || cReturns != 1 && !atypeReturn[0].isTuple())
+                    {
+                    log(errsTemp, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cReturns, cMethodRets);
+                    errsKeep = errsTemp;
+                    continue;
+                    }
                 }
 
             if (cNamed > 0)
