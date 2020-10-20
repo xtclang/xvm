@@ -1781,6 +1781,10 @@ public class TypeCompositionStatement
                                 return;
                                 }
                             // note: it is too early in the compilation cycle to use "isA()"
+                            if (typeConsParam.isAutoNarrowing())
+                                {
+                                typeConsParam = typeConsParam.resolveAutoNarrowingBase();
+                                }
                             if (!atypeParams[i].equals(typeConsParam))
                                 {
                                 continue NextConstructor;
