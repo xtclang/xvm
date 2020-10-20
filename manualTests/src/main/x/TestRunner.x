@@ -107,7 +107,17 @@ module TestRunner.xtclang.org
         @Inject Container.Linker linker;
         @Inject ModuleRepository repository;
 
-        FileTemplate   fileTemplate   = linker.loadFileTemplate(bytes).resolve(repository);
+        FileTemplate fileTemplate;
+        try
+            {
+            fileTemplate = linker.loadFileTemplate(bytes).resolve(repository);
+            }
+        catch (Exception e)
+            {
+            console.println($"Failed to resolve the module: {fileXtc} ({e.text})");
+            return Null;
+            }
+
         ModuleTemplate moduleTemplate = fileTemplate.mainModule;
         Injector       injector;
 

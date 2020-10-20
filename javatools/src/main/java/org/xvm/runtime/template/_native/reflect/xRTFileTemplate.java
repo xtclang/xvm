@@ -96,11 +96,16 @@ public class xRTFileTemplate
                     if (hArg.getTemplate() instanceof xRepository)
                         {
                         file = f_templates.createFileStructure(file.getModule());
-                        file.linkModules(f_templates.f_repository, true);
+
+                        String sMissing = file.linkModules(f_templates.f_repository, true);
+                        if (sMissing != null)
+                            {
+                            return frame.raiseException("Missing dependent module: " + sMissing);
+                            }
                         }
                     else
                         {
-                        throw new UnsupportedOperationException("TODO");
+                        throw new UnsupportedOperationException("TODO custom repository support");
                         }
                     }
                 return frame.assignValue(iReturn, makeHandle(file));
