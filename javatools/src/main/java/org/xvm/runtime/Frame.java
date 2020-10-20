@@ -1184,27 +1184,9 @@ public class Frame
         }
 
     /**
-     * Obtain the type of the specified argument. Negative argument ids are treated as constants.
+     * Obtain the type of the specified argument.
      *
-     * @param iArg  the argument id
-     *
-     * @return the type (resolved) of the specified argument or null if the argument points to the
-     *         stack
-     */
-    public TypeConstant getArgumentType(int iArg)
-        {
-        return iArg >= 0
-            ? getRegisterType(iArg)
-            : iArg <= Op.CONSTANT_OFFSET
-                ? getConstant(iArg).getType()  // a constant cannot be generic
-                : getPredefinedArgumentType(iArg, null);
-        }
-
-    /**
-     * Similarly to {@link #getArgumentType}, obtain the type of the specified argument except
-     * that the negative ids are treated as "local-property" references.
-     *
-     * @param iArg  the argument id
+     * @param iArg  the argument id; negative ids are treated as "local-property" references
      * @param hArg  in case the argument id points to the stack, indicates the argument itself
      *
      * @return the type (resolved) of the specified argument or null if the argument points to the
@@ -1216,7 +1198,7 @@ public class Frame
             ? getRegisterType(iArg)
             : iArg <= Op.CONSTANT_OFFSET
                 // "local property" type needs to be resolved
-                ? getConstant(iArg).getType().resolveGenerics(poolContext(), getGenericsResolver())
+                ? resolveType(getConstant(iArg).getType())
                 : getPredefinedArgumentType(iArg, hArg);
         }
 
@@ -1609,7 +1591,7 @@ public class Frame
                 }
 
             Parameter    param = f_function.getParam(nVar);
-            TypeConstant type  = param.getType().resolveGenerics(poolContext(), getGenericsResolver());
+            TypeConstant type  = resolveType(param.getType());
 
             info = f_aInfo[nVar] = new VarInfo(type, VAR_STANDARD);
             info.setName(param.getName());
@@ -2203,12 +2185,10 @@ public class Frame
                 ? frame.getConstant(nTargetReg)
                 : pool.getConstant(nTargetReg));
 
-            return iAuxId >= 0
-                ? idMethod.getRawReturns()[iAuxId].
-                    resolveGenerics(pool, frame.getGenericsResolver())
+            return frame.resolveType(iAuxId >= 0
+                ? idMethod.getRawReturns()[iAuxId]
                 : pool.ensureParameterizedTypeConstant(
-                    pool.typeTuple(), idMethod.getSignature().getRawReturns()).
-                        resolveGenerics(pool, frame.getGenericsResolver());
+                    pool.typeTuple(), idMethod.getSignature().getRawReturns()));
             }
         };
 
