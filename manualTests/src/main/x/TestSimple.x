@@ -4,21 +4,35 @@ module TestSimple
 
     void run()
         {
-        Test<String, IntNumber> t = new Test(new HashMap());
-        t.test("a");
+        new Parent().test();
         }
 
-    class Test<Key, Value>(Map<Key, Value> map)
+    class Base()
         {
-        void test(Key key)
+        }
+
+    class Parent()
+            extends Base
+        {
+        void test()
             {
-            Int r = map.process(key, entry ->
+            new Child().test();
+
+            Base   b = this.Base;
+            Parent p = this.Parent;
+            console.println(b);
+            console.println(p);
+            }
+
+        class Child
+            {
+            void test()
                 {
-                @Inject Console console;
-                console.println(&entry.Referent);
-                console.println(&entry.actualType);
-                return 0;
-                });
+                Base   b = this.Base;
+                Parent p = this.Parent;
+                console.println(b);
+                console.println(p);
+                }
             }
         }
     }

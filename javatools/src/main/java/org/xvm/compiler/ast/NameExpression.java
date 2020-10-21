@@ -1839,6 +1839,16 @@ public class NameExpression
                                 .forceResolve(ErrorListener.BLACKHOLE);
                         if (constTarget instanceof IdentityConstant && constTarget.isClass())
                             {
+                            // they may choose to emphasize the exact type of "this" by writing:
+                            // "this.X", where X is this class itself, a super class or any other
+                            // contribution into this class; in all cases we'll treat it as "this"
+                            if (ctx.getThisType().isA(constTarget.getType()))
+                                {
+                                TypeConstant typeTarget = constTarget.getType().
+                                        adoptParameters(pool, ctx.getThisType());
+                                return m_arg = new Register(typeTarget, Op.A_THIS);
+                                }
+
                             // if the left is a class, then the result is a sequence of at
                             // least one (recursive) ParentClassConstant around a
                             // ThisClassConstant; from this (context) point, walk up looking
