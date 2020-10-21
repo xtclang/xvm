@@ -762,7 +762,7 @@ public class NameExpression
                 }
             }
 
-        if (left == null && isRValue() && !getName().equals("this"))
+        if (left == null && isRValue())
             {
             switch (getMeaning())
                 {
