@@ -60,7 +60,7 @@ public class FBind
 
         int c = readPackedInt(in);
 
-        m_anParamIx = new int[c];
+        m_anParamIx    = new int[c];
         m_anParamValue = new int[c];
 
         for (int i = 0; i < c; i++)
@@ -104,9 +104,10 @@ public class FBind
         {
         try
             {
+            int            nFunctionId = m_nFunctionId;
             FunctionHandle hFunction;
 
-            if (m_nFunctionId == A_SUPER)
+            if (nFunctionId == A_SUPER)
                 {
                 CallChain chain = frame.m_chain;
                 if (chain == null)
@@ -120,7 +121,7 @@ public class FBind
                     }
                 hFunction = xRTFunction.makeHandle(chain, nDepth).bindTarget(frame.getThis());
                 }
-            else if (m_nFunctionId <= CONSTANT_OFFSET)
+            else if (nFunctionId <= CONSTANT_OFFSET)
                 {
                 MethodStructure function = getMethodStructure(frame);
                 if (function == null)
@@ -131,7 +132,7 @@ public class FBind
                 }
             else
                 {
-                ObjectHandle hFn = frame.getArgument(m_nFunctionId);
+                ObjectHandle hFn = frame.getArgument(nFunctionId);
 
                 if (isDeferred(hFn))
                     {
@@ -152,18 +153,9 @@ public class FBind
         {
         try
             {
-            int            cParams   = m_anParamIx.length;
-            ObjectHandle[] ahParam   = new ObjectHandle[cParams];
-            boolean        fDeferred = false;
+            ObjectHandle[] ahParam = frame.getArguments(m_anParamValue, 0);
 
-            for (int i = 0; i < cParams; i++)
-                {
-                ObjectHandle hParam = frame.getArgument(m_anParamValue[i]);
-                ahParam[i] = hParam;
-                fDeferred |= isDeferred(hParam);
-                }
-
-            if (fDeferred)
+            if (anyDeferred(ahParam))
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, hFunction, ahParam);
@@ -183,20 +175,22 @@ public class FBind
         {
         // TODO: introduce bindMulti() method to reduce array copying
         // we assume that the indexes are sorted in the ascending order
-        for (int i = 0, c = m_anParamIx.length; i < c; i++)
+        int[] anParamIx = m_anParamIx;
+        for (int i = 0, c = anParamIx.length; i < c; i++)
             {
             // after every step, the resulting function accepts one less
             // parameter, so it needs to compensate the absolute position
-            hFunction = hFunction.bind(frame, m_anParamIx[i] - i, ahParam[i]);
+            hFunction = hFunction.bind(frame, anParamIx[i] - i, ahParam[i]);
             }
 
-        if (frame.isNextRegister(m_nRetValue))
+        int nRetVal = m_nRetValue;
+        if (frame.isNextRegister(nRetVal))
             {
             // do we need a precise type?
-            frame.introduceResolvedVar(m_nRetValue, frame.poolContext().typeFunction());
+            frame.introduceResolvedVar(nRetVal, frame.poolContext().typeFunction());
             }
 
-        return frame.assignValue(m_nRetValue, hFunction);
+        return frame.assignValue(nRetVal, hFunction);
         }
 
     @Override

@@ -978,7 +978,6 @@ public class LambdaExpression
                 TypeConstant[]        atypeAllParams = new TypeConstant[cAllParams];
                 String[]              asAllParams    = new String[cAllParams];
                 int                   iParam         = 0;
-                List<Op>              listMoveOp     = new ArrayList<>(cBindArgs);
 
                 aBindArgs = new Argument[cBindArgs];
 
@@ -1007,6 +1006,8 @@ public class LambdaExpression
                     iParam++;
                     }
 
+                // Note: the MoveRef ops are allowed to push arguments on the stack since the
+                // run-time knows to load them up in the inverse order
                 for (Entry<String, Boolean> entry : mapCapture.entrySet())
                     {
                     String       sCapture    = entry.getKey();
@@ -1019,7 +1020,7 @@ public class LambdaExpression
                         typeCapture = pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
                         Register regVal = regCapture;
                         Register regVar = new Register(typeCapture, Op.A_STACK);
-                        listMoveOp.add(new MoveVar(regVal, regVar));
+                        code.add(new MoveVar(regVal, regVar));
                         regCapture = regVar;
                         fImplicitDeref = true;
                         }
@@ -1030,7 +1031,7 @@ public class LambdaExpression
                         typeCapture = pool.ensureParameterizedTypeConstant(pool.typeRef(), typeCapture);
                         Register regVal = regCapture;
                         Register regVar = new Register(typeCapture, Op.A_STACK);
-                        listMoveOp.add(new MoveRef(regVal, regVar));
+                        code.add(new MoveRef(regVal, regVar));
                         regCapture     = regVar;
                         fImplicitDeref = true;
                         }
@@ -1051,12 +1052,6 @@ public class LambdaExpression
                     ++iParam;
                     }
                 assert iParam == cBindArgs;
-
-                // since the Move* ops push refs onto the stack, add them in the inverse order
-                for (int i = listMoveOp.size() - 1; i >= 0; --i)
-                    {
-                    code.add(listMoveOp.get(i));
-                    }
 
                 System.arraycopy(atypeParams, 0, atypeAllParams, cBindArgs, cLambdaParams);
                 System.arraycopy(asParams   , 0, asAllParams   , cBindArgs, cLambdaParams);
