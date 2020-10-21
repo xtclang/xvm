@@ -160,7 +160,7 @@ module TestMisc
         Int    n = o.as(Int);
         console.println("n=" + n);
 
-        Object o2 = 4.toInt();
+        Object o2 = Int:4;
         console.println("o2=" + o2);
 
         try
@@ -365,7 +365,7 @@ module TestMisc
     void testStmtExpr()
         {
         console.println("\n** testStmtExpr()");
-        console.println("5+3=" + {return 5.toInt() + 3;});
+        console.println("5+3=" + {return Int:5 + 3;});
         }
 
     void testAssertTrue()

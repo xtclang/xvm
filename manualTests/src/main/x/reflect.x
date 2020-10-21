@@ -305,19 +305,19 @@ module TestReflection
                 case 1:
                     Class<Point, Point:protected, Point:private, Point:struct> clz = Point;
                     assert Point:struct structure := clz.allocate();
-                    structure.x = 1.toInt();
-                    structure.y = 2.toInt();
+                    structure.x = Int:1;
+                    structure.y = Int:2;
                     Tuple<Point<Int>> p2 = constructor.invoke(Tuple:(structure));
                     console.println($"construct(structure)={p2[0]}");
                     break;
 
                 case 2:
-                    Tuple<Point<Int>> p2 = constructor.invoke((1.toInt(), 2.toInt()));
+                    Tuple<Point<Int>> p2 = constructor.invoke((Int:1, Int:2));
                     console.println($"construct(1,2)={p2[0]}");
                     break;
 
                 case 3:
-                    Tuple<Point<Int>> p3 = constructor.invoke((1.toInt(), 2.toInt(), "there"));
+                    Tuple<Point<Int>> p3 = constructor.invoke((Int:1, Int:2, "there"));
                     console.println($"construct(1,2,\"there\")={p3[0]}");
                     break;
                 }

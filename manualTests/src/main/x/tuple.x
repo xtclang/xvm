@@ -117,7 +117,7 @@ module TestTuples
         Tuple<Int, String, Char> t1 = (1, "big", '?');
         console.println($"{t1} - {t1.mutability}");
 
-        Tuple t1a = Tuple:().add(1.toInt()).add("big").add('?');
+        Tuple t1a = Tuple:().add(Int:1).add("big").add('?');
         assert t1a == t1;
 
         Tuple<Int, String, Char> t2 = t1.ensureMutability(Fixed);
