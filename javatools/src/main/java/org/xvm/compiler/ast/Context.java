@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -999,15 +1000,15 @@ public class Context
     /**
      * Mark the specified generic type as being used within this context.
      *
-     * @param sName  the generic type name
-     * @param errs   the error list to log to (optional)
+     * @param type  the generic type or a type that contains generic types
+     * @param errs  the error list to log to (optional)
      */
-    public void useGenericType(String sName, ErrorListener errs)
+    public void useGenericType(TypeConstant type, ErrorListener errs)
         {
         Context ctxOuter = getOuterContext();
         if (ctxOuter != null)
             {
-            ctxOuter.useGenericType(sName, errs);
+            ctxOuter.useGenericType(type, errs);
             }
         }
 
@@ -2403,13 +2404,13 @@ public class Context
             {
             super(ctxOuter, true);
 
-            m_typeLeft = typeLeft;
+            f_typeLeft = typeLeft;
             }
 
         @Override
         public Context enterList()
             {
-            TypeConstant typeCtx = m_typeLeft;
+            TypeConstant typeCtx = f_typeLeft;
             TypeConstant typeEl  = typeCtx.isA(pool().typeList())
                     ? typeCtx.resolveGenericType("Element")
                     : null;
@@ -2431,7 +2432,7 @@ public class Context
             if (!(arg instanceof TargetInfo))
                 {
                 SimpleCollector collector = new SimpleCollector(errs);
-                TypeConstant    typeLeft  = m_typeLeft;
+                TypeConstant    typeLeft  = f_typeLeft;
                 Access          access    = typeLeft.getAccess();
 
                 if (typeLeft.isExplicitClassIdentity(true))
@@ -2501,7 +2502,7 @@ public class Context
             getOuterContext().replaceGenericType(sName, branch, typeNarrowed);
             }
 
-        private TypeConstant m_typeLeft;
+        private final TypeConstant f_typeLeft;
         }
 
 
@@ -2559,13 +2560,30 @@ public class Context
             }
 
         @Override
-        public void useGenericType(String sName, ErrorListener errs)
+        public void useGenericType(TypeConstant type, ErrorListener errs)
             {
-            super.useGenericType(sName, errs);
+            super.useGenericType(type, errs);
 
-            TargetInfo info = (TargetInfo) resolveName(sName, null, errs);
-            assert info != null;
-            ensureGenericMap().putIfAbsent(sName, info);
+            if (type.isGenericType())
+                {
+                String     sName = ((PropertyConstant) type.getDefiningConstant()).getName();
+                TargetInfo info  = (TargetInfo) resolveName(sName, null, errs);
+                assert info != null;
+                ensureGenericMap().putIfAbsent(sName, info);
+                }
+            else
+                {
+                Set<PropertyConstant> setIds = new HashSet<>();
+                type.collectGenericNames(true, setIds);
+
+                for (PropertyConstant idProp : setIds)
+                    {
+                    String     sName = idProp.getName();
+                    TargetInfo info  = (TargetInfo) resolveName(sName, null, errs);
+                    assert info != null;
+                    ensureGenericMap().putIfAbsent(sName, info);
+                    }
+                }
             }
 
         /**

@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Set;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -152,6 +154,12 @@ public abstract class AbstractDependantTypeConstant
     public boolean containsGenericType(boolean fAllowParams)
         {
         return getParentType().containsGenericType(fAllowParams);
+        }
+
+    @Override
+    public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
+        {
+        getParentType().collectGenericNames(fAllowParams, setGeneric);
         }
 
     @Override

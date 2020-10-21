@@ -4,6 +4,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.List;
+import java.util.Set;
 
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
@@ -132,6 +133,11 @@ public class PendingTypeConstant
     public boolean containsGenericType(boolean fAllowParams)
         {
         return false;
+        }
+
+    @Override
+    public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
+        {
         }
 
     @Override

@@ -4,40 +4,21 @@ module TestSimple
 
     void run()
         {
-        new Test().report();
+        Test<String, IntNumber> t = new Test(new HashMap());
+        t.test("a");
         }
 
-    mixin Silly
-            into Var<Int>
+    class Test<Key, Value>(Map<Key, Value> map)
         {
-        }
-
-    class Test
-        {
-        @Lazy(() -> foo()) Int prop;
-
-        static Int foo()
+        void test(Key key)
             {
-            return 42;
-            }
-
-        @Lazy Int prop2.calc()
-            {
-            return 48;
-            }
-
-        @Silly Int prop3 = 3;
-
-        void report()
-            {
-            console.println(prop);
-            console.println(&prop);
-
-            console.println(prop2);
-            console.println(&prop2);
-
-            console.println(prop3);
-            console.println(&prop3);
+            Int r = map.process(key, entry ->
+                {
+                @Inject Console console;
+                console.println(&entry.Referent);
+                console.println(&entry.actualType);
+                return 0;
+                });
             }
         }
     }

@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1206,9 +1205,7 @@ public class LambdaExpression
         }
 
     /**
-     * A context for compiling lambda expressions, anonymous inner classes, and any other construct
-     * that "captures" variables from an outer context.
-     * <p/>TODO capture "this" (makes a lambda into a method, or a static anonymous class into an instance anonymous class)
+     * A context for compiling lambda expressions.
      */
     public static class LambdaContext
             extends CaptureContext
@@ -1228,8 +1225,8 @@ public class LambdaExpression
 
             assert atypeParams == null && asParams == null
                     || atypeParams != null && asParams != null && atypeParams.length == asParams.length;
-            f_atypeParams   = atypeParams;
-            f_asParams      = asParams;
+            f_atypeParams = atypeParams;
+            f_asParams    = asParams;
             }
 
         @Override

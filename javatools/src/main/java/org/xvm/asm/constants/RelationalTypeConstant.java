@@ -267,6 +267,13 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
+        {
+        m_constType1.collectGenericNames(fAllowParams, setGeneric);
+        m_constType2.collectGenericNames(fAllowParams, setGeneric);
+        }
+
+    @Override
     public boolean containsTypeParameter(boolean fAllowParams)
         {
         return m_constType1.containsTypeParameter(fAllowParams)

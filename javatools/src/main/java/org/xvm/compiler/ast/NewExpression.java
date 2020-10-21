@@ -1634,8 +1634,6 @@ public class NewExpression
 
     /**
      * A context for compiling new expressions that define an anonymous inner class.
-     * <p/>TODO capture "this" (makes a lambda into a method, or a static anonymous class into an instance anonymous class)
-     * <p/>TODO refactor for shared base class with LambdaExpression.CaptureContext
      */
     public class AnonInnerClassContext
             extends CaptureContext

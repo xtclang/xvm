@@ -389,6 +389,18 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
+        {
+        if (fAllowParams)
+            {
+            for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+                {
+                m_atypeParams[i].collectGenericNames(fAllowParams, setGeneric);
+                }
+            }
+        }
+
+    @Override
     public boolean containsTypeParameter(boolean fAllowParams)
         {
         if (fAllowParams)

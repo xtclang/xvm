@@ -4,6 +4,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.List;
+import java.util.Set;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -158,6 +159,11 @@ public class TypeSequenceTypeConstant
     public boolean containsGenericType(boolean fAllowParams)
         {
         return fAllowParams;
+        }
+
+    @Override
+    public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
+        {
         }
 
     @Override

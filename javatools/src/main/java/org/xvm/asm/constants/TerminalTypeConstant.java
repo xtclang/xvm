@@ -1009,6 +1009,15 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
+        {
+        if (isGenericType())
+            {
+            setGeneric.add((PropertyConstant) getDefiningConstant());
+            }
+        }
+
+    @Override
     public boolean containsTypeParameter(boolean fAllowParams)
         {
         return isTypeParameter();

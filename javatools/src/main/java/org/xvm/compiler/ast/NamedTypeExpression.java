@@ -758,7 +758,7 @@ public class NamedTypeExpression
                 {
                 // the type is either a simple generic (Element), a formal child (Element.Key),
                 // or a narrowed formal type (Element + Stringable)
-                ctx.useGenericType(names.get(0).getValueText(), errs);
+                ctx.useGenericType(type, errs);
                 }
 
             if (m_fExternalTypedef && type.containsGenericType(true))

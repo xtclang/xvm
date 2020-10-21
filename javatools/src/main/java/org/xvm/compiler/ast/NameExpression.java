@@ -762,19 +762,20 @@ public class NameExpression
                 }
             }
 
-        // TODO the "no deref" thing is very awkward here, because we still need to force a capture,
-        //      even if we are not de-referencing the variable (i.e. the markVarRead() API is wrong)
-        if (left == null && !isSuppressDeref() && isRValue())
+        if (left == null && isRValue() && !getName().equals("this"))
             {
             switch (getMeaning())
                 {
                 case Reserved:
                 case Variable:
-                    ctx.markVarRead(getNameToken(), errs);
-                    if (type.isGenericType())
+                    if (!isSuppressDeref())
                         {
-                        PropertyConstant idProp = (PropertyConstant) type.getDefiningConstant();
-                        ctx.useGenericType(idProp.getName(), errs);
+                        ctx.markVarRead(getNameToken(), errs);
+                        }
+
+                    if (type.containsGenericType(true))
+                        {
+                        ctx.useGenericType(type, errs);
                         }
                     break;
 
@@ -784,7 +785,7 @@ public class NameExpression
 
                     if (idProp.isFormalType())
                         {
-                        ctx.useGenericType(idProp.getName(), errs);
+                        ctx.useGenericType(idProp.getFormalType(), errs);
                         }
                     else if (!idProp.getComponent().isStatic() && m_plan != Plan.PropertySelf)
                         {
@@ -794,7 +795,7 @@ public class NameExpression
                     break;
                     }
                 }
-            } // TODO else account for ".this"???
+            }
 
         if (left instanceof NameExpression && ((NameExpression) left).getMeaning() == Meaning.Label)
             {
