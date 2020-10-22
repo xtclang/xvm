@@ -862,13 +862,19 @@ public class xRef
 
                 case REF_PROPERTY:
                     {
-                    GenericHandle hTarget = (GenericHandle) m_hReferent;
-                    ObjectHandle  hValue  = hTarget.getField(m_idProp);
+                    GenericHandle    hTarget = (GenericHandle) m_hReferent;
+                    PropertyConstant idProp  = m_idProp;
+                    if (idProp.isFormalType())
+                        {
+                        // generic types are always "assigned"
+                        return true;
+                        }
+                    ObjectHandle hValue = hTarget.getField(idProp);
                     if (hValue == null)
                         {
                         return false;
                         }
-                    if (hTarget.isInflated(m_idProp))
+                    if (hTarget.isInflated(idProp))
                         {
                         return ((RefHandle) hValue).isAssigned();
                         }

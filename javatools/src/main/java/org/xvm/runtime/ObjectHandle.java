@@ -354,13 +354,18 @@ public abstract class ObjectHandle
         @Override
         public boolean isService()
             {
-            if (getTemplate().isService())
+            ClassTemplate template = getTemplate();
+            if (template.isService())
                 {
                 return true;
                 }
 
-            ObjectHandle hOuter = getField(OUTER);
-            return hOuter != null && hOuter.isService();
+            if (template.getStructure().isVirtualChild())
+                {
+                ObjectHandle hOuter = getField(OUTER);
+                return hOuter != null && hOuter.isService();
+                }
+            return false;
             }
 
         @Override
