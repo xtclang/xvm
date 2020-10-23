@@ -16,6 +16,7 @@ import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Constants;
 
 import org.xvm.util.Severity;
@@ -213,20 +214,27 @@ public class AnnotatedTypeExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        ConstantPool   pool    = pool();
-        TypeExpression typeNew = (TypeExpression) type.validate(ctx, pool().typeType(), errs);
+        ConstantPool   pool        = pool();
+        TypeExpression exprTypeNew = (TypeExpression) type.validate(ctx, pool.typeType(), errs);
 
-        if (typeNew == null)
+        if (exprTypeNew == null)
             {
             return null;
             }
 
-        type = typeNew;
+        type = exprTypeNew;
 
         TypeConstant typeReferent = ensureTypeConstant(ctx);
         Annotation   anno         = annotation.ensureAnnotation(pool);
         TypeConstant typeAnno     = anno.getAnnotationType();
         TypeConstant typeReq;
+
+        if (typeAnno.containsUnresolved())
+            {
+            annotation.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE,
+                    typeAnno.getValueString());
+            return null;
+            }
 
         // the annotation must mix in to the Var (if it's disassociated), or into the underlying
         // type otherwise
@@ -235,22 +243,28 @@ public class AnnotatedTypeExpression
             Constant clzAnno = anno.getAnnotationClass();
             if (clzAnno.equals(pool.clzInject()))
                 {
-                if (isIntoRef())
-                    {
-                    // TODO log error - Inject is not compatible with any other var annotations
-                    }
-
                 // @Inject implies assignment & final
                 m_fFinal = m_fInjected = true;
                 }
             else if (clzAnno.equals(pool.clzFinal()))
                 {
-                if (isFinal())
-                    {
-                    // TODO log error - already final
-                    }
-
                 m_fFinal = true;
+                }
+
+            if (exprTypeNew instanceof AnnotatedTypeExpression)
+                {
+                AnnotatedTypeExpression exprTypeNext = (AnnotatedTypeExpression) exprTypeNew;
+                if (m_fInjected || exprTypeNext.isInjected())
+                    {
+                    log(errs, Severity.ERROR, Compiler.ANNOTATED_INJECTION);
+                    return null;
+                    }
+                if (m_fFinal && exprTypeNext.isFinal())
+                    {
+                    log(errs, Severity.ERROR, Constants.VE_ANNOTATION_REDUNDANT,
+                        anno.getAnnotationType().getValueString());
+                    return null;
+                    }
                 }
 
             m_fVar  = typeAnno.getIntoVariableType().isA(pool.typeVar());

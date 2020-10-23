@@ -41,6 +41,7 @@ import ecstasy.annotations.AtomicVar         as Atomic;
 import ecstasy.annotations.AutoConversion    as Auto;
 import ecstasy.annotations.ConditionalTuple;
 import ecstasy.annotations.Debug;
+import ecstasy.annotations.FinalVar          as Final;
 import ecstasy.annotations.FutureVar;
 import ecstasy.annotations.FutureVar         as Future;
 import ecstasy.annotations.InjectedRef       as Inject;

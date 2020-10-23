@@ -181,18 +181,18 @@ public class VariableDeclarationStatement
             {
             AnnotatedTypeExpression exprAnnoType = (AnnotatedTypeExpression) typeNew;
 
-            if (exprAnnoType.isInjected())
-                {
-                ctx.markVarWrite(name, false, errs);
-                m_reg.markEffectivelyFinal();
-                }
-
             // for DVAR registers, specify the DVAR "register type"
             // (separate from the type of the value that gets held in the register)
             List<AnnotationExpression> listRefAnnos = exprAnnoType.getRefAnnotations();
             int                        cRefAnnos    = listRefAnnos == null ? 0 : listRefAnnos.size();
             if (cRefAnnos > 0)
                 {
+                if (exprAnnoType.isInjected())
+                    {
+                    ctx.markVarWrite(name, false, errs);
+                    m_reg.markEffectivelyFinal();
+                    }
+
                 boolean      fVar    = exprAnnoType.isVar();
                 boolean      fConst  = true;
                 TypeConstant typeReg = pool.ensureParameterizedTypeConstant(

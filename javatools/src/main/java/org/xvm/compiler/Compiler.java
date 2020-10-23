@@ -1253,6 +1253,10 @@ public class Compiler
      */
     public static final String SET_VALUES_DUPLICATE                = "COMPILER-164";
     /**
+     * Injection cannot be combined with any other Ref annotations.
+     */
+    public static final String ANNOTATED_INJECTION                 = "COMPILER-165";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
