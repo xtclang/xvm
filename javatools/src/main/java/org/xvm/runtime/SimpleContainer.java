@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.xvm.asm.InjectionKey;
-
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ModuleConstant;
@@ -17,11 +16,21 @@ import org.xvm.asm.constants.ModuleConstant;
 public class SimpleContainer
         extends Container
     {
+    /**
+     * Instantiate a simple container.
+     *
+     * @param context   the parent container's context
+     * @param idModule  the module id
+     */
     public SimpleContainer(ServiceContext context, ModuleConstant idModule)
         {
-        super(context.getRuntime(), context.f_templates, context.f_container.f_heapGlobal, idModule);
+        super(context.getRuntime(), context.f_templates,
+              new ContainerHeap(context.f_container.f_heap), idModule);
         }
 
+    /**
+     * @return a set of injections for this container's module
+     */
     public Set<InjectionKey> collectInjections()
         {
         ModuleStructure module = (ModuleStructure) getModule().getComponent();

@@ -43,13 +43,13 @@ import org.xvm.runtime.template.reflect.xModule;
 public abstract class Container
         implements LinkerContext
     {
-    protected Container(Runtime runtime, TemplateRegistry templates, ObjectHeap heapGlobal,
+    protected Container(Runtime runtime, TemplateRegistry templates, ConstHeap heap,
                         ModuleConstant idModule)
         {
-        f_runtime    = runtime;
-        f_templates  = templates;
-        f_heapGlobal = heapGlobal;
-        m_idModule   = idModule;
+        f_runtime   = runtime;
+        f_templates = templates;
+        f_heap      = heap;
+        m_idModule  = idModule;
         }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -205,13 +205,13 @@ public abstract class Container
         }
 
     /**
-     * A delegation method into the ObjectHeap API.
+     * A delegation method into the ConstHeap API.
      *
      * Could be overridden by Container implementations to use container-specific heaps.
      */
     public ObjectHandle ensureConstHandle(Frame frame, Constant constValue)
         {
-        return f_heapGlobal.ensureConstHandle(frame, constValue);
+        return f_heap.ensureConstHandle(frame, constValue);
         }
 
 
@@ -353,7 +353,7 @@ public abstract class Container
 
     public final Runtime          f_runtime;
     public final TemplateRegistry f_templates;
-    public final ObjectHeap       f_heapGlobal;
+    public final ConstHeap        f_heap;
 
     /**
      * The main module id.

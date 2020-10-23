@@ -1,5 +1,6 @@
 package org.xvm.api;
 
+
 import java.io.File;
 import java.io.IOException;
 
@@ -17,9 +18,10 @@ import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.runtime.CoreContainer;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHeap;
+import org.xvm.runtime.CoreConstHeap;
 import org.xvm.runtime.Runtime;
 import org.xvm.runtime.TemplateRegistry;
+
 
 /**
  * The API between Java host environment and an XVM runtime.
@@ -47,7 +49,7 @@ public class Connector
         m_repository = repository;
         f_runtime    = new Runtime();
         f_templates  = new TemplateRegistry(repository);
-        f_heapGlobal = new ObjectHeap(f_templates);
+        f_heapGlobal = new CoreConstHeap(f_templates);
         f_templates.loadNativeTemplates();
         }
 
@@ -171,7 +173,7 @@ public class Connector
             throws InterruptedException
         {
         // extremely naive; replace
-        do {
+        do  {
             Thread.sleep(500);
             }
         while (!f_runtime.isIdle() || !m_container.isIdle());
@@ -200,7 +202,7 @@ public class Connector
     /**
      * The template registry.
      */
-    private final ObjectHeap f_heapGlobal;
+    private final CoreConstHeap f_heapGlobal;
 
     /**
      * The container associated with this Connector.

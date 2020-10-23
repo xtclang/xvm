@@ -37,10 +37,10 @@ import org.xvm.runtime.template._native.temporal.xNanosTimer;
 public class CoreContainer
         extends Container
     {
-    public CoreContainer(Runtime runtime, TemplateRegistry templates, ObjectHeap heapGlobal,
+    public CoreContainer(Runtime runtime, TemplateRegistry templates, CoreConstHeap heapCore,
                          ModuleConstant idModule)
         {
-        super(runtime, templates, heapGlobal, idModule);
+        super(runtime, templates, heapCore, idModule);
         }
 
     public void start()
