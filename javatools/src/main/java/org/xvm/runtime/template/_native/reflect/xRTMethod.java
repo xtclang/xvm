@@ -59,7 +59,6 @@ public class xRTMethod
     public void initNative()
         {
         markNativeProperty("access");
-        markNativeProperty("annotations");
 
         markNativeMethod("formalParamNames" , null, null);
         markNativeMethod("formalReturnNames", null, null);
@@ -130,9 +129,6 @@ public class xRTMethod
             {
             case "access":
                 return getPropertyAccess(frame, hMethod, iReturn);
-
-            case "annotations":
-                return getPropertyAnnotations(frame, hMethod, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -224,20 +220,6 @@ public class xRTMethod
         Access       access  = hMethod.getMethodInfo().getAccess();
         ObjectHandle hAccess = xRTType.makeAccessHandle(frame, access);
         return frame.assignValue(iReturn, hAccess);
-        }
-
-    /**
-     * Implements property: annotations.get()
-     */
-    public int getPropertyAnnotations(Frame frame, MethodHandle hMethod, int iReturn)
-        {
-        MethodStructure method = hMethod.getMethod();
-        Annotation[]    aAnno  = method.getAnnotations();
-
-        return aAnno.length > 0
-                ? new Utils.CreateAnnos(aAnno, iReturn).doNext(frame)
-                : frame.assignValue(iReturn,
-                    Utils.makeAnnoArrayHandle(frame.poolContext(), Utils.OBJECTS_NONE));
         }
 
 

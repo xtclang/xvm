@@ -1,3 +1,4 @@
+import ecstasy.reflect.Annotation;
 import ecstasy.reflect.MethodTemplate;
 import ecstasy.reflect.MultiMethodTemplate;
 
@@ -9,5 +10,7 @@ class RTMethodTemplate
         extends RTComponentTemplate
         implements MethodTemplate
     {
-    @Override @RO MultiMethodTemplate parent;
+    @Override MultiMethodTemplate parent.get()  { TODO("native"); }
+
+    @Override Annotation[] annotations.get()    { TODO("native"); }
     }
