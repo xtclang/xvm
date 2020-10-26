@@ -177,7 +177,7 @@ public class xRTProperty
     // ----- PropertyHandle support ----------------------------------------------------------------
 
     /**
-     * Obtain a {@link PropertyHandle} for the specified property.
+     * Obtain a handle for the specified property.
      *
      * @param frame       the current frame
      * @param typeTarget  (optional) the type of the property target
@@ -187,14 +187,12 @@ public class xRTProperty
      */
     public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, PropertyConstant idProp)
         {
-        ConstantPool      pool     = frame.poolContext();
-        PropertyStructure prop     = (PropertyStructure) idProp.getComponent();
-        Annotation[]      aAnno    = prop.getPropertyAnnotations();
-        TypeConstant      typeProp = idProp.getValueType(typeTarget);
+        Annotation[] aAnno    = ((PropertyStructure) idProp.getComponent()).getPropertyAnnotations();
+        TypeConstant typeProp = idProp.getValueType(typeTarget);
 
         if (aAnno != null && aAnno.length > 0)
             {
-            typeProp = pool.ensureAnnotatedTypeConstant(typeProp, aAnno);
+            typeProp = frame.poolContext().ensureAnnotatedTypeConstant(typeProp, aAnno);
 
             Mixin mixin = (Mixin) INSTANCE.f_templates.getTemplate(typeProp);
 
