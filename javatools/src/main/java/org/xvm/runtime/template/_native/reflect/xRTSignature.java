@@ -14,6 +14,7 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
@@ -121,8 +122,7 @@ public class xRTSignature
      */
     protected int getPropertyName(Frame frame, SignatureHandle hFunc, int iReturn)
         {
-        xString.StringHandle handle = xString.makeHandle(hFunc.getName());
-        return frame.assignValue(iReturn, handle);
+        return frame.assignValue(iReturn, xString.makeHandle(hFunc.getName()));
         }
 
     /**
@@ -404,7 +404,7 @@ public class xRTSignature
      * Signature handle.
      */
     public abstract static class SignatureHandle
-            extends ObjectHandle
+            extends GenericHandle
         {
         // ----- constructors -----------------------------------------------------------------
 

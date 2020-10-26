@@ -457,7 +457,7 @@ public class ClassComposition
     /**
      * @return the inception type (private access)
      */
-    protected TypeConstant getInceptionType()
+    public TypeConstant getInceptionType()
         {
         return f_typeInception;
         }

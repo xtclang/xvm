@@ -35,6 +35,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
+import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
@@ -852,7 +853,7 @@ public class xRTType
 
         TypeConstant                    typeTarget  = hType.getDataType();
         Map<MethodConstant, MethodInfo> mapMethods  = typeTarget.ensureTypeInfo().getMethods();
-        ArrayList<MethodHandle>         listHandles = new ArrayList<>(mapMethods.size());
+        ArrayList<ObjectHandle>         listHandles = new ArrayList<>(mapMethods.size());
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
             MethodConstant idMethod = entry.getKey();
@@ -860,13 +861,19 @@ public class xRTType
             if (!info.isCapped() && !info.isFunction() && !info.isConstructor()
                     && idMethod.getNestedDepth() == 2)
                 {
-                listHandles.add(xRTMethod.makeHandle(typeTarget, info.getIdentity()));
+                listHandles.add(xRTMethod.makeHandle(frame, typeTarget, info.getIdentity()));
                 }
             }
-        MethodHandle[] ahMethods = listHandles.toArray(new MethodHandle[0]);
-        ArrayHandle    hArray    = xRTMethod.ensureArrayTemplate().createArrayHandle(
-                xRTMethod.ensureArrayComposition(typeTarget), ahMethods);
-        return frame.assignValue(iReturn, hArray);
+
+        ClassComposition clzArray  = xRTMethod.ensureArrayComposition(typeTarget);
+        ObjectHandle[]   ahMethods = listHandles.toArray(Utils.OBJECTS_NONE);
+        if (Op.anyDeferred(ahMethods))
+            {
+            ObjectHandle hDeferred = new DeferredArrayHandle(clzArray, ahMethods);
+            return hDeferred.proceed(frame,
+                frameCaller -> frameCaller.assignValue(iReturn, frameCaller.popStack()));
+            }
+        return frame.assignValue(iReturn, xArray.INSTANCE.createArrayHandle(clzArray, ahMethods));
         }
 
     /**

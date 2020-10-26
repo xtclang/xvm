@@ -1,12 +1,15 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import java.util.function.Function;
+
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -19,9 +22,12 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.Mixin;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
@@ -74,9 +80,30 @@ public class xRTMethod
         TypeConstant typeTarget = typeActual.getParamType(0);
         TypeConstant typeP      = pool.ensureParameterizedTypeConstant(pool.typeTuple());
         TypeConstant typeR      = typeActual.getParamType(2);
-        TypeConstant typeClz    = pool.ensureParameterizedTypeConstant(
+        TypeConstant typeMethod = pool.ensureParameterizedTypeConstant(
                                         pool.typeMethod(), typeTarget, typeP, typeR);
-        return super.ensureClass(typeClz);
+        if (typeActual.isAnnotated())
+            {
+            TypeConstant typeBase = typeMethod;
+            Function<TypeConstant, TypeConstant> transformer = new Function<>()
+                {
+                public TypeConstant apply(TypeConstant type)
+                    {
+                    return type.isAnnotated()
+                        ? type.replaceUnderlying(pool, this)
+                        : typeBase;
+                    }
+                };
+            typeMethod = transformer.apply(typeActual);
+            }
+
+        return super.ensureClass(typeMethod);
+        }
+
+    @Override
+    public boolean isGenericHandle()
+        {
+        return true;
         }
 
     @Override
@@ -84,8 +111,12 @@ public class xRTMethod
         {
         if (constant instanceof MethodConstant)
             {
-            return frame.pushStack(
-                    makeHandle(frame.getThis().getType(), (MethodConstant) constant));
+            ObjectHandle hMethod = makeHandle(frame,
+                frame.getThis().getType(), (MethodConstant) constant);
+
+            return Op.isDeferred(hMethod)
+                ? hMethod.proceed(frame, frameCaller -> Op.R_NEXT)
+                : frame.pushStack(hMethod);
             }
 
         return super.createConstHandle(frame, constant);
@@ -190,8 +221,8 @@ public class xRTMethod
      */
     public int getPropertyAccess(Frame frame, MethodHandle hMethod, int iReturn)
         {
-        Constants.Access access  = hMethod.getMethodInfo().getAccess();
-        ObjectHandle     hAccess = xRTType.makeAccessHandle(frame, access);
+        Access       access  = hMethod.getMethodInfo().getAccess();
+        ObjectHandle hAccess = xRTType.makeAccessHandle(frame, access);
         return frame.assignValue(iReturn, hAccess);
         }
 
@@ -261,12 +292,36 @@ public class xRTMethod
 
     // ----- Object handle -------------------------------------------------------------------------
 
-    public static MethodHandle makeHandle(TypeConstant typeTarget, MethodConstant idMethod)
+    public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, MethodConstant idMethod)
         {
-        ConstantPool pool = INSTANCE.pool();
-        TypeConstant type = idMethod.getSignature().asMethodType(pool, typeTarget);
+        ConstantPool    pool   = frame.poolContext();
+        TypeConstant    type   = idMethod.getSignature().asMethodType(pool, typeTarget);
+        MethodStructure method = (MethodStructure) idMethod.getComponent();
+        Annotation[]    aAnno  = method.getAnnotations();
 
-        return new MethodHandle(type, idMethod);
+        if (aAnno != null && aAnno.length > 0)
+            {
+            type = pool.ensureAnnotatedTypeConstant(type, aAnno);
+
+            Mixin mixin = (Mixin) INSTANCE.f_templates.getTemplate(type);
+
+            MethodHandle hMethod = new MethodHandle(type, method);
+            ObjectHandle hStruct = hMethod.ensureAccess(Access.STRUCT);
+
+            switch (mixin.proceedConstruction(frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    return frame.popStack();
+
+                case Op.R_CALL:
+                    return new DeferredCallHandle(frame.m_frameNext);
+
+                case Op.R_EXCEPTION:
+                    return new DeferredCallHandle(frame.m_hException);
+                }
+            }
+
+        return new MethodHandle(type, method);
         }
 
     /**
@@ -278,9 +333,9 @@ public class xRTMethod
     public static class MethodHandle
             extends SignatureHandle
         {
-        protected MethodHandle(TypeConstant type, MethodConstant idMethod)
+        protected MethodHandle(TypeConstant type, MethodStructure method)
             {
-            super(INSTANCE.ensureClass(type), idMethod, (MethodStructure) idMethod.getComponent(), type);
+            super(INSTANCE.ensureClass(type), method.getIdentityConstant(), method, type);
             }
 
         public TypeConstant getTargetType()
@@ -321,7 +376,7 @@ public class xRTMethod
                 }
 
             CallChain chain;
-            if (method != null && method.getAccess() == Constants.Access.PRIVATE)
+            if (method != null && method.getAccess() == Access.PRIVATE)
                 {
                 chain = new CallChain(method);
                 }
@@ -350,22 +405,6 @@ public class xRTMethod
     // ----- Template, Composition, and handle caching ---------------------------------------------
 
     /**
-     * @return the ClassTemplate for an Array of Method
-     */
-    public static xArray ensureArrayTemplate()
-        {
-        xArray template = ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeMethodArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeMethod());
-            ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeMethodArray));
-            assert template != null;
-            }
-        return template;
-        }
-
-    /**
      * @return the ClassComposition for an Array of Method
      */
     public static ClassComposition ensureArrayComposition()
@@ -388,7 +427,7 @@ public class xRTMethod
         {
         if (ARRAY_EMPTY == null)
             {
-            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+            ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(
                     ensureArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARRAY_EMPTY;
@@ -410,7 +449,6 @@ public class xRTMethod
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static xArray           ARRAY_TEMPLATE;
     private static ClassComposition ARRAY_CLZCOMP;
     private static ArrayHandle      ARRAY_EMPTY;
     }

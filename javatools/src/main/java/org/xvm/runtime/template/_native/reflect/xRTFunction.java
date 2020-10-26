@@ -316,6 +316,7 @@ public class xRTFunction
 
             hFunc.addBoundArguments(ahValue);
 
+            // TODO: what if any of the assigns below return R_CALL?
             frame.assignValue(aiReturn[0], xBoolean.TRUE);
             frame.assignValue(aiReturn[1], xRTComponentTemplate.makeMethodHandle(method));
             frame.assignValue(aiReturn[2], makeHandle(method));
@@ -348,25 +349,36 @@ public class xRTFunction
         MethodStructure method = hFunc.getMethod();
         if (method != null && !method.isFunction())
             {
-            int            cParams = method.getParamCount();
-            ObjectHandle[] ahParam = new ObjectHandle[cParams];
-            ObjectHandle[] ahValue = new ObjectHandle[cParams];
+            ObjectHandle[] ahValue = new ObjectHandle[method.getParamCount()];
 
             hFunc.addBoundArguments(ahValue);
 
             ObjectHandle hTarget = hFunc.getTarget();
+            ObjectHandle hMethod = xRTMethod.makeHandle(frame,
+                    hTarget.getType(), method.getIdentityConstant());
 
-            frame.assignValue(aiReturn[0], xBoolean.TRUE);
-            frame.assignValue(aiReturn[1], hTarget);
-            frame.assignValue(aiReturn[2],
-                    xRTMethod.makeHandle(hTarget.getType(), method.getIdentityConstant()));
-
-            Frame.Continuation stepNext = frameCaller ->
-                constructListMap(frameCaller, ahParam, ahValue, aiReturn[3]);
-            return new Utils.CreateParameters(method.getParamArray(), ahParam, stepNext).doNext(frame);
+            return Op.isDeferred(hMethod)
+                ? hMethod.proceed(frame.m_frameNext, frameCaller ->
+                        createMethodParams(frameCaller, method, hMethod, hTarget, ahValue, aiReturn))
+                : createMethodParams(frame, method, hMethod, hTarget, ahValue, aiReturn);
             }
 
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        }
+
+    private int createMethodParams(Frame frame, MethodStructure method, ObjectHandle hMethod,
+                                   ObjectHandle hTarget, ObjectHandle[] ahValue, int[] aiReturn)
+        {
+        ObjectHandle[] ahParam = new ObjectHandle[method.getParamCount()];
+
+        // TODO: what if any of the assigns below return R_CALL?
+        frame.assignValue(aiReturn[0], xBoolean.TRUE);
+        frame.assignValue(aiReturn[1], hTarget);
+        frame.assignValue(aiReturn[2], hMethod);
+
+        Frame.Continuation stepNext = frameCaller ->
+            constructListMap(frameCaller, ahParam, ahValue, aiReturn[3]);
+        return new Utils.CreateParameters(method.getParamArray(), ahParam, stepNext).doNext(frame);
         }
 
 

@@ -276,7 +276,7 @@ public class Mixin
         {
         return getBaseTemplate(clz instanceof PropertyComposition
             ? ((PropertyComposition) clz).getPropertyClass().getType()
-            : clz.getType());
+            : ((ClassComposition) clz).getInceptionType());
         }
 
     private ClassTemplate getBaseTemplate(TypeConstant type)
