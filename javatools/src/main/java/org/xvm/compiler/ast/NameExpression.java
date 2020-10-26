@@ -2349,6 +2349,13 @@ public class NameExpression
                         assert method != null;
                         }
 
+                    if (typeDesired.isA(pool.typeMethod()) && !method.isFunction())
+                        {
+                        // they explicitly specified a method; give them the method
+                        m_plan = Plan.None;
+                        return method.getIdentityConstant().getValueType(null);
+                        }
+
                     int cTypeParams = method.getTypeParamCount();
                     if (cTypeParams > 0)
                         {
