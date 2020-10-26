@@ -21,15 +21,15 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.collections.xArray;
-
-import org.xvm.runtime.template.text.xString;
-import org.xvm.runtime.template.text.xString.StringHandle;
-
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
+
+import org.xvm.runtime.template.collections.xArray;
+
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
@@ -226,7 +226,7 @@ public class xRTClassTemplate
                             i++;
                             }
                         haNames = xArray.makeStringArrayHandle(ahNames);
-                        haTypes = xRTType.ensureArrayTemplate().createArrayHandle(
+                        haTypes = xArray.INSTANCE.createArrayHandle(
                                     xRTType.ensureTypeArrayComposition(), ahTypes);
                         }
                     sAction = "Incorporates";

@@ -1228,23 +1228,7 @@ public class xRTFunction
         }
 
 
-    // ----- Template, Composition, and handle caching ---------------------------------------------
-
-    /**
-     * @return the ClassTemplate for an Array of Function
-     */
-    public static xArray ensureArrayTemplate()
-        {
-        xArray template = ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeFunctionArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeFunction());
-            ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeFunctionArray));
-            assert template != null;
-            }
-        return template;
-        }
+    // ----- Composition and handle caching --------------------------------------------------------
 
     /**
      * @return the ClassComposition for an Array of Function
@@ -1269,7 +1253,7 @@ public class xRTFunction
         {
         if (ARRAY_EMPTY == null)
             {
-            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+            ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(
                 ensureArrayComposition(), new ObjectHandle[0]);
             }
         return ARRAY_EMPTY;
@@ -1325,7 +1309,6 @@ public class xRTFunction
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static xArray           ARRAY_TEMPLATE;
     private static ClassComposition ARRAY_CLZCOMP;
     private static ClassComposition LISTMAP_CLZCOMP;
     private static ArrayHandle      ARRAY_EMPTY;

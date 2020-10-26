@@ -280,7 +280,7 @@ public class xRTTypeTemplate
             ahTypes[i] = makeHandle(aUnderlying[i]);
             }
 
-        ArrayHandle hArray = ensureTypeTemplateArrayTemplate().createArrayHandle(ensureArrayClassComposition(), ahTypes);
+        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(ensureArrayClassComposition(), ahTypes);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -421,7 +421,7 @@ public class xRTTypeTemplate
             ahTypes[i] = makeHandle(atypes[i]);
             }
 
-        ArrayHandle hArray = ensureTypeTemplateArrayTemplate().createArrayHandle(ensureArrayClassComposition(), ahTypes);
+        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(ensureArrayClassComposition(), ahTypes);
         return frame.assignValues(aiReturn, xBoolean.TRUE, hArray);
         }
 
@@ -447,28 +447,7 @@ public class xRTTypeTemplate
         }
 
 
-    // ----- Template caching -----------------------------------------------------------------------
-
-    /**
-     * @return the ClassTemplate for an Array of TypeTemplate
-     */
-    public xArray ensureTypeTemplateArrayTemplate()
-        {
-        xArray template = TYPETEMPLATE_ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeTemplateArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType()); // TODO
-            TYPETEMPLATE_ARRAY_TEMPLATE = template = ((xArray) f_templates.getTemplate(typeTypeTemplateArray));
-            assert template != null;
-            }
-        return template;
-        }
-
-    private static xArray TYPETEMPLATE_ARRAY_TEMPLATE;
-
-
-    // ----- ClassComposition caching and helpers --------------------------------------------------
+    // ----- ClassComposition caching --------------------------------------------------------------
 
     /**
      * @return the ClassComposition for an Array of TypeTemplate

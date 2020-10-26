@@ -244,7 +244,7 @@ public class xRTComponentTemplate
         assert i == cChildren;
 
         // turn the Java array into an Ecstasy array
-        ObjectHandle.ArrayHandle hArray = ensureComponentArrayTemplate().createArrayHandle(
+        ObjectHandle.ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
                 ensureComponentArrayType(), ahChildren);
 
         // create and return an iterator of the Ecstasy array
@@ -261,23 +261,7 @@ public class xRTComponentTemplate
         }
 
 
-    // ----- Type and Template caching -------------------------------------------------------------
-
-    /**
-     * @return the ClassTemplate for an Array of ComponentTemplate
-     */
-    public static xArray ensureComponentArrayTemplate()
-        {
-        xArray template = COMPONENT_ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            TypeConstant typeTypeArray = ensureComponentArrayType().getType();
-            COMPONENT_ARRAY_TEMPLATE = template =
-                    ((xArray) INSTANCE.f_templates.getTemplate(typeTypeArray));
-            assert template != null;
-            }
-        return template;
-        }
+    // ----- Composition caching -------------------------------------------------------------------
 
     /**
      * @return the ClassComposition for an Array of ComponentTemplate
@@ -425,7 +409,6 @@ public class xRTComponentTemplate
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static xArray           COMPONENT_ARRAY_TEMPLATE;
     private static ClassComposition COMPONENT_ARRAY_COMP;
     private static ClassComposition METHOD_TEMPLATE_COMP;
     private static ClassComposition MULTI_METHOD_TEMPLATE_COMP;

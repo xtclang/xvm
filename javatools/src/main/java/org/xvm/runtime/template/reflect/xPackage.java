@@ -32,9 +32,12 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xOrdered;
 
+import org.xvm.runtime.template.collections.xArray;
+
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTClass;
 
@@ -138,10 +141,10 @@ public class xPackage
         ClassStructure   pkg    = hTarget.getStructure();
         ClassComposition clzMap = ensureListMapComposition();
 
-        Map<String, Component>          mapChildren = pkg.getChildByNameMap();
-        ArrayList<xString.StringHandle> listNames   = new ArrayList<>(mapChildren.size());
-        ArrayList<ObjectHandle>         listClasses = new ArrayList<>(mapChildren.size());
-        boolean                         fDeferred   = false;
+        Map<String, Component>  mapChildren = pkg.getChildByNameMap();
+        ArrayList<StringHandle> listNames   = new ArrayList<>(mapChildren.size());
+        ArrayList<ObjectHandle> listClasses = new ArrayList<>(mapChildren.size());
+        boolean                 fDeferred   = false;
         for (Map.Entry<String, Component> entry : mapChildren.entrySet())
             {
             Component component = entry.getValue();
@@ -156,17 +159,16 @@ public class xPackage
                 }
             }
 
-        ObjectHandle[] ahNames   = listNames  .toArray(Utils.OBJECTS_NONE);
+        StringHandle[] ahNames   = listNames  .toArray(new StringHandle[0]);
         ObjectHandle[] ahClasses = listClasses.toArray(Utils.OBJECTS_NONE);
 
-        ArrayHandle hNames = xString.ensureArrayTemplate().createArrayHandle(
-            xString.ensureArrayComposition(), ahNames);
+        ArrayHandle hNames = xArray.makeStringArrayHandle(ahNames);
 
         if (fDeferred)
             {
             Frame.Continuation stepNext = frameCaller ->
                 {
-                ArrayHandle hClasses = xRTClass.ensureArrayTemplate().createArrayHandle(
+                ArrayHandle hClasses = xArray.INSTANCE.createArrayHandle(
                     xRTClass.ensureArrayComposition(), ahClasses);
                 return Utils.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
                 };
@@ -174,7 +176,7 @@ public class xPackage
             return new Utils.GetArguments(ahClasses, stepNext).doNext(frame);
             }
 
-        ArrayHandle hClasses = xRTClass.ensureArrayTemplate().createArrayHandle(
+        ArrayHandle hClasses = xArray.INSTANCE.createArrayHandle(
             xRTClass.ensureArrayComposition(), ahClasses);
         return Utils.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
         }

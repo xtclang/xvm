@@ -28,14 +28,14 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Mixin;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
-import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xOrdered;
 
 /**
  * Native Method implementation.

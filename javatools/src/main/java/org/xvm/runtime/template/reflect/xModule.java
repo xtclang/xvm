@@ -179,7 +179,7 @@ public class xModule
                     xString.ensureEmptyArray(), ensureEmptyArray(), iReturn);
             }
 
-        ObjectHandle[] ahPaths   = new ObjectHandle[cModules];
+        StringHandle[] ahPaths   = new StringHandle[cModules];
         ObjectHandle[] ahModules = new ObjectHandle[cModules];
         boolean        fDeferred = false;
         int            index     = 0;
@@ -196,8 +196,7 @@ public class xModule
                 }
             }
 
-        ArrayHandle hPaths = xString.ensureArrayTemplate().createArrayHandle(
-            xString.ensureArrayComposition(), ahPaths);
+        ArrayHandle hPaths = xArray.makeStringArrayHandle(ahPaths);
 
         ClassComposition clzArray = ensureArrayComposition();
         xArray           template = (xArray) clzArray.getTemplate();

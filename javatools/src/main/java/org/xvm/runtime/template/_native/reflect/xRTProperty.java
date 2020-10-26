@@ -373,23 +373,7 @@ public class xRTProperty
         }
 
 
-    // ----- Template, Composition, and handle caching ---------------------------------------------
-
-    /**
-     * @return the ClassTemplate for an Array of Property
-     */
-    public static xArray ensureArrayTemplate()
-        {
-        xArray template = ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeProperty());
-            ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typePropertyArray));
-            assert template != null;
-            }
-        return template;
-        }
+    // ----- Composition and handle caching --------------------------------------------------------
 
     /**
      * @return the ClassComposition for an Array of Property
@@ -410,11 +394,11 @@ public class xRTProperty
     /**
      * @return the handle for an empty Array of Property
      */
-    public static ObjectHandle.ArrayHandle ensureEmptyArray()
+    public static ArrayHandle ensureEmptyArray()
         {
         if (ARRAY_EMPTY == null)
             {
-            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+            ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(
                 ensureArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARRAY_EMPTY;
@@ -436,7 +420,6 @@ public class xRTProperty
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static xArray           ARRAY_TEMPLATE;
     private static ClassComposition ARRAY_CLZCOMP;
     private static ArrayHandle      ARRAY_EMPTY;
     }

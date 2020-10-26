@@ -378,8 +378,8 @@ public class xRTClass
             }
 
         return frame.assignValues(aiReturn,
-                xString.ensureArrayTemplate().createArrayHandle(xString.ensureArrayComposition(), ahNames),
-                xRTType.ensureArrayTemplate().createArrayHandle(xRTType.ensureTypeArrayComposition(), ahTypes));
+                xArray.makeStringArrayHandle(ahNames),
+                xArray.INSTANCE.createArrayHandle(xRTType.ensureTypeArrayComposition(), ahTypes));
         }
 
     /**
@@ -469,23 +469,7 @@ public class xRTClass
         }
 
 
-    // ----- Template, Composition, and handle caching ---------------------------------------------
-
-    /**
-     * @return the ClassTemplate for an Array of Class
-     */
-    public static xArray ensureArrayTemplate()
-        {
-        xArray template = ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeClassArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeClass());
-            ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeClassArray));
-            assert template != null;
-            }
-        return template;
-        }
+    // ----- Composition and handle caching --------------------------------------------------------
 
     /**
      * @return the ClassComposition for an Array of Class
@@ -511,7 +495,7 @@ public class xRTClass
         {
         if (ARRAY_EMPTY == null)
             {
-            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+            ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(
                 ensureArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARRAY_EMPTY;
@@ -520,7 +504,6 @@ public class xRTClass
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static xArray           ARRAY_TEMPLATE;
     private static ClassComposition ARRAY_CLZCOMP;
     private static ArrayHandle      ARRAY_EMPTY;
     }

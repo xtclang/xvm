@@ -523,24 +523,7 @@ public class xString
         }
 
 
-    // ----- Template, Composition, and handle caching ---------------------------------------------
-
-    /**
-     * @return the ClassTemplate for an Array of String
-     */
-    public static xArray ensureArrayTemplate()
-        {
-        xArray template = ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeStringArray = pool.ensureParameterizedTypeConstant(
-                    pool.typeArray(), pool.typeString());
-            ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeStringArray));
-            assert template != null;
-            }
-        return template;
-        }
+    // ----- Composition and handle caching --------------------------------------------------------
 
     /**
      * @return the ClassComposition for an Array of String
@@ -562,12 +545,11 @@ public class xString
     /**
      * @return the handle for an empty Array of String
      */
-    public static ObjectHandle.ArrayHandle ensureEmptyArray()
+    public static ArrayHandle ensureEmptyArray()
         {
         if (ARRAY_EMPTY == null)
             {
-            ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
-                    ensureArrayComposition(), Utils.OBJECTS_NONE);
+            ARRAY_EMPTY = xArray.makeStringArrayHandle(new StringHandle[0]);
             }
         return ARRAY_EMPTY;
         }
@@ -580,7 +562,6 @@ public class xString
     public static StringHandle ZERO;
     public static StringHandle ONE;
 
-    private static xArray           ARRAY_TEMPLATE;
     private static ClassComposition ARRAY_CLZCOMP;
     private static ArrayHandle      ARRAY_EMPTY;
 

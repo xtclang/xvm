@@ -294,40 +294,6 @@ public class xRTSignature
         }
 
     /**
-     * @return the ClassTemplate for an Array of Return
-     */
-    public static xArray ensureReturnArrayTemplate()
-        {
-        xArray template = RETURN_ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                    ensureReturnType());
-            RETURN_ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeTypeArray));
-            assert template != null;
-            }
-        return template;
-        }
-
-    /**
-     * @return the ClassTemplate for an Array of Parameter
-     */
-    public static xArray ensureParamArrayTemplate()
-        {
-        xArray template = PARAM_ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                    ensureParamType());
-            PARAM_ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeTypeArray));
-            assert template != null;
-            }
-        return template;
-        }
-
-    /**
      * @return the ClassComposition for an RTReturn of the specified type
      */
     public static ClassComposition ensureRTReturn(TypeConstant typeValue)
@@ -390,9 +356,6 @@ public class xRTSignature
 
     private static xConst RTRETURN_TEMPLATE;
     private static xConst RTPARAM_TEMPLATE;
-
-    private static xArray RETURN_ARRAY_TEMPLATE;
-    private static xArray PARAM_ARRAY_TEMPLATE;
 
     private static ClassComposition RETURN_ARRAY;
     private static ClassComposition PARAM_ARRAY;
@@ -628,8 +591,7 @@ public class xRTSignature
                     }
                 }
 
-            xArray templateArray = fRetVals ? ensureReturnArrayTemplate() : ensureParamArrayTemplate();
-            ObjectHandle.ArrayHandle hArray = templateArray.createArrayHandle(
+            ObjectHandle.ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
                     fRetVals ? ensureReturnArray() : ensureParamArray(), ahElement);
             return frameCaller.assignValue(iReturn, hArray);
             }

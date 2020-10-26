@@ -42,7 +42,6 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
-import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
@@ -51,16 +50,18 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.runtime.template._native.reflect.xRTClass.ClassHandle;
-import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
-import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
-
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 import org.xvm.runtime.template.collections.xTuple;
 
+import org.xvm.runtime.template.numbers.xInt64;
+
 import org.xvm.runtime.template.text.xString;
+
+import org.xvm.runtime.template._native.reflect.xRTClass.ClassHandle;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
+import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
 
 import org.xvm.util.ListMap;
 
@@ -540,7 +541,7 @@ public class xRTType
             listProps.add(hProperty);
             }
 
-        ArrayHandle hArray = xRTProperty.ensureArrayTemplate().createArrayHandle(
+        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
                 xRTProperty.ensureArrayComposition(), listProps.toArray(Utils.OBJECTS_NONE));
         return frame.assignValue(iReturn, hArray);
         }
@@ -675,7 +676,7 @@ public class xRTType
             ahFunctions = new FunctionHandle[0];
             }
 
-        ArrayHandle hArray = xRTFunction.ensureArrayTemplate().createArrayHandle(
+        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
                 xRTFunction.ensureConstructorArray(typeTarget, typeParent), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
@@ -835,7 +836,7 @@ public class xRTType
                 }
             }
         FunctionHandle[] ahFunctions = listHandles.toArray(new FunctionHandle[0]);
-        ArrayHandle      hArray      = xRTFunction.ensureArrayTemplate().createArrayHandle(
+        ArrayHandle      hArray      = xArray.INSTANCE.createArrayHandle(
                 xRTFunction.ensureArrayComposition(), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
@@ -903,7 +904,7 @@ public class xRTType
                 listProps.add(hProperty);
                 }
             }
-        ArrayHandle hArray = xRTProperty.ensureArrayTemplate().createArrayHandle(
+        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
                 xRTProperty.ensureArrayComposition(typeTarget), listProps.toArray(Utils.OBJECTS_NONE));
         return frame.assignValue(iReturn, hArray);
         }
@@ -969,8 +970,7 @@ public class xRTType
             ahTypes[i] = aUnderlying[i].ensureTypeHandle(frame.poolContext());
             }
 
-        ArrayHandle hArray = ensureArrayTemplate().
-                createArrayHandle(ensureTypeArrayComposition(), ahTypes);
+        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(ensureTypeArrayComposition(), ahTypes);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -1092,7 +1092,7 @@ public class xRTType
 
         ArrayHandle hArgs = ahArg.length == 0
             ? ensureEmptyArgumentArray()
-            : ensureArrayTemplate().createArrayHandle(ensureArgumentArrayComposition(), ahArg);
+            : xArray.INSTANCE.createArrayHandle(ensureArgumentArrayComposition(), ahArg);
 
         ObjectHandle[] ahVar = new ObjectHandle[constructAnno.getMaxVars()];
         ahVar[0] = hClass;
@@ -1233,8 +1233,7 @@ public class xRTType
             ahTypes[i] = atypes[i].normalizeParameters().ensureTypeHandle(frame.poolContext());
             }
 
-        ArrayHandle hArray = ensureArrayTemplate().
-                createArrayHandle(ensureTypeArrayComposition(), ahTypes);
+        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(ensureTypeArrayComposition(), ahTypes);
         return frame.assignValues(aiReturn, xBoolean.TRUE, hArray);
         }
 
@@ -1442,23 +1441,7 @@ public class xRTType
         }
 
 
-    // ----- Template, Composition, and handle caching ---------------------------------------------
-
-    /**
-     * @return the ClassTemplate for an Array of Type
-     */
-    public static xArray ensureArrayTemplate()
-        {
-        xArray template = ARRAY_TEMPLATE;
-        if (template == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
-            ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeTypeArray));
-            assert template != null;
-            }
-        return template;
-        }
+    // ----- Composition and handle caching --------------------------------------------------------
 
     /**
      * @return the ClassComposition for an Array of Type
@@ -1500,7 +1483,7 @@ public class xRTType
         {
         if (TYPE_ARRAY_EMPTY == null)
             {
-            TYPE_ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+            TYPE_ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(
                 ensureTypeArrayComposition(), Utils.OBJECTS_NONE);
             }
         return TYPE_ARRAY_EMPTY;
@@ -1513,7 +1496,7 @@ public class xRTType
         {
         if (ARGUMENT_ARRAY_EMPTY == null)
             {
-            ARGUMENT_ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+            ARGUMENT_ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(
                 ensureArgumentArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARGUMENT_ARRAY_EMPTY;
@@ -1631,11 +1614,9 @@ public class xRTType
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static xArray           ARRAY_TEMPLATE;
     private static ClassComposition TYPE_ARRAY_CLZCOMP;
     private static ArrayHandle      TYPE_ARRAY_EMPTY;
     private static ClassComposition LISTMAP_CLZCOMP;
-
 
     private static ClassTemplate    ANNOTATION_TEMPLATE;
     private static MethodStructure  ANNOTATION_CONSTRUCT;
