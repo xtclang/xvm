@@ -114,7 +114,7 @@ public class xRTMethod
                 frame.getThis().getType(), (MethodConstant) constant);
 
             return Op.isDeferred(hMethod)
-                ? hMethod.proceed(frame, frameCaller -> Op.R_NEXT)
+                ? hMethod.proceed(frame, Utils.NEXT)
                 : frame.pushStack(hMethod);
             }
 
@@ -274,6 +274,15 @@ public class xRTMethod
 
     // ----- Object handle -------------------------------------------------------------------------
 
+    /**
+     * Obtain a handle for the specified method.
+     *
+     * @param frame       the current frame
+     * @param typeTarget  the type of the method target
+     * @param idMethod    the method id
+     *
+     * @return the resulting {@link MethodHandle} or a {@link DeferredCallHandle}
+     */
     public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, MethodConstant idMethod)
         {
         ConstantPool    pool   = frame.poolContext();

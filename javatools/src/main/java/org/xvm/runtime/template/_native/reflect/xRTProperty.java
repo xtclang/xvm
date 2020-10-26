@@ -4,8 +4,11 @@ package org.xvm.runtime.template._native.reflect;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -17,9 +20,12 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.Mixin;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 
@@ -44,12 +50,6 @@ public class xRTProperty
             {
             INSTANCE = this;
             }
-        }
-
-    @Override
-    public boolean isGenericHandle()
-        {
-        return false;
         }
 
     @Override
@@ -79,12 +79,13 @@ public class xRTProperty
         {
         if (constant instanceof PropertyClassTypeConstant)
             {
-            TypeConstant     typeParent   = ((PropertyClassTypeConstant) constant).getParentType();
-            PropertyConstant idProperty   = ((PropertyClassTypeConstant) constant).getProperty();
-            TypeConstant     typeProperty = idProperty.getValueType(typeParent);
-            ObjectHandle     hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
+            TypeConstant     typeParent = ((PropertyClassTypeConstant) constant).getParentType();
+            PropertyConstant idProperty = ((PropertyClassTypeConstant) constant).getProperty();
+            ObjectHandle     hProperty  = makeHandle(frame, typeParent, idProperty);
 
-            return frame.pushStack(hProperty);
+            return Op.isDeferred(hProperty)
+                ? hProperty.proceed(frame, Utils.NEXT)
+                : frame.pushStack(hProperty);
             }
 
         return super.createConstHandle(frame, constant);
@@ -178,20 +179,49 @@ public class xRTProperty
     /**
      * Obtain a {@link PropertyHandle} for the specified property.
      *
-     * @param typeProp  the type of the property to obtain a {@link PropertyHandle} for
+     * @param frame       the current frame
+     * @param typeTarget  (optional) the type of the property target
+     * @param idProp      the property id
      *
-     * @return the resulting {@link PropertyHandle}
+     * @return the resulting {@link PropertyHandle} or a {@link DeferredCallHandle}
      */
-    public PropertyHandle makeHandle(TypeConstant typeProp)
+    public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, PropertyConstant idProp)
         {
-        return new PropertyHandle(ensureClass(typeProp));
+        ConstantPool      pool     = frame.poolContext();
+        PropertyStructure prop     = (PropertyStructure) idProp.getComponent();
+        Annotation[]      aAnno    = prop.getPropertyAnnotations();
+        TypeConstant      typeProp = idProp.getValueType(typeTarget);
+
+        if (aAnno != null && aAnno.length > 0)
+            {
+            typeProp = pool.ensureAnnotatedTypeConstant(typeProp, aAnno);
+
+            Mixin mixin = (Mixin) INSTANCE.f_templates.getTemplate(typeProp);
+
+            PropertyHandle hProp   = new PropertyHandle(INSTANCE.ensureClass(typeProp));
+            ObjectHandle   hStruct = hProp.ensureAccess(Access.STRUCT);
+
+            switch (mixin.proceedConstruction(frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    return frame.popStack();
+
+                case Op.R_CALL:
+                    return new ObjectHandle.DeferredCallHandle(frame.m_frameNext);
+
+                case Op.R_EXCEPTION:
+                    return new ObjectHandle.DeferredCallHandle(frame.m_hException);
+                }
+            }
+
+        return new PropertyHandle(INSTANCE.ensureClass(typeProp));
         }
 
     /**
      * Inner class: PropertyHandle. This is a handle to a native property.
      */
     public static class PropertyHandle
-            extends ObjectHandle
+            extends GenericHandle
         {
         protected PropertyHandle(ClassComposition clzProp)
             {
@@ -232,8 +262,8 @@ public class xRTProperty
      */
     public int getPropertyAbstract(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().isAbstract());
-        return frame.assignValue(iReturn, hValue);
+        return frame.assignValue(iReturn,
+            xBoolean.makeHandle(hProp.getPropertyInfo().isAbstract()));
         }
 
     /**
@@ -255,8 +285,8 @@ public class xRTProperty
      */
     public int getPropertyAtomic(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().isAtomic());
-        return frame.assignValue(iReturn, hValue);
+        return frame.assignValue(iReturn,
+            xBoolean.makeHandle(hProp.getPropertyInfo().isAtomic()));
         }
 
     /**
@@ -264,8 +294,8 @@ public class xRTProperty
      */
     public int getPropertyFormal(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().isFormalType());
-        return frame.assignValue(iReturn, hValue);
+        return frame.assignValue(iReturn,
+            xBoolean.makeHandle(hProp.getPropertyInfo().isFormalType()));
         }
 
     /**
@@ -273,8 +303,8 @@ public class xRTProperty
      */
     public int getPropertyHasField(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().hasField());
-        return frame.assignValue(iReturn, hValue);
+        return frame.assignValue(iReturn,
+            xBoolean.makeHandle(hProp.getPropertyInfo().hasField()));
         }
 
     /**
@@ -282,8 +312,8 @@ public class xRTProperty
      */
     public int getPropertyHasUnreachableSetter(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().isSetterUnreachable());
-        return frame.assignValue(iReturn, hValue);
+        return frame.assignValue(iReturn,
+            xBoolean.makeHandle(hProp.getPropertyInfo().isSetterUnreachable()));
         }
 
     /**
@@ -291,8 +321,8 @@ public class xRTProperty
      */
     public int getPropertyInjected(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().isInjected());
-        return frame.assignValue(iReturn, hValue);
+        return frame.assignValue(iReturn,
+            xBoolean.makeHandle(hProp.getPropertyInfo().isInjected()));
         }
 
     /**
@@ -300,8 +330,7 @@ public class xRTProperty
      */
     public int getPropertyLazy(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        ObjectHandle hValue = xBoolean.makeHandle(hProp.getPropertyInfo().isLazy());
-        return frame.assignValue(iReturn, hValue);
+        return frame.assignValue(iReturn, xBoolean.makeHandle(hProp.getPropertyInfo().isLazy()));
         }
 
     /**
@@ -317,8 +346,7 @@ public class xRTProperty
      */
     public int getPropertyReadOnly(Frame frame, PropertyHandle hProp, int iReturn)
         {
-        ObjectHandle hValue = xBoolean.makeHandle(!hProp.getPropertyInfo().isVar());
-        return frame.assignValue(iReturn, hValue);
+        return frame.assignValue(iReturn, xBoolean.makeHandle(!hProp.getPropertyInfo().isVar()));
         }
 
 

@@ -978,8 +978,10 @@ public class TypeCompositionStatement
                         else
                             {
                             // make sure that there is only one "extends" clause, but defer the
-                            // analysis of conditional clauses (we can't evaluate conditions yet)
+                            // analysis of conditional clauses or appropriate "into"
+                            // (we can't evaluate conditions or super classes yet)
                             fAlreadyExtends = composition.condition == null;
+                            typeDefaultInto = null;
 
                             TypeConstant type = composition.getType().ensureTypeConstant();
                             for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)

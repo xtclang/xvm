@@ -1689,6 +1689,8 @@ public abstract class Utils
 
     public final static ObjectHandle[] OBJECTS_NONE = new ObjectHandle[0];
 
+    public final static Frame.Continuation NEXT = frame -> Op.R_NEXT;
+
     private static TemplateRegistry REGISTRY;
 
     // assigned by initNative()

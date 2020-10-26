@@ -901,7 +901,7 @@ public class Frame
     public int pushDeferredValue(ObjectHandle hValue)
         {
         return hValue instanceof DeferredCallHandle
-                ? hValue.proceed(this, frameCaller -> Op.R_NEXT)
+                ? hValue.proceed(this, Utils.NEXT)
                 : pushStack(hValue);
         }
 

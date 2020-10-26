@@ -43,7 +43,6 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTProperty;
-import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
@@ -601,9 +600,12 @@ public class xRef
                             typeContainer.getValueString());
                     }
 
-                TypeConstant   typeProperty = infoProp.getIdentity().getValueType(typeContainer);
-                PropertyHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
-                return frame.assignValues(aiReturn, xBoolean.TRUE, hProperty, hContainer);
+                ObjectHandle hProp = xRTProperty.makeHandle(frame, typeContainer, infoProp.getIdentity());
+
+                return Op.isDeferred(hProp)
+                    ? hProp.proceed(frame, frameCaller ->
+                        frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack(), hContainer))
+                    : frame.assignValues(aiReturn, xBoolean.TRUE, hProp, hContainer);
                 }
             }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);

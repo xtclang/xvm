@@ -260,6 +260,11 @@ public class Mixin
         return getBaseTemplate(hTarget.getComposition()).invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        return getBaseTemplate(hTarget.getComposition()).invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+        }
+
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {

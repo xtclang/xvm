@@ -726,7 +726,7 @@ public class NameExpression
 
                                 TypeConstant typeParent = left == null
                                         ? ctx.getThisType()
-                                        : m_fClassAttribute
+                                        : m_fClassAttribute || !isIdentityMode(ctx, false)
                                                 ? left.getType()
                                                 : left.getType().getParamType(0);
                                 constVal = pool.ensurePropertyClassTypeConstant(typeParent, id);
@@ -2159,7 +2159,6 @@ public class NameExpression
 
                 // use the type inference to differentiate between a property dereferencing
                 // and the Property instance itself (check for both Property and Property? types)
-                TypeOfProperty:
                 if (typeDesired != null && typeDesired.removeNullable().isA(pool.typeProperty()) &&
                         !type.removeNullable().isA(pool.typeProperty()))
                     {
@@ -2172,25 +2171,17 @@ public class NameExpression
                     if (left == null)
                         {
                         typeLeft = target == null ? ctx.getThisType() : target.getTargetType();
-                        infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                         }
                     else
                         {
                         typeLeft = left.getImplicitType(ctx);
-                        if (fClass || isIdentityMode(ctx, false))
+                        if (!fClass && isIdentityMode(ctx, false))
                             {
                             assert typeLeft.isA(pool.typeClass());
-                            if (!fClass)
-                                {
-                                typeLeft = typeLeft.getParamType(0);
-                                }
-                            infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
-                            }
-                        else
-                            {
-                            break TypeOfProperty;
+                            typeLeft = typeLeft.getParamType(0);
                             }
                         }
+                    infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
 
                     if (infoProp == null)
                         {

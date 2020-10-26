@@ -89,15 +89,16 @@ public class Call_00
             ObjectHandle hFunction = frame.getArgument(m_nFunctionId);
 
             return isDeferred(hFunction)
-                    ? hFunction.proceed(frame, frameCaller ->
-                        ((FunctionHandle) frameCaller.popStack()).
-                            call1(frameCaller, null, Utils.OBJECTS_NONE, A_IGNORE))
-                    : ((FunctionHandle) hFunction).
-                        call1(frame, null, Utils.OBJECTS_NONE, A_IGNORE);
+                    ? hFunction.proceed(frame, CALL)
+                    : ((FunctionHandle) hFunction).call1(frame, null, Utils.OBJECTS_NONE, A_IGNORE);
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
         }
+
+    private static final Frame.Continuation CALL =
+        frameCaller -> ((FunctionHandle) frameCaller.popStack()).
+            call1(frameCaller, null, Utils.OBJECTS_NONE, A_IGNORE);
     }

@@ -2,6 +2,7 @@ package org.xvm.runtime.template._native.reflect;
 
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Annotation;
@@ -527,23 +528,16 @@ public class xRTType
         TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
         Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
         ArrayList<ObjectHandle>             listProps  = new ArrayList<>(mapProps.size());
+
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
             {
             PropertyInfo infoProp = entry.getValue();
-            if (!infoProp.isConstant())
+            if (infoProp.isConstant())
                 {
-                continue;
+                listProps.add(xRTProperty.makeHandle(frame, typeTarget, entry.getKey()));
                 }
-
-            TypeConstant typeProperty = entry.getKey().getValueType(typeTarget);
-            ObjectHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
-
-            listProps.add(hProperty);
             }
-
-        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
-                xRTProperty.ensureArrayComposition(), listProps.toArray(Utils.OBJECTS_NONE));
-        return frame.assignValue(iReturn, hArray);
+        return makePropertyArray(frame, typeTarget, listProps, iReturn);
         }
 
     /**
@@ -892,21 +886,17 @@ public class xRTType
         TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
         Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
         ArrayList<ObjectHandle>             listProps  = new ArrayList<>(mapProps.size());
+
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
             {
             PropertyConstant idProp   = entry.getKey();
             PropertyInfo     infoProp = entry.getValue();
             if (!infoProp.isConstant() && idProp.getNestedDepth() == 1)
                 {
-                TypeConstant  typeProperty = idProp.getValueType(typeTarget);
-                PropertyHandle hProperty   = xRTProperty.INSTANCE.makeHandle(typeProperty);
-
-                listProps.add(hProperty);
+                listProps.add(xRTProperty.makeHandle(frame, typeTarget, idProp));
                 }
             }
-        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
-                xRTProperty.ensureArrayComposition(typeTarget), listProps.toArray(Utils.OBJECTS_NONE));
-        return frame.assignValue(iReturn, hArray);
+        return makePropertyArray(frame, typeTarget, listProps, iReturn);
         }
 
     /**
@@ -1154,10 +1144,12 @@ public class xRTType
                 Constant constDef = type.getDefiningConstant();
                 if (constDef instanceof PropertyConstant)
                     {
-                    TypeConstant   typeProperty = ((PropertyConstant) constDef).getValueType(null);
-                    PropertyHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
+                    ObjectHandle hProp = xRTProperty.makeHandle(frame, null, (PropertyConstant) constDef);
 
-                    return frame.assignValues(aiReturn, xBoolean.TRUE, hProperty);
+                    return Op.isDeferred(hProp)
+                        ? hProp.proceed(frame, frameCaller ->
+                            frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack()))
+                        : frame.assignValues(aiReturn, xBoolean.TRUE, hProp);
                     }
                 }
             }
@@ -1438,6 +1430,22 @@ public class xRTType
             default:
                 throw new IllegalStateException("unsupported type: " + type);
             }
+        }
+
+    private int makePropertyArray(Frame frame, TypeConstant typeTarget,
+                                  List<ObjectHandle> listProps, int iReturn)
+        {
+        ObjectHandle[]   ahProps  = listProps.toArray(Utils.OBJECTS_NONE);
+        ClassComposition clzArray = xRTProperty.ensureArrayComposition(typeTarget);
+
+        if (Op.anyDeferred(ahProps))
+            {
+            ObjectHandle hDeferred = new DeferredArrayHandle(clzArray, ahProps);
+            return hDeferred.proceed(frame,
+                frameCaller -> frameCaller.assignValue(iReturn, frameCaller.popStack()));
+            }
+
+        return frame.assignValue(iReturn, xArray.INSTANCE.createArrayHandle(clzArray, ahProps));
         }
 
 
