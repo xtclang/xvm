@@ -348,8 +348,7 @@ public class PropertyClassTypeConstant
 
         return new TypeInfo(this, cInvals, infoBase.getClassStructure(),
                 idBase.getNestedDepth() + 1, false, mapTypeParams,
-                Annotation.NO_ANNOTATIONS,
-                typeBase, null, null,
+                Annotation.NO_ANNOTATIONS, infoBase.getMixinAnnotations(), typeBase, null, null,
                 Collections.EMPTY_LIST, ListMap.EMPTY, ListMap.EMPTY,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 TypeInfo.Progress.Complete);

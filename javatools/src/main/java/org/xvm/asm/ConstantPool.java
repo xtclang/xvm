@@ -2223,7 +2223,8 @@ public class ConstantPool
         if (info == null)
             {
             m_infoPlaceholder = info = new TypeInfo(
-                typeObject(), 0, null, 0, true, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
+                typeObject(), 0, null, 0, true, Collections.EMPTY_MAP,
+                Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
                 typeObject(), null, typeObject(),
                 Collections.EMPTY_LIST, new ListMap<>(), new ListMap<>(),
                 Collections.EMPTY_MAP, Collections.EMPTY_MAP,
@@ -3548,6 +3549,7 @@ public class ConstantPool
                 0,                      // depth
                 true,                   // synthetic
                 mapTypeParams,
+                Annotation.NO_ANNOTATIONS,
                 Annotation.NO_ANNOTATIONS,
                 null,                   // typeExtends
                 null,                   // typeRebase

@@ -395,8 +395,7 @@ public class AnnotatedTypeConstant
             TypeConstant typeTarget = pool.ensureAccessTypeConstant(this, Access.PRIVATE);
 
             return new TypeInfo(typeTarget, cInvals, struct, 0, false,
-                    infoBase.getTypeParams(),
-                    aAnnoClass,
+                    infoBase.getTypeParams(), aAnnoClass, infoBase.getMixinAnnotations(),
                     infoBase.getExtends(), infoBase.getRebases(), infoBase.getInto(),
                     infoBase.getContributionList(), infoBase.getClassChain(), infoBase.getDefaultChain(),
                     infoBase.getProperties(), infoBase.getMethods(),

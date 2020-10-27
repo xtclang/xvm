@@ -530,6 +530,7 @@ public abstract class RelationalTypeConstant
                             0,                      // depth
                             false,                  // synthetic
                             mergeTypeParams(info1, info2, errs),
+                            Annotation.NO_ANNOTATIONS,
                             mergeAnnotations(info1, info2, errs),
                             null,                   // typeExtends
                             null,                   // typeRebase
@@ -559,7 +560,7 @@ public abstract class RelationalTypeConstant
     abstract protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
     /**
-     * Produce an array of Annotations for for a merge of the specified TypeInfos.
+     * Produce an array of mixin Annotations for for a merge of the specified TypeInfos.
      *
      * Note, that either of the two TypeInfos can be null.
      *

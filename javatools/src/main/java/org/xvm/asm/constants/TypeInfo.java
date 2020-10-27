@@ -49,10 +49,11 @@ public class TypeInfo
      * @param fSynthetic           true if this type info is synthetic (e.g. "as into")
      * @param mapTypeParams        the collected type parameters for the type
      * @param aannoClass           the annotations for the type that mix into "Class"
+     * @param aannoMixin           the mixin annotations (not the incorporate) for the type
      * @param typeExtends          the type that is extended
      * @param typeRebases          the type that is rebased onto
      * @param typeInto             for mixins, the type that is mixed into; for interfaces, Object
-     * @param listProcess
+     * @param listProcess          the contribution list
      * @param listmapClassChain    the potential call chain of classes
      * @param listmapDefaultChain  the potential call chain of default implementations
      * @param mapProps             the properties of the type
@@ -70,6 +71,7 @@ public class TypeInfo
             boolean                             fSynthetic,
             Map<Object, ParamInfo>              mapTypeParams,
             Annotation[]                        aannoClass,
+            Annotation[]                        aannoMixin,
             TypeConstant                        typeExtends,
             TypeConstant                        typeRebases,
             TypeConstant                        typeInto,
@@ -99,6 +101,7 @@ public class TypeInfo
         f_cDepth              = cDepth;
         f_mapTypeParams       = mapTypeParams;
         f_aannoClass          = validateAnnotations(aannoClass);
+        f_aannoMixin          = validateAnnotations(aannoMixin);
         f_typeExtends         = typeExtends;
         f_typeRebases         = typeRebases;
         f_typeInto            = typeInto;
@@ -116,7 +119,6 @@ public class TypeInfo
         // and determine if this type is implicitly abstract
         f_cacheById  = new ConcurrentHashMap<>(mapMethods);
         f_cacheByNid = new ConcurrentHashMap<>(mapVirtMethods);
-
 
         boolean fExplicitAbstract = fSynthetic || !isClass() || struct.isExplicitlyAbstract() ||
                 TypeInfo.containsAnnotation(aannoClass, "Abstract");
@@ -171,7 +173,8 @@ public class TypeInfo
         f_struct              = infoConstraint.f_struct;
         f_cDepth              = infoConstraint.f_cDepth;
         f_mapTypeParams       = Collections.EMPTY_MAP;
-        f_aannoClass          = null;
+        f_aannoClass          = Annotation.NO_ANNOTATIONS;
+        f_aannoMixin          = Annotation.NO_ANNOTATIONS;
         f_typeExtends         = infoConstraint.f_type;
         f_typeRebases         = null;
         f_typeInto            = null;
@@ -281,7 +284,7 @@ public class TypeInfo
         TypeConstant typeInto    = limitAccess(f_typeInto,    access);
 
         return new TypeInfo(typeNew, f_cInvalidations, f_struct, f_cDepth, false,
-                f_mapTypeParams, f_aannoClass,
+                f_mapTypeParams, f_aannoClass, f_aannoMixin,
                 typeExtends, typeRebases, typeInto,
                 f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren, f_progress);
@@ -341,7 +344,7 @@ public class TypeInfo
                 }
 
             info = new TypeInfo(f_type, f_cInvalidations, f_struct, f_cDepth, true,
-                    f_mapTypeParams, f_aannoClass,
+                    f_mapTypeParams, f_aannoClass, f_aannoMixin,
                     f_typeExtends, f_typeRebases, f_typeInto,
                     f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
                     mapProps, mapMethods, mapVirtProps, mapVirtMethods, f_mapChildren, f_progress);
@@ -398,7 +401,7 @@ public class TypeInfo
                 }
 
             info = new TypeInfo(f_type, f_cInvalidations, f_struct, f_cDepth, true,
-                    f_mapTypeParams, f_aannoClass,
+                    f_mapTypeParams, f_aannoClass, f_aannoMixin,
                     f_typeExtends, f_typeRebases, f_typeInto,
                     f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
                     mapProps, mapMethods, mapVirtProps, mapVirtMethods, f_mapChildren, f_progress);
@@ -797,6 +800,14 @@ public class TypeInfo
     public Annotation[] getClassAnnotations()
         {
         return f_aannoClass;
+        }
+
+    /**
+     * @return the mixin annotations (not incorporation)
+     */
+    public Annotation[] getMixinAnnotations()
+        {
+        return f_aannoMixin;
         }
 
     /**
@@ -2448,6 +2459,11 @@ public class TypeInfo
      * The class annotations.
      */
     private final Annotation[] f_aannoClass;
+
+    /**
+     * The mixin annotations.
+     */
+    private final Annotation[] f_aannoMixin;
 
     /**
      * The type that is extended. The term "extends" has slightly different meanings for mixins and

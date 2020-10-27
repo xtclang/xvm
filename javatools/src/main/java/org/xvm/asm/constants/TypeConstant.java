@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -1696,8 +1697,12 @@ public abstract class TypeConstant
         checkTypeParameterProperties(mapTypeParams, mapVirtProps,
             fComplete ? errs : ErrorListener.BLACKHOLE);
 
+        Annotation[] aAnnoMixin = fComplete
+                ? collectMixinAnnotations(listProcess)
+                : Annotation.NO_ANNOTATIONS;
+
         TypeInfo info = new TypeInfo(this, cInvalidations, struct, 0, false, mapTypeParams,
-            aAnnoClass, typeExtends, typeRebase, typeInto,
+                aAnnoClass, aAnnoMixin, typeExtends, typeRebase, typeInto,
                 listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 fComplete ? Progress.Complete : Progress.Incomplete);
@@ -1723,6 +1728,52 @@ public abstract class TypeConstant
         }
 
     /**
+     * Recursively collect all the mixin annotations for the contributions in the specified list.
+     */
+    private Annotation[] collectMixinAnnotations(List<Contribution> listContrib)
+        {
+        List<Annotation> listAnnos = null;
+        for (Contribution contrib : listContrib)
+            {
+            switch (contrib.getComposition())
+                {
+                case Annotation:
+                    {
+                    Annotation anno = contrib.getAnnotation();
+
+                    if (!anno.getAnnotationType().getExplicitClassInto().isIntoClassType())
+                        {
+                        if (listAnnos == null)
+                            {
+                            listAnnos = new ArrayList<>();
+                            }
+                        listAnnos.add(anno);
+                        }
+                    break;
+                    }
+
+                case Extends:
+                    {
+                    TypeInfo     infoExtend  = contrib.getTypeConstant().ensureTypeInfo();
+                    Annotation[] aannoExtend = infoExtend.getMixinAnnotations();
+                    if (aannoExtend.length > 0)
+                        {
+                        if (listAnnos == null)
+                            {
+                            listAnnos = new ArrayList<>();
+                            }
+                        listAnnos.addAll(Arrays.asList(aannoExtend));
+                        }
+                    break;
+                    }
+                }
+            }
+        return listAnnos == null
+                ? Annotation.NO_ANNOTATIONS
+                : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
+        }
+
+    /**
      * Layer on the specified annotations on top of the base TypeInfo using this type as a target.
      *
      * @param constId         the identity constant of the class that this type is based on
@@ -1743,7 +1794,8 @@ public abstract class TypeConstant
 
         for (int c = aAnnoMixin.length, i = c-1; i >= 0; --i)
             {
-            AnnotatedTypeConstant typeAnno = pool.ensureAnnotatedTypeConstant(typeNext, aAnnoMixin[i]);
+            Annotation            anno     = aAnnoMixin[i];
+            AnnotatedTypeConstant typeAnno = pool.ensureAnnotatedTypeConstant(typeNext, anno);
 
             TypeConstant typeMixin        = typeAnno.getAnnotationType();
             TypeConstant typeMixinPrivate = pool.ensureAccessTypeConstant(typeMixin, Access.PRIVATE);
@@ -1764,7 +1816,7 @@ public abstract class TypeConstant
 
             infoNext = typeNext.mergeMixinTypeInfo(this, cInvalidations, constId,
                     struct, infoNext, infoMixin,
-                    i == 0 ? aAnnoClass : Annotation.NO_ANNOTATIONS, /*fAddProcess*/ true, errs);
+                    i == 0 ? aAnnoClass : Annotation.NO_ANNOTATIONS, anno, errs);
             typeNext = typeAnno;
             }
 
@@ -1869,7 +1921,7 @@ public abstract class TypeConstant
         mapMethods.putIfAbsent(infoToString.getIdentity(), infoToString);
 
         return new TypeInfo(this, cInvals, infoPri.getClassStructure(), 0,
-                false, infoPri.getTypeParams(), infoPri.getClassAnnotations(),
+                false, infoPri.getTypeParams(), infoPri.getClassAnnotations(), infoPri.getMixinAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
                 mapProps, mapMethods, mapVirtProps, Collections.EMPTY_MAP, ListMap.EMPTY,   // TODO mapChildren
@@ -4625,7 +4677,7 @@ public abstract class TypeConstant
                 {
                 // return the incomplete info of for we've got so far
                 return new TypeInfo(this, cInvalidations, infoBase.getClassStructure(), 0, false,
-                    info.getTypeParams(), null,
+                    info.getTypeParams(), Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
                     info.getExtends(), info.getRebases(), info.getInto(),
                     info.getContributionList(), info.getClassChain(), info.getDefaultChain(),
                     info.getProperties(), info.getMethods(),
@@ -4634,7 +4686,7 @@ public abstract class TypeConstant
                 }
 
             info = mergeMixinTypeInfo(this, cInvalidations, idBase, infoBase.getClassStructure(),
-                    info, infoMixin, Annotation.NO_ANNOTATIONS, /*fAddProcess*/ false, errs);
+                    info, infoMixin, Annotation.NO_ANNOTATIONS, null, errs);
             }
         return info;
         }
@@ -4650,7 +4702,7 @@ public abstract class TypeConstant
      * @param infoSource     the TypeInfo containing all previous incorporates
      * @param infoMixin      the TypeInfo for the mixin to be merged with the source TypeInfo
      * @param aAnnoClass     an array of annotations for the type that mix into "Class"
-     * @param fAnnoMixin     if true, the mixin represents an annotation; otherwise an incorporation
+     * @param annoMixin      (optional) the annotation mixin; null for incorporation
      * @param errs           the error listener to log into
      *
      * @return the resulting TypeInfo
@@ -4663,7 +4715,7 @@ public abstract class TypeConstant
             TypeInfo         infoSource,
             TypeInfo         infoMixin,
             Annotation[]     aAnnoClass,
-            boolean fAnnoMixin,
+            Annotation       annoMixin,
             ErrorListener    errs)
         {
         ConstantPool pool = getConstantPool();
@@ -4672,6 +4724,7 @@ public abstract class TypeConstant
         Map<PropertyConstant, PropertyInfo> mapMixinProps   = infoMixin.getProperties();
         Map<MethodConstant  , MethodInfo>   mapMixinMethods = infoMixin.getMethods();
         Map<Object          , ParamInfo>    mapMixinParams  = infoMixin.getTypeParams();
+        TypeConstant                        typeMixin       = infoMixin.getType();
 
         Map<PropertyConstant, PropertyInfo> mapProps       = new HashMap<>(infoSource.getProperties());
         Map<MethodConstant  , MethodInfo  > mapMethods     = new HashMap<>(infoSource.getMethods());
@@ -4686,19 +4739,21 @@ public abstract class TypeConstant
                     entry.getKey(), entry.getValue(), errs);
             }
 
-        typeTarget.layerOnMethods(idBase, false, fAnnoMixin, null, mapMethods, mapVirtMethods,
-                infoMixin.getType(), mapMixinMethods, errs);
+        typeTarget.layerOnMethods(idBase, false, annoMixin != null, null, mapMethods, mapVirtMethods,
+                typeMixin, mapMixinMethods, errs);
 
         List<Contribution> listProcess = infoSource.getContributionList();
-        if (fAnnoMixin)
+        if (annoMixin != null)
             {
             listProcess = new ArrayList<>(listProcess);
-            listProcess.add(new Contribution(Composition.Annotation,
-                    pool.ensureAccessTypeConstant(infoMixin.getType(), Access.PROTECTED)));
+            listProcess.add(new Contribution(annoMixin, typeMixin));
             }
 
+        Annotation[] aAnnoMixin = collectMixinAnnotations(listProcess);
+
         // TODO handle mapChildren
-        return new TypeInfo(typeTarget, cInvalidations, structBase, 0, false, mapMixinParams, aAnnoClass,
+        return new TypeInfo(typeTarget, cInvalidations, structBase, 0, false, mapMixinParams,
+                aAnnoClass, aAnnoMixin,
                 infoSource.getExtends(), infoSource.getRebases(), infoSource.getInto(),
                 listProcess, infoSource.getClassChain(), infoSource.getDefaultChain(),
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
