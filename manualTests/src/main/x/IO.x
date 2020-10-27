@@ -343,7 +343,7 @@ module TestIO
             {
             using (FieldInput fields = in.openObject())
                 {
-                return new Segment(fields.read<Point>("p1"), fields.read<Point>("p2"));
+                return new Segment(fields.readObject<Point>("p1"), fields.readObject<Point>("p2"));
 //console.println($"reading segment");
 //Point p1 = fields.read<Point>("p1");
 //console.println($"p1={p1}");

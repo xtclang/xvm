@@ -2,7 +2,7 @@
  * A mapping for Nullable values.
  */
 const NullableMapping<NotNullable>(Mapping<NotNullable> underlying)
-        implements Mapping<NotNullable?>
+        implements Mapping<Nullable | NotNullable>
     {
     assert()
         {
@@ -34,5 +34,24 @@ const NullableMapping<NotNullable>(Mapping<NotNullable> underlying)
             {
             underlying.write(out, value);
             }
+        }
+
+    @Override
+    <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type)
+        {
+        // TODO GG: if (type.is(Type<Nullable>) && type.form == Intersection,
+        if (type.is(Type<Nullable>) && type.as(Type).form == Intersection,
+                (Type left, Type right) := type.relational(),
+                left == Nullable,
+                right != underlying.Serializable,
+                Mapping<NotNullable> narrowedUnderlying := underlying.narrow(schema, right.as(Type<NotNullable>)))
+            {
+            // TODO GG: Mapping<right.Serializable> narrowedNullable = new NullableMapping<right.Serializable>(narrowedUnderling);
+            val narrowedNullable = new NullableMapping<NotNullable>(narrowedUnderlying);
+
+            return True, narrowedNullable.as(Mapping<SubType>);
+            }
+
+        return False;
         }
     }

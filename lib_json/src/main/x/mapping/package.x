@@ -8,6 +8,9 @@ package mapping
         new LiteralMapping<FPLiteral>(),
         new LiteralMapping<String>(),
 
+        new BitMapping(),
+        new CharMapping(),
+
         new IntNumberMapping<           ecstasy.numbers.Int8     >(),
         new IntNumberMapping<@Unchecked ecstasy.numbers.Int8     >(),
         new IntNumberMapping<           ecstasy.numbers.Int16    >(),
@@ -44,13 +47,14 @@ package mapping
         new FPNumberMapping<ecstasy.numbers.Float128>(),
         new FPNumberMapping<ecstasy.numbers.FloatN>(),
 
-// TODO Bit
-// TODO Char
-
         new DateMapping(),
         new TimeMapping(),
         new DateTimeMapping(),
         new TimeZoneMapping(),
         new DurationMapping(),
+
+        // generic container types
+        new @Narrowable RangeMapping(new GenericMapping<Orderable>()),
+        // TODO other container types...
         ];
     }

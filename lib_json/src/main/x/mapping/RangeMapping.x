@@ -3,18 +3,16 @@ import Type.Constructor;
 /**
  * A mapping for Range values.
  */
-const RangeMapping<Element extends Orderable>(Schema schema, Mapping<Element> underlying)
+const RangeMapping<Element extends Orderable>(Mapping<Element> underlying)
         implements Mapping<Range<Element>>
     {
     /**
      * Construct the RangeMapping.
      *
-     * @param schema      the enclosing schema
      * @param underlying  the mapping to use for the elements of the `Range`
      */
-    construct(Schema schema, Mapping<Element> underlying)
+    construct(Mapping<Element> underlying)
         {
-        this.schema     = schema;
         this.underlying = underlying;
         this.typeName   = $"Range<{underlying.typeName}>";
         }
@@ -24,27 +22,12 @@ const RangeMapping<Element extends Orderable>(Schema schema, Mapping<Element> un
         {
         using (val obj = in.openObject())
             {
-            RangeMapping<Element> mapping = this;
-            if (schema.enableMetadata, Doc overrideTypeName ?= obj.metadataFor(schema.typeKey),
-                    overrideTypeName.is(String) && overrideTypeName != typeName)
-                {
-                mapping = schema.ensureMappingByName(overrideTypeName, Serializable).as(RangeMapping<Element>);
-                }
-
-            return mapping.read(obj);
+            Element first          = underlying.read(obj.openField("first"));
+            Boolean firstExclusive = obj.readBoolean("firstExclusive", False);
+            Element last           = underlying.read(obj.openField("last"));
+            Boolean lastExclusive  = obj.readBoolean("lastExclusive", False);
+            return new Range<Element>(first, last, firstExclusive, lastExclusive);
             }
-        }
-
-    /**
-     * Reads the `Range` object fields and creates a new `Range` object.
-     */
-    private Serializable read(FieldInput in)
-        {
-        Element first          = underlying.read(in.openField("first"));
-        Boolean firstExclusive = in.readBoolean("firstExclusive", False);
-        Element last           = underlying.read(in.openField("last"));
-        Boolean lastExclusive  = in.readBoolean("lastExclusive", False);
-        return new Range<Element>(first, last, firstExclusive, lastExclusive);
         }
 
     @Override
@@ -53,15 +36,14 @@ const RangeMapping<Element extends Orderable>(Schema schema, Mapping<Element> un
         using (val obj = out.openObject())
             {
             Mapping<Element> underlying = this.underlying;
-            if (value.Element != this.Element)
-                {
-                if (schema.enableMetadata)
-                    {
-                    obj.add(schema.typeKey, $"Range<{value.Element}>");
-                    }
-
-                underlying = schema.ensureMapping(value.Element);
-                }
+// TODO CP remove this - should be handled by Narrowable
+//            if (value.Element != this.Element)
+//                {
+//                if (schema.enableMetadata)
+//                    {
+//                    obj.add(schema.typeKey, $"Range<{value.Element}>");
+//                    }
+//                }
 
             underlying.write(obj.openField("first"), value.first);
             if (value.firstExclusive)
@@ -75,5 +57,21 @@ const RangeMapping<Element extends Orderable>(Schema schema, Mapping<Element> un
                 obj.add("lastExclusive", True);
                 }
             }
+        }
+
+    @Override
+    <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type)
+        {
+// TODO GG
+//        if (SubType.Element != Element)
+//            {
+//            try
+//                {
+//                return True, new RangeMapping<SubType.Element>(schema.ensureMapping(SubType.Element));
+//                }
+//            catch (MissingMapping e) {}
+//            }
+
+        return False;
         }
     }

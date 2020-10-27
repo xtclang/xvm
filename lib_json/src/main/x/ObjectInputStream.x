@@ -118,7 +118,7 @@ class ObjectInputStream(Schema schema, Parser parser)
     @Override
     <ObjectType> ObjectType read<ObjectType>()
         {
-        return ensureElementInput().read<ObjectType>();
+        return ensureElementInput().readObject<ObjectType>();
         }
 
     @Override
@@ -167,13 +167,14 @@ class ObjectInputStream(Schema schema, Parser parser)
         Version? version;
 
         @Override
-        Doc metadataFor(String attribute, Boolean peekAhead=False)
+        Doc metadataFor(String attribute)
             {
-            if (!peekAhead)
-                {
-                return parent?.metadataFor(attribute);
-                }
+            return parent?.metadataFor(attribute) : Null;
+            }
 
+        @Override
+        Doc peekMetadata(String attribute)
+            {
             return Null;
             }
 
@@ -203,7 +204,7 @@ class ObjectInputStream(Schema schema, Parser parser)
          * (which exists to read and provides the requested metadata) is held onto, but if the
          * caller then takes a different path (one that does not immediately create the FieldInput),
          * then the input stream must appear to have had no state changes whatsoever made to it by
-         * the original call to "metadataFor()", i.e. we must fully restore the previous state of
+         * the original call to "peekMetadata()", i.e. we must fully restore the previous state of
          * the input stream. On the other hand, if the caller does request the FieldInput, then the
          * previously created one is ready to go.
          */
@@ -850,7 +851,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         @Override
-        Doc metadataFor(String attribute, Boolean peekAhead=False)
+        Doc metadataFor(String attribute)
             {
             if (schema.enableMetadata && schema.isMetadata(attribute),
                     Token[]? tokens := seek(attribute, skip=schema.randomAccess && !peekingAhead))
@@ -865,6 +866,12 @@ class ObjectInputStream(Schema schema, Parser parser)
                 }
 
             return Null;
+            }
+
+        @Override
+        Doc peekMetadata(String attribute)
+            {
+            return metadataFor(attribute);
             }
 
         @Override
@@ -1085,7 +1092,7 @@ class ObjectInputStream(Schema schema, Parser parser)
      * Adds peek-ahead support for metadata to the ElementInput implementations.
      */
     mixin PeekAhead
-            into (ElementInputStream | ArrayInputStream)
+            into (ElementInputStream | ArrayInputStream)
         {
         @Override
         FieldInputStream<PeekAhead> openObject(Boolean peekAhead=False)
@@ -1107,11 +1114,11 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         @Override
-        Doc metadataFor(String attribute, Boolean peekAhead=False)
+        Doc peekMetadata(String attribute)
             {
-            DocInputStream<>? current = this.ObjectInputStream.current;
-            if (peekAhead && schema.enableMetadata)
+            if (schema.enableMetadata)
                 {
+                DocInputStream<>? current = this.ObjectInputStream.current;
                 if (&current == &this)
                     {
                     if (parser.peek().id == ObjectEnter)
@@ -1127,7 +1134,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                     }
                 }
 
-            return super(attribute, peekAhead);
+            return super(attribute);
             }
         }
 
@@ -1148,7 +1155,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         protected Boolean pointerChecked = False;
 
         @Override
-        <Serializable> Serializable read(Serializable? defaultValue = Null)
+        <Serializable> Serializable readObject(Serializable? defaultValue = Null)
             {
             Boolean alreadyChecked = pointerChecked;
             try
@@ -1168,8 +1175,8 @@ class ObjectInputStream(Schema schema, Parser parser)
 
         @Override
         <Serializable> Serializable readUsing(
-                function Serializable(ElementInput<>) deserialize,
-                Serializable? defaultValue = Null)
+                Mapping<Serializable> mapping,
+                Serializable?         defaultValue = Null)
             {
             Boolean alreadyChecked = pointerChecked;
             try
@@ -1179,7 +1186,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                     return value;
                     }
 
-                return registerPointer(alreadyChecked, super(deserialize, defaultValue));
+                return registerPointer(alreadyChecked, super(mapping, defaultValue));
                 }
             finally
                 {
@@ -1198,7 +1205,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             {
             if (!pointerChecked && parser.peek().id == ObjectEnter)
                 {
-                Doc pointer = metadataFor(schema.pointerKey, peekAhead=True);
+                Doc pointer = peekMetadata(schema.pointerKey);
                 if (pointer.is(String))
                     {
                     return True, dereference(pointer);

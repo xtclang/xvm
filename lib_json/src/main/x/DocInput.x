@@ -17,7 +17,7 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
     // ----- schema --------------------------------------------------------------------------------
 
     /**
-     * The JSON [Schema] that provides the genericized JSON-to-Ecstasy [Mappings](Schema.Mapping).
+     * The JSON [Schema] that provides the genericized JSON-to-Ecstasy [Mappings].
      * A default Schema is used when no custom mappings are provided.
      */
     @RO Schema schema;
@@ -31,9 +31,12 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
     Version? version;
 
     /**
+     * Search from the current `DocInput` to its parent and so on, until a JSON object (such as
+     * would be represented by a [FieldInput]) is encountered, and obtain the specified metadata
+     * property from that object.
+     *
      * Metadata properties are automatically collected from the beginning of the closest enclosing
      * JSON object if the [Schema's collectMetadata property](Schema.collectMetadata) is `True`.
-     *
      * These properties are included in the "remainder", and are available during the parsing of the
      * JSON object via this method.
      *
@@ -41,14 +44,20 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
      * metadata properties.
      *
      * @param attribute  the metadata attribute name
-     * @param peekAhead  pass `True` to search only within the confines of the current `DocInput`,
-     *                   peeking ahead in the input if necessary; the default, `False`, searches
-     *                   from the current `DocInput` to its parent and so on, until a JSON object
-     *                   (such as would be represented by a [FieldInput]) is encountered
      *
      * @return the value of the metadata attribute, or `Null`
      */
-    Doc metadataFor(String attribute, Boolean peekAhead=False);
+    Doc metadataFor(String attribute);
+
+    /**
+     * Search for the specified metadata property only within the confines of the current
+     * `DocInput`, peeking ahead in the input as necessary.
+     *
+     * @param attribute  the metadata attribute name
+     *
+     * @return the value of the metadata attribute, or `Null`
+     */
+    Doc peekMetadata(String attribute);
 
 
     // ----- context -------------------------------------------------------------------------------

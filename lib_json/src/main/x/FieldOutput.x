@@ -56,8 +56,8 @@
  *
  * If the Schema in use had a mapping for the Color object, then all of those steps from
  * `openObject()` to `close()` could be replaced with a single call to `addObject("Color", color)`,
- * which would delegate the nested object name/value population to the [Mapping](Schema.Mapping) for
- * the `Color` type.
+ * which would delegate the nested object name/value population to the [Mapping] for the `Color`
+ * type.
  */
 interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
         extends DocOutput<ParentOutput>
@@ -140,20 +140,55 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
         }
 
     /**
-     * Add a name/value pair to the current JSON object, with the value being a JSON object
-     * populated by the [Mapping](Schema.Mapping) for the type of the `Serializable` value.
+     * Add a name/value pair to the current JSON object, using the provided name and emitting a
+     * JSON value using the [Mapping] obtained from the [Schema] based on the type of `value`.
+     * Additionally, if [Schema.enableMetadata] is `True`, then it is expected that the Ecstasy type
+     * will also be encoded into the resulting JSON value, providing some future deserialization
+     * operation with sufficient type information to instantiate a sufficiently-identical object
+     * from the JSON value.
      *
      * @param name   the name for the JSON property
-     * @param value  the object to serialize into the nested sub-object
+     * @param value  the object to serialize into the named value (typically a nested sub-object)
      *
      * @return this FieldOutput
      */
     <Serializable> FieldOutput addObject(String name, Serializable value)
         {
+        if (value == Null)
+            {
+            return add(name, Null);
+            }
+
         using (val nested = openField(name))
             {
             nested.addObject(value);
             }
+
+        return this;
+        }
+
+    /**
+     * Add a name/value pair to the current JSON object, using the provided name and emitting a
+     * JSON value using the provided [Mapping].
+     *
+     * @param mapping  the [Mapping] instance to use to serialize the object
+     * @param name     the name for the JSON property
+     * @param value    the object to serialize into the named value (typically a nested sub-object)
+     *
+     * @return this FieldOutput
+     */
+    <Serializable> FieldOutput addUsing(Mapping<Serializable> mapping, String name, Serializable value)
+        {
+        if (value == Null)
+            {
+            return add(name, value);
+            }
+
+        using (val nested = openField(name))
+            {
+            nested.addUsing(mapping, value);
+            }
+
         return this;
         }
 
@@ -211,7 +246,7 @@ interface FieldOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
 
     /**
      * Add a name/value pair to the current JSON object, with the value being a JSON array with each
-     * element populated by the [Mapping](Schema.Mapping) for the type of the `Serializable` values.
+     * element populated by the [Mapping] for the type of the `Serializable` values.
      *
      * @param name   the name for the JSON property
      * @param value  the objects to serialize into the array of nested sub-objects

@@ -14,10 +14,19 @@ interface DocOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
         extends Closeable
     {
     /**
-     * The JSON [Schema] that provides the genericized Ecstasy-to-JSON [Mappings](Schema.Mapping).
+     * The JSON [Schema] that provides the genericized Ecstasy-to-JSON [Mappings].
      * A default Schema is used when no custom mappings are provided.
      */
     @RO Schema schema;
+
+    /**
+     * Metadata "poke ahead": If/when the next mutating operation opens an object, automatically
+     * include the specified metadata as part of that object.
+     *
+     * @param attribute  the metadata attribute name
+     * @param doc        the corresponding JSON document (for example, a String)
+     */
+    void prepareMetadata(String attribute, Doc doc);
 
 
     // ----- context -------------------------------------------------------------------------------

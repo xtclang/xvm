@@ -122,6 +122,12 @@ class ObjectOutputStream(Schema schema, Writer writer)
         protected/private (String | Int)? id;
 
         @Override
+        void prepareMetadata(String attribute, Doc doc)
+            {
+            TODO CP
+            }
+
+        @Override
         conditional ElementOutputStream<ParentOutput> insideElement()
             {
             return False;

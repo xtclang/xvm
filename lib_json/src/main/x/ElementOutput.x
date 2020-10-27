@@ -73,10 +73,36 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      * @param value  the object to serialize into a nested sub-object
      *
      * @return this ElementOutput
+     *
+     * @throws MissingMapping  if no appropriate mapping can be located
      */
     <Serializable> ElementOutput addObject(Serializable value)
         {
-        schema.ensureMapping(Serializable).write(this, value);
+        val type = &value.actualType;
+        if (schema.enableMetadata)
+            {
+            prepareMetadata(schema.typeKey, schema.nameForType(type));
+            }
+
+        return addUsing(schema.ensureMapping(type), value);
+        }
+
+    /**
+     * Store the serialized form of the specified value in this JSON element.
+     *
+     * @param mapping  the [Mapping] instance to use to serialize the object
+     * @param value    the object to serialize into a nested sub-object
+     *
+     * @return this ElementOutput
+     */
+    <Serializable> ElementOutput addUsing(Mapping<Serializable> mapping, Serializable value)
+        {
+        if (value == Null)
+            {
+            return add(Null);
+            }
+
+        mapping.write(this, value);
         return this;
         }
 
@@ -131,7 +157,7 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
 
     /**
      * Store an array of the specified values in this JSON element, with each value being serialized
-     * by the [Mapping](Schema.Mapping) for the type of the `Serializable` values.
+     * by the [Mapping] for the type of the `Serializable` values.
      *
      * @param value  the objects to serialize into the array of nested sub-objects
      *
