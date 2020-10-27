@@ -49,18 +49,16 @@ mixin Narrowable<Serializable>
         super(out, value);
         }
 
-//    @Override
-//    <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type)
-//        {
-//        if (type != Serializable)
-//            {
-//            try
-//                {
-//                return True, TODO CP
-//                }
-//            catch (MissingMapping e) {}
-//            }
-//
-//        return False;
-//        }
+    @Override
+    <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type)
+        {
+        if (type != Serializable,
+                val mapping := schema.findMapping(type),
+                &mapping != &this)
+            {
+            return True, mapping;
+            }
+
+        return False;
+        }
     }

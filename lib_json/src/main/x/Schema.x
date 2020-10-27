@@ -275,6 +275,24 @@ const Schema
     /**
      * Find or create a mapping for the specified type.
      *
+     * @param type  the type for which a Mapping is desired
+     *
+     * @return True iff a Mapping was found for the specified type
+     * @return (conditional) the Mapping for the specified type
+     */
+    <Serializable> conditional Mapping<Serializable> findMapping(Type<Serializable> type)
+        {
+        if (val mapping := mappingByType.get(type))
+            {
+            return True, mapping.as(Mapping<Serializable>);
+            }
+
+        return mapper.findMapping(type);
+        }
+
+    /**
+     * Find or create a mapping for the specified type.
+     *
      * @param type  the type for which a Mapping is required
      *
      * @return the Mapping for the specified type
@@ -283,14 +301,12 @@ const Schema
      */
     <Serializable> Mapping<Serializable> ensureMapping(Type<Serializable> type)
         {
-        if (val mapping := mappingByType.get(type))
+        if (val mapping := findMapping(type))
             {
-            return mapping.as(Mapping<Serializable>);
+            return mapping;
             }
-        else
-            {
-            return mapper.ensureMappingByType(type);
-            }
+
+        throw new MissingMapping($"Unable to identify a potential mapping for type {type}");
         }
 
     /**
@@ -299,7 +315,15 @@ const Schema
      */
     service MappingService
         {
-        // ----- API -------------------------------------------------------------------------------
+        construct()
+            {
+            allMappingsByType = new HashMap<Type, Mapping>().putAll(mappingByType);
+            }
+
+        /**
+         * A lookup cache from Ecstasy type to JSON Mapping.
+         */
+        protected/private HashMap<Type, Mapping> allMappingsByType;
 
         /**
          * Search for (or create if possible) a mapping for the specified type.
@@ -310,15 +334,18 @@ const Schema
          *
          * @throws MissingMapping  if no appropriate mapping can be provided
          */
-        <Serializable> Mapping<Serializable> ensureMappingByType(Type<Serializable> type)
+        <Serializable> conditional Mapping<Serializable> findMapping(Type<Serializable> type)
             {
             Mapping<Serializable>? backupPlan = Null;
 
-            if (val mapping := mappingByType.get(type))
+            if (val mapping := allMappingsByType.get(type))
                 {
-                return mapping.as(Mapping<Serializable>);
+                return True, mapping.as(Mapping<Serializable>);
                 }
 
+            // go through the original list of mappings (ordered by precedence) and see if any of
+            // them could apply to the requested type; the first one to provide a specific type
+            // mapping for the requested type wins, otherwise the first one that matches at all wins
             for (Mapping mapping : mappingByType.values)
                 {
                 if (mapping.Serializable.is(type)) // TODO GG - or should this be ".is(Type<type>)"?
@@ -327,33 +354,20 @@ const Schema
 
                     if (val narrowedMapping := mapping.narrow(this.Schema, type))
                         {
-                        mappingByType.put(type, narrowedMapping);
-                        return mapping.as(Mapping<Serializable>);
+                        allMappingsByType.put(type, narrowedMapping);
+                        return True, narrowedMapping.as(Mapping<Serializable>);
                         }
                     }
                 }
 
             if (backupPlan != Null)
                 {
-                mappingByType.put(type, backupPlan);
-                return backupPlan;
+                allMappingsByType.put(type, backupPlan);
+                return True, backupPlan;
                 }
 
-            throw new MissingMapping($"Unable to identify a potential mapping for type {type}");
+            return False;
             }
-
-
-        // ----- properties ------------------------------------------------------------------------
-
-        /**
-         * A lookup cache from Ecstasy type to JSON Mapping.
-         */
-        protected/private HashMap<Type, Mapping> moreMappingsByType = new HashMap();
-
-        /**
-         * A lookup cache from JSON metadata type name to Ecstasy type.
-         */
-        protected/private HashMap<String, Type> moreTypesByName = new HashMap();
         }
 
 
