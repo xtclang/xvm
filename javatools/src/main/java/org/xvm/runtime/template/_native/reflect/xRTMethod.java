@@ -327,6 +327,8 @@ public class xRTMethod
         protected MethodHandle(TypeConstant type, MethodStructure method)
             {
             super(INSTANCE.ensureClass(type), method.getIdentityConstant(), method, type);
+
+            m_fMutable = false;
             }
 
         public TypeConstant getTargetType()

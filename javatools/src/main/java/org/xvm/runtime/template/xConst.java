@@ -247,7 +247,8 @@ public class xConst
                             }
                         else
                             {
-                            return frame.raiseException("Field \"" + sField + "\" is not freezable");
+                            return frame.raiseException("Field \"" +
+                                f_sName + '.' + sField + "\" is not freezable");
                             }
                         }
 

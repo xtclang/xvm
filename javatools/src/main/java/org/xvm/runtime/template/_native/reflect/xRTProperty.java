@@ -224,6 +224,8 @@ public class xRTProperty
         protected PropertyHandle(ClassComposition clzProp)
             {
             super(clzProp);
+
+            m_fMutable = false;
             }
 
         public TypeConstant getTargetType()
