@@ -1,5 +1,7 @@
 /**
- * A mapping for TODO CP
+ * A mapping mixin for a mapping that may need to replace itself automatically as it reads or writes
+ * in order to handle a more specific type (such as a sub-class0 than the mapping was instantiated
+ * to handle.
  */
 mixin Narrowable<Serializable>
         into Mapping<Serializable>
@@ -12,12 +14,27 @@ mixin Narrowable<Serializable>
                 Doc typeName ?= in.peekMetadata(schema.typeKey),
                 typeName.is(String))
             {
+            Type type;
+            try
+                {
+                type = schema.typeForName(typeName);
+                }
+            catch (Exception e)
+                {
+                throw e.is(IllegalJSON) ? e : new IllegalJSON($"Invalid type name: \"{typeName}\"", e);
+                }
+
+            if (!type.is(Type<Serializable>))
+                {
+                throw new IllegalJSON($"Incompatible type: \"{this.typeName}\" required, \"{typeName}\" found");
+                }
+
             // TODO GG: (some weird error messages and not clear what I should have been doing ..)
             // TODO GG: Mapping<Serializable> substitute = schema.ensureMapping(schema.typeForName(typeName).as(Serializable));
             // TODO GG: Mapping<Serializable> substitute = schema.ensureMapping(schema.typeForName<Serializable>(typeName));
             // TODO GG: Mapping<Serializable> substitute = schema.ensureMapping(schema.typeForName(typeName)).as(Mapping<Serializable>);
             // TODO GG: Mapping<Serializable> substitute = schema.ensureMapping(schema.typeForName(typeName).as(Serializable));
-            Mapping<Serializable> substitute = schema.ensureMapping(schema.typeForName(typeName).as(Type<Serializable>));
+            Mapping<Serializable> substitute = schema.ensureMapping(type);
             if (&substitute != &this) // avoid infinite recursion to "this"
                 {
                 return substitute.read(in);
@@ -47,18 +64,5 @@ mixin Narrowable<Serializable>
             }
 
         super(out, value);
-        }
-
-    @Override
-    <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type)
-        {
-        if (type != Serializable,
-                val mapping := schema.findMapping(type),
-                &mapping != &this)
-            {
-            return True, mapping;
-            }
-
-        return False;
         }
     }
