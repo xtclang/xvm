@@ -30,6 +30,9 @@ import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 
+import org.xvm.runtime.template._native.reflect.xRTClass;
+import org.xvm.runtime.template._native.reflect.xRTClass.ClassHandle;
+
 
 /**
  * A template for the base of all Enum classes
@@ -169,6 +172,36 @@ public class xEnum
 
         switch (sPropName)
             {
+            case "enumeration":
+                if (m_hEnumeration != null)
+                    {
+                    return frame.assignValue(iReturn, m_hEnumeration);
+                    }
+
+                IdentityConstant idValue        = (IdentityConstant) hTarget.getType().getDefiningConstant();
+                ClassStructure   clzEnumeration = ((ClassStructure) idValue.getComponent()).getSuper();
+
+                switch (xRTClass.INSTANCE.createConstHandle(frame, clzEnumeration.getIdentityConstant()))
+                    {
+                    case Op.R_NEXT:
+                        m_hEnumeration = (ClassHandle) frame.popStack();
+                        return frame.assignValue(iReturn, m_hEnumeration);
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(frameCaller ->
+                            {
+                            m_hEnumeration = (ClassHandle) frameCaller.popStack();
+                            return frameCaller.assignValue(iReturn, m_hEnumeration);
+                            });
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+
             case "name":
                 return frame.assignValue(iReturn,
                         xString.makeHandle(m_listNames.get(hEnum.getOrdinal())));
@@ -402,4 +435,5 @@ public class xEnum
 
     protected List<String>     m_listNames;
     protected List<EnumHandle> m_listHandles;
+    protected ClassHandle      m_hEnumeration;
     }

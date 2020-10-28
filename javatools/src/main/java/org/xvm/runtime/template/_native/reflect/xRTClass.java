@@ -433,7 +433,7 @@ public class xRTClass
      * ClassHandle is a trivial extension of GenericHandle that supports native equality
      * (used by JumpVal ops).
      */
-    protected static class ClassHandle
+    public static class ClassHandle
             extends GenericHandle
         {
         public ClassHandle(TypeComposition clazz)

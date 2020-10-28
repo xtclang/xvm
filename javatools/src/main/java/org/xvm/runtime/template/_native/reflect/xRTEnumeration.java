@@ -5,6 +5,8 @@ import java.util.List;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
+
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
@@ -46,6 +48,13 @@ public class xRTEnumeration
         }
 
     @Override
+    protected IdentityConstant getInceptionClassConstant()
+        {
+        // Enumeration is a mixin; defer to the Class itself
+        return xRTClass.INSTANCE.getClassConstant();
+        }
+
+    @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         switch (sPropName)
@@ -66,10 +75,29 @@ public class xRTEnumeration
         ObjectHandle hMap    = hByName.getReferent();
         if (hMap == null)
             {
-            TypeConstant     typeEnum     = hClass.getType().getParamType(0);
-            xEnum            templateEnum = (xEnum) f_templates.getTemplate(typeEnum);
-            List<String>     listNames    = templateEnum.getNames();
-            List<EnumHandle> listValues   = templateEnum.getValues();
+            TypeConstant     typePublic = hClass.getType().getParamType(0);
+            IdentityConstant idPublic   = (IdentityConstant) typePublic.getDefiningConstant();
+            ClassStructure   clzPublic  = (ClassStructure) idPublic.getComponent();
+
+            IdentityConstant idEnumeration;
+            switch (clzPublic.getFormat())
+                {
+                case ENUMVALUE:
+                    idEnumeration = clzPublic.getSuper().getIdentityConstant();
+                    break;
+
+                case ENUM:
+                    idEnumeration = idPublic;
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+
+            xEnum templateEnumeration = (xEnum) f_templates.getTemplate(idEnumeration);
+
+            List<String>     listNames  = templateEnumeration.getNames();
+            List<EnumHandle> listValues = templateEnumeration.getValues();
 
             assert listNames.size() == listValues.size();
 
@@ -110,9 +138,9 @@ public class xRTEnumeration
                 }
 
 
-            ConstantPool pool    = pool();
+            ConstantPool pool    = frame.poolContext();
             TypeConstant typeMap = pool.ensureParameterizedTypeConstant(pool.typeMap(),
-                                        pool.typeString(), typeEnum);
+                                        pool.typeString(), idEnumeration.getType());
 
             switch (xListMap.INSTANCE.constructMap(
                         frame, typeMap, ahName, ahVal, false, fDefer, Op.A_STACK))
