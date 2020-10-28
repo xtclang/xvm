@@ -63,13 +63,11 @@ const RangeMapping<Element extends Orderable>(Mapping<Element> underlying)
     <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type)
         {
 // TODO GG
-//        if (SubType.Element != Element)
+//        if (SubType.Element != Element,
+//                val narrowedUnderlying := schema.findMapping(SubType.Element),
+//                &narrowedUnderlying != &underlying)
 //            {
-//            try
-//                {
-//                return True, new RangeMapping<SubType.Element>(schema.ensureMapping(SubType.Element));
-//                }
-//            catch (MissingMapping e) {}
+//            return True, new RangeMapping<SubType.Element>(narrowedUnderlying);
 //            }
 
         return False;

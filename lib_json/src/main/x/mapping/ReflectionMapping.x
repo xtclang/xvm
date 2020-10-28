@@ -1,7 +1,5 @@
 /**
  * A reflection-based [Mapping] implementation that works for exactly one type, `Serializable`.
- *
- * TODO verify other type traits come through e.g. immutable
  */
 const ReflectionMapping<Serializable, StructType extends Struct>(
                 String                                                      typeName,
@@ -9,16 +7,6 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                 PropertyMapping<StructType>[]                               fields)
         implements Mapping<Serializable>
     {
-    // ----- local types ---------------------------------------------------------------------------
-
-    static const PropertyMapping<StructType, Value>(
-            String                      name,
-            Mapping<Value>              mapping,
-            Boolean                     subclassable,
-            Property<StructType, Value> property,
-            Value?                      defaultValue = Null);
-
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -113,7 +101,68 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
     @Override
     <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type)
         {
-        // TODO TODO TODO TODO!!! TODO CP
-        TODO this is where we create ReflectionMapping instances
+        // disassemble traits (immutable, :private/:protected/:public etc.) and '&'/'|' types
+        // TODO GG: switch (type.form)
+        switch (type.as(Type).form)
+            {
+            case Intersection:
+                if (type.is(Type<Nullable>) && type.as(Type).form == Intersection,
+                        (Type left, Type right) := type.relational(),
+                        left == Nullable)
+                    {
+// TODO GG
+//                    if (val underlying := schema.findMapping(right))
+//                        {
+//                        return True, new @Narrowable NullableMapping<right.DataType>(underlyingk);
+//                        }
+                    }
+                TODO
+
+            case Union:
+                TODO
+
+            case Immutable:
+                TODO
+
+            case Access:
+                TODO
+
+            case Class:
+                // TODO CP enums
+                // TODO CP other singletons
+                // TODO CP disallow services
+
+                assert val clazz := type.fromClass();
+                val structType = clazz.StructType;
+// TODO GG
+//                PropertyMapping<structType.DataType>[] fields = new PropertyMapping[];
+//                for (Property<structType.DataType> prop : structType.properties)
+//                    {
+//                    assert !prop.isConstant && prop.hasField && !prop.abstract && !prop.injected;
+//
+//                    // TODO CP what if the referent type is the same as "type"? (linked list example)
+//                    if (Mapping<prop.Referent> valueMapping := schema.findMapping(prop.Referent))
+//                        {
+//                        // TODO CP - name has to be unique
+//                        fields += new PropertyMapping<structType.DataType, prop.Referent>(prop.name, valueMapping, prop);
+//                        }
+//                    }
+//                return True, new ReflectionMapping<type.DataType, structType.DataType>(schema.nameForType(type), clazz, fields);
+
+            // TODO could theoretically handle child classes
+            // TODO check the "annotation" form ... is that possible to occur here?
+            default:
+                return False;
+            }
         }
+
+
+    // ----- local types ---------------------------------------------------------------------------
+
+    static const PropertyMapping<StructType, Value>(
+            String                      name,
+            Mapping<Value>              mapping,
+            Property<StructType, Value> property,
+            Boolean                     subclassable = True,
+            Value?                      defaultValue = Null);
     }
