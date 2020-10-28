@@ -128,14 +128,26 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                 TODO
 
             case Class:
-                TODO
-//        if (Class clazz := type.fromClass());
-//        Type<clazz.StructType> struct = clazz.StructType;
-//        Property<DataType>
-//        .properties
-//    @RO Array<Property<DataType>> properties;
-//        PropertyMapping
-//        new ReflectionMapping<type, clazz.StructType>(...)
+                // TODO CP enums
+                // TODO CP other singletons
+                // TODO CP disallow services
+
+                assert val clazz := type.fromClass();
+                val structType = clazz.StructType;
+// TODO GG
+//                PropertyMapping<structType.DataType>[] fields = new PropertyMapping[];
+//                for (Property<structType.DataType> prop : structType.properties)
+//                    {
+//                    assert !prop.isConstant && prop.hasField && !prop.abstract && !prop.injected;
+//
+//                    // TODO CP what if the referent type is the same as "type"? (linked list example)
+//                    if (Mapping<prop.Referent> valueMapping := schema.findMapping(prop.Referent))
+//                        {
+//                        // TODO CP - name has to be unique
+//                        fields += new PropertyMapping<structType.DataType, prop.Referent>(prop.name, valueMapping, prop);
+//                        }
+//                    }
+//                return True, new ReflectionMapping<type.DataType, structType.DataType>(schema.nameForType(type), clazz, fields);
 
             // TODO could theoretically handle child classes
             // TODO check the "annotation" form ... is that possible to occur here?
@@ -150,7 +162,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
     static const PropertyMapping<StructType, Value>(
             String                      name,
             Mapping<Value>              mapping,
-            Boolean                     subclassable,
             Property<StructType, Value> property,
+            Boolean                     subclassable = True,
             Value?                      defaultValue = Null);
     }
