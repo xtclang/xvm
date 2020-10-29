@@ -124,8 +124,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
         /**
          * This is a class that holds poke-ahead meta-data.
          */
-        // TODO protected class Metadata(String name, Doc value, Metadata? next);
-        protected static class Metadata(String name, Doc value, Metadata? next = Null) {}
+        protected static class Metadata(String name, Doc value, Metadata? next = Null);
 
         /**
          * Prepared metadata.

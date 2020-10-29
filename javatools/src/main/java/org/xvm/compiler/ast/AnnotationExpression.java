@@ -355,7 +355,7 @@ public class AnnotationExpression
             return finishValidation(ctx, typeRequired, typeAnno, TypeFit.Fit, null, errs);
             }
 
-        if (!typeAnno.isA(typeRequired))
+        if (typeRequired != null && !typeAnno.isA(typeRequired))
             {
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                     typeRequired.getValueString(), typeAnno.getValueString());
@@ -406,7 +406,7 @@ public class AnnotationExpression
             TypeConstant typeInto = anno.getAnnotationType().getExplicitClassInto();
             if (typeRequired != null)
                 {
-                typeInto = typeInto.resolveGenerics(pool, typeRequired);
+                typeInto = typeInto.resolveGenerics(pool, typeAnno);
                 }
             typeAnno = pool.ensureAnnotatedTypeConstant(typeInto, anno);
 
