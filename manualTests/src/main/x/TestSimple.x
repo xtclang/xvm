@@ -4,44 +4,42 @@ module TestSimple
 
     void run()
         {
-        Method m = TestSimple.foo;
-        console.println(m);
-
-        assert m.is(Put);
-        console.println($"request={m.request}; path={m.path}");
-
-        Property<TestSimple, Int> p = TestSimple.count;
-        console.println(p);
-
-        assert p.is(Put);
-        console.println($"request={p.request}; path={p.path}");
-        }
-
-    mixin Put(String path="")
-            extends Http(Put)
-        {
-        }
-
-    mixin Http(Request request=Get)
-            into Method | Property
-        {
-        enum Request{Get, Post, Put, Delete}
-
-        @Override
-        String toString()
+        Object t = new TestApp();
+        if (t.is(WebService))
             {
-            return $"Http{request} {this.is(Property) ? "property" : "method"}";
+            console.println($"Is a WebService path={t.path}");
             }
         }
 
-    @Put("hello")
-    void foo()
+    mixin WebService(String path = "/")
+            into Initializable
+        {
+        void start()
+            {
+            init();
+            }
+        }
+
+    @WebService("/test")
+    class TestApp
+            extends BaseApp
         {
         }
 
-    @Put("goodbye")
-    Int count.get()
+    @WebService("/base")
+    class BaseApp
+            implements Initializable
         {
-        return 0;
+        @Override
+        void init()
+            {
+            }
+        }
+
+    interface Initializable
+        {
+        void init()
+            {
+            }
         }
     }

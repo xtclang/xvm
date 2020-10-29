@@ -31,7 +31,6 @@ import org.xvm.runtime.template.Child;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.Mixin;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
@@ -362,9 +361,6 @@ public class TemplateRegistry
                     break;
 
                 case MIXIN:
-                    template = new Mixin(this, structClass, false);
-                    break;
-
                 case CLASS:
                 case INTERFACE:
                     template = structClass.isVirtualChild()

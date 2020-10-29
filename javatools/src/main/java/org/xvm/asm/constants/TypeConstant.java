@@ -1729,12 +1729,14 @@ public abstract class TypeConstant
 
     /**
      * Recursively collect all the mixin annotations for the contributions in the specified list.
+     * Note: the annotations must be collected in the inverse order.
      */
     private Annotation[] collectMixinAnnotations(List<Contribution> listContrib)
         {
         List<Annotation> listAnnos = null;
-        for (Contribution contrib : listContrib)
+        for (int c = listContrib.size(), i = c - 1; i >= 0; i--)
             {
+            Contribution contrib = listContrib.get(i);
             switch (contrib.getComposition())
                 {
                 case Annotation:
@@ -1755,14 +1757,14 @@ public abstract class TypeConstant
                 case Extends:
                     {
                     TypeInfo     infoExtend  = contrib.getTypeConstant().ensureTypeInfo();
-                    Annotation[] aannoExtend = infoExtend.getMixinAnnotations();
-                    if (aannoExtend.length > 0)
+                    Annotation[] aAnnoExtend = infoExtend.getMixinAnnotations();
+                    if (aAnnoExtend.length > 0)
                         {
                         if (listAnnos == null)
                             {
                             listAnnos = new ArrayList<>();
                             }
-                        listAnnos.addAll(Arrays.asList(aannoExtend));
+                        listAnnos.addAll(Arrays.asList(aAnnoExtend));
                         }
                     break;
                     }

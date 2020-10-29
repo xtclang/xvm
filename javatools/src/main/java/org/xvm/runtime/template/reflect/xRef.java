@@ -34,7 +34,6 @@ import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template.Identity;
 import org.xvm.runtime.template.IndexSupport;
-import org.xvm.runtime.template.Mixin;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
@@ -263,12 +262,8 @@ public class xRef
         TypeConstant typeRef = clazz.getType();
         if (typeRef instanceof AnnotatedTypeConstant)
             {
-            AnnotatedTypeConstant typeAnno  = (AnnotatedTypeConstant) typeRef;
-            TypeConstant          typeMixin = typeAnno.getAnnotationType();
-            Mixin                 mixin     = (Mixin) f_templates.getTemplate(typeMixin);
-
             hRef    = createRefHandle(frame, clazz.ensureAccess(Access.STRUCT), sName);
-            iResult = mixin.proceedConstruction(frame, null, true, hRef, Utils.OBJECTS_NONE, Op.A_STACK);
+            iResult = clazz.getTemplate().proceedConstruction(frame, null, true, hRef, Utils.OBJECTS_NONE, Op.A_STACK);
             fStack  = true;
             }
         else

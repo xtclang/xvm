@@ -25,7 +25,6 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.Mixin;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 
@@ -194,12 +193,11 @@ public class xRTProperty
             {
             typeProp = frame.poolContext().ensureAnnotatedTypeConstant(typeProp, aAnno);
 
-            Mixin mixin = (Mixin) INSTANCE.f_templates.getTemplate(typeProp);
-
             PropertyHandle hProp   = new PropertyHandle(INSTANCE.ensureClass(typeProp));
             ObjectHandle   hStruct = hProp.ensureAccess(Access.STRUCT);
 
-            switch (mixin.proceedConstruction(frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
+            switch (hProp.getTemplate().
+                    proceedConstruction(frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
                 {
                 case Op.R_NEXT:
                     return frame.popStack();

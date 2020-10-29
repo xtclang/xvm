@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.Set;
 
 import java.util.function.Function;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
@@ -21,6 +23,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
@@ -1585,9 +1588,23 @@ public abstract class ClassTemplate
     @Override
     public ClassTemplate getTemplate(TypeConstant type)
         {
-        return type instanceof AnnotatedTypeConstant
-                ? f_templates.getTemplate(((AnnotatedTypeConstant) type).getAnnotationClass())
-                : this;
+        if (type instanceof AnnotatedTypeConstant)
+            {
+            AnnotatedTypeConstant typeAnno = (AnnotatedTypeConstant) type;
+            while (true)
+                {
+                TypeConstant typeBase = typeAnno.getUnderlyingType();
+                if (typeBase instanceof AnnotatedTypeConstant)
+                    {
+                    typeAnno = (AnnotatedTypeConstant) typeBase;
+                    }
+                else
+                    {
+                    return f_templates.getTemplate(typeBase);
+                    }
+                }
+            }
+        return this;
         }
 
     @Override
@@ -2134,8 +2151,10 @@ public abstract class ClassTemplate
         private final int             iReturn;
 
         // internal fields
-        private Frame frameTop;
-        private int   ixStep;
+        private int          ixStep;
+        private Annotation[] aAnnoMixin; // annotation mixins to construct
+        private int          ixAnno;     // index of the next annotation mixin
+        private List<Frame>  listFinalizable;
 
         public Construct(MethodStructure constructor,
                          boolean         fInitStruct,
@@ -2148,7 +2167,24 @@ public abstract class ClassTemplate
             this.ahVar       = ahVar;
             this.iReturn     = iReturn;
 
-            ixStep = fInitStruct ? 0 : 2;
+            TypeComposition composition = hStruct.getComposition();
+            assert composition.isStruct();
+
+            if (composition instanceof PropertyComposition)
+                {
+                aAnnoMixin = composition.getBaseType().ensureTypeInfo().getMixinAnnotations();
+                }
+            else
+                {
+                TypeConstant typeStruct = composition.getType();
+
+                aAnnoMixin = typeStruct.isAnnotated()
+                    ? typeStruct.ensureTypeInfo().getMixinAnnotations()
+                    : Annotation.NO_ANNOTATIONS;
+                }
+
+            ixStep = fInitStruct ? 0 : 4;
+            ixAnno = 0;
             }
 
         @Override
@@ -2175,8 +2211,8 @@ public abstract class ClassTemplate
                     case 0: // call an anonymous class "wrapper" constructor first
                         if (constructor != null && constructor.isAnonymousClassWrapperConstructor())
                             {
-                            // wrapper constructor calls the initializer itself; skip next two steps
-                            ixStep  = 3;
+                            // wrapper constructor calls the initializer itself; skip next three steps
+                            ixStep  = 4;
                             iResult = frameCaller.call1(constructor, hStruct, ahVar, Op.A_IGNORE);
                             break;
                             }
@@ -2195,30 +2231,58 @@ public abstract class ClassTemplate
                         // fall through
                         }
 
-                    case 2: // call the constructor
+                    case 2: // call annotation mixin constructors
+                        {
+                        if (aAnnoMixin.length > 0)
+                            {
+                            Annotation      anno          = aAnnoMixin[ixAnno++];
+                            Constant[]      aconstArgs    = anno.getParams();
+                            ClassConstant   idAnno        = (ClassConstant) anno.getAnnotationClass();
+                            ClassStructure  structAnno    = (ClassStructure) idAnno.getComponent();
+                            MethodStructure constructAnno = structAnno.findMethod("construct", aconstArgs.length);
+                            ObjectHandle[]  ahArgs        = new ObjectHandle[constructAnno.getMaxVars()];
+                            for (int i = 0, c = aconstArgs.length; i < c; i++)
+                                {
+                                ahArgs[i] = frameCaller.getConstHandle(aconstArgs[i]);
+                                }
+
+                            Frame frameCtor = frameCaller.createFrame1(
+                                    constructAnno, hStruct, ahArgs, Op.A_IGNORE);
+
+                            prepareFinalizer(frameCtor, constructAnno, ahArgs);
+
+                            iResult = frameCaller.callInitialized(frameCtor);
+
+                            if (ixAnno < aAnnoMixin.length)
+                                {
+                                // repeat step 2
+                                ixStep = 2;
+                                }
+                            break;
+                            }
+                        ixStep++;
+                        // fall through
+                        }
+
+                    case 3: // call the base constructor
                         if (constructor != null)
                             {
                             Frame frameCD = frameCaller.createFrame1(
                                     constructor, hStruct, ahVar, Op.A_IGNORE);
 
-                            FullyBoundHandle hfn = Utils.makeFinalizer(constructor, ahVar);
+                            prepareFinalizer(frameCD, constructor, ahVar);
 
-                            // in case super constructors have their own finalizers we always need
-                            // a non-null anchor
-                            frameCD.m_hfnFinally = hfn == null ? FullyBoundHandle.NO_OP : hfn;
-
-                            iResult  = frameCaller.callInitialized(frameCD);
-                            frameTop = frameCD;
+                            iResult = frameCaller.callInitialized(frameCD);
                             break;
                             }
                         ixStep++;
                         // fall through
 
-                    case 3: // validation
+                    case 4: // validation
                         iResult = callValidator(frameCaller, hStruct);
                         break;
 
-                    case 4: // check unassigned
+                    case 5: // check unassigned
                         {
                         List<String> listUnassigned;
                         if ((listUnassigned = hStruct.validateFields()) != null)
@@ -2230,21 +2294,29 @@ public abstract class ClassTemplate
                         // fall through
                         }
 
-                    case 5: // native post-construction validation
+                    case 6: // native post-construction validation
                         iResult = postValidate(frameCaller, hStruct);
                         break;
 
-                    case 6:
+                    case 7:
                         {
-                        ObjectHandle     hPublic    = hStruct.ensureAccess(Access.PUBLIC);
-                        FullyBoundHandle hfnFinally = frameTop == null
-                                ? FullyBoundHandle.NO_OP
-                                : frameTop.m_hfnFinally;
+                        ObjectHandle hPublic      =  hStruct.ensureAccess(Access.PUBLIC);
+                        List<Frame>  listFinalize = listFinalizable;
+                        if (listFinalize == null)
+                            {
+                            return frameCaller.assignValue(iReturn, hPublic);
+                            }
 
-                        return hfnFinally == FullyBoundHandle.NO_OP
-                                ? frameCaller.assignValue(iReturn, hPublic)
-                                : hfnFinally.callChain(frameCaller, hPublic, frame_ ->
-                                        frame_.assignValue(iReturn, hPublic));
+                        // create a chain (stack) of finalizers
+                        int              cFn        = listFinalize.size();
+                        FullyBoundHandle hfnFinally = listFinalize.get(cFn - 1).m_hfnFinally;
+                        for (int i = cFn - 2; i >= 0; i--)
+                            {
+                            hfnFinally = listFinalize.get(i).m_hfnFinally.chain(hfnFinally);
+                            }
+
+                        return hfnFinally.callChain(frameCaller, hPublic, frame_ ->
+                                    frame_.assignValue(iReturn, hPublic));
                         }
 
                     default:
@@ -2267,6 +2339,25 @@ public abstract class ClassTemplate
                         throw new IllegalArgumentException();
                     }
                 }
+            }
+
+        private void prepareFinalizer(Frame frame, MethodStructure ctor, ObjectHandle[] ahVar)
+            {
+            if (listFinalizable == null)
+                {
+                listFinalizable = new ArrayList<>();
+                }
+
+            FullyBoundHandle hfn = Utils.makeFinalizer(ctor, ahVar);
+            if (hfn == null)
+                {
+                // in case super constructors have their own finalizers, we need a non-null anchor
+                // that may be replaced by Frame.chainFinalizers()
+                hfn = FullyBoundHandle.NO_OP;
+                }
+
+            frame.m_hfnFinally = hfn;
+            listFinalizable.add(frame);
             }
         }
 

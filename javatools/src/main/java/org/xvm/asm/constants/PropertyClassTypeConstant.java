@@ -281,7 +281,8 @@ public class PropertyClassTypeConstant
         ConstantPool pool     = getConstantPool();
         int          cInvals  = pool.getInvalidationCount();
         PropertyInfo infoProp = getPropertyInfo();
-        TypeConstant typeBase = pool.ensureAccessTypeConstant(infoProp.getBaseRefType(), Access.PROTECTED);
+        TypeConstant typeRef  = infoProp.getBaseRefType().resolveAutoNarrowing(pool, false, null);
+        TypeConstant typeBase = pool.ensureAccessTypeConstant(typeRef, Access.PROTECTED);
         TypeInfo     infoBase = typeBase.buildTypeInfo(errs);
 
         PropertyStructure prop = infoProp.getHead().getStructure();

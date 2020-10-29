@@ -27,7 +27,6 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.Mixin;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
 
@@ -294,12 +293,11 @@ public class xRTMethod
             {
             type = pool.ensureAnnotatedTypeConstant(type, aAnno);
 
-            Mixin mixin = (Mixin) INSTANCE.f_templates.getTemplate(type);
-
             MethodHandle hMethod = new MethodHandle(type, method);
             ObjectHandle hStruct = hMethod.ensureAccess(Access.STRUCT);
 
-            switch (mixin.proceedConstruction(frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
+            switch (hMethod.getTemplate().
+                    proceedConstruction(frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
                 {
                 case Op.R_NEXT:
                     return frame.popStack();
