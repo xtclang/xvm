@@ -1574,7 +1574,16 @@ public class TypeCompositionStatement
                             // an "extends" clause, so add "implements Object" to the class
                             if (component.getFormat() != Format.MIXIN)
                                 {
-                                component.addContribution(Composition.Implements, pool().typeObject());
+                                // check if we already added the implicit one on a previous round
+                                List<Contribution> listContribs = component.getContributionsAsList();
+                                TypeConstant       typeObject   = pool().typeObject();
+                                if (listContribs.isEmpty() ||
+                                    listContribs.stream().noneMatch(contribPrev ->
+                                                contribPrev.getComposition() == Composition.Implements &&
+                                                contribPrev.getTypeConstant().equals(typeObject)))
+                                    {
+                                    component.addContribution(Composition.Implements, typeObject);
+                                    }
                                 }
 
                             // @Override should NOT exist
