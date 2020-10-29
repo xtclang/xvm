@@ -151,6 +151,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
 
             // TODO could theoretically handle child classes
             // TODO check the "annotation" form ... is that possible to occur here?
+            TODO
             default:
                 return False;
             }
