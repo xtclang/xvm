@@ -224,7 +224,8 @@ public class PropertyConstant
         {
         if (typeTarget == null)
             {
-            typeTarget = getClassIdentity().getType();
+            typeTarget = getConstantPool().ensureAccessTypeConstant(
+                getClassIdentity().getType(), Access.PRIVATE);
             }
 
         Access access = getComponent().getAccess();
