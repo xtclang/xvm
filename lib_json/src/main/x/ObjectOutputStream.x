@@ -121,10 +121,26 @@ class ObjectOutputStream(Schema schema, Writer writer)
          */
         protected/private (String | Int)? id;
 
+        /**
+         * This is a class that holds poke-ahead meta-data.
+         */
+        // TODO protected class Metadata(String name, Doc value, Metadata? next);
+        protected static class Metadata(String name, Doc value, Metadata? next = Null) {}
+
+        /**
+         * Prepared metadata.
+         */
+        /* TODO GG protected/private */ @LinkedList(Metadata.next) Metadata? metadata;
+
         @Override
         void prepareMetadata(String attribute, Doc doc)
             {
-            TODO CP
+            ensureActive();
+            assert canWrite;
+            if (!&metadata.any(m -> m.name == attribute))
+                {
+                &metadata.add(new Metadata(attribute, doc));
+                }
             }
 
         @Override
@@ -165,6 +181,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
 
             // close this node, and make the parent node into the current node
             canWrite = False;
+            metadata = Null;
             ParentOutput parent = this.parent;
             current = parent;
             return parent;
@@ -223,6 +240,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
             {
             assert canWrite;
             ensureActive();
+            metadata = Null;
             parent?.childWriting();
             if (String name := named())
                 {
@@ -394,11 +412,12 @@ class ObjectOutputStream(Schema schema, Writer writer)
         @Override
         FieldOutputStream<ElementOutputStream> openObject()
             {
+            Metadata? metadata = this.metadata;
             prepareWrite();
             canWrite = False;
             return schema.enablePointers
-                    ? new @CloseCap @PointerAwareFieldOutput FieldOutputStream(this)
-                    : new @CloseCap FieldOutputStream(this);
+                    ? new @CloseCap @PointerAwareFieldOutput FieldOutputStream(this, metadata=metadata)
+                    : new @CloseCap FieldOutputStream(this, metadata=metadata);
             }
 
         @Override
@@ -490,10 +509,11 @@ class ObjectOutputStream(Schema schema, Writer writer)
         @Override
         FieldOutputStream<ArrayOutputStream> openObject()
             {
+            Metadata? metadata = this.metadata;
             ensureActive();
             return schema.enablePointers
-                    ? new @CloseCap @PointerAwareFieldOutput FieldOutputStream(this, count)
-                    : new @CloseCap FieldOutputStream(this, count);
+                    ? new @CloseCap @PointerAwareFieldOutput FieldOutputStream(this, count, metadata)
+                    : new @CloseCap FieldOutputStream(this, count, metadata);
             }
 
         @Override
@@ -538,7 +558,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
             extends DocOutputStream<ParentOutput>
             implements FieldOutput<ParentOutput>
         {
-        construct(ParentOutput parent, (String|Int)? id = Null)
+        construct(ParentOutput parent, (String|Int)? id = Null, Metadata? metadata = Null)
             {
             construct DocOutputStream(parent, id);
             }
@@ -546,6 +566,12 @@ class ObjectOutputStream(Schema schema, Writer writer)
             {
             prepareWrite();
             writer.add('{');
+
+            while (metadata != Null)
+                {
+                add(metadata.name, metadata.value);
+                metadata = metadata.next;
+                }
             }
 
         Boolean first = True;
@@ -590,10 +616,11 @@ class ObjectOutputStream(Schema schema, Writer writer)
         @Override
         FieldOutputStream!<FieldOutputStream> openObject(String name)
             {
+            Metadata? metadata = this.metadata;
             ensureActive();
             return schema.enablePointers
-                    ? new @CloseCap @PointerAwareFieldOutput FieldOutputStream(this, name)
-                    : new @CloseCap FieldOutputStream(this, name);
+                    ? new @CloseCap @PointerAwareFieldOutput FieldOutputStream(this, name, metadata)
+                    : new @CloseCap FieldOutputStream(this, name, metadata);
             }
 
         // TODO potential optimizations

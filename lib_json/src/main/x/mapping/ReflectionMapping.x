@@ -128,12 +128,18 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                 TODO
 
             case Class:
-                // TODO CP enums
+                assert val clazz := type.fromClass();
+                val structType = clazz.StructType;
+
+// TODO GG
+//                if (clazz.is(Enumeration))
+//                    {
+//                    return True, new EnumMapping<clazz.EnumType>();
+//                    }
+
                 // TODO CP other singletons
                 // TODO CP disallow services
 
-                assert val clazz := type.fromClass();
-                val structType = clazz.StructType;
 // TODO GG
 //                PropertyMapping<structType.DataType>[] fields = new PropertyMapping[];
 //                for (Property<structType.DataType> prop : structType.properties)
@@ -148,10 +154,10 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
 //                        }
 //                    }
 //                return True, new ReflectionMapping<type.DataType, structType.DataType>(schema.nameForType(type), clazz, fields);
+                TODO
 
             // TODO could theoretically handle child classes
             // TODO check the "annotation" form ... is that possible to occur here?
-            TODO
             default:
                 return False;
             }
