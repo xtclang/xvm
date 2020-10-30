@@ -68,7 +68,7 @@ class ObjectInputStream(Schema schema, Parser parser)
      * A cache of all of the previously deserialized objects indexed by their JSON pointers.
      */
     @Lazy
-    protected/private Map<String, Object> pointers
+    protected Map<String, Object> pointers
         {
         @Override
         Map<String, Object> calc()

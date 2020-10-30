@@ -40,7 +40,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
      * A cache of all of the previously serialized objects, and their corresponding JSON pointers.
      */
     @Lazy
-    protected/private Map<Ref.Identity, String> pointers.calc()
+    protected Map<Ref.Identity, String> pointers.calc()
         {
         return new HashMap();
         }
@@ -129,7 +129,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
         /**
          * Prepared metadata.
          */
-        protected/private @LinkedList(Metadata.next) Metadata? metadata;
+        protected @LinkedList(Metadata.next) Metadata? metadata;
 
         @Override
         void prepareMetadata(String attribute, Doc doc)
