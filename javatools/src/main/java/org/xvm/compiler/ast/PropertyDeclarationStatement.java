@@ -8,7 +8,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
@@ -368,25 +367,6 @@ public class PropertyDeclarationStatement
                 {
                 mgr.requestRevisit();
                 return;
-                }
-
-            if (prop.isRefAnnotated() && !prop.isVarAccessible(prop.getAccess()))
-                {
-                for (Annotation anno : prop.getRefAnnotations())
-                    {
-                    TypeConstant typeInto = anno.getAnnotationType().getExplicitClassInto();
-                    if (typeInto.isA(pool().typeVar()))
-                        {
-                        // the annotation is into a Var, but the Var access is more restrictive
-                        // than the Ref access, making impossible for the annotated property not to
-                        // "leak" the Var access (we may need a better error)
-                        log(errs, Severity.ERROR, Constant.VE_ANNOTATION_INCOMPATIBLE,
-                                toSignatureString(),
-                                anno.getAnnotationClass().getValueString(),
-                                typeInto.getValueString());
-                        return;
-                        }
-                    }
                 }
 
             if (prop.hasInitialValue())
