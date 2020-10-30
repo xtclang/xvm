@@ -2170,21 +2170,9 @@ public abstract class ClassTemplate
             TypeComposition composition = hStruct.getComposition();
             assert composition.isStruct();
 
-            if (composition instanceof PropertyComposition)
-                {
-                aAnnoMixin = composition.getBaseType().ensureTypeInfo().getMixinAnnotations();
-                }
-            else
-                {
-                TypeConstant typeStruct = composition.getType();
-
-                aAnnoMixin = typeStruct.isAnnotated()
-                    ? typeStruct.ensureTypeInfo().getMixinAnnotations()
-                    : Annotation.NO_ANNOTATIONS;
-                }
-
-            ixStep = fInitStruct ? 0 : 4;
-            ixAnno = 0;
+            aAnnoMixin = composition.getBaseType().ensureTypeInfo().getMixinAnnotations();
+            ixStep     = fInitStruct ? 0 : 4;
+            ixAnno     = 0;
             }
 
         @Override

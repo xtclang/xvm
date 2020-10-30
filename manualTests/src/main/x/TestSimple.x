@@ -14,6 +14,12 @@ module TestSimple
     mixin WebService(String path = "/")
             into Initializable
         {
+        construct(String path)
+            {
+            console.println($"mixin construct {path}");
+            this.path = path;
+            }
+
         void start()
             {
             init();
@@ -24,12 +30,22 @@ module TestSimple
     class TestApp
             extends BaseApp
         {
+        construct()
+            {
+            console.println("main construct");
+            construct BaseApp();
+            }
         }
 
     @WebService("/base")
     class BaseApp
             implements Initializable
         {
+        construct()
+            {
+            console.println("base construct");
+            }
+
         @Override
         void init()
             {
