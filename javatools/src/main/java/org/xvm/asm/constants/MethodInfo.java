@@ -934,8 +934,8 @@ public class MethodInfo
                             {
                             assert impl == Implementation.Delegating;
 
-                            ClassConstant  idHost  = (ClassConstant) body.getIdentity().getNamespace();
-                            ClassStructure clzHost = (ClassStructure) idHost.getComponent();
+                            IdentityConstant idHost  = body.getIdentity().getNamespace();
+                            ClassStructure   clzHost = (ClassStructure) idHost.getComponent();
                             method = clzHost.ensureMethodDelegation(
                                     getTopmostMethodStructure(infoType),
                                     body.getPropertyConstant().getName());
