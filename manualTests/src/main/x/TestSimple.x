@@ -4,58 +4,31 @@ module TestSimple
 
     void run()
         {
-        Object t = new TestApp();
-        if (t.is(WebService))
-            {
-            console.println($"Is a WebService path={t.path}");
-            }
+        TestApp t = new TestApp();
+        t.report();
+        console.println(t.p2);
         }
 
-    mixin WebService(String path = "/")
-            into Initializable
-        {
-        construct(String path)
-            {
-            console.println($"mixin construct {path}");
-            this.path = path;
-            }
-
-        void start()
-            {
-            init();
-            }
-        }
-
-    @WebService("/test")
     class TestApp
             extends BaseApp
         {
-        construct()
-            {
-            console.println("main construct");
-            construct BaseApp();
-            }
         }
 
-    @WebService("/base")
     class BaseApp
-            implements Initializable
         {
-        construct()
+        void report()
             {
-            console.println("base construct");
+            console.println(p1);
             }
 
-        @Override
-        void init()
+        @Lazy protected/private Int p1.calc()
             {
+            return 42;
             }
-        }
 
-    interface Initializable
-        {
-        void init()
+        @Lazy public/private Int p2.calc()
             {
+            return 43;
             }
         }
     }

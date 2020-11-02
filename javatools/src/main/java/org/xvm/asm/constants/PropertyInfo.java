@@ -480,13 +480,14 @@ public class PropertyInfo
         }
 
     /**
-     * @return this PropertyInfo, but with a requirement that a field exists
+     * @return this PropertyInfo for a Ref annotated property, but with a Var access
      */
-    public PropertyInfo requireField()
+    public PropertyInfo ensureVar()
         {
-        return hasField()
-                ? this
-                : new PropertyInfo(m_aBody, m_type, true, m_fSuppressVar, m_nRank);
+        assert hasField() && isRefAnnotated();
+        return m_fSuppressVar
+                ? new PropertyInfo(m_aBody, m_type, true, false, m_nRank)
+                : this;
         }
 
     /**

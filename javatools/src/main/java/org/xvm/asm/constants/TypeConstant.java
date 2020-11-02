@@ -1861,6 +1861,14 @@ public abstract class TypeConstant
             if (prop.isFormalType() || prop.isConstant() || prop.hasField())
                 {
                 PropertyConstant id = entry.getKey();
+                if (prop.hasField() && prop.isRefAnnotated())
+                    {
+                    // in the same way as we make private properties of the contributions visible
+                    // below, we need to "promote" the visibility of Ref-annotated properties
+                    // that have only the "ref" access at this level
+                    prop = prop.ensureVar();
+                    }
+
                 if (prop.isVirtual())
                     {
                     mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
