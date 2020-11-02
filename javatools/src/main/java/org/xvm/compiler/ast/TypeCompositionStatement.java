@@ -1195,14 +1195,44 @@ public class TypeCompositionStatement
 
                 case DELEGATES:
                     // these are all OK; other checks will be done after the types are resolvable
-                    TypeConstant      constClass = composition.getType().ensureTypeConstant();
-                    PropertyConstant  constProp  = pool.ensurePropertyConstant(component.getIdentityConstant(),
-                            ((Delegates) composition).getPropertyName()); // TODO change back from prop -> expr
+                    TypeConstant     typeTarget = composition.getType().ensureTypeConstant();
+                    Expression       exprTarget = ((Delegates) composition).getDelegatee();
+                    String           sTarget;
+                    PropertyConstant idTarget;
+                    if (exprTarget instanceof NameExpression && ((NameExpression) exprTarget).isSimpleName())
+                        {
+                        sTarget  = ((NameExpression) exprTarget).getName();
+                        idTarget = pool.ensurePropertyConstant(component.getIdentityConstant(), sTarget);
+                        }
+                    else
+                        {
+                        // create a new property to represent the value of the expression
+                        sTarget = "delegate:" + typeTarget.toString();
+                        long lStartPos = exprTarget.getStartPosition();
+                        long lEndPos   = exprTarget.getEndPosition();
+                        PropertyDeclarationStatement propTarget = new PropertyDeclarationStatement(
+                                lStartPos,
+                                lEndPos,
+                                composition.getCondition(),
+                                null,
+                                null,
+                                composition.getType(),
+                                new Token(lStartPos, lEndPos, Id.IDENTIFIER, sTarget),
+                                null, exprTarget, null, null);
+                        propTarget.markSynthetic();
+                        exprTarget.setParent(propTarget); // REVIEW
+                        ensureBody().addStatement(propTarget);
+                        idTarget = pool.ensurePropertyConstant(component.getIdentityConstant(), sTarget);
+                        }
+
+                    // remember the property identity that holds the target
+                    ((Delegates) composition).setPropertyName(sTarget);
+
                     for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                         {
                         // register the class whose interface the component delegates, and the
                         // property whose value indicates the object to delegate to
-                        struct.addDelegation(constClass, constProp);
+                        struct.addDelegation(typeTarget, idTarget);
                         }
                     break;
 

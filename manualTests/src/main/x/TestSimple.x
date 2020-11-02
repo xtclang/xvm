@@ -1,34 +1,28 @@
 module TestSimple
+        delegates Beepable(ConsoleBeeper.DEFAULT)
     {
     @Inject Console console;
 
     void run()
         {
-        TestApp t = new TestApp();
-        t.report();
-        console.println(t.p2);
+        console.println("Running ...");
+        beep();
         }
 
-    class TestApp
-            extends BaseApp
+    interface Beepable
         {
+        void beep();
         }
 
-    class BaseApp
+    const ConsoleBeeper
+            implements Beepable
         {
-        void report()
-            {
-            console.println(p1);
-            }
+        static ConsoleBeeper DEFAULT = new ConsoleBeeper();
 
-        @Lazy protected/private Int p1.calc()
+        @Override
+        void beep()
             {
-            return 42;
-            }
-
-        @Lazy public/private Int p2.calc()
-            {
-            return 43;
+            console.println("beep");
             }
         }
     }

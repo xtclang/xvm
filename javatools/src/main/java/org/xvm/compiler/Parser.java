@@ -541,10 +541,10 @@ public class Parser
                     {
                     TypeExpression type = parseTypeExpression();
                     expect(Id.L_PAREN);
-                    Token tokProp = expect(Id.IDENTIFIER);
+                    Expression expr = parseExpression();
                     Token tokEnd = expect(Id.R_PAREN);
                     compositions.add(new CompositionNode.Delegates(exprCondition, keyword, type,
-                            tokProp, tokEnd.getEndPosition()));
+                            expr, tokEnd.getEndPosition()));
                     }
                 while (match(Id.COMMA) != null);
                 fAny = true;

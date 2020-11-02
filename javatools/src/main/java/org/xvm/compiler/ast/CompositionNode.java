@@ -358,19 +358,32 @@ public abstract class CompositionNode
     public static class Delegates
             extends CompositionNode
         {
-        public Delegates(Expression condition, Token keyword, TypeExpression type, Token delegate, long lEndPos)
+        public Delegates(Expression condition, Token keyword, TypeExpression type, Expression delegatee, long lEndPos)
             {
             super(condition, keyword, type);
-            this.delegate = delegate;
-            this.lEndPos  = lEndPos;
+            this.delegatee = delegatee;
+            this.lEndPos   = lEndPos;
             }
 
         /**
-         * @return the name of the property that holds the reference to delegate to
+         * @return the expression denoting the target of the delegation, such as the name of the
+         *         property that holds the reference to delegate to
          */
+        public Expression getDelegatee()
+            {
+            return delegatee;
+            }
+
+        public void setPropertyName(String sName)
+            {
+            assert name == null;
+            name = sName;
+            }
+
         public String getPropertyName()
             {
-            return (String) delegate.getValue();
+            assert name != null;
+            return name;
             }
 
         @Override
@@ -380,13 +393,23 @@ public abstract class CompositionNode
             }
 
         @Override
-        public String toString()
+        protected Field[] getChildFields()
             {
-            return toStartString() + '(' + delegate + ')' + toEndString();
+            return CHILD_FIELDS;
             }
 
-        protected Token delegate;
-        protected long  lEndPos;
+        @Override
+        public String toString()
+            {
+            return toStartString() + '(' + delegatee + ')' + toEndString();
+            }
+
+        protected Expression delegatee;
+        protected long       lEndPos;
+
+        protected transient String name;
+
+        private static final Field[] CHILD_FIELDS = fieldsForNames(Delegates.class, "condition", "type", "delegatee");
         }
 
 

@@ -296,7 +296,17 @@ public class NameExpression
         }
 
     /**
-     * @return true iff the expression is as "pure" name expression, i.e. containing only names
+     * @return true iff the expression is a simple name expression, i.e. just a single, non-special
+     *         name with no other stuff
+     */
+    public boolean isSimpleName()
+        {
+        return left == null && !isSuppressDeref() && !isSpecial() && !hasTrailingTypeParams();
+        }
+
+    /**
+     * @return true iff the expression is a "pure" name expression, i.e. composed of only
+     *         NameExpressions
      */
     public boolean isOnlyNames()
         {

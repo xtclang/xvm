@@ -1,11 +1,7 @@
 module json.xtclang.org
-        implements ecstasy.io.TextFormat
+        delegates ecstasy.io.TextFormat(Schema.DEFAULT)
     {
     import ecstasy.io.IOException;
-    import ecstasy.io.ObjectInput;
-    import ecstasy.io.ObjectOutput;
-    import ecstasy.io.Reader;
-    import ecstasy.io.Writer;
 
     /**
      * An IllegalJSON exception is raised when a JSON format error is detected.
@@ -29,27 +25,4 @@ module json.xtclang.org
      * JSON types include primitive types, array types, and map types.
      */
     typedef (Primitive | Map<String, Doc> | Array<Doc>) Doc;
-
-
-    // ----- TextFormat interface ------------------------------------------------------------------
-
-    @Override
-    @RO String name.get()
-        {
-        return Schema.DEFAULT.name;
-        }
-
-    @Override
-    ObjectInput createObjectInput(Reader reader)
-        {
-        // use the default JSON schema to deserialize objects
-        return Schema.DEFAULT.createObjectInput(reader);
-        }
-
-    @Override
-    ObjectOutput createObjectOutput(Writer writer)
-        {
-        // use the default JSON schema to serialize objects
-        return Schema.DEFAULT.createObjectOutput(writer);
-        }
     }
