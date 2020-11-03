@@ -1207,7 +1207,7 @@ public class TypeCompositionStatement
                     else
                         {
                         // create a new property to represent the value of the expression
-                        sTarget = "delegate:" + typeTarget.toString();
+                        sTarget = "delegate:" + exprTarget.toString();
                         long lStartPos = exprTarget.getStartPosition();
                         long lEndPos   = exprTarget.getEndPosition();
                         PropertyDeclarationStatement propTarget = new PropertyDeclarationStatement(
