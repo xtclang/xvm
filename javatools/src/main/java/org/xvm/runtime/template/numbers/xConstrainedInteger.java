@@ -62,7 +62,10 @@ public abstract class xConstrainedInteger
         {
         String sName = f_sName;
 
-        markNativeProperty("magnitude");
+        if (f_fSigned)
+            {
+            markNativeProperty("magnitude");
+            }
         markNativeProperty("bitCount");
         markNativeProperty("leftmostBit");
         markNativeProperty("rightmostBit");
@@ -385,6 +388,13 @@ public abstract class xConstrainedInteger
                         }
 
                     return templateTo.convertLong(frame, lValue, iReturn, f_fChecked);
+                    }
+
+                if (template instanceof xUnconstrainedInteger)
+                    {
+                    xUnconstrainedInteger templateTo = (xUnconstrainedInteger) template;
+                    PackedInteger         piValue    = PackedInteger.valueOf(((JavaLong) hTarget).getValue());
+                    return frame.assignValue(iReturn, templateTo.makeInt(piValue));
                     }
 
                 if (template instanceof BaseBinaryFP)

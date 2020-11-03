@@ -45,8 +45,10 @@ public abstract class BaseInt128
         {
         String sName = f_sName;
 
-        markNativeProperty("magnitude");
-
+        if (f_fSigned)
+            {
+            markNativeProperty("magnitude");
+            }
         markNativeMethod("toUnchecked", VOID, null);
 
         markNativeMethod("toInt128" , VOID, sName.equals("numbers.Int128") ? THIS : new String[]{"numbers.Int128"});
