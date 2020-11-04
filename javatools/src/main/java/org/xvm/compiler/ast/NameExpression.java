@@ -1773,7 +1773,9 @@ public class NameExpression
                         {
                         case Variable:
                             {
-                            // Example (Array.x):
+                            // There are two examples of what we need to handle:
+                            // a) the property is a formal property and the name refers to its
+                            //    constraint's formal property: (e.g. Array.x):
                             //   static <CompileType extends Hasher> Int hashCode(CompileType array)
                             //       {
                             //       Int hash = 0;
@@ -1793,12 +1795,23 @@ public class NameExpression
                             // in that case, "typeLeft" for the second expression is a union
                             // (CompileType + Array), but we still need to produce "CompileType.Element"
                             // formal child constant
-
+                            // or
+                            // b) the name refers to a property on the Type object represented by
+                            //    this variable (e.g. NullableMapping.x):
+                            // <Subtype> conditional Mapping<SubType<>> narrow(Type<SubType> type)
+                            //    {
+                            //    if (type.form == Intersection) {...}
+                            //    }
                             TypeConstant typeFormal = ((Register) argLeft).getOriginalType().getParamType(0);
                             if (typeFormal.isFormalType())
                                 {
-                                constFormal = (FormalConstant) typeFormal.getDefiningConstant();
-                                typeLeft    = typeLeft.getParamType(0);
+                                TypeConstant typeConstraint =
+                                    ((FormalConstant) typeFormal.getDefiningConstant()).getConstraintType();
+                                if (typeConstraint.containsGenericParam(sName))
+                                    {
+                                    constFormal = (FormalConstant) typeFormal.getDefiningConstant();
+                                    typeLeft    = typeLeft.getParamType(0);
+                                    }
                                 }
                             break;
                             }
@@ -2311,7 +2324,7 @@ public class NameExpression
                 {
                 FormalTypeChildConstant idFormal = (FormalTypeChildConstant) constant;
                 m_plan = Plan.TypeOfFormalChild;
-                return idFormal.getType();
+                return idFormal.getType().getType();
                 }
 
             case Typedef:

@@ -2264,7 +2264,8 @@ public class InvocationExpression
                         // "this" is "CompileType.Element.hashCode(el)"
                         //  typeLeft is a type of "CompileType.Element" formal type child
 
-                        TypeInfo      infoLeft = typeLeft.ensureTypeInfo(errs);
+                        assert typeLeft.isTypeOfType();
+                        TypeInfo      infoLeft = typeLeft.getParamType(0).ensureTypeInfo(errs);
                         ErrorListener errsTemp = errs.branch();
 
                         Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Function,

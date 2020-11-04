@@ -102,18 +102,17 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
     <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type)
         {
         // disassemble traits (immutable, :private/:protected/:public etc.) and '&'/'|' types
-        // TODO GG: switch (type.form)
-        switch (type.as(Type).form)
+        switch (type.form)
             {
             case Intersection:
-                if (type.is(Type<Nullable>) && type.as(Type).form == Intersection,
-                        (Type left, Type right) := type.relational(),
-                        left == Nullable)
+                if (type.is(Type<Nullable>),
+                    (Type left, Type right) := type.relational(),
+                    left == Nullable)
                     {
-// TODO GG
+// TODO GG - dynamic type
 //                    if (val underlying := schema.findMapping(right))
 //                        {
-//                        return True, new @Narrowable NullableMapping<right.DataType>(underlyingk);
+//                        return True, new @Narrowable NullableMapping<right.DataType>(underlying);
 //                        }
                     }
                 TODO

@@ -81,7 +81,7 @@ public class NewG_0
     @Override
     public int process(Frame frame, int iPC)
         {
-        MethodStructure  constructor = getMethodStructure(frame);
+        MethodStructure constructor = getMethodStructure(frame);
         if (constructor == null)
             {
             return R_EXCEPTION;

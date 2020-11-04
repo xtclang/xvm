@@ -22,6 +22,7 @@ import org.xvm.asm.XvmStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
@@ -490,8 +491,24 @@ public class NameResolver
                 case TypeParameter:
                     {
                     TypeParameterConstant constTypeParam = (TypeParameterConstant) id;
-                    return ((MethodStructure) constTypeParam.getMethod().getComponent()).
-                            getParam(constTypeParam.getRegister());
+                    MethodConstant        idMethod       = constTypeParam.getMethod();
+                    int                   nRegister      = constTypeParam.getRegister();
+                    MethodStructure       method         = (MethodStructure) idMethod.getComponent();
+                    if (method == null)
+                        {
+                        // use the constraint type for the corresponding parameter
+                        TypeConstant typeParam = idMethod.getRawParams()[nRegister];
+                        assert typeParam.isTypeOfType();
+
+                        TypeConstant typeConstraint = typeParam.getParamType(0).resolveAutoNarrowingBase();
+                        if (typeConstraint.isExplicitClassIdentity(true))
+                            {
+                            IdentityConstant idConstraint = (IdentityConstant) typeConstraint.getDefiningConstant();
+                            return idConstraint.getComponent();
+                            }
+                        return null;
+                        }
+                    return method.getParam(nRegister);
                     }
 
                 case ThisClass:

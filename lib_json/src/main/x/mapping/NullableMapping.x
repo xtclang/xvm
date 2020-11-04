@@ -39,8 +39,7 @@ const NullableMapping<NotNullable>(Mapping<NotNullable> underlying)
     @Override
     <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type)
         {
-        // TODO GG: if (type.is(Type<Nullable>) && type.form == Intersection,
-        if (type.is(Type<Nullable>) && type.as(Type).form == Intersection,
+        if (type.is(Type<Nullable>) && type.form == Intersection,
                 (Type left, Type right) := type.relational(),
                 left == Nullable,
                 right != underlying.Serializable,
