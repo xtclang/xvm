@@ -1802,16 +1802,15 @@ public class NameExpression
                             //    {
                             //    if (type.form == Intersection) {...}
                             //    }
-                            TypeConstant typeFormal = ((Register) argLeft).getOriginalType().getParamType(0);
-                            if (typeFormal.isFormalType())
+                            TypeConstant typeData = typeLeft.getParamType(0);
+                            if (typeData.containsGenericParam(sName))
                                 {
-                                TypeConstant typeConstraint =
-                                    ((FormalConstant) typeFormal.getDefiningConstant()).getConstraintType();
-                                if (typeConstraint.containsGenericParam(sName))
+                                TypeConstant typeFormal = ((Register) argLeft).getOriginalType().getParamType(0);
+                                if (typeFormal.isFormalType())
                                     {
                                     constFormal = (FormalConstant) typeFormal.getDefiningConstant();
-                                    typeLeft    = typeLeft.getParamType(0);
                                     }
+                                typeLeft = typeData;
                                 }
                             break;
                             }
