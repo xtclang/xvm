@@ -372,4 +372,43 @@ const UIntN
         {
         TODO
         }
+
+
+    // ----- Stringable implementation -------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        if (this <= UInt64.maxvalue)
+            {
+            return toUInt().estimateStringLength();
+            }
+
+        static UIntN chunkVal = 10_000_000_000_000_000_000;
+        static Int   chunkLen = 19;
+
+        UIntN left     = this;
+        Int   rightLen = 0;
+        do
+            {
+            (left, _) = left /% chunkVal;
+            rightLen += chunkLen;
+            }
+        while (left > UInt64.maxvalue);
+        return left.toUInt().estimateStringLength() + rightLen;
+        }
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf)
+        {
+        if (this <= UInt64.maxvalue)
+            {
+            return toUInt().appendTo(buf);
+            }
+
+        static UIntN chunkVal = 10_000_000_000_000_000_000;
+        (UIntN dividend, UIntN remainder) = this /% chunkVal;
+        dividend.appendTo(buf);
+        return remainder.toUInt().appendTo(buf);
+        }
     }

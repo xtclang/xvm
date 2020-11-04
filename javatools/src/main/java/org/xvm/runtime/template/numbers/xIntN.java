@@ -3,7 +3,11 @@ package org.xvm.runtime.template.numbers;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.util.PackedInteger;
 
 
 /**
@@ -16,7 +20,7 @@ public class xIntN
 
     public xIntN(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false, true);
 
         if (fInstance)
             {
@@ -27,8 +31,27 @@ public class xIntN
     @Override
     public void initNative()
         {
+        markNativeProperty("magnitude");
+
         markNativeMethod("abs", VOID, THIS);
 
-        getCanonicalType().invalidateTypeInfo();
+        super.initNative();
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        switch (sPropName)
+            {
+            case "magnitude":
+                {
+                PackedInteger pi = ((xIntLiteral.IntNHandle) hTarget).m_piValue;
+                return frame.assignValue(iReturn, pi.isNegative()
+                        ? makeInt(pi.negate())
+                        : hTarget);
+                }
+            }
+
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
     }

@@ -132,7 +132,7 @@ public class PackedInteger
      * The size of the "native" 2's-complement signed integer that would be
      * necessary to hold the value.
      *
-     * @return 1, 2, 4, 8, 16, or 32
+     * @return a value between 1 and 32 inclusive
      */
     public int getSignedByteSize()
         {
@@ -142,17 +142,14 @@ public class PackedInteger
                 ? calculateSignedByteCount(m_bigint)
                 : Math.max(1, (((64 - Long.numberOfLeadingZeros(Math.max(m_lValue, ~m_lValue))) & 0x3F) + 7) / 8);
 
-        assert nBytes >= 1 && nBytes <= 32;
-
-        // turn the raw number of bytes {1,2,3,4,5,6,7,8,9,...}
-        //                         into {1,2,4,4,8,8,8,8,16,...}
-        return Integer.highestOneBit(nBytes * 2 - 1);
+        assert nBytes >= 1 && nBytes <= 32; // arbitrary limit of 32 for the prototype
+        return nBytes;
         }
 
     /**
      * The size of the unsigned integer that would be necessary to hold the value.
      *
-     * @return 1, 2, 4, 8, 16, or 32
+     * @return a value between 1 and 32 inclusive
      */
     public int getUnsignedByteSize()
         {
@@ -166,11 +163,8 @@ public class PackedInteger
                 ? calculateUnsignedByteCount(m_bigint)
                 : Math.max(1, (((64 - Long.numberOfLeadingZeros(m_lValue)) + 7) / 8));
 
-        assert nBytes >= 1 && nBytes <= 32;
-
-        // turn the raw number of bytes {1,2,3,4,5,6,7,8,9,...}
-        //                         into {1,2,4,4,8,8,8,8,16,...}
-        return Integer.highestOneBit(nBytes * 2 - 1);
+        assert nBytes >= 1 && nBytes <= 32; // arbitrary limit of 32 for the prototype
+        return nBytes;
         }
 
     /**

@@ -16,7 +16,7 @@ public class xUIntN
 
     public xUIntN(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, true, true);
 
         if (fInstance)
             {

@@ -55,4 +55,13 @@ const UIntNumber
         {
         throw new UnsupportedOperation();
         }
+
+
+    // ----- Stringable implementation -------------------------------------------------------------
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf)
+        {
+        TODO($"Implementations of UIntNumber must override appendTo(); class={this:class}");
+        }
     }

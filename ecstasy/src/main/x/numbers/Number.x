@@ -58,13 +58,15 @@ const Number
         }
 
     /**
-     * An IllegalMath exception is raised when an assert fails.
+     * An IllegalMath exception is raised to indicate any operation that violates mathematical
+     * rules.
      */
     static const IllegalMath(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
 
     /**
-     * An Assertion exception is raised when an assert fails.
+     * A DivisionByZero exception is raised to indicate that an attempt to divide-by-zero has
+     * occurred.
      */
     static const DivisionByZero(String? text = Null, Exception? cause = Null)
             extends IllegalMath(text, cause);
@@ -156,8 +158,7 @@ const Number
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      * @throws OutOfBounds  if the resulting value is out of range for this type
      */
-    @Op("-")
-    Number sub(Number n);
+    @Op("-") Number sub(Number n);
 
     /**
      * Multiplication: Multiply this number by another number, and return the result.
@@ -169,8 +170,7 @@ const Number
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      * @throws OutOfBounds  if the resulting value is out of range for this type
      */
-    @Op("*")
-    Number mul(Number n);
+    @Op("*") Number mul(Number n);
 
     /**
      * Division: Divide this number by another number, and return the result.
@@ -182,8 +182,7 @@ const Number
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      * @throws OutOfBounds  if the resulting value is out of range for this type
      */
-    @Op("/")
-    Number div(Number n);
+    @Op("/") Number div(Number n);
 
     /**
      * Modulo: Return the modulo that would result from dividing this number by another number.
@@ -196,8 +195,7 @@ const Number
      *
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      */
-    @Op("%")
-    Number mod(Number n);
+    @Op("%") Number mod(Number n);
 
     /**
      * Division and Remainder: Divide this number by another number, and return both the
@@ -211,8 +209,7 @@ const Number
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      * @throws OutOfBounds  if the resulting value is out of range for this type
      */
-    @Op("/%")
-    (Number quotient, Number remainder) divrem(Number n)
+    @Op("/%") (Number quotient, Number remainder) divrem(Number n)
         {
         Number quotient  = this / n;
         Number remainder = this - (n * quotient);
@@ -242,8 +239,8 @@ const Number
     /**
      * Calculate the absolute value of this number. If there is no absolute value representable
      * using this number's type, then an exception is thrown; this can happen for a signed integer
-     * of the minimum value for that integer type, since the positive range for a 2s-complement
-     * signed integer is always one smaller than the negative range.
+     * of the minimum value for that integer type, since the positive range for a 2's-complement
+     * signed integer is always one element smaller than the negative range.
      *
      * @return the absolute value of this number
      *
@@ -532,17 +529,26 @@ const Number
         }
 
     /**
-     * @return the integer literal for this number
+     * Produce an `IntLiteral` value that represents the value of this number.
+     *
+     * @return an integer literal for this number
+     *
+     * @throws TODO if this value is not naturally convertible to an integer form without loss of information
      */
     IntLiteral toIntLiteral();
 
     /**
-     * @return the floating point literal for this number
+     * Produce an `FPLiteral` value that represents the value of this number.
+     *
+     * @return a floating point literal for this number
      */
     FPLiteral toFPLiteral();
 
 
     // ----- Stringable support --------------------------------------------------------------------
 
+    /**
+     * The representations for "digits" in any radix up to 16 (hexadecimal).
+     */
     static Char[] DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
     }

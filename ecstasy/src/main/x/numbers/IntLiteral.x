@@ -29,12 +29,11 @@ const IntLiteral(String text)
      */
     construct(String text)
         {
-/*  TODO: uncomment when the compiler is sufficiently complete
-        assert text.length > 0;
+        assert:arg text.size > 0;
 
         // optional leading sign
         Int of = 0;
-        switch (chars[of])
+        switch (text[of])
             {
             case '-':
                 explicitSign = Signum.Negative;
@@ -49,9 +48,9 @@ const IntLiteral(String text)
 
         // optional leading format
         Boolean underscoreOk = False;
-        if (text.length - of >= 2 && chars[of] == '0')
+        if (text.size - of >= 2 && text[of] == '0')
             {
-            switch (chars[of+1])
+            switch (text[of+1])
                 {
                 case 'X':
                 case 'x':
@@ -63,7 +62,7 @@ const IntLiteral(String text)
                     radix = 2;
                     break;
 
-                case 'o':           // TODO / REVIEW possible addition to lang spec
+                case 'o':
                     radix = 8;
                     break;
                 }
@@ -77,39 +76,58 @@ const IntLiteral(String text)
 
         // digits
         UIntN magnitude = 0;
-        Int     digits    = 0;
-        while (of < text.length)
+        Int   digits    = 0;
+        NextChar: while (of < text.size)
             {
-            Char ch = chars[of++];
+            Char ch = text[of];
             Int  nch;
-            if (ch >= '0' && ch <= '9')
+            switch (ch)
                 {
-                nch = ch.toInt() - '0'.toInt();
-                }
-            else if (ch >= 'A' && ch <= 'F')
-                {
-                nch = ch.toInt() - 'A'.toInt() + 10;
-                }
-            else if (ch >= 'a' && ch <= 'f')
-                {
-                nch = ch.toInt() - 'a'.toInt() + 10;
-                }
-            else
-                {
-                assert ch == '_' && underscoreOk;
-                continue;
+                case '0'..'9':
+                    nch = ch - '0';
+                    break;
+
+                case 'A'..'F':
+                    nch = 10 + (ch - 'A');
+                    break;
+
+                case 'a'..'f':
+                    nch = 10 + (ch - 'a');
+                    break;
+
+                case '_':
+                    if (underscoreOk)
+                        {
+                        continue NextChar;
+                        }
+                    continue;
+
+                default:
+                    throw new IllegalArgument($|Illegal character {ch.toSourceString()} at \
+                                               |offset {of} in integer literal {text.quoted}
+                                             );
                 }
 
-            assert nch < radix;
-            magnitude = magnitude * radix + nch.toIntN();
-            ++digits;
+            if (nch >= radix)
+                {
+                throw new IllegalArgument($|Illegal digit {ch.toSourceString()} for radix \
+                                           |{radix} in integer literal {text.quoted}
+                                         );
+                }
+
+            magnitude    = magnitude * radix + nch;
             underscoreOk = True;
+            ++digits;
+            ++of;
             }
 
-        assert digits > 0;
+        if (digits == 0)
+            {
+            throw new IllegalArgument($"Illegal integer literal {text.quoted()}");
+            }
+
         this.magnitude = magnitude;
-*/
-        this.text = text;
+        this.text      = text;
         }
 
     /**
