@@ -11,7 +11,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.SignatureConstant;
 
 import org.xvm.runtime.CallChain;
@@ -207,7 +206,21 @@ public class xContainerLinker
                     }
                 }
 
-            switch (container.ensureTypeSystemHandle(frameCaller, Op.A_STACK))
+            // the "ensureTypeSystemHandle" call should be made on the new container's context
+            Op opCall = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    return container.ensureTypeSystemHandle(frame, 0);
+                    }
+
+                public String toString()
+                    {
+                    return "CreateTypeSystem";
+                    }
+                };
+
+            switch (container.ensureServiceContext().sendOp1Request(frameCaller, opCall, Op.A_STACK))
                 {
                 case Op.R_NEXT:
                     return frameCaller.assignValues(aiReturn,

@@ -37,10 +37,8 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
-import org.xvm.runtime.template.xService.PropertyOperation;
 import org.xvm.runtime.template.xService.PropertyOperation10;
 import org.xvm.runtime.template.xService.PropertyOperation01;
-import org.xvm.runtime.template.xService.PropertyOperation11;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
@@ -146,7 +144,7 @@ public class ServiceContext
      */
     public Object getOpInfo(Op op, Enum category)
         {
-        EnumMap mapByCategory = m_mapOpInfo.get(op);
+        EnumMap mapByCategory = f_mapOpInfo.get(op);
         return mapByCategory == null ? null : mapByCategory.get(category);
         }
 
@@ -159,7 +157,7 @@ public class ServiceContext
      */
     public void setOpInfo(Op op, Enum category, Object info)
         {
-        m_mapOpInfo.computeIfAbsent(op, (op_) -> new EnumMap(category.getClass()))
+        f_mapOpInfo.computeIfAbsent(op, (op_) -> new EnumMap(category.getClass()))
                    .put(category, info);
         }
 
@@ -901,24 +899,50 @@ public class ServiceContext
         }
 
     /*
-     * Send and asynchronous "construct service" message to this context.
+     * Send and asynchronous Op-based message to this context with one return value.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendConstructRequest(Frame frameCaller, MethodStructure constructor, ClassComposition clazz,
-                                    ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
+    public int sendOp1Request(Frame frameCaller, Op op, int iReturn)
         {
-        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
+        OpRequest                       request = new OpRequest(frameCaller, op, 1);
+        CompletableFuture<ObjectHandle> future  = request.f_future;
 
-        addRequest(new ConstructRequest(frameCaller, constructor, clazz, future, hParent, ahArg));
+        addRequest(request);
 
         frameCaller.f_fiber.registerRequest(future);
 
         return frameCaller.assignFutureResult(iReturn, future);
         }
 
+    /*
+     * Send and asynchronous "construct service" request to this context.
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
+     */
+    public int sendConstructRequest(Frame frameCaller, MethodStructure constructor, ClassComposition clazz,
+                                    ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
+        {
+        Op opConstruct = new Op()
+            {
+            public int process(Frame frame, int iPC)
+                {
+                xService service = (xService) clazz.getTemplate();
+
+                return service.constructSync(frame, constructor, clazz, hParent, ahArg, 0);
+                }
+
+            public String toString()
+                {
+                return "ConstructRequest";
+                }
+            };
+
+        return sendOp1Request(frameCaller, opConstruct, iReturn);
+        }
+
     /**
-     * Send and asynchronous "invoke" message with zero or one return value.
+     * Send and asynchronous "invoke" request with zero or one return value.
      *
      * @param fTuple   if true, the tuple is expected as a result of async execution
      * @param iReturn  a register id ({@link Op#A_IGNORE} for fire and forget)
@@ -933,14 +957,39 @@ public class ServiceContext
             return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
             }
 
-        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
-
         int cReturns = fTuple                 ? -1
                      : iReturn == Op.A_IGNORE ? 0
                                               : 1;
+        Op opCall = new Op()
+            {
+            public int process(Frame frame, int iPC)
+                {
+                switch (cReturns)
+                    {
+                    case -1:
+                        return hFunction.callT(frame, hTarget, ahArg, 0);
 
-        boolean fOverwhelmed = addRequest(
-                new Invoke1Request(frameCaller, hFunction, hTarget, ahArg, cReturns, future));
+                    case 0:
+                        return hFunction.call1(frame, hTarget, ahArg, A_IGNORE);
+
+                    case 1:
+                        return hFunction.call1(frame, hTarget, ahArg, 0);
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            public String toString()
+                {
+                return "Invoke1Request";
+                }
+            };
+
+        OpRequest                       request = new OpRequest(frameCaller, opCall, cReturns);
+        CompletableFuture<ObjectHandle> future  = request.f_future;
+
+        boolean fOverwhelmed = addRequest(request);
 
         Fiber fiber = frameCaller.f_fiber;
         if (cReturns == 0)
@@ -959,11 +1008,12 @@ public class ServiceContext
             }
 
         fiber.registerRequest(future);
+
         return frameCaller.assignFutureResult(iReturn, future);
         }
 
     /**
-     * Send and asynchronous "invoke" message with multiple return values.
+     * Send and asynchronous "invoke" request with multiple return values.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -975,11 +1025,31 @@ public class ServiceContext
             return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
             }
 
-        CompletableFuture<ObjectHandle[]> future   = new CompletableFuture<>();
-        int                               cReturns = aiReturn.length;
+        int cReturns = aiReturn.length;
+        Op  opCall   = new Op()
+            {
+            public int process(Frame frame, int iPC)
+                {
+                // the pseudo-frame's vars are the return values
+                int[] aiReturn = new int[cReturns];
+                for (int i = 0; i < cReturns; i++)
+                    {
+                    aiReturn[i] = i;
+                    }
 
-        boolean fOverwhelmed = addRequest(
-                new InvokeNRequest(frameCaller, hFunction, hTarget, ahArg, cReturns, future));
+                return hFunction.callN(frame, hTarget, ahArg, aiReturn);
+                }
+
+            public String toString()
+                {
+                return "InvokeNRequest";
+                }
+            };
+
+        OpRequest                         request = new OpRequest(frameCaller, opCall, cReturns);
+        CompletableFuture<ObjectHandle[]> future  = request.f_future;
+
+        boolean fOverwhelmed = addRequest(request);
 
         Fiber fiber = frameCaller.f_fiber;
         if (cReturns == 0)
@@ -1003,7 +1073,7 @@ public class ServiceContext
         }
 
     /**
-     * Send and asynchronous property "read" operation message.
+     * Send and asynchronous property "read" operation request.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1015,17 +1085,30 @@ public class ServiceContext
             return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
             }
 
-        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
+        Op opGet = new Op()
+            {
+            public int process(Frame frame, int iPC)
+                {
+                // the property target is the service itself
+                int iResult = op.invoke(frame, frame.f_context.m_hService, idProp, 0);
 
-        addRequest(new PropertyOpRequest(frameCaller, idProp, null, 1, future, op));
+                // don't return a FutureHandle, but wait till it's done
+                return idProp.isFutureVar() && iResult == Op.R_NEXT
+                    ? ((FutureHandle) frame.f_ahVar[0]).waitAndAssign(frame, 0)
+                    : iResult;
+                }
 
-        frameCaller.f_fiber.registerRequest(future);
+            public String toString()
+                {
+                return "Property01_Op";
+                }
+            };
 
-        return frameCaller.assignFutureResult(iReturn, future);
+        return sendOp1Request(frameCaller, opGet, iReturn);
         }
 
     /*
-     * Send and asynchronous property "update" operation message.
+     * Send and asynchronous property "update" operation request.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1037,9 +1120,24 @@ public class ServiceContext
             return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
             }
 
-        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
+        Op opSet = new Op()
+            {
+            public int process(Frame frame, int iPC)
+                {
+                // the property target is the service itself
+                return op.invoke(frame, frame.f_context.m_hService, idProp, hValue);
+                }
 
-        boolean fOverwhelmed = addRequest(new PropertyOpRequest(frameCaller, idProp, hValue, 0, future, op));
+            public String toString()
+                {
+                return "Property10_Op";
+                }
+            };
+
+        OpRequest                       request = new OpRequest(frameCaller, opSet, 0);
+        CompletableFuture<ObjectHandle> future  = request.f_future;
+
+        boolean fOverwhelmed = addRequest(request);
 
         frameCaller.f_fiber.registerUncapturedRequest(future);
 
@@ -1054,11 +1152,25 @@ public class ServiceContext
     public CompletableFuture<ObjectHandle> sendConstantRequest(Frame frameCaller,
                                                                List<SingletonConstant> listConstants)
         {
-        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
+        Op opInit = new Op()
+            {
+            public int process(Frame frame, int iPC)
+                {
+                return Utils.initConstants(frame, listConstants,
+                    frameCaller -> frameCaller.assignValue(0, xNullable.NULL));
+                }
 
-        addRequest(new ConstantInitializationRequest(frameCaller, listConstants, future));
+            public String toString()
+                {
+                return "StaticInitializationRequest";
+                }
+            };
 
-        return future;
+        OpRequest request = new OpRequest(frameCaller, opInit, 1);
+
+        addRequest(request);
+
+        return request.f_future;
         }
 
     protected void callUnhandledExceptionHandler(ExceptionHandle hException)
@@ -1216,7 +1328,7 @@ public class ServiceContext
     // --- inner classes ---------------------------------------------------------------------------
 
     /**
-     * Base class for requests.
+     * Base class for cross-service communications.
      */
     public abstract static class Message
         {
@@ -1247,53 +1359,46 @@ public class ServiceContext
         }
 
     /**
-     * Represents an invoke request from one service onto another with zero or one return value.
+     * Base class for an asynchronous cross-service Message based on a CompletableFuture.
      */
-    public static class ConstructRequest
+    public abstract static class Request
             extends Message
         {
-        private final MethodStructure                 f_constructor;
-        private final ClassComposition                f_clazz;
-        private final ObjectHandle                    f_hParent;
-        private final ObjectHandle[]                  f_ahArg;
-        private final CompletableFuture<ObjectHandle> f_future;
-
-        public ConstructRequest(Frame frameCaller, MethodStructure constructor, ClassComposition clazz,
-                                CompletableFuture future, ObjectHandle hParent, ObjectHandle[] ahArg)
+        protected Request(Frame frameCaller)
             {
             super(frameCaller);
 
-            f_constructor = constructor;
-            f_clazz       = clazz;
-            f_hParent     = hParent;
-            f_ahArg       = ahArg;
-            f_future      = future;
+            f_future = new CompletableFuture();
+            }
+
+        final public CompletableFuture f_future;
+        }
+
+    /**
+     * A cross-service Op based Request.
+     */
+    public static class OpRequest
+            extends Request
+        {
+        protected OpRequest(Frame frameCaller, Op op, int cReturns)
+            {
+            super(frameCaller);
+
+            f_op       = op;
+            f_cReturns = cReturns;
             }
 
         @Override
         public Frame createFrame(ServiceContext context)
             {
-            Op opConstruct = new Op()
-                {
-                public int process(Frame frame, int iPC)
-                    {
-                    xService service = (xService) f_clazz.getTemplate();
+            Frame frame0 = context.createServiceEntryFrame(this, f_cReturns, new Op[]{f_op, Return_0.INSTANCE});
 
-                    return service.constructSync(frame, f_constructor, f_clazz, f_hParent, f_ahArg, 0);
-                    }
-
-                public String toString()
-                    {
-                    return "ConstructRequest";
-                    }
-                };
-
-            Frame frame0 = context.createServiceEntryFrame(this, 1,
-                    new Op[]{opConstruct, Return_0.INSTANCE});
-
-            frame0.addContinuation(_null -> sendResponse(f_fiberCaller, frame0, f_future, 1));
+            frame0.addContinuation(_null -> sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
             return frame0;
             }
+
+        final private Op  f_op;
+        final private int f_cReturns;
         }
 
     /**
@@ -1352,245 +1457,6 @@ public class ServiceContext
                     }
                 return Op.R_NEXT;
                 });
-
-            return frame0;
-            }
-        }
-
-    /**
-     * Represents an invoke request from one service onto another with zero or one return value.
-     */
-    public static class Invoke1Request
-            extends Message
-        {
-        private final FunctionHandle                  f_hFunction;
-        private final ObjectHandle                    f_hTarget;
-        private final ObjectHandle[]                  f_ahArg;
-        private final int                             f_cReturns;
-        private final CompletableFuture<ObjectHandle> f_future;
-
-        public Invoke1Request(Frame frameCaller, FunctionHandle hFunction,
-                              ObjectHandle hTarget, ObjectHandle[] ahArg, int cReturns,
-                              CompletableFuture<ObjectHandle> future)
-            {
-            super(frameCaller);
-
-            f_hFunction = hFunction;
-            f_hTarget   = hTarget;
-            f_ahArg     = ahArg;
-            f_cReturns  = cReturns;
-            f_future    = future;
-            }
-
-        @Override
-        public Frame createFrame(ServiceContext context)
-            {
-            Op opCall = new Op()
-                {
-                public int process(Frame frame, int iPC)
-                    {
-                    switch (f_cReturns)
-                        {
-                        case -1:
-                            return f_hFunction.callT(frame, f_hTarget, f_ahArg, 0);
-
-                        case 0:
-                            return f_hFunction.call1(frame, f_hTarget, f_ahArg, A_IGNORE);
-
-                        case 1:
-                            return f_hFunction.call1(frame, f_hTarget, f_ahArg, 0);
-
-                        default:
-                            throw new IllegalStateException();
-                        }
-                    }
-
-                public String toString()
-                    {
-                    return "Invoke1Request";
-                    }
-                };
-
-            Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
-                    new Op[] {opCall, Return_0.INSTANCE});
-
-            frame0.addContinuation(_null ->
-                sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
-
-            return frame0;
-            }
-        }
-
-    /**
-     * Represents an invoke request from one service onto another with multiple return values.
-     */
-    public static class InvokeNRequest
-            extends Message
-        {
-        private final FunctionHandle                    f_hFunction;
-        private final ObjectHandle                      f_hTarget;
-        private final ObjectHandle[]                    f_ahArg;
-        private final int                               f_cReturns;
-        private final CompletableFuture<ObjectHandle[]> f_future;
-
-        public InvokeNRequest(Frame frameCaller, FunctionHandle hFunction,
-                              ObjectHandle hTarget, ObjectHandle[] ahArg, int cReturns,
-                              CompletableFuture<ObjectHandle[]> future)
-            {
-            super(frameCaller);
-
-            f_hFunction = hFunction;
-            f_hTarget   = hTarget;
-            f_ahArg     = ahArg;
-            f_cReturns  = cReturns;
-            f_future    = future;
-            }
-
-        @Override
-        public Frame createFrame(ServiceContext context)
-            {
-            // the pseudo-frame's vars are the return values
-            int[] aiReturn = new int[f_cReturns];
-            for (int i = 0; i < f_cReturns; i++)
-                {
-                aiReturn[i] = i;
-                }
-
-            Op opCall = new Op()
-                {
-                public int process(Frame frame, int iPC)
-                    {
-                    return f_hFunction.callN(frame, f_hTarget, f_ahArg, aiReturn);
-                    }
-
-                public String toString()
-                    {
-                    return "InvokeNRequest";
-                    }
-                };
-
-            Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
-                new Op[] {opCall, Return_0.INSTANCE});
-
-            frame0.addContinuation(_null ->
-                sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
-
-            return frame0;
-            }
-        }
-
-    /**
-     * Represents a property operation request from one service onto another
-     * that takes zero or one parameter and returns zero or one value.
-     */
-    public static class PropertyOpRequest
-            extends Message
-        {
-        private final PropertyConstant                f_idProp;
-        private final ObjectHandle                    f_hValue;
-        private final int                             f_cReturns;
-        private final CompletableFuture<ObjectHandle> f_future;
-        private final PropertyOperation               f_op;
-
-        public PropertyOpRequest(Frame frameCaller, PropertyConstant idProp,
-                                 ObjectHandle hValue, int cReturns,
-                                 CompletableFuture<ObjectHandle> future, PropertyOperation op)
-            {
-            super(frameCaller);
-
-            f_idProp   = idProp;
-            f_hValue   = hValue;
-            f_cReturns = cReturns;
-            f_future   = future;
-            f_op       = op;
-            }
-
-        @Override
-        public Frame createFrame(ServiceContext context)
-            {
-            int cReturns = f_cReturns;
-
-            Op opCall = new Op()
-                {
-                public int process(Frame frame, int iPC)
-                    {
-                    if (cReturns == 0)
-                        {
-                        // setter: svc.prop = value;
-                        return ((PropertyOperation10) f_op).invoke(frame, context.m_hService, f_idProp, f_hValue);
-                        }
-
-                    if (f_hValue == null)
-                        {
-                        // getter: value = svc.prop;
-                        int iResult = (((PropertyOperation01) f_op).invoke(frame, context.m_hService, f_idProp, 0));
-
-                        // don't return a FutureHandle, but wait till it's done
-                        return f_idProp.isFutureVar() && iResult == Op.R_NEXT
-                            ? ((FutureHandle) frame.f_ahVar[0]).waitAndAssign(frame, 0)
-                            : iResult;
-                        }
-
-                    // not currently used
-                    return ((PropertyOperation11) f_op).invoke(frame, context.m_hService, f_idProp, f_hValue, 0);
-                    }
-
-                public String toString()
-                    {
-                    return "PropertyOpRequest";
-                    }
-                };
-
-            Frame frame0 = context.createServiceEntryFrame(this, cReturns,
-                    new Op[]{opCall, Return_0.INSTANCE});
-
-            frame0.addContinuation(_null ->
-                sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
-
-            return frame0;
-            }
-        }
-
-    /**
-     * Represents a constant initialization request sent to the "main" container context.
-     */
-    public static class ConstantInitializationRequest
-            extends Message
-        {
-        private final List<SingletonConstant>         f_list;
-        private final CompletableFuture<ObjectHandle> f_future;
-
-        public ConstantInitializationRequest(Frame frameCaller, List<SingletonConstant> listConstants,
-                                             CompletableFuture<ObjectHandle> future)
-            {
-            super(frameCaller);
-
-            f_list   = listConstants;
-            f_future = future;
-            }
-
-        @Override
-        public Frame createFrame(ServiceContext context)
-            {
-            Op opCall = new Op()
-                {
-                public int process(Frame frame, int iPC)
-                    {
-                    return Utils.initConstants(frame, f_list,
-                        frameCaller -> frameCaller.assignValue(0, xNullable.NULL));
-                    }
-
-                public String toString()
-                    {
-                    return "StaticInitializationRequest";
-                    }
-                };
-
-            Frame frame0 = context.createServiceEntryFrame(this, 1,
-                    new Op[]{opCall, Return_0.INSTANCE});
-
-            frame0.addContinuation(_null ->
-                sendResponse(f_fiberCaller, frame0, f_future, 1));
 
             return frame0;
             }
@@ -1768,5 +1634,5 @@ public class ServiceContext
      * A "service-local" cache for run-time information that needs to be calculated by various ops.
      * Since only one fiber can access the service context at any time, a simple HashMap is used.
      */
-    private Map<Op, EnumMap> m_mapOpInfo = new HashMap<>();
+    private final Map<Op, EnumMap> f_mapOpInfo = new HashMap<>();
     }
