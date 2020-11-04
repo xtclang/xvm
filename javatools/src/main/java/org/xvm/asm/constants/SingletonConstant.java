@@ -52,7 +52,7 @@ public class SingletonConstant
             throw new IllegalArgumentException("class of the singleton value required");
             }
 
-        m_fmt        = format;
+        f_fmt        = format;
         m_constClass = constClass;
         }
 
@@ -70,7 +70,7 @@ public class SingletonConstant
         {
         super(pool);
 
-        m_fmt    = format;
+        f_fmt    = format;
         m_iClass = readMagnitude(in);
         }
 
@@ -125,14 +125,9 @@ public class SingletonConstant
      */
     public void setHandle(ObjectHandle handle)
         {
-        // the only scenario when the singleton value can be reset is when it turns from
-        // a struct to an immutable
+        // the only scenarios when the singleton value can be reset are when it turns from
+        // INITIALIZING to anything or from a struct to an immutable value
         assert handle != null;
-
-        if (m_handle != null && handle != m_handle)
-            {
-            assert m_handle.isStruct() && !handle.isStruct();
-            }
 
         m_handle        = handle;
         m_fInitializing = false;
@@ -147,6 +142,7 @@ public class SingletonConstant
         {
         if (m_fInitializing)
             {
+            m_handle = ObjectHandle.INITIALIZING;
             return false;
             }
         return m_fInitializing = true;
@@ -158,7 +154,7 @@ public class SingletonConstant
     @Override
     public Format getFormat()
         {
-        return m_fmt;
+        return f_fmt;
         }
 
     @Override
@@ -181,7 +177,7 @@ public class SingletonConstant
         return constNew == constOld
                 ? this
                 : (SingletonConstant) getConstantPool().register(
-                        new SingletonConstant(getConstantPool(), m_fmt, constNew));
+                        new SingletonConstant(getConstantPool(), f_fmt, constNew));
         }
 
     @Override
@@ -226,7 +222,8 @@ public class SingletonConstant
     @Override
     public String getDescription()
         {
-        return "singleton-" + (m_fmt == Format.SingletonConst ? "const=" : "service=") + m_constClass.getName();
+        return "singleton-" + (f_fmt == Format.SingletonConst ? "const=" : "service=") +
+                m_constClass.getName();
         }
 
 
@@ -244,7 +241,7 @@ public class SingletonConstant
     /**
      * The format of the constant; either SingletonConst or SingletonService.
      */
-    private Format m_fmt;
+    private final Format f_fmt;
 
     /**
      * Used during deserialization: holds the index of the class constant.

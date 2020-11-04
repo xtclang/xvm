@@ -36,21 +36,6 @@ public abstract class ObjectHandle
     protected TypeComposition m_clazz;
     protected boolean m_fMutable = false;
 
-    public static final ObjectHandle DEFAULT = new ObjectHandle(null)
-        {
-        @Override
-        public TypeConstant getType()
-            {
-            return null;
-            }
-
-        @Override
-        public String toString()
-            {
-            return "<default>";
-            }
-        };
-
     protected ObjectHandle(TypeComposition clazz)
         {
         m_clazz = clazz;
@@ -911,7 +896,44 @@ public abstract class ObjectHandle
             }
         }
 
-    // ----- DEFERRED ----
+    /**
+     * A handle that is used as an indicator for a default method argument value.
+     */
+    public static final ObjectHandle DEFAULT = new ObjectHandle(null)
+        {
+        @Override
+        public TypeConstant getType()
+            {
+            return null;
+            }
+
+        @Override
+        public String toString()
+            {
+            return "<default>";
+            }
+        };
+
+    /**
+     * A handle that is used an indicator of an in-progress singleton initialization.
+     */
+    public static final ObjectHandle INITIALIZING = new ObjectHandle(null)
+        {
+        @Override
+        public TypeConstant getType()
+            {
+            return null;
+            }
+
+        @Override
+        public String toString()
+            {
+            return "<initializing>";
+            }
+        };
+
+
+    // ----- DEFERRED ------------------------------------------------------------------------------
 
     public static long createHandle(int nTypeId, int nIdentityId, boolean fMutable)
         {

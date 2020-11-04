@@ -120,6 +120,11 @@ public abstract class ConstHeap
      */
     protected ObjectHandle saveConstHandle(Constant constValue, ObjectHandle hValue)
         {
+        if (hValue == ObjectHandle.INITIALIZING)
+            {
+            return hValue;
+            }
+
         ObjectHandle hValue0 = f_mapConstants.putIfAbsent(constValue, hValue);
         return hValue0 == null ? hValue : hValue0;
         }

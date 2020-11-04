@@ -684,8 +684,8 @@ public abstract class Utils
             // we are on the main context and can actually perform the initialization
             if (!constSingleton.markInitializing())
                 {
-                // this can only happen if we are called recursively
-                return frame.raiseException("Circular initialization");
+                // this can only happen if we are called recursively; the value is INITIALIZING
+                return continuation.proceed(frame);
                 }
 
             IdentityConstant constValue = constSingleton.getClassConstant();
@@ -1476,7 +1476,7 @@ public abstract class Utils
                     makeAnnoArrayHandle(frameCaller.poolContext(), ahAnno));
             }
 
-        enum Stage {Mixin, ArgumentArray, Value, Argument, Annotation};
+        enum Stage {Mixin, ArgumentArray, Value, Argument, Annotation}
         private Stage stageNext;
 
         private final Annotation[]   aAnno;
