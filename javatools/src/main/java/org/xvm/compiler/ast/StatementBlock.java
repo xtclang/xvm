@@ -1307,7 +1307,8 @@ public class StatementBlock
             for (int i = 0, c = method.getParamCount(); i < c; ++i)
                 {
                 org.xvm.asm.Parameter param = method.getParam(i);
-                String    sName = param.getName();
+                String                sName = param.getName();
+
                 if (!sName.equals(Id.ANY.TEXT))
                     {
                     Register reg;

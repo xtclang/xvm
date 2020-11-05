@@ -27,7 +27,7 @@ import org.xvm.compiler.Token;
 
 
 /**
- * A variable declaration statement specifies a type and a simply name for a variable.
+ * A variable declaration statement specifies a type and a simple name for a variable.
  */
 public class VariableDeclarationStatement
         extends Statement
@@ -35,6 +35,7 @@ public class VariableDeclarationStatement
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a statement.
      *
      * @param type  the type of the variable
      * @param name  the name of the variable

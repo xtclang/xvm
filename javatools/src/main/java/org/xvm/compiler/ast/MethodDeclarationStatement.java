@@ -751,22 +751,22 @@ public class MethodDeclarationStatement
         org.xvm.asm.Parameter[] aParams = new org.xvm.asm.Parameter[cParams];
         for (int i = 0; i < cTypes; ++i)
             {
-            Parameter param = typeParams.get(i);
+            Parameter      param     = typeParams.get(i);
             TypeExpression exprType  = param.getType();
-            TypeConstant constType = pool.ensureClassTypeConstant(pool.clzType(), null,
+            TypeConstant   typeParam = pool.ensureClassTypeConstant(pool.clzType(), null,
                     exprType == null
                             ? pool.typeObject()
                             : exprType.ensureTypeConstant());
-            aParams[i] = new org.xvm.asm.Parameter(pool, constType, param.getName(), null, false, i, true);
+            aParams[i] = new org.xvm.asm.Parameter(pool, typeParam, param.getName(), null, false, i, true);
             }
 
         boolean fDefaultRequired = false;
         for (int i = cTypes; i < cParams; ++i)
             {
-            Parameter      param        = params.get(i - cTypes);
-            String         sName        = param.getName();
-            TypeExpression exprType     = param.getType();
-            TypeConstant   typeArg      = exprType.ensureTypeConstant();
+            Parameter      param    = params.get(i - cTypes);
+            String         sName    = param.getName();
+            TypeExpression exprType = param.getType();
+            TypeConstant   typeArg  = exprType.ensureTypeConstant();
 
             aParams[i] = new org.xvm.asm.Parameter(pool, typeArg, sName, null, false, i, false);
 
