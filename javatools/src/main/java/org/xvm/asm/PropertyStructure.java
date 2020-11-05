@@ -431,7 +431,7 @@ public class PropertyStructure
         if (!listActual.isEmpty())
             {
             ClassStructure clzThis = (ClassStructure) getParent();
-            sigThis = sigThis.resolveGenericTypes(pool, clzThis.new SimpleTypeResolver(listActual));
+            sigThis = sigThis.resolveGenericTypes(pool, clzThis.new SimpleTypeResolver(pool, listActual));
             }
 
         // TODO: if read-only then isA() would suffice

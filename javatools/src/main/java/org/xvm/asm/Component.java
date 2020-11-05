@@ -3253,7 +3253,7 @@ public abstract class Component
                 return typeContrib;
                 }
 
-            GenericTypeResolver resolver = clzParent.new SimpleTypeResolver(listActual);
+            GenericTypeResolver resolver = clzParent.new SimpleTypeResolver(pool, listActual);
 
             typeContrib = typeContrib.resolveGenerics(pool, resolver);
 

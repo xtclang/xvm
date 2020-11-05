@@ -726,7 +726,7 @@ public class ClassStructure
                 Map<StringConstant, TypeConstant> mapParams = getTypeParams();
                 TypeConstant[] atypeParam = new TypeConstant[mapParams.size()];
                 int ix = 0;
-                GenericTypeResolver resolver = new SimpleTypeResolver(new ArrayList<>());
+                GenericTypeResolver resolver = new SimpleTypeResolver(pool, new ArrayList<>());
                 for (TypeConstant typeParam : mapParams.values())
                     {
                     atypeParam[ix++] = typeParam.isFormalTypeSequence()
@@ -756,7 +756,7 @@ public class ClassStructure
         {
         return listActual.isEmpty() && !isParameterized()
             ? getCanonicalType()
-            : getFormalType().resolveGenerics(pool, new SimpleTypeResolver(listActual));
+            : getFormalType().resolveGenerics(pool, new SimpleTypeResolver(pool, listActual));
         }
 
     /**
@@ -892,7 +892,8 @@ public class ClassStructure
             {
             if (contrib.getComposition() == Composition.Into)
                 {
-                TypeConstant typeContrib = contrib.resolveGenerics(pool, new SimpleTypeResolver(listRight));
+                TypeConstant typeContrib = contrib.resolveGenerics(pool,
+                                                new SimpleTypeResolver(pool, listRight));
 
                 if (typeContrib != null && typeContrib.isTuple())
                     {
@@ -925,7 +926,8 @@ public class ClassStructure
             {
             if (contrib.getComposition() == Composition.Into)
                 {
-                TypeConstant typeContrib = contrib.resolveGenerics(pool, new SimpleTypeResolver(listParams));
+                TypeConstant typeContrib = contrib.resolveGenerics(pool,
+                                                new SimpleTypeResolver(pool, listParams));
                 if (typeContrib != null && typeContrib.isTuple())
                     {
                     return typeContrib.getTupleParamTypes();
@@ -2173,7 +2175,8 @@ public class ClassStructure
 
                 case Into:
                 case Implements:
-                    typeContrib = typeContrib.resolveGenerics(pool, new SimpleTypeResolver(listRight));
+                    typeContrib = typeContrib.resolveGenerics(pool,
+                                        new SimpleTypeResolver(pool, listRight));
                     if (typeContrib != null)
                         {
                         if (typeContrib.equals(pool.typeObject()))
@@ -2244,7 +2247,7 @@ public class ClassStructure
                 TypeConstant constType = property.getType();
                 if (!listActual.isEmpty())
                     {
-                    constType = constType.resolveGenerics(pool, new SimpleTypeResolver(listActual));
+                    constType = constType.resolveGenerics(pool, new SimpleTypeResolver(pool, listActual));
                     }
 
                 if (property.isRefAccessible(access)
@@ -2398,7 +2401,7 @@ public class ClassStructure
                 TypeConstant constType = property.getType();
                 if (!listActual.isEmpty())
                     {
-                    constType = constType.resolveGenerics(pool, new SimpleTypeResolver(listActual));
+                    constType = constType.resolveGenerics(pool, new SimpleTypeResolver(pool, listActual));
                     }
 
                 if (property.isRefAccessible(access)
@@ -2553,7 +2556,7 @@ public class ClassStructure
                         {
                         if (resolver == null)
                             {
-                            resolver = new SimpleTypeResolver(listLeft);
+                            resolver = new SimpleTypeResolver(pool, listLeft);
                             }
                         sig = sig.resolveGenericTypes(pool, resolver);
                         }
@@ -2597,7 +2600,7 @@ public class ClassStructure
                             {
                             if (resolver == null)
                                 {
-                                resolver = new SimpleTypeResolver(listLeft);
+                                resolver = new SimpleTypeResolver(pool, listLeft);
                                 }
                             sig = sig.resolveGenericTypes(pool, resolver);
                             }
@@ -2676,8 +2679,9 @@ public class ClassStructure
                 {
                 MultiMethodStructure mms = (MultiMethodStructure) child;
 
-                GenericTypeResolver resolver = listParams.isEmpty() ? null :
-                    new SimpleTypeResolver(listParams);
+                GenericTypeResolver resolver = listParams.isEmpty()
+                        ? null
+                        : new SimpleTypeResolver(pool, listParams);
 
                 for (MethodStructure method : mms.methods())
                     {
@@ -2752,7 +2756,7 @@ public class ClassStructure
                 }
             else
                 {
-                typeContrib = contrib.resolveGenerics(pool, new SimpleTypeResolver(listParams));
+                typeContrib = contrib.resolveGenerics(pool, new SimpleTypeResolver(pool, listParams));
 
                 if (typeContrib.containsSubstitutableMethod(signature, access, fFunction, new ArrayList<>()))
                     {
@@ -3607,12 +3611,12 @@ public class ClassStructure
         /**
          * Create a TypeResolver based on the actual type list.
          *
+         * @param pool        the ConstantPool to use
          * @param listActual  the actual type list
          */
-        public SimpleTypeResolver(List<TypeConstant> listActual)
+        public SimpleTypeResolver(ConstantPool pool, List<TypeConstant> listActual)
             {
-            ConstantPool pool = getConstantPool();
-
+            f_pool       = pool;
             m_listActual = listActual;
 
             IdentityConstant id = getIdentityConstant();
@@ -3656,9 +3660,10 @@ public class ClassStructure
         @Override
         public TypeConstant resolveGenericType(String sFormalName)
             {
-            return extractGenericType(getConstantPool(), sFormalName, m_listActual);
+            return extractGenericType(f_pool, sFormalName, m_listActual);
             }
 
+        private final ConstantPool f_pool;
         private List<TypeConstant> m_listActual;
         }
 
