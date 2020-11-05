@@ -2012,8 +2012,6 @@ public class Frame
             m_nTypeId   = nAuxId;
             m_nStyle    = VAR_STANDARD;
             m_resolver  = resolver;
-
-            assert getType() != null; // side effect of realizing the type
             }
 
         public String getName()
@@ -2045,8 +2043,16 @@ public class Frame
                     type = m_resolver.resolve(Frame.this, m_nTargetId, m_nTypeId);
                     }
 
-                m_type    = type = type.resolveGenerics(poolContext(), getGenericsResolver());
-                m_nTypeId = type.getPosition();
+                // don't cache dynamic types
+                boolean fDynamic = type.containsDynamicType(null);
+
+                type = type.resolveGenerics(poolContext(), getGenericsResolver());
+
+                if (!fDynamic)
+                    {
+                    m_type    = type;
+                    m_nTypeId = type.getPosition();
+                    }
                 }
             return type;
             }

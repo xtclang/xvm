@@ -23,27 +23,7 @@ import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.FormalConstant;
-import org.xvm.asm.constants.FormalTypeChildConstant;
-import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.MultiMethodConstant;
-import org.xvm.asm.constants.PackageConstant;
-import org.xvm.asm.constants.ParentClassConstant;
-import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.PropertyInfo;
-import org.xvm.asm.constants.PseudoConstant;
-import org.xvm.asm.constants.SingletonConstant;
-import org.xvm.asm.constants.ThisClassConstant;
-import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypeParameterConstant;
-import org.xvm.asm.constants.TypedefConstant;
-import org.xvm.asm.constants.UnresolvedNameConstant;
+import org.xvm.asm.constants.*;
 
 import org.xvm.asm.op.*;
 
@@ -1767,9 +1747,8 @@ public class NameExpression
                 FormalConstant constFormal = null;
                 if (typeLeft.isTypeOfType() && left instanceof NameExpression)
                     {
-                    Argument argLeft = ((NameExpression) left).m_arg;
-
-                    switch (((NameExpression) left).getMeaning())
+                    NameExpression exprLeft = (NameExpression) left;
+                    switch (exprLeft.getMeaning())
                         {
                         case Variable:
                             {
@@ -1805,7 +1784,8 @@ public class NameExpression
                             TypeConstant typeData = typeLeft.getParamType(0);
                             if (typeData.containsGenericParam(sName))
                                 {
-                                TypeConstant typeFormal = ((Register) argLeft).getOriginalType().getParamType(0);
+                                Register     argLeft    = (Register) exprLeft.m_arg;
+                                TypeConstant typeFormal = argLeft.getOriginalType().getParamType(0);
                                 if (typeFormal.isFormalType())
                                     {
                                     constFormal = (FormalConstant) typeFormal.getDefiningConstant();
@@ -1837,7 +1817,7 @@ public class NameExpression
                             //           Property[] props = Element.properties;
                             //           }
                             //       }
-                            PropertyConstant idProp = (PropertyConstant) argLeft;
+                            PropertyConstant idProp = (PropertyConstant) exprLeft.m_arg;
                             if (idProp.isFormalType() &&
                                     idProp.getConstraintType().containsGenericParam(sName))
                                 {
@@ -2294,7 +2274,60 @@ public class NameExpression
                     infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                     if (infoProp != null)
                         {
-                        type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft);
+                        if (infoProp.isFormalType())
+                            {
+                            if (m_fClassAttribute)
+                                {
+                                // this can only be one of the Class' formal types,
+                                // for example: Point.StructType
+                                if (isSuppressDeref())
+                                    {
+                                    log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
+                                    return null;
+                                    }
+                                assert typeLeft.isA(pool.typeClass());
+                                type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft);
+                                }
+                            else
+                                {
+                                boolean fDynamic = false;
+
+                                if (left instanceof NameExpression)
+                                    {
+                                    NameExpression exprLeft = (NameExpression) left;
+                                    switch (exprLeft.getMeaning())
+                                        {
+                                        case Variable:
+                                            {
+                                            // this is a dynamic formal type (e.g. array.Element)
+                                            Register              argLeft      = (Register) exprLeft.m_arg;
+                                            DynamicFormalConstant constDynamic = pool.ensureDynamicFormal(
+                                                    ctx.getMethod().getIdentityConstant(), argLeft,
+                                                    idProp, exprLeft.getName());
+                                            type     = constDynamic.getType().getType();
+                                            fDynamic = true;
+                                            break;
+                                            }
+
+                                        case Property:
+                                            // REVIEW support dynamic types for properties?
+                                            break;
+
+                                        default:
+                                            break;
+                                        }
+                                    }
+
+                                if (!fDynamic)
+                                    {
+                                    type = idProp.getType();
+                                    }
+                                }
+                            }
+                        else
+                            {
+                            type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft);
+                            }
                         }
                     }
 

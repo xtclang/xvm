@@ -86,9 +86,16 @@ public class Register
         if (m_typeReg != null)
             {
             m_typeReg = (TypeConstant) registry.register(m_typeReg);
+            assert !m_typeReg.containsDynamicType(this);
             }
         else if (m_type != null)
             {
+            if (m_type.containsDynamicType(this))
+                {
+                // get rid of the self-referencing type elements
+                m_type = m_type.resolveDynamicConstraints(this);
+                }
+
             m_type = (TypeConstant) registry.register(m_type);
             }
         return this;

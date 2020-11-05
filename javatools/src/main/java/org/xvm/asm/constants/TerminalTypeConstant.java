@@ -118,6 +118,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return ((FormalConstant) constant).getParentConstant().isShared(poolOther);
 
             case ThisClass:
@@ -194,6 +195,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return (((FormalConstant) constant)).getConstraintType().isImmutable();
 
             case NativeClass:
@@ -352,6 +354,9 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
+                assert listParams.isEmpty();
+
                 return ((FormalConstant) constant).getConstraintType().
                     getGenericParamType(sName, listParams);
 
@@ -460,6 +465,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return ResolutionResult.UNKNOWN;
 
             case NativeClass:
@@ -546,8 +552,27 @@ public class TerminalTypeConstant
         Constant constId = getDefiningConstant();
         if (constId instanceof FormalConstant)
             {
-            FormalConstant constFormal  = (FormalConstant) constId;
+            FormalConstant constFormal = (FormalConstant) constId;
             return constFormal.getConstraintType().resolveConstraints();
+            }
+
+        return this;
+        }
+
+    @Override
+    public TypeConstant resolveDynamicConstraints(Register register)
+        {
+        if (isSingleDefiningConstant())
+            {
+            Constant constId = getDefiningConstant();
+            if (constId instanceof DynamicFormalConstant)
+                {
+                DynamicFormalConstant constDynamic = (DynamicFormalConstant) constId;
+                if (register == null || constDynamic.getRegister() == register)
+                    {
+                    return constDynamic.getConstraintType();
+                    }
+                }
             }
 
         return this;
@@ -566,6 +591,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return this;
 
             case Class:
@@ -854,6 +880,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return ((FormalConstant) constant).getConstraintType().isNullable();
             }
 
@@ -1003,6 +1030,22 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean containsDynamicType(Register register)
+        {
+        if (isDynamicType())
+            {
+            if (register == null)
+                {
+                return true;
+                }
+
+            DynamicFormalConstant constDynamic = (DynamicFormalConstant) getDefiningConstant();
+            return constDynamic.getRegister() == register;
+            }
+        return false;
+        }
+
+    @Override
     public boolean containsGenericType(boolean fAllowParams)
         {
         return isGenericType();
@@ -1042,6 +1085,17 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean isDynamicType()
+        {
+        if (isSingleDefiningConstant())
+            {
+            Constant constant = getDefiningConstant();
+            return constant.getFormat() == Format.DynamicFormal;
+            }
+        return false;
+        }
+
+    @Override
     public Category getCategory()
         {
         if (!isSingleDefiningConstant())
@@ -1074,6 +1128,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return Category.FORMAL;
 
             case ThisClass:
@@ -1119,6 +1174,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return ((FormalConstant) constant).getConstraintType().
                         isSingleUnderlyingClass(fAllowInterface);
 
@@ -1156,11 +1212,8 @@ public class TerminalTypeConstant
                 return (IdentityConstant) constant;
 
             case Class:
-                if (!fAllowInterface)
-                    {
-                    // must not be an interface
-                    assert (((ClassConstant) constant).getComponent()).getFormat() != Component.Format.INTERFACE;
-                    }
+                assert fAllowInterface ||
+                       (((ClassConstant) constant).getComponent()).getFormat() != Component.Format.INTERFACE;
                 return (IdentityConstant) constant;
 
             case Property:
@@ -1204,6 +1257,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return false;
 
             default:
@@ -1468,6 +1522,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 {
                 TypeConstant typeConstraint = ((FormalConstant) constant).getConstraintType();
                 int          cInvalidations = getConstantPool().getInvalidationCount();
@@ -1514,14 +1569,44 @@ public class TerminalTypeConstant
                 return constId.getReferredToType().calculateRelationToLeft(typeLeft);
                 }
 
-            TypeConstant typeConstraint = ((FormalConstant) getDefiningConstant()).getConstraintType();
-            Relation     relation       = typeConstraint.calculateRelation(typeLeft);
+            FormalConstant constRight     = (FormalConstant) getDefiningConstant();
+            TypeConstant   typeConstraint = constRight.getConstraintType();
+            if (isDynamicType())
+                {
+                Register regRight = ((DynamicFormalConstant) constRight).getRegister();
+                if (regRight != null)
+                    {
+                    if (typeLeft.containsDynamicType(regRight))
+                        {
+                        // the dynamic type is allowed to be assigned from its constraint;
+                        // the run-time will be responsible for the actual cast check
+                        typeLeft = typeLeft.resolveDynamicConstraints(regRight);
+                        }
+                    }
+                return typeConstraint.calculateRelation(typeLeft);
+                }
+
+            Relation relation = typeConstraint.calculateRelation(typeLeft);
             if (relation != Relation.INCOMPATIBLE)
                 {
                 return relation;
                 }
             }
         return super.calculateRelationToLeft(typeLeft);
+        }
+
+    @Override
+    protected Relation calculateRelationToRight(TypeConstant typeRight)
+        {
+        if (isDynamicType())
+            {
+            // the dynamic type is allowed to be assigned from its constraint;
+            // the run-time will be responsible for the actual cast check
+            TypeConstant typeConstraint =
+                    ((DynamicFormalConstant) getDefiningConstant()).getConstraintType();
+            return typeRight.calculateRelation(typeConstraint);
+            }
+        return super.calculateRelationToRight(typeRight);
         }
 
     @Override
@@ -1668,6 +1753,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return ((FormalConstant) constIdThis).getConstraintType().
                     containsSubstitutableMethod(signature, access, fFunction, listParams);
 
@@ -1700,6 +1786,7 @@ public class TerminalTypeConstant
             case TypeParameter:
             case FormalTypeChild:
             case Property: // formal types do not consume
+            case DynamicFormal:
                 return Usage.NO;
 
             case NativeClass:
@@ -1780,6 +1867,13 @@ public class TerminalTypeConstant
 
             case Property:
                 return Usage.valueOf(((PropertyConstant) constId).getName().equals(sTypeName));
+
+            case DynamicFormal:
+                {
+                FormalConstant constFormal = ((DynamicFormalConstant) constId).getFormalConstant();
+                return Usage.valueOf(constFormal instanceof PropertyConstant &&
+                        constFormal.getName().equals(sTypeName));
+                }
 
             case NativeClass:
                 constId = ((NativeRebaseConstant) constId).getClassConstant();
@@ -1980,6 +2074,7 @@ public class TerminalTypeConstant
                 case ParentClass:
                 case ChildClass:
                 case NativeClass:
+                case DynamicFormal:
                     return super.validate(errs);
 
                 case UnresolvedName:

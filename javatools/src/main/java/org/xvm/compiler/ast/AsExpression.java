@@ -65,17 +65,9 @@ public class AsExpression
         else
             {
             expr2 = exprType;
-            if (exprType.isDynamic())
-                {
-                log(errs, Severity.ERROR, Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS);
-                fValid = false;
-                }
-            else
-                {
-                type = exprType.ensureTypeConstant(ctx).resolveAutoNarrowingBase();
-                }
+            type  = exprType.ensureTypeConstant(ctx).resolveAutoNarrowingBase();
 
-            if (expr1.testFit(ctx, type, null).isFit())
+            if (!exprType.isDynamic() && expr1.testFit(ctx, type, null).isFit())
                 {
                 typeRequest     = type;
                 m_fCastRequired = false;
@@ -95,7 +87,7 @@ public class AsExpression
         if (fValid)
             {
             Constant constVal = null;
-            if (expr1.isConstant())
+            if (!m_fCastRequired && expr1.isConstant())
                 {
                 constVal = expr1.toConstant();
                 }

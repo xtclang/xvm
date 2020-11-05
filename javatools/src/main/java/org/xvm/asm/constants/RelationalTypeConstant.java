@@ -18,6 +18,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.Register;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -253,10 +254,30 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public TypeConstant resolveDynamicConstraints(Register register)
+        {
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
+        TypeConstant constResolved1 = constOriginal1.resolveDynamicConstraints(register);
+        TypeConstant constResolved2 = constOriginal2.resolveDynamicConstraints(register);
+
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : cloneRelational(getConstantPool(), constResolved1, constResolved2);
+        }
+
+    @Override
     public boolean containsFormalType(boolean fAllowParams)
         {
         return m_constType1.containsFormalType(fAllowParams)
             || m_constType2.containsFormalType(fAllowParams);
+        }
+
+    @Override
+    public boolean containsDynamicType(Register register)
+        {
+        return m_constType1.containsDynamicType(register)
+            || m_constType2.containsDynamicType(register);
         }
 
     @Override

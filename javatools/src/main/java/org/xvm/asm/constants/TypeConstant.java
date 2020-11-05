@@ -38,6 +38,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.Register;
 import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.XvmStructure;
 
@@ -843,6 +844,25 @@ public abstract class TypeConstant
         {
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = constOriginal.resolveConstraints();
+        return constResolved == constOriginal
+                ? this
+                : cloneSingle(getConstantPool(), constResolved);
+        }
+
+    /**
+     * If this type contains any dynamic formal type for the specified register, replace that
+     * dynamic type with its constraint type.
+     *
+     * Note: this method can be used only during the compilation.
+     *
+     * @param register  the register to resolve constraints for (null for all)
+     *
+     * @return the resulting type
+     */
+    public TypeConstant resolveDynamicConstraints(Register register)
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.resolveDynamicConstraints(register);
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(getConstantPool(), constResolved);
@@ -5091,7 +5111,7 @@ public abstract class TypeConstant
                     }
 
                 // the typeRight is a generic type and cannot have any modifiers
-                assert typeRight instanceof TerminalTypeConstant;
+                assert typeRight.resolveTypedefs() instanceof TerminalTypeConstant;
                 return idRight.getConstraintType().calculateRelation(typeLeft);
                 }
 
@@ -5582,8 +5602,8 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff the TypeConstant represents a "formal type", which could be either
-     *         generic type or type parameter
+     * @return true iff the TypeConstant represents a "formal type", which is based on a
+     *              {@link FormalConstant}
      */
     public boolean isFormalType()
         {
@@ -5591,16 +5611,37 @@ public abstract class TypeConstant
         }
 
     /**
-     * Check if this type contains a formal type, which could be either a generic type or a
+     * @return true iff the TypeConstant represents a "dynamic type", which is based on a
+     *              {@link DynamicFormalConstant}
+     */
+    public boolean isDynamicType()
+        {
+        return false;
+        }
+
+    /**
+     * Check if this type contains a "formal type", which could be either a generic type or a
      * type parameter.
      *
      * @param fAllowParams  true if type parameters are acceptable
      *
-     * @return true iff the TypeConstant contains a "formal type"
+     * @return true iff the TypeConstant contains a formal type
      */
     public boolean containsFormalType(boolean fAllowParams)
         {
         return getUnderlyingType().containsFormalType(fAllowParams);
+        }
+
+    /**
+     * Check if this type contains a dynamic formal type based on the specified register.
+     *
+     * @param register  the register to check for (null for all)
+     *
+     * @return true iff the TypeConstant contains a dynamic formal type
+     */
+    public boolean containsDynamicType(Register register)
+        {
+        return getUnderlyingType().containsDynamicType(register);
         }
 
     /**

@@ -651,7 +651,18 @@ public class NamedTypeExpression
                 if (left == null && names != null && names.size() > 1 && access == null
                         && immutable == null && paramTypes == null && getCodeContainer() != null)
                     {
-                    // assume that the type is "dynamic", for example: "that.Element"
+                    // assume that the type is "dynamic", for example:
+                    // "that.Element" or "that.Key.Element"
+                    NameExpression exprDyn = new NameExpression(names.get(0));
+                    getParent().adopt(exprDyn);
+
+                    for (int i = 1, cNames = names.size(); i < cNames; i++)
+                        {
+                        NameExpression exprNext = new NameExpression(exprDyn, null, names.get(i), null, lEndPos);
+                        exprDyn.adopt(exprNext);
+                        exprDyn = exprNext;
+                        }
+                    m_exprDynamic = exprDyn;
                     return;
                     }
 
@@ -664,21 +675,40 @@ public class NamedTypeExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        ConstantPool         pool       = pool();
-        List<TypeExpression> listParams = paramTypes;
-        boolean              fValid     = true;
-        TypeConstant         type       = null;
+        ConstantPool pool = pool();
+
+        if (m_exprDynamic != null)
+            {
+            NameExpression exprOld = m_exprDynamic;
+            NameExpression exprNew = (NameExpression) exprOld.validate(ctx, pool.typeType(), errs);
+            if (exprNew == null)
+                {
+                return null;
+                }
+            m_exprDynamic = exprNew;
+
+            TypeConstant typeTypeFormal = exprNew.getType();
+            TypeConstant typeFormal     = typeTypeFormal.getParamType(0);
+
+            // typeFormal could be either dynamic formal (e.g. array.Element)
+            // or a formal type for a Class (e.g. Person.StructType)
+            assert typeFormal.isFormalType();
+
+            m_constId = typeFormal;
+            return finishValidation(ctx, typeRequired, typeTypeFormal, TypeFit.Fit, null, errs);
+            }
 
         if (m_constId == null || m_constId.containsUnresolved())
             {
-            // first, try to re-resolve the type (ignore "deferred" or "error" scenarios)
+            // first, try to re-resolve the type
             ErrorListener errsTemp = errs.branch();
             NameResolver  resolver = getNameResolver();
             switch (resolver.resolve(errsTemp))
                 {
                 case DEFERRED:
                 case ERROR:
-                    break;
+                    errsTemp.merge();
+                    return null;
 
                 case RESOLVED:
                     {
@@ -712,32 +742,7 @@ public class NamedTypeExpression
                 }
             }
 
-        if (m_constId == null || m_constId.containsUnresolved())
-            {
-            // this can only mean that the name resolution ended in an error
-            // and has been deferred (e.g. "that.Element" or "that.Key.Element")
-            NameExpression exprOld = new NameExpression(names.get(0));
-            getParent().adopt(exprOld);
-
-            for (int i = 1, cNames = names.size(); i < cNames; i++)
-                {
-                NameExpression exprNext = new NameExpression(exprOld, null, names.get(i), null, lEndPos);
-                exprOld.adopt(exprNext);
-                exprOld = exprNext;
-                }
-
-            NameExpression exprNew = m_exprDynamic =
-                    (NameExpression) exprOld.validate(ctx, pool().typeType(), errs);
-
-            if (exprNew == null ||
-                finishValidation(ctx, typeRequired, exprNew.getType(), TypeFit.Fit, null, errs) == null)
-                {
-                return null;
-                }
-            m_constId = exprNew.getType();
-            return this;
-            }
-
+        TypeConstant type;
         if (left == null)
             {
             if (m_constId instanceof TypeConstant)
@@ -771,32 +776,30 @@ public class NamedTypeExpression
         else
             {
             TypeExpression exprOld = left;
-
-            Expression exprNew = exprOld.validate(ctx, null, errs);
+            Expression     exprNew = exprOld.validate(ctx, null, errs);
             if (exprNew == null)
                 {
-                fValid = false;
+                return null;
                 }
-            else
+
+            type = left.getType().getParamType(0); // Type<DataType, OuterType>
+
+            for (Token name : names)
                 {
-                type = left.getType().getParamType(0); // Type<DataType, OuterType>
+                TypeInfo infoLeft = type.ensureTypeInfo(errs);
+                String   sName    = name.getValueText();
 
-                for (Token name : names)
+                type = infoLeft.calculateChildType(pool, sName);
+                if (type == null)
                     {
-                    TypeInfo infoLeft = type.ensureTypeInfo(errs);
-                    String   sName    = name.getValueText();
-
-                    type = infoLeft.calculateChildType(pool, sName);
-                    if (type == null)
-                        {
-                        log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
-                        return null;
-                        }
+                    log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+                    return null;
                     }
                 }
             }
 
-        if (fValid && listParams != null)
+        List<TypeExpression> listParams = paramTypes;
+        if (listParams != null)
             {
             TypeConstant[] atypeParams = validateParameters(ctx, listParams, errs);
             if (atypeParams == null)
@@ -817,6 +820,7 @@ public class NamedTypeExpression
                 {
                 // this is a duplicate of the check in calculateDefaultType() in case we got
                 // to this point bypassing that logic
+                boolean fValid;
                 if (type.isExplicitClassIdentity(true))
                     {
                     ClassStructure clzTarget = (ClassStructure)
@@ -841,6 +845,7 @@ public class NamedTypeExpression
                     }
                 }
             }
+
         Access access = getExplicitAccess();
         if (access != null && access != Access.PUBLIC)
             {
@@ -853,9 +858,7 @@ public class NamedTypeExpression
             }
 
         TypeConstant typeType = type.getType();
-        return fValid
-                ? finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, typeType, errs)
-                : null;
+        return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, typeType, errs);
         }
 
     /**
@@ -1022,6 +1025,15 @@ public class NamedTypeExpression
                     }
 
                 case UnresolvedName:
+                    if (m_exprDynamic != null)
+                        {
+                        TypeConstant type = m_exprDynamic.getImplicitType(ctx);
+                        if (type != null)
+                            {
+                            assert type.isTypeOfType();
+                            return type.getParamType(0);
+                            }
+                        }
                     return m_typeUnresolved =
                             new UnresolvedTypeConstant(pool, (UnresolvedNameConstant) constTarget);
 

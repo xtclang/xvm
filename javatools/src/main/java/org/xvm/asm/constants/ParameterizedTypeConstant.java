@@ -19,6 +19,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.Register;
 
 import org.xvm.util.Severity;
 
@@ -355,13 +356,47 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public TypeConstant resolveDynamicConstraints(Register register)
+        {
+        TypeConstant constUnderlying = m_constType;
+        boolean      fDiff           = false;
+
+        assert !constUnderlying.isDynamicType();
+
+        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstResolved = aconstOriginal;
+        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+            {
+            TypeConstant constParamOriginal = aconstOriginal[i];
+            TypeConstant constParamResolved = constParamOriginal.resolveDynamicConstraints(register);
+            if (constParamOriginal != constParamResolved)
+                {
+                if (aconstResolved == aconstOriginal)
+                    {
+                    aconstResolved = aconstOriginal.clone();
+                    }
+                aconstResolved[i] = constParamResolved;
+                fDiff = true;
+                }
+            }
+
+        if (fDiff)
+            {
+            ParameterizedTypeConstant typeResolved = (ParameterizedTypeConstant)
+                getConstantPool().ensureParameterizedTypeConstant(constUnderlying, aconstResolved);
+            return typeResolved;
+            }
+        return this;
+        }
+
+    @Override
     public boolean containsFormalType(boolean fAllowParams)
         {
         if (fAllowParams)
             {
-            for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+            for (TypeConstant typeParam : m_atypeParams)
                 {
-                if (m_atypeParams[i].containsFormalType(true))
+                if (typeParam.containsFormalType(true))
                     {
                     return true;
                     }
@@ -372,13 +407,26 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public boolean containsDynamicType(Register register)
+        {
+        for (TypeConstant typeParam : m_atypeParams)
+            {
+            if (typeParam.containsDynamicType(register))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    @Override
     public boolean containsGenericType(boolean fAllowParams)
         {
         if (fAllowParams)
             {
-            for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+            for (TypeConstant typeParam : m_atypeParams)
                 {
-                if (m_atypeParams[i].containsGenericType(fAllowParams))
+                if (typeParam.containsGenericType(fAllowParams))
                     {
                     return true;
                     }
@@ -393,9 +441,9 @@ public class ParameterizedTypeConstant
         {
         if (fAllowParams)
             {
-            for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+            for (TypeConstant typeParam : m_atypeParams)
                 {
-                m_atypeParams[i].collectGenericNames(fAllowParams, setGeneric);
+                typeParam.collectGenericNames(fAllowParams, setGeneric);
                 }
             }
         }
@@ -405,9 +453,9 @@ public class ParameterizedTypeConstant
         {
         if (fAllowParams)
             {
-            for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+            for (TypeConstant typeParam : m_atypeParams)
                 {
-                if (m_atypeParams[i].containsTypeParameter(true))
+                if (typeParam.containsTypeParameter(true))
                     {
                     return true;
                     }

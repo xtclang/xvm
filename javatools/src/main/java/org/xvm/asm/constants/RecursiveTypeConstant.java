@@ -13,6 +13,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.Register;
 
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
@@ -100,6 +101,12 @@ public class RecursiveTypeConstant
 
     @Override
     public TypeConstant resolveConstraints()
+        {
+        return this;
+        }
+
+    @Override
+    public TypeConstant resolveDynamicConstraints(Register register)
         {
         return this;
         }

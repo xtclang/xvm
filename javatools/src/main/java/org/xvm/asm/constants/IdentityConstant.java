@@ -715,6 +715,7 @@ public abstract class IdentityConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return getConstantPool().ensureTerminalTypeConstant(this);
 
             default:

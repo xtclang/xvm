@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Register;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -139,6 +140,16 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
+    public TypeConstant resolveDynamicConstraints(Register register)
+        {
+        TypeConstant constOriginal = getParentType();
+        TypeConstant constResolved = constOriginal.resolveDynamicConstraints(register);
+        return constResolved == constOriginal
+                ? this
+                : cloneSingle(getConstantPool(), constResolved);
+        }
+
+    @Override
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
         {
         return null;
@@ -148,6 +159,12 @@ public abstract class AbstractDependantTypeConstant
     public boolean containsFormalType(boolean fAllowParams)
         {
         return getParentType().containsFormalType(fAllowParams);
+        }
+
+    @Override
+    public boolean containsDynamicType(Register register)
+        {
+        return getParentType().containsDynamicType(register);
         }
 
     @Override

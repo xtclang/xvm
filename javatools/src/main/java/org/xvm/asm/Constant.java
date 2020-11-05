@@ -848,6 +848,7 @@ public abstract class Constant
         ChildClass,
         TypeParameter,
         FormalTypeChild,
+        DynamicFormal,
         Signature,
         DecoratedClass,
         NativeClass,
@@ -912,6 +913,7 @@ public abstract class Constant
                 case Property:
                 case TypeParameter:
                 case FormalTypeChild:
+                case DynamicFormal:
                 case ThisClass:
                 case ParentClass:
                 case ChildClass:

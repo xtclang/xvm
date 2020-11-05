@@ -9,9 +9,14 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Register;
 
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+
 
 /**
- * Represent a constant whose purpose is to represent a run-time register.
+ * Constant whose purpose is to represent a run-time register.
  */
 public class RegisterConstant
         extends Constant
@@ -41,7 +46,7 @@ public class RegisterConstant
      * @throws IOException  if an issue occurs reading the Constant value
      */
     public RegisterConstant(ConstantPool pool, DataInput in)
-        throws IOException
+            throws IOException
         {
         super(pool);
 
@@ -71,6 +76,23 @@ public class RegisterConstant
                 : m_nReg;
         }
 
+    /**
+     * Obtain the ObjectHandle for this RegisterConstant.
+     *
+     * @return the ObjectHandle (can be DeferredCallHandle)
+     */
+    public ObjectHandle getHandle(Frame frame)
+        {
+        try
+            {
+            return frame.getArgument(getRegisterIndex());
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return new DeferredCallHandle(e.getExceptionHandle());
+            }
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -89,9 +111,10 @@ public class RegisterConstant
     @Override
     protected int compareDetails(Constant that)
         {
+        assert getRegisterIndex() != Register.UNKNOWN;
         return that instanceof RegisterConstant
-            ? this.getRegisterIndex() - ((RegisterConstant) that).getRegisterIndex()
-            : -1;
+                ? this.getRegisterIndex() - ((RegisterConstant) that).getRegisterIndex()
+                : -1;
         }
 
     @Override
@@ -99,7 +122,7 @@ public class RegisterConstant
         {
         int nReg = getRegisterIndex();
 
-        return "Register " + (nReg == Register.UNKNOWN ? "unknown" : String.valueOf(nReg));
+        return "Register " + (nReg == Register.UNKNOWN ? "?" : String.valueOf(nReg));
         }
 
 
@@ -117,7 +140,7 @@ public class RegisterConstant
     @Override
     public String getDescription()
         {
-        return "register " + getValueString();
+        return getValueString();
         }
 
 

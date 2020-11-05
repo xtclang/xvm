@@ -2,141 +2,83 @@ module TestSimple
     {
     @Inject Console console;
 
+    package json import json.xtclang.org;
+
+    import json.Mapping;
+    import json.Schema;
+
     void run()
         {
-        console.println("Running ...");
-        val tests = ["0", "3", "123", "-123", "0x9", "0xf", "-0x3ABC", "0x"];
-        NextTest: for (String test : tests)
-            {
-            IL lit;
-            try
-                {
-                lit = new IL(test);
-                }
-            catch (Exception e)
-                {
-                console.println($"exception parsing {test}: {e}");
-                continue NextTest;
-                }
+        new Token(Identifier, "hello");
 
-            console.println($"test={test}, lit={lit}");
-            }
+        Int[] ints = [1, 2];
+
+        assertElementType(ints[0], ints);
+
+        checkElementType(ints);
+
+        RMapping<IntNumber> m = new RMapping();
+        Type<Int> type = Int;
+        m.narrow(Schema.DEFAULT, type);
         }
 
-    const IL(String text)
+    const Token (Id id, Object value)
         {
-        Signum explicitSign = Zero;
-        Int    radix        = 10;
-        UIntN  magnitude;
-        String text;
-
-        construct(String text)
+        assert()
             {
-            assert text.size > 0;
-
-            // optional leading sign
-            Int of = 0;
-            switch (text[of])
-                {
-                case '-':
-                    explicitSign = Signum.Negative;
-                    ++of;
-                    break;
-
-                case '+':
-                    explicitSign = Signum.Positive;
-                    ++of;
-                    break;
-                }
-
-            // optional leading format
-            Boolean underscoreOk = False;
-            if (text.size - of >= 2 && text[of] == '0')
-                {
-                switch (text[of+1])
-                    {
-                    case 'X':
-                    case 'x':
-                        radix = 16;
-                        break;
-
-                    case 'B':
-                    case 'b':
-                        radix = 2;
-                        break;
-
-                    case 'o':
-                        radix = 8;
-                        break;
-                    }
-
-                if (radix != 10)
-                    {
-                    of += 2;
-                    underscoreOk = True;
-                    }
-                }
-
-            // digits
-            UIntN magnitude = 0;
-            Int   digits    = 0;
-            NextChar: while (of < text.size)
-                {
-                Char ch = text[of];
-                Int  nch;
-                switch (ch)
-                    {
-                    case '0'..'9':
-                        nch = ch - '0';
-                        break;
-
-                    case 'A'..'F':
-                        nch = 10 + (ch - 'A');
-                        break;
-
-                    case 'a'..'f':
-                        nch = 10 + (ch - 'a');
-                        break;
-
-                    case '_':
-                        if (underscoreOk)
-                            {
-                            continue NextChar;
-                            }
-                        continue;
-
-                    default:
-                        throw new IllegalArgument($|Illegal character {ch.toSourceString()} at \
-                                                   |offset {of} in integer literal {text.quoted}
-                                                 );
-                    }
-
-                if (nch >= radix)
-                    {
-                    throw new IllegalArgument($|Illegal digit {ch.toSourceString()} for radix \
-                                               |{radix} in integer literal {text.quoted}
-                                             );
-                    }
-
-                magnitude    = magnitude * radix + nch;
-                underscoreOk = True;
-                ++digits;
-                ++of;
-                }
-
-            if (digits == 0)
-                {
-                throw new IllegalArgument($"Illegal integer literal {text.quoted()}");
-                }
-
-            this.magnitude = magnitude;
-            this.text      = text;
-            }
-
-        @Override
-        String toString()
-            {
-            return $"IL\{text={text}, magnitude={magnitude}, radix={radix}, explicitSign={explicitSign}}";
+            assert value.is(id.Value);
             }
         }
+
+    enum Id<Value>(String? text)
+        {
+        Colon     <Object>(":"),
+        Identifier<String>(Null)
+        }
+
+    private void assertElementType(Object e, Array array)
+        {
+        assert e.is(array.Element);
+
+        array.Element e1 = array[0];
+        array.Element e2 = array[1];
+
+        assert e2 != e1;
+        }
+
+    private static <Value> Boolean checkElementType(Value o)
+        {
+        return Value.is(Type<Array>) && Value.Element.is(Type<Int>);
+        }
+
+    class RMapping<Serializable>
+        {
+        <SubType extends Serializable> Mapping<SubType> narrow(Schema schema, Type<SubType> type)
+            {
+            switch (type.form)
+                {
+                case Intersection:
+                    {
+                    TODO Intersection
+                    }
+
+                case Class:
+                    assert val clazz := type.fromClass();
+                    Type<Struct> structType = clazz.StructType;
+
+                    if (Mapping valueMapping := schema.findMapping(type))
+                        {
+                        TODO return new PropertyMapping<structType.DataType>("");
+                        }
+                    TODO Class
+
+                default:
+                    {
+                    TODO other
+                    }
+                }
+            }
+        }
+
+    const PropertyMapping<StructType>(String name);
     }

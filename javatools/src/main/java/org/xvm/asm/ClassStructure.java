@@ -1754,6 +1754,13 @@ public class ClassStructure
                 }
             else
                 {
+                // since dynamic types are added automatically, we can treat them as they are
+                // "not there" and therefore non-conflicting with the right type
+                if (typeLeft.isDynamicType())
+                    {
+                    continue;
+                    }
+
                 // Assignment  C<L1, L2> = C<R1> is not the same as
                 //             C<L1, L2> = C<R1, [canonical type for R2]>;
                 // the former is only allowed if class C produces L2

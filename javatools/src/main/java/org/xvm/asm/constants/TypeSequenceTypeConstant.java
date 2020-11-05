@@ -10,6 +10,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.Register;
 
 /**
  * Type constant that represents а constraint for a formal type parameter that materializes into
@@ -170,6 +171,12 @@ public class TypeSequenceTypeConstant
     public boolean containsFormalType(boolean fAllowParams)
         {
         return fAllowParams;
+        }
+
+    @Override
+    public boolean containsDynamicType(Register register)
+        {
+        return false;
         }
 
     @Override

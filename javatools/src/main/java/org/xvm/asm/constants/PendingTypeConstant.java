@@ -12,6 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.Register;
 
 /**
  * Represents a formal type parameter constant that has not been determined yet.
@@ -150,6 +151,12 @@ public class PendingTypeConstant
     public TypeConstant resolveConstraints()
         {
         return f_typeConstraint;
+        }
+
+    @Override
+    public boolean containsDynamicType(Register register)
+        {
+        return false;
         }
 
     @Override

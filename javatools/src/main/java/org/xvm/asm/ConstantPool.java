@@ -1110,6 +1110,25 @@ public class ConstantPool
         }
 
     /**
+     * Given a method, a register. a formal constant and a variable name obtain a corresponding
+     * DynamicFormalConstant.
+     *
+     * @param idMethod  the enclosing method id
+     * @param reg       the register
+     * @param idFormal  the underlying FormalConstant
+     * @param sVarName  the variable name for the register
+     *
+     * @return the specified formal constant
+     */
+     public DynamicFormalConstant ensureDynamicFormal(MethodConstant idMethod, Register reg,
+                                                      FormalConstant idFormal, String sVarName)
+         {
+         DynamicFormalConstant constDynamic = new DynamicFormalConstant(
+                this, idMethod, sVarName, reg, idFormal);
+         return (DynamicFormalConstant) register(constDynamic);
+         }
+
+    /**
      * Given an IdentityConstant for a singleton const class, obtain a constant that represents the
      * singleton instance of that class.
      *
@@ -2535,6 +2554,10 @@ public class ConstantPool
 
                 case Register:
                     constant = new RegisterConstant(this, in);
+                    break;
+
+                case DynamicFormal:
+                    constant = new DynamicFormalConstant(this, format, in);
                     break;
 
                 /*

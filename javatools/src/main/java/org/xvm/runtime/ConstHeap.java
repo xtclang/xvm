@@ -15,7 +15,6 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.DeferredPropertyHandle;
 import org.xvm.runtime.ObjectHandle.DeferredSingletonHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 
 /**
@@ -34,14 +33,7 @@ public abstract class ConstHeap
         {
         if (constValue instanceof RegisterConstant)
             {
-            try
-                {
-                return frame.getArgument(((RegisterConstant) constValue).getRegisterIndex());
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                return new DeferredCallHandle(e.getExceptionHandle());
-                }
+            return ((RegisterConstant) constValue).getHandle(frame);
             }
 
         // NOTE: we cannot use computeIfAbsent, since createConstHandle can be recursive,
