@@ -45,8 +45,7 @@ const NullableMapping<NotNullable>(Mapping<NotNullable> underlying)
                 right != underlying.Serializable,
                 Mapping<NotNullable> narrowedUnderlying := underlying.narrow(schema, right.as(Type<NotNullable>)))
             {
-            // TODO GG: Mapping<right.Serializable> narrowedNullable = new NullableMapping<right.Serializable>(narrowedUnderling);
-            val narrowedNullable = new NullableMapping<NotNullable>(narrowedUnderlying);
+            Mapping<right.DataType> narrowedNullable = new NullableMapping(narrowedUnderlying);
 
             return True, narrowedNullable.as(Mapping<SubType>);
             }

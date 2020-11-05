@@ -109,11 +109,11 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                     (Type left, Type right) := type.relational(),
                     left == Nullable)
                     {
-// TODO GG - dynamic type
-//                    if (val underlying := schema.findMapping(right))
-//                        {
-//                        return True, new @Narrowable NullableMapping<right.DataType>(underlying);
-//                        }
+                    if (val underlying := schema.findMapping(right.DataType))
+                        {
+                        return True, new @Narrowable NullableMapping<right.DataType>(underlying).
+                                        as(Mapping<SubType>);
+                        }
                     }
                 TODO
 
@@ -130,30 +130,29 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                 assert val clazz := type.fromClass();
                 val structType = clazz.StructType;
 
-// TODO GG
-//                if (clazz.is(Enumeration))
-//                    {
-//                    return True, new EnumMapping<clazz.EnumType>();
-//                    }
+                if (clazz.is(Enumeration))
+                    {
+                    return True, new EnumMapping<clazz.EnumType>().as(Mapping<SubType>);
+                    }
 
                 // TODO CP other singletons
                 // TODO CP disallow services
 
-// TODO GG
-//                PropertyMapping<structType.DataType>[] fields = new PropertyMapping[];
-//                for (Property<structType.DataType> prop : structType.properties)
-//                    {
-//                    assert !prop.isConstant && prop.hasField && !prop.abstract && !prop.injected;
-//
-//                    // TODO CP what if the referent type is the same as "type"? (linked list example)
-//                    if (Mapping<prop.Referent> valueMapping := schema.findMapping(prop.Referent))
-//                        {
-//                        // TODO CP - name has to be unique
-//                        fields += new PropertyMapping<structType.DataType, prop.Referent>(prop.name, valueMapping, prop);
-//                        }
-//                    }
-//                return True, new ReflectionMapping<type.DataType, structType.DataType>(schema.nameForType(type), clazz, fields);
-                TODO
+                PropertyMapping<structType.DataType>[] fields = new PropertyMapping[];
+                for (Property<structType.DataType> prop : structType.properties)
+                    {
+                    assert !prop.isConstant() && prop.hasField && !prop.abstract && !prop.injected;
+
+                    // TODO CP what if the referent type is the same as "type"? (linked list example)
+                    if (Mapping<prop.Referent> valueMapping := schema.findMapping(prop.Referent))
+                        {
+                        // TODO CP - name has to be unique
+                        fields += new PropertyMapping<structType.DataType, prop.Referent>
+                                        (prop.name, valueMapping, prop);
+                        }
+                    }
+                return True, new ReflectionMapping<type.DataType, structType.DataType>
+                                    (schema.nameForType(type), clazz, fields);
 
             // TODO could theoretically handle child classes
             // TODO check the "annotation" form ... is that possible to occur here?

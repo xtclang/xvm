@@ -133,7 +133,7 @@ public class DynamicFormalConstant
             try
                 {
                 ObjectHandle hTarget = ((Frame) resolver).getArgument(getRegisterIndex());
-                return getFormalConstant().resolve(hTarget.getType());
+                return m_constFormal.resolve(hTarget.getType());
                 }
             catch (ExceptionHandle.WrapperException e)
                 {

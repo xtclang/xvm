@@ -862,9 +862,9 @@ public class NamedTypeExpression
         }
 
     /**
-     * Validate the parameters.
+     * Validate the type parameters.
      *
-     * @return the parameter types or null if the validation failed
+     * @return the type parameter types or null if the validation failed
      */
     private TypeConstant[] validateParameters(Context ctx, List<TypeExpression> listParams,
                                               ErrorListener errs)
@@ -876,16 +876,10 @@ public class NamedTypeExpression
         for (int i = 0, c = listParams.size(); i < c; ++i)
             {
             TypeExpression exprOld = listParams.get(i);
-            TypeExpression exprNew = (TypeExpression) exprOld.validate(ctx, null, errs);
+            TypeExpression exprNew = (TypeExpression) exprOld.validate(ctx, pool.typeType(), errs);
+
             if (exprNew == null)
                 {
-                fValid = false;
-                continue;
-                }
-
-            if (exprNew.isDynamic())
-                {
-                log(errs, Severity.ERROR, Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS);
                 fValid = false;
                 continue;
                 }
@@ -895,18 +889,7 @@ public class NamedTypeExpression
                 listParams.set(i, exprNew);
                 }
 
-            TypeConstant   typeParam = exprNew.getType();
-            TypeConstant[] atypeSub  = typeParam.getParamTypesArray();
-            if (atypeSub.length >= 1 && typeParam.isA(pool.typeType()))
-                {
-                atypeParams[i] = atypeSub[0];
-                }
-            else
-                {
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                        pool.typeType().getValueString(), typeParam.getValueString());
-                fValid = false;
-                }
+            atypeParams[i] = exprNew.ensureTypeConstant(ctx);
             }
         return fValid ? atypeParams : null;
         }
@@ -1025,7 +1008,7 @@ public class NamedTypeExpression
                     }
 
                 case UnresolvedName:
-                    if (m_exprDynamic != null)
+                    if (m_exprDynamic != null && ctx != null)
                         {
                         TypeConstant type = m_exprDynamic.getImplicitType(ctx);
                         if (type != null)

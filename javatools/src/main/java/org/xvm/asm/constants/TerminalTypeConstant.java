@@ -307,6 +307,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return ((FormalConstant) constant).getConstraintType().containsGenericParam(sName);
 
             case NativeClass:
@@ -649,6 +650,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return TypeConstant.NO_TYPES;
 
             case Class:
@@ -804,6 +806,7 @@ public class TerminalTypeConstant
                 }
 
             case FormalTypeChild:
+            case DynamicFormal:
                 // this shouldn't happen
                 break;
             }
@@ -839,6 +842,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return ((FormalConstant) constant).getConstraintType().isTuple();
 
             case ThisClass:
@@ -911,6 +915,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 if (((FormalConstant) constant).getConstraintType().isNullable())
                     {
                     // Note: we use the DifferenceType here to say that "this" formal type
@@ -941,6 +946,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 {
                 FormalConstant constFormal    = (FormalConstant) constant;
                 TypeConstant   typeConstraint = constFormal.getConstraintType();
@@ -1010,6 +1016,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return ((FormalConstant) constant).getConstraintType().extendsClass(constClass);
 
             case ThisClass:
@@ -1219,6 +1226,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 return ((FormalConstant) constant).getConstraintType().
                     getSingleUnderlyingClass(fAllowInterface);
 
@@ -1417,6 +1425,7 @@ public class TerminalTypeConstant
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
             case ThisClass:
             case ParentClass:
             case ChildClass:
@@ -2070,11 +2079,11 @@ public class TerminalTypeConstant
                 case Property:
                 case TypeParameter:
                 case FormalTypeChild:
+                case DynamicFormal:
                 case ThisClass:
                 case ParentClass:
                 case ChildClass:
                 case NativeClass:
-                case DynamicFormal:
                     return super.validate(errs);
 
                 case UnresolvedName:
