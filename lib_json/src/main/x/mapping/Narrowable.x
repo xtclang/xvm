@@ -29,11 +29,6 @@ mixin Narrowable<Serializable>
                 throw new IllegalJSON($"Incompatible type: \"{this.typeName}\" required, \"{typeName}\" found");
                 }
 
-            // TODO GG: (some weird error messages and not clear what I should have been doing ..)
-            // TODO GG: Mapping<Serializable> substitute = schema.ensureMapping(schema.typeForName(typeName).as(Serializable));
-            // TODO GG: Mapping<Serializable> substitute = schema.ensureMapping(schema.typeForName<Serializable>(typeName));
-            // TODO GG: Mapping<Serializable> substitute = schema.ensureMapping(schema.typeForName(typeName)).as(Mapping<Serializable>);
-            // TODO GG: Mapping<Serializable> substitute = schema.ensureMapping(schema.typeForName(typeName).as(Serializable));
             Mapping<Serializable> substitute = schema.ensureMapping(type);
             if (&substitute != &this) // avoid infinite recursion to "this"
                 {
