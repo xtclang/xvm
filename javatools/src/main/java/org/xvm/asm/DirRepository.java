@@ -243,10 +243,9 @@ public class DirRepository
                 FileStructure struct = new FileStructure(file);
                 return struct.getModule();
                 }
-            catch (IOException e)
+            catch (Exception e)
                 {
-                System.out.println("Error loading module from file: " + file);
-                e.printStackTrace();
+                System.out.println("Error loading module from file: " + file + "; " + e.getMessage());
                 }
 
             return null;

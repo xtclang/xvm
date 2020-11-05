@@ -240,16 +240,11 @@ public class FileRepository
         try
             {
             FileStructure struct = new FileStructure(file);
-            XvmStructure top = struct.getModule();
-            if (top instanceof ModuleStructure)
-                {
-                return (ModuleStructure) top;
-                }
+            return struct.getModule();
             }
-        catch (IOException e)
+        catch (Exception e)
             {
-            System.out.println("Error loading module from file: " + file);
-            e.printStackTrace();
+            System.out.println("Error loading module from file: " + file + "; " + e.getMessage());
             }
 
         err = true;
