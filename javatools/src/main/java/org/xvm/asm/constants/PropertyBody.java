@@ -3,7 +3,6 @@ package org.xvm.asm.constants;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.PropertyStructure;
 
@@ -101,11 +100,10 @@ public class PropertyBody
     /**
      * Construct a PropertyBody that represents the specified formal type parameter.
      *
-     * @param pool        the ConstantPool to place any new constants into
      * @param struct      the property structure that this body is derived from
      * @param infoFormal  the formal type parameter information
      */
-    public PropertyBody(ConstantPool pool, PropertyStructure struct, ParamInfo infoFormal)
+    public PropertyBody(PropertyStructure struct, ParamInfo infoFormal)
         {
         assert infoFormal != null;
         assert struct == null || struct.getName().equals(infoFormal.getName());

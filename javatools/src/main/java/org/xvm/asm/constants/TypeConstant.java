@@ -3992,7 +3992,7 @@ public abstract class TypeConstant
                     PropertyConstant id    = prop.getIdentityConstant();
                     int              nRank = nBaseRank + mapProps.size() + 1;
 
-                    mapProps.put(id, new PropertyInfo(new PropertyBody(pool, prop,
+                    mapProps.put(id, new PropertyInfo(new PropertyBody(prop,
                                         mapTypeParams.get(id.getName())), nRank));
                     }
                 }
@@ -4156,7 +4156,7 @@ public abstract class TypeConstant
                 PropertyConstant idParam   = pool.ensurePropertyConstant(id, "Referent");
                 Object           nidParam  = idParam.resolveNestedIdentity(pool, this);
                 ParamInfo        param     = new ParamInfo(nidParam, "Referent", pool.typeObject(), info.getType());
-                PropertyInfo     propParam = new PropertyInfo(new PropertyBody(pool, null, param), nRank + 1);
+                PropertyInfo     propParam = new PropertyInfo(new PropertyBody(null, param), nRank + 1);
                 mapTypeParams.put(nidParam, param);
                 mapProps.put(idParam, propParam);
                 }
