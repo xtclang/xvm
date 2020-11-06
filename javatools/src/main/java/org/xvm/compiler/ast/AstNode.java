@@ -783,7 +783,7 @@ public abstract class AstNode
             stageOldest = stageNext;
             }
 
-        return true;
+        return !errs.hasSeriousErrors();
         }
 
     // ----- name resolution -----------------------------------------------------------------------
