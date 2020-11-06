@@ -1,6 +1,6 @@
 /**
  * A mapping mixin for a mapping that may need to replace itself automatically as it reads or writes
- * in order to handle a more specific type (such as a sub-class0 than the mapping was instantiated
+ * in order to handle a more specific type (such as a sub-class) than the mapping was instantiated
  * to handle.
  */
 mixin Narrowable<Serializable>

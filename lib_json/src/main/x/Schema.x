@@ -350,14 +350,18 @@ const Schema
             // mapping for the requested type wins, otherwise the first one that matches at all wins
             for (Mapping mapping : mappingByType.values)
                 {
-                if (mapping.Serializable.is(type)) // TODO GG - or should this be ".is(Type<type>)"?
+                // if (mapping.Serializable.is(Type<type>)) TODO GG weird error msg
+                if (type.DataType.is(mapping.Serializable))
                     {
-                    backupPlan ?:= mapping.as(Mapping<Serializable>);
-
                     if (val narrowedMapping := mapping.narrow(this.Schema, type))
                         {
                         allMappingsByType.put(type, narrowedMapping);
                         return True, narrowedMapping.as(Mapping<Serializable>);
+                        }
+
+                    if (mapping.is(Mapping<Serializable>))
+                        {
+                        backupPlan ?:= mapping;
                         }
                     }
                 }

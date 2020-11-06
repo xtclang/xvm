@@ -129,7 +129,8 @@ class ObjectOutputStream(Schema schema, Writer writer)
         /**
          * Prepared metadata.
          */
-        protected @LinkedList(Metadata.next) Metadata? metadata;
+        // TODO GG: protected
+        @LinkedList(Metadata.next) Metadata? metadata;
 
         @Override
         void prepareMetadata(String attribute, Doc doc)
