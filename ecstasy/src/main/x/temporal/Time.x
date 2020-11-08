@@ -1,5 +1,3 @@
-import numbers.UInt128;
-
 /**
  * A Time represents information about "time-of-day". It is primarily intended to support human
  * interface concepts, such as scheduling, or to assist in displaying information.
@@ -81,8 +79,8 @@ const Time(Int picos)
                 throw new IllegalArgument($"invalid ISO-8601 time: \"{time}\"");
             }
 
-        Int hour = new IntLiteral(hours).toInt();
-        Int min  = new IntLiteral(mins ).toInt();
+        Int hour = new IntLiteral(hours);
+        Int min  = new IntLiteral(mins );
         Int sec  = 0;
         Int pico = 0;
 
@@ -92,7 +90,7 @@ const Time(Int picos)
                 {
                 if (dot > 0)
                     {
-                    sec = new IntLiteral(secs[0..dot)).toInt();
+                    sec = new IntLiteral(secs[0..dot));
                     }
 
                 Int len = secs.size;
@@ -104,12 +102,12 @@ const Time(Int picos)
                         picos = picos[0..11];
                         }
 
-                    pico = new IntLiteral(picos).toInt() * SCALE_10[picos.size];
+                    pico = new IntLiteral(picos) * SCALE_10[picos.size];
                     }
                 }
             else
                 {
-                sec = new IntLiteral(secs).toInt();
+                sec = new IntLiteral(secs);
                 }
             }
 
@@ -197,13 +195,13 @@ const Time(Int picos)
             return this;
             }
 
-        return new Time(((picos.toUInt128() + period) % PICOS_PER_DAY).toInt());
+        return new Time(((picos.toUInt128() + period) % PICOS_PER_DAY).toInt64());
         }
 
     @Op("-") Time sub(Duration duration)
         {
         Int minuend    = this.picos;
-        Int subtrahend = (duration.picoseconds % PICOS_PER_DAY).toInt();
+        Int subtrahend = (duration.picoseconds % PICOS_PER_DAY).toInt64();
         if (subtrahend > minuend)
             {
             minuend += PICOS_PER_DAY;

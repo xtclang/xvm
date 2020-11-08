@@ -1,3 +1,6 @@
+/**
+ * UInt8, also known as "Byte", is an 8-bit unsigned integer value.
+ */
 const UInt8
         extends UIntNumber
         default(0)
@@ -66,85 +69,73 @@ const UInt8
     // ----- operations ----------------------------------------------------------------------------
 
     @Override
-    @Op("+")
-    UInt8 add(UInt8 n)
+    @Op("+") UInt8 add(UInt8 n)
         {
         return this + n;
         }
 
     @Override
-    @Op("-")
-    UInt8 sub(UInt8 n)
+    @Op("-") UInt8 sub(UInt8 n)
         {
         return this - n;
         }
 
     @Override
-    @Op("*")
-    UInt8 mul(UInt8 n)
+    @Op("*") UInt8 mul(UInt8 n)
         {
         return this * n;
         }
 
     @Override
-    @Op("/")
-    UInt8 div(UInt8 n)
+    @Op("/") UInt8 div(UInt8 n)
         {
         return this / n;
         }
 
     @Override
-    @Op("%")
-    UInt8 mod(UInt8 n)
+    @Op("%") UInt8 mod(UInt8 n)
         {
         return this % n;
         }
 
     @Override
-    @Op("&")
-    UInt8 and(UInt8 n)
+    @Op("&") UInt8 and(UInt8 n)
         {
         return new UInt8(this.bits & n.bits);
         }
 
     @Override
-    @Op("|")
-    UInt8 or(UInt8 n)
+    @Op("|") UInt8 or(UInt8 n)
         {
         return new UInt8(this.bits | n.bits);
         }
 
     @Override
-    @Op("^")
-    UInt8 xor(UInt8 n)
+    @Op("^") UInt8 xor(UInt8 n)
         {
         return new UInt8(this.bits ^ n.bits);
         }
 
     @Override
-    @Op("~")
-    UInt8 not()
+    @Op("~") UInt8 not()
         {
         return new UInt8(~bits);
         }
 
     @Override
-    @Op("<<")
-    UInt8 shiftLeft(Int count)
+    @Op("<<") UInt8 shiftLeft(Int count)
         {
         return new UInt8(bits << count);
         }
 
     @Override
-    @Op(">>")
-    UInt8 shiftRight(Int count)
+    @Op(">>") UInt8 shiftRight(Int count)
         {
         return new UInt8(bits >> count);
         }
 
     @Override
-    @Op(">>>")
-    UInt8 shiftAllRight(Int count)
+    @Op(">>>") UInt8 shiftAllRight(Int count)
         {
         return new UInt8(bits >>> count);
         }
@@ -271,7 +262,7 @@ const UInt8
         }
 
     @Override
-    @Auto Int8 toInt8()
+    Int8 toInt8()
         {
         assert:bounds this <= Int8.maxvalue;
         return new Int8(bits);
@@ -280,29 +271,35 @@ const UInt8
     @Override
     @Auto Int16 toInt16()
         {
-        return new Int16(new Array<Bit>(16, i -> (i < 16-bitLength ? 0 : bits[i])));
+        return new Int16(new Array<Bit>(16, i -> i < 16-bitLength ? 0 : bits[i]));
         }
 
     @Override
     @Auto Int32 toInt32()
         {
-        return new Int32(new Array<Bit>(32, i -> (i < 32-bitLength ? 0 : bits[i])));
+        return new Int32(new Array<Bit>(32, i -> i < 32-bitLength ? 0 : bits[i]));
         }
 
     @Override
-    @Auto Int64 toInt()
+    @Auto Int64 toInt64()
         {
-        return new Int64(new Array<Bit>(64, i -> (i < 64-bitLength ? 0 : bits[i])));
+        return new Int64(new Array<Bit>(64, i -> i < 64-bitLength ? 0 : bits[i]));
         }
 
     @Override
     @Auto Int128 toInt128()
         {
-        return new Int128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])));
+        return new Int128(new Array<Bit>(128, i -> i < 128-bitLength ? 0 : bits[i]));
         }
 
     @Override
-    @Auto UInt8 toByte()
+    @Auto IntN toIntN()
+        {
+        return bits[0] == 0 ? new IntN(bits) : toUInt16().toIntN();
+        }
+
+    @Override
+    UInt8 toUInt8()
         {
         return this;
         }
@@ -310,31 +307,25 @@ const UInt8
     @Override
     @Auto UInt16 toUInt16()
         {
-        return new UInt16(new Array<Bit>(16, i -> (i < 16-bitLength ? 0 : bits[i])));
+        return new UInt16(new Array<Bit>(16, i -> i < 16-bitLength ? 0 : bits[i]));
         }
 
     @Override
     @Auto UInt32 toUInt32()
         {
-        return new UInt32(new Array<Bit>(32, i -> (i < 32-bitLength ? 0 : bits[i])));
+        return new UInt32(new Array<Bit>(32, i -> i < 32-bitLength ? 0 : bits[i]));
         }
 
     @Override
-    @Auto UInt64 toUInt()
+    @Auto UInt64 toUInt64()
         {
-        return new UInt64(new Array<Bit>(64, i -> (i < 64-bitLength ? 0 : bits[i])));
+        return new UInt64(new Array<Bit>(64, i -> i < 64-bitLength ? 0 : bits[i]));
         }
 
     @Override
     @Auto UInt128 toUInt128()
         {
-        return new UInt128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])));
-        }
-
-    @Override
-    @Auto IntN toIntN()
-        {
-        return bits[0] == 0 ? new IntN(bits) : toUInt16().toIntN();
+        return new UInt128(new Array<Bit>(128, i -> i < 128-bitLength ? 0 : bits[i]));
         }
 
     @Override

@@ -1,9 +1,5 @@
 module TestNumbers
     {
-    import ecstasy.numbers.Int8;
-    import ecstasy.numbers.Int128;
-    import ecstasy.numbers.UInt128;
-
     @Inject ecstasy.io.Console console;
 
     void run()
@@ -52,13 +48,13 @@ module TestNumbers
             {
             }
 
-        Int un1 = Int.maxvalue.toInt().toUnchecked();
+        Int un1 = Int.maxvalue.toInt64().toUnchecked();
         Int un2 = un1 + 1;
 
         assert un2 == Int.minvalue; // wraps around w/out exception
         assert un2.is(@Unchecked Int);
 
-        UInt un3 = UInt.maxvalue.toUInt().toUnchecked();
+        UInt un3 = UInt.maxvalue.toUInt64().toUnchecked();
         UInt un4 = ++un3;
         assert un4 == 0;
 
@@ -91,7 +87,7 @@ module TestNumbers
             }
 
         // Byte == UInt8
-        Byte un1 = Byte.maxvalue.toByte().toUnchecked();
+        Byte un1 = Byte.maxvalue.toUInt8().toUnchecked();
         Byte un2 = un1 + 1;
 
         assert un2 == 0; // wraps around w/out exception
@@ -208,8 +204,6 @@ module TestNumbers
 
     void testFloat32()
         {
-        import ecstasy.numbers.Float32;
-
         console.println("\n** testFloat32()");
 
         Float32 n1 = 4.2;
@@ -229,8 +223,6 @@ module TestNumbers
 
     void testFloat16()
         {
-        import ecstasy.numbers.Float16;
-
         console.println("\n** testFloat16()");
 
         Float16 n1 = 4.2;

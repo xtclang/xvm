@@ -189,7 +189,7 @@ const IntNumber
     @Override
     Int stepsTo(IntNumber that)
         {
-        return (that - this).toInt();
+        return (that - this).toInt64();
         }
 
     @Override
@@ -216,7 +216,7 @@ const IntNumber
      */
     Char toHexit()
         {
-        Int nibble = toUnchecked().toInt() & 0xF;
+        UInt32 nibble = toUnchecked().toUInt32() & 0xF;          // TODO CP sliceByte()
         return nibble <= 9 ? '0' + nibble : 'A' + nibble - 10;
         }
 

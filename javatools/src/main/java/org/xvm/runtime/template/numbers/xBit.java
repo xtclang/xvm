@@ -42,9 +42,9 @@ public class xBit
         ONE  = new JavaLong(getCanonicalClass(), 1);
 
         markNativeMethod("toBoolean", VOID, new String[]{"Boolean"});
-        markNativeMethod("toByte"   , VOID, new String[]{"numbers.UInt8"}); // Byte
-        markNativeMethod("toInt"    , VOID, new String[]{"numbers.Int64"});
-        markNativeMethod("toUInt"   , VOID, new String[]{"numbers.UInt64"});
+        markNativeMethod("toUInt8"  , VOID, new String[]{"numbers.UInt8"}); // Byte
+        markNativeMethod("toInt64"  , VOID, new String[]{"numbers.Int64"});
+        markNativeMethod("toUInt64" , VOID, new String[]{"numbers.UInt64"});
 
         markNativeMethod("and", THIS, THIS);
         markNativeMethod("or" , THIS, THIS);
@@ -103,9 +103,9 @@ public class xBit
         switch (method.getName())
             {
             case "toBoolean":
-            case "toByte":
-            case "toInt":
-            case "toUInt":
+            case "toUInt8":
+            case "toInt64":
+            case "toUInt64":
                 {
                 TypeConstant  typeRet  = method.getReturn(0).getType();
                 ClassTemplate template = f_templates.getTemplate(typeRet);

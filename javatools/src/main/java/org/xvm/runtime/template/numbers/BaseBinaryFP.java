@@ -134,7 +134,7 @@ abstract public class BaseBinaryFP
                     xBitArray.makeHandle(abValue, f_cBits, xArray.Mutability.Constant));
                 }
 
-            case "toInt":
+            case "toInt64":
                 // TODO: overflow check
                 return Double.isInfinite(d)
                     ? overflow(frame)

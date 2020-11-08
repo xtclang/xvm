@@ -1,28 +1,3 @@
-import numbers.Bit;
-import numbers.BFloat16;
-import numbers.Dec32;
-import numbers.Dec64;
-import numbers.Dec128;
-import numbers.Float16;
-import numbers.Float32;
-import numbers.Float64;
-import numbers.Float128;
-import numbers.Int8;
-import numbers.Int16;
-import numbers.Int32;
-import numbers.Int64;
-import numbers.Int128;
-import numbers.Nibble;
-import numbers.UInt8;
-import numbers.UInt16;
-import numbers.UInt32;
-import numbers.UInt64;
-import numbers.UInt128;
-import numbers.DecN;
-import numbers.FloatN;
-import numbers.IntN;
-import numbers.UIntN;
-
 /**
  * Array is the fundamental implementation of List; it is an Int-indexed container of elements of a
  * particular type.
@@ -1365,6 +1340,14 @@ class Array<Element>
             }
 
         /**
+         * A second name for the [toUInt8] method, to assist with readability. By using a property
+         * to alias the method, instead of creating a second delegating method, this prevents the
+         * potential for accidentally overriding the wrong method.
+         */
+        // TODO GG: static Method<BitArray<Element>, <>, <Byte>> toByte = toUInt8;
+        Byte toByte() {return  toUInt8();}
+
+        /**
          * Obtain the number as an array of bytes, in left-to-right order.
          */
         immutable Byte[] toByteArray()
@@ -1412,15 +1395,7 @@ class Array<Element>
 //
 //            return bytes.freeze(True);
             }
-
-        /**
-         * Convert the bit array to a variable-length signed integer.
-         */
-        IntN toIntN()
-            {
-            TODO
-            }
-
+// TODO CP something like verifyMax2sComplementBytes() etc.
         /**
          * Convert the bit array to a signed 8-bit integer.
          *
@@ -1428,7 +1403,7 @@ class Array<Element>
          */
         Int8 toInt8()
             {
-            return toIntN().toInt8();
+            return new Int8(this);
             }
 
         /**
@@ -1438,7 +1413,7 @@ class Array<Element>
          */
         Int16 toInt16()
             {
-            return toIntN().toInt16();
+            return new Int16(this);
             }
 
         /**
@@ -1448,7 +1423,7 @@ class Array<Element>
          */
         Int32 toInt32()
             {
-            return toIntN().toInt32();
+            return new Int32(this);
             }
 
         /**
@@ -1456,9 +1431,9 @@ class Array<Element>
          *
          * @throws OutOfBounds  if the resulting value is out of the signed 64-bit integer range
          */
-        Int64 toInt()
+        Int64 toInt64()
             {
-            return toIntN().toInt();
+            return new Int64(this);
             }
 
         /**
@@ -1468,7 +1443,65 @@ class Array<Element>
          */
         Int128 toInt128()
             {
-            return toIntN().toInt128();
+            return new Int128(this);
+            }
+
+        /**
+         * Convert the bit array to a variable-length signed integer.
+         */
+        IntN toIntN()
+            {
+            return new IntN(this);
+            }
+
+        /**
+         * Convert the bit array to an unsigned 8-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the unsigned 8-bit integer range
+         */
+        UInt8 toUInt8()
+            {
+            return new UInt8(this);
+            }
+
+        /**
+         * Convert the bit array to an unsigned 16-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the unsigned 16-bit integer range
+         */
+        UInt16 toUInt16()
+            {
+            return new UInt16(this);
+            }
+
+        /**
+         * Convert the bit array to an unsigned 32-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the unsigned 32-bit integer range
+         */
+        UInt32 toUInt32()
+            {
+            return new UInt32(this);
+            }
+
+        /**
+         * Convert the bit array to an unsigned 64-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the unsigned 64-bit integer range
+         */
+        UInt64 toUInt64()
+            {
+            return new UInt64(this);
+            }
+
+        /**
+         * Convert the bit array to an unsigned 128-bit integer.
+         *
+         * @throws OutOfBounds  if the resulting value is out of the unsigned 128-bit integer range
+         */
+        UInt128 toUInt128()
+            {
+            return new UInt128(this);
             }
 
         /**
@@ -1476,73 +1509,7 @@ class Array<Element>
          */
         UIntN toUIntN()
             {
-            TODO
-            }
-
-        /**
-         * Convert the bit array to a unsigned 8-bit integer.
-         *
-         * @throws OutOfBounds  if the resulting value is out of the unsigned 8-bit integer range
-         */
-        UInt8 toByte()
-            {
-            return toUIntN().toByte();
-            }
-
-        /**
-         * Convert the bit array to a unsigned 16-bit integer.
-         *
-         * @throws OutOfBounds  if the resulting value is out of the unsigned 16-bit integer range
-         */
-        UInt16 toUInt16()
-            {
-            return toUIntN().toUInt16();
-            }
-
-        /**
-         * Convert the bit array to a unsigned 32-bit integer.
-         *
-         * @throws OutOfBounds  if the resulting value is out of the unsigned 32-bit integer range
-         */
-        UInt32 toUInt32()
-            {
-            return toUIntN().toUInt32();
-            }
-
-        /**
-         * Convert the bit array to a unsigned 64-bit integer.
-         *
-         * @throws OutOfBounds  if the resulting value is out of the unsigned 64-bit integer range
-         */
-        UInt64 toUInt()
-            {
-            return toUIntN().toUInt();
-            }
-
-        /**
-         * Convert the bit array to a unsigned 128-bit integer.
-         *
-         * @throws OutOfBounds  if the resulting value is out of the unsigned 128-bit integer range
-         */
-        UInt128 toUInt128()
-            {
-            return toIntN().toUInt128();
-            }
-
-        /**
-         * Convert the bit array to a variable-length binary radix floating point number.
-         */
-        FloatN toFloatN()
-            {
-            TODO
-            }
-
-        /**
-         * Convert the bit array to a 16-bit radix-2 (binary) floating point number.
-         */
-        Float16 toFloat16()
-            {
-            return toFloatN().toFloat16();
+            return new UIntN(this);
             }
 
         /**
@@ -1550,7 +1517,15 @@ class Array<Element>
          */
         BFloat16 toBFloat16()
             {
-            return toFloatN().toBFloat16();
+            return new BFloat16(this);
+            }
+
+        /**
+         * Convert the bit array to a 16-bit radix-2 (binary) floating point number.
+         */
+        Float16 toFloat16()
+            {
+            return new Float16(this);
             }
 
         /**
@@ -1558,7 +1533,7 @@ class Array<Element>
          */
         Float32 toFloat32()
             {
-            return toFloatN().toFloat32();
+            return new Float32(this);
             }
 
         /**
@@ -1566,7 +1541,7 @@ class Array<Element>
          */
         Float64 toFloat64()
             {
-            return toFloatN().toFloat64();
+            return new Float64(this);
             }
 
         /**
@@ -1574,15 +1549,15 @@ class Array<Element>
          */
         Float128 toFloat128()
             {
-            return toFloatN().toFloat128();
+            return new Float128(this);
             }
 
         /**
-         * Convert the bit array to a variable-length decimal radix floating point number.
+         * Convert the bit array to a variable-length binary radix floating point number.
          */
-        DecN toDecN()
+        FloatN toFloatN()
             {
-            TODO
+            return new FloatN(this);
             }
 
         /**
@@ -1590,7 +1565,7 @@ class Array<Element>
          */
         Dec32 toDec32()
             {
-            return toDecN().toDec32();
+            return new Dec32(this);
             }
 
         /**
@@ -1598,7 +1573,7 @@ class Array<Element>
          */
         Dec64 toDec64()
             {
-            return toDecN().toDec64();
+            return new Dec64(this);
             }
 
         /**
@@ -1606,7 +1581,15 @@ class Array<Element>
          */
         Dec128 toDec128()
             {
-            return toDecN().toDec128();
+            return new Dec128(this);
+            }
+
+        /**
+         * Convert the bit array to a variable-length decimal radix floating point number.
+         */
+        DecN toDecN()
+            {
+            return new DecN(this);
             }
         }
 
@@ -1673,16 +1656,12 @@ class Array<Element>
             }
 
         /**
-         * Convert the byte array to a variable-length signed integer.
-         *
-         * @throws OutOfBounds  if the byte array is too large to be converted to a variable-length
-         *                      signed integer
+         * A second name for the [toUInt8] method, to assist with readability. By using a property
+         * to alias the method, instead of creating a second delegating method, this prevents the
+         * potential for accidentally overriding the wrong method.
          */
-        IntN toIntN()
-            {
-            assert:bounds size > 0;
-            return new IntN(this);
-            }
+        // TODO GG: static Method<ByteArray<Element>, <>, <Byte>> toByte = toUInt8;
+        Byte toByte() {return  toUInt8();}
 
         /**
          * Convert the byte array to a signed 8-bit integer.
@@ -1727,7 +1706,7 @@ class Array<Element>
          *                      signed integer, or if the resulting value is out of the signed
          *                      64-bit integer range
          */
-        Int64 toInt()
+        Int64 toInt64()
             {
             return new Int64(verifyMax2sComplementBytes(8));
             }
@@ -1745,31 +1724,31 @@ class Array<Element>
             }
 
         /**
-         * Convert the byte array to a variable-length unsigned integer.
+         * Convert the byte array to a variable-length signed integer.
          *
          * @throws OutOfBounds  if the byte array is too large to be converted to a variable-length
-         *                      unsigned integer
+         *                      signed integer
          */
-        UIntN toUIntN()
+        IntN toIntN()
             {
             assert:bounds size > 0;
-            return new UIntN(this);
+            return new IntN(this);
             }
 
         /**
-         * Convert the byte array to a unsigned 8-bit integer.
+         * Convert the byte array to an unsigned 8-bit integer.
          *
          * @throws OutOfBounds  if the byte array is too large to be converted to a 8-bit
          *                      unsigned integer, or if the resulting value is out of the unsigned
          *                      8-bit integer range
          */
-        UInt8 toByte()
+        UInt8 toUInt8()
             {
             return new UInt8(verifyMaxSignificantBytes(1));
             }
 
         /**
-         * Convert the byte array to a unsigned 16-bit integer.
+         * Convert the byte array to an unsigned 16-bit integer.
          *
          * @throws OutOfBounds  if the byte array is too large to be converted to a 16-bit
          *                      unsigned integer, or if the resulting value is out of the unsigned
@@ -1781,7 +1760,7 @@ class Array<Element>
             }
 
         /**
-         * Convert the byte array to a unsigned 32-bit integer.
+         * Convert the byte array to an unsigned 32-bit integer.
          *
          * @throws OutOfBounds  if the byte array is too large to be converted to a 32-bit
          *                      unsigned integer, or if the resulting value is out of the unsigned
@@ -1793,19 +1772,19 @@ class Array<Element>
             }
 
         /**
-         * Convert the byte array to a unsigned 64-bit integer.
+         * Convert the byte array to an unsigned 64-bit integer.
          *
          * @throws OutOfBounds  if the byte array is too large to be converted to a 64-bit
          *                      unsigned integer, or if the resulting value is out of the unsigned
          *                      64-bit integer range
          */
-        UInt64 toUInt()
+        UInt64 toUInt64()
             {
             return new UInt64(verifyMaxSignificantBytes(8));
             }
 
         /**
-         * Convert the byte array to a unsigned 128-bit integer.
+         * Convert the byte array to an unsigned 128-bit integer.
          *
          * @throws OutOfBounds  if the byte array is too large to be converted to a 128-bit
          *                      unsigned integer, or if the resulting value is out of the unsigned
@@ -1817,15 +1796,15 @@ class Array<Element>
             }
 
         /**
-         * Convert the byte array to a variable-length binary radix floating point number.
+         * Convert the byte array to a variable-length unsigned integer.
          *
          * @throws OutOfBounds  if the byte array is too large to be converted to a variable-length
-         *                      radix-2 (binary) floating point number
+         *                      unsigned integer
          */
-        FloatN toFloatN()
+        UIntN toUIntN()
             {
-            assert:bounds size >= 2 && size.bitCount == 1;
-            return new FloatN(this);
+            assert:bounds size > 0;
+            return new UIntN(this);
             }
 
         /**
@@ -1889,15 +1868,15 @@ class Array<Element>
             }
 
         /**
-         * Convert the byte array to a variable-length decimal radix floating point number.
+         * Convert the byte array to a variable-length binary radix floating point number.
          *
          * @throws OutOfBounds  if the byte array is too large to be converted to a variable-length
-         *                      radix-10 (decimal) floating point number
+         *                      radix-2 (binary) floating point number
          */
-        DecN toDecN()
+        FloatN toFloatN()
             {
-            assert:bounds size >= 4 && size.bitCount == 1;
-            return new DecN(this);
+            assert:bounds size >= 2 && size.bitCount == 1;
+            return new FloatN(this);
             }
 
         /**
@@ -1934,6 +1913,18 @@ class Array<Element>
             {
             assert:bounds size == 16;
             return new Dec128(this);
+            }
+
+        /**
+         * Convert the byte array to a variable-length decimal radix floating point number.
+         *
+         * @throws OutOfBounds  if the byte array is too large to be converted to a variable-length
+         *                      radix-10 (decimal) floating point number
+         */
+        DecN toDecN()
+            {
+            assert:bounds size >= 4 && size.bitCount == 1;
+            return new DecN(this);
             }
 
         /**
@@ -2028,7 +2019,7 @@ class Array<Element>
             // in which the entire value is contained in the 7 MSBs
             if (b & 0x01 != 0)
                 {
-                return (b >> 1).toInt(), offset + 1;
+                return (b >> 1), offset + 1;
                 }
 
             // Small and Medium formats are indicated by the second bit (and differentiated by the
@@ -2038,25 +2029,25 @@ class Array<Element>
             // the result, and the next byte provides bits 0..7 of the result
             if (b & 0x02 != 0)
                 {
-                Int n = (b >> 3).toInt() << 8 | this[offset+1].toInt();
+                Int n = (b >> 3).toInt64() << 8 | this[offset+1];
 
                 // the third bit is used to indicate Medium format (a second trailing byte)
                 return b & 0x04 != 0
-                        ? (n << 8 | this[offset+2].toInt(), offset + 3)
+                        ? (n << 8 | this[offset+2], offset + 3)
                         : (n, offset + 2);
                 }
 
             // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
             // first byte are the trailing number of bytes minus 1
-            Int size = 1 + (b >>> 2).toInt();
+            Int size = 1 + (b >>> 2);
             assert:bounds size <= 8;
 
             Int  curOffset  = offset + 1;
             Int  nextOffset = curOffset + size;
-            Int  n          = new Int8(this[curOffset++].toBitArray()).toInt();  // sign-extend
+            Int  n          = new Int8(this[curOffset++].toBitArray());     // sign-extend
             while (curOffset < nextOffset)
                 {
-                n = n << 8 | this[curOffset++].toInt();
+                n = n << 8 | this[curOffset++];
                 }
             return n, nextOffset;
             }

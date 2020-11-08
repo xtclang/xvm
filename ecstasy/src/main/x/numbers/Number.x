@@ -285,6 +285,14 @@ const Number
         }
 
     /**
+     * A second name for the [toUInt8] method, to assist with readability. By using a property
+     * to alias the method, instead of creating a second delegating method, this prevents the
+     * potential for accidentally overriding the wrong method.
+     */
+    // TODO GG: static Method<Number, <>, <Byte>> toByte = toUInt8;
+    Byte toByte() {return  toUInt8();}
+
+    /**
      * Obtain the number as an array of bytes, in left-to-right order.
      *
      * @return the number as an array of bytes
@@ -344,9 +352,9 @@ const Number
      *
      * @throws OutOfBounds  if the resulting value is out of the signed 64-bit integer range
      */
-    Int64 toInt()
+    Int64 toInt64()
         {
-        return toIntN().toInt();
+        return toIntN().toInt64();
         }
 
     /**
@@ -375,9 +383,9 @@ const Number
      *
      * @throws OutOfBounds  if the resulting value is out of the unsigned 8-bit integer range
      */
-    UInt8 toByte()
+    UInt8 toUInt8()
         {
-        return toUIntN().toByte();
+        return toUIntN().toUInt8();
         }
 
     /**
@@ -411,9 +419,9 @@ const Number
      *
      * @throws OutOfBounds  if the resulting value is out of the unsigned 64-bit integer range
      */
-    UInt64 toUInt()
+    UInt64 toUInt64()
         {
-        return toUIntN().toUInt();
+        return toUIntN().toUInt64();
         }
 
     /**

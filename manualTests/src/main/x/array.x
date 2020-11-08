@@ -110,19 +110,19 @@ module TestArray
         {
         console.println("\n** testFixedArray()");
 
-        String[] list = new Array<String>(3, (i) -> ["one","two","three"][i]);
+        String[] list = new Array<String>(3, i -> ["one","two","three"][i]);
         console.println("list=" + list);
 
-        Char[] chars = new Array<Char>(3, (i) -> ('a' + i));
+        Char[] chars = new Array<Char>(3, i -> 'a' + i.toUInt32());
         console.println("chars=" + chars);
 
-        Int[] ints = new Array<Int>(3, (i) -> -i);
+        Int[] ints = new Array<Int>(3, i -> -i);
         console.println("ints=" + ints);
 
-        Byte[] bytes = new Array<Byte>(3, (i) -> i.toByte());
+        Byte[] bytes = new Array<Byte>(3, i -> i.toByte());
         console.println("ints=" + bytes);
 
-        Boolean[] booleans = new Array<Boolean>(3, (i) -> i % 2 == 0);
+        Boolean[] booleans = new Array<Boolean>(3, i -> i % 2 == 0);
         console.println("booleans=" + booleans);
         }
 
@@ -173,8 +173,6 @@ module TestArray
 
     void testNibble()
         {
-        import ecstasy.numbers.Nibble;
-
         console.println("\n** testNibble()");
 
         loop:
@@ -186,8 +184,6 @@ module TestArray
 
     void testBits()
         {
-        import ecstasy.numbers.Bit;
-
         console.println("\n** testBits()");
 
         Int n = 17;
@@ -212,7 +208,6 @@ module TestArray
         {
         import ecstasy.collections.Hasher;
         import ecstasy.collections.NaturalHasher;
-        import ecstasy.numbers.Bit;
 
         console.println("\n** testComparable()");
 

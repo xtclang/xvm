@@ -40,17 +40,17 @@ const ConstOrdinalList
         @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
 
         Int valueCount = values.size;
-        out.writeInt(valueCount);
+        out.writeInt64(valueCount);
 
         if (valueCount > 0)
             {
             (Int highest, Int defaultVal) = analyzeValues(values);
-            out.writeInt(defaultVal);
+            out.writeInt64(defaultVal);
 
             // calculate bits per value
             Int bitsPerVal = highest.leftmostBit.trailingZeroCount + 1 & 0x3F;
             assert bitsPerVal > 0 && bitsPerVal <= 63;
-            out.writeInt(bitsPerVal);
+            out.writeInt64(bitsPerVal);
 
             // calculate a minimum run length based on expected node sizes (assume 6 byte overhead)
             Int minRunLen = (6 * 8 - 1) / bitsPerVal + 1;
@@ -63,7 +63,7 @@ const ConstOrdinalList
             ensureFastNode(nodes, values, fastAccess, minRunLen);
 
             // last field in the header is the index of the first value from the first node
-            out.writeInt(nodes.size == 0 ? valueCount : nodes[0].index);
+            out.writeInt64(nodes.size == 0 ? valueCount : nodes[0].index);
 
             if (nodes.size > 0)
                 {
@@ -311,7 +311,7 @@ const ConstOrdinalList
                 Int bitCount = 8 - (bitOffset & 0x7);
                 Int bitShift = 8 - bitCount;
 
-                byte |= val << bitShift;
+                byte |= (val << bitShift).toByte(); // TODO CP REVIEW GG this should throw .. we need a "slice byte"
                 binVal[byteOffset] = byte;
 
                 val     >>>= bitCount;
@@ -359,7 +359,7 @@ const ConstOrdinalList
         Int remainingBits = bitsPerVal;
         while (remainingBits > 0)
             {
-            Int  byteVal    = contents[packedOffset + bitOffset / 8].toInt();
+            Int  byteVal    = contents[packedOffset + bitOffset / 8].toInt64(); // TODO GG get rid of ".toInt64()"
             Int  partOffset = bitOffset & 0x7;
             Int  partLength = (8 - partOffset).minOf(remainingBits);
 
@@ -669,16 +669,16 @@ const ConstOrdinalList
                 }
 
             @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
-            out.writeInt(jumpIndex);
+            out.writeInt64(jumpIndex);
             if (jumpIndex != 0)
                 {
-                out.writeInt(jumpOffset);
+                out.writeInt64(jumpOffset);
                 }
-            out.writeInt(nextIndex);
-            out.writeInt(valCount);
+            out.writeInt64(nextIndex);
+            out.writeInt64(valCount);
             if (node.runLenEnc)
                 {
-                out.writeInt(val);
+                out.writeInt64(val);
                 }
             else
                 {

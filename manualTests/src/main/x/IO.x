@@ -82,44 +82,44 @@ module TestIO
         @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
         for (Int i : [-150..+150])
             {
-            out.writeInt(i);
+            out.writeInt64(i);
             }
 
         Int[] others = [minvalue, maxvalue, -12341235, -1234151515, +1324153, +1512358723597];
         for (Int i : others)
             {
-            out.writeInt(i);
+            out.writeInt64(i);
             }
 
         for (Int i = 1; i > 0; i = i << 1)
             {
-            out.writeInt(i);
-            out.writeInt(i+1);
-            out.writeInt(i-1);
-            out.writeInt(-i);
-            out.writeInt(-(i+1));
-            out.writeInt(-(i-1));
+            out.writeInt64(i);
+            out.writeInt64(i+1);
+            out.writeInt64(i-1);
+            out.writeInt64(-i);
+            out.writeInt64(-(i+1));
+            out.writeInt64(-(i-1));
             }
 
 
         @PackedDataInput ByteArrayInputStream in = new @PackedDataInput ByteArrayInputStream(out.bytes);
         for (Int i : [-150..+150])
             {
-            assert in.readInt() == i;
+            assert in.readInt64() == i;
             }
         for (Int i : others)
             {
-            assert in.readInt() == i;
+            assert in.readInt64() == i;
             }
 
         for (Int i = 1; i > 0; i = i << 1)
             {
-            assert in.readInt() == i;
-            assert in.readInt() == i+1;
-            assert in.readInt() == i-1;
-            assert in.readInt() == -i;
-            assert in.readInt() == -(i+1);
-            assert in.readInt() == -(i-1);
+            assert in.readInt64() == i;
+            assert in.readInt64() == i+1;
+            assert in.readInt64() == i-1;
+            assert in.readInt64() == -i;
+            assert in.readInt64() == -(i+1);
+            assert in.readInt64() == -(i-1);
             }
         }
 
@@ -311,7 +311,7 @@ module TestIO
                 }
 //                Doc doc = in.readDoc();
 //                Map<String, Doc> map = doc.as(Map<String, Doc>);
-//                return new Point(map["x"].as(IntLiteral).toInt(), map["y"].as(IntLiteral).toInt()).as(ObjectType);
+//                return new Point(map["x"].as(IntLiteral).toInt64(), map["y"].as(IntLiteral).toInt64()).as(ObjectType);
             }
 
         @Override

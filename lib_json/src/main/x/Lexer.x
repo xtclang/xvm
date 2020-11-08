@@ -4,8 +4,6 @@ import ecstasy.io.EndOfFile;
 import ecstasy.io.IOException;
 import ecstasy.io.TextPosition;
 
-import ecstasy.numbers.Nibble;
-
 /**
  * A lexer for a JSON document.
  *

@@ -52,15 +52,15 @@ public abstract class BaseInt128
         markNativeMethod("toUnchecked", VOID, null);
 
         markNativeMethod("toInt128" , VOID, sName.equals("numbers.Int128") ? THIS : new String[]{"numbers.Int128"});
-        markNativeMethod("toInt"    , VOID, new String[]{"numbers.Int64"});
+        markNativeMethod("toInt64"  , VOID, new String[]{"numbers.Int64"});
         markNativeMethod("toInt32"  , VOID, new String[]{"numbers.Int32"});
         markNativeMethod("toInt16"  , VOID, new String[]{"numbers.Int16"});
         markNativeMethod("toInt8"   , VOID, new String[]{"numbers.Int8"});
         markNativeMethod("toUInt128", VOID, sName.equals("numbers.UInt128") ? THIS : new String[]{"numbers.UInt128"});
-        markNativeMethod("toUInt"   , VOID, new String[]{"numbers.UInt64"});
+        markNativeMethod("toUInt64" , VOID, new String[]{"numbers.UInt64"});
         markNativeMethod("toUInt32" , VOID, new String[]{"numbers.UInt32"});
         markNativeMethod("toUInt16" , VOID, new String[]{"numbers.UInt16"});
-        markNativeMethod("toByte"   , VOID, new String[]{"numbers.UInt8"});
+        markNativeMethod("toUInt8"  , VOID, new String[]{"numbers.UInt8"});
 
         // @Op methods
         markNativeMethod("abs", VOID, THIS);
@@ -160,12 +160,12 @@ public abstract class BaseInt128
             case "toInt8":
             case "toInt16":
             case "toInt32":
-            case "toInt":
+            case "toInt64":
             case "toInt128":
-            case "toByte":
+            case "toUInt8":
             case "toUInt16":
             case "toUInt32":
-            case "toUInt":
+            case "toUInt64":
             case "toUInt128":
                 {
                 TypeConstant  typeRet  = method.getReturn(0).getType();

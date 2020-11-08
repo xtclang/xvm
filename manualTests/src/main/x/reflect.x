@@ -258,7 +258,7 @@ module TestReflection
 
             Int foo()
                 {
-                return x.toInt() + y.toInt();
+                return x.toInt64() + y.toInt64();
                 }
 
             static String bar(Int n)

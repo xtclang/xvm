@@ -19,6 +19,6 @@ const BitMapping
     @Override
     void write(ElementOutput out, Serializable value)
         {
-        out.add(value.toInt());
+        out.add(value.toInt64());
         }
     }

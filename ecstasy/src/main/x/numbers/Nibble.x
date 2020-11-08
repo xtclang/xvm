@@ -102,7 +102,7 @@ const Nibble
     @Override
     Nibble skip(Int steps)
         {
-        return Nibble.of(toInt() + steps);
+        return Nibble.of(toInt64() + steps);
         }
 
 
@@ -113,32 +113,29 @@ const Nibble
         return bits.as(immutable Bit[]);
         }
 
-    @Auto
-    Byte toByte()
+    @Auto UInt8 toUInt8()
         {
-        return bits.toByte();
+        return bits.toUInt8();
         }
 
-    UInt toUInt32()
+    UInt32 toUInt32()
         {
-        return toByte().toUInt32();
+        return toUInt8();
         }
 
     Char toChar()
         {
-        Int n = toInt();
+        UInt32 n = toUInt32();
         return n <= 9 ? '0' + n : 'A' + n - 0xA;
         }
 
-    @Auto
-    Int toInt()
+    @Auto Int64 toInt64()
         {
-        return toByte().toInt();
+        return toUInt8().toInt64();
         }
 
-    @Auto
-    UInt toUInt()
+    @Auto UInt64 toUInt64()
         {
-        return toByte().toUInt();
+        return toUInt8().toUInt64();
         }
     }

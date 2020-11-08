@@ -271,14 +271,14 @@ const UInt16
         }
 
     @Override
-    @Auto Int8 toInt8()
+    Int8 toInt8()
         {
         assert:bounds this <= Int8.maxvalue;
         return new Int8(bits[bitLength-8..bitLength));
         }
 
     @Override
-    @Auto Int16 toInt16()
+    Int16 toInt16()
         {
         assert:bounds this <= Int16.maxvalue;
         return new Int16(bits);
@@ -291,7 +291,7 @@ const UInt16
         }
 
     @Override
-    @Auto Int64 toInt()
+    @Auto Int64 toInt64()
         {
         return new Int64(new Array<Bit>(64, i -> (i < 64-bitLength ? 0 : bits[i])));
         }
@@ -303,14 +303,20 @@ const UInt16
         }
 
     @Override
-    @Auto UInt8 toByte()
+    @Auto IntN toIntN()
+        {
+        return bits[0] == 0 ? new IntN(bits) : toUIntN().toIntN();
+        }
+
+    @Override
+    UInt8 toUInt8()
         {
         assert:bounds this <= UInt8.maxvalue;
         return new UInt8(bits[bitLength-8..bitLength));
         }
 
     @Override
-    @Auto UInt16 toUInt16()
+    UInt16 toUInt16()
         {
         return this;
         }
@@ -322,7 +328,7 @@ const UInt16
         }
 
     @Override
-    @Auto UInt64 toUInt()
+    @Auto UInt64 toUInt64()
         {
         return new UInt64(new Array<Bit>(64, i -> (i < 64-bitLength ? 0 : bits[i])));
         }
@@ -331,12 +337,6 @@ const UInt16
     @Auto UInt128 toUInt128()
         {
         return new UInt128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])));
-        }
-
-    @Override
-    @Auto IntN toIntN()
-        {
-        return bits[0] == 0 ? new IntN(bits) : toUIntN().toIntN();
         }
 
     @Override

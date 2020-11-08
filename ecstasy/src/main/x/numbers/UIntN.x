@@ -255,93 +255,48 @@ const UIntN
         }
 
     @Override
-    @Auto Int8 toInt8()
+    Int8 toInt8()
         {
         assert:bounds this <= Int8.maxvalue;
         return bitLength < 8
-                ? new Int8(new Array<Bit>(8, i -> (i < 8-bitLength ? 0 : bits[i])))
+                ? new Int8(new Array<Bit>(8, i -> i < 8-bitLength ? 0 : bits[i]))
                 : new Int8(bits[bitLength-8..bitLength));
         }
 
     @Override
-    @Auto Int16 toInt16()
+    Int16 toInt16()
         {
         assert:bounds this <= Int16.maxvalue;
         return bitLength < 16
-                ? new Int16(new Array<Bit>(16, i -> (i < 16-bitLength ? 0 : bits[i])))
+                ? new Int16(new Array<Bit>(16, i -> i < 16-bitLength ? 0 : bits[i]))
                 : new Int16(bits[bitLength-16..bitLength));
         }
 
     @Override
-    @Auto Int32 toInt32()
+    Int32 toInt32()
         {
         assert:bounds this <= Int32.maxvalue;
         return bitLength < 32
-                ? new Int32(new Array<Bit>(32, i -> (i < 32-bitLength ? 0 : bits[i])))
+                ? new Int32(new Array<Bit>(32, i -> i < 32-bitLength ? 0 : bits[i]))
                 : new Int32(bits[bitLength-32..bitLength));
         }
 
     @Override
-    @Auto Int64 toInt()
+    Int64 toInt64()
         {
         assert:bounds this <= Int64.maxvalue;
         return bitLength < 64
-                ? new Int64(new Array<Bit>(64, i -> (i < 64-bitLength ? 0 : bits[i])))
+                ? new Int64(new Array<Bit>(64, i -> i < 64-bitLength ? 0 : bits[i]))
                 : new Int64(bits[bitLength-64..bitLength));
         }
 
     @Override
-    @Auto Int128 toInt128()
+    Int128 toInt128()
         {
         assert:bounds this <= Int128.maxvalue;
         return bitLength < 128
-                ? new Int128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])))
+                ? new Int128(new Array<Bit>(128, i -> i < 128-bitLength ? 0 : bits[i]))
                 : new Int128(bits[bitLength-128..bitLength));
-        }
-
-    @Override
-    @Auto UInt8 toByte()
-        {
-        assert:bounds this <= UInt8.maxvalue;
-        return bitLength < 8
-                ? new UInt8(new Array<Bit>(8, i -> (i < 8-bitLength ? 0 : bits[i])))
-                : new UInt8(bits[bitLength-8..bitLength));
-        }
-
-    @Override
-    @Auto UInt16 toUInt16()
-        {
-        assert:bounds this <= UInt16.maxvalue;
-        return bitLength < 16
-                ? new UInt16(new Array<Bit>(16, i -> (i < 16-bitLength ? 0 : bits[i])))
-                : new UInt16(bits[bitLength-16..bitLength));
-        }
-
-    @Override
-    @Auto UInt32 toUInt32()
-        {
-        assert:bounds this <= UInt32.maxvalue;
-        return bitLength < 32
-                ? new UInt32(new Array<Bit>(32, i -> (i < 32-bitLength ? 0 : bits[i])))
-                : new UInt32(bits[bitLength-32..bitLength));
-        }
-
-    @Override
-    @Auto UInt64 toUInt()
-        {
-        assert:bounds this <= UInt64.maxvalue;
-        return bitLength < 64
-                ? new UInt64(new Array<Bit>(64, i -> (i < 64-bitLength ? 0 : bits[i])))
-                : new UInt64(bits[bitLength-64..bitLength));
-        }
-
-    @Override
-    @Auto UInt128 toUInt128()
-        {
-        assert:bounds this <= UInt64.maxvalue;
-        return bitLength < 128
-                ? new UInt128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])))
-                : new UInt128(bits[bitLength-128..bitLength));
         }
 
     @Override
@@ -350,13 +305,58 @@ const UIntN
         Bit[] bits = this.bits;
         if (bits[0] == 1)
             {
-            bits = new Array<Bit>(bits.size + 8, i -> (i < 8 ? 0 : bits[i-8]));
+            bits = new Array<Bit>(bits.size + 8, i -> i < 8 ? 0 : bits[i-8]);
             }
         return new IntN(bits);
         }
 
     @Override
-    @Auto UIntN toUIntN()
+    UInt8 toUInt8()
+        {
+        assert:bounds this <= UInt8.maxvalue;
+        return bitLength < 8
+                ? new UInt8(new Array<Bit>(8, i -> i < 8-bitLength ? 0 : bits[i]))
+                : new UInt8(bits[bitLength-8..bitLength));
+        }
+
+    @Override
+    UInt16 toUInt16()
+        {
+        assert:bounds this <= UInt16.maxvalue;
+        return bitLength < 16
+                ? new UInt16(new Array<Bit>(16, i -> i < 16-bitLength ? 0 : bits[i]))
+                : new UInt16(bits[bitLength-16..bitLength));
+        }
+
+    @Override
+    UInt32 toUInt32()
+        {
+        assert:bounds this <= UInt32.maxvalue;
+        return bitLength < 32
+                ? new UInt32(new Array<Bit>(32, i -> i < 32-bitLength ? 0 : bits[i]))
+                : new UInt32(bits[bitLength-32..bitLength));
+        }
+
+    @Override
+    UInt64 toUInt64()
+        {
+        assert:bounds this <= UInt64.maxvalue;
+        return bitLength < 64
+                ? new UInt64(new Array<Bit>(64, i -> i < 64-bitLength ? 0 : bits[i]))
+                : new UInt64(bits[bitLength-64..bitLength));
+        }
+
+    @Override
+    UInt128 toUInt128()
+        {
+        assert:bounds this <= UInt64.maxvalue;
+        return bitLength < 128
+                ? new UInt128(new Array<Bit>(128, i -> i < 128-bitLength ? 0 : bits[i]))
+                : new UInt128(bits[bitLength-128..bitLength));
+        }
+
+    @Override
+    UIntN toUIntN()
         {
         return this;
         }
@@ -381,7 +381,7 @@ const UIntN
         {
         if (this <= UInt64.maxvalue)
             {
-            return toUInt().estimateStringLength();
+            return toUInt64().estimateStringLength();
             }
 
         static UIntN chunkVal = 10_000_000_000_000_000_000;
@@ -395,7 +395,7 @@ const UIntN
             rightLen += chunkLen;
             }
         while (left > UInt64.maxvalue);
-        return left.toUInt().estimateStringLength() + rightLen;
+        return left.toUInt64().estimateStringLength() + rightLen;
         }
 
     @Override
@@ -403,12 +403,12 @@ const UIntN
         {
         if (this <= UInt64.maxvalue)
             {
-            return toUInt().appendTo(buf);
+            return toUInt64().appendTo(buf);
             }
 
         static UIntN chunkVal = 10_000_000_000_000_000_000;
         (UIntN dividend, UIntN remainder) = this /% chunkVal;
         dividend.appendTo(buf);
-        return remainder.toUInt().appendTo(buf);
+        return remainder.toUInt64().appendTo(buf);
         }
     }

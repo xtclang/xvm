@@ -58,7 +58,7 @@ const Int8
     @Override
     UInt8 magnitude.get()
         {
-        return toInt16().abs().toByte();
+        return toInt16().abs().toUInt8();
         }
 
     @Override
@@ -295,7 +295,7 @@ const Int8
         }
 
     @Override
-    @Auto Int8 toInt8()
+    Int8 toInt8()
         {
         return this;
         }
@@ -313,7 +313,7 @@ const Int8
         }
 
     @Override
-    @Auto Int64 toInt()
+    @Auto Int64 toInt64()
         {
         return new Int64(new Array<Bit>(64, i -> bits[i < 64-bitLength ? 0 : i]));
         }
@@ -325,48 +325,48 @@ const Int8
         }
 
     @Override
-    @Auto UInt8 toByte()
-        {
-        assert:bounds this >= 0;
-        return new UInt8(bits);
-        }
-
-    @Override
-    @Auto UInt16 toUInt16()
-        {
-        assert:bounds this >= 0;
-        return new UInt16(new Array<Bit>(16, i -> (i < 16-bitLength ? 0 : bits[i]))); // TODO CP+GG these extra () suck because no ? : in lambda
-        }
-
-    @Override
-    @Auto UInt32 toUInt32()
-        {
-        assert:bounds this >= 0;
-        return new UInt32(new Array<Bit>(32, i -> (i < 32-bitLength ? 0 : bits[i])));
-        }
-
-    @Override
-    @Auto UInt64 toUInt()
-        {
-        assert:bounds this >= 0;
-        return new UInt64(new Array<Bit>(64, i -> (i < 64-bitLength ? 0 : bits[i])));
-        }
-
-    @Override
-    @Auto UInt128 toUInt128()
-        {
-        assert:bounds this >= 0;
-        return new UInt128(new Array<Bit>(128, i -> (i < 128-bitLength ? 0 : bits[i])));
-        }
-
-    @Override
     @Auto IntN toIntN()
         {
         return new IntN(bits);
         }
 
     @Override
-    @Auto UIntN toUIntN()
+    UInt8 toUInt8()
+        {
+        assert:bounds this >= 0;
+        return new UInt8(bits);
+        }
+
+    @Override
+    UInt16 toUInt16()
+        {
+        assert:bounds this >= 0;
+        return new UInt16(new Array<Bit>(16, i -> i < 16-bitLength ? 0 : bits[i]));
+        }
+
+    @Override
+    UInt32 toUInt32()
+        {
+        assert:bounds this >= 0;
+        return new UInt32(new Array<Bit>(32, i -> i < 32-bitLength ? 0 : bits[i]));
+        }
+
+    @Override
+    UInt64 toUInt64()
+        {
+        assert:bounds this >= 0;
+        return new UInt64(new Array<Bit>(64, i -> i < 64-bitLength ? 0 : bits[i]));
+        }
+
+    @Override
+    UInt128 toUInt128()
+        {
+        assert:bounds this >= 0;
+        return new UInt128(new Array<Bit>(128, i -> i < 128-bitLength ? 0 : bits[i]));
+        }
+
+    @Override
+    UIntN toUIntN()
         {
         assert:bounds this >= 0;
         return new UIntN(bits);

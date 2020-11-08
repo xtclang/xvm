@@ -1,5 +1,3 @@
-import numbers.Int128;
-
 /**
  * A DateTime is a value that can provide Date and Time information based on a combination of the
  * number of picoseconds elapsed since 1970-01-01T00:00:00Z, and a TimeZone.
@@ -102,8 +100,8 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
         {
         Int128 picos = adjustedPicos;
         return new Date(picos >= 0
-                ? (picos / Time.PICOS_PER_DAY).toInt()
-                : -1 - ((picos.abs() - 1) / Time.PICOS_PER_DAY).toInt());
+                ? (picos / Time.PICOS_PER_DAY).toInt64()
+                : -1 - ((picos.abs() - 1) / Time.PICOS_PER_DAY).toInt64());
         }
 
     /**
@@ -111,7 +109,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
      */
     Time time.get()
         {
-        return new Time((adjustedPicos % Time.PICOS_PER_DAY).toInt());
+        return new Time((adjustedPicos % Time.PICOS_PER_DAY).toInt64());
         }
 
     /**
@@ -199,7 +197,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
             }
         Int tzSize = iso8601 || tz.picos != 0 ? (iso8601 ? 0 : 1) + tz.estimateStringLength(iso8601) : 0;
 
-        Int fraction = (epochPicos % Duration.PICOS_PER_SECOND).toInt();
+        Int fraction = (epochPicos % Duration.PICOS_PER_SECOND).toInt64();
         Int fractionSize = fraction == 0 ? 0 : 1 + Duration.picosFractionalLength(fraction);
 
         return 19 + fractionSize + tzSize;

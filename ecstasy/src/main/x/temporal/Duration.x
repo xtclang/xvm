@@ -1,5 +1,3 @@
-import numbers.UInt128;
-
 /**
  * A Duration represents a magnitude of time, with picosecond resolution.
  */
@@ -293,7 +291,7 @@ const Duration(UInt128 picoseconds)
      */
     Int days.get()
         {
-        return (picoseconds / PICOS_PER_DAY).toInt();
+        return (picoseconds / PICOS_PER_DAY).toInt64();
         }
 
     /**
@@ -303,7 +301,7 @@ const Duration(UInt128 picoseconds)
      */
     Int hours.get()
         {
-        return (picoseconds / PICOS_PER_HOUR).toInt();
+        return (picoseconds / PICOS_PER_HOUR).toInt64();
         }
 
     /**
@@ -313,7 +311,7 @@ const Duration(UInt128 picoseconds)
      */
     Int minutes.get()
         {
-        return (picoseconds / PICOS_PER_MINUTE).toInt();
+        return (picoseconds / PICOS_PER_MINUTE).toInt64();
         }
 
     /**
@@ -327,7 +325,7 @@ const Duration(UInt128 picoseconds)
      */
     Int seconds.get()
         {
-        return (picoseconds / PICOS_PER_SECOND).toInt();
+        return (picoseconds / PICOS_PER_SECOND).toInt64();
         }
 
     /**
@@ -337,7 +335,7 @@ const Duration(UInt128 picoseconds)
      */
     Int milliseconds.get()
         {
-        return (picoseconds / PICOS_PER_MILLI).toInt();
+        return (picoseconds / PICOS_PER_MILLI).toInt64();
         }
 
     /**
@@ -347,7 +345,7 @@ const Duration(UInt128 picoseconds)
      */
     Int microseconds.get()
         {
-        return (picoseconds / PICOS_PER_MICRO).toInt();
+        return (picoseconds / PICOS_PER_MICRO).toInt64();
         }
 
     /**
@@ -357,7 +355,7 @@ const Duration(UInt128 picoseconds)
      */
     Int nanoseconds.get()
         {
-        return (picoseconds / PICOS_PER_NANO).toInt();
+        return (picoseconds / PICOS_PER_NANO).toInt64();
         }
 
     /**
@@ -454,7 +452,7 @@ const Duration(UInt128 picoseconds)
      */
     Int picosecondsPart.get()
         {
-        return (picoseconds % PICOS_PER_SECOND).toInt();
+        return (picoseconds % PICOS_PER_SECOND).toInt64();
         }
 
     /**

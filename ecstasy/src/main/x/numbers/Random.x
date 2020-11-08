@@ -95,7 +95,7 @@ interface Random
     UInt uint(Range<UInt> range)
         {
         // note: range.size is limited to Int64.maxvalue
-        return range.effectiveLowerBound + uint(range.size);
+        return range.effectiveLowerBound + uint(range.size.toUInt64());
         }
 
     /**

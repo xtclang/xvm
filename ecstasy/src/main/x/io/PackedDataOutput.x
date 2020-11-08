@@ -1,12 +1,3 @@
-import numbers.Int16;
-import numbers.Int32;
-import numbers.Int128;
-import numbers.UInt16;
-import numbers.UInt32;
-import numbers.UInt128;
-import numbers.IntN;
-import numbers.UIntN;
-
 /**
  * The DataOutput interface represents a output stream of values of various fundamental Ecstasy
  * types. It provides default implementations for some methods, but does not prescribe an underlying
@@ -26,49 +17,25 @@ mixin PackedDataOutput
     @Override
     void writeInt16(Int16 value)
         {
-        writeInt(value.toInt());
-        }
-
-    @Override
-    void writeUInt16(UInt16 value)
-        {
-        writeInt(value.toInt());
+        writeInt64(value);
         }
 
     @Override
     void writeInt32(Int32 value)
         {
-        writeInt(value.toInt());
+        writeInt64(value);
         }
 
     @Override
-    void writeUInt32(UInt32 value)
-        {
-        writeInt(value.toInt());
-        }
-
-    @Override
-    void writeInt(Int value)
+    void writeInt64(Int64 value)
         {
         writePackedInt(this, value);
         }
 
     @Override
-    void writeUInt(UInt value)
-        {
-        writeIntN(value.toIntN());
-        }
-
-    @Override
     void writeInt128(Int128 value)
         {
-        writeIntN(value.toIntN());
-        }
-
-    @Override
-    void writeUInt128(UInt128 value)
-        {
-        writeIntN(value.toIntN());
+        writeIntN(value);
         }
 
     @Override
@@ -78,8 +45,32 @@ mixin PackedDataOutput
         }
 
     @Override
+    void writeUInt16(UInt16 value)
+        {
+        writeInt64(value);
+        }
+
+    @Override
+    void writeUInt32(UInt32 value)
+        {
+        writeInt64(value);
+        }
+
+    @Override
+    void writeUInt64(UInt value)
+        {
+        writeIntN(value);
+        }
+
+    @Override
+    void writeUInt128(UInt128 value)
+        {
+        writeIntN(value);
+        }
+
+    @Override
     void writeUIntN(UIntN value)
         {
-        writeIntN(value.toIntN());
+        writeIntN(value);
         }
     }

@@ -1,8 +1,5 @@
 import io.IllegalUTF;
 
-import numbers.UInt16;
-import numbers.UInt32;
-
 /**
  * The LegacyDataOutput mixin uses the same wire formats as defined by the Java `DataOutputStream`
  * for bytes, characters, strings, and for the subset of the number types supported by that
@@ -59,13 +56,13 @@ mixin JavaDataOutput
             throw new IllegalUTF($"length ({length}) exceeds the Java limit ({UInt16.maxvalue}})");
             }
 
-        writeUInt16(length);
+        writeUInt16(length.toUInt16());
         if (length == value.size)
             {
             // simple: all characters are in the ASCII range
             for (Char ch : value)
                 {
-                writeByte(ch.codepoint);
+                writeByte(ch.toByte());
                 }
             }
         else

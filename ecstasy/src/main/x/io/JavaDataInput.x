@@ -1,6 +1,5 @@
 import io.IllegalUTF;
 
-
 /**
  * The JavaDataInput mixin uses the same wire formats as defined by the Java `DataInputStream` for
  * bytes, characters, strings, and for the subset of the number types supported by that language.
@@ -22,7 +21,7 @@ mixin JavaDataInput
     String readString()
         {
         // read the number of bytes (not the number of chars)
-        Int length = readUInt16().toInt();
+        Int length = readUInt16();
         if (length == 0)
             {
             return "";

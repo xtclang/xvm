@@ -2,8 +2,6 @@ import collections.ConstOrdinalList;
 
 import io.IllegalUTF;
 
-import numbers.UInt32;
-
 const Char
         implements Sequential
         implements Stringable
@@ -112,7 +110,7 @@ const Char
 
     conditional Int isDigit()
         {
-        Int codepoint = this.codepoint.toInt();
+        Int codepoint = this.codepoint;
         return 0x30 <= codepoint <= 0x39
                 ? (True, codepoint - 0x30)
                 : False;
@@ -120,7 +118,7 @@ const Char
 
     conditional Int isHexit()
         {
-        Int codepoint = this.codepoint.toInt();
+        Int codepoint = this.codepoint;
         return switch (codepoint)
             {
             case 0x30..0x39: (True, codepoint - 0x30);
@@ -162,16 +160,16 @@ const Char
     @Override
     Char skip(Int steps)
         {
-        return this + steps;
+        return this + steps.toUInt32();
         }
 
 
     // ----- operators ---------------------------------------------------------------------------
 
     @Op("+")
-    Char add(Int n)
+    Char add(UInt32 n)
         {
-        return new Char(this.toInt() + n);
+        return new Char(codepoint + n);
         }
 
     @Op("+")
@@ -187,15 +185,15 @@ const Char
         }
 
     @Op("-")
-    Char sub(Int n)
+    Char sub(UInt32 n)
         {
-        return new Char(this.toInt() - n);
+        return new Char(codepoint - n);
         }
 
     @Op("-")
-    Int sub(Char ch)
+    UInt32 sub(Char ch)
         {
-        return this.toInt() - ch.toInt();
+        return this.codepoint - ch.codepoint;
         }
 
     @Op("*")
@@ -219,8 +217,9 @@ const Char
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
-     * A direct conversion from the Char to a Byte is supported because of ASCII. An
-     * out-of-range value will result in an exception.
+     * A direct conversion from the Char to a Byte is supported because of ASCII. An out-of-range
+     * value (anything not an ASCII character) will result in an exception; this is subtly different
+     * from [toUInt8], which supports any value up to 0xFF.
      */
     Byte toByte()
         {
@@ -244,8 +243,79 @@ const Char
         return bytes.makeImmutable();
         }
 
+    // conversion to integer types are **not** @Auto, because a Char is not considered to be a
+    // number, and a conversion fails if the codepoint is out of range of the desired type
+
     /**
-     * @return the integer value of the character's codepoint
+     * @return the character's codepoint as an 8-bit signed integer
+     * @throws an exception if the codepoint is not in the range 0..127
+     */
+    Int8 toInt8()
+        {
+        return codepoint.toInt8();
+        }
+
+    /**
+     * @return the character's codepoint as a 16-bit signed integer
+     * @throws an exception if the codepoint is not in the range 0..32767
+     */
+    Int16 toInt16()
+       {
+       return codepoint.toInt16();
+       }
+
+    /**
+     * @return the character's codepoint as a 32-bit signed integer
+     */
+    Int32 toInt32()
+       {
+       return codepoint.toInt32();
+       }
+
+    /**
+     * @return the character's codepoint as a 64-bit signed integer
+     */
+    Int64 toInt64()
+        {
+        return codepoint.toInt64();
+        }
+
+    /**
+     * @return the character's codepoint as a 128-bit signed integer
+     */
+    Int128 toInt128()
+        {
+        return codepoint.toInt128();
+        }
+
+    /**
+     * @return the character's codepoint as a variable-length signed integer
+     */
+    IntN toIntN()
+        {
+        return codepoint.toIntN();
+        }
+
+    /**
+     * @return the character's codepoint as an 8-bit unsigned integer
+     * @throws an exception if the codepoint is not in the range 0..255
+     */
+    UInt8 toUInt8()
+        {
+        return codepoint.toUInt8();
+        }
+
+    /**
+     * @return the character's codepoint as a 16-bit unsigned integer
+     * @throws an exception if the codepoint is not in the range 0..65535
+     */
+    UInt16 toUInt16()
+        {
+        return codepoint.toUInt16();
+        }
+
+    /**
+     * @return the character's codepoint as a 32-bit unsigned integer
      */
     UInt32 toUInt32()
         {
@@ -253,11 +323,27 @@ const Char
         }
 
     /**
-     * @return the integer value of the character's codepoint
+     * @return the character's codepoint as a 64-bit unsigned integer
      */
-    Int toInt()
+    UInt64 toUInt64()
         {
-        return codepoint.toInt();
+        return codepoint.toUInt64();
+        }
+
+    /**
+     * @return the character's codepoint as a 128-bit unsigned integer
+     */
+    UInt128 toUInt128()
+        {
+        return codepoint.toUInt128();
+        }
+
+    /**
+     * @return the character's codepoint as a variable-length unsigned integer
+     */
+    UIntN toUIntN()
+        {
+        return codepoint.toUIntN();
         }
 
     /**
@@ -388,11 +474,11 @@ const Char
      */
     Int formatUtf8(Byte[] bytes, Int of)
         {
-        UInt32 ch = codepoint;
-        if (ch <= 0x7F)
+        UInt32 cp = codepoint;
+        if (cp <= 0x7F)
             {
             // ASCII - single byte 0xxxxxxx format
-            bytes[of] = ch.toByte();
+            bytes[of] = cp.toByte();
             return 1;
             }
 
@@ -405,13 +491,13 @@ const Char
         //  26   U+200000  - U+3FFFFFF   111110xx    10xxxxxx      4
         //  31   U+4000000 - U+7FFFFFFF  1111110x    10xxxxxx      5
         Int trailing;
-        switch (ch.leftmostBit)
+        switch (cp.leftmostBit)
             {
             case 0b00000000000000000000000010000000:
             case 0b00000000000000000000000100000000:
             case 0b00000000000000000000001000000000:
             case 0b00000000000000000000010000000000:
-                bytes[of++] = 0b11000000 | ch >>> 6;
+                bytes[of++] = 0b11000000 | (cp >>> 6).toByte();
                 trailing = 1;
                 break;
 
@@ -420,7 +506,7 @@ const Char
             case 0b00000000000000000010000000000000:
             case 0b00000000000000000100000000000000:
             case 0b00000000000000001000000000000000:
-                bytes[of++] = 0b11100000 | ch >>> 12;
+                bytes[of++] = 0b11100000 | (cp >>> 12).toByte();
                 trailing = 2;
                 break;
 
@@ -429,7 +515,7 @@ const Char
             case 0b00000000000001000000000000000000:
             case 0b00000000000010000000000000000000:
             case 0b00000000000100000000000000000000:
-                bytes[of++] = 0b11110000 | ch >>> 18;
+                bytes[of++] = 0b11110000 | (cp >>> 18).toByte();
                 trailing = 3;
                 break;
 
@@ -438,7 +524,7 @@ const Char
             case 0b00000000100000000000000000000000:
             case 0b00000001000000000000000000000000:
             case 0b00000010000000000000000000000000:
-                bytes[of++] = 0b11111000 | ch >>> 24;
+                bytes[of++] = 0b11111000 | (cp >>> 24).toByte();
                 trailing = 4;
                 break;
 
@@ -447,13 +533,13 @@ const Char
             case 0b00010000000000000000000000000000:
             case 0b00100000000000000000000000000000:
             case 0b01000000000000000000000000000000:
-                bytes[of++] = 0b11111100 | ch >>> 30;
+                bytes[of++] = 0b11111100 | (cp >>> 30).toByte();
                 trailing = 5;
                 break;
 
             default:
-                // TODO: ch.toHexString() would be a better output
-                throw new IllegalUTF("illegal character: " + ch);
+                // TODO: cp.toHexString() would be a better output
+                throw new IllegalUTF($"illegal codepoint: {cp}");
             }
         Int length = trailing + 1;
 
@@ -461,7 +547,7 @@ const Char
         // bits of data
         while (trailing > 0)
             {
-            bytes[of++] = 0b10_000000 | (ch >>> --trailing * 6 & 0b00_111111);
+            bytes[of++] = 0b10_000000 | (cp >>> --trailing * 6 & 0b00_111111).toByte();
             }
 
         return length;

@@ -20,20 +20,23 @@ const Bit
         return literal == 1;
         }
 
-    @Auto Byte toByte()
+    @Auto Byte toUInt8()
         {
-        return literal.toByte();
+        return literal.toUInt8();
         }
 
-    @Auto Int toInt()
-        {
-        return literal.toInt();
-        }
-
-    @Auto UInt toUInt()
-        {
-        return literal.toUInt();
-        }
+    @Auto Int8    toInt8()    {return literal.toInt8();   }
+    @Auto Int16   toInt16()   {return literal.toInt16();  }
+    @Auto Int32   toInt32()   {return literal.toInt32();  }
+    @Auto Int64   toInt64()   {return literal.toInt64();  }
+    @Auto Int128  toInt128()  {return literal.toInt128(); }
+    @Auto IntN    toIntN()    {return literal.toIntN();   }
+    @Auto UInt8   toUInt8()   {return literal.toUInt8();  }
+    @Auto UInt16  toUInt16()  {return literal.toUInt16(); }
+    @Auto UInt32  toUInt32()  {return literal.toUInt32(); }
+    @Auto UInt64  toUInt64()  {return literal.toUInt64(); }
+    @Auto UInt128 toUInt128() {return literal.toUInt128();}
+    @Auto UIntN   toUIntN()   {return literal.toUIntN();  }
 
     @Op("&")
     Bit and(Bit that)

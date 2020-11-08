@@ -215,12 +215,12 @@ module TestMisc
 
         IntLiteral? a = Null;
         Int b = 7;
-        console.println("a=" + a + ", b=" + b + ", a?.toInt():b=" + (a?.toInt():b));
+        console.println("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
         // [11] VAR #-238, ecstasy:Int64 #2                             // create temp var "#2" to hold the result of the else expression (ok!)
         // [12] VAR #-256, ecstasy:Nullable | ecstasy:IntLiteral #3     // create temp var #3 to hold ... um ... wrong! (wasted)     TODO?
         // [13] MOV #0, #3                                              // ... and here's proof: it's just a one-time-use, read-only copy
         // [14] JMP_NULL #3 :else1                                      // here is the '?' operator (ok!)
-        // [15] NVOK_01 #3.to() -> #4                                   // here is the toInt() (ok!)
+        // [15] NVOK_01 #3.to() -> #4                                   // here is the toInt64() (ok!)
         // [16] MOV #4, #2                                              // here's the non-Null result (ok!)
         // [17] JMP :end1                                               // all done; skip the else (ok!)
         // [18] :else1: MOV #1, #2                                      // else: move int to int (ok!)
@@ -230,12 +230,12 @@ module TestMisc
             {
             a = 4;
             }
-        console.println("a=" + a + ", b=" + b + ", a?.toInt():b=" + (a?.toInt():b));
+        console.println("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
         // [28] VAR #-238, ecstasy:Int64 #5                             // create temp var "#5" to hold the result of the else expression (ok!)
         // [29] VAR #-256, ecstasy:Nullable | ecstasy:IntLiteral #6     // create temp var #6 to hold ... um ... wrong! (wasted)
         // [30] MOV #0, #6                                              // ... and here's proof: it's just a one-time-use, read-only copy
         // [31] JMP_NULL #6 :else2                                      // here is the '?' operator (ok!)
-        // [32] NVOK_01 #6.to() -> #7                                   // here is the toInt() (ok!)
+        // [32] NVOK_01 #6.to() -> #7                                   // here is the toInt64() (ok!)
         // [33] MOV #7, #5                                              // here's the non-Null result (ok!)
         // [34] JMP :end2                                               // all done; skip the else (ok!)
         // [35] :else2: MOV #1, #5                                      // else: move int to int (ok!)

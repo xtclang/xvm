@@ -30,7 +30,7 @@ import org.xvm.util.PackedInteger;
  *     underlying expression, resulting in an Int type, so at this point the resulting type is
  *     IntNumber, regardless of the type of the underlying expression;</li>
  * <li>Offset: The optional offset is applied to the IntNumber;</li>
- * <li>Convert: If the IntNumber is not an Int, then the IntNumber.toInt() method is
+ * <li>Convert: If the IntNumber is not an Int, then the IntNumber.toInt64() method is
  *     applied.</li>
  * </ul>
  */
@@ -101,7 +101,7 @@ public class ToIntExpression
                 {
                 // at least one of these does NOT have an @Auto method that converts to<Int>()
                 MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
-                        "toInt", true, false, getTypes(), TypeConstant.NO_TYPES);
+                        "toInt64", true, false, getTypes(), TypeConstant.NO_TYPES);
                 assert id != null;
                 return id;
                 }
@@ -185,7 +185,7 @@ public class ToIntExpression
             case "numbers.UIntN":
                 // most of these do NOT have an @Auto method that converts to<Int>()
                 MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
-                        "toInt", true, false, getTypes(), TypeConstant.NO_TYPES);
+                        "toInt64", true, false, getTypes(), TypeConstant.NO_TYPES);
                 assert id != null;
                 return id;
 

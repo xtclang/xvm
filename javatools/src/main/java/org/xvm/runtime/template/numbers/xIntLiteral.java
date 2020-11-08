@@ -71,13 +71,13 @@ public class xIntLiteral
         markNativeMethod("toInt8"    , VOID, new String[]{"numbers.Int8"});
         markNativeMethod("toInt16"   , VOID, new String[]{"numbers.Int16"});
         markNativeMethod("toInt32"   , VOID, new String[]{"numbers.Int32"});
-        markNativeMethod("toInt"     , VOID, new String[]{"numbers.Int64"});
+        markNativeMethod("toInt64"   , VOID, new String[]{"numbers.Int64"});
         markNativeMethod("toInt128"  , VOID, new String[]{"numbers.Int128"});
 
-        markNativeMethod("toByte"    , VOID, new String[]{"numbers.UInt8"});
+        markNativeMethod("toUInt8"    , VOID, new String[]{"numbers.UInt8"});
         markNativeMethod("toUInt16"  , VOID, new String[]{"numbers.UInt16"});
         markNativeMethod("toUInt32"  , VOID, new String[]{"numbers.UInt32"});
-        markNativeMethod("toUInt"    , VOID, new String[]{"numbers.UInt64"});
+        markNativeMethod("toUInt64"  , VOID, new String[]{"numbers.UInt64"});
         markNativeMethod("toUInt128" , VOID, new String[]{"numbers.UInt128"});
 
         markNativeMethod("toIntN"  , VOID, new String[]{"numbers.IntN"});
@@ -319,12 +319,12 @@ public class xIntLiteral
             case "toInt8":
             case "toInt16":
             case "toInt32":
-            case "toInt":
+            case "toInt64":
             case "toInt128":
-            case "toByte":
+            case "toUInt8":
             case "toUInt16":
             case "toUInt32":
-            case "toUInt":
+            case "toUInt64":
             case "toUInt128":
             case "toIntN":
             case "toUIntN":

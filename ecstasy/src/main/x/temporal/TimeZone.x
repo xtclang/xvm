@@ -1,5 +1,3 @@
-import numbers.Int128;
-
 /**
  * A TimeZone contains the necessary information to convert a UTC DateTime value into a localized
  * Date and Time value.
@@ -76,8 +74,8 @@ const TimeZone(Int picos, String? name = Null)
                 {
                 if (colon > 1 && colon < tz.size-1)
                     {
-                    hours = new IntLiteral(tz[1..colon)).toInt();
-                    mins  = new IntLiteral(tz.substring(colon+1)).toInt();
+                    hours = new IntLiteral(tz[1..colon));
+                    mins  = new IntLiteral(tz.substring(colon+1));
                     }
                 }
             else
@@ -305,7 +303,7 @@ const TimeZone(Int picos, String? name = Null)
             picos = picos.abs();
             }
 
-        Int normalized = (picos % Time.PICOS_PER_DAY).toInt();
+        Int normalized = (picos % Time.PICOS_PER_DAY).toInt64();
         if (normalized > 12 * Time.PICOS_PER_HOUR)
             {
             normalized -= Time.PICOS_PER_DAY;

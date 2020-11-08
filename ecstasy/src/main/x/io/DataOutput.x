@@ -1,24 +1,3 @@
-import numbers.BFloat16;
-import numbers.Dec32;
-import numbers.Dec64;
-import numbers.Dec128;
-import numbers.Float16;
-import numbers.Float32;
-import numbers.Float64;
-import numbers.Float128;
-import numbers.Int8;
-import numbers.Int16;
-import numbers.Int32;
-import numbers.Int128;
-import numbers.UInt8;
-import numbers.UInt16;
-import numbers.UInt32;
-import numbers.UInt128;
-import numbers.DecN;
-import numbers.FloatN;
-import numbers.IntN;
-import numbers.UIntN;
-
 /**
  * The DataOutput interface represents a output stream of values of various fundamental Ecstasy
  * types. It provides default implementations for some methods, but does not prescribe an underlying
@@ -35,7 +14,7 @@ interface DataOutput
      */
     void writeBoolean(Boolean value)
         {
-        writeByte(value.toByte());
+        writeByte(value.toUInt8());
         }
 
     /**
@@ -55,7 +34,7 @@ interface DataOutput
      */
     void writeString(String value)
         {
-        writeInt(value.size);
+        writeInt64(value.size);
         for (Char ch : value)
             {
             writeChar(ch);
@@ -69,7 +48,7 @@ interface DataOutput
      */
     void writeEnum(Enum value)
         {
-        writeInt(value.ordinal);
+        writeInt64(value.ordinal);
         }
 
     /**
@@ -93,16 +72,6 @@ interface DataOutput
         }
 
     /**
-     * Write a UInt16 value to the stream.
-     *
-     * @param value  a value of type UInt16 to write to the stream
-     */
-    void writeUInt16(UInt16 value)
-        {
-        writeBytes(value.toByteArray());
-        }
-
-    /**
      * Write an Int32 value to the stream.
      *
      * @param value  a value of type Int32 to write to the stream
@@ -113,31 +82,11 @@ interface DataOutput
         }
 
     /**
-     * Write a UInt32 value to the stream.
-     *
-     * @param value  a value of type UInt32 to write to the stream
-     */
-    void writeUInt32(UInt32 value)
-        {
-        writeBytes(value.toByteArray());
-        }
-
-    /**
      * Write a 64-bit Int value to the stream.
      *
      * @param value  a value of type Int to write to the stream
      */
-    void writeInt(Int value)
-        {
-        writeBytes(value.toByteArray());
-        }
-
-    /**
-     * Write a 64-bit UInt value to the stream.
-     *
-     * @param value  a value of type UInt64 to write to the stream
-     */
-    void writeUInt(UInt value)
+    void writeInt64(Int64 value)
         {
         writeBytes(value.toByteArray());
         }
@@ -153,6 +102,58 @@ interface DataOutput
         }
 
     /**
+     * Write a IntN value to the stream.
+     *
+     * @param value  a value of type IntN to write to the stream
+     */
+    void writeIntN(IntN value)
+        {
+        Byte[] bytes = value.toByteArray();
+        writeInt64(bytes.size);
+        writeBytes(bytes);
+        }
+
+    /**
+     * Write a UInt8 (aka a "Byte") value to the stream.
+     *
+     * @param value  a value of type UInt8 to write to the stream
+     */
+    void writeUInt8(UInt8 value)
+        {
+        writeByte(value);
+        }
+
+    /**
+     * Write a UInt16 value to the stream.
+     *
+     * @param value  a value of type UInt16 to write to the stream
+     */
+    void writeUInt16(UInt16 value)
+        {
+        writeBytes(value.toByteArray());
+        }
+
+    /**
+     * Write a UInt32 value to the stream.
+     *
+     * @param value  a value of type UInt32 to write to the stream
+     */
+    void writeUInt32(UInt32 value)
+        {
+        writeBytes(value.toByteArray());
+        }
+
+    /**
+     * Write a 64-bit UInt value to the stream.
+     *
+     * @param value  a value of type UInt64 to write to the stream
+     */
+    void writeUInt64(UInt64 value)
+        {
+        writeBytes(value.toByteArray());
+        }
+
+    /**
      * Write a UInt128 value to the stream.
      *
      * @param value  a value of type UInt128 to write to the stream
@@ -163,18 +164,6 @@ interface DataOutput
         }
 
     /**
-     * Write a IntN value to the stream.
-     *
-     * @param value  a value of type IntN to write to the stream
-     */
-    void writeIntN(IntN value)
-        {
-        Byte[] bytes = value.toByteArray();
-        writeInt(bytes.size);
-        writeBytes(bytes);
-        }
-
-    /**
      * Write a UIntN value to the stream.
      *
      * @param value  a value of type UIntN to write to the stream
@@ -182,7 +171,7 @@ interface DataOutput
     void writeUIntN(UIntN value)
         {
         Byte[] bytes = value.toByteArray();
-        writeInt(bytes.size);
+        writeInt64(bytes.size);
         writeBytes(bytes);
         }
 
@@ -224,7 +213,7 @@ interface DataOutput
     void writeDecN(DecN value)
         {
         Byte[] bytes = value.toByteArray();
-        writeInt(bytes.size);
+        writeInt64(bytes.size);
         writeBytes(bytes);
         }
 
@@ -286,7 +275,7 @@ interface DataOutput
     void writeFloatN(FloatN value)
         {
         Byte[] bytes = value.toByteArray();
-        writeInt(bytes.size);
+        writeInt64(bytes.size);
         writeBytes(bytes);
         }
 
@@ -297,7 +286,7 @@ interface DataOutput
      */
     void writeDate(Date value)
         {
-        writeInt(value.epochDay);
+        writeInt64(value.epochDay);
         }
 
     /**
@@ -307,7 +296,7 @@ interface DataOutput
      */
     void writeTime(Time value)
         {
-        writeInt(value.picos);
+        writeInt64(value.picos);
         }
 
     /**
@@ -344,7 +333,7 @@ interface DataOutput
         else
             {
             writeByte(1);
-            writeInt(value.picos);
+            writeInt64(value.picos);
             }
         }
 
@@ -355,7 +344,7 @@ interface DataOutput
      */
     void writeDuration(Duration value)
         {
-        writeInt128(value.picoseconds);
+        writeUInt128(value.picoseconds);
         }
 
 
@@ -398,7 +387,7 @@ interface DataOutput
     static Int packedIntNLength(IntN n)
         {
         return Int.minvalue <= n <= Int.maxvalue
-                ? packedIntLength(n.toInt())
+                ? packedIntLength(n.toInt64())
                 : 1 + n.toByteArray().size;
         }
 
@@ -494,7 +483,7 @@ interface DataOutput
         {
         if (Int.minvalue <= n <= Int.maxvalue)
             {
-            writePackedInt(out, n.toInt());
+            writePackedInt(out, n.toInt64());
             }
 
         Byte[] bytes     = n.toByteArray();
@@ -502,7 +491,7 @@ interface DataOutput
         assert:bounds 8 < byteCount <= 64;
 
         // write out using large format
-        out.writeByte(byteCount-1 << 2);
+        out.writeByte((byteCount-1).toByte() << 2);
         out.writeBytes(bytes);
         }
 
@@ -532,7 +521,7 @@ interface DataOutput
         if (codepoint & ~0x7F == 0)
             {
             // ASCII - single byte 0xxxxxxx format
-            out.writeByte(codepoint.toByte());
+            out.writeByte(codepoint.toUInt8());
             return;
             }
 
@@ -551,7 +540,7 @@ interface DataOutput
             case 0b00000000000000000000000100000000:
             case 0b00000000000000000000001000000000:
             case 0b00000000000000000000010000000000:
-                out.writeByte(0b11000000 | (codepoint >>> 6).toByte());
+                out.writeByte(0b11000000 | (codepoint >>> 6).toUInt8());
                 trail = 1;
                 break;
 
@@ -560,7 +549,7 @@ interface DataOutput
             case 0b00000000000000000010000000000000:
             case 0b00000000000000000100000000000000:
             case 0b00000000000000001000000000000000:
-                out.writeByte(0b11100000 | (codepoint >>> 12).toByte());
+                out.writeByte(0b11100000 | (codepoint >>> 12).toUInt8());
                 trail = 2;
                 break;
 
@@ -569,7 +558,7 @@ interface DataOutput
             case 0b00000000000001000000000000000000:
             case 0b00000000000010000000000000000000:
             case 0b00000000000100000000000000000000:
-                out.writeByte(0b11110000 | (codepoint >>> 18).toByte());
+                out.writeByte(0b11110000 | (codepoint >>> 18).toUInt8());
                 trail = 3;
                 break;
 
@@ -578,7 +567,7 @@ interface DataOutput
             case 0b00000000100000000000000000000000:
             case 0b00000001000000000000000000000000:
             case 0b00000010000000000000000000000000:
-                out.writeByte(0b11111000 | (codepoint >>> 24).toByte());
+                out.writeByte(0b11111000 | (codepoint >>> 24).toUInt8());
                 trail = 4;
                 break;
 
@@ -587,7 +576,7 @@ interface DataOutput
             case 0b00010000000000000000000000000000:
             case 0b00100000000000000000000000000000:
             case 0b01000000000000000000000000000000:
-                out.writeByte(0b11111100 | (codepoint >>> 30).toByte());
+                out.writeByte(0b11111100 | (codepoint >>> 30).toUInt8());
                 trail = 5;
                 break;
 
@@ -598,7 +587,7 @@ interface DataOutput
         // bits of data
         while (trail > 0)
             {
-            out.writeByte(0b10_000000 | (codepoint >>> --trail * 6 & 0b00_111111));
+            out.writeByte(0b10_000000 | (codepoint >>> --trail * 6 & 0b00_111111).toByte());
             }
         }
 
@@ -681,7 +670,7 @@ interface DataOutput
         for (Char ch : s)
             {
             UInt32 codepoint = ch.codepoint;
-            Byte   byte      = 0 < codepoint <= 0x7F ? codepoint : convToAscii(ch);
+            Byte   byte      = 0 < codepoint <= 0x7F ? codepoint.toByte() : convToAscii(ch);
             out.writeByte(byte);
             if (byte == 0)
                 {

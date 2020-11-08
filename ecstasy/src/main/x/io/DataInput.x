@@ -1,28 +1,5 @@
 import io.IllegalUTF;
 
-import numbers.BFloat16;
-import numbers.Dec32;
-import numbers.Dec64;
-import numbers.Dec128;
-import numbers.Float16;
-import numbers.Float32;
-import numbers.Float64;
-import numbers.Float128;
-import numbers.Int8;
-import numbers.Int16;
-import numbers.Int32;
-import numbers.Int64;
-import numbers.Int128;
-import numbers.UInt8;
-import numbers.UInt16;
-import numbers.UInt32;
-import numbers.UInt64;
-import numbers.UInt128;
-import numbers.DecN;
-import numbers.FloatN;
-import numbers.IntN;
-import numbers.UIntN;
-
 /**
  * The DataInput interface represents a stream of values of various fundamental Ecstasy types. It
  * provides default implementations for some methods, but does not prescribe an underlying data
@@ -53,7 +30,7 @@ interface DataInput
      */
     String readString()
         {
-        Int length = readInt();
+        Int length = readInt64();
         if (length == 0)
             {
             return "";
@@ -73,7 +50,7 @@ interface DataInput
      */
     <EnumType extends Enum> EnumType readEnum(Enumeration<EnumType> enumeration)
         {
-        Int n = readInt();
+        Int n = readInt64();
         assert 0 <= n < enumeration.count;
         return enumeration.values[n];
         }
@@ -95,14 +72,6 @@ interface DataInput
         }
 
     /**
-     * @return  a value of type UInt16 read from the stream
-     */
-    UInt16 readUInt16()
-        {
-        return new UInt16(readBytes(2));
-        }
-
-    /**
      * @return  a value of type Int32 read from the stream
      */
     Int32 readInt32()
@@ -111,27 +80,11 @@ interface DataInput
         }
 
     /**
-     * @return  a value of type UInt32 read from the stream
+     * @return  a value of type Int64 (aka "Int") read from the stream
      */
-    UInt32 readUInt32()
-        {
-        return new UInt32(readBytes(4));
-        }
-
-    /**
-     * @return  a value of type Int read from the stream
-     */
-    Int readInt()
+    Int64 readInt64()
         {
         return new Int64(readBytes(8));
-        }
-
-    /**
-     * @return  a value of type UInt read from the stream
-     */
-    UInt readUInt()
-        {
-        return new UInt64(readBytes(8));
         }
 
     /**
@@ -143,6 +96,46 @@ interface DataInput
         }
 
     /**
+     * @return  a value of type IntN read from the stream
+     */
+    IntN readIntN()
+        {
+        return new IntN(readBytes(readInt64()));
+        }
+
+    /**
+     * @return  a value of type UInt8 read from the stream
+     */
+    UInt8 readUInt8()
+        {
+        return readByte();
+        }
+
+    /**
+     * @return  a value of type UInt16 read from the stream
+     */
+    UInt16 readUInt16()
+        {
+        return new UInt16(readBytes(2));
+        }
+
+    /**
+     * @return  a value of type UInt32 read from the stream
+     */
+    UInt32 readUInt32()
+        {
+        return new UInt32(readBytes(4));
+        }
+
+    /**
+     * @return  a value of type UInt64 (aka "UInt") read from the stream
+     */
+    UInt64 readUInt64()
+        {
+        return new UInt64(readBytes(8));
+        }
+
+    /**
      * @return  a value of type UInt128 read from the stream
      */
     UInt128 readUInt128()
@@ -151,19 +144,11 @@ interface DataInput
         }
 
     /**
-     * @return  a value of type IntN read from the stream
-     */
-    IntN readIntN()
-        {
-        return new IntN(readBytes(readInt()));
-        }
-
-    /**
      * @return  a value of type UIntN read from the stream
      */
     UIntN readUIntN()
         {
-        return new UIntN(readBytes(readInt()));
+        return new UIntN(readBytes(readInt64()));
         }
 
     /**
@@ -195,7 +180,7 @@ interface DataInput
      */
     DecN readDecN()
         {
-        return new DecN(readBytes(readInt()));
+        return new DecN(readBytes(readInt64()));
         }
 
     /**
@@ -243,7 +228,7 @@ interface DataInput
      */
     FloatN readFloatN()
         {
-        return new FloatN(readBytes(readInt()));
+        return new FloatN(readBytes(readInt64()));
         }
 
     /**
@@ -251,7 +236,7 @@ interface DataInput
      */
     Date readDate()
         {
-        return new Date(readInt());
+        return new Date(readInt64());
         }
 
     /**
@@ -259,7 +244,7 @@ interface DataInput
      */
     Time readTime()
         {
-        return new Time(readInt());
+        return new Time(readInt64());
         }
 
     /**
@@ -288,7 +273,7 @@ interface DataInput
                 TODO Rules-based TimeZone
 
             case 1:
-                return new TimeZone(readInt());
+                return new TimeZone(readInt64());
 
             default:
                 throw new IOException($"illegal timezone format indicator: {b}");
@@ -300,7 +285,7 @@ interface DataInput
      */
     Duration readDuration()
         {
-        return new Duration(readInt128());
+        return new Duration(readUInt128());
         }
 
 
@@ -346,7 +331,7 @@ interface DataInput
         // in which the entire value is contained in the 7 MSBs
         if (b & 0x01 != 0)
             {
-            return (b >> 1).toInt();
+            return b >> 1;
             }
 
         // Small and Medium formats are indicated by the second bit (and differentiated by the third
@@ -356,25 +341,25 @@ interface DataInput
         // the next byte provides bits 0..7 of the result
         if (b & 0x02 != 0)
             {
-            Int n = (b >> 3).toInt() << 8 | in.readByte().toInt();
+            Int n = (b >> 3).toInt64() << 8 | in.readByte();
 
             // the third bit is used to indicate Medium format (a second trailing byte)
             if (b & 0x04 != 0)
                 {
-                n = n << 8 | in.readByte().toInt();
+                n = n << 8 | in.readByte();
                 }
             return n;
             }
 
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
-        Int size = 1 + (b >>> 2).toInt();
+        Int size = 1 + (b >>> 2);
         assert:bounds size <= 8;
 
-        Int n = in.readInt8().toInt();
+        Int n = in.readInt8();
         while (--size > 0)
             {
-            n = n << 8 | in.readByte().toInt();
+            n = n << 8 | in.readByte();
             }
         return n;
         }
@@ -396,7 +381,7 @@ interface DataInput
         // in which the entire value is contained in the 7 MSBs
         if (b & 0x01 != 0)
             {
-            return (b >> 1).toIntN();
+            return b >> 1;
             }
 
         // Small and Medium formats are indicated by the second bit (and differentiated by the third
@@ -406,29 +391,29 @@ interface DataInput
         // the next byte provides bits 0..7 of the result
         if (b & 0x02 != 0)
             {
-            Int n = (b >> 3).toInt() << 8 | in.readByte().toInt();
+            Int n = (b >> 3).toInt64() << 8 | in.readByte();
 
             // the third bit is used to indicate Medium format (a second trailing byte)
             if (b & 0x04 != 0)
                 {
-                n = n << 8 | in.readByte().toInt();
+                n = n << 8 | in.readByte();
                 }
-            return n.toIntN();
+            return n;
             }
 
         // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
         // first byte are the trailing number of bytes minus 1
-        Int size = 1 + (b >>> 2).toInt();
+        Int size = 1 + (b >>> 2);
         assert:bounds size <= 8;
 
         if (size <= 8)
             {
-            Int n = in.readInt8().toInt();              // use sign extension on the first byte
+            Int n = in.readInt8();                      // use sign extension on the first byte
             while (--size > 0)
                 {
-                n = n << 8 | in.readByte().toInt();     // additional bytes remain bitwise intact
+                n = n << 8 | in.readByte();             // additional bytes remain bitwise intact
                 }
-            return n.toIntN();
+            return n;
             }
 
         Byte[] bytes = new Byte[size];

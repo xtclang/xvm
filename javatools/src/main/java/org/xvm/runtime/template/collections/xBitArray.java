@@ -43,7 +43,7 @@ public class xBitArray
         {
         ClassStructure mixin = f_templates.getClassStructure("collections.Array.BitArray");
 
-        mixin.findMethod("toByte", 0).markNative();
+        mixin.findMethod("toUInt8", 0).markNative();
         mixin.findMethod("toByteArray", 0).markNative();
 
         getCanonicalType().invalidateTypeInfo();
@@ -62,7 +62,7 @@ public class xBitArray
         {
         switch (method.getName())
             {
-            case "toByte":
+            case "toUInt8":
                 {
                 BitArrayHandle hBits = (BitArrayHandle) hTarget;
                 return hBits.m_cSize > 8

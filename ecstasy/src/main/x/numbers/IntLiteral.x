@@ -79,8 +79,8 @@ const IntLiteral(String text)
         Int   digits    = 0;
         NextChar: while (of < text.size)
             {
-            Char ch = text[of];
-            Int  nch;
+            Char   ch = text[of];
+            UInt32 nch;
             switch (ch)
                 {
                 case '0'..'9':
@@ -139,7 +139,7 @@ const IntLiteral(String text)
     /**
      * This is the radix of the integer literal, one of 2, 8, 10, or 16.
      */
-    Int radix = 10;
+    UInt8 radix = 10;
 
     /**
      * This is the value of the literal in IntN form.
@@ -210,7 +210,7 @@ const IntLiteral(String text)
             return 8;
             }
 
-        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.maxOf(8).toInt();
+        return (magnitude.leftmostBit.trailingZeroCount * 2 + 1).leftmostBit.maxOf(8).toInt64();
         }
 
     /**
@@ -302,7 +302,7 @@ const IntLiteral(String text)
      */
     @Op("..") Range<Int> to(Int n)
         {
-        return new Range<Int>(this.toInt(), n);
+        return new Range<Int>(this.toInt64(), n);
         }
 
     /**
@@ -310,7 +310,7 @@ const IntLiteral(String text)
      */
     @Op("..<") Range<Int> toExcluding(Int n)
         {
-        return new Range<Int>(this.toInt(), n, lastExclusive=True);
+        return new Range<Int>(this.toInt64(), n, lastExclusive=True);
         }
 
 
@@ -406,6 +406,16 @@ const IntLiteral(String text)
         }
 
     /**
+     * Convert the number to an unsigned 8-bit integer.
+     *
+     * A second name for the [toUInt8] method, to assist with readability. By using a property
+     * to alias the method, instead of creating a second delegating method, this prevents the
+     * potential for accidentally overriding the wrong method.
+     */
+    // TODO GG: static Method<IntLiteral, <>, <Byte>> toByte = toUInt8;
+    Byte toByte() {return toUInt8();}
+
+    /**
      * Convert the number to a variable-length signed integer.
      */
     @Auto IntN toIntN()
@@ -444,9 +454,9 @@ const IntLiteral(String text)
      * Convert the number to a signed 64-bit integer.
      * Any additional magnitude is discarded.
      */
-    @Auto Int64 toInt()
+    @Auto Int64 toInt64()
         {
-        return toIntN().toInt();
+        return toIntN().toInt64();
         }
 
     /**
@@ -467,16 +477,16 @@ const IntLiteral(String text)
         }
 
     /**
-     * Convert the number to a unsigned 8-bit integer.
+     * Convert the number to an unsigned 8-bit integer.
      * Any additional magnitude is discarded.
      */
-    @Auto UInt8 toByte()
+    @Auto UInt8 toUInt8()
         {
-        return toUIntN().toByte();
+        return toUIntN().toUInt8();
         }
 
     /**
-     * Convert the number to a unsigned 16-bit integer.
+     * Convert the number to an unsigned 16-bit integer.
      * Any additional magnitude is discarded.
      */
     @Auto UInt16 toUInt16()
@@ -485,7 +495,7 @@ const IntLiteral(String text)
         }
 
     /**
-     * Convert the number to a unsigned 32-bit integer.
+     * Convert the number to an unsigned 32-bit integer.
      * Any additional magnitude is discarded.
      */
     @Auto UInt32 toUInt32()
@@ -494,16 +504,16 @@ const IntLiteral(String text)
         }
 
     /**
-     * Convert the number to a unsigned 64-bit integer.
+     * Convert the number to an unsigned 64-bit integer.
      * Any additional magnitude is discarded.
      */
-    @Auto UInt64 toUInt()
+    @Auto UInt64 toUInt64()
         {
-        return toUIntN().toUInt();
+        return toUIntN().toUInt64();
         }
 
     /**
-     * Convert the number to a unsigned 128-bit integer.
+     * Convert the number to an unsigned 128-bit integer.
      * Any additional magnitude is discarded.
      */
     @Auto UInt128 toUInt128()

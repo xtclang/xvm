@@ -1,12 +1,3 @@
-import numbers.Int16;
-import numbers.Int32;
-import numbers.Int128;
-import numbers.UInt16;
-import numbers.UInt32;
-import numbers.UInt128;
-import numbers.IntN;
-import numbers.UIntN;
-
 /**
  * The PackedDataInput mixin uses the packed integer format for integers and the UTF-8 encoding for
  * characters.
@@ -24,37 +15,19 @@ mixin PackedDataInput
     @Override
     Int16 readInt16()
         {
-        return readInt().toInt16();
-        }
-
-    @Override
-    UInt16 readUInt16()
-        {
-        return readInt().toUInt16();
+        return readInt64().toInt16();
         }
 
     @Override
     Int32 readInt32()
         {
-        return readInt().toInt32();
+        return readInt64().toInt32();
         }
 
     @Override
-    UInt32 readUInt32()
-        {
-        return readInt().toUInt32();
-        }
-
-    @Override
-    Int readInt()
+    Int64 readInt64()
         {
         return readPackedInt(this);
-        }
-
-    @Override
-    UInt readUInt()
-        {
-        return readIntN().toUInt();
         }
 
     @Override
@@ -64,15 +37,33 @@ mixin PackedDataInput
         }
 
     @Override
-    UInt128 readUInt128()
-        {
-        return readIntN().toUInt128();
-        }
-
-    @Override
     IntN readIntN()
         {
         return readPackedIntN(this);
+        }
+
+    @Override
+    UInt16 readUInt16()
+        {
+        return readInt64().toUInt16();
+        }
+
+    @Override
+    UInt32 readUInt32()
+        {
+        return readInt64().toUInt32();
+        }
+
+    @Override
+    UInt64 readUInt64()
+        {
+        return readIntN().toUInt64();
+        }
+
+    @Override
+    UInt128 readUInt128()
+        {
+        return readIntN().toUInt128();
         }
 
     @Override

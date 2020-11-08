@@ -436,7 +436,7 @@ const Schema
         Int length = pointer.size;
         for (Char ch : pointer)
             {
-            Int n = ch.toInt();
+            Int n = ch.toInt64();
             if (n <= 0x7F)
                 {
                 if (!FRAGMENT_ALLOW[n])
@@ -467,7 +467,7 @@ const Schema
         {
         for (Char ch : pointer)
             {
-            Int n = ch.toInt();
+            Int n = ch.toInt64();
             if (n <= 0x7F)
                 {
                 if (FRAGMENT_ALLOW[n])

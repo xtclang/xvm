@@ -944,15 +944,15 @@ class Lexer
         enum Stage(Boolean naked=False) {Init(True), Head(True), Day, Sep(True), Hour, Minute, Second, Fraction, Err}
         Stage prevStage = Init;
 
-        Int128  picos = 0;
+        UInt128 picos = 0;
         Boolean any   = False;
         Boolean err   = False;
         Loop: while (True)
             {
             // read the number
-            static Int MAX    = maxvalue / 10 - 1;
-            Int        value  = 0;
-            Int        digits = 0;
+            static UInt MAX   = maxvalue / 10 - 1;
+            UInt       value  = 0;
+            UInt       digits = 0;
             while (Char digit := nextDigit())
                 {
                 if (value >= MAX)

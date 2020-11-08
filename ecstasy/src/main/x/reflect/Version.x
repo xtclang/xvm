@@ -242,7 +242,7 @@ const Version
             }
         else if (fAnyNums)
             {
-            Int num = new IntLiteral(version[start..end]).toInt();
+            Int num = new IntLiteral(version[start..end]);
             construct Version(parent, num, build);
             }
         else
