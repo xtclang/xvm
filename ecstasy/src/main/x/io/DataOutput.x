@@ -48,7 +48,7 @@ interface DataOutput
      */
     void writeEnum(Enum value)
         {
-        writeInt64(value.ordinal);
+        writeUInt16(value.ordinal.toUInt16());
         }
 
     /**
@@ -58,7 +58,7 @@ interface DataOutput
      */
     void writeInt8(Int8 value)
         {
-        writeByte(value.toByteArray()[0]);
+        writeByte(value.toByteArray()[0]);  // TODO CP sliceByte
         }
 
     /**

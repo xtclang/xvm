@@ -303,13 +303,6 @@ const Number
         }
 
     /**
-     * Convert the number to a variable-length signed integer.
-     *
-     * @return the number as a signed integer of variable length
-     */
-    IntN toIntN();
-
-    /**
      * Convert the number to a signed 8-bit integer.
      *
      * @return the number as a signed 8-bit integer
@@ -370,11 +363,11 @@ const Number
         }
 
     /**
-     * Convert the number to a variable-length unsigned integer.
+     * Convert the number to a variable-length signed integer.
      *
-     * @return the number as an unsigned integer of variable length
+     * @return the number as a signed integer of variable length
      */
-    UIntN toUIntN();
+    IntN toIntN();
 
     /**
      * Convert the number to an unsigned 8-bit integer.
@@ -437,11 +430,11 @@ const Number
         }
 
     /**
-     * Convert the number to a variable-length binary radix floating point number.
+     * Convert the number to a variable-length unsigned integer.
      *
-     * @return the number as a binary floating point of variable length
+     * @return the number as an unsigned integer of variable length
      */
-    FloatN toFloatN();
+    UIntN toUIntN();
 
     /**
      * Convert the number to a 16-bit radix-2 (binary) "brain" floating point number.
@@ -494,11 +487,11 @@ const Number
         }
 
     /**
-     * Convert the number to a variable-length decimal radix floating point number.
+     * Convert the number to a variable-length binary radix floating point number.
      *
-     * @return the number as a decimal of variable length
+     * @return the number as a binary floating point of variable length
      */
-    DecN toDecN();
+    FloatN toFloatN();
 
     /**
      * Convert the number to a 32-bit radix-10 (decimal) floating point number.
@@ -535,6 +528,13 @@ const Number
         {
         return toDecN().toDec128();
         }
+
+    /**
+     * Convert the number to a variable-length decimal radix floating point number.
+     *
+     * @return the number as a decimal of variable length
+     */
+    DecN toDecN();
 
     /**
      * Produce an `IntLiteral` value that represents the value of this number.

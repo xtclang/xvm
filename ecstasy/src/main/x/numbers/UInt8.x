@@ -53,6 +53,15 @@ const UInt8
         return this == 0 ? Zero : Positive;
         }
 
+    /**
+     * For a byte that represents the most significant byte of a 2's complement value, provide the
+     * byte that would be used to sign-extend the value when adding more significant bytes.
+     */
+    Byte signExtend.get()
+        {
+        return this & 0x80 == 0 ? 0x00 : 0xFF;
+        }
+
     @Override
     UInt8 leftmostBit.get()
         {
