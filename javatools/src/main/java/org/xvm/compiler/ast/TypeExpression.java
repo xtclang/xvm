@@ -231,9 +231,20 @@ public abstract class TypeExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeConstant typeReferent  = ensureTypeConstant(ctx);
-        TypeConstant typeReference = typeReferent.getType();
-        return finishValidation(ctx, typeRequired, typeReference, TypeFit.Fit, typeReference, errs);
+        TypeConstant type = ensureTypeConstant(ctx);
+        if (typeRequired != null)
+            {
+            TypeConstant typeInferred = super.inferTypeFromRequired(
+                    type, typeRequired.getParamType(0));
+            if (typeInferred != null)
+                {
+                type = typeInferred;
+                }
+            }
+
+        TypeConstant typeType = type.getType();
+
+        return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, typeType, errs);
         }
 
     @Override
@@ -246,22 +257,6 @@ public abstract class TypeExpression
             ((TypeExpression) expr).resetTypeConstant();
             }
         return expr;
-        }
-
-    @Override
-    protected TypeConstant inferTypeFromRequired(TypeConstant typeActual, TypeConstant typeRequired)
-        {
-        if (typeActual.isTypeOfType() &&
-                typeRequired.isTypeOfType() && typeRequired.isParamsSpecified())
-            {
-            TypeConstant typeInferredReferent = super.inferTypeFromRequired(
-                getSafeDataType(typeActual), getSafeDataType(typeRequired));
-            if (typeInferredReferent != null)
-                {
-                return typeInferredReferent.getType();
-                }
-            }
-        return null;
         }
 
     /**

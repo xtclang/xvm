@@ -606,13 +606,41 @@ public abstract class Expression
             typeRequired = typeRequired.removeNullable();
             }
 
-        if (typeRequired.isParameterizedDeep() && !typeActual.isParamsSpecified()
-                && !typeActual.equals(typeRequired))
+        if (typeRequired.isParameterizedDeep() && !typeActual.equals(typeRequired))
             {
-            TypeConstant typeInferred = typeActual.adoptParameters(pool(), typeRequired);
-            if (typeInferred.isA(typeRequired))
+            if (typeActual.isParamsSpecified())
                 {
-                return typeInferred;
+                // there is a possibility that the type parameters could be in turn inferred, e.g.
+                //   PropertyMapping<structType.DataType>[] fields = new PropertyMapping[];
+                TypeConstant[] atypeRequired = typeRequired.getParamTypesArray();
+                TypeConstant[] atypeActual   = typeActual.getParamTypesArray();
+                int            cRequired     = atypeRequired.length;
+                int            cActual       = atypeActual.length;
+                TypeConstant[] atypeInferred = atypeActual;
+
+                for (int i = 0, c = Math.min(cRequired, cActual); i < c; i++)
+                    {
+                    TypeConstant typeInferred = inferTypeFromRequired(atypeActual[i], atypeRequired[i]);
+                    if (typeInferred != null)
+                        {
+                        if (atypeInferred == atypeActual)
+                            {
+                            atypeInferred = atypeInferred.clone();
+                            }
+                        atypeInferred[i] = typeInferred;
+                        }
+                    }
+                return atypeInferred == atypeActual
+                        ? null
+                        : typeActual.adoptParameters(pool(), atypeInferred);
+                }
+            else
+                {
+                TypeConstant typeInferred = typeActual.adoptParameters(pool(), typeRequired);
+                if (typeInferred.isA(typeRequired))
+                    {
+                    return typeInferred;
+                    }
                 }
             }
         return null;
