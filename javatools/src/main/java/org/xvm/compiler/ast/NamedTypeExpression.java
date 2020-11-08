@@ -687,15 +687,12 @@ public class NamedTypeExpression
                 }
             m_exprDynamic = exprNew;
 
-            TypeConstant typeTypeFormal = exprNew.getType();
-            TypeConstant typeFormal     = typeTypeFormal.getParamType(0);
+            TypeConstant typeType = exprNew.getType();
 
-            // typeFormal could be either dynamic formal (e.g. array.Element)
-            // or a formal type for a Class (e.g. Person.StructType)
-            assert typeFormal.isFormalType();
-
-            m_constId = typeFormal;
-            return finishValidation(ctx, typeRequired, typeTypeFormal, TypeFit.Fit, null, errs);
+            // the underlying type could be either dynamic formal (e.g. array.Element),
+            // or an actual type (e.g. Person.StructType, which is equivalent to Person:struct)
+            m_constId = typeType.getParamType(0);
+            return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, null, errs);
             }
 
         if (m_constId == null || m_constId.containsUnresolved())

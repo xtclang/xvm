@@ -41,6 +41,8 @@ val compileAll = tasks.register<JavaExec>("compileAll") {
 
     dependsOn(xdk.tasks["build"])
 
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
     classpath(javatoolsJar)
 
     val opts = listOf<String>(
