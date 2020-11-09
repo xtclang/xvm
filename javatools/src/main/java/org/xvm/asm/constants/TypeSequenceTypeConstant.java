@@ -212,13 +212,13 @@ public class TypeSequenceTypeConstant
                 switch (typeLeft.getParamsCount())
                     {
                     case 0:
-                        // Iterable iter = ElementTypes;
+                        // List list = ElementTypes;
                         return Relation.IS_A;
 
                     case 1:
-                        if (typeLeft.getParamType(0).equals(pool.typeType()))
+                        if (pool.typeType().isA(typeLeft.getParamType(0)))
                             {
-                            // Iterable<Type> iter = ElementTypes;
+                            // List<Type<Object, Object>> list = ElementTypes;
                             return Relation.IS_A;
                             }
                         break;

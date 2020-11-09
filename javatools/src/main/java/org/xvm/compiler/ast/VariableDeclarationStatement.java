@@ -162,25 +162,27 @@ public class VariableDeclarationStatement
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         ConstantPool   pool    = pool();
-        TypeExpression typeOld = type;
-        TypeExpression typeNew = (TypeExpression) typeOld.validate(ctx, pool.typeType(), errs);
+        TypeExpression exprOld = type;
+        TypeExpression exprNew = (TypeExpression) exprOld.validate(ctx, pool.typeType(), errs);
 
-        if (typeNew == null)
+        if (exprNew == null)
             {
             return null;
             }
 
-        type = typeNew;
+        type = exprNew;
 
         // create the register
-        TypeConstant typeVar = typeNew.ensureTypeConstant(ctx).resolveAutoNarrowing(pool, false, null);
+        TypeConstant typeVar = exprNew.ensureTypeConstant(ctx).
+                resolveAutoNarrowing(pool, false, null).
+                normalizeParameters();
 
         m_reg = new Register(typeVar);
         ctx.registerVar(name, m_reg, errs);
 
-        if (typeNew instanceof AnnotatedTypeExpression)
+        if (exprNew instanceof AnnotatedTypeExpression)
             {
-            AnnotatedTypeExpression exprAnnoType = (AnnotatedTypeExpression) typeNew;
+            AnnotatedTypeExpression exprAnnoType = (AnnotatedTypeExpression) exprNew;
 
             // for DVAR registers, specify the DVAR "register type"
             // (separate from the type of the value that gets held in the register)
