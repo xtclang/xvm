@@ -45,7 +45,8 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                     {
                     using (ElementInput elementInput = fieldInput.openField(field.name))
                         {
-                        var mapping = field.mapping;
+                        // TODO GG: var mapping = field.mapping;
+                        Mapping<field.Value> mapping = field.mapping;
                         if (field.subclassable && schema.enableMetadata,
                                 Doc typeName ?= in.peekMetadata(schema.typeKey),
                                 typeName.is(String))
@@ -56,7 +57,8 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                         value = elementInput.readUsing(mapping, field.defaultValue);
                         }
                     }
-                field.property.set(structure, value);
+                // TODO GG field.property.set(structure, value);
+                field.property.as(Property<StructType, field.Value>).set(structure, value);
                 }
             }
 
@@ -83,8 +85,10 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                     }
                 else
                     {
-                    val type    = &fieldValue.actualType;
-                    var mapping = field.mapping;
+                    // TODO GG val type    = &fieldValue.actualType;
+                    //         var mapping = field.mapping;
+                    Type<field.Value>    type    = &fieldValue.actualType;
+                    Mapping<field.Value> mapping = field.mapping;
                     if (field.subclassable && type != mapping.Serializable,
                             mapping := mapping.narrow(schema, type),
                             schema.enableMetadata)
