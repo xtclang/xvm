@@ -1,5 +1,5 @@
 const FPNumber
-        extends Number
+        extends Number // TODO FPConvertible
     {
     // ----- constants -----------------------------------------------------------------------------
 

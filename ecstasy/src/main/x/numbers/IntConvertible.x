@@ -1,9 +1,17 @@
 /**
- * TODO
+ * Represents a value that can be converted to an integer or floating point numeric value.
  */
 interface IntConvertible
+        extends FPConvertible
     {
     // ----- conversions ---------------------------------------------------------------------------
+
+    /**
+     * Convert the value to an `IntLiteral` that represents the same value.
+     *
+     * @return an integer literal
+     */
+    IntLiteral toIntLiteral();
 
     /**
      * Convert the value to a signed 8-bit integer.

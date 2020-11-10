@@ -335,12 +335,57 @@ public class ConstantPool
             case DateTime:
             case Duration:
             case Path:
+                {
                 LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(format).get(s);
                 if (constant == null)
                     {
                     constant = (LiteralConstant) register(new LiteralConstant(this, format, s, oValue));
                     }
                 return constant;
+                }
+
+            case BFloat16:
+            case Float16:
+            case Float32:
+            case Float64:
+            case Float128:
+            case FloatN:
+            case Dec32:
+            case Dec64:
+            case Dec128:
+            case DecN:
+                {
+                LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(Format.FPLiteral).get(s);
+                if (constant == null)
+                    {
+                    constant = new LiteralConstant(this, Format.FPLiteral, s, oValue);
+                    }
+                switch (format)
+                    {
+                    case BFloat16:
+                        return constant.toBFloat16Constant();
+                    case Float16:
+                        return constant.toFloat16Constant();
+                    case Float32:
+                        return constant.toFloat32Constant();
+                    case Float64:
+                        return constant.toFloat64Constant();
+                    case Float128:
+                        return constant.toFloat128Constant();
+                    case FloatN:
+                        return constant.toFloatNConstant();
+
+                    case Dec32:
+                    case Dec64:
+                    case Dec128:
+                        return constant.toDecimalConstant(format);
+                    case DecN:
+                        return constant.toDecNConstant();
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
 
             case Int16:
             case Int32:

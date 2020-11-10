@@ -28,6 +28,37 @@ const BFloat16
         construct BinaryFPNumber(bytes);
         }
 
+    /**
+     * Construct the floating point number from its constituent pieces: A sign bit, a significand,
+     * and an exponent.
+     *
+     * REVIEW GG CP if this approach is good, then replicate (including static properties below) to all FPNumber implementations
+     *
+     * @param signBit      true if explicitly negative
+     * @param significand  the significand value, in the range `0` to
+     * @param exponent     the exponent value, in the range [EMIN] to [EMAX]
+     */
+    construct(Boolean signBit, Int significand, Int exponent)
+        {
+        if (significand == 0)
+            {
+            construct BFloat16(signBit ? BFloat16:-0.bits : BFloat16:0.bits);
+            return;
+            }
+
+        // note that this allows one more significant bit than can be stored, because IEEE754 uses
+        // an implicit leading '1' bit (for non-zero, and non-sub-normal values) that is not encoded
+        // into the resulting IEEE754 value
+        Int sigCount = 64 - significand.leadingZeroCount;
+        assert:bounds significand > 0 && sigCount - 1 <= SIG_BITS;
+        assert:bounds EMIN <= exponent <= EMAX;
+
+        Bit[] signBits = signBit ? [1] : [0];
+        Bit[] expBits  = (exponent + BIAS).toBitArray()[64-EXP_BITS..64);
+        Bit[] sigBits  = (significand << (SIG_BITS - (sigCount-1))).toBitArray()[64-SIG_BITS..64);
+        construct BFloat16(signBits + expBits + sigBits);
+        }
+
 
     // ----- Number properties ---------------------------------------------------------------------
 
@@ -91,34 +122,59 @@ const BFloat16
 
     // ----- FPNumber properties -------------------------------------------------------------------
 
+    /**
+     * Number of significand bits in a BFloat16 value (7).
+     */
+    static Int SIG_BITS = 7;
+
+    /**
+     * Number of exponent bits in a BFloat16 value (8).
+     */
+    static Int EXP_BITS = 8;
+
+    /**
+     * Maximum exponent value in a BFloat16 value (127).
+     */
+    static Int EMAX     = (1 << (EXP_BITS-1)) - 1;
+
+    /**
+     * Minimum exponent value in a BFloat16 value (-126).
+     */
+    static Int EMIN     = 1 - EMAX;
+
+    /**
+     * Exponent bias for a BFloat16 value (126).
+     */
+    static Int BIAS     = EMAX;
+
     @Override
     Int emax.get()
         {
-        return 127;
+        return EMAX;
         }
 
     @Override
     Int emin.get()
         {
-        return 1 - emax;
+        return EMIN;
         }
 
     @Override
     Int bias.get()
         {
-        return emax;
+        return BIAS;
         }
 
     @Override
     Int significandBitLength.get()
         {
-        return 7;
+        return SIG_BITS;
         }
 
     @Override
     Int exponentBitLength.get()
         {
-        return 8;
+        return EXP_BITS;
         }
 
 
