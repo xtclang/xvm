@@ -187,27 +187,27 @@ public class xRTProperty
     public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, PropertyConstant idProp)
         {
         PropertyInfo infoProp = typeTarget.ensureTypeInfo().findProperty(idProp);
-        Annotation[] aAnno    = infoProp.getRefAnnotations();
+        Annotation[] aAnno    = infoProp.getPropertyAnnotations();
         TypeConstant typeProp = idProp.getValueType(typeTarget);
 
-        if (false && aAnno != null && aAnno.length > 0) // TODO GG
+        if (aAnno != null && aAnno.length > 0)
             {
             typeProp = frame.poolContext().ensureAnnotatedTypeConstant(typeProp, aAnno);
 
             PropertyHandle hProp   = new PropertyHandle(INSTANCE.ensureClass(typeProp));
             ObjectHandle   hStruct = hProp.ensureAccess(Access.STRUCT);
 
-            switch (hProp.getTemplate().
-                    proceedConstruction(frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
+            switch (INSTANCE.proceedConstruction(
+                    frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
                 {
                 case Op.R_NEXT:
                     return frame.popStack();
 
                 case Op.R_CALL:
-                    return new ObjectHandle.DeferredCallHandle(frame.m_frameNext);
+                    return new DeferredCallHandle(frame.m_frameNext);
 
                 case Op.R_EXCEPTION:
-                    return new ObjectHandle.DeferredCallHandle(frame.m_hException);
+                    return new DeferredCallHandle(frame.m_hException);
                 }
             }
 
