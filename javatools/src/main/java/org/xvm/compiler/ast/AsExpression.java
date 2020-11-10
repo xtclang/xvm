@@ -101,7 +101,9 @@ public class AsExpression
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        Argument     argBefore = expr1.generateArgument(ctx, code, true, true, errs);
+        // if cast is not required, placing an argument on the stack doesn't provide enough
+        // type information for the Move op to create a necessary register
+        Argument     argBefore = expr1.generateArgument(ctx, code, true, m_fCastRequired | fUsedOnce, errs);
         TypeConstant type      = getType();
         Argument     argAfter  = createRegister(type, fUsedOnce);
         if (m_fCastRequired)
@@ -127,7 +129,7 @@ public class AsExpression
         {
         if (LVal.isLocalArgument())
             {
-            Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
+            Argument argTarget = expr1.generateArgument(ctx, code, true, m_fCastRequired, errs);
             if (m_fCastRequired)
                 {
                 code.add(new MoveCast(argTarget, LVal.getLocalArgument(), getType()));
