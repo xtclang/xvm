@@ -102,6 +102,11 @@ public class Construct_T
             return R_EXCEPTION;
             }
 
+        if (constructor.isNoOp())
+            {
+            return R_NEXT;
+            }
+
         ObjectHandle    hStruct = frame.getThis();
         ObjectHandle[]  ahVar   = Utils.ensureSize(ahArg, constructor.getMaxVars());
 

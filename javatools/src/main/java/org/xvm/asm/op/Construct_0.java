@@ -58,6 +58,11 @@ public class Construct_0
             return R_EXCEPTION;
             }
 
+        if (constructor.isNoOp())
+            {
+            return iPC + 1;
+            }
+
         ObjectHandle    hStruct = frame.getThis();
         ObjectHandle[]  ahVar   = new ObjectHandle[constructor.getMaxVars()];
 

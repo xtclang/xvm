@@ -107,6 +107,11 @@ public class Construct_1
 
     protected int complete(Frame frame, MethodStructure constructor, ObjectHandle[] ahVar)
         {
+        if (constructor.isNoOp())
+            {
+            return R_NEXT;
+            }
+
         ObjectHandle hStruct = frame.getThis();
 
         frame.chainFinalizer(Utils.makeFinalizer(constructor, ahVar));

@@ -1063,6 +1063,16 @@ public class MethodStructure
         }
 
     /**
+     * @return true iff this method can be optimized out
+     */
+    public boolean isNoOp()
+        {
+        // a no-op constructor that has a finalizer cannot be trivially optimized out
+        return ensureCode().isNoOp() &&
+            (!isConstructor() || getConstructFinally() == null);
+        }
+
+    /**
      * Check if this method is accessible with the specified access policy.
      */
     public boolean isAccessible(Access access)
@@ -1967,7 +1977,21 @@ public class MethodStructure
         public boolean isNoOp()
             {
             Op[] aOp = getAssembledOps();
-            return aOp.length == 0 || aOp[0].getOpCode() == Op.OP_RETURN_0;
+            switch (aOp.length)
+                {
+                case 0:
+                    return true;
+
+                case 1:
+                    return aOp[0].getOpCode() == Op.OP_RETURN_0;
+
+                case 2:
+                    return aOp[0] instanceof Nop &&
+                           aOp[1].getOpCode() == Op.OP_RETURN_0;
+
+                default:
+                    return false;
+                }
             }
 
         /**

@@ -568,7 +568,7 @@ public class ClassComposition
                             MethodStructure method = infoAnno.getMethodById(idConstruct).
                                 getTopmostMethodStructure(infoAnno);
 
-                            if (!method.isSynthetic() || !method.ensureCode().isNoOp())
+                            if (!method.isSynthetic() || !method.isNoOp())
                                 {
                                 // this will serve as a flag to call annotation constructors
                                 // (see ClassTemplate.createPropertyRef() method)

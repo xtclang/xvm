@@ -2228,18 +2228,25 @@ public abstract class ClassTemplate
                             ClassConstant   idAnno        = (ClassConstant) anno.getAnnotationClass();
                             ClassStructure  structAnno    = (ClassStructure) idAnno.getComponent();
                             MethodStructure constructAnno = structAnno.findMethod("construct", aconstArgs.length);
-                            ObjectHandle[]  ahArgs        = new ObjectHandle[constructAnno.getMaxVars()];
-                            for (int i = 0, c = aconstArgs.length; i < c; i++)
+                            if (constructAnno.isNoOp())
                                 {
-                                ahArgs[i] = frameCaller.getConstHandle(aconstArgs[i]);
+                                iResult = Op.R_NEXT;
                                 }
+                            else
+                                {
+                                ObjectHandle[]  ahArgs        = new ObjectHandle[constructAnno.getMaxVars()];
+                                for (int i = 0, c = aconstArgs.length; i < c; i++)
+                                    {
+                                    ahArgs[i] = frameCaller.getConstHandle(aconstArgs[i]);
+                                    }
 
-                            Frame frameCtor = frameCaller.createFrame1(
-                                    constructAnno, hStruct, ahArgs, Op.A_IGNORE);
+                                Frame frameCtor = frameCaller.createFrame1(
+                                        constructAnno, hStruct, ahArgs, Op.A_IGNORE);
 
-                            prepareFinalizer(frameCtor, constructAnno, ahArgs);
+                                prepareFinalizer(frameCtor, constructAnno, ahArgs);
 
-                            iResult = frameCaller.callInitialized(frameCtor);
+                                iResult = frameCaller.callInitialized(frameCtor);
+                                }
 
                             if (ixAnno < aAnnoMixin.length)
                                 {
@@ -2253,7 +2260,7 @@ public abstract class ClassTemplate
                         }
 
                     case 3: // call the base constructor
-                        if (constructor != null)
+                        if (constructor != null && !constructor.isNoOp())
                             {
                             Frame frameCD = frameCaller.createFrame1(
                                     constructor, hStruct, ahVar, Op.A_IGNORE);
