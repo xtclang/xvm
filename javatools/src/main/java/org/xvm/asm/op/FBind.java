@@ -114,7 +114,7 @@ public class FBind
                     {
                     throw new IllegalStateException();
                     }
-                int nDepth = frame.m_nDepth + 1;
+                int nDepth = frame.m_nChainDepth + 1;
                 if (nDepth >= chain.getDepth())
                     {
                     return frame.raiseException("Invalid \"super\" reference");

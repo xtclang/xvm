@@ -67,6 +67,7 @@ public class Frame
 
     protected final int             f_iPCPrev;      // the caller's PC (used only for async reporting)
     protected final int             f_iId;          // the frame's id (used only for async reporting)
+    protected final int             f_nDepth;       // the frame's call stack depth
 
     public  int                     m_iPC;          // the program counter
     public  int                     m_iScope;       // current scope index (starts with 0)
@@ -81,7 +82,7 @@ public class Frame
     public  Continuation            m_continuation; // a function to call after this frame returns
 
     public  CallChain               m_chain;        // an invocation call chain
-    public  int                     m_nDepth;       // this frame's depth in the call chain
+    public  int                     m_nChainDepth;  // this frame's depth in the call chain
 
     private ObjectHandle            m_hStackTop;    // the top of the local stack
     private Deque<ObjectHandle>     m_stack;        // a remainder of the stack
@@ -101,6 +102,7 @@ public class Frame
 
         f_context   = framePrev.f_context;
         f_iId       = f_context.m_iFrameCounter++;
+        f_nDepth    = framePrev.f_nDepth + 1;
         f_fiber     = framePrev.f_fiber;
         f_framePrev = framePrev;
         f_iPCPrev   = framePrev.m_iPC;
@@ -131,6 +133,7 @@ public class Frame
         {
         f_context   = fiber.f_context;
         f_iId       = f_context.m_iFrameCounter++;
+        f_nDepth    = 0;
         f_fiber     = fiber;
         f_framePrev = null;
         f_iPCPrev   = iCallerPC;
@@ -151,6 +154,7 @@ public class Frame
         {
         f_context   = framePrev.f_context;
         f_iId       = f_context.m_iFrameCounter++;
+        f_nDepth    = framePrev.f_nDepth + 1;
         f_fiber     = framePrev.f_fiber;
         f_framePrev = framePrev;
         f_iPCPrev   = framePrev.m_iPC;
@@ -303,8 +307,8 @@ public class Frame
         {
         Frame frameNext = createFrame1(chain.getMethod(nDepth), hTarget, ahVar, iReturn);
 
-        frameNext.m_chain  = chain;
-        frameNext.m_nDepth = nDepth;
+        frameNext.m_chain       = chain;
+        frameNext.m_nChainDepth = nDepth;
 
         return ensureInitialized(frameNext);
         }
@@ -314,8 +318,8 @@ public class Frame
         {
         Frame frameNext = createFrameT(chain.getMethod(nDepth), hTarget, ahVar, iReturn);
 
-        frameNext.m_chain  = chain;
-        frameNext.m_nDepth = nDepth;
+        frameNext.m_chain       = chain;
+        frameNext.m_nChainDepth = nDepth;
 
         return ensureInitialized(frameNext);
         }
@@ -325,8 +329,8 @@ public class Frame
         {
         Frame frameNext = createFrameN(chain.getMethod(nDepth), hTarget, ahVar, aiReturn);
 
-        frameNext.m_chain  = chain;
-        frameNext.m_nDepth = nDepth;
+        frameNext.m_chain       = chain;
+        frameNext.m_nChainDepth = nDepth;
 
         return ensureInitialized(frameNext);
         }
@@ -416,7 +420,7 @@ public class Frame
             case Op.A_SUPER:
                 return f_hThis == null
                     ? makeDeferredException("Run-time error: no target")
-                    : xRTFunction.makeHandle(m_chain, m_nDepth).bind(this, 0, f_hThis);
+                    : xRTFunction.makeHandle(m_chain, m_nChainDepth).bind(this, 0, f_hThis);
 
             case Op.A_THIS:
                 return f_hThis == null

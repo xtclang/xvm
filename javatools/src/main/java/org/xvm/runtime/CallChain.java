@@ -84,7 +84,7 @@ public class CallChain
 
     public MethodStructure getSuper(Frame frame)
         {
-        return getMethod(frame.m_nDepth + 1);
+        return getMethod(frame.m_nChainDepth + 1);
         }
 
     public boolean isNative()
@@ -241,8 +241,8 @@ public class CallChain
      */
     public int callSuper01(Frame frame, int iReturn)
         {
-        ObjectHandle hThis = frame.getThis();
-        int nDepth = frame.m_nDepth + 1;
+        ObjectHandle hThis  = frame.getThis();
+        int          nDepth = frame.m_nChainDepth + 1;
 
         MethodBody bodySuper = f_aMethods[nDepth];
         switch (bodySuper.getImplementation())
@@ -274,8 +274,8 @@ public class CallChain
      */
     public int callSuper10(Frame frame, ObjectHandle hArg)
         {
-        ObjectHandle hThis = frame.getThis();
-        int nDepth = frame.m_nDepth + 1;
+        ObjectHandle hThis  = frame.getThis();
+        int          nDepth = frame.m_nChainDepth + 1;
 
         MethodBody bodySuper = f_aMethods[nDepth];
         switch (bodySuper.getImplementation())
@@ -308,8 +308,8 @@ public class CallChain
      */
     public int callSuperN1(Frame frame, ObjectHandle[] ahArg, int iReturn, boolean fReturnTuple)
         {
-        ObjectHandle hThis = frame.getThis();
-        int nDepth = frame.m_nDepth + 1;
+        ObjectHandle hThis  = frame.getThis();
+        int          nDepth = frame.m_nChainDepth + 1;
 
         MethodBody bodySuper = f_aMethods[nDepth];
         MethodStructure methodSuper = bodySuper.getMethodStructure();
@@ -341,8 +341,8 @@ public class CallChain
      */
     public int callSuperNN(Frame frame, ObjectHandle[] ahArg, int[] aiReturn)
         {
-        ObjectHandle hThis = frame.getThis();
-        int nDepth = frame.m_nDepth + 1;
+        ObjectHandle hThis  = frame.getThis();
+        int          nDepth = frame.m_nChainDepth + 1;
 
         MethodBody bodySuper = f_aMethods[nDepth];
         MethodStructure methodSuper = bodySuper.getMethodStructure();

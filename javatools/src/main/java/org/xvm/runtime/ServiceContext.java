@@ -469,8 +469,8 @@ public class ServiceContext
                 throw new IllegalStateException();
             }
 
-        Op[] aOp = frame.f_aOp;
-        int  nOps = 0;
+        Op[] aOp  = frame.f_aOp;
+        int  cOps = 0;
 
     nextOp:
         while (true)
@@ -479,9 +479,14 @@ public class ServiceContext
                 {
                 frame.m_iPC = iPC;
 
-                if (++nOps > 100)
+                if (++cOps > 100)
                     {
-                    fiber.setStatus(FiberStatus.Paused);
+                    if (frame.f_nDepth > 100)
+                        {
+                        iPC = frame.raiseException("Stack overflow");
+                        break;
+                        }
+                    fiber.setStatus(FiberStatus.Paused, cOps);
                     return frame;
                     }
 
@@ -625,22 +630,22 @@ public class ServiceContext
 
                 case Op.R_REPEAT:
                     frame.m_iPC = iPCLast;
-                    fiber.setStatus(FiberStatus.Waiting);
+                    fiber.setStatus(FiberStatus.Waiting, cOps);
                     return frame;
 
                 case Op.R_BLOCK:
                     frame.m_iPC = iPCLast + 1;
-                    fiber.setStatus(FiberStatus.Waiting);
+                    fiber.setStatus(FiberStatus.Waiting, cOps);
                     return frame;
 
                 case Op.R_YIELD:
                     frame.m_iPC = iPCLast + 1;
-                    fiber.setStatus(FiberStatus.Yielded);
+                    fiber.setStatus(FiberStatus.Yielded, cOps);
                     return frame;
 
                 case Op.R_PAUSE:
                     frame.m_iPC = iPCLast;
-                    fiber.setStatus(FiberStatus.Paused);
+                    fiber.setStatus(FiberStatus.Paused, cOps);
                     return frame;
 
                 default:
@@ -715,7 +720,7 @@ public class ServiceContext
         {
         if (fiber.hasPendingRequests())
             {
-            fiber.setStatus(FiberStatus.Terminating);
+            fiber.setStatus(FiberStatus.Terminating, 0);
             }
         else
             {
@@ -755,7 +760,7 @@ public class ServiceContext
 
                 if (fiber != fiberThis)
                     {
-                    fiber.setStatus(FiberStatus.Terminating);
+                    fiber.setStatus(FiberStatus.Terminating, 0);
 
                     // this will respond immediately with an exception from "Fiber.prepareRun()"
                     execute(frameNext);

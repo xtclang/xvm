@@ -128,8 +128,11 @@ public class Fiber
 
     /**
      * Set the fiber's status; called only from this fiber's service thread.
+     *
+     * @param status  the status
+     * @param cOps    the number of ops this fiber has processed since the last status update
      */
-    public void setStatus(FiberStatus status)
+    public void setStatus(FiberStatus status, int cOps)
         {
         switch (m_status = status)
             {
@@ -150,6 +153,7 @@ public class Fiber
                 m_nanoStarted = 0;
                 f_context.m_cRuntimeNanos += cNanos;
                 m_frame = f_context.getCurrentFrame();
+                m_cOps += cOps;
                 break;
 
             case Terminating:
@@ -235,7 +239,7 @@ public class Fiber
                 }
             }
 
-        setStatus(FiberStatus.Running);
+        setStatus(FiberStatus.Running, 0);
         m_fResponded = false;
         return iResult;
         }
@@ -510,6 +514,11 @@ public class Fiber
     private long m_ldtTimeout;
 
     /**
+     * Metrics: the total number of ops this fiber has executed.
+     */
+    private long m_cOps;
+
+    /**
      * Currently active AsyncSection.
      */
     private ObjectHandle m_hAsyncSection = xNullable.NULL;
@@ -539,7 +548,7 @@ public class Fiber
     /**
      * The counter used to create fibers ids.
      */
-    private static AtomicLong s_counter = new AtomicLong();
+    private static final AtomicLong s_counter = new AtomicLong();
 
     enum FiberStatus
         {
@@ -570,6 +579,6 @@ public class Fiber
         /**
          * The activity index; the higher the index, the more active the status
          */
-        private int nActivity;
+        private final int nActivity;
         }
     }
