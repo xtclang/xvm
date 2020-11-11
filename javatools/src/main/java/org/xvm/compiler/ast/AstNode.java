@@ -767,15 +767,17 @@ public abstract class AstNode
             return true;
             }
 
+        ErrorListener errsTemp = errs.branch();
         while (stageOldest.compareTo(stageTarget) < 0)
             {
             Stage    stageNext = stageOldest.nextTarget();
-            StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errs);
+            StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errsTemp);
             while (!mgrKids.processComplete())
                 {
-                if (errs.isAbortDesired() || mgrKids.getIterations() > 20)
+                if (errsTemp.isAbortDesired() || mgrKids.getIterations() > 20)
                     {
-                    mgrKids.logDeferredAsErrors(errs);
+                    mgrKids.logDeferredAsErrors(errsTemp);
+                    errsTemp.merge();
                     return false;
                     }
                 }
@@ -783,7 +785,9 @@ public abstract class AstNode
             stageOldest = stageNext;
             }
 
-        return !errs.hasSeriousErrors();
+        boolean fFailure = errsTemp.hasSeriousErrors();
+        errsTemp.merge();
+        return !fFailure;
         }
 
     // ----- name resolution -----------------------------------------------------------------------
