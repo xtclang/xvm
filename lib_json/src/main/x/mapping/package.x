@@ -53,6 +53,9 @@ package mapping
         new TimeZoneMapping(),
         new DurationMapping(),
 
+        new PathMapping(),
+        new VersionMapping(),
+
         // generic container types
         new @Narrowable RangeMapping(new GenericMapping<Orderable>()),
         // TODO other container types...

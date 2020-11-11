@@ -49,6 +49,7 @@ const SysInfoMapping
             {
             fields.add("status"   , value.status   .toString())
                   .add("timestamp", value.timestamp.toString())
+// alternatively: .add("timestamp", value.timestamp.toString(True)) // ISO8601 (used automatically by DateTimeMapping)
                   .add("version"  , value.version  .toString());
             }
         }

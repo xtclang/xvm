@@ -2,7 +2,19 @@ import ecstasy.io.ByteArrayOutputStream;
 import ecstasy.io.PackedDataOutput;
 
 /**
- * Metadata catalog for a database.
+ * Metadata catalog for a database. A `Catalog` acts as the "gateway" to a JSON database, allowing a
+ * database to be created, opened, examined, recovered, upgraded, and/or deleted.
+ *
+ * A `Catalog` is instantiated as a combination of a database module which provides the model (the
+ * Ecstasy representation) for the database, and a filing system directory providing the storage for
+ * the database's data. The `Catalog` does not require the module to be provided; it can be omitted
+ * so that a database on disk can be examined and (to a limited extent) manipulated/repaired without
+ * explicit knowledge of its Ecstasy representation.
+ *
+ * The `Catalog` has a weak notion of mutual exclusion:
+ *
+ * * While the Catalog is [Configuring](Status.Configuring), [Running](Status.Running), or
+ *   [Recovering](Status.Recovering), it
  *
  * TODO version - should only be able to open the catalog with the correct TypeSystem version
  */
@@ -30,12 +42,13 @@ service Catalog
      * @param dir       the directory that contains (or may contain) the catalog
      * @param readOnly  pass `True` to access the catalog in a read-only manner
      */
-    construct(Directory dir, Boolean readOnly = False)
+    construct(Directory dir, Module? dbModule = Null, Boolean readOnly = False)
         {
         assert:arg dir.exists;
         assert:arg dir.readable && (readOnly || dir.writable);
 
         this.dir      = dir;
+        this.dbModule = dbModule;
         this.readOnly = readOnly;
         }
     finally
@@ -50,6 +63,12 @@ service Catalog
      * The directory used to store the contents of the database
      */
     public/private Directory dir;
+
+    /**
+     * The module representing the database. Used for serialization and deserialization of
+     * persistent data.
+     */
+    public/private Module? dbModule;
 
     /**
      * True iff the database was opened in read-only mode.

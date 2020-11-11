@@ -7,6 +7,10 @@ const SysInfo(Catalog.Status status,
     {
     /**
      * Create a copy of this `const` with only the specified properties modified.
+     *
+     * @param status     (optional) the new status
+     * @param timestamp  (optional) the new timestamp
+     * @param version    (optional) the new version
      */
     SysInfo with(Catalog.Status? status    = Null,
                  DateTime?       timestamp = Null,
@@ -18,9 +22,7 @@ const SysInfo(Catalog.Status status,
         }
 
     /**
-     *
-     *
-     * @return
+     * @return a new SysInfo with the timestamp updated to the current time
      */
     SysInfo touch()
         {

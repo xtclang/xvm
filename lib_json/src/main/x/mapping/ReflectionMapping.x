@@ -109,9 +109,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
         switch (type.form)
             {
             case Intersection:
-                if (type.is(Type<Nullable>),
-                    (Type left, Type right) := type.relational(),
-                    left == Nullable)
+                if ((Type left, Type right) := type.relational(), left == Nullable)
                     {
                     if (val underlying := schema.findMapping(right.DataType))
                         {

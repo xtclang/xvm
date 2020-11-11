@@ -345,6 +345,29 @@ const Schema
                 return True, mapping.as(Mapping<Serializable>);
                 }
 
+            // to avoid the chicken-and-the-egg problem with recursion, register a temporary mapping
+            // for this type
+// TODO GG
+//            allMappingsByType.put(type, new ChickenOrEggMapping<Serializable>(() ->
+//                    allMappingsByType.getOrNull(type)?.as(Mapping<Serializable>) : assert));
+//
+//Info: Validating expressions
+//Exception in thread "main" java.lang.IllegalStateException: current stage=Resolved, target stage=Emitted, required stage=Validated, node=null
+//	at org.xvm.compiler.ast.StageMgr.processInternal(StageMgr.java:200)
+//	at org.xvm.compiler.ast.StageMgr.processChildrenExcept(StageMgr.java:380)
+//	at org.xvm.compiler.ast.StageMgr.processChildren(StageMgr.java:350)
+//	at org.xvm.compiler.ast.StageMgr.processInternal(StageMgr.java:233)
+//	at org.xvm.compiler.ast.StageMgr.processComplete(StageMgr.java:91)
+//	at org.xvm.compiler.ast.StageMgr.fastForward(StageMgr.java:122)
+//	at org.xvm.compiler.ast.PropertyDeclarationStatement.validateContent(PropertyDeclarationStatement.java:408)
+//            function Mapping<Serializable>() egg = () ->
+//                {
+//                assert val mapping := this.allMappingsByType.get(type);
+//                return mapping.as(Mapping<Serializable>);
+//                };
+//            ChickenOrEggMapping<Serializable> chicken = new ChickenOrEggMapping<Serializable>(egg);
+//            allMappingsByType.put(type, chicken);
+
             // go through the original list of mappings (ordered by precedence) and see if any of
             // them could apply to the requested type; the first one to provide a specific type
             // mapping for the requested type wins, otherwise the first one that matches at all wins
@@ -372,8 +395,14 @@ const Schema
                 return True, backupPlan;
                 }
 
+            allMappingsByType.remove(type);
             return False;
             }
+        }
+
+    protected <Serializable> Mapping<Serializable> createTempMapping(Type<Serializable> type)
+        {
+        TODO
         }
 
 
