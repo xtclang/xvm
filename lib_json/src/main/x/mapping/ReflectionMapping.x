@@ -113,8 +113,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                     {
                     if (val underlying := schema.findMapping(right.DataType))
                         {
-                        return True, new @Narrowable NullableMapping<right.DataType>(underlying).
-                                        as(Mapping<SubType>);
+                        return True, new @Narrowable NullableMapping<SubType>(underlying.as(Mapping<SubType>));
                         }
                     }
                 TODO
