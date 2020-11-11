@@ -395,8 +395,8 @@ module TestIO
         testSer(schemaSA, "point", point);
         testSer(schemaSA, "segment", new Segment(point, new Point(1,99)));
 
-        // TODO CP test ReflectionMapping
-        // testSer(schema, "point", point);
+        // test ReflectionMapping
+        testSer(schema, "point", point);
 
         private <Ser> void testSer(Schema schema, String name, Ser val)
             {
