@@ -3281,9 +3281,8 @@ public class Parser
                             Token keyword = current();
                             expect(Id.L_PAREN);
                             expr = keyword.getId() == Id.AS
-                                    ? new AsExpression(expr, keyword, parseTypeExpression())
-                                    : new IsExpression(expr, keyword, parseExpression());
-                            expect(Id.R_PAREN);
+                                    ? new AsExpression(expr, keyword, parseTypeExpression(), expect(Id.R_PAREN))
+                                    : new IsExpression(expr, keyword, parseExpression(),     expect(Id.R_PAREN));
                             break;
                             }
 

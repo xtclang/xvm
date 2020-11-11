@@ -561,6 +561,12 @@ public abstract class AstNode
                         mapExprs.put(sExpr, expr);
                         }
                     }
+
+                if (expr.isConstant())
+                    {
+                    // don't recurse constants
+                    continue;
+                    }
                 }
 
             node.selectTraceableExpressions(mapExprs);

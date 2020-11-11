@@ -29,13 +29,21 @@ public class IsExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public IsExpression(Expression expr1, Token operator, Expression expr2)
+    public IsExpression(Expression expr1, Token operator, Expression expr2, Token tokClose)
         {
         super(expr1, operator, expr2);
+
+        lEndPos = tokClose.getEndPosition();
         }
 
 
     // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     public TypeConstant getImplicitType(Context ctx)
@@ -95,7 +103,7 @@ public class IsExpression
                     }
                 }
 
-            if (exprTarget.isConstant() && !typeTest.containsFormalType(true))
+            if (exprTarget.isConstant() && exprTest.isConstant())
                 {
                 constVal = pool.valOf(typeTarget.isA(typeTest));
                 }
@@ -153,4 +161,9 @@ public class IsExpression
                 ? new JumpType(argTarget, argType, label)
                 : new JumpNType(argTarget, argType, label));
         }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    protected long lEndPos;
     }

@@ -11,10 +11,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.MoveCast;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
-
-import org.xvm.util.Severity;
 
 
 /**
@@ -25,13 +22,21 @@ public class AsExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public AsExpression(Expression expr1, Token operator, TypeExpression expr2)
+    public AsExpression(Expression expr1, Token operator, TypeExpression expr2, Token tokClose)
         {
         super(expr1, operator, expr2);
+
+        lEndPos = tokClose.getEndPosition();
         }
 
 
     // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public long getEndPosition()
+        {
+        return lEndPos;
+        }
 
     @Override
     public TypeConstant getImplicitType(Context ctx)
@@ -140,6 +145,8 @@ public class AsExpression
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    protected long lEndPos;
 
     private transient boolean m_fCastRequired = true;
     }

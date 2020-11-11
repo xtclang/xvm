@@ -855,6 +855,20 @@ public class NameExpression
         }
 
     @Override
+    protected void selectTraceableExpressions(Map<String, Expression> mapExprs)
+        {
+        switch (getMeaning())
+            {
+            case Variable:
+            case Property:
+            case FormalChildType:
+                // stop recursing further
+                return;
+            }
+        super.selectTraceableExpressions(mapExprs);
+        }
+
+    @Override
     public boolean isAssignable(Context ctx)
         {
         if (m_fAssignable)
