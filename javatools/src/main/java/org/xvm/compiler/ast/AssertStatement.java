@@ -459,53 +459,53 @@ public class AssertStatement
         {
         if (!conds.isEmpty())
             {
-            List<AstNode> listNewConds = new ArrayList<>();
+            List<AstNode> listOldConds = conds;
+            conds       = new ArrayList<>(conds.size());
             m_listTexts = new ArrayList<>(conds.size());
-            for (AstNode cond : conds)
+            for (AstNode cond : listOldConds)
                 {
-                String sCond = Handy.appendString(new StringBuilder(),
-                        cond.getSource().toString(cond.getStartPosition(), cond.getEndPosition()))
-                        .toString();
-
-                Expression exprRemainder = null;
-                do
-                    {
-                    if (cond instanceof UnaryComplementExpression)
-                        {
-                        // demorgan
-                        UnaryComplementExpression exprNot = (UnaryComplementExpression) cond;
-                        Expression                exprSub = exprNot.expr;
-                        if (exprSub instanceof BiExpression
-                                && ((BiExpression) exprSub).operator.getId() == Id.COND_OR)
-                            {
-                            BiExpression              exprOr   = (BiExpression) exprSub;
-                            UnaryComplementExpression exprNot2 = (UnaryComplementExpression) exprNot.clone();
-
-                            exprNot.expr  = exprOr.expr1;
-                            exprNot2.expr = exprOr.expr2;
-                            exprRemainder = exprNot2;
-                            exprOr.discard(false);
-                            }
-                        }
-                    else if (cond instanceof BiExpression
-                            && ((BiExpression) cond).operator.getId() == Id.COND_AND)
-                        {
-                        BiExpression exprAnd = (BiExpression) cond;
-                        cond          = exprAnd.expr1;
-                        exprRemainder = exprAnd.expr2;
-                        exprAnd.discard(false);
-                        }
-
-                    listNewConds.add(cond);
-                    m_listTexts.add(sCond);
-
-                    cond          = exprRemainder;
-                    exprRemainder = null;
-                    }
-                while (cond != null);
+                demorgan(cond);
                 }
-            conds = listNewConds;
             }
+        }
+
+    private void demorgan(AstNode cond)
+        {
+        String sCond = Handy.appendString(new StringBuilder(),
+                cond.getSource().toString(cond.getStartPosition(), cond.getEndPosition()))
+                .toString();
+
+        if (cond instanceof UnaryComplementExpression)
+            {
+            // demorgan
+            UnaryComplementExpression exprNot = (UnaryComplementExpression) cond;
+            Expression                exprSub = exprNot.expr;
+            if (exprSub instanceof BiExpression
+                    && ((BiExpression) exprSub).operator.getId() == Id.COND_OR)
+                {
+                BiExpression              exprOr   = (BiExpression) exprSub;
+                UnaryComplementExpression exprNot2 = (UnaryComplementExpression) exprNot.clone();
+
+                exprNot .expr = exprOr.expr1;
+                exprNot2.expr = exprOr.expr2;
+                demorgan(exprNot);
+                demorgan(exprNot2);
+                exprOr.discard(false);
+                return;
+                }
+            }
+        else if (cond instanceof BiExpression
+                && ((BiExpression) cond).operator.getId() == Id.COND_AND)
+            {
+            BiExpression exprAnd = (BiExpression) cond;
+            demorgan(exprAnd.expr1);
+            demorgan(exprAnd.expr2);
+            exprAnd.discard(false);
+            return;
+            }
+
+        conds.add(cond);
+        m_listTexts.add(sCond);
         }
 
     /**
