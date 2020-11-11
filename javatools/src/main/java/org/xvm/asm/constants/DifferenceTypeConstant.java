@@ -65,6 +65,16 @@ public class DifferenceTypeConstant
         return pool.ensureDifferenceTypeConstant(type1, type2);
         }
 
+    @Override
+    protected TypeConstant simplifyOrClone(ConstantPool pool, TypeConstant type1, TypeConstant type2)
+        {
+        if (type1 instanceof IntersectionTypeConstant)
+            {
+            return type1.andNot(pool, type2);
+            }
+
+        return cloneRelational(pool, type1, type2);
+        }
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
