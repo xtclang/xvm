@@ -10,8 +10,8 @@ const NullableMapping<Serializable>
         {
         assert !underlying.is(NullableMapping);
         assert !Null.is(underlying.Serializable);
-        // TODO GG
-        // assert underlying.Serializable.is(Type<Serializable-Nullable>);
+        assert underlying.Serializable.is(Type<NonNullable>);
+
         this.underlying = underlying.as(Mapping<NonNullable>);
         }
 
