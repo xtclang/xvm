@@ -229,7 +229,7 @@ public class xConst
                     for (int i = 0; i < cFields; i++)
                         {
                         ObjectHandle hField = ahFields[i];
-                        if (!hField.isMutable() || hField.isService())
+                        if (hField.isPassThrough())
                             {
                             continue;
                             }

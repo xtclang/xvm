@@ -1231,7 +1231,7 @@ public class ServiceContext
                 ObjectHandle    hReturn    = frame.f_ahVar[0];
                 ExceptionHandle hException = frame.m_hException;
 
-                if (hException == null && hReturn.isMutable() && !hReturn.isService())
+                if (hException == null && !hReturn.isPassThrough())
                     {
                     hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
                     if (hReturn == null)
@@ -1263,7 +1263,7 @@ public class ServiceContext
                         for (int i = 0, c = ahReturn.length; i < c; i++)
                             {
                             ObjectHandle hReturn = ahReturn[i];
-                            if (hReturn.isMutable() && !hReturn.isService())
+                            if (!hReturn.isPassThrough())
                                 {
                                 hReturn = hReturn.getTemplate().
                                         createProxyHandle(frame.f_context, hReturn, null);
@@ -1302,7 +1302,7 @@ public class ServiceContext
                             // the DEFAULT value (see Utils.GET_AND_RETURN)
                             ahReturn[i] = ObjectHandle.DEFAULT;
                             }
-                        else if (hReturn.isMutable() && !hReturn.isService())
+                        else if (!hReturn.isPassThrough())
                             {
                             hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
                             if (hReturn == null)

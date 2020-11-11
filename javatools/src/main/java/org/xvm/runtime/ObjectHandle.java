@@ -174,8 +174,17 @@ public abstract class ObjectHandle
         }
 
     /**
-     * @return true iff the handle is a non-constant object that is allowed to be passed across
-     *         service boundaries
+     * @return true iff the handle is an object that is allowed to be passed across service
+     *         boundaries (an immutable, a service or an object that has all pass-through fields)
+     */
+    public boolean isPassThrough()
+        {
+        return !isMutable() || isService();
+        }
+
+    /**
+     * @return true iff the handle is a non-constant object for which all method invocations
+     *         and properties access need to be proxied across service boundaries
      */
     public boolean isService()
         {

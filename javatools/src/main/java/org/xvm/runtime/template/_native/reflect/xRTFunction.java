@@ -635,6 +635,12 @@ public class xRTFunction
             }
 
         @Override
+        public boolean isPassThrough()
+            {
+            return m_hDelegate == null || m_hDelegate.isPassThrough();
+            }
+
+        @Override
         protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
             return m_hDelegate.call1Impl(frame, hTarget, ahVar, iReturn);
@@ -769,6 +775,12 @@ public class xRTFunction
             }
 
         @Override
+        public boolean isPassThrough()
+            {
+            return m_hDelegate.isPassThrough() && m_hArg.isPassThrough();
+            }
+
+        @Override
         protected int calculateShift(int iArg)
             {
             int nShift = m_iArg == -1 || iArg < m_iArg ? 0 : 1;
@@ -897,6 +909,19 @@ public class xRTFunction
                     }
                 }
             return super.isMutable();
+            }
+
+        @Override
+        public boolean isPassThrough()
+            {
+            for (ObjectHandle hArg : f_ahArg)
+                {
+                if (!hArg.isPassThrough())
+                    {
+                    return false;
+                    }
+                }
+            return super.isPassThrough();
             }
 
         @Override
@@ -1034,7 +1059,7 @@ public class xRTFunction
                         : super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validateImmutable(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1057,7 +1082,7 @@ public class xRTFunction
                         : super.callTImpl(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validateImmutable(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1080,7 +1105,7 @@ public class xRTFunction
                         : super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
 
-            if (!validateImmutable(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1112,7 +1137,7 @@ public class xRTFunction
                 return super.call1(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validateImmutable(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1128,7 +1153,7 @@ public class xRTFunction
                 return super.callT(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validateImmutable(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1144,7 +1169,7 @@ public class xRTFunction
                 return super.callN(frame, hTarget, ahVar, aiReturn);
                 }
 
-            if (!validateImmutable(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1157,10 +1182,10 @@ public class xRTFunction
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * @return true iff all the arguments are immutable
+     * @return true iff all the arguments are pass-through or proxyable
      */
-    private static boolean validateImmutable(ServiceContext ctx, MethodStructure method,
-                                             ObjectHandle[] ahArg)
+    private static boolean validatePassThrough(ServiceContext ctx, MethodStructure method,
+                                               ObjectHandle[] ahArg)
         {
         // Note: this logic could be moved to ServiceContext.sendInvokeXXX()
         for (int i = 0, c = ahArg.length; i < c; i++)
@@ -1172,7 +1197,7 @@ public class xRTFunction
                 break;
                 }
 
-            if (hArg.isMutable() && !hArg.isService())
+            if (!hArg.isPassThrough())
                 {
                 hArg = hArg.getTemplate().createProxyHandle(ctx, hArg, method.getParamTypes()[i]);
                 if (hArg == null)
