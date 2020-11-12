@@ -68,9 +68,15 @@ public class DifferenceTypeConstant
     @Override
     protected TypeConstant simplifyOrClone(ConstantPool pool, TypeConstant type1, TypeConstant type2)
         {
-        if (type1 instanceof IntersectionTypeConstant)
+        if (type1.isRelationalType())
             {
-            return type1.andNot(pool, type2);
+            TypeConstant typeResult = type1.andNot(pool, type2);
+
+            // andNot algorithm defaults to the "minuend" type
+            if (typeResult != type1)
+                {
+                return typeResult;
+                }
             }
 
         return cloneRelational(pool, type1, type2);
