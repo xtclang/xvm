@@ -376,9 +376,9 @@ const Char
         if (codepoint <= 0x7F)
             {
             return 0x09 <= codepoint <= 0x20
-                                     // 2               1      0
-                                     // 0FEDCBA9876543210FEDCBA9
-                && 1.as(Int) << codepoint-9 & 0b111110100000000000011111 != 0;
+                    //                              2               1      0
+                    //                              0FEDCBA9876543210FEDCBA9
+                    && 1.as(Int) << codepoint-9 & 0b111110100000000000011111 != 0;
             }
 
         return switch (codepoint)
