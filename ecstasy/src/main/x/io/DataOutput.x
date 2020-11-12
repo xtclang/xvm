@@ -503,7 +503,7 @@ interface DataOutput
      *
      * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
-    static void writeUTF8Char(DataOutput out, Char ch)
+    static void writeUTF8Char(BinaryOutput out, Char ch)
         {
         writeUTF8Codepoint(out, ch.codepoint);
         }
@@ -516,7 +516,7 @@ interface DataOutput
       *
      * @throws IllegalUTF if the data cannot be written as valid UTF data
      */
-    static void writeUTF8Codepoint(DataOutput out, UInt32 codepoint)
+    static void writeUTF8Codepoint(BinaryOutput out, UInt32 codepoint)
         {
         if (codepoint & ~0x7F == 0)
             {

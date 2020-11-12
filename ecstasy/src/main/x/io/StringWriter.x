@@ -1,5 +1,3 @@
-import io.Writer;
-
 /**
  * A StringWriter is a delegating text [Writer] that tracks its current position.
  */
