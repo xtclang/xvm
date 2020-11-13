@@ -1659,14 +1659,7 @@ public class ClassStructure
                 list.toArray(TypeConstant.NO_TYPES));
             }
 
-        if (ix < list.size())
-            {
-            TypeConstant type = list.get(ix);
-            return type.isFormalTypeSequence()
-                 ? pool.typeTuple()
-                 : type;
-            }
-        return null;
+        return ix < list.size() ? list.get(ix) : null;
         }
 
 

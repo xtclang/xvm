@@ -137,13 +137,6 @@ public class PropertyConstant
                     return null;
                     }
                 }
-
-            TypeConstant typeResolved = resolver.resolveFormalType(this);
-
-            // prevent a recursive resolution into "Tuple<...>"
-            return typeResolved == null || typeResolved.isFormalTypeSequence()
-                    ? null
-                    : typeResolved;
             }
 
         return resolver.resolveFormalType(this);
