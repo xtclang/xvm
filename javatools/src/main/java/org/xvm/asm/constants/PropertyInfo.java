@@ -511,7 +511,8 @@ public class PropertyInfo
             }
 
         PropertyBody body = new PropertyBody(getHead().getStructure(), Implementation.Implicit, null,
-                getType(), fRO, fRW, false, Effect.None, Effect.None, hasField(), false, null, null);
+                getType(), fRO, fRW, getHead().hasCustomCode(), Effect.None, Effect.None, hasField(),
+                false, null, null);
         return new PropertyInfo(new PropertyBody[] {body},
                 m_type, m_fRequireField, m_fSuppressVar, m_nRank);
         }
