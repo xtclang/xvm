@@ -120,36 +120,8 @@ public class TypeInfo
         f_cacheById  = new ConcurrentHashMap<>(mapMethods);
         f_cacheByNid = new ConcurrentHashMap<>(mapVirtMethods);
 
-        boolean fExplicitAbstract = fSynthetic || !isClass() || struct.isExplicitlyAbstract() ||
+        m_fExplicitAbstract = fSynthetic || !isClass() || struct.isExplicitlyAbstract() ||
                 TypeInfo.containsAnnotation(aannoClass, "Abstract");
-
-        boolean fImplicitAbstract = false;
-        boolean fMissingConstruct = false;
-        for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
-            {
-            MethodInfo info = entry.getValue();
-
-            info.populateCache(entry.getKey(), f_cacheById, f_cacheByNid);
-
-            if (info.isVirtualConstructor())
-                {
-                // constructors must come from "this" structure; otherwise they are un-implemented
-                // virtual constructors
-                fMissingConstruct |= info.isVirtualConstructorImplemented(this);
-                }
-            else
-                {
-                // unfortunately, there is no "||=" operator in Java
-                fImplicitAbstract = fImplicitAbstract || info.isAbstract();
-                }
-            }
-
-        fImplicitAbstract = fImplicitAbstract ||
-            mapProps.values().stream().anyMatch(PropertyInfo::isExplicitlyAbstract);
-
-        m_fExplicitAbstract = fExplicitAbstract;
-        m_fImplicitAbstract = fImplicitAbstract;
-        m_fMissingConstruct = fMissingConstruct;
 
         assert cInvalidations == 0 // necessary for TYPEINFO_PLACEHOLDER construction
             || cInvalidations <= type.getConstantPool().getInvalidationCount();
@@ -192,8 +164,7 @@ public class TypeInfo
         f_cacheByNid = infoConstraint.f_cacheByNid;
 
         m_fExplicitAbstract = true;
-        m_fImplicitAbstract = infoConstraint.m_fImplicitAbstract;
-        m_fMissingConstruct = false;
+        m_fImplicitAbstract = false;
 
         assert cInvalidations <= typeFormal.getConstantPool().getInvalidationCount();
         }
@@ -626,7 +597,9 @@ public class TypeInfo
      */
     public boolean isAbstract()
         {
-        return m_fImplicitAbstract || m_fExplicitAbstract || m_fMissingConstruct;
+        ensureCaches();
+
+        return m_fImplicitAbstract || m_fExplicitAbstract;
         }
 
     /**
@@ -1412,6 +1385,8 @@ public class TypeInfo
      */
     public MethodInfo getMethodById(MethodConstant id)
         {
+        ensureCaches();
+
         MethodInfo infoMethod = f_cacheById.get(id);
         if (infoMethod != null)
             {
@@ -1439,6 +1414,8 @@ public class TypeInfo
      */
     public MethodInfo getMethodByNestedId(Object nid)
         {
+        ensureCaches();
+
         MethodInfo info = f_cacheByNid.get(nid);
         if (info != null)
             {
@@ -2250,6 +2227,49 @@ public class TypeInfo
 
     // ----- deferred TypeInfo creation ------------------------------------------------------------
 
+    private void ensureCaches()
+        {
+        if (m_fCacheReady)
+            {
+            return;
+            }
+
+        Map<MethodConstant, MethodInfo> cacheById  = f_cacheById;
+        Map<Object, MethodInfo>         cacheByNid = f_cacheByNid;
+
+        // use the cache for synchronization since it's shared across formal type parameters info
+        synchronized (cacheById)
+            {
+            if (m_fCacheReady)
+                {
+                return;
+                }
+
+            boolean fImplicitAbstract = false;
+            for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
+                {
+                MethodInfo info = entry.getValue();
+
+                info.populateCache(entry.getKey(), cacheById, cacheByNid);
+
+                if (info.isVirtualConstructor())
+                    {
+                    // constructors must come from "this" structure; otherwise they are un-implemented
+                    // virtual constructors
+                    fImplicitAbstract |= info.isVirtualConstructorImplemented(this);
+                    }
+                else
+                    {
+                    fImplicitAbstract |= info.isAbstract();
+                    }
+                }
+
+            m_fImplicitAbstract = fImplicitAbstract ||
+                f_mapProps.values().stream().anyMatch(PropertyInfo::isExplicitlyAbstract);
+            m_fCacheReady = true;
+            }
+        }
+
     Progress getProgress()
         {
         return f_progress;
@@ -2443,12 +2463,7 @@ public class TypeInfo
     /**
      * Whether this type is abstract due to a presence of abstract properties or methods.
      */
-    private final boolean m_fImplicitAbstract;
-
-    /**
-     * Whether this type is abstract due to an absence of a virtual constructor.
-     */
-    private final boolean m_fMissingConstruct;
+    private boolean m_fImplicitAbstract;
 
     /**
      * The type parameters for this TypeInfo key'ed by a String or Nid.
@@ -2550,8 +2565,8 @@ public class TypeInfo
      */
     private transient Map<SignatureConstant, MethodInfo> m_mapMethodsBySignature;
 
-    // cached query results REVIEW for thread safety
     // REVIEW is this a reasonable way to cache these?
+    private boolean                               m_fCacheReady;
     private final Map<MethodConstant, MethodInfo> f_cacheById;
     private final Map<Object, MethodInfo>         f_cacheByNid;
 
