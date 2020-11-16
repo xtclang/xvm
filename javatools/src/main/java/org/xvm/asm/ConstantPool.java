@@ -3596,19 +3596,24 @@ public class ConstantPool
         Map<Object, ParamInfo> mapTypeParams = new HashMap<>();
         mapTypeParams.put("Referent", new ParamInfo("Referent", typeReferent, typeObject()));
 
-        MethodConstant id        = info.findMethods("get", 0, TypeInfo.MethodKind.Method).iterator().next();
-        MethodInfo     method    = info.getMethodById(id);
-        MethodBody     body      = method.getHead();
-        MethodBody     bodyNew   = body.resolveGenerics(this, resolver);
-        MethodInfo     methodNew = new MethodInfo(bodyNew);
+        MethodConstant    id        = info.findMethods("get", 0, TypeInfo.MethodKind.Method).iterator().next();
+        SignatureConstant sig       = id.getSignature();
+        MethodInfo        method    = info.getMethodById(id);
+        MethodBody        body      = method.getHead();
+        MethodConstant    idNew     = ensureMethodConstant(info.getIdentity(),
+                                        sig.resolveGenericTypes(this, resolver));
+        SignatureConstant sigNew    = idNew.getSignature();
+        MethodBody        bodyNew   = new MethodBody(idNew, sigNew, body.getImplementation(), null);
+        MethodInfo        methodNew = new MethodInfo(bodyNew);
+        bodyNew.setMethodStructure(body.getMethodStructure());
 
         Map<MethodConstant, MethodInfo> mapMethods = new HashMap<>(info.getMethods());
         mapMethods.remove(id);
         mapMethods.put(methodNew.getIdentity(), methodNew);
 
         Map<Object, MethodInfo> mapVirtMethods = new HashMap<>(info.getVirtMethods());
-        mapVirtMethods.remove(id.getSignature());
-        mapVirtMethods.put(bodyNew.getSignature(), methodNew);
+        mapVirtMethods.remove(sig);
+        mapVirtMethods.put(sigNew, methodNew);
 
         return new TypeInfo(
                 info.getType(),         // unresolved formal type from the "native" pool

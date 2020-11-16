@@ -3973,8 +3973,6 @@ public abstract class TypeConstant
             int                                 nBaseRank,
             ErrorListener                       errs)
         {
-        ConstantPool pool = getConstantPool();
-
         if (isVirtualChild())
             {
             // virtual child has access to the parent's type parameters

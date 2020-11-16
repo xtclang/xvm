@@ -387,6 +387,14 @@ public class PropertyBody
         }
 
     /**
+     * @return true iff the property is synthetic
+     */
+    public boolean isSynthetic()
+        {
+        return m_structProp != null && m_structProp.isSynthetic();
+        }
+
+    /**
      * @return true if the property is annotated by "@Abstract"
      */
     public boolean isExplicitAbstract()

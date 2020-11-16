@@ -182,7 +182,7 @@ public class PropertyInfo
             // check @Override
             PropertyBody bodyAdd = aAdd[0];
             if (!bodyAdd.isExplicitOverride() && !this.containsBody(bodyAdd.getIdentity())
-                    && !bodyAdd.getStructure().isSynthetic())   // synthetic might not be marked
+                    && !bodyAdd.isSynthetic()) // synthetic might not be marked
                 {
                 constId.log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_REQUIRED,
                         bodyAdd.getIdentity().getValueString(),
@@ -208,7 +208,7 @@ public class PropertyInfo
                 // the property type can only be wider if it is a read-only interface/into method
                 // or the layer-on is an annotation; otherwise it is an error
                 else if (!(exAdd != Existence.Class && bodyAdd.isRO() && typeResult.isA(typeAdd))
-                        && !bodyAdd.getStructure().isSynthetic()    // synthetic might not be marked
+                        && !bodyAdd.isSynthetic() // synthetic might not be marked
                         && !fAnno)
                     {
                     constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
