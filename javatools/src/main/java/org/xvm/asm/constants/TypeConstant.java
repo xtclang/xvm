@@ -4129,6 +4129,7 @@ public abstract class TypeConstant
                 // align the structure with the info (may be used by the runtime)
                 fNative = true;
                 method.markNative();
+                pool.invalidateTypeInfos(id.getNamespace());
                 }
 
             MethodBody body = new MethodBody(id, sig,
