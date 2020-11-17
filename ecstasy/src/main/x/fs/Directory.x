@@ -61,7 +61,7 @@ interface Directory
     /**
      * Delete the contents of this directory, if any, and then delete this directory, if it exists.
      *
-     * @return this directory iff it did exist, and now does not
+     * @return True iff this directory did exist, and now does not
      *
      * @throws AccessDenied  if permission to delete the file has not been granted
      */
