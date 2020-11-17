@@ -727,9 +727,9 @@ public class TypeCompositionStatement
             switch (component.getFormat())
                 {
                 case CONST:
-                    // parent MUST be a const (because parent will be automatically captured, and a
-                    // const can't capture a non-const)
-                    if (container.getFormat() != Format.CONST)
+                    // parent MUST be a const or a service (because parent will be automatically
+                    // captured, and a const can't capture a non-const)
+                    if (container.getFormat() != Format.CONST && container.getFormat() != Format.SERVICE)
                         {
                         log(errs, Severity.ERROR, Compiler.INNER_CONST_NOT_STATIC);
                         fExplicitlyStatic = true;
