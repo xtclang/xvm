@@ -1464,6 +1464,7 @@ public class InvocationExpression
             // obtain the function that will be bound and/or called
             assert !m_fBindTarget;
             argFn = expr.generateArgument(ctx, code, false, fTargetOnStack, errs);
+            assert argFn.getType().isA(pool().typeFunction());
             }
 
         // bind arguments and/or generate a call to the function specified by argFn; first, convert
@@ -1491,6 +1492,7 @@ public class InvocationExpression
             char       chArgs;
 
             assert !m_fBindParams || cArgs > 0;
+            assert cDefaults >= 0;
 
             if (cAll == 0)
                 {
