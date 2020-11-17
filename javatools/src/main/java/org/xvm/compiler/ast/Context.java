@@ -1786,31 +1786,67 @@ public class Context
             super.promoteNarrowedType(sName, arg, branch);
 
             // choose the wider type of the two branches and promote to "Always"
-            if (branch == Branch.WhenTrue)
+            Context  ctxOuter = getOuterContext();
+            Argument argOrig  = ctxOuter.getVar(sName);
+            if (argOrig != null)
                 {
-                Argument argTrue  = arg;
-                Argument argFalse = getNarrowingMap(false).get(sName);
-                if (argFalse != null)
-                    {
-                    Context      ctxOuter  = getOuterContext();
-                    Argument     argOrig   = ctxOuter.getVar(sName);
-                    TypeConstant typeOrig  = argOrig == null ? null : argOrig.getType();
-                    TypeConstant typeTrue  = argTrue .getType();
-                    TypeConstant typeFalse = argFalse.getType();
+                Argument     argTrue;
+                Argument     argFalse;
+                TypeConstant typeTrue;
+                TypeConstant typeFalse;
 
-                    if (typeFalse.isA(typeTrue))
-                        {
-                        if (!typeTrue.equals(typeOrig))
+                switch (branch)
+                    {
+                    case WhenTrue:
+                        argTrue   = arg;
+                        argFalse  = getNarrowingMap(false).get(sName);
+                        typeTrue  = argTrue.getType();
+                        typeFalse = argFalse == null ? argOrig.getType() : argFalse.getType();
+                        break;
+
+                    case WhenFalse:
+                        argTrue = getNarrowingMap(true).get(sName);
+                        if (argTrue != null)
                             {
-                            ctxOuter.replaceArgument(sName, Branch.Always, argTrue);
+                            // the argument has already been processed on the "true" branch
+                            return;
                             }
+                        argFalse  = arg;
+                        typeTrue  = argOrig.getType();
+                        typeFalse = argFalse.getType();
+                        break;
+
+                    default:
+                        // already processed by the super call
+                        return;
+                    }
+
+                if (typeFalse.isA(typeTrue))
+                    {
+                    if (argTrue != null)
+                        {
+                        ctxOuter.replaceArgument(sName, Branch.Always, argTrue);
                         }
-                    else if (typeTrue.isA(typeFalse))
+                    }
+                else if (typeTrue.isA(typeFalse))
+                    {
+                    if (argFalse != null)
                         {
-                        if (!typeFalse.equals(typeOrig))
-                            {
-                            ctxOuter.replaceArgument(sName, Branch.Always, argFalse);
-                            }
+                        ctxOuter.replaceArgument(sName, Branch.Always, argFalse);
+                        }
+                    }
+                else
+                    {
+                    TypeConstant typeOrig = argOrig.getType();
+
+                    if (!typeFalse.isA(typeOrig) || !typeTrue.isA(typeOrig))
+                        {
+                        // this can only happen if the original type was already a shadow
+                        assert argOrig instanceof Register;
+
+                        Register regOrig = (Register) argOrig;
+                        ctxOuter.replaceArgument(sName, Branch.Always,
+                            regOrig.narrowType(regOrig.getOriginalType()));
                         }
                     }
                 }

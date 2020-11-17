@@ -4,12 +4,55 @@ module TestSimple
 
     void run()
         {
+        Boolean flag = True;
+        Byte[]? bytes = Null;
+
+        bytes = Null;
+        if (flag)
+            {
+            bytes = [0];
+            }
+        flag = fromBytes(bytes?);
+
+        bytes = Null;
+        if (flag)
+            {
+            }
+        else
+            {
+            bytes = [1];
+            }
+
+        flag = fromBytes(bytes?);
+
+        bytes = Null;
+        try
+            {
+            bytes = [2];
+            }
+        catch (Exception e)
+            {
+            }
+
+        bytes = Null;
+        try
+            {
+            bytes = [3];
+            }
+        finally
+            {
+            flag = False;
+            }
+
+        flag = fromBytes(bytes?);
         }
 
-    protected void transition(function Boolean(Int)? canTransition = Null)
+    protected Boolean fromBytes(Byte[] bytes)
         {
-        Int glance = 5;
+        return True;
+        }
 
-        assert canTransition?(glance);
+    void foo()
+        {
         }
     }

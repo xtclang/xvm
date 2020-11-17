@@ -153,7 +153,7 @@ public class TryStatement
         int     cCatches    = catches == null ? 0 : catches.size();
 
         // validate the "try" block
-        Context ctxTryBlock = ctxOrig.enter();
+        TryContext ctxTryBlock = new TryContext(ctxOrig);
         block.validate(ctxTryBlock, errs);
 
         Map<String, Assignment> mapTryAsn = ctxTryBlock.prepareJump(ctxOrig);
@@ -252,7 +252,11 @@ public class TryStatement
             assert ctxNext == ctxOrig;
             if (ctxTryBlock.isReachable())
                 {
-                ctxOrig.merge(ctxTryBlock.getDefiniteAssignments());
+                ctxTryBlock.exitReachable();
+                }
+            else
+                {
+                ctxTryBlock.discard();
                 }
 
             ctxOrig.setReachable(fReachable);
@@ -505,6 +509,55 @@ public class TryStatement
     public String getDumpDesc()
         {
         return keyword.getId().TEXT;
+        }
+
+
+    // ----- inner classes -------------------------------------------------------------------------
+
+    /**
+     * A custom "try" block context.
+     */
+    static protected class TryContext
+            extends Context
+        {
+        protected TryContext(Context ctxOuter)
+            {
+            super(ctxOuter, true);
+            }
+
+        /**
+         * Merge the information from this context into the outer when it's reachable.
+         */
+        protected void exitReachable()
+            {
+            Context ctxOuter = getOuterContext();
+            ctxOuter.merge(getDefiniteAssignments());
+
+            promoteNarrowedTypes();
+            }
+
+        @Override
+        protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
+            {
+            if (branch == Branch.Always && !isVarDeclaredInThisScope(sName))
+                {
+                Context  ctxOuter = getOuterContext();
+                Argument argOrig  = ctxOuter.getVar(sName);
+                assert argOrig != null;
+
+                TypeConstant typeArg  = arg.getType();
+                TypeConstant typeOrig = argOrig.getType();
+                if (!typeArg.isA(typeOrig))
+                    {
+                    // this can only happen if the original type was already a shadow
+                    assert argOrig instanceof Register;
+
+                    Register regOrig = (Register) argOrig;
+                    ctxOuter.replaceArgument(sName, branch,
+                        regOrig.narrowType(regOrig.getOriginalType()));
+                    }
+                }
+            }
         }
 
 
