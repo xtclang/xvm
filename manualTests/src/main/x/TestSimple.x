@@ -2,26 +2,36 @@ module TestSimple
     {
     @Inject Console console;
 
+    import ecstasy.io.CharArrayReader;
+
+    package json import json.xtclang.org;
+
+    import json.Mapping;
+    import json.Schema;
+
     void run()
         {
-        enum Color {Red, Green, Blue}
+        Schema schema = Schema.DEFAULT;
+        Point  point  = new Point(1, 2);
 
-        void test(Class clz)
-            {
-            console.println($"class name={clz.name}");
-            if (clz.is(Enumeration))
-                {
-                console.println($"enumeration={clz.values}");
-                }
-            else
-                {
-                assert clz.is(EnumValue);
+        console.println($"point={point}");
 
-                console.println($"enumValue={clz.value}; enumeration={clz.enumeration}");
-                }
-            }
-
-        test(Color.Red);
-        test(Color);
+        testSer(schema, "point", point);
         }
+
+    private <Ser> void testSer(Schema schema, String name, Ser val)
+        {
+        @Inject Timer timer;
+
+        StringBuffer buf = new StringBuffer();
+        schema.createObjectOutput(buf).write(val);
+
+        String s = buf.toString();
+        console.println($"JSON {name} written out={s} in {timer.elapsed}");
+
+        Ser val2 = schema.createObjectInput(new CharArrayReader(s)).read<Ser>();
+        console.println($"read {name} back in={val2} in {timer.elapsed}");
+        }
+
+    const Point(Int x, Int y);
     }

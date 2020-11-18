@@ -6256,9 +6256,12 @@ public abstract class TypeConstant
             return false;
             }
 
-        // TODO: there is a concern that this allows a Typedef to equal its referent
-        TypeConstant typeThis = this.resolveTypedefs();
-        TypeConstant typeThat = ((TypeConstant) obj).resolveTypedefs();
+        TypeConstant typeThis = this instanceof UnresolvedTypeConstant
+                ? ((UnresolvedTypeConstant) this).getResolvedType()
+                : this;
+        TypeConstant typeThat = obj instanceof UnresolvedTypeConstant
+                ? ((UnresolvedTypeConstant) obj).getResolvedType()
+                : (TypeConstant) obj;
 
         return typeThis.getFormat() == typeThat.getFormat()
             && typeThis.compareDetails(typeThat) == 0;
