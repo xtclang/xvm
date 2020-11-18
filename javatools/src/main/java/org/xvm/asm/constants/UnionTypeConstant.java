@@ -681,6 +681,7 @@ public class UnionTypeConstant
     @Override
     public int hashCode()
         {
-        return "|".hashCode() ^ m_constType1.hashCode() ^ m_constType2.hashCode();
+        // '+' == 53
+        return 53 ^ m_constType1.hashCode() ^ m_constType2.hashCode();
         }
     }

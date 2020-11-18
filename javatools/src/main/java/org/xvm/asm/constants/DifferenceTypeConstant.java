@@ -479,6 +479,7 @@ public class DifferenceTypeConstant
     @Override
     public int hashCode()
         {
-        return "-".hashCode() ^ m_constType1.hashCode() ^ m_constType2.hashCode();
+        // '-' == 55
+        return 55 ^ m_constType1.hashCode() ^ m_constType2.hashCode();
         }
     }

@@ -1015,10 +1015,16 @@ public class ParameterizedTypeConstant
     @Override
     public int hashCode()
         {
-        int n = m_constType.hashCode() + m_atypeParams.length;
-        for (TypeConstant type : m_atypeParams)
+        int n = m_nHashCode;
+        if (n == 0)
             {
-            n ^= type.hashCode();
+            n = m_constType.hashCode() + m_atypeParams.length;
+            for (TypeConstant type : m_atypeParams)
+                {
+                n ^= type.hashCode();
+                }
+            n |= 1; // this will never be a zero
+            m_nHashCode = n;
             }
         return n;
         }
@@ -1045,4 +1051,9 @@ public class ParameterizedTypeConstant
      * The type parameters.
      */
     private TypeConstant[] m_atypeParams;
+
+    /**
+     * Cached hashCode value.
+     */
+    private transient int m_nHashCode;
     }
