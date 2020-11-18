@@ -133,7 +133,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
 
                 if (clazz.is(Enumeration))
                     {
-                    return True, new EnumMapping<clazz.EnumType>().as(Mapping<SubType>);
+                    return True, new EnumMapping<clazz.Value>().as(Mapping<SubType>);
                     }
 
                 // TODO CP other singletons

@@ -215,8 +215,6 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     Composition composition;
 
-    // TODO get super
-
     /**
      * The underlying ClassTemplate of this Class. For example, given a composition
      * `@A1 @A2 C`, the `baseTemplate` property would retrun `C`.
@@ -363,7 +361,7 @@ const Class<PublicType, ProtectedType extends PublicType,
         assert:arg paramTypes.size <= canonicalTypes.size;
         for (Int i = 0, Int c = paramTypes.size; i < c; ++i)
             {
-            assert:arg paramTypes[i].isA(canonicalTypes[i]);     // REVIEW should this be isA(Ttype<cT[i]>) ?
+            assert:arg paramTypes[i].isA(canonicalTypes[i].DataType);
             }
 
         assert Class!<> that := PublicType.parameterize(paramTypes).fromClass();

@@ -5,10 +5,10 @@ import ClassTemplate.Composition;
  *
  * @see Enumeration
  */
-const EnumValue<BaseType extends Enum>
-        extends Class<BaseType>
+const EnumValue<Value extends Enum>
+        extends Class<Value>
     {
-    construct(Composition composition, Enumeration<BaseType> enumeration)
+    construct(Composition composition, Enumeration<Value> enumeration)
         {
         construct Class(composition);
 
@@ -18,14 +18,14 @@ const EnumValue<BaseType extends Enum>
     /**
      * The Enumeration that contains this Enum value.
      */
-    Enumeration<BaseType> enumeration;
+    Enumeration<Value> enumeration;
 
     /**
      * The singleton Enum value of this EnumValue class.
      */
-    BaseType value.get()
+    Value value.get()
         {
-        assert BaseType value := enumeration.byName.get(name);
+        assert Value value := enumeration.byName.get(name);
         return value;
         }
     }

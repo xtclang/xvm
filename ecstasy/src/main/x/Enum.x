@@ -1,8 +1,10 @@
 /**
- * Each value in an {@link Enumeration} is a singleton constant that implements the Enum interface.
- *
- * @see Enumeration
+ * Each instance of an [Enumeration] is a singleton constant that implements the Enum interface and
+ * whose class is an [EnumValue].
  */
+// TODO GG: ideally, we'd like to say
+//      interface Enum<Value extends Enum<Value>>
+// and replace the return value types for next() and prev() to Value
 interface Enum
         extends immutable Const
         extends Sequential
@@ -21,6 +23,9 @@ interface Enum
      * The unique name (within the Enumeration) of this Enum value.
      */
     @RO String name;
+
+
+    // ----- Sequential methods --------------------------------------------------------------------
 
     /**
      * Obtain the Enum value that follows this Enum in the Enumeration.
@@ -50,6 +55,9 @@ interface Enum
         return False;
         }
 
+
+    // ----- Orderable and Hashable ----------------------------------------------------------------
+
     /**
      * Calculate a hash code for the specified Enum value.
      */
@@ -73,6 +81,7 @@ interface Enum
         {
         return value1.ordinal == value2.ordinal;
         }
+
 
     // ----- Stringable methods --------------------------------------------------------------------
 

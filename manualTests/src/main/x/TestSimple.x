@@ -11,7 +11,7 @@ module TestSimple
             console.println($"class name={clz.name}");
             if (clz.is(Enumeration))
                 {
-                console.println($"enumeration={clz.values[0].enumeration}");
+                console.println($"enumeration={clz.values}");
                 }
             else
                 {

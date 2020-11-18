@@ -48,8 +48,8 @@ import ClassTemplate.Composition;
  *   its Enum values are instances of the class of Enumeration values (or a subclass thereof), and
  *   no class can extend the class of any Enum.
  */
-const Enumeration<EnumType extends Enum>
-        extends Class<EnumType>
+const Enumeration<Value extends Enum>
+        extends Class<Value>
     {
     construct(Composition composition, ListMap<String, Type>? canonicalParams = Null)
         {
@@ -106,7 +106,7 @@ const Enumeration<EnumType extends Enum>
      * * {False, True} for {@link Boolean}
      * * {Lesser, Equal, Greater} for {@link Ordered}
      */
-    @Lazy EnumType[] values.calc()
+    @Lazy Value[] values.calc()
         {
         return byName.values.toArray();
         }
@@ -119,18 +119,18 @@ const Enumeration<EnumType extends Enum>
      * * {"False"=False, "True"=True} for {@link Boolean}
      * * {"Lesser"=Lesser, "Equal"=Equal, "Greater"=Greater} for {@link Ordered}
      */
-    @Lazy Map<String, EnumType> byName.calc()
+    @Lazy Map<String, Value> byName.calc()
         {
         // the Enumeration class contains singleton Enum class/values; collect those values into a
         // Map keyed by name
-        ListMap<String, EnumType> map = new ListMap();
+        ListMap<String, Value> map = new ListMap();
 
         for ((String name, Type type) : PublicType.childTypes)
             {
             if (type.is(Type<PublicType>))
                 {
                 assert Class<> clz := type.fromClass();
-                assert EnumType instance := clz.as(Class<EnumType>).isSingleton();
+                assert Value instance := clz.as(Class<Value>).isSingleton();
                 assert instance.ordinal == map.size;
                 map.put(name, instance);
                 }
