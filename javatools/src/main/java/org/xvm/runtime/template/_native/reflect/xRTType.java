@@ -59,7 +59,8 @@ import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 
-import org.xvm.runtime.template._native.reflect.xRTClass.ClassHandle;
+import org.xvm.runtime.template.reflect.xClass.ClassHandle;
+
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
 import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
@@ -1121,7 +1122,7 @@ public class xRTType
             TypeConstant typeTarget = hType.getDataType();
             if (typeTarget.isExplicitClassIdentity(true))
                 {
-                typeTarget = typeTarget.removeAccess().removeImmutable();
+                typeTarget = typeTarget.removeAccess().removeImmutable().resolveAutoNarrowingBase();
 
                 IdentityConstant idClz = frame.poolContext().ensureClassConstant(typeTarget);
 
@@ -1513,14 +1514,14 @@ public class xRTType
     /**
      * @return the ClassComposition for ListMap<String, Type>
      */
-    private static ClassComposition ensureListMapComposition()
+    public static ClassComposition ensureListMapComposition()
         {
         ClassComposition clz = LISTMAP_CLZCOMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
-            typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeString());
+            typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeType());
             LISTMAP_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeList);
             assert clz != null;
             }

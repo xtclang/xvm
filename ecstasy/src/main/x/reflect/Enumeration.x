@@ -1,7 +1,8 @@
 import collections.ListMap;
+import ClassTemplate.Composition;
 
 /**
- * An Enumeration is a class of singleton Enum value objects.
+ * An Enumeration is a class of singleton abstract base of Enum value objects.
  *
  * Consider the following examples:
  * * {@link Nullable.Null} is a singleton instance Enum value, of the class (or a subclass of)
@@ -47,9 +48,14 @@ import collections.ListMap;
  *   its Enum values are instances of the class of Enumeration values (or a subclass thereof), and
  *   no class can extend the class of any Enum.
  */
-mixin Enumeration<EnumType extends Enum>
-        into Class<EnumType>
+const Enumeration<EnumType extends Enum>
+        extends Class<EnumType>
     {
+    construct(Composition composition, ListMap<String, Type>? canonicalParams = Null)
+        {
+        construct Class(composition, canonicalParams);
+        }
+
     /**
      * The name of the Enumeration.
      *

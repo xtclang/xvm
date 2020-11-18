@@ -106,7 +106,7 @@ public class CoreConstHeap
 
             case Class:
             case DecoratedClass:
-                sComponent = "_native.reflect.RTClass";
+                sComponent = "reflect.Class";
                 break;
 
             case PropertyClassType:

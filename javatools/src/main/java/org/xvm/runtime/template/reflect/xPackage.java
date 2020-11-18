@@ -39,8 +39,6 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template._native.reflect.xRTClass;
-
 
 /**
  * Native implementation of Package interface.
@@ -169,7 +167,7 @@ public class xPackage
             Frame.Continuation stepNext = frameCaller ->
                 {
                 ArrayHandle hClasses = xArray.INSTANCE.createArrayHandle(
-                    xRTClass.ensureArrayComposition(), ahClasses);
+                    xClass.ensureArrayComposition(), ahClasses);
                 return Utils.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
                 };
 
@@ -177,7 +175,7 @@ public class xPackage
             }
 
         ArrayHandle hClasses = xArray.INSTANCE.createArrayHandle(
-            xRTClass.ensureArrayComposition(), ahClasses);
+            xClass.ensureArrayComposition(), ahClasses);
         return Utils.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
         }
 

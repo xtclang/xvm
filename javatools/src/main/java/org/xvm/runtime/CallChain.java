@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 
+import org.xvm.asm.Component;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
@@ -252,9 +253,13 @@ public class CallChain
                     hThis, bodySuper.getPropertyConstant(), iReturn);
 
             case Native:
-                return hThis.getTemplate().invokeNativeN(frame, bodySuper.getMethodStructure(),
-                    hThis, Utils.OBJECTS_NONE, iReturn);
-
+                {
+                MethodStructure method    = bodySuper.getMethodStructure();
+                Component       container = method.getParent().getParent();
+                return container instanceof PropertyStructure
+                    ? hThis.getTemplate().invokeNativeGet(frame, container.getName(), hThis, iReturn)
+                    : hThis.getTemplate().invokeNativeN(frame, method, hThis, Utils.OBJECTS_NONE, iReturn);
+                }
             case Default:
             case Explicit:
                 {

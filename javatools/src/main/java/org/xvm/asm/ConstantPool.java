@@ -1249,7 +1249,7 @@ public class ConstantPool
      */
     public IdentityConstant getImplicitlyImportedIdentity(String sName)
         {
-        IdentityConstant id = m_implicits.get(sName);
+        IdentityConstant id = f_implicits.get(sName);
 
         if (id == null)
             {
@@ -1291,7 +1291,7 @@ public class ConstantPool
                 id = ensureClassConstant(id, sClz);
                 }
 
-            m_implicits.put(sName, id);
+            f_implicits.put(sName, id);
             }
 
         return id;
@@ -2097,7 +2097,7 @@ public class ConstantPool
 
     // ----- caching helpers -----------------------------------------------------------------------
 
-    public ModuleConstant    modEcstasy()       {ModuleConstant    c = m_valEcstasy;      if (c == null) {m_valEcstasy      = c = ensureModuleConstant(ECSTASY_MODULE)                        ;} return c;}
+    public ModuleConstant    modEcstasy()       {ModuleConstant    c = m_valEcstasy;      if (c == null) {m_valEcstasy      = c = ensureModuleConstant(ECSTASY_MODULE)                             ;} return c;}
 
     public ClassConstant     clzObject()        {ClassConstant     c = m_clzObject;       if (c == null) {m_clzObject       = c = (ClassConstant) getImplicitlyImportedIdentity("Object"          );} return c;}
     public ClassConstant     clzInner()         {ClassConstant     c = m_clzInner;        if (c == null) {m_clzInner        = c = (ClassConstant) getImplicitlyImportedIdentity("Inner"           );} return c;}
@@ -2112,6 +2112,7 @@ public class ConstantPool
     public ClassConstant     clzPackage()       {ClassConstant     c = m_clzPackage;      if (c == null) {m_clzPackage      = c = (ClassConstant) getImplicitlyImportedIdentity("Package"         );} return c;}
     public ClassConstant     clzEnum()          {ClassConstant     c = m_clzEnum;         if (c == null) {m_clzEnum         = c = (ClassConstant) getImplicitlyImportedIdentity("Enum"            );} return c;}
     public ClassConstant     clzEnumeration()   {ClassConstant     c = m_clzEnumeration;  if (c == null) {m_clzEnumeration  = c = (ClassConstant) getImplicitlyImportedIdentity("Enumeration"     );} return c;}
+    public ClassConstant     clzEnumValue()     {ClassConstant     c = m_clzEnumValue;    if (c == null) {m_clzEnumValue    = c = (ClassConstant) getImplicitlyImportedIdentity("EnumValue"       );} return c;}
     public ClassConstant     clzCloseable()     {ClassConstant     c = m_clzCloseable;    if (c == null) {m_clzCloseable    = c = (ClassConstant) getImplicitlyImportedIdentity("Closeable"       );} return c;}
     public ClassConstant     clzException()     {ClassConstant     c = m_clzException;    if (c == null) {m_clzException    = c = (ClassConstant) getImplicitlyImportedIdentity("Exception"       );} return c;}
     public ClassConstant     clzProperty()      {ClassConstant     c = m_clzProperty;     if (c == null) {m_clzProperty     = c = (ClassConstant) getImplicitlyImportedIdentity("Property"        );} return c;}
@@ -2160,9 +2161,9 @@ public class ConstantPool
     public TypeConstant      typeModuleRB()     {TypeConstant      c = m_typeModuleRB;    if (c == null) {m_typeModuleRB    = c = makeNativeRebase(clzModule()                               );} return c;}
     public TypeConstant      typePackage()      {TypeConstant      c = m_typePackage;     if (c == null) {m_typePackage     = c = ensureTerminalTypeConstant(clzPackage()                    );} return c;}
     public TypeConstant      typePackageRB()    {TypeConstant      c = m_typePackageRB;   if (c == null) {m_typePackageRB   = c = makeNativeRebase(clzPackage()                              );} return c;}
-    public TypeConstant      typeEnum()         {TypeConstant      c = m_typeEnum;        if (c == null) {m_typeEnum        = c = ensureTerminalTypeConstant(clzEnum()                       );} return c;}
     public TypeConstant      typeEnumRB()       {TypeConstant      c = m_typeEnumRB;      if (c == null) {m_typeEnumRB      = c = makeNativeRebase(clzEnum()                                 );} return c;}
     public TypeConstant      typeEnumeration()  {TypeConstant      c = m_typeEnumeration; if (c == null) {m_typeEnumeration = c = ensureTerminalTypeConstant(clzEnumeration()                );} return c;}
+    public TypeConstant      typeEnumValue()    {TypeConstant      c = m_typeEnumValue;   if (c == null) {m_typeEnumValue   = c = ensureTerminalTypeConstant(clzEnumValue()                  );} return c;}
     public TypeConstant      typeException()    {TypeConstant      c = m_typeException;   if (c == null) {m_typeException   = c = ensureTerminalTypeConstant(clzException()                  );} return c;}
     public TypeConstant      typeCloseable()    {TypeConstant      c = m_typeCloseable;   if (c == null) {m_typeCloseable   = c = ensureTerminalTypeConstant(clzCloseable()                  );} return c;}
     public TypeConstant      typeProperty()     {TypeConstant      c = m_typeProperty;    if (c == null) {m_typeProperty    = c = ensureTerminalTypeConstant(clzProperty()                   );} return c;}
@@ -2892,6 +2893,7 @@ public class ConstantPool
         m_clzPackage      = null;
         m_clzEnum         = null;
         m_clzEnumeration  = null;
+        m_clzEnumValue    = null;
         m_clzException    = null;
         m_clzProperty     = null;
         m_clzMethod       = null;
@@ -2937,9 +2939,9 @@ public class ConstantPool
         m_typeModuleRB    = null;
         m_typePackage     = null;
         m_typePackageRB   = null;
-        m_typeEnum        = null;
         m_typeEnumRB      = null;
         m_typeEnumeration = null;
+        m_typeEnumValue   = null;
         m_typeException   = null;
         m_typeException१  = null;
         m_typeProperty    = null;
@@ -3028,7 +3030,7 @@ public class ConstantPool
         // discard any previous lookup structures, since contents may have changed
         m_mapConstants.clear();
         m_mapLocators.clear();
-        m_implicits.clear();
+        f_implicits.clear();
         }
 
 
@@ -3553,7 +3555,7 @@ public class ConstantPool
         assert !typeInception.isAccessSpecified();
         assert typeInception.normalizeParameters().equals(typeInception);
 
-        ClassComposition clz = m_mapCompositions.computeIfAbsent(typeInception, (type) ->
+        ClassComposition clz = f_mapCompositions.computeIfAbsent(typeInception, (type) ->
             {
             OpSupport support = type.isAnnotated() && type.isIntoVariableType()
                     ? type.getOpSupport(template.f_templates)
@@ -3583,7 +3585,7 @@ public class ConstantPool
 
     public TypeInfo getNakedRefInfo(TypeConstant typeReferent)
         {
-        return m_mapRefTypes.computeIfAbsent(typeReferent, this::computeNakedRefInfo);
+        return f_mapRefTypes.computeIfAbsent(typeReferent, this::computeNakedRefInfo);
         }
 
     private TypeInfo computeNakedRefInfo(TypeConstant typeReferent)
@@ -3719,6 +3721,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzPackage;
     private transient ClassConstant     m_clzEnum;
     private transient ClassConstant     m_clzEnumeration;
+    private transient ClassConstant     m_clzEnumValue;
     private transient ClassConstant     m_clzException;
     private transient ClassConstant     m_clzCloseable;
     private transient ClassConstant     m_clzProperty;
@@ -3766,9 +3769,9 @@ public class ConstantPool
     private transient TypeConstant      m_typeModuleRB;
     private transient TypeConstant      m_typePackage;
     private transient TypeConstant      m_typePackageRB;
-    private transient TypeConstant      m_typeEnum;
     private transient TypeConstant      m_typeEnumRB;
     private transient TypeConstant      m_typeEnumeration;
+    private transient TypeConstant      m_typeEnumValue;
     private transient TypeConstant      m_typeException;
     private transient TypeConstant      m_typeCloseable;
     private transient TypeConstant      m_typeException१;
@@ -3896,7 +3899,7 @@ public class ConstantPool
     /**
      * Cache of implicitly imported identities.
      */
-    private Map<String, IdentityConstant> m_implicits = new HashMap<>();
+    private final Map<String, IdentityConstant> f_implicits = new HashMap<>();
 
     /**
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.
@@ -3914,7 +3917,7 @@ public class ConstantPool
      * Any ClassComposition in this map is defined by a {@link ClassConstant} referring to a
      * concrete natural class. It also keeps the secondary map of compositions for revealed types.
      */
-    private Map<TypeConstant, ClassComposition> m_mapCompositions = new ConcurrentHashMap<>();
+    private final Map<TypeConstant, ClassComposition> f_mapCompositions = new ConcurrentHashMap<>();
 
     /**
      * NakedRef is a fundamental formal type that comes from the "_native" module,
@@ -3924,7 +3927,7 @@ public class ConstantPool
     /**
      * A cache of TypeInfo for parameterized NakedRef types.
      */
-    private Map<TypeConstant, TypeInfo> m_mapRefTypes = new ConcurrentHashMap<>();
+    private final Map<TypeConstant, TypeInfo> f_mapRefTypes = new ConcurrentHashMap<>();
 
     /**
      * Thread local allowing to get the "current" ConstantPool without any context.

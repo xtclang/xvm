@@ -28,10 +28,9 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
-import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.reflect.xClass.ClassHandle;
 
-import org.xvm.runtime.template._native.reflect.xRTClass;
-import org.xvm.runtime.template._native.reflect.xRTClass.ClassHandle;
+import org.xvm.runtime.template.text.xString;
 
 
 /**
@@ -173,38 +172,18 @@ public class xEnum
         switch (sPropName)
             {
             case "enumeration":
-                if (m_hEnumeration != null)
-                    {
-                    return frame.assignValue(iReturn, m_hEnumeration);
-                    }
-
+                {
                 IdentityConstant idValue        = (IdentityConstant) hTarget.getType().getDefiningConstant();
                 ClassStructure   clzEnumeration = ((ClassStructure) idValue.getComponent()).getSuper();
 
-                switch (xRTClass.INSTANCE.createConstHandle(frame, clzEnumeration.getIdentityConstant()))
-                    {
-                    case Op.R_NEXT:
-                        m_hEnumeration = (ClassHandle) frame.popStack();
-                        return frame.assignValue(iReturn, m_hEnumeration);
-
-                    case Op.R_CALL:
-                        frame.m_frameNext.addContinuation(frameCaller ->
-                            {
-                            m_hEnumeration = (ClassHandle) frameCaller.popStack();
-                            return frameCaller.assignValue(iReturn, m_hEnumeration);
-                            });
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
+                ObjectHandle hEnumeration = frame.getConstHandle(clzEnumeration.getIdentityConstant());
+                return Op.isDeferred(hEnumeration)
+                    ? hEnumeration.proceed(frame, frameCaller -> frame.assignValue(iReturn, frameCaller.popStack()))
+                    : frame.assignValue(iReturn, hEnumeration);
+                }
 
             case "name":
-                return frame.assignValue(iReturn,
-                        xString.makeHandle(m_listNames.get(hEnum.getOrdinal())));
+                return frame.assignValue(iReturn, xString.makeHandle(m_listNames.get(hEnum.getOrdinal())));
 
             case "ordinal":
                 return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getOrdinal()));

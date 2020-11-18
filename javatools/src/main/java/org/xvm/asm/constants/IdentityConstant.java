@@ -669,10 +669,20 @@ public abstract class IdentityConstant
 
             type = type.removeAccess().normalizeParameters();
 
-            return pool.ensureParameterizedTypeConstant(pool.typeClass(), type,
-                    pool.ensureAccessTypeConstant(type, Access.PROTECTED),
-                    pool.ensureAccessTypeConstant(type, Access.PRIVATE),
-                    pool.ensureAccessTypeConstant(type, Access.STRUCT));
+            switch (getComponent().getFormat())
+                {
+                case ENUM:
+                    return pool.ensureParameterizedTypeConstant(pool.typeEnumeration(), type);
+
+                case ENUMVALUE:
+                    return pool.ensureParameterizedTypeConstant(pool.typeEnumValue(), type);
+
+                default:
+                return pool.ensureParameterizedTypeConstant(pool.typeClass(), type,
+                        pool.ensureAccessTypeConstant(type, Access.PROTECTED),
+                        pool.ensureAccessTypeConstant(type, Access.PRIVATE),
+                        pool.ensureAccessTypeConstant(type, Access.STRUCT));
+                }
             }
 
         throw new UnsupportedOperationException("constant-class=" + getClass().getSimpleName());

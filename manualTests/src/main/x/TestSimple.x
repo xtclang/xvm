@@ -4,55 +4,24 @@ module TestSimple
 
     void run()
         {
-        Boolean flag = True;
-        Byte[]? bytes = Null;
+        enum Color {Red, Green, Blue}
 
-        bytes = Null;
-        if (flag)
+        void test(Class clz)
             {
-            bytes = [0];
-            }
-        flag = fromBytes(bytes?);
+            console.println($"class name={clz.name}");
+            if (clz.is(Enumeration))
+                {
+                console.println($"enumeration={clz.values[0].enumeration}");
+                }
+            else
+                {
+                assert clz.is(EnumValue);
 
-        bytes = Null;
-        if (flag)
-            {
-            }
-        else
-            {
-            bytes = [1];
+                console.println($"enumValue={clz.value}; enumeration={clz.enumeration}");
+                }
             }
 
-        flag = fromBytes(bytes?);
-
-        bytes = Null;
-        try
-            {
-            bytes = [2];
-            }
-        catch (Exception e)
-            {
-            }
-
-        bytes = Null;
-        try
-            {
-            bytes = [3];
-            }
-        finally
-            {
-            flag = False;
-            }
-
-        flag = fromBytes(bytes?);
-        }
-
-    protected Boolean fromBytes(Byte[] bytes)
-        {
-        return True;
-        }
-
-    void foo()
-        {
+        test(Color.Red);
+        test(Color);
         }
     }

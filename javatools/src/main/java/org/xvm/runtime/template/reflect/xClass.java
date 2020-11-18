@@ -1,4 +1,4 @@
-package org.xvm.runtime.template._native.reflect;
+package org.xvm.runtime.template.reflect;
 
 
 import java.util.Iterator;
@@ -39,18 +39,19 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**
  * Native Class implementation.
  */
-public class xRTClass
+public class xClass
         extends xConst
     {
-    public static xRTClass INSTANCE;
+    public static xClass INSTANCE;
 
-    public xRTClass(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xClass(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
 
@@ -64,6 +65,7 @@ public class xRTClass
     public void initNative()
         {
         markNativeProperty("abstract");
+        markNativeProperty("canonicalParams");
         markNativeProperty("composition");
         markNativeProperty("implicitName");
         markNativeProperty("name");
@@ -73,27 +75,11 @@ public class xRTClass
         markNativeMethod("allocate"              , null, null);
         markNativeMethod("derivesFrom"           , null, null);
         markNativeMethod("extends"               , null, null);
-        markNativeMethod("getFormalNamesAndTypes", null, null);
         markNativeMethod("implements"            , null, null);
         markNativeMethod("incorporates"          , null, null);
         markNativeMethod("isSingleton"           , null, null);
 
         getCanonicalType().invalidateTypeInfo();
-        }
-
-    @Override
-    public void registerNativeTemplates()
-        {
-        ClassStructure clzEnum = f_templates.getClassStructure("Enumeration");
-        new xRTEnumeration(f_templates, clzEnum, true).initNative();
-        }
-
-    @Override
-    public ClassTemplate getTemplate(TypeConstant type)
-        {
-        return type.isA(pool().typeEnumeration())
-                ? xRTEnumeration.INSTANCE
-                : this;
         }
 
     @Override
@@ -104,13 +90,26 @@ public class xRTClass
             IdentityConstant idClz    = (IdentityConstant) constant;
             TypeConstant     typeClz  = idClz.getValueType(null).
                 resolveGenerics(frame.poolContext(), frame.getGenericsResolver());
-            ClassComposition clz      = ensureClass(typeClz);
-            ClassTemplate    template = clz.getTemplate();
 
-            MethodStructure constructor = getStructure().findMethod("construct", 0);
-            ObjectHandle[]  ahVar       = new ObjectHandle[constructor.getMaxVars()];
+            ClassTemplate template;
+            switch (idClz.getComponent().getFormat())
+                {
+                case ENUMVALUE:
+                    template = xEnumValue.INSTANCE;
+                    break;
 
-            return template.construct(frame, constructor, clz, null, ahVar, Op.A_STACK);
+                case ENUM:
+                    template = xEnumeration.INSTANCE;
+                    break;
+
+                default:
+                    template = this;
+                    break;
+                }
+            ClassComposition clz = template.ensureClass(typeClz);
+
+            // skip the natural constructor; it's a "make believe" code anyway
+            return template.construct(frame, null, clz, null, Utils.OBJECTS_NONE, Op.A_STACK);
             }
 
         return super.createConstHandle(frame, constant);
@@ -129,6 +128,9 @@ public class xRTClass
             {
             case "abstract":
                 return getPropertyAbstract(frame, hTarget, iReturn);
+
+            case "canonicalParams":
+                return invokePropertyCanonicalParams(frame, (ClassHandle) hTarget, iReturn);
 
             case "composition":
                 return getPropertyComposition(frame, hTarget, iReturn);
@@ -170,9 +172,6 @@ public class xRTClass
             {
             case "allocate":
                 return invokeAllocate(frame, hTarget, aiReturn);
-
-            case "getFormalNamesAndTypes":
-                return invokeGetFormalNamesAndTypes(frame, hTarget, aiReturn);
 
             case "isSingleton":
                 return invokeIsSingleton(frame, hTarget, aiReturn);
@@ -339,47 +338,81 @@ public class xRTClass
         }
 
     /**
-     * Implementation for: {@code (String[], Type[]) getFormalNamesAndTypes()}.
+     * Implementation for: {@code @Lazy ListMap<String, Type> canonicalParams.calc()}.
      */
-    public int invokeGetFormalNamesAndTypes(Frame frame, ObjectHandle hTarget, int[] aiReturn)
+    public int invokePropertyCanonicalParams(Frame frame, ClassHandle hClass, int iReturn)
         {
-        TypeConstant   typeClz = getClassType(hTarget);
-        ClassStructure clz     = (ClassStructure) typeClz.getSingleUnderlyingClass(true).getComponent();
-        boolean        fTuple  = typeClz.isTuple();
-
-        int cParams = fTuple
-                ? typeClz.getParamsCount()
-                : clz.getTypeParamCount();
-        if (cParams == 0)
+        ObjectHandle hMap = hClass.getField("canonicalParams");
+        if (hMap == null)
             {
-            return frame.assignValues(aiReturn, xString.ensureEmptyArray(), xRTType.ensureEmptyTypeArray());
-            }
+            TypeConstant   typeClz = getClassType(hClass);
+            ClassStructure clz     = (ClassStructure) typeClz.getSingleUnderlyingClass(true).getComponent();
+            boolean        fTuple  = typeClz.isTuple();
 
-        StringHandle[] ahNames = new StringHandle[cParams];
-        TypeHandle  [] ahTypes = new TypeHandle  [cParams];
-        if (fTuple)
-            {
-            TypeConstant[] atypeParam = typeClz.getParamTypesArray();
-            for (int i = 0; i < cParams; ++i)
+            int cParams = fTuple
+                    ? typeClz.getParamsCount()
+                    : clz.getTypeParamCount();
+            int iResult;
+            if (cParams == 0)
                 {
-                ahNames[i] = xString.makeHandle("ElementTypes[" + i + "]");
-                ahTypes[i] = atypeParam[i].ensureTypeHandle(frame.poolContext());
+                iResult = Utils.constructListMap(frame, xRTType.ensureListMapComposition(),
+                        xString.ensureEmptyArray(), xRTType.ensureEmptyTypeArray(), Op.A_STACK);
+                }
+            else
+                {
+
+                StringHandle[] ahNames = new StringHandle[cParams];
+                TypeHandle  [] ahTypes = new TypeHandle  [cParams];
+                if (fTuple)
+                    {
+                    TypeConstant[] atypeParam = typeClz.getParamTypesArray();
+                    for (int i = 0; i < cParams; ++i)
+                        {
+                        ahNames[i] = xString.makeHandle("ElementTypes[" + i + "]");
+                        ahTypes[i] = atypeParam[i].ensureTypeHandle(frame.poolContext());
+                        }
+                    }
+                else
+                    {
+                    Iterator<StringConstant> iterNames  = clz.getTypeParams().keySet().iterator();
+                    TypeConstant[]           atypeParam = clz.normalizeParameters(INSTANCE.pool(), typeClz.getParamTypesArray());
+                    for (int i = 0; i < cParams; ++i)
+                        {
+                        ahNames[i] = xString.makeHandle(iterNames.next().getValue());
+                        ahTypes[i] = atypeParam[i].ensureTypeHandle(frame.poolContext());
+                        }
+                    }
+
+                iResult = Utils.constructListMap(frame, xRTType.ensureListMapComposition(),
+                        xArray.makeStringArrayHandle(ahNames),
+                        xArray.INSTANCE.createArrayHandle(xRTType.ensureTypeArrayComposition(), ahTypes),
+                        Op.A_STACK);
+                }
+            switch (iResult)
+                {
+                case Op.R_NEXT:
+                    hMap = frame.popStack();
+                    hClass.setField("canonicalParams", hMap);
+                    break;
+
+                case Op.R_CALL:
+                    Frame.Continuation stepNext = frameCaller ->
+                        {
+                        ObjectHandle hResult = frameCaller.popStack();
+                        hClass.setField("canonicalParams", hResult);
+                        return frameCaller.assignValue(iReturn, hResult);
+                        };
+                    frame.m_frameNext.addContinuation(stepNext);
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
                 }
             }
-        else
-            {
-            Iterator<StringConstant> iterNames  = clz.getTypeParams().keySet().iterator();
-            TypeConstant[]           atypeParam = clz.normalizeParameters(INSTANCE.pool(), typeClz.getParamTypesArray());
-            for (int i = 0; i < cParams; ++i)
-                {
-                ahNames[i] = xString.makeHandle(iterNames.next().getValue());
-                ahTypes[i] = atypeParam[i].ensureTypeHandle(frame.poolContext());
-                }
-            }
-
-        return frame.assignValues(aiReturn,
-                xArray.makeStringArrayHandle(ahNames),
-                xArray.INSTANCE.createArrayHandle(xRTType.ensureTypeArrayComposition(), ahTypes));
+        return frame.assignValue(iReturn, hMap);
         }
 
     /**

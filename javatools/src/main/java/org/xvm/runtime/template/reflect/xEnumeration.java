@@ -1,4 +1,5 @@
-package org.xvm.runtime.template._native.reflect;
+package org.xvm.runtime.template.reflect;
+
 
 import java.util.List;
 
@@ -23,15 +24,16 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 
+
 /**
  * Native Enumeration implementation.
  */
-public class xRTEnumeration
-        extends xRTClass
+public class xEnumeration
+        extends xClass
     {
-    public static xRTEnumeration INSTANCE;
+    public static xEnumeration INSTANCE;
 
-    public xRTEnumeration(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xEnumeration(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
 
@@ -45,13 +47,6 @@ public class xRTEnumeration
     public void initNative()
         {
         markNativeProperty("byName");
-        }
-
-    @Override
-    protected IdentityConstant getInceptionClassConstant()
-        {
-        // Enumeration is a mixin; defer to the Class itself
-        return xRTClass.INSTANCE.getClassConstant();
         }
 
     @Override

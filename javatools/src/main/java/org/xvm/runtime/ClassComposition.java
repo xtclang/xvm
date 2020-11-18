@@ -553,7 +553,7 @@ public class ClassComposition
                     clzRef = f_template.f_templates.resolveClass(infoProp.getBaseRefType());
                     }
 
-                if (clzRef != null)
+                if (clzRef != null && !infoProp.isNative())
                     {
                     AnyConstructor:
                     for (Annotation anno : infoProp.getRefAnnotations())

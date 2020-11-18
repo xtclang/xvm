@@ -76,7 +76,6 @@ import reflect.ClassTemplate.Composition;
 const Class<PublicType, ProtectedType extends PublicType,
                         PrivateType   extends ProtectedType,
                         StructType    extends Struct>
-        incorporates conditional Enumeration<PublicType extends Enum>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -215,6 +214,8 @@ const Class<PublicType, ProtectedType extends PublicType,
      * The composition of the class.
      */
     Composition composition;
+
+    // TODO get super
 
     /**
      * The underlying ClassTemplate of this Class. For example, given a composition
@@ -607,7 +608,7 @@ const Class<PublicType, ProtectedType extends PublicType,
                 }
             }
 
-        buf.addAll(displayName);
+        displayName.appendTo(buf);
 
         ListMap<String, Type> params = formalTypes;
         if (!params.empty)
@@ -617,7 +618,7 @@ const Class<PublicType, ProtectedType extends PublicType,
                 {
                 if (!Params.first)
                     {
-                    buf.addAll(", ");
+                    ", ".appendTo(buf);
                     }
                 type.appendTo(buf);
                 }

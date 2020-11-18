@@ -300,7 +300,7 @@ public class PropertyComposition
     @Override
     public String toString()
         {
-        return "PropertyComposition: " + f_clzParent + "." + f_infoProp.getIdentity().getValueString();
+        return f_clzParent + "." + f_infoProp.getName() + (isStruct() ? ":struct" : "");
         }
 
 

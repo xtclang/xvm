@@ -11,7 +11,6 @@ import ecstasy.ConcurrentModification;
 import ecstasy.Const;
 import ecstasy.Deadlock;
 import ecstasy.Enum;
-import ecstasy.Enumeration;
 import ecstasy.Exception;
 import ecstasy.IllegalArgument;
 import ecstasy.IllegalState;
@@ -126,6 +125,8 @@ import ecstasy.numbers.UInt128;
 import ecstasy.numbers.UIntN;
 
 import ecstasy.reflect.Class;
+import ecstasy.reflect.Enumeration;
+import ecstasy.reflect.EnumValue;
 import ecstasy.reflect.Function;
 import ecstasy.reflect.Property;
 import ecstasy.reflect.Method;
