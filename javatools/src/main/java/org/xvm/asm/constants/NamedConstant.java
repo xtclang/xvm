@@ -124,12 +124,6 @@ public abstract class NamedConstant
         }
 
     @Override
-    public boolean containsUnresolved()
-        {
-        return super.containsUnresolved() || m_constName.containsUnresolved();
-        }
-
-    @Override
     protected int compareDetails(Constant that)
         {
         if (!(that instanceof NamedConstant))
