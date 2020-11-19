@@ -901,7 +901,7 @@ public abstract class ObjectHandle
         @Override
         public String toString()
             {
-            return "Deferred array initialization: " + f_clzArray.getType();
+            return "Deferred array initialization: " + getType();
             }
         }
 

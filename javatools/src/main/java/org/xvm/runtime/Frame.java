@@ -1914,12 +1914,12 @@ public class Frame
         @Override
         public int handleException(Frame frame, ExceptionHandle hException, int iGuard)
             {
-            TypeComposition clzException = hException.getComposition();
+            TypeConstant typeException = hException.getType();
 
             for (int iCatch = 0, c = f_anClassConstId.length; iCatch < c; iCatch++)
                 {
-                ClassComposition clzCatch = frame.resolveClass(f_anClassConstId[iCatch]);
-                if (clzException.getType().isA(clzCatch.getType()))
+                TypeConstant typeCatch = frame.resolveType(f_anClassConstId[iCatch]);
+                if (typeException.isA(typeCatch))
                     {
                     introduceValue(frame, iGuard, hException,
                         frame.getString(f_anNameConstId[iCatch]));

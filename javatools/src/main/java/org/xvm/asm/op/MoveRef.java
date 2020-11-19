@@ -77,7 +77,7 @@ public class MoveRef
                 ClassComposition clzRef = xRef.INSTANCE.ensureParameterizedClass(
                         frame.poolContext(), infoSrc.getType());
                 hRef    = new RefHandle(clzRef, frame, m_nFromValue);
-                typeReg = clzRef.getType();
+                typeReg = hRef.getType();
                 }
             }
         else

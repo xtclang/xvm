@@ -1733,8 +1733,7 @@ public abstract class ClassTemplate
      */
     public CallChain findOpChain(ObjectHandle hTarget, String sName, String sOp)
         {
-        TypeComposition clz  = hTarget.getComposition();
-        TypeInfo        info = clz.getType().ensureTypeInfo();
+        TypeInfo info = hTarget.getType().ensureTypeInfo();
 
         Set<MethodConstant> setMethods = info.findOpMethods(sName, sOp, 0);
         switch (setMethods.size())
@@ -1745,7 +1744,7 @@ public abstract class ClassTemplate
             case 1:
                 {
                 MethodConstant idMethod = setMethods.iterator().next();
-                return clz.getMethodCallChain(idMethod.getSignature());
+                return hTarget.getComposition().getMethodCallChain(idMethod.getSignature());
                 }
 
             default:
@@ -1760,8 +1759,7 @@ public abstract class ClassTemplate
      */
     public CallChain findOpChain(ObjectHandle hTarget, String sName, String sOp, ObjectHandle hArg)
         {
-        TypeComposition clz  = hTarget.getComposition();
-        TypeInfo        info = clz.getType().ensureTypeInfo();
+        TypeInfo info = hTarget.getType().ensureTypeInfo();
 
         Set<MethodConstant> setMethods = info.findOpMethods(sName, sOp, hArg == null ? 0 : 1);
         switch (setMethods.size())
@@ -1772,7 +1770,7 @@ public abstract class ClassTemplate
             case 1:
                 {
                 MethodConstant idMethod = setMethods.iterator().next();
-                return clz.getMethodCallChain(idMethod.getSignature());
+                return hTarget.getComposition().getMethodCallChain(idMethod.getSignature());
                 }
 
             default:
@@ -1787,7 +1785,7 @@ public abstract class ClassTemplate
 
                         if (typeArg.isA(typeParam))
                             {
-                            return clz.getMethodCallChain(sig);
+                            return hTarget.getComposition().getMethodCallChain(sig);
                             }
                         }
                     }
@@ -1805,9 +1803,8 @@ public abstract class ClassTemplate
      */
     public CallChain findOpChain(ObjectHandle hTarget, String sOp, ObjectHandle[] ahArg)
         {
-        TypeComposition clz   = hTarget.getComposition();
-        TypeInfo        info  = clz.getType().ensureTypeInfo();
-        int             cArgs = ahArg.length;
+        TypeInfo info  = hTarget.getType().ensureTypeInfo();
+        int      cArgs = ahArg.length;
 
         Set<MethodConstant> setMethods = info.findOpMethods(sOp, sOp, cArgs);
         switch (setMethods.size())
@@ -1818,7 +1815,7 @@ public abstract class ClassTemplate
             case 1:
                 {
                 MethodConstant idMethod = setMethods.iterator().next();
-                return clz.getMethodCallChain(idMethod.getSignature());
+                return hTarget.getComposition().getMethodCallChain(idMethod.getSignature());
                 }
 
             default:
@@ -1839,7 +1836,7 @@ public abstract class ClassTemplate
                             continue NextMethod;
                             }
                         }
-                    return clz.getMethodCallChain(sig);
+                    return hTarget.getComposition().getMethodCallChain(sig);
                     }
 
                 // soft assert
