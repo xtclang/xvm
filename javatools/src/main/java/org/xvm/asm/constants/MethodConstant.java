@@ -350,7 +350,7 @@ public class MethodConstant
         {
         // method can be identified with only a signature, assuming it is not recursively nested
         return getNamespace().isNested()
-                ? new NestedIdentity()
+                ? getCanonicalNestedIdentity()
                 : getPathElement();
         }
 
@@ -364,7 +364,9 @@ public class MethodConstant
             resolver = null;
             }
         return getNamespace().isNested()
-                ? new NestedIdentity(resolver)
+                ? resolver == null
+                    ? getCanonicalNestedIdentity()
+                    : new NestedIdentity(resolver)
                 : getSignature().resolveGenericTypes(pool, resolver);
         }
 

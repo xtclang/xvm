@@ -268,7 +268,7 @@ public abstract class IdentityConstant
     public Object getNestedIdentity()
         {
         return isNested()
-                ? new NestedIdentity()
+                ? getCanonicalNestedIdentity()
                 : null;
         }
 
@@ -284,8 +284,23 @@ public abstract class IdentityConstant
     public Object resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver)
         {
         return isNested()
-                ? new NestedIdentity(resolver)
+                ? resolver == null
+                    ? getCanonicalNestedIdentity()
+                    : new NestedIdentity(resolver)
                 : null;
+        }
+
+    /**
+     * @return a canonical (not based on any resolver) nested identity
+     */
+    protected NestedIdentity getCanonicalNestedIdentity()
+        {
+        NestedIdentity nid = m_canonicalNid;
+        if (nid == null)
+            {
+            m_canonicalNid = nid = new NestedIdentity();
+            }
+        return nid;
         }
 
     /**
@@ -786,4 +801,9 @@ public abstract class IdentityConstant
      * Cached component this identity points to.
      */
     private transient Component m_component;
+
+    /**
+     * Cached canonical NestedIdentity.
+     */
+    private transient NestedIdentity m_canonicalNid;
     }

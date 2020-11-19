@@ -289,7 +289,7 @@ public class PropertyConstant
         {
         // property can be identified with only a name, assuming it is not recursively nested
         return getNamespace().isNested()
-                ? new NestedIdentity()
+                ? getCanonicalNestedIdentity()
                 : getName();
         }
 
@@ -298,7 +298,9 @@ public class PropertyConstant
         {
         // property can be identified with only a name, assuming it is not recursively nested
         return getNamespace().isNested()
-                ? new NestedIdentity(resolver)
+                ? resolver == null
+                    ? getCanonicalNestedIdentity()
+                    : new NestedIdentity(resolver)
                 : getName();
         }
 

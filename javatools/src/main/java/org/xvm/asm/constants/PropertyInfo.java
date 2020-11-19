@@ -989,15 +989,20 @@ public class PropertyInfo
      */
     public TypeConstant getBaseRefType()
         {
-        TypeConstant typeProp = getType();
-        ConstantPool pool     = pool();
+        TypeConstant typeBaseRef = m_typeBaseRef;
+        if (typeBaseRef == null)
+            {
+            ConstantPool pool     = pool();
+            TypeConstant typeProp = getType();
 
-        TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
-            isVar() ? pool.typeVar() : pool.typeRef(), typeProp);
+            TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
+                isVar() ? pool.typeVar() : pool.typeRef(), typeProp);
 
-        return isRefAnnotated()
-                ? pool.ensureAnnotatedTypeConstant(typeRef, getRefAnnotations())
-                : typeRef;
+            m_typeBaseRef = typeBaseRef = isRefAnnotated()
+                    ? pool.ensureAnnotatedTypeConstant(typeRef, getRefAnnotations())
+                    : typeRef;
+            }
+        return typeBaseRef;
         }
 
     /**
@@ -1078,9 +1083,13 @@ public class PropertyInfo
      */
     public MethodConstant getGetterId()
         {
-        PropertyConstant constId = getIdentity();
-        ConstantPool     pool    = pool();
-        return pool.ensureMethodConstant(constId, "get", ConstantPool.NO_TYPES, new TypeConstant[]{getType()});
+        MethodConstant idGetter = m_idGetter;
+        if (idGetter == null)
+            {
+            m_idGetter = idGetter = pool().ensureMethodConstant(getIdentity(), "get",
+                    ConstantPool.NO_TYPES, new TypeConstant[]{getType()});
+            }
+        return idGetter;
         }
 
     /**
@@ -1118,9 +1127,13 @@ public class PropertyInfo
      */
     public MethodConstant getSetterId()
         {
-        PropertyConstant constId = getIdentity();
-        ConstantPool     pool    = pool();
-        return pool.ensureMethodConstant(constId, "set", new TypeConstant[]{getType()}, ConstantPool.NO_TYPES);
+        MethodConstant idSetter = m_idSetter;
+        if (idSetter == null)
+            {
+            m_idSetter = idSetter = pool().ensureMethodConstant(getIdentity(), "set",
+                    new TypeConstant[]{getType()}, ConstantPool.NO_TYPES);
+            }
+        return idSetter;
         }
 
     /**
@@ -1453,4 +1466,19 @@ public class PropertyInfo
      * Cached "Injected" flag.
      */
     private Boolean m_FInjected;
+
+    /**
+     * Cached base ref type.
+     */
+    private TypeConstant m_typeBaseRef;
+
+    /**
+     * Cached getter id.
+     */
+    private MethodConstant m_idGetter;
+
+    /**
+     * Cached setter id.
+     */
+    private MethodConstant m_idSetter;
     }

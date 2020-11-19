@@ -3075,12 +3075,16 @@ public abstract class TypeConstant
         int          cAnnos = aAnnos.length;
         for (int i = cAnnos - 1; i >= 0; --i)
             {
-            Annotation     anno     = aAnnos[i];
-            TypeConstant   typeAnno = anno.getAnnotationType();
-            ClassStructure clzAnno  = (ClassStructure) ((IdentityConstant) anno.getAnnotationClass()).getComponent();
-            if (typeAnno.isIntoPropertyType() && clzAnno.isParameterized())
+            Annotation   anno     = aAnnos[i];
+            TypeConstant typeAnno = anno.getAnnotationType();
+            if (typeAnno.isIntoPropertyType())
                 {
-                typeAnno = pool.ensureParameterizedTypeConstant(typeAnno, typeProp);
+                ClassStructure clzAnno = (ClassStructure)
+                    ((IdentityConstant) anno.getAnnotationClass()).getComponent();
+                if (clzAnno.isParameterized())
+                    {
+                    typeAnno = pool.ensureParameterizedTypeConstant(typeAnno, typeProp);
+                    }
                 }
             typeAnno = pool.ensureAccessTypeConstant(typeAnno, Access.PROTECTED);
 
@@ -3146,28 +3150,38 @@ public abstract class TypeConstant
 
         // basically, everything in infoContrib needs to be "indented" (nested) within the nested
         // identity of the property *without* resolving generic types (to avoid double-dipping)
-        Map<PropertyConstant, PropertyInfo> mapContribProps = new HashMap<>();
-        for (Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getProperties().entrySet())
+        Map<PropertyConstant, PropertyInfo> mapOrigProps = infoContrib.getProperties();
+        if (!mapOrigProps.isEmpty())
             {
-            Object           nidContrib = entry.getKey().resolveNestedIdentity(pool, null);
-            PropertyConstant idContrib  = (PropertyConstant) idProp.appendNestedIdentity(pool, nidContrib);
-            mapContribProps.put(idContrib, entry.getValue());
-            }
-        layerOnProps(constId, false, null, mapProps, mapVirtProps, typeContrib, mapContribProps, errs);
-
-        Map<MethodConstant, MethodInfo> mapContribMethods = new HashMap<>();
-        for (Entry<MethodConstant, MethodInfo> entry : infoContrib.getMethods().entrySet())
-            {
-            Object         nidContrib = entry.getKey().resolveNestedIdentity(pool, null);
-            MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(pool, nidContrib);
-            MethodInfo     infoMethod = entry.getValue();
-            if (infoMethod.isCapped())
+            Map<PropertyConstant, PropertyInfo> mapContribProps = new HashMap<>(mapOrigProps.size());
+            for (Entry<PropertyConstant, PropertyInfo> entry : mapOrigProps.entrySet())
                 {
-                infoMethod = infoMethod.nestNarrowingIdentity(pool, idProp);
+                Object           nidContrib = entry.getKey().resolveNestedIdentity(pool, null);
+                PropertyConstant idContrib  = (PropertyConstant) idProp.appendNestedIdentity(pool, nidContrib);
+                mapContribProps.put(idContrib, entry.getValue());
                 }
-            mapContribMethods.put(idContrib, infoMethod);
+            layerOnProps(constId, false, null, mapProps, mapVirtProps, typeContrib,
+                    mapContribProps, errs);
             }
-        layerOnMethods(constId, false, false, null, mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
+
+        Map<MethodConstant, MethodInfo> mapOrigMethods = infoContrib.getMethods();
+        if (!mapOrigMethods.isEmpty())
+            {
+            Map<MethodConstant, MethodInfo> mapContribMethods = new HashMap<>(mapOrigMethods.size());
+            for (Entry<MethodConstant, MethodInfo> entry : mapOrigMethods.entrySet())
+                {
+                Object         nidContrib = entry.getKey().resolveNestedIdentity(pool, null);
+                MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(pool, nidContrib);
+                MethodInfo     infoMethod = entry.getValue();
+                if (infoMethod.isCapped())
+                    {
+                    infoMethod = infoMethod.nestNarrowingIdentity(pool, idProp);
+                    }
+                mapContribMethods.put(idContrib, infoMethod);
+                }
+            layerOnMethods(constId, false, false, null, mapMethods, mapVirtMethods, typeContrib,
+                    mapContribMethods, errs);
+            }
         }
 
     /**
