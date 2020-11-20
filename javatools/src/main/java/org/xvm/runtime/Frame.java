@@ -660,9 +660,6 @@ public class Frame
             TypeConstant typeFrom = hValue.getType();
             if (typeFrom.getPosition() != info.m_nTypeId) // quick check
                 {
-                // TODO: should this check be done by the class itself?
-                typeFrom = hValue.revealOrigin().getType();
-
                 // TODO: how to minimize the probability of getting here?
                 TypeConstant typeTo = info.getType();
 
@@ -673,31 +670,49 @@ public class Frame
                         break;
 
                     case IS_A_WEAK:
-                        // the types are assignable, but we need to inject a "safe-wrapper" proxy;
-                        // for example, in the case of:
-                        //      List<Object> lo;
-                        //      List<String> ls = ...;
-                        //      lo = ls;
-                        // "add(Object o)" method needs to be wrapped on "lo" reference, to ensure the
-                        // run-time type of "String"
-                        if (REPORT_WRAPPING && !typeTo.isTypeOfType())
+                        if (typeTo.isTypeOfType())
                             {
-                            System.err.println("WARNING: wrapping required from: " + typeFrom.getValueString()
-                                + " to: " + typeTo.getValueString());
+                            // the Type type is mostly native and safe
+                            break;
+                            }
+                        // fall through
+                    default:
+                        // check the revealed type as the last resource
+                        typeFrom = hValue.revealOrigin().getType();
+                        switch (typeFrom.calculateRelation(typeTo))
+                            {
+                            case IS_A:
+                                break;
+
+                            case IS_A_WEAK:
+                                // the types are assignable, but we need to inject a "safe-wrapper" proxy;
+                                // for example, in the case of:
+                                //      List<Object> lo;
+                                //      List<String> ls = ...;
+                                //      lo = ls;
+                                // "add(Object o)" method needs to be wrapped on "lo" reference, to ensure the
+                                // run-time type of "String"
+                                if (REPORT_WRAPPING)
+                                    {
+                                    System.err.println("WARNING: wrapping required from: " +
+                                        typeFrom.getValueString() + " to: " + typeTo.getValueString());
+                                    }
+                                break;
+
+                            default:
+                                // why did the compiler/verifier allow this?
+                                if (typeFrom.isAutoNarrowing())
+                                    {
+                                    // TODO: how to get the narrowing context?
+                                    }
+                                else
+                                    {
+                                    System.err.println("WARNING: suspicious assignment from: " +
+                                        typeFrom.getValueString() + " to: " + typeTo.getValueString());
+                                    }
+                                break;
                             }
                         break;
-
-                    default:
-                        // why did the compiler/verifier allow this?
-                        if (typeFrom.isAutoNarrowing())
-                            {
-                            // TODO: how to get the narrowing context?
-                            }
-                        else
-                            {
-                            System.err.println("WARNING: suspicious assignment from: " + typeFrom.getValueString()
-                                + " to: " + typeTo.getValueString());
-                            }
                     }
                 }
 
