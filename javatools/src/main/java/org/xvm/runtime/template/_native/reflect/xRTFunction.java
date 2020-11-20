@@ -425,6 +425,11 @@ public class xRTFunction
                     function == null ? null : function.getIdentityConstant(), function, type);
             }
 
+        @Override
+        public ObjectHandle revealOrigin()
+            {
+            return this;
+            }
 
         // ----- FunctionHandle interface ----------------------------------------------------------
 

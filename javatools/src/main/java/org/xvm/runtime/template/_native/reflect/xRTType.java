@@ -1568,6 +1568,12 @@ public class xRTType
             }
 
         @Override
+        public ObjectHandle revealOrigin()
+            {
+            return this;
+            }
+
+        @Override
         public TypeConstant getType()
             {
             return f_typeForeign == null
