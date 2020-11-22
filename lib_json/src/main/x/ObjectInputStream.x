@@ -968,6 +968,13 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         @Override
+        protected void prepareRead()
+            {
+            assert canRead || schema.randomAccess;
+            ensureActive();
+            }
+
+        @Override
         protected Boolean loadNext(Boolean first = False)
             {
             Boolean collectMetadata = False;
@@ -1203,7 +1210,7 @@ class ObjectInputStream(Schema schema, Parser parser)
          */
         <Serializable> conditional Serializable pointerCheck()
             {
-            if (!pointerChecked && parser.peek().id == ObjectEnter)
+            if (!pointerChecked && !parser.eof && parser.peek().id == ObjectEnter)
                 {
                 Doc pointer = peekMetadata(schema.pointerKey);
                 if (pointer.is(String))
