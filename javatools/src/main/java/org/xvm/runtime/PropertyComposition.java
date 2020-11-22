@@ -37,15 +37,9 @@ public class PropertyComposition
      */
     public PropertyComposition(ClassComposition clzParent, PropertyInfo infoProp)
         {
-        f_clzParent = clzParent;
-        f_infoProp  = infoProp;
-
-        TypeConstant typeParent = clzParent.getInceptionType();
-        TypeInfo     infoParent = typeParent.ensureTypeInfo();
-        TypeConstant typeRef    = infoProp.getBaseRefType();
-
-        f_clzRef     = clzParent.getRegistry().resolveClass(typeRef);
-        f_infoParent = infoParent;
+        f_clzParent  = clzParent;
+        f_infoProp   = infoProp;
+        f_clzRef     = clzParent.getRegistry().resolveClass(infoProp.getBaseRefType());
         f_mapMethods = new ConcurrentHashMap<>();
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();
@@ -61,7 +55,6 @@ public class PropertyComposition
         f_clzParent    = clzInception.f_clzParent;
         f_infoProp     = clzInception.f_infoProp;
         f_clzRef       = clzInception.f_clzRef;
-        f_infoParent   = clzInception.f_infoParent;
         f_mapMethods   = clzInception.f_mapMethods;
         f_mapGetters   = clzInception.f_mapGetters;
         f_mapSetters   = clzInception.f_mapSetters;
@@ -206,11 +199,11 @@ public class PropertyComposition
                 PropertyConstant idBase   = f_infoProp.getIdentity();
                 MethodConstant   idNested = (MethodConstant) idBase.appendNestedIdentity(
                                                 idBase.getConstantPool(), nid);
-
-                MethodInfo info = f_infoParent.getMethodByNestedId(idNested.getNestedIdentity());
+                TypeInfo   infoParent = getParentInfo();
+                MethodInfo info       = infoParent.getMethodByNestedId(idNested.getNestedIdentity());
                 return info == null
                     ? f_clzRef.getMethodCallChain(nid)
-                    : new CallChain(info.ensureOptimizedMethodChain(f_infoParent));
+                    : new CallChain(info.ensureOptimizedMethodChain(infoParent));
                 });
         }
 
@@ -225,10 +218,11 @@ public class PropertyComposition
                 PropertyConstant idNested = (PropertyConstant) idBase.appendNestedIdentity(
                                                 idBase.getConstantPool(), id.getNestedIdentity());
 
-                PropertyInfo infoProp = f_infoParent.findProperty(idNested);
+                TypeInfo     infoParent = getParentInfo();
+                PropertyInfo infoProp   = infoParent.findProperty(idNested);
                 return infoProp == null
                     ? f_clzRef.getPropertyGetterChain(id)
-                    : new CallChain(infoProp.ensureOptimizedGetChain(f_infoParent, idNested));
+                    : new CallChain(infoProp.ensureOptimizedGetChain(infoParent, idNested));
                 });
         }
 
@@ -242,10 +236,11 @@ public class PropertyComposition
                 PropertyConstant idNested = (PropertyConstant) idBase.appendNestedIdentity(
                                                 idBase.getConstantPool(), id.getNestedIdentity());
 
-                PropertyInfo infoProp = f_infoParent.findProperty(idNested);
+                TypeInfo     infoParent = getParentInfo();
+                PropertyInfo infoProp   = infoParent.findProperty(idNested);
                 return infoProp == null
                     ? f_clzRef.getPropertySetterChain(id)
-                    : new CallChain(infoProp.ensureOptimizedSetChain(f_infoParent, idNested));
+                    : new CallChain(infoProp.ensureOptimizedSetChain(infoParent, idNested));
                 });
         }
 
@@ -341,17 +336,15 @@ public class PropertyComposition
     /**
      * @return the TypeInfo for the parent
      */
-    public TypeInfo getParentInfo()
+    private TypeInfo getParentInfo()
         {
-        return f_infoParent;
+        return f_clzParent.getInceptionType().ensureTypeInfo();
         }
 
 
     // ----- data fields ---------------------------------------------------------------------------
 
     private final ClassComposition f_clzParent;
-
-    private final TypeInfo         f_infoParent;
     private final ClassComposition f_clzRef;
     private final PropertyInfo     f_infoProp;
 
