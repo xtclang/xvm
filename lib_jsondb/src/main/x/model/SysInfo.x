@@ -2,22 +2,37 @@
  * Database system status record, stored in the root database directory as `/sys.json`.
  */
 const SysInfo(Catalog.Status status,
-              DateTime       timestamp,
-              Version        version)
+              DateTime       stampedBy,
+              DateTime       updated,
+              Version?       version)
     {
+    /**
+     * Create a SysInfo for the specified Catalog.
+     *
+     * @param catalog  the Catalog
+     */
+    construct(Catalog catalog)
+        {
+        @Inject Clock clock;
+        construct SysInfo(catalog.status, catalog.timestamp, clock.now, catalog.version);
+        }
+
     /**
      * Create a copy of this `const` with only the specified properties modified.
      *
      * @param status     (optional) the new status
-     * @param timestamp  (optional) the new timestamp
+     * @param stampedBy  (optional) the timestamp from the Catalog that created the status
+     * @param updated    (optional) the time at which the status was last updated
      * @param version    (optional) the new version
      */
     SysInfo with(Catalog.Status? status    = Null,
-                 DateTime?       timestamp = Null,
+                 DateTime?       stampedBy = Null,
+                 DateTime?       updated   = Null,
                  Version?        version   = Null)
         {
         return new SysInfo(status    = status    ?: this.status,
-                           timestamp = timestamp ?: this.timestamp,
+                           stampedBy = stampedBy ?: this.stampedBy,
+                           updated   = updated   ?: this.updated,
                            version   = version   ?: this.version);
         }
 
@@ -27,6 +42,6 @@ const SysInfo(Catalog.Status status,
     SysInfo touch()
         {
         @Inject Clock clock;
-        return with(timestamp=clock.now);
+        return with(updated=clock.now);
         }
     }

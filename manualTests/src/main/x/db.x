@@ -24,24 +24,71 @@ module db
 
         import jsondb.Catalog;
         Catalog cat = new Catalog(dataDir);
+        console.println($"catalog={cat}");
+        console.println($"statusFile={cat.statusFile.path}, exists={cat.statusFile.exists}");
 
-        console.println($"status={cat.status}");
-//        cat.create("test");
+//        {
+//        SysInfo info = new SysInfo(cat);
+//        console.println($"Testing SysInfo serialization for SysInfo={info}");
+//        StringBuffer buf = new StringBuffer();
+//        Schema.DEFAULT.createObjectOutput(buf).write(info);
+//        String json = buf.toString();
+//        console.println($"SysInfo JSON={json}");
+//        SysInfo info2 = Schema.DEFAULT.createObjectInput(new CharArrayReader(json)).read();
+//        console.println($"SysInfo from JSON={info2}");
+//        }
 
-        @Inject Clock clock;
-        SysInfo info = new SysInfo(cat.status, clock.now, v:1.0);
-        console.println($"info={info}");
+        if (cat.statusFile.exists)
+            {
+            console.println($"Reading {cat.statusFile.path} ...");
+            Byte[]  bytes = cat.statusFile.contents;
+// TODO GG cannot call function on an imported module
+//            jsondb.dump("- bytes", bytes);
+//            SysInfo info  = jsondb.fromBytes(SysInfo, bytes);
+//            jsondb.dump("- info", info);
+            dump("- bytes", bytes);
+            SysInfo info  = fromBytes(SysInfo, bytes);
+            dump("- info", info);
+            }
 
-        Schema schemaC = new Schema([new jsondb.model.SysInfoMapping()], randomAccess = True);
-        Schema schemaD = Schema.DEFAULT;
+        try
+            {
+            Tuple t1 = cat.create("test");
+            }
+        catch (Exception e)
+            {
+            console.println($"Exception occurred creating db: {e}");
+            console.println("Recoving...");
+            Tuple t2 = cat.recover();
+            console.println("Configuring...");
+            Tuple t3 = cat.edit();
+            }
 
-        String sC = ser(schemaC, info);
-        String sD = ser(schemaD, info);
-        console.println($"custom JSON={sC}, default JSON={sD}");
+//        using (val section = new ecstasy.AsyncSection(e ->
+//                {
+//                console.println($"Exception occurred creating db: {e}");
+//                console.println("Recoving...");
+//                cat.recover();
+//                console.println("Configuring...");
+//                cat.edit();
+//                }))
+//            {
+//            cat.create("test");
+//            }
 
-        SysInfo infoC = deser(schemaC, sC);
-        SysInfo infoD = deser(schemaD, sD);
-        console.println($"deser info custom={infoC} default={infoD}");
+//        @Inject Clock clock;
+//        SysInfo info = new SysInfo(cat.status, clock.now, clock.now, v:1.0);
+//        console.println($"info={info}");
+//
+//        Schema schemaD = Schema.DEFAULT;
+//
+//        String sD = ser(schemaD, info);
+//        console.println($"ser info={sD}");
+//
+//        SysInfo infoD = deser(schemaD, sD);
+//        console.println($"deser info={infoD}");
+
+        Tuple t4 = cat.close();
         }
 
     String ser(Schema schema, SysInfo info)
@@ -54,5 +101,35 @@ module db
     SysInfo deser(Schema schema, String s)
         {
         return schema.createObjectInput(new CharArrayReader(s)).read<SysInfo>();
+        }
+
+    static <Serializable> immutable Byte[] toBytes(Serializable value)
+        {
+        import ecstasy.io.*;
+        val raw = new ByteArrayOutputStream();
+        json.Schema.DEFAULT.createObjectOutput(new UTF8Writer(raw)).write(value);
+        return raw.bytes.freeze(True);
+        }
+
+    static <Serializable> Serializable fromBytes(Type<Serializable> type, Byte[] bytes)
+        {
+        import ecstasy.io.*;
+        dump("reading XML", bytes);
+        return json.Schema.DEFAULT.createObjectInput(new UTF8Reader(new ByteArrayInputStream(bytes))).read();
+        }
+
+    static void dump(String desc, Object o)
+        {
+        @Inject Console console;
+        String s = switch()
+            {
+            case o.is(Byte[]): o.all(b -> b >= 32 && b <= 127 || new Char(b).isWhitespace())
+                    ? new String(new Char[o.size](i -> new Char(o[i])))
+                    : o.toString();
+
+            default: o.toString();
+            };
+
+        console.println($"{desc}={s}");
         }
     }

@@ -1,5 +1,5 @@
-import ecstasy.io.ByteArrayOutputStream;
-import ecstasy.io.PackedDataOutput;
+import model.Lock;
+import model.SysInfo;
 
 /**
  * Metadata catalog for a database. A `Catalog` acts as the "gateway" to a JSON database, allowing a
@@ -21,48 +21,45 @@ import ecstasy.io.PackedDataOutput;
 service Catalog
         implements Closeable
     {
-    /**
-     * The status of this `Catalog`.
-     *
-     * * `Initial` - The `Catalog` has been configured with a directory that does not contain a
-     *   catalog.
-     * * `Configuring` - This `Catalog` object has the database open for schema definition and
-     *   modification, or other maintenance work.
-     * * `Running` - This `Catalog` object has the database open for data access.
-     * * `LockedOut` - This `Catalog` object detected the _possibility_ that the directory has
-     *   already been opened by another `Catalog` instance, and is currently in use.
-     * * `Recovering` - This `Catalog` object has been instructed to recover the database.
-     * * `Closed` - This `Catalog` object has shut down, and is no longer usable.
-     */
-    enum Status {Empty, Configuring, Running, LockedOut, Recovering, Closed}
+    // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Open the catalog for the specified directory.
      *
      * @param dir       the directory that contains (or may contain) the catalog
-     * @param readOnly  pass `True` to access the catalog in a read-only manner
+     * @param dbModule  (optional) the Ecstasy module that represents the database schema
+     * @param readOnly  (optional) pass `True` to access the catalog in a read-only manner
      */
     construct(Directory dir, Module? dbModule = Null, Boolean readOnly = False)
         {
-        assert:arg dir.exists;
-        assert:arg dir.readable && (readOnly || dir.writable);
+        assert:arg dir.exists && dir.readable && (readOnly || dir.writable);
 
-        this.dir      = dir;
-        this.dbModule = dbModule;
-        this.readOnly = readOnly;
-        }
-    finally
-        {
-        status = inferStatus();
+        @Inject Clock clock;
+
+        this.timestamp = clock.now;
+        this.dir       = dir;
+        this.readOnly  = readOnly;
+        this.dbModule  = dbModule;
+        this.status    = Closed;
         }
 
 
     // ----- properties ----------------------------------------------------------------------------
 
     /**
+     * The timestamp from when this Catalog was created; used as an assumed-unique identifier.
+     */
+    public/private DateTime timestamp;
+
+    /**
      * The directory used to store the contents of the database
      */
     public/private Directory dir;
+
+    /**
+     * True iff the database was opened in read-only mode.
+     */
+    public/private Boolean readOnly;
 
     /**
      * The module representing the database. Used for serialization and deserialization of
@@ -71,9 +68,10 @@ service Catalog
     public/private Module? dbModule;
 
     /**
-     * True iff the database was opened in read-only mode.
+     * The version of the database represented by this `Catalog` object. The version may not be
+     * available before the database is opened.
      */
-    public/private Boolean readOnly = False;
+    public/private Version? version;
 
     /**
      * The status of this `Catalog` object.
@@ -81,11 +79,40 @@ service Catalog
     @Atomic public/private Status status;
 
 
+    // ----- visibility ----------------------------------------------------------------------------
+
+    @Override
+    String toString()
+        {
+// TODO GG: return $"{this:class.name}:\{dir={dir}, version={version}, status={status}, readOnly={readOnly}, unique-id={timestamp}}";
+        return $"Catalog:\{dir={dir}, version={version}, status={status}, readOnly={readOnly}, unique-id={timestamp}}";
+        }
+
+
     // ----- status management ---------------------------------------------------------------------
 
     /**
-     * For a `Catalog` that is `Empty`, initialize the directory and file structures so that a
-     * catalog exists in the previously specified directory. After creation, the `Catalog` will be
+     * The file used to store the "in-use" status for the database.
+     */
+    @Lazy File statusFile.calc()
+        {
+        return dir.fileFor("sys.json");
+        }
+
+    /**
+     * The status of this `Catalog`.
+     *
+     * * `Closed` - This `Catalog` object has not yet been opened, or it has been shut down.
+     * * `Configuring` - This `Catalog` object has the database open for schema definition and
+     *   modification, or other maintenance work.
+     * * `Running` - This `Catalog` object has the database open for data access.
+     * * `Recovering` - This `Catalog` object has been instructed to recover the database.
+     */
+    enum Status {Closed, Recovering, Configuring, Running}
+
+    /**
+     * For an empty `Catalog` that is `Closed`, initialize the directory and file structures so that
+     * a catalog exists in the previously specified directory. After creation, the `Catalog` will be
      * in the `Configuring` status, allowing the caller to populate the database schema.
      *
      * @param name  the name of the database to create
@@ -94,87 +121,69 @@ service Catalog
      */
     void create(String name)
         {
-        transition(Empty, Configuring);
+        transition(Closed, Configuring, snapshot -> snapshot.empty);
 
-        TODO
+        // TODO maybe return a config API?
         }
 
     /**
-     * For an existent database, if this `Catalog` is `Running` or `Closed`, then transition to the
-     * `Configuring` state, allowing modifications to be made to the database structure.
+     * For an existent database, if this `Catalog` is `Closed`, `Recovering`, or `Running`, then
+     * transition to the `Configuring` state, allowing modifications to be made to the database
+     * structure.
      *
      * @throws IllegalState  if the Catalog is not `Closed` or `Running`, or is read-only
      */
     void edit()
         {
-        transition([Running, Closed], Configuring);
+        transition([Closed, Recovering, Running], Configuring, snapshot -> !snapshot.empty && !snapshot.lockedOut);
 
-        TODO
+        // TODO maybe return a config API?
         }
 
     /**
-     * For an existent database, if this `Catalog` is `LockedOut`, then assume that the previous
-     * owner terminated, take ownership of the database and verify its integrity, resulting in a
-     * `Running` database.
+     * For an existent database, if this `Catalog` is locked-out, then assume that the previous
+     * owner terminated, take ownership of the database and verify its integrity.
      *
-     * @throws IllegalState  if the Catalog is not `LockedOut`
+     * @throws IllegalState  if the Catalog is not locked-out or `Closed`
      */
     void recover()
         {
-        transition(LockedOut, Recovering, False);
+        transition(Closed, Recovering, snapshot -> !snapshot.empty || sysDir.exists, ignoreLock = True);
 
-        TODO
-
-        transition(Recovering, Running, False);
+        // TODO
         }
 
     /**
-     * For an existent database, if this `Catalog` is `Configuring` or `Closed`, then transition to
-     * the `Running` state, allowing modifications to be made to the database structure.
+     * For an existent database, if this `Catalog` is `Closed`, `Recovering`, or `Configuring`, then
+     * transition to the `Running` state, allowing access and modification of the database contents.
      *
-     * @throws IllegalState  if the Catalog is not `Closed` or `Configuring`
+     * @throws IllegalState  if the Catalog is not `Closed`, `Recovering`, or `Configuring`
      */
     void open()
         {
-        transition([Configuring, Closed], Running, False);
+        transition([Closed, Recovering, Configuring], Running,
+                snapshot -> snapshot.owned || snapshot.unowned,
+                allowReadOnly = True);
 
-        TODO
+        // TODO
         }
 
     /**
-     * For a `Catalog` that is `Empty`, initialize the directory and file structures so that a
-     * catalog exists in the provided directory.
+     * Close this `Catalog`.
      */
     @Override
     void close()
         {
         switch (status)
             {
-            case Empty:
-                // nothing to close
-                break;
-
             case Configuring:
-                transition(Configuring, Closed);
+            case Recovering:
+                transition(status, Closed, snapshot -> snapshot.owned);
                 break;
 
             case Running:
-                transition(Running, Closed);
-                break;
-
-            case LockedOut:
-                // this Catalog object never took ownership of the database
-                break;
-
-            case Recovering:
-                // this is bad; we were recovering the database, and yet here we are processing
-                // something while the database is still not finished recovering; the recovery
-                // failed with an exception that was caught, and the database is being shut down
-                // without being recovered; just leave the persistent status as is
-                break;
-
             case Closed:
-                // already closed
+                transition(status, Closed, snapshot -> snapshot.owned, allowReadOnly = True);
                 break;
 
             default:
@@ -183,17 +192,26 @@ service Catalog
         }
 
     /**
-     * For a `Catalog` that is `Configuring`, initialize the directory and file structures so that a
-     * catalog exists in the provided directory.
+     * For a `Catalog` that is `Configuring` or `Closed`, remove the entirety of the database. When
+     * complete, the status will be `Closed`.
      *
-     * @throws IllegalState  if the Catalog is not `Configuring`, or is read-only
+     * @throws IllegalState  if the Catalog is not `Configuring` or `Closed`, or is read-only
      */
     void delete()
         {
-        transition([Configuring, Closed], Running, performAction = () ->
+        transition([Closed, Configuring], Configuring, snapshot -> snapshot.owned || snapshot.unowned);
+
+        for (Directory subdir : dir.dirs())
             {
-            TODO
-            });
+            subdir.deleteRecursively();
+            }
+
+        for (File file : dir.files())
+            {
+            file.delete();
+            }
+
+        transition(status, Closed, snapshot -> snapshot.owned);
         }
 
     /**
@@ -206,26 +224,179 @@ service Catalog
      * @param requiresWrite   `True` iff the Catalog is not allowed to be read-only
      * @param targetStatus    the ending `Status` to transition to
      * @param performAction   a function to execute while the lock is held
+     *
+     * @return True if the status has been changed
      */
-    protected void transition(Status | Status[] requiredStatus,
-                              Status            targetStatus,
-                              Boolean           requiresWrite = True,
-                              function void()?  performAction = Null)
+    protected void transition(Status | Status[]         requiredStatus,
+                              Status                    targetStatus,
+                              function Boolean(Glance)? canTransition = Null,
+                              Boolean                   allowReadOnly = False,
+                              Boolean                   ignoreLock    = False)
         {
+        Status oldStatus = status;
         if (requiredStatus.is(Status))
             {
-            assert status == requiredStatus;
+            assert oldStatus == requiredStatus;
             }
         else
             {
-            assert requiredStatus.contains(status);
+            assert requiredStatus.contains(oldStatus);
             }
 
-        assert !(readOnly && requiresWrite);
+@Inject Console console;
+console.println($"** transition(): required status={requiredStatus}, target status={targetStatus}");
 
-        TODO
+        if (readOnly)
+            {
+            assert allowReadOnly;
+            status = targetStatus;
+            }
+        else
+            {
+            using (val lock = lock(ignoreLock))
+                {
+                // get a glance at the current status on disk, and verify that the requested
+                // transition is legal
+                Glance glance = glance();
+console.println($"** transition(): glance={glance}");
+                if (!canTransition?(glance))
+                    {
+console.println($"** transition(): canTransition() failed");
+                    throw new IllegalState($"Unable to transition {dir.path} from {oldStatus} to {targetStatus}");
+                    }
 
-        status = targetStatus;
+                // store the updated status
+                status = targetStatus;
+
+val info  = new SysInfo(this);
+val bytes = toBytes(info);
+dump($"** transition(): updating {statusFile.path} status from info={info}:\n", bytes);
+statusFile.contents = bytes;
+                // statusFile.contents = toBytes(new SysInfo(this));
+                }
+            }
+        }
+
+
+    // ----- directory Glance ----------------------------------------------------------------------
+
+    /**
+     * A `Glance` is a snapshot view of the database status on disk, from the point of view of the
+     * `Catalog` that makes the "glancing" observation of the directory containing the database.
+     */
+    const Glance(SysInfo? info, Lock? lock, Exception? error)
+        {
+        /*
+         * True iff at the moment of the snapshot, the observing `Catalog` detected that the
+         * directory did not appear to contain a configured database.
+         */
+        Boolean empty.get()
+            {
+            return error == Null && info == Null;
+            }
+
+        /**
+         * True iff at the moment of the snapshot, the observing `Catalog` detected that the
+         * directory was not owned.
+         */
+        Boolean unowned.get()
+            {
+            return error == Null && (info?.status == Closed : True);
+            }
+
+        /**
+         * True iff at the moment of the snapshot, the observing `Catalog` detected that it (and
+         * not some other `Catalog` instance) was the owner of the directory.
+         */
+        Boolean owned.get()
+            {
+            return error == Null && info?.status != Closed && info?.stampedBy == this.Catalog.timestamp : False;
+            }
+
+        /**
+         * True iff at the moment of the snapshot, that the observing `Catalog` detected the
+         * _possibility_ that the directory has already been opened by another `Catalog` instance,
+         * and is currently in use. (It is also possible that the directory was open previously,
+         * and a clean shut-down did not occur.)
+         */
+        Boolean lockedOut.get()
+            {
+            return error != Null || (info?.status != Closed && info?.stampedBy != this.Catalog.timestamp : False);
+            }
+        }
+
+    /**
+     * Create a snapshot `Glance` of the status of the database on disk.
+     *
+     * @return a point-in-time snap-shot of the status of the database on disk
+     */
+    Glance glance()
+        {
+        SysInfo?   info  = Null;
+        Lock?      lock  = Null;
+        Exception? error = Null;
+
+        import ecstasy.fs.FileNotFound;
+
+{ // TODO GG
+        Byte[]? bytes = Null;
+        try
+            {
+            if (lockFile.exists)
+                {
+                // this is not an atomic operation, so a FileNotFound may still occur
+                bytes = lockFile.contents;
+                }
+            }
+        catch (FileNotFound e)
+            {
+            // it's ok for the lock file to not exist
+            }
+        catch (Exception e)
+            {
+            error = e;
+            }
+
+        try
+            {
+            lock = fromBytes(Lock, bytes?);
+            }
+        catch (Exception e)
+            {
+            error ?:= e;
+            }
+
+} { // TODO GG
+Byte[]? bytes = Null;
+        // bytes = Null;
+        try
+            {
+            if (statusFile.exists)
+                {
+                // this is not an atomic operation, so a FileNotFound may still occur
+                bytes = statusFile.contents;
+                }
+            }
+        catch (FileNotFound e)
+            {
+            // it's ok for the status file to not exist
+            }
+        catch (Exception e)
+            {
+            error ?:= e;
+            }
+
+        try
+            {
+            info = fromBytes(SysInfo, bytes?);
+            }
+        catch (Exception e)
+            {
+            error ?:= e;
+            }
+} // TODO GG
+
+        return new Glance(info, lock, error);
         }
 
 
@@ -239,52 +410,59 @@ service Catalog
         return dir.fileFor("sys.lock");
         }
 
-    /**
-     * The file used to store the "in-use" status for the database.
-     */
-    @Lazy File statusFile.calc()
-        {
-        return dir.fileFor("sys.json");
-        }
-
     @Lazy Directory sysDir.calc()
         {
         return dir.dirFor("sys");
         }
 
-    /**
-     * Without locking, examine the `Catalog` directory to determine what the status of the catalog
-     * is.
-     *
-     * @return the apparent `Status`
-     */
-    protected Status inferStatus()
+    protected Closeable lock(Boolean ignorePreviousLock)
         {
-        if (statusFile.exists)
+        String           path  = lockFile.path.toString();
+        Lock             lock  = new Lock(this);
+        immutable Byte[] bytes = toBytes(lock);
+
+// TODO remove
+dump($"creating lock file {path} containing:", bytes);
+
+        if (lockFile.exists && !ignorePreviousLock)
             {
-            TODO
+            String msg = $"Lock file ({path}) already exists";
+            try
+                {
+                Byte[] oldBytes = lockFile.contents;
+                String text     = oldBytes.all(b -> b >= 32 && b <= 127 || new Char(b).isWhitespace())
+                    ? new String(new Char[oldBytes.size](i -> new Char(oldBytes[i])))
+                    : oldBytes.toString();
+                msg = $"{msg}; Catalog timestamp={timestamp}; lock file contains: {text}";
+                }
+            catch (Exception e)
+                {
+                throw new IllegalState(msg, e);
+                }
+
+            throw new IllegalState(msg);
             }
-        else
+
+        if (!lockFile.create() && !ignorePreviousLock)
             {
-            return Empty;
+            throw new IllegalState($"Failed to create lock file: {path}");
             }
+
+        try
+            {
+            lockFile.contents = bytes;
+            }
+        catch (Exception e)
+            {
+            throw new IllegalState($"Failed to write lock file: {path}", e);
+            }
+
+        return new Closeable()
+            {
+            @Override void close()
+                {
+                lockFile.delete();
+                }
+            };
         }
-//
-//    protected conditional Closeable tryLock()
-//        {
-//        if (lockFile.create())
-//            {
-//            // verify the status file
-//            TODO
-//
-//            @Inject Clock clock;
-//            val raw = new @PackedDataOutput ByteArrayOutputStream();
-//            DataOutput.writeAsciiStringZ(raw, clock.now.toString());
-//            lockFile.contents = raw.bytes;
-//
-//            return True, () -> {lockFile.delete(); return;};
-//            }
-//
-//        return False;
-//        }
     }
