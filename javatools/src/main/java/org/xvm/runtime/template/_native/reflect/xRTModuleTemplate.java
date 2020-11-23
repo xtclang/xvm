@@ -10,11 +10,11 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -80,8 +80,8 @@ public class xRTModuleTemplate
     public int getPropertyModuleNamesByPath(Frame frame, ComponentTemplateHandle hTemplate, int iReturn)
         {
         // TODO GG: how to cache the result?
-        ModuleStructure  module = (ModuleStructure) hTemplate.getComponent();
-        ClassComposition clzMap = ensureListMapComposition();
+        ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
+        TypeComposition clzMap = ensureListMapComposition();
 
         // starting with this module, find all module dependencies, and the shortest path to each
         Map<ModuleConstant, String> mapModulePaths = module.collectDependencies();
@@ -113,11 +113,11 @@ public class xRTModuleTemplate
         }
 
     /**
-     * @return the ClassComposition for ListMap<String, String>
+     * @return the TypeComposition for ListMap<String, String>
      */
-    private static ClassComposition ensureListMapComposition()
+    private static TypeComposition ensureListMapComposition()
         {
-        ClassComposition clz = LISTMAP_CLZ;
+        TypeComposition clz = LISTMAP_CLZ;
         if (clz == null)
             {
             ConstantPool pool     = INSTANCE.pool();
@@ -148,6 +148,6 @@ public class xRTModuleTemplate
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static ClassComposition MODULE_TEMPLATE_COMPOSITION;
-    private static ClassComposition LISTMAP_CLZ;
+    private static TypeComposition MODULE_TEMPLATE_COMPOSITION;
+    private static TypeComposition LISTMAP_CLZ;
     }

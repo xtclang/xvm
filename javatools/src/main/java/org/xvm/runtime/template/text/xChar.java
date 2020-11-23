@@ -13,6 +13,8 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
@@ -77,7 +79,7 @@ public class xChar
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         // all three different constructors take a JavaLong parameter
@@ -131,10 +133,10 @@ public class xChar
         }
 
 
-    // ----- comparison support -----
+    // ----- comparison support --------------------------------------------------------------------
 
     @Override
-    public int callEquals(Frame frame, ClassComposition clazz,
+    public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         JavaLong h1 = (JavaLong) hValue1;
@@ -145,7 +147,7 @@ public class xChar
         }
 
     @Override
-    public int callCompare(Frame frame, ClassComposition clazz,
+    public int callCompare(Frame frame, TypeComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         JavaLong h1 = (JavaLong) hValue1;

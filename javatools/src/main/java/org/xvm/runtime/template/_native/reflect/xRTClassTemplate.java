@@ -13,12 +13,12 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
@@ -392,9 +392,9 @@ public class xRTClassTemplate
     /**
      * @return the ClassComposition for an Array of Contributions
      */
-    private static ClassComposition ensureContribArrayComposition()
+    private static TypeComposition ensureContribArrayComposition()
         {
-        ClassComposition clz = CONTRIBUTION_ARRAY_CLZCOMP;
+        TypeComposition clz = CONTRIBUTION_ARRAY_CLZCOMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -409,9 +409,9 @@ public class xRTClassTemplate
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static ClassComposition CLASS_TEMPLATE_CLZCOMP;
-    private static ClassComposition CONTRIBUTION_CLZCOMP;
-    private static ClassComposition CONTRIBUTION_ARRAY_CLZCOMP;
-    private static xEnum            ACTION;
-    private static MethodStructure  CREATE_CONTRIB_METHOD;
+    private static TypeComposition CLASS_TEMPLATE_CLZCOMP;
+    private static TypeComposition CONTRIBUTION_CLZCOMP;
+    private static TypeComposition CONTRIBUTION_ARRAY_CLZCOMP;
+    private static xEnum           ACTION;
+    private static MethodStructure CREATE_CONTRIB_METHOD;
     }

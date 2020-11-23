@@ -26,11 +26,11 @@ import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.compiler.ast.TypeExpression;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
@@ -76,9 +76,9 @@ public class xModule
         {
         if (constant instanceof ModuleConstant)
             {
-            ModuleConstant   idModule   = (ModuleConstant) constant;
-            TypeConstant     typeModule = idModule.getType();
-            ClassComposition clazz      = ensureClass(typeModule, typeModule);
+            ModuleConstant  idModule   = (ModuleConstant) constant;
+            TypeConstant    typeModule = idModule.getType();
+            TypeComposition clazz      = ensureClass(typeModule, typeModule);
 
             return createPackageHandle(frame, clazz);
             }
@@ -166,9 +166,9 @@ public class xModule
     public int getPropertyModulesByPath(Frame frame, PackageHandle hTarget, int iReturn)
         {
         // TODO GG: how to cache the result?
-        ModuleConstant   idModule = (ModuleConstant) hTarget.getId();
-        ModuleStructure  module   = (ModuleStructure) idModule.getComponent();
-        ClassComposition clzMap   = ensureListMapComposition();
+        ModuleConstant  idModule = (ModuleConstant) hTarget.getId();
+        ModuleStructure module   = (ModuleStructure) idModule.getComponent();
+        TypeComposition clzMap   = ensureListMapComposition();
 
         // starting with this module, find all module dependencies, and the shortest path to each
         Map<ModuleConstant, String> mapModulePaths = module.collectDependencies();
@@ -198,8 +198,8 @@ public class xModule
 
         ArrayHandle hPaths = xArray.makeStringArrayHandle(ahPaths);
 
-        ClassComposition clzArray = ensureArrayComposition();
-        xArray           template = (xArray) clzArray.getTemplate();
+        TypeComposition clzArray = ensureArrayComposition();
+        xArray          template = (xArray) clzArray.getTemplate();
 
         if (fDeferred)
             {
@@ -342,11 +342,11 @@ public class xModule
     // ----- Template, Composition, and handle caching ---------------------------------------------
 
     /**
-     * @return the ClassComposition for an Array of Module
+     * @return the TypeComposition for an Array of Module
      */
-    public static ClassComposition ensureArrayComposition()
+    public static TypeComposition ensureArrayComposition()
         {
-        ClassComposition clz = ARRAY_CLZ;
+        TypeComposition clz = ARRAY_CLZ;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -364,19 +364,19 @@ public class xModule
         {
         if (ARRAY_EMPTY == null)
             {
-            ClassComposition clzArray = ensureArrayComposition();
-            xArray           template = (xArray) clzArray.getTemplate();
+            TypeComposition clzArray = ensureArrayComposition();
+            xArray          template = (xArray) clzArray.getTemplate();
             ARRAY_EMPTY = template.createArrayHandle(clzArray, Utils.OBJECTS_NONE);
             }
         return ARRAY_EMPTY;
         }
 
     /**
-     * @return the ClassComposition for ListMap<String, Module>
+     * @return the TypeComposition for ListMap<String, Module>
      */
-    private static ClassComposition ensureListMapComposition()
+    private static TypeComposition ensureListMapComposition()
         {
-        ClassComposition clz = LISTMAP_CLZ;
+        TypeComposition clz = LISTMAP_CLZ;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -388,12 +388,11 @@ public class xModule
         return clz;
         }
 
-    private static ClassComposition LISTMAP_CLZ;
-
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static ClassComposition ARRAY_CLZ;
-    private static ArrayHandle      ARRAY_EMPTY;
-    private static VersionConstant  VERSION_DEFAULT;
+    private static TypeComposition LISTMAP_CLZ;
+    private static TypeComposition ARRAY_CLZ;
+    private static ArrayHandle     ARRAY_EMPTY;
+    private static VersionConstant VERSION_DEFAULT;
     }

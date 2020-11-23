@@ -1,36 +1,31 @@
 package org.xvm.runtime;
 
 
-import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ObjectHandle.GenericHandle;
-
 import org.xvm.runtime.template.InterfaceProxy;
-
-import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**
  * ProxyComposition represents a proxy interface.
  */
 public class ProxyComposition
-        implements TypeComposition
+        extends DelegatingComposition
     {
     /**
      * Construct the ProxyComposition for a given "inception" type and a "proxy" type.
      */
     public ProxyComposition(ClassComposition clzOrigin, TypeConstant typeProxy)
         {
+        super(clzOrigin);
+
         assert typeProxy.isInterfaceType();
 
-        f_clzOrigin = clzOrigin;
         f_typeProxy = typeProxy;
         }
 
@@ -115,72 +110,6 @@ public class ProxyComposition
         }
 
     @Override
-    public boolean isInflated(Object nid)
-        {
-        return f_clzOrigin.isInflated(nid);
-        }
-
-    @Override
-    public boolean isLazy(Object nid)
-        {
-        return f_clzOrigin.isLazy(nid);
-        }
-
-    @Override
-    public boolean isAllowedUnassigned(Object nid)
-        {
-        return f_clzOrigin.isAllowedUnassigned(nid);
-        }
-
-    @Override
-    public boolean isInjected(PropertyConstant idProp)
-        {
-        return f_clzOrigin.isInflated(idProp);
-        }
-
-    @Override
-    public boolean isAtomic(PropertyConstant idProp)
-        {
-        return f_clzOrigin.isAtomic(idProp);
-        }
-
-    @Override
-    public CallChain getMethodCallChain(Object nidMethod)
-        {
-        return f_clzOrigin.getMethodCallChain(nidMethod);
-        }
-
-    @Override
-    public CallChain getPropertyGetterChain(PropertyConstant idProp)
-        {
-        return f_clzOrigin.getPropertyGetterChain(idProp);
-        }
-
-    @Override
-    public CallChain getPropertySetterChain(PropertyConstant idProp)
-        {
-        return f_clzOrigin.getPropertySetterChain(idProp);
-        }
-
-    @Override
-    public List<String> getFieldNames()
-        {
-        return f_clzOrigin.getFieldNames();
-        }
-
-    @Override
-    public StringHandle[] getFieldNameArray()
-        {
-        return f_clzOrigin.getFieldNameArray();
-        }
-
-    @Override
-    public ObjectHandle[] getFieldValueArray(GenericHandle hValue)
-        {
-        return f_clzOrigin.getFieldValueArray(hValue);
-        }
-
-    @Override
     public Map<Object, ObjectHandle> initializeStructure()
         {
         return null;
@@ -194,11 +123,6 @@ public class ProxyComposition
 
 
     // ----- data fields ---------------------------------------------------------------------------
-
-    /**
-     * The original ClassComposition.
-     */
-    private final ClassComposition f_clzOrigin;
 
     /**
      * The revealed (proxying) type.

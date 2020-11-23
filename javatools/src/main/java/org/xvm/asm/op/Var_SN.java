@@ -13,11 +13,11 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -134,8 +134,8 @@ public class Var_SN
 
     protected int complete(Frame frame, int iPC, ObjectHandle[] ahArg)
         {
-        TypeConstant     typeList = frame.resolveType(m_nType);
-        ClassComposition clzArray     = getArrayClass(frame, typeList);
+        TypeConstant    typeList = frame.resolveType(m_nType);
+        TypeComposition clzArray = getArrayClass(frame, typeList);
 
         ArrayHandle hArray = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahArg);
 

@@ -88,7 +88,7 @@ public class xService
         return true;
         }
 
-    public int constructSync(Frame frame, MethodStructure constructor, ClassComposition clazz,
+    public int constructSync(Frame frame, MethodStructure constructor, TypeComposition clazz,
                              ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {
         switch (super.construct(frame, constructor, clazz, hParent, ahArg, Op.A_STACK))
@@ -118,7 +118,7 @@ public class xService
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {
         ServiceContext contextNew = frame.f_context.f_container.createServiceContext(f_sName);
@@ -127,7 +127,7 @@ public class xService
         }
 
     @Override
-    public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
+    public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
         // called via constructSync()
         ServiceContext context = frame.f_context;

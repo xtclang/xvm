@@ -10,8 +10,8 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.VarSupport;
 
 
@@ -62,7 +62,7 @@ public class Var_D
     @Override
     public int process(Frame frame, int iPC)
         {
-        ClassComposition clz = frame.resolveClass(m_nType);
+        TypeComposition clz = frame.resolveClass(m_nType);
 
         return ((VarSupport) clz.getSupport()).introduceRef(frame, clz, null, m_nVar);
         }

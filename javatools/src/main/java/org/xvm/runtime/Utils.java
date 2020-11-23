@@ -1423,7 +1423,7 @@ public abstract class Utils
                         ahArg[0] = hValue;
                         ahArg[1] = xString.makeHandle(param.getName());
 
-                        ClassComposition clzArg = ARGUMENT_TEMPLATE.
+                        TypeComposition clzArg = ARGUMENT_TEMPLATE.
                             ensureParameterizedClass(frameCaller.poolContext(), param.getType());
                         int iResult = ARGUMENT_TEMPLATE.construct(frameCaller, constructor,
                                             clzArg, null, ahArg, Op.A_STACK);
@@ -1560,10 +1560,10 @@ public abstract class Utils
                 boolean      fFormal      = param.isTypeParameter();
                 Constant     constDefault = param.getDefaultValue();
 
-                ConstantPool     pool      = frameCaller.poolContext();
-                ClassTemplate    template  = RT_PARAMETER_TEMPLATE;
-                TypeConstant     typeParam = pool.ensureParameterizedTypeConstant(typeRTParameter, type);
-                ClassComposition clzParam  = pool.ensureClassComposition(typeParam, template);
+                ConstantPool    pool      = frameCaller.poolContext();
+                ClassTemplate   template  = RT_PARAMETER_TEMPLATE;
+                TypeConstant    typeParam = pool.ensureParameterizedTypeConstant(typeRTParameter, type);
+                TypeComposition clzParam  = pool.ensureClassComposition(typeParam, template);
 
                 MethodStructure  construct = RT_PARAMETER_CONSTRUCT;
                 ObjectHandle[]   ahArg     = new ObjectHandle[construct.getMaxVars()];
@@ -1611,7 +1611,7 @@ public abstract class Utils
      *
      * @return R_CALL or R_EXCEPTION
      */
-    public static int constructListMap(Frame frame, ClassComposition clzMap,
+    public static int constructListMap(Frame frame, TypeComposition clzMap,
                                        ArrayHandle haKeys, ArrayHandle haValues, int iReturn)
         {
         MethodStructure constructor = LIST_MAP_CONSTRUCT;
@@ -1694,15 +1694,15 @@ public abstract class Utils
     private static TemplateRegistry REGISTRY;
 
     // assigned by initNative()
-    private static ClassTemplate    ANNOTATION_TEMPLATE;
-    private static MethodStructure  ANNOTATION_CONSTRUCT;
-    private static ClassTemplate    ARGUMENT_TEMPLATE;
-    private static MethodStructure  ARGUMENT_CONSTRUCT;
-    private static ClassTemplate    RT_PARAMETER_TEMPLATE;
-    private static MethodStructure  RT_PARAMETER_CONSTRUCT;
-    private static MethodStructure  LIST_MAP_CONSTRUCT;
+    private static ClassTemplate   ANNOTATION_TEMPLATE;
+    private static MethodStructure ANNOTATION_CONSTRUCT;
+    private static ClassTemplate   ARGUMENT_TEMPLATE;
+    private static MethodStructure ARGUMENT_CONSTRUCT;
+    private static ClassTemplate   RT_PARAMETER_TEMPLATE;
+    private static MethodStructure RT_PARAMETER_CONSTRUCT;
+    private static MethodStructure LIST_MAP_CONSTRUCT;
 
     // assigned lazily
-    private static ClassComposition ANNOTATION_ARRAY_CLZ;
-    private static ClassComposition ARGUMENT_ARRAY_CLZ;
+    private static TypeComposition ANNOTATION_ARRAY_CLZ;
+    private static TypeComposition ARGUMENT_ARRAY_CLZ;
     }

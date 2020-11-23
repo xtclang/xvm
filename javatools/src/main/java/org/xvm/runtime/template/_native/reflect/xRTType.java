@@ -31,7 +31,6 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -40,11 +39,12 @@ import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.CanonicalizedTypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
@@ -72,14 +72,14 @@ import org.xvm.util.ListMap;
  * Native Type implementation.
  */
 public class xRTType
-        extends    xConst
+        extends    ClassTemplate
         implements IndexSupport // for turtle types
     {
     public static xRTType INSTANCE;
 
     public xRTType(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(templates, structure);
 
         if (fInstance)
             {
@@ -132,15 +132,18 @@ public class xRTType
         markNativeMethod("and", PARAM_TYPE   , null);
         markNativeMethod("or" , PARAM_TYPE   , null);
 
-        ClassConstant   idType     = pool().clzType();
-        TypeConstant    typeType   = idType.getType();
-        ClassStructure  structType = (ClassStructure) idType.getComponent();
+        ClassConstant   idType       = pool().clzType();
+        ClassStructure  structType   = (ClassStructure) idType.getComponent();
+        ClassStructure  structRTType = getStructure();
 
-        structType.findMethod("hashCode", 2).markNative();
-        structType.findMethod("equals"  , 3).markNative();
-        structType.findMethod("compare" , 3).markNative();
+        structType  .findMethod("equals",   3).markNative();
+        structType  .findMethod("compare",  3).markNative();
+        structType  .findMethod("hashCode", 2).markNative();
+        structRTType.findMethod("equals",   3).markNative();
+        structRTType.findMethod("compare",  3).markNative();
+        structRTType.findMethod("hashCode", 2).markNative();
 
-        typeType.invalidateTypeInfo();
+        pool().typeType().invalidateTypeInfo();
         }
 
     @Override
@@ -149,6 +152,17 @@ public class xRTType
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
             pool.typeType(), pool.typeObject(), pool.typeObject());
+        }
+
+    @Override
+    public TypeComposition ensureClass(TypeConstant typeActual)
+        {
+        if (typeActual.equals(getCanonicalType()))
+            {
+            return super.ensureClass(typeActual);
+            }
+
+        return new CanonicalizedTypeComposition(getCanonicalClass(), typeActual);
         }
 
     @Override
@@ -264,6 +278,25 @@ public class xRTType
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "compare":
+                return callCompare(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
+
+            case "equals":
+                return callEquals(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
+
+            case "hashCode":
+                return buildHashCode(frame, getCanonicalClass(), ahArg[1], iReturn);
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
@@ -411,7 +444,7 @@ public class xRTType
         }
 
     @Override
-    protected int callEqualsImpl(Frame frame, ClassComposition clazz,
+    protected int callEqualsImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.assignValue(iReturn, xBoolean.makeHandle(
@@ -419,15 +452,14 @@ public class xRTType
         }
 
     @Override
-    protected int callCompareImpl(Frame frame, ClassComposition clazz,
+    protected int callCompareImpl(Frame frame, TypeComposition clazz,
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.assignValue(iReturn, xOrdered.makeHandle(
             (((TypeHandle) hValue1).getDataType()).compareTo(((TypeHandle) hValue2).getDataType())));
         }
 
-    @Override
-    protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn,
             xInt64.makeHandle(((TypeHandle) hTarget).getDataType().hashCode()));
@@ -585,9 +617,9 @@ public class xRTType
         FunctionHandle[] ahFunctions;
         if (infoTarget.isNewable())
             {
-            ConstantPool     pool       = frame.poolContext();
-            TypeConstant     typeStruct = pool.ensureAccessTypeConstant(typeTarget, Constants.Access.STRUCT);
-            ClassComposition clzTarget  = f_templates.resolveClass(typeTarget);
+            ConstantPool    pool       = frame.poolContext();
+            TypeConstant    typeStruct = pool.ensureAccessTypeConstant(typeTarget, Constants.Access.STRUCT);
+            TypeComposition clzTarget  = f_templates.resolveClass(typeTarget);
 
             ArrayList<FunctionHandle> listHandles   = new ArrayList<>();
             boolean                   fStructConstr = false;
@@ -682,7 +714,7 @@ public class xRTType
     public static class ConstructorHandle
             extends FunctionHandle
         {
-        public ConstructorHandle(ClassComposition clzTarget, TypeConstant typeConstruct,
+        public ConstructorHandle(TypeComposition clzTarget, TypeConstant typeConstruct,
                                  MethodStructure constructor, Parameter[] aParams, boolean fParent)
             {
             super(typeConstruct, constructor);
@@ -704,13 +736,13 @@ public class xRTType
                 System.arraycopy(ahArg, 1, ahArg, 0, ahArg.length-1);
                 }
 
-            ClassComposition clzTarget   = f_clzTarget;
+            TypeComposition clzTarget    = f_clzTarget;
             ClassTemplate    template    = clzTarget.getTemplate();
             MethodStructure  constructor = f_constructor;
             ConstantPool     pool        = frame.poolContext();
             TypeConstant     typeTuple   = pool.ensureParameterizedTypeConstant(
                                             pool.typeTuple(), clzTarget.getType());
-            ClassComposition clzTuple    = xTuple.INSTANCE.ensureClass(typeTuple);
+            TypeComposition clzTuple     = xTuple.INSTANCE.ensureClass(typeTuple);
 
             int iResult = constructor == null
                 ? template.proceedConstruction(frame, null, false, ahArg[0], ahArg, Op.A_STACK)
@@ -783,10 +815,10 @@ public class xRTType
             return Math.max(cVars, f_aParams.length);
             }
 
-        final private ClassComposition f_clzTarget;
-        final private MethodStructure  f_constructor;
-        final protected Parameter[]    f_aParams;
-        final private boolean          f_fParent;
+        final private TypeComposition f_clzTarget;
+        final private MethodStructure f_constructor;
+        final protected Parameter[]   f_aParams;
+        final private boolean         f_fParent;
         }
 
     /**
@@ -861,8 +893,8 @@ public class xRTType
                 }
             }
 
-        ClassComposition clzArray  = xRTMethod.ensureArrayComposition(typeTarget);
-        ObjectHandle[]   ahMethods = listHandles.toArray(Utils.OBJECTS_NONE);
+        TypeComposition clzArray  = xRTMethod.ensureArrayComposition(typeTarget);
+        ObjectHandle[]  ahMethods = listHandles.toArray(Utils.OBJECTS_NONE);
         if (Op.anyDeferred(ahMethods))
             {
             ObjectHandle hDeferred = new DeferredArrayHandle(clzArray, ahMethods);
@@ -1436,8 +1468,8 @@ public class xRTType
     private int makePropertyArray(Frame frame, TypeConstant typeTarget,
                                   List<ObjectHandle> listProps, int iReturn)
         {
-        ObjectHandle[]   ahProps  = listProps.toArray(Utils.OBJECTS_NONE);
-        ClassComposition clzArray = xRTProperty.ensureArrayComposition(typeTarget);
+        ObjectHandle[]  ahProps  = listProps.toArray(Utils.OBJECTS_NONE);
+        TypeComposition clzArray = xRTProperty.ensureArrayComposition(typeTarget);
 
         if (Op.anyDeferred(ahProps))
             {
@@ -1453,11 +1485,11 @@ public class xRTType
     // ----- Composition and handle caching --------------------------------------------------------
 
     /**
-     * @return the ClassComposition for an Array of Type
+     * @return the TypeComposition for an Array of Type
      */
-    public static ClassComposition ensureTypeArrayComposition()
+    public static TypeComposition ensureTypeArrayComposition()
         {
-        ClassComposition clz = TYPE_ARRAY_CLZCOMP;
+        TypeComposition clz = TYPE_ARRAY_CLZCOMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -1469,11 +1501,11 @@ public class xRTType
         }
 
     /**
-     * @return the ClassComposition for an Array of Arguments
+     * @return the TypeComposition for an Array of Arguments
      */
-    public static ClassComposition ensureArgumentArrayComposition()
+    public static TypeComposition ensureArgumentArrayComposition()
         {
-        ClassComposition clz = ARGUMENT_ARRAY_CLZCOMP;
+        TypeComposition clz = ARGUMENT_ARRAY_CLZCOMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -1512,11 +1544,11 @@ public class xRTType
         }
 
     /**
-     * @return the ClassComposition for ListMap<String, Type>
+     * @return the TypeComposition for ListMap<String, Type>
      */
-    public static ClassComposition ensureListMapComposition()
+    public static TypeComposition ensureListMapComposition()
         {
-        ClassComposition clz = LISTMAP_CLZCOMP;
+        TypeComposition clz = LISTMAP_CLZCOMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -1559,7 +1591,7 @@ public class xRTType
     public static class TypeHandle
             extends GenericHandle
         {
-        protected TypeHandle(ClassComposition clazz, TypeConstant typeForeign)
+        protected TypeHandle(TypeComposition clazz, TypeConstant typeForeign)
             {
             super(clazz);
 
@@ -1629,12 +1661,12 @@ public class xRTType
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static ClassComposition TYPE_ARRAY_CLZCOMP;
-    private static ArrayHandle      TYPE_ARRAY_EMPTY;
-    private static ClassComposition LISTMAP_CLZCOMP;
+    private static TypeComposition TYPE_ARRAY_CLZCOMP;
+    private static ArrayHandle     TYPE_ARRAY_EMPTY;
+    private static TypeComposition LISTMAP_CLZCOMP;
 
-    private static ClassTemplate    ANNOTATION_TEMPLATE;
-    private static MethodStructure  ANNOTATION_CONSTRUCT;
-    private static ClassComposition ARGUMENT_ARRAY_CLZCOMP;
-    private static ArrayHandle      ARGUMENT_ARRAY_EMPTY;
+    private static ClassTemplate   ANNOTATION_TEMPLATE;
+    private static MethodStructure ANNOTATION_CONSTRUCT;
+    private static TypeComposition ARGUMENT_ARRAY_CLZCOMP;
+    private static ArrayHandle     ARGUMENT_ARRAY_EMPTY;
     }

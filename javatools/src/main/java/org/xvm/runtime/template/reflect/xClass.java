@@ -106,7 +106,7 @@ public class xClass
                     template = this;
                     break;
                 }
-            ClassComposition clz = template.ensureClass(typeClz);
+            ClassComposition clz = (ClassComposition) template.ensureClass(typeClz);
 
             // skip the natural constructor; it's a "make believe" code anyway
             return template.construct(frame, null, clz, null, Utils.OBJECTS_NONE, Op.A_STACK);
@@ -116,7 +116,7 @@ public class xClass
         }
 
     @Override
-    public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
+    public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
         return new ClassHandle(clazz.ensureAccess(Constants.Access.STRUCT));
         }
@@ -183,7 +183,7 @@ public class xClass
         }
 
     @Override
-    protected int callEqualsImpl(Frame frame, ClassComposition clazz,
+    protected int callEqualsImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.assignValue(iReturn,
@@ -191,7 +191,7 @@ public class xClass
         }
 
     @Override
-    protected int callCompareImpl(Frame frame, ClassComposition clazz,
+    protected int callCompareImpl(Frame frame, TypeComposition clazz,
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.assignValue(iReturn,
@@ -199,7 +199,7 @@ public class xClass
         }
 
     @Override
-    protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn, xInt64.makeHandle(getClassType(hTarget).hashCode()));
         }
@@ -312,9 +312,9 @@ public class xClass
                 return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
-        ClassComposition clz      = f_templates.resolveClass(typePublic);
-        ObjectHandle     hStruct  = template.createStruct(frame, clz);
-        MethodStructure  methodAI = clz.ensureAutoInitializer();
+        TypeComposition clz      = f_templates.resolveClass(typePublic);
+        ObjectHandle    hStruct  = template.createStruct(frame, clz);
+        MethodStructure methodAI = clz.ensureAutoInitializer();
         if (methodAI != null)
             {
             switch (frame.call1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE))
@@ -505,11 +505,11 @@ public class xClass
     // ----- Composition and handle caching --------------------------------------------------------
 
     /**
-     * @return the ClassComposition for an Array of Class
+     * @return the TypeComposition for an Array of Class
      */
-    public static ClassComposition ensureArrayComposition()
+    public static TypeComposition ensureArrayComposition()
         {
-        ClassComposition clz = ARRAY_CLZCOMP;
+        TypeComposition clz = ARRAY_CLZCOMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -537,6 +537,6 @@ public class xClass
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static ClassComposition ARRAY_CLZCOMP;
-    private static ArrayHandle      ARRAY_EMPTY;
+    private static TypeComposition ARRAY_CLZCOMP;
+    private static ArrayHandle     ARRAY_EMPTY;
     }

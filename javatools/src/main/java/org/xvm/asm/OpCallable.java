@@ -16,11 +16,11 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
@@ -406,9 +406,9 @@ public abstract class OpCallable extends Op
     protected int constructChild(Frame frame, MethodStructure constructor,
                                  ObjectHandle hParent, ObjectHandle[] ahVar)
         {
-        ClassStructure   structChild = (ClassStructure) constructor.getParent().getParent();
-        TypeConstant     typeChild   = getCanonicalChildType(frame, hParent.getType(), structChild.getName());
-        ClassComposition clzTarget   = frame.ensureClass(typeChild);
+        ClassStructure  structChild = (ClassStructure) constructor.getParent().getParent();
+        TypeConstant    typeChild   = getCanonicalChildType(frame, hParent.getType(), structChild.getName());
+        TypeComposition clzTarget   = frame.ensureClass(typeChild);
 
         if (frame.isNextRegister(m_nRetValue))
             {

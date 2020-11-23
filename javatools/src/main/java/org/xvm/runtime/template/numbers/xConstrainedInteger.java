@@ -11,12 +11,12 @@ import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
@@ -162,7 +162,7 @@ public abstract class xConstrainedInteger
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         SignatureConstant sig = constructor.getIdentityConstant().getSignature();
@@ -675,7 +675,7 @@ public abstract class xConstrainedInteger
         }
 
     @Override
-    public int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         long l = ((JavaLong) hTarget).getValue();
 
@@ -685,7 +685,7 @@ public abstract class xConstrainedInteger
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
-    public int callEquals(Frame frame, ClassComposition clazz,
+    public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         JavaLong h1 = (JavaLong) hValue1;
@@ -696,7 +696,7 @@ public abstract class xConstrainedInteger
         }
 
     @Override
-    public int callCompare(Frame frame, ClassComposition clazz,
+    public int callCompare(Frame frame, TypeComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         JavaLong h1 = (JavaLong) hValue1;

@@ -267,8 +267,8 @@ public abstract class Container
             ahArg[1] = xBooleanArray.INSTANCE.createArrayHandle(
                     xBooleanArray.INSTANCE.getCanonicalClass(), ahShared);
 
-            ClassComposition clzArray = xModule.ensureArrayComposition();
-            xArray           template = (xArray) clzArray.getTemplate();
+            TypeComposition clzArray = xModule.ensureArrayComposition();
+            xArray          template = (xArray) clzArray.getTemplate();
             if (fDeferred)
                 {
                 Frame.Continuation stepNext = frameCaller ->

@@ -840,7 +840,7 @@ public class Frame
      */
     public int assignTuple(int nVar, ObjectHandle... ahValue)
         {
-        ClassComposition clazz = ensureClass(getVarInfo(nVar).getType());
+        TypeComposition clazz = ensureClass(getVarInfo(nVar).getType());
 
         return assignValue(nVar, xTuple.makeHandle(clazz, ahValue));
         }
@@ -1098,8 +1098,8 @@ public class Frame
             case Op.A_TUPLE:
                 if (afDynamic == null)
                     {
-                    int              iReturn = f_aiReturn[0];
-                    ClassComposition clazz   = ensureClass(f_framePrev.getVarInfo(iReturn).getType());
+                    int             iReturn = f_aiReturn[0];
+                    TypeComposition clazz   = ensureClass(f_framePrev.getVarInfo(iReturn).getType());
 
                     return returnValue(iReturn, xTuple.makeHandle(clazz, ahValue), false);
                     }
@@ -1240,12 +1240,12 @@ public class Frame
         return info.getType().getParamType(0);
         }
 
-    public ClassComposition resolveClass(int iArg)
+    public TypeComposition resolveClass(int iArg)
         {
         return ensureClass(resolveType(iArg));
         }
 
-    public ClassComposition ensureClass(TypeConstant type)
+    public TypeComposition ensureClass(TypeConstant type)
         {
         return f_context.f_templates.resolveClass(type);
         }

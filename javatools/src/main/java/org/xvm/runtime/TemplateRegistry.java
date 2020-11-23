@@ -391,8 +391,8 @@ public class TemplateRegistry
             });
         }
 
-    // produce a ClassComposition based on the specified TypeConstant
-    public ClassComposition resolveClass(TypeConstant typeActual)
+    // produce a TypeComposition based on the specified TypeConstant
+    public TypeComposition resolveClass(TypeConstant typeActual)
         {
         return getTemplate(typeActual).ensureClass(typeActual.normalizeParameters());
         }

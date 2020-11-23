@@ -299,7 +299,7 @@ public class xRef
         }
 
     @Override
-    public int callEquals(Frame frame, ClassComposition clazz,
+    public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         RefHandle hRef1 = (RefHandle) hValue1;

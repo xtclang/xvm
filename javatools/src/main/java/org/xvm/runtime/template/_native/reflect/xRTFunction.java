@@ -13,7 +13,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -21,6 +20,7 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
@@ -71,7 +71,7 @@ public class xRTFunction
         }
 
     @Override
-    public ClassComposition ensureClass(TypeConstant typeActual)
+    public TypeComposition ensureClass(TypeConstant typeActual)
         {
         // from the run-time perspective, a function type is equivalent to its "full bound" type
         // (where there are no parameters) and the responsibility to check the parameter types
@@ -161,14 +161,14 @@ public class xRTFunction
         }
 
     @Override
-    protected int callEqualsImpl(Frame frame, ClassComposition clazz,
+    protected int callEqualsImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));
         }
 
     @Override
-    protected int callCompareImpl(Frame frame, ClassComposition clazz,
+    protected int callCompareImpl(Frame frame, TypeComposition clazz,
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.assignValue(iReturn,
@@ -176,7 +176,7 @@ public class xRTFunction
         }
 
     @Override
-    protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         FunctionHandle hFunc = (FunctionHandle) hTarget;
 
@@ -1261,11 +1261,11 @@ public class xRTFunction
     // ----- Composition and handle caching --------------------------------------------------------
 
     /**
-     * @return the ClassComposition for an Array of Function
+     * @return the TypeComposition for an Array of Function
      */
-    public static ClassComposition ensureArrayComposition()
+    public static TypeComposition ensureArrayComposition()
         {
-        ClassComposition clz = ARRAY_CLZCOMP;
+        TypeComposition clz = ARRAY_CLZCOMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -1290,11 +1290,11 @@ public class xRTFunction
         }
 
     /**
-     * @return the ClassComposition for a ListMap<Parameter, Object>
+     * @return the TypeComposition for a ListMap<Parameter, Object>
      */
-    public static ClassComposition ensureListMap()
+    public static TypeComposition ensureListMap()
         {
-        ClassComposition clz = LISTMAP_CLZCOMP;
+        TypeComposition clz = LISTMAP_CLZCOMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -1324,9 +1324,9 @@ public class xRTFunction
         }
 
     /**
-     * @return the ClassComposition for an Array of Constructor
+     * @return the TypeComposition for an Array of Constructor
      */
-    public static ClassComposition ensureConstructorArray(TypeConstant typeTarget, TypeConstant typeParent)
+    public static TypeComposition ensureConstructorArray(TypeConstant typeTarget, TypeConstant typeParent)
         {
         assert typeTarget != null;
 
@@ -1339,9 +1339,9 @@ public class xRTFunction
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static ClassComposition ARRAY_CLZCOMP;
-    private static ClassComposition LISTMAP_CLZCOMP;
-    private static ArrayHandle      ARRAY_EMPTY;
+    private static TypeComposition ARRAY_CLZCOMP;
+    private static TypeComposition LISTMAP_CLZCOMP;
+    private static ArrayHandle     ARRAY_EMPTY;
 
     /**
      * RTFunction:

@@ -11,7 +11,6 @@ import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
@@ -79,7 +78,7 @@ public class xFPLiteral
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         StringHandle hText = (StringHandle) ahVar[0];

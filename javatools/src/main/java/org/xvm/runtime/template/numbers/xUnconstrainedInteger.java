@@ -8,10 +8,10 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
@@ -452,7 +452,7 @@ public abstract class xUnconstrainedInteger
         }
 
     @Override
-    public int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         long l = ((ObjectHandle.JavaLong) hTarget).getValue();
 
@@ -463,7 +463,7 @@ public abstract class xUnconstrainedInteger
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
-    public int callEquals(Frame frame, ClassComposition clazz,
+    public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         IntNHandle h1 = (xIntLiteral.IntNHandle) hValue1;
@@ -473,7 +473,7 @@ public abstract class xUnconstrainedInteger
         }
 
     @Override
-    public int callCompare(Frame frame, ClassComposition clazz,
+    public int callCompare(Frame frame, TypeComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         IntNHandle h1 = (IntNHandle) hValue1;

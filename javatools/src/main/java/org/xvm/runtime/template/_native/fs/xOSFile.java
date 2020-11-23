@@ -11,11 +11,11 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -51,8 +51,8 @@ public class xOSFile
 
         getCanonicalType().invalidateTypeInfo();
 
-        ClassTemplate    templateFile = f_templates.getTemplate("fs.File");
-        ClassComposition clzOSFile    = ensureClass(templateFile.getCanonicalType());
+        ClassTemplate   templateFile = f_templates.getTemplate("fs.File");
+        TypeComposition clzOSFile    = ensureClass(templateFile.getCanonicalType());
 
         s_clzOSFileStruct = clzOSFile.ensureAccess(Constants.Access.STRUCT);
         s_constructorFile = getStructure().findConstructor();
@@ -118,7 +118,7 @@ public class xOSFile
      */
     public int createHandle(Frame frame, ObjectHandle hOSStore, Path path, int iReturn)
         {
-        ClassComposition clzStruct   = s_clzOSFileStruct;
+        TypeComposition clzStruct   = s_clzOSFileStruct;
         MethodStructure  constructor = s_constructorFile;
 
         NodeHandle     hStruct = new NodeHandle(clzStruct, path.toAbsolutePath(), hOSStore);
@@ -130,6 +130,6 @@ public class xOSFile
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static ClassComposition s_clzOSFileStruct;
-    private static MethodStructure  s_constructorFile;
+    private static TypeComposition s_clzOSFileStruct;
+    private static MethodStructure s_constructorFile;
     }

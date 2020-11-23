@@ -193,7 +193,7 @@ public class xEnum
         }
 
     @Override
-    public int callEquals(Frame frame, ClassComposition clazz,
+    public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         EnumHandle hEnum1 = (EnumHandle) hValue1;
@@ -202,7 +202,7 @@ public class xEnum
         }
 
     @Override
-    public int callCompare(Frame frame, ClassComposition clazz,
+    public int callCompare(Frame frame, TypeComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         EnumHandle hEnum1 = (EnumHandle) hValue1;
@@ -217,7 +217,7 @@ public class xEnum
         }
 
     @Override
-    public int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         EnumHandle hEnum = (EnumHandle) hTarget;
 

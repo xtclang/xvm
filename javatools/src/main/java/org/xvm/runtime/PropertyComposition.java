@@ -32,7 +32,7 @@ public class PropertyComposition
     /**
      * Construct the PropertyComposition for a given property of the specified parent.
      *
-     * @param clzParent  the parent's ClassComposition
+     * @param clzParent  the parent's TypeComposition
      * @param infoProp   the property info
      */
     public PropertyComposition(ClassComposition clzParent, PropertyInfo infoProp)
@@ -320,7 +320,7 @@ public class PropertyComposition
     /**
      * @return the ClassComposition for this property composition
      */
-    public ClassComposition getPropertyClass()
+    public TypeComposition getPropertyClass()
         {
         return f_clzRef;
         }
@@ -345,7 +345,7 @@ public class PropertyComposition
     // ----- data fields ---------------------------------------------------------------------------
 
     private final ClassComposition f_clzParent;
-    private final ClassComposition f_clzRef;
+    private final TypeComposition  f_clzRef;
     private final PropertyInfo     f_infoProp;
 
     // cached method call chain by nid (the top-most method first)

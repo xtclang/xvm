@@ -13,12 +13,12 @@ import org.xvm.asm.OpCallable;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
+
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -116,9 +116,9 @@ public class NewV_N
             return reportMissingConstructor(frame, hType);
             }
 
-        TypeConstant     typeTarget = hType.getDataType();
-        ClassComposition clzTarget  = frame.f_context.f_templates.resolveClass(typeTarget);
-        int              nReturn    = m_nRetValue;
+        TypeConstant    typeTarget = hType.getDataType();
+        TypeComposition clzTarget  = frame.f_context.f_templates.resolveClass(typeTarget);
+        int             nReturn    = m_nRetValue;
 
         if (frame.isNextRegister(nReturn))
             {

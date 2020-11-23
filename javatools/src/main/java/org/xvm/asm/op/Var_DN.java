@@ -12,8 +12,8 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template.annotations.xInjectedRef.InjectedHandle;
@@ -90,7 +90,7 @@ public class Var_DN
         int       iRet = iPC + 1;
         if (hRef == null)
             {
-            ClassComposition clz = frame.resolveClass(m_nType);
+            TypeComposition clz = frame.resolveClass(m_nType);
 
             iRet = ((VarSupport) clz.getSupport()).introduceRef(frame, clz, sName, m_nVar);
 

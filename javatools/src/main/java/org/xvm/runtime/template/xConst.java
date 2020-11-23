@@ -124,9 +124,9 @@ public class xConst
             BooleanHandle f1 = xBoolean.makeHandle(constRange.isFirstExcluded());
             BooleanHandle f2 = xBoolean.makeHandle(constRange.isLastExcluded());
 
-            TypeConstant     typeRange   = constRange.getType();
-            ClassComposition clzRange    = f_templates.resolveClass(typeRange);
-            MethodStructure  constructor = RANGE_CONSTRUCT;
+            TypeConstant    typeRange   = constRange.getType();
+            TypeComposition clzRange    = f_templates.resolveClass(typeRange);
+            MethodStructure constructor = RANGE_CONSTRUCT;
 
             ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
             ahArg[0] = h1;
@@ -148,7 +148,7 @@ public class xConst
         Literal:
         if (constant instanceof LiteralConstant)
             {
-            ClassComposition clz;
+            TypeComposition clz;
             MethodStructure  constructor;
             switch (constant.getFormat())
                 {
@@ -213,9 +213,9 @@ public class xConst
             GenericHandle hConst = (GenericHandle) hStruct;
             if (hConst.containsMutableFields())
                 {
-                ClassComposition clz      = (ClassComposition) hStruct.getComposition();
-                ObjectHandle[]   ahFields = clz.getFieldValueArray(hConst);
-                int              cFields  = ahFields.length;
+                TypeComposition clz      = hStruct.getComposition();
+                ObjectHandle[]  ahFields = clz.getFieldValueArray(hConst);
+                int             cFields  = ahFields.length;
                 if (cFields > 0)
                     {
                     List<String> listFieldNames = clz.getFieldNames();
@@ -339,7 +339,7 @@ public class xConst
         }
 
     @Override
-    protected int callEqualsImpl(Frame frame, ClassComposition clazz,
+    protected int callEqualsImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // Note: the actual types could be subclasses of the specified class
@@ -348,7 +348,7 @@ public class xConst
         }
 
     @Override
-    protected int callCompareImpl(Frame frame, ClassComposition clazz,
+    protected int callCompareImpl(Frame frame, TypeComposition clazz,
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // Note: the actual types could be subclasses of the specified class
@@ -358,7 +358,7 @@ public class xConst
 
     // build the hashValue and assign it to the specified register
     // returns R_NEXT, R_CALL or R_EXCEPTION
-    protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         GenericHandle hConst = (GenericHandle) hTarget;
 

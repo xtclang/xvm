@@ -9,12 +9,12 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
@@ -264,11 +264,11 @@ public class xRTComponentTemplate
     // ----- Composition caching -------------------------------------------------------------------
 
     /**
-     * @return the ClassComposition for an Array of ComponentTemplate
+     * @return the TypeComposition for an Array of ComponentTemplate
      */
-    public static ClassComposition ensureComponentArrayType()
+    public static TypeComposition ensureComponentArrayType()
         {
-        ClassComposition clz = COMPONENT_ARRAY_COMP;
+        TypeComposition clz = COMPONENT_ARRAY_COMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -281,11 +281,11 @@ public class xRTComponentTemplate
         }
 
     /**
-     * @return the ClassComposition for an RTMethodTemplate
+     * @return the TypeComposition for an RTMethodTemplate
      */
-    public static ClassComposition ensureMethodTemplateComposition()
+    public static TypeComposition ensureMethodTemplateComposition()
         {
-        ClassComposition clz = METHOD_TEMPLATE_COMP;
+        TypeComposition clz = METHOD_TEMPLATE_COMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -298,11 +298,11 @@ public class xRTComponentTemplate
         }
 
     /**
-     * @return the ClassComposition for an RTMultiMethodTemplate
+     * @return the TypeComposition for an RTMultiMethodTemplate
      */
-    public static ClassComposition ensureMultiMethodTemplateComposition()
+    public static TypeComposition ensureMultiMethodTemplateComposition()
         {
-        ClassComposition clz = MULTI_METHOD_TEMPLATE_COMP;
+        TypeComposition clz = MULTI_METHOD_TEMPLATE_COMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -390,7 +390,7 @@ public class xRTComponentTemplate
     public static class ComponentTemplateHandle
             extends GenericHandle
         {
-        protected ComponentTemplateHandle(ClassComposition clz, Component component)
+        protected ComponentTemplateHandle(TypeComposition clz, Component component)
             {
             super(clz);
 
@@ -409,7 +409,7 @@ public class xRTComponentTemplate
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static ClassComposition COMPONENT_ARRAY_COMP;
-    private static ClassComposition METHOD_TEMPLATE_COMP;
-    private static ClassComposition MULTI_METHOD_TEMPLATE_COMP;
+    private static TypeComposition COMPONENT_ARRAY_COMP;
+    private static TypeComposition METHOD_TEMPLATE_COMP;
+    private static TypeComposition MULTI_METHOD_TEMPLATE_COMP;
     }

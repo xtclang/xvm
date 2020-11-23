@@ -1,10 +1,7 @@
 package org.xvm.runtime.template;
 
 
-import java.util.concurrent.CompletableFuture;
-
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -48,14 +45,14 @@ public class InterfaceProxy
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {
         throw new IllegalStateException();
         }
 
     @Override
-    public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
+    public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
         throw new IllegalStateException();
         }

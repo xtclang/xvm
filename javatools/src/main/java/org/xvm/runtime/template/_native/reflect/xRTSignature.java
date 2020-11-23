@@ -11,7 +11,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -167,7 +166,7 @@ public class xRTSignature
         {
         int              cParams  = hFunc.getParamCount();
         ObjectHandle[]   ahType   = new ObjectHandle[cParams];
-        ClassComposition clzArray = xRTType.ensureTypeArrayComposition();
+        TypeComposition clzArray = xRTType.ensureTypeArrayComposition();
         for (int i = 0; i < cParams; i++)
             {
             ahType[i] = hFunc.getParamType(i).ensureTypeHandle(frame.poolContext());
@@ -182,7 +181,7 @@ public class xRTSignature
         {
         int              cReturns = hFunc.getReturnCount();
         ObjectHandle[]   ahType   = new ObjectHandle[cReturns];
-        ClassComposition clzArray = xRTType.ensureTypeArrayComposition();
+        TypeComposition clzArray = xRTType.ensureTypeArrayComposition();
         for (int i = 0; i < cReturns; i++)
             {
             ahType[i] = hFunc.getReturnType(i).ensureTypeHandle(frame.poolContext());
@@ -203,7 +202,7 @@ public class xRTSignature
         }
 
 
-    // ----- Template and ClassComposition caching and helpers -------------------------------------
+    // ----- Template and TypeComposition caching and helpers -------------------------------------
 
     /**
      * @return the TypeConstant for a Return
@@ -294,9 +293,9 @@ public class xRTSignature
         }
 
     /**
-     * @return the ClassComposition for an RTReturn of the specified type
+     * @return the TypeComposition for an RTReturn of the specified type
      */
-    public static ClassComposition ensureRTReturn(TypeConstant typeValue)
+    public static TypeComposition ensureRTReturn(TypeConstant typeValue)
         {
         assert typeValue != null;
         TypeConstant typeRTReturn = INSTANCE.pool().
@@ -305,9 +304,9 @@ public class xRTSignature
         }
 
     /**
-     * @return the ClassComposition for a RTParameter of the specified type
+     * @return the TypeComposition for a RTParameter of the specified type
      */
-    public static ClassComposition ensureRTParameter(TypeConstant typeValue)
+    public static TypeComposition ensureRTParameter(TypeConstant typeValue)
         {
         assert typeValue != null;
         TypeConstant typeRTParam = INSTANCE.pool().
@@ -316,11 +315,11 @@ public class xRTSignature
         }
 
     /**
-     * @return the ClassComposition for an Array of Return
+     * @return the TypeComposition for an Array of Return
      */
-    public static ClassComposition ensureReturnArray()
+    public static TypeComposition ensureReturnArray()
         {
-        ClassComposition clz = RETURN_ARRAY;
+        TypeComposition clz = RETURN_ARRAY;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -333,11 +332,11 @@ public class xRTSignature
         }
 
     /**
-     * @return the ClassComposition for an Array of Parameter
+     * @return the TypeComposition for an Array of Parameter
      */
-    public static ClassComposition ensureParamArray()
+    public static TypeComposition ensureParamArray()
         {
-        ClassComposition clz = PARAM_ARRAY;
+        TypeComposition clz = PARAM_ARRAY;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -357,8 +356,8 @@ public class xRTSignature
     private static xConst RTRETURN_TEMPLATE;
     private static xConst RTPARAM_TEMPLATE;
 
-    private static ClassComposition RETURN_ARRAY;
-    private static ClassComposition PARAM_ARRAY;
+    private static TypeComposition RETURN_ARRAY;
+    private static TypeComposition PARAM_ARRAY;
 
 
     // ----- Object handle -------------------------------------------------------------------------
@@ -554,7 +553,7 @@ public class xRTSignature
                 {
                 Parameter        param = fRetVals ? hMethod.getReturn(index)     : hMethod.getParam(index);
                 TypeConstant     type  = fRetVals ? hMethod.getReturnType(index) : hMethod.getParamType(index);
-                ClassComposition clz   = fRetVals ? ensureRTReturn(type)         : ensureRTParameter(type);
+                TypeComposition clz    = fRetVals ? ensureRTReturn(type)         : ensureRTParameter(type);
                 String           sName = param.getName();
                 ahParams[0] = xInt64.makeHandle(index);
                 ahParams[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);

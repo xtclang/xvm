@@ -6094,11 +6094,9 @@ public abstract class TypeConstant
             {
             return frame.assignValue(iReturn, xBoolean.TRUE);
             }
-        TypeComposition  clz1 = hValue1.getComposition();
-        TypeComposition  clz2 = hValue2.getComposition();
-        ClassComposition clz = clz1 == clz2 && clz1 instanceof ClassComposition
-            ? (ClassComposition) clz1
-            : frame.ensureClass(this);
+        TypeComposition clz1 = hValue1.getComposition();
+        TypeComposition clz2 = hValue2.getComposition();
+        TypeComposition clz = clz1 == clz2 ? clz1 : frame.ensureClass(this);
         return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
         }
 
@@ -6119,11 +6117,9 @@ public abstract class TypeConstant
             return frame.assignValue(iReturn, xOrdered.EQUAL);
             }
 
-        TypeComposition  clz1 = hValue1.getComposition();
-        TypeComposition  clz2 = hValue2.getComposition();
-        ClassComposition clz = clz1 == clz2 && clz1 instanceof ClassComposition
-            ? (ClassComposition) clz1
-            : frame.ensureClass(this);
+        TypeComposition clz1 = hValue1.getComposition();
+        TypeComposition clz2 = hValue2.getComposition();
+        TypeComposition clz = clz1 == clz2 ? clz1 : frame.ensureClass(this);
         return clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
         }
 

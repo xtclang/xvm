@@ -131,7 +131,7 @@ public class xTuple
             ahValue[i] = hValue;
             }
 
-        ClassComposition clzTuple = ensureClass(typeTuple);
+        TypeComposition clzTuple = ensureClass(typeTuple);
         if (fDeferred)
             {
             Frame.Continuation stepNext = frameCaller ->
@@ -143,7 +143,7 @@ public class xTuple
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         ObjectHandle hSequence = ahVar[0];
@@ -347,10 +347,10 @@ public class xTuple
             atypeNew[cTypes] = hType.getDataType();
             }
 
-        ConstantPool     pool = pool();
-        TypeConstant     typeTupleNew = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
-        ClassComposition clzTupleNew  = ensureClass(typeTupleNew);
-        TupleHandle      hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hThis.m_mutability);
+        ConstantPool    pool = pool();
+        TypeConstant    typeTupleNew = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
+        TypeComposition clzTupleNew  = ensureClass(typeTupleNew);
+        TupleHandle     hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hThis.m_mutability);
 
         return frame.assignValue(iReturn, hTupleNew);
         }
@@ -399,10 +399,10 @@ public class xTuple
             System.arraycopy(atypeAdd, 0, atypeNew, cTypes, cTypesAdd);
             }
 
-        ConstantPool     pool = pool();
-        TypeConstant     typeTupleNew = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
-        ClassComposition clzTupleNew  = ensureClass(typeTupleNew);
-        TupleHandle      hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hThis.m_mutability);
+        ConstantPool    pool = pool();
+        TypeConstant    typeTupleNew = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
+        TypeComposition clzTupleNew  = ensureClass(typeTupleNew);
+        TupleHandle     hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hThis.m_mutability);
 
         return frame.assignValue(iReturn, hTupleNew);
         }
@@ -567,10 +567,10 @@ public class xTuple
                 atypeNew = Arrays.copyOfRange(atype,   (int) ixLower, (int) ixUpper);
                 }
 
-            ConstantPool     pool         = pool();
-            TypeConstant     typeTupleNew = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
-            ClassComposition clzTupleNew  = ensureClass(typeTupleNew);
-            TupleHandle      hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hTuple.m_mutability);
+            ConstantPool    pool         = pool();
+            TypeConstant    typeTupleNew = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
+            TypeComposition clzTupleNew  = ensureClass(typeTupleNew);
+            TupleHandle     hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hTuple.m_mutability);
 
             return frame.assignValue(iReturn, hTupleNew);
             }
@@ -667,7 +667,7 @@ public class xTuple
         }
 
     @Override
-    public int callEquals(Frame frame, ClassComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+    public int callEquals(Frame frame, TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         TupleHandle hTuple1 = (TupleHandle) hValue1;
         TupleHandle hTuple2 = (TupleHandle) hValue2;

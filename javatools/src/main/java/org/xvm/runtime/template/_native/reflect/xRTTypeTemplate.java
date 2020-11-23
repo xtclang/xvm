@@ -14,13 +14,13 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
@@ -167,7 +167,7 @@ public class xRTTypeTemplate
      */
     public static TypeTemplateHandle makeHandle(TypeConstant type)
         {
-        ClassComposition clz = INSTANCE.ensureClass(INSTANCE.getCanonicalType(),
+        TypeComposition clz = INSTANCE.ensureClass(INSTANCE.getCanonicalType(),
                 INSTANCE.pool().ensureEcstasyTypeConstant("reflect.TypeTemplate"));
         return new TypeTemplateHandle(clz, type);
         }
@@ -178,7 +178,7 @@ public class xRTTypeTemplate
     public static class TypeTemplateHandle
             extends GenericHandle
         {
-        protected TypeTemplateHandle(ClassComposition clz, TypeConstant type)
+        protected TypeTemplateHandle(TypeComposition clz, TypeConstant type)
             {
             super(clz);
             f_type = type;
@@ -447,14 +447,14 @@ public class xRTTypeTemplate
         }
 
 
-    // ----- ClassComposition caching --------------------------------------------------------------
+    // ----- TypeComposition caching ---------------------------------------------------------------
 
     /**
-     * @return the ClassComposition for an Array of TypeTemplate
+     * @return the TypeComposition for an Array of TypeTemplate
      */
-    public ClassComposition ensureClassComposition()
+    public TypeComposition ensureClassComposition()
         {
-        ClassComposition clz = TYPETEMPLATE;
+        TypeComposition clz = TYPETEMPLATE;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -466,11 +466,11 @@ public class xRTTypeTemplate
         }
 
     /**
-     * @return the ClassComposition for an Array of TypeTemplate
+     * @return the TypeComposition for an Array of TypeTemplate
      */
-    public ClassComposition ensureArrayClassComposition()
+    public TypeComposition ensureArrayClassComposition()
         {
-        ClassComposition clz = TYPETEMPLATE_ARRAY;
+        TypeComposition clz = TYPETEMPLATE_ARRAY;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -482,8 +482,8 @@ public class xRTTypeTemplate
         return clz;
         }
 
-    private static ClassComposition TYPETEMPLATE;
-    private static ClassComposition TYPETEMPLATE_ARRAY;
+    private static TypeComposition TYPETEMPLATE;
+    private static TypeComposition TYPETEMPLATE_ARRAY;
 
 
     // ----- helpers -------------------------------------------------------------------------------

@@ -196,7 +196,7 @@ public abstract class ClassTemplate
      */
     protected ClassComposition ensureCanonicalClass()
         {
-        return ensureClass(getCanonicalType());
+        return (ClassComposition) ensureClass(getCanonicalType());
         }
 
     /**
@@ -205,7 +205,7 @@ public abstract class ClassTemplate
      * @param pool        the ConstantPool to place a potentially created new type into
      * @param typeParams  the type parameters
      */
-    public ClassComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... typeParams)
+    public TypeComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... typeParams)
         {
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
             getInceptionClassConstant().getType(), typeParams).normalizeParameters();
@@ -216,12 +216,12 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Produce a ClassComposition using the specified actual type.
+     * Produce a TypeComposition using the specified actual type.
      *
      * Note: the passed type should be fully resolved and normalized
      *       (all formal parameters resolved)
      */
-    public ClassComposition ensureClass(TypeConstant typeActual)
+    public TypeComposition ensureClass(TypeConstant typeActual)
         {
         IdentityConstant constInception = getInceptionClassConstant();
 
@@ -364,7 +364,7 @@ public abstract class ClassTemplate
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         ObjectHandle hStruct = createStruct(frame, clazz);
@@ -384,11 +384,11 @@ public abstract class ClassTemplate
      * Create an ObjectHandle of the "struct" access for the specified natural class.
      *
      * @param frame  the current frame
-     * @param clazz  the ClassComposition for the newly created handle
+     * @param clazz  the TypeComposition for the newly created handle
      *
      * @return the newly allocated handle
      */
-    public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
+    public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
         assert clazz.getTemplate() == this;
 
@@ -1464,7 +1464,7 @@ public abstract class ClassTemplate
         ConstantPool pool         = frame.poolContext();
         TypeConstant typeReferent = idProp.getType().resolveGenerics(pool, hTarget.getType());
 
-        ClassComposition clzRef = fRO
+        TypeComposition clzRef = fRO
             ? xRef.INSTANCE.ensureParameterizedClass(pool, typeReferent)
             : xVar.INSTANCE.ensureParameterizedClass(pool, typeReferent);
 
@@ -1486,7 +1486,7 @@ public abstract class ClassTemplate
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int callEquals(Frame frame, ClassComposition clazz,
+    public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         if (hValue1 == hValue2)
@@ -1496,15 +1496,14 @@ public abstract class ClassTemplate
 
         // if there is an "equals" function that is not native (on the Object itself),
         // we need to call it
-        TypeConstant    type       = clazz.getType();
-        MethodStructure functionEq = type.findCallable(frame.poolContext().sigEquals());
-        if (functionEq != null && !functionEq.isNative())
+        CallChain chain = clazz.getMethodCallChain(frame.poolContext().sigEquals());
+        if (chain != null && !chain.isNative())
             {
-            ObjectHandle[] ahVars = new ObjectHandle[functionEq.getMaxVars()];
-            ahVars[0] = type.ensureTypeHandle(frame.poolContext());
+            ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars()];
+            ahVars[0] = clazz.getType().ensureTypeHandle(frame.poolContext());
             ahVars[1] = hValue1;
             ahVars[2] = hValue2;
-            return frame.call1(functionEq, null, ahVars, iReturn);
+            return frame.call1(chain.getTop(), null, ahVars, iReturn);
             }
 
         return callEqualsImpl(frame, clazz, hValue1, hValue2, iReturn);
@@ -1513,7 +1512,7 @@ public abstract class ClassTemplate
     /**
      * Default implementation for "equals"; overridden only by xConst.
      */
-    protected int callEqualsImpl(Frame frame, ClassComposition clazz,
+    protected int callEqualsImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.assignValue(iReturn, xBoolean.FALSE);
@@ -1530,7 +1529,7 @@ public abstract class ClassTemplate
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int callCompare(Frame frame, ClassComposition clazz,
+    public int callCompare(Frame frame, TypeComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         if (hValue1 == hValue2)
@@ -1539,15 +1538,14 @@ public abstract class ClassTemplate
             }
 
         // if there is an "compare" function, we need to call it
-        TypeConstant    type        = clazz.getType();
-        MethodStructure functionCmp = type.findCallable(frame.poolContext().sigCompare());
-        if (functionCmp != null && !functionCmp.isNative())
+        CallChain chain = clazz.getMethodCallChain(frame.poolContext().sigCompare());
+        if (chain != null && !chain.isNative())
             {
-            ObjectHandle[] ahVars = new ObjectHandle[functionCmp.getMaxVars()];
-            ahVars[0] = type.ensureTypeHandle(frame.poolContext());
+            ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars()];
+            ahVars[0] = clazz.getType().ensureTypeHandle(frame.poolContext());
             ahVars[1] = hValue1;
             ahVars[2] = hValue2;
-            return frame.call1(functionCmp, null, ahVars, iReturn);
+            return frame.call1(chain.getTop(), null, ahVars, iReturn);
             }
 
         return callCompareImpl(frame, clazz, hValue1, hValue2, iReturn);
@@ -1556,7 +1554,7 @@ public abstract class ClassTemplate
     /**
      * Default implementation for "compare"; overridden only by xConst.
      */
-    protected int callCompareImpl(Frame frame, ClassComposition clazz,
+    protected int callCompareImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.raiseException("No implementation for \"compare()\" function at " + f_sName);

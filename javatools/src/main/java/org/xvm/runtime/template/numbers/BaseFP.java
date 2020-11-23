@@ -1,18 +1,16 @@
 package org.xvm.runtime.template.numbers;
 
 
-import java.math.MathContext;
 import java.math.RoundingMode;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.asm.Op;
 import org.xvm.asm.constants.SignatureConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
 import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
@@ -98,7 +96,7 @@ abstract public class BaseFP
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         SignatureConstant sig = constructor.getIdentityConstant().getSignature();

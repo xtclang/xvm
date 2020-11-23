@@ -105,7 +105,7 @@ public class xIntLiteral
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         StringHandle hText = (StringHandle) ahVar[0];
@@ -377,7 +377,7 @@ public class xIntLiteral
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
-    public int callEquals(Frame frame, ClassComposition clazz,
+    public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         IntNHandle h1 = (IntNHandle) hValue1;
@@ -387,7 +387,7 @@ public class xIntLiteral
         }
 
     @Override
-    public int callCompare(Frame frame, ClassComposition clazz,
+    public int callCompare(Frame frame, TypeComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         IntNHandle h1 = (IntNHandle) hValue1;

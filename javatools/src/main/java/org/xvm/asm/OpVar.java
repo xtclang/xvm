@@ -8,9 +8,9 @@ import java.io.IOException;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ServiceContext;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray;
 
@@ -139,17 +139,17 @@ public abstract class OpVar
         }
 
     /**
-     * Helper method to calculate a ClassComposition for a sequence class.
+     * Helper method to calculate a TypeComposition for a sequence class.
      *
      * @param frame     the current frame
      * @param typeList  the sequence type
      *
      * @return the corresponding class composition
      */
-    protected ClassComposition getArrayClass(Frame frame, TypeConstant typeList)
+    protected TypeComposition getArrayClass(Frame frame, TypeConstant typeList)
         {
         ServiceContext   context  = frame.f_context;
-        ClassComposition clzArray = (ClassComposition) context.getOpInfo(this, Category.Composition);;
+        TypeComposition clzArray = (TypeComposition) context.getOpInfo(this, Category.Composition);;
         TypeConstant     typePrev = (TypeConstant)     context.getOpInfo(this, Category.Type);
 
         if (clzArray == null || !typeList.equals(typePrev))

@@ -88,6 +88,14 @@ public interface TypeComposition
     boolean isConst();
 
     /**
+     * @return true iff this TypeComposition represents an instance inner class
+     */
+    default boolean isInstanceChild()
+        {
+        return getTemplate().getStructure().isInstanceChild();
+        }
+
+    /**
      * Retrieve an auto-generated default initializer for struct instances of this class. Return
      * null if there are no fields to initialize.
      *

@@ -12,12 +12,12 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
+
 import org.xvm.runtime.template.collections.xTuple;
 
 
@@ -100,7 +100,7 @@ public class Var_T
     @Override
     public int process(Frame frame, int iPC)
         {
-        ClassComposition clzTuple = frame.resolveClass(m_nType);
+        TypeComposition clzTuple = frame.resolveClass(m_nType);
 
         try
             {

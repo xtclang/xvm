@@ -925,7 +925,7 @@ public class ServiceContext
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendConstructRequest(Frame frameCaller, MethodStructure constructor, ClassComposition clazz,
+    public int sendConstructRequest(Frame frameCaller, MethodStructure constructor, TypeComposition clazz,
                                     ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {
         Op opConstruct = new Op()

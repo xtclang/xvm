@@ -3,11 +3,11 @@ package org.xvm.runtime.template.numbers;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xOrdered;
 
@@ -56,7 +56,7 @@ public abstract class xUnsignedConstrainedInt
         }
 
     @Override
-    public int callCompare(Frame frame, ClassComposition clazz,
+    public int callCompare(Frame frame, TypeComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         JavaLong h1 = (JavaLong) hValue1;

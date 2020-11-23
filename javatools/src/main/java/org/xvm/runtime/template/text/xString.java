@@ -12,7 +12,6 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -97,7 +96,7 @@ public class xString
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, ClassComposition clazz,
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         CharArrayHandle hCharArray = (CharArrayHandle) ahVar[0];
@@ -270,7 +269,7 @@ public class xString
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
-    public int callEquals(Frame frame, ClassComposition clazz,
+    public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         StringHandle h1 = (StringHandle) hValue1;
@@ -280,7 +279,7 @@ public class xString
         }
 
     @Override
-    public int callCompare(Frame frame, ClassComposition clazz,
+    public int callCompare(Frame frame, TypeComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         StringHandle h1 = (StringHandle) hValue1;
@@ -290,7 +289,7 @@ public class xString
         }
 
     @Override
-    public int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn, ((StringHandle) hTarget).getHashCode());
         }
@@ -526,11 +525,11 @@ public class xString
     // ----- Composition and handle caching --------------------------------------------------------
 
     /**
-     * @return the ClassComposition for an Array of String
+     * @return the TypeComposition for an Array of String
      */
-    public static ClassComposition ensureArrayComposition()
+    public static TypeComposition ensureArrayComposition()
         {
-        ClassComposition clz = ARRAY_CLZCOMP;
+        TypeComposition clz = ARRAY_CLZCOMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -562,8 +561,8 @@ public class xString
     public static StringHandle ZERO;
     public static StringHandle ONE;
 
-    private static ClassComposition ARRAY_CLZCOMP;
-    private static ArrayHandle      ARRAY_EMPTY;
+    private static TypeComposition ARRAY_CLZCOMP;
+    private static ArrayHandle     ARRAY_EMPTY;
 
     protected static MethodStructure METHOD_APPEND_TO;
     }

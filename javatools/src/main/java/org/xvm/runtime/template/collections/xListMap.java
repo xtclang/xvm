@@ -13,12 +13,12 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 
@@ -100,9 +100,9 @@ public class xListMap
         TypeConstant typeKeyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeKey);
         TypeConstant typeValArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeVal);
 
-        ClassComposition clzKeyArray = f_templates.resolveClass(typeKeyArray);
-        ClassComposition clzValArray = f_templates.resolveClass(typeValArray);
-        ClassComposition clzMap      = ensureClass(
+        TypeComposition clzKeyArray = f_templates.resolveClass(typeKeyArray);
+        TypeComposition clzValArray = f_templates.resolveClass(typeValArray);
+        TypeComposition clzMap      = ensureClass(
             pool.ensureParameterizedTypeConstant(getClassConstant().getType(), typeKey, typeVal));
 
         ObjectHandle     haKeys = fDeferredKey

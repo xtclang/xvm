@@ -11,9 +11,9 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.reflect.xRef;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
@@ -74,7 +74,7 @@ public class MoveRef
                 }
             else
                 {
-                ClassComposition clzRef = xRef.INSTANCE.ensureParameterizedClass(
+                TypeComposition clzRef = xRef.INSTANCE.ensureParameterizedClass(
                         frame.poolContext(), infoSrc.getType());
                 hRef    = new RefHandle(clzRef, frame, m_nFromValue);
                 typeReg = hRef.getType();

@@ -70,10 +70,10 @@ public class CoreContainer
                 return;
                 }
 
-            TypeConstant     typeModule = m_idModule.getType();
-            ClassComposition clzModule  = f_templates.resolveClass(typeModule);
-            CallChain        chain      = clzModule.getMethodCallChain(idMethod.getSignature());
-            FunctionHandle   hFunction  = xRTFunction.makeHandle(chain, 0);
+            TypeConstant    typeModule = m_idModule.getType();
+            TypeComposition clzModule  = f_templates.resolveClass(typeModule);
+            CallChain       chain      = clzModule.getMethodCallChain(idMethod.getSignature());
+            FunctionHandle  hFunction  = xRTFunction.makeHandle(chain, 0);
 
             FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle((frame, ah, iReturn) ->
                 {

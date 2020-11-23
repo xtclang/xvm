@@ -17,7 +17,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -166,7 +165,7 @@ public class xArray
         }
 
     @Override
-    public ClassComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... atypeParams)
+    public TypeComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... atypeParams)
         {
         assert atypeParams.length == 1;
 
@@ -231,7 +230,7 @@ public class xArray
             typeArray = typeArray.resolveGenerics(frame.poolContext(), frame.getGenericsResolver());
             }
 
-        ClassComposition clzArray = f_templates.resolveClass(typeArray);
+        TypeComposition clzArray = f_templates.resolveClass(typeArray);
         if (fSet)
             {
             TypeConstant typeEl = typeArray.getParamType(0);
@@ -261,9 +260,9 @@ public class xArray
 
     private int createListSet(Frame frame, TypeConstant typeEl, ObjectHandle[] ahValue)
         {
-        ConstantPool     pool      = frame.poolContext();
-        TypeConstant     typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeEl);
-        ClassComposition clzArray  = f_templates.resolveClass(typeArray);
+        ConstantPool    pool      = frame.poolContext();
+        TypeConstant    typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeEl);
+        TypeComposition clzArray  = f_templates.resolveClass(typeArray);
 
         ObjectHandle[] ahVar = new ObjectHandle[CREATE_LIST_SET.getMaxVars()];
         ahVar[0] = typeEl.ensureTypeHandle(pool);
@@ -280,7 +279,7 @@ public class xArray
      *
      * @return the array handle
      */
-    public ArrayHandle createArrayHandle(ClassComposition clzArray, ObjectHandle[] ahArg)
+    public ArrayHandle createArrayHandle(TypeComposition clzArray, ObjectHandle[] ahArg)
         {
         return new GenericArrayHandle(clzArray, ahArg, Mutability.Constant);
         }
@@ -294,13 +293,13 @@ public class xArray
      *
      * @return the array handle
      */
-    public ArrayHandle createArrayHandle(ClassComposition clzArray, int cCapacity, Mutability mutability)
+    public ArrayHandle createArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
         {
         return new GenericArrayHandle(clzArray, cCapacity, mutability);
         }
 
     @Override
-    public int construct(Frame frame, MethodStructure constructor, ClassComposition clzArray,
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clzArray,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         IdentityConstant idConstruct = constructor.getIdentityConstant();
@@ -618,7 +617,7 @@ public class xArray
         }
 
     @Override
-    public int callEquals(Frame frame, ClassComposition clazz,
+    public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         GenericArrayHandle hArray1 = (GenericArrayHandle) hValue1;
@@ -1231,8 +1230,8 @@ public class xArray
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};
     protected static final String[] ARRAY        = new String[] {"collections.Array!<Element>"};
 
-    private static ClassComposition s_clzStringArray;
-    private static ClassComposition s_clzObjectArray;
+    private static TypeComposition s_clzStringArray;
+    private static TypeComposition s_clzObjectArray;
     private static Map<TypeConstant, xArray> ARRAY_TEMPLATES;
 
     private static MethodStructure CREATE_LIST_SET;

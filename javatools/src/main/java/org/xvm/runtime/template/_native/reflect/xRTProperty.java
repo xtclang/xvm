@@ -8,7 +8,6 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -16,13 +15,13 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
@@ -220,7 +219,7 @@ public class xRTProperty
     public static class PropertyHandle
             extends GenericHandle
         {
-        protected PropertyHandle(ClassComposition clzProp)
+        protected PropertyHandle(TypeComposition clzProp)
             {
             super(clzProp);
 
@@ -403,11 +402,11 @@ public class xRTProperty
     // ----- Composition and handle caching --------------------------------------------------------
 
     /**
-     * @return the ClassComposition for an Array of Property
+     * @return the TypeComposition for an Array of Property
      */
-    public static ClassComposition ensureArrayComposition()
+    public static TypeComposition ensureArrayComposition()
         {
-        ClassComposition clz = ARRAY_CLZCOMP;
+        TypeComposition clz = ARRAY_CLZCOMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -432,9 +431,9 @@ public class xRTProperty
         }
 
     /**
-     * @return the ClassComposition for an Array of Property
+     * @return the TypeComposition for an Array of Property
      */
-    public static ClassComposition ensureArrayComposition(TypeConstant typeTarget)
+    public static TypeComposition ensureArrayComposition(TypeConstant typeTarget)
         {
         assert typeTarget != null;
 
@@ -447,6 +446,6 @@ public class xRTProperty
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static ClassComposition ARRAY_CLZCOMP;
-    private static ArrayHandle      ARRAY_EMPTY;
+    private static TypeComposition ARRAY_CLZCOMP;
+    private static ArrayHandle     ARRAY_EMPTY;
     }

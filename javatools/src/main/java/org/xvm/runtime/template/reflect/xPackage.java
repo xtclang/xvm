@@ -19,7 +19,6 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -68,9 +67,9 @@ public class xPackage
         {
         if (constant instanceof PackageConstant)
             {
-            PackageConstant  idPackage   = (PackageConstant) constant;
-            TypeConstant     typePackage = idPackage.getType();
-            ClassComposition clazz       = ensureClass(typePackage, typePackage);
+            PackageConstant idPackage   = (PackageConstant) constant;
+            TypeConstant    typePackage = idPackage.getType();
+            TypeComposition clazz       = ensureClass(typePackage, typePackage);
 
             return createPackageHandle(frame, clazz);
             }
@@ -105,7 +104,7 @@ public class xPackage
         }
 
     @Override
-    protected int callEqualsImpl(Frame frame, ClassComposition clazz,
+    protected int callEqualsImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.assignValue(iReturn, xBoolean.makeHandle(
@@ -113,7 +112,7 @@ public class xPackage
         }
 
     @Override
-    protected int callCompareImpl(Frame frame, ClassComposition clazz,
+    protected int callCompareImpl(Frame frame, TypeComposition clazz,
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.assignValue(iReturn, xOrdered.makeHandle(
@@ -121,7 +120,7 @@ public class xPackage
         }
 
     @Override
-    protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn,
             xInt64.makeHandle(((PackageHandle) hTarget).getId().hashCode()));
@@ -136,8 +135,8 @@ public class xPackage
     public int getPropertyClassByName(Frame frame, PackageHandle hTarget, int iReturn)
         {
         // TODO GG: how to cache the result?
-        ClassStructure   pkg    = hTarget.getStructure();
-        ClassComposition clzMap = ensureListMapComposition();
+        ClassStructure  pkg    = hTarget.getStructure();
+        TypeComposition clzMap = ensureListMapComposition();
 
         Map<String, Component>  mapChildren = pkg.getChildByNameMap();
         ArrayList<StringHandle> listNames   = new ArrayList<>(mapChildren.size());
@@ -205,11 +204,11 @@ public class xPackage
     // ----- Helpers -------------------------------------------------------------------------------
 
     /**
-     * @return the ClassComposition for ListMap<String, Class>
+     * @return the TypeComposition for ListMap<String, Class>
      */
-    private static ClassComposition ensureListMapComposition()
+    private static TypeComposition ensureListMapComposition()
         {
-        ClassComposition clz = LISTMAP_CLZ;
+        TypeComposition clz = LISTMAP_CLZ;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -221,17 +220,17 @@ public class xPackage
         return clz;
         }
 
-    private static ClassComposition LISTMAP_CLZ;
+    private static TypeComposition LISTMAP_CLZ;
 
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     /**
-     * Create a new PackageHandle for the specified ClassComposition and place it on the stack.
+     * Create a new PackageHandle for the specified TypeComposition and place it on the stack.
      *
      * @return one of R_NEXT, R_CALL or R_EXCEPTION
      */
-    protected int createPackageHandle(Frame frame, ClassComposition clazz)
+    protected int createPackageHandle(Frame frame, TypeComposition clazz)
         {
         PackageHandle   hStruct     = new PackageHandle(clazz.ensureAccess(Access.STRUCT));
         MethodStructure constructor = clazz.getTemplate().getStructure().findMethod("construct", 0);

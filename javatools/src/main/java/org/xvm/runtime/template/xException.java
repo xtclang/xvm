@@ -12,6 +12,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -65,9 +66,9 @@ public class xException
         }
 
     @Override
-    public ObjectHandle createStruct(Frame frame, ClassComposition clazz)
+    public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        return makeMutableStruct(frame, clazz, null);
+        return makeMutableStruct(frame, (ClassComposition) clazz, null);
         }
 
     @Override

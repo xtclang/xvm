@@ -8,11 +8,11 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xService;
@@ -49,8 +49,8 @@ public class xOSDirectory
 
         getCanonicalType().invalidateTypeInfo();
 
-        ClassTemplate    templateDir = f_templates.getTemplate("fs.Directory");
-        ClassComposition clzOSDir    = ensureClass(templateDir.getCanonicalType());
+        ClassTemplate   templateDir = f_templates.getTemplate("fs.Directory");
+        TypeComposition clzOSDir    = ensureClass(templateDir.getCanonicalType());
 
         s_clzOSDirStruct = clzOSDir.ensureAccess(Constants.Access.STRUCT);
         s_constructorDir = getStructure().findConstructor();
@@ -123,8 +123,8 @@ public class xOSDirectory
      */
     public int createHandle(Frame frame, ObjectHandle hOSStore, Path path, int iReturn)
         {
-        ClassComposition clzStruct   = s_clzOSDirStruct;
-        MethodStructure  constructor = s_constructorDir;
+        TypeComposition clzStruct   = s_clzOSDirStruct;
+        MethodStructure constructor = s_constructorDir;
 
         NodeHandle     hStruct = new NodeHandle(clzStruct, path.toAbsolutePath(), hOSStore);
         ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, constructor.getMaxVars());
@@ -135,6 +135,6 @@ public class xOSDirectory
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static ClassComposition s_clzOSDirStruct;
-    private static MethodStructure  s_constructorDir;
+    private static TypeComposition s_clzOSDirStruct;
+    private static MethodStructure s_constructorDir;
     }

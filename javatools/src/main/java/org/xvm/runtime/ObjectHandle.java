@@ -843,10 +843,10 @@ public abstract class ObjectHandle
     public static class DeferredArrayHandle
             extends DeferredCallHandle
         {
-        private final ClassComposition f_clzArray;
-        private final ObjectHandle[]   f_ahValue;
+        private final TypeComposition f_clzArray;
+        private final ObjectHandle[]  f_ahValue;
 
-        public DeferredArrayHandle(ClassComposition clzArray, ObjectHandle[] ahValue)
+        public DeferredArrayHandle(TypeComposition clzArray, ObjectHandle[] ahValue)
             {
             super((ExceptionHandle) null);
 

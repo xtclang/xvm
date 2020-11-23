@@ -6,7 +6,6 @@ import java.util.Arrays;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -36,7 +35,7 @@ public abstract class BitBasedArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(ClassComposition clzArray, ObjectHandle[] ahArg)
+    public ArrayHandle createArrayHandle(TypeComposition clzArray, ObjectHandle[] ahArg)
         {
         int    cBits = ahArg.length;
         byte[] ab    = new byte[storage(cBits)];
@@ -51,7 +50,7 @@ public abstract class BitBasedArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(ClassComposition clzArray, int cCapacity, Mutability mutability)
+    public ArrayHandle createArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
         {
         return new BitArrayHandle(clzArray, 0, cCapacity, mutability);
         }
@@ -152,7 +151,7 @@ public abstract class BitBasedArray
         }
 
     @Override
-    public int callEquals(Frame frame, ClassComposition clazz,
+    public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         BitArrayHandle h1 = (BitArrayHandle) hValue1;

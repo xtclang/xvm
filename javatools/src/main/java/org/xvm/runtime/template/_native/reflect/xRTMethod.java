@@ -18,7 +18,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.CallChain;
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -68,7 +67,7 @@ public class xRTMethod
         }
 
     @Override
-    public ClassComposition ensureClass(TypeConstant typeActual)
+    public TypeComposition ensureClass(TypeConstant typeActual)
         {
         // see explanation at xRTFunction.ensureClass()
         ConstantPool pool = typeActual.getConstantPool();
@@ -179,7 +178,7 @@ public class xRTMethod
         }
 
     @Override
-    protected int callEqualsImpl(Frame frame, ClassComposition clazz,
+    protected int callEqualsImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         MethodHandle hMethod1 = (MethodHandle) hValue1;
@@ -190,7 +189,7 @@ public class xRTMethod
         }
 
     @Override
-    protected int callCompareImpl(Frame frame, ClassComposition clazz,
+    protected int callCompareImpl(Frame frame, TypeComposition clazz,
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         MethodHandle hMethod1 = (MethodHandle) hValue1;
@@ -201,7 +200,7 @@ public class xRTMethod
         }
 
     @Override
-    protected int buildHashCode(Frame frame, ClassComposition clazz, ObjectHandle hTarget, int iReturn)
+    protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         MethodHandle hMethod = (MethodHandle) hTarget;
 
@@ -396,11 +395,11 @@ public class xRTMethod
     // ----- Template, Composition, and handle caching ---------------------------------------------
 
     /**
-     * @return the ClassComposition for an Array of Method
+     * @return the TypeComposition for an Array of Method
      */
-    public static ClassComposition ensureArrayComposition()
+    public static TypeComposition ensureArrayComposition()
         {
-        ClassComposition clz = ARRAY_CLZCOMP;
+        TypeComposition clz = ARRAY_CLZCOMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
@@ -425,9 +424,9 @@ public class xRTMethod
         }
 
     /**
-     * @return the ClassComposition for an Array of Method
+     * @return the TypeComposition for an Array of Method
      */
-    public static ClassComposition ensureArrayComposition(TypeConstant typeTarget)
+    public static TypeComposition ensureArrayComposition(TypeConstant typeTarget)
         {
         assert typeTarget != null;
 
@@ -440,6 +439,6 @@ public class xRTMethod
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static ClassComposition ARRAY_CLZCOMP;
-    private static ArrayHandle      ARRAY_EMPTY;
+    private static TypeComposition ARRAY_CLZCOMP;
+    private static ArrayHandle     ARRAY_EMPTY;
     }

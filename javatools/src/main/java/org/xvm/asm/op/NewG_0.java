@@ -12,9 +12,9 @@ import org.xvm.asm.OpCallable;
 
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.TypeComposition;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -87,8 +87,8 @@ public class NewG_0
             return R_EXCEPTION;
             }
 
-        ClassComposition clzTarget = frame.resolveClass(m_nTypeValue);
-        ObjectHandle     hParent   = clzTarget.isInstanceChild() ? frame.getThis() : null;
+        TypeComposition clzTarget = frame.resolveClass(m_nTypeValue);
+        ObjectHandle    hParent  = clzTarget.isInstanceChild() ? frame.getThis() : null;
 
         if (frame.isNextRegister(m_nRetValue))
             {

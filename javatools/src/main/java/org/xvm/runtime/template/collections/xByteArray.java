@@ -11,7 +11,6 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -70,7 +69,7 @@ public class xByteArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(ClassComposition clzArray, ObjectHandle[] ahArg)
+    public ArrayHandle createArrayHandle(TypeComposition clzArray, ObjectHandle[] ahArg)
         {
         int    c  = ahArg.length;
         byte[] al = new byte[c];
@@ -100,7 +99,7 @@ public class xByteArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(ClassComposition clzArray, int cCapacity, Mutability mutability)
+    public ArrayHandle createArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
         {
         return new ByteArrayHandle(clzArray, cCapacity, mutability);
         }
@@ -175,7 +174,7 @@ public class xByteArray
         }
 
     @Override
-    public int callEquals(Frame frame, ClassComposition clazz,
+    public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         ByteArrayHandle h1 = (ByteArrayHandle) hValue1;
@@ -434,8 +433,8 @@ public class xByteArray
 
     public static ByteArrayHandle makeHandle(byte[] ab, Mutability mutability)
         {
-        ConstantPool     pool = INSTANCE.pool();
-        ClassComposition clz  = mutability == Mutability.Constant
+        ConstantPool    pool = INSTANCE.pool();
+        TypeComposition clz  = mutability == Mutability.Constant
             ? INSTANCE.ensureClass(pool.typeBinary())
             : INSTANCE.ensureClass(pool.typeByteArray());
 

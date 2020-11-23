@@ -117,9 +117,9 @@ public class xContainerControl
                 " method for " + idModule.getValueString());
             }
 
-        ClassComposition clzModule = f_templates.resolveClass(idModule.getType());
-        CallChain        chain     = clzModule.getMethodCallChain(idMethod.getSignature());
-        FunctionHandle   hFunction = new xRTFunction.AsyncHandle(chain)
+        TypeComposition clzModule = f_templates.resolveClass(idModule.getType());
+        CallChain       chain     = clzModule.getMethodCallChain(idMethod.getSignature());
+        FunctionHandle  hFunction = new xRTFunction.AsyncHandle(chain)
             {
             @Override
             protected ObjectHandle getContextTarget(Frame frame, ServiceHandle hService)

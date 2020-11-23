@@ -101,14 +101,6 @@ public class ClassComposition
         }
 
     /**
-     * @return true iff this class represents an instance inner class
-     */
-    public boolean isInstanceChild()
-        {
-        return f_template.getStructure().isInstanceChild();
-        }
-
-    /**
      * @return a ProxyComposition for the specified proxying type
      */
     public ProxyComposition ensureProxyComposition(TypeConstant typeProxy)
