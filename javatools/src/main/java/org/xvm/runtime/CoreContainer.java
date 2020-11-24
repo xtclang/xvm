@@ -73,7 +73,6 @@ public class CoreContainer
             TypeConstant    typeModule = m_idModule.getType();
             TypeComposition clzModule  = f_templates.resolveClass(typeModule);
             CallChain       chain      = clzModule.getMethodCallChain(idMethod.getSignature());
-            FunctionHandle  hFunction  = xRTFunction.makeHandle(chain, 0);
 
             FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle((frame, ah, iReturn) ->
                 {
@@ -81,8 +80,8 @@ public class CoreContainer
 
                 return Op.isDeferred(hModule)
                         ? hModule.proceed(frame, frameCaller ->
-                            hFunction.call1(frameCaller, frameCaller.popStack(), ahArg, Op.A_IGNORE))
-                        : hFunction.call1(frame, hModule, ahArg, Op.A_IGNORE);
+                            chain.invoke(frameCaller, frameCaller.popStack(), ahArg, Op.A_IGNORE))
+                        : chain.invoke(frame, hModule, ahArg, Op.A_IGNORE);
                 });
 
             m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE, false);
