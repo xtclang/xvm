@@ -11,6 +11,11 @@ interface Transaction<Schema extends RootSchema>
     @RO (Connection<Schema> + Schema) connection;
 
     /**
+     * True iff the transaction is active and can theoretically be committed or rolled back.
+     */
+    @RO Boolean pending;
+
+    /**
      * Commit the transaction.
      *
      * @return `True` iff the commit succeeded
@@ -30,6 +35,18 @@ interface Transaction<Schema extends RootSchema>
     @Override
     void close(Exception? e = Null)
         {
-        commit();
+        if (pending)
+            {
+            if (e != Null)
+                {
+                rollback();
+                }
+            else
+                {
+                commit();
+                }
+
+            assert !pending;
+            }
         }
     }
