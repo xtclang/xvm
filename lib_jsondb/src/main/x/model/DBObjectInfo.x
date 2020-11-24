@@ -1,3 +1,5 @@
+import oodb.DBObject.DBCategory as Category;
+
 /**
  * Metadata information about a particular `DBObject`.
  */
@@ -47,8 +49,6 @@ const DBObjectInfo(Catalog  catalog,
         {
         TODO
         }
-
-    enum Category {Schema, Map, List, Queue, Log, Counter, Singleton}
 
     /**
      * The category of the `DBObject`.

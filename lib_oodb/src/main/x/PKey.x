@@ -1,4 +1,0 @@
-mixin PKey
-        into Property
-    {
-    }

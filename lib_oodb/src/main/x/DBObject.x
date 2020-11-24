@@ -11,6 +11,16 @@ interface DBObject
     @RO DBObject!? dbParent;
 
     /**
+     * Categorizations of the various forms of `DBObject`s.
+     */
+    enum DBCategory {DBSchema, DBMap, DBList, DBQueue, DBLog, DBCounter, DBSingleton, DBFunction}
+
+    /**
+     * The category of this `DBObject`.
+     */
+    @RO DBCategory dbCategory;
+
+    /**
      * Each `DBObject` has a uniquely identifying `String` name that identifies it within its parent
      * `DBObject`.
      */
@@ -235,7 +245,7 @@ interface DBObject
     /**
      * Represents a change within a transactional database object.
      */
-    interface Change
+    static interface Change
         {
         /**
          * The state of of the `DBObject`, before this change was made.
@@ -259,7 +269,7 @@ interface DBObject
     /**
      * Represents an automatic response to a change that occurs when a transaction commits.
      */
-    interface Trigger
+    static interface Trigger
         {
         /**
          * `True` iff the trigger is interested in changes made by other triggers. It is possible

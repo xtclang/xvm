@@ -134,7 +134,7 @@ mixin FutureVar<Referent>
     // ----- Closeable interface -------------------------------------------------------------------
 
     @Override
-    void close()
+    void close(Exception? cause = Null)
         {
         completeExceptionally(new Closed());
         }

@@ -2,7 +2,6 @@
  * A simple set of meta-data describing a database.
  */
 interface DBInfo
-        extends DBSingleton
     {
     /**
      * The name of the database.

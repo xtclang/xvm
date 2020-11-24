@@ -92,7 +92,7 @@ interface BinaryInput
         }
 
     @Override
-    void close()
+    void close(Exception? cause = Null)
         {
         }
 

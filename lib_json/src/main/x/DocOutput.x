@@ -117,5 +117,5 @@ interface DocOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      * @throws IllegalState if the DocOutput cannot be closed from its current point
      */
     @Override
-    ParentOutput close();
+    ParentOutput close(Exception? cause = Null);
     }

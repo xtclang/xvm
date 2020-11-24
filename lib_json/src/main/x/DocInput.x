@@ -146,7 +146,7 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
      * @return the parent `DocInput` representing the node that provided this `DocInput`
      */
     @Override
-    ParentInput close();
+    ParentInput close(Exception? cause = Null);
 
 
     // ----- helpers -------------------------------------------------------------------------------

@@ -25,7 +25,7 @@ module db
         import jsondb.Catalog;
         Catalog cat = new Catalog(dataDir);
         console.println($"catalog={cat}");
-        console.println($"statusFile={cat.statusFile.path}, exists={cat.statusFile.exists}");
+        console.println($"glance={cat.glance()}");
 
 //        {
 //        SysInfo info = new SysInfo(cat);
@@ -38,18 +38,18 @@ module db
 //        console.println($"SysInfo from JSON={info2}");
 //        }
 
-        if (cat.statusFile.exists)
-            {
-            console.println($"Reading {cat.statusFile.path} ...");
-            Byte[]  bytes = cat.statusFile.contents;
-// TODO GG cannot call function on an imported module
-//            jsondb.dump("- bytes", bytes);
-//            SysInfo info  = jsondb.fromBytes(SysInfo, bytes);
-//            jsondb.dump("- info", info);
-            dump("- bytes", bytes);
-            SysInfo info  = fromBytes(SysInfo, bytes);
-            dump("- info", info);
-            }
+//        if (cat.statusFile.exists)
+//            {
+//            console.println($"Reading {cat.statusFile.path} ...");
+//            Byte[]  bytes = cat.statusFile.contents;
+//// TODO GG cannot call function on an imported module
+////            jsondb.dump("- bytes", bytes);
+////            SysInfo info  = jsondb.fromBytes(SysInfo, bytes);
+////            jsondb.dump("- info", info);
+//            dump("- bytes", bytes);
+//            SysInfo info  = fromBytes(SysInfo, bytes);
+//            dump("- info", info);
+//            }
 
         try
             {

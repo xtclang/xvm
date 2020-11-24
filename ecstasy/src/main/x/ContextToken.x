@@ -79,7 +79,7 @@ const ContextToken<Value extends Service | immutable Object>
      * `try` with-resources keywords.
      */
     @Override
-    void close()
+    void close(Exception? cause = Null)
         {
         if (registered)
             {

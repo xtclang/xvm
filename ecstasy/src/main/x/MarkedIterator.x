@@ -203,11 +203,11 @@ class MarkedIterator<Element>(Iterator<Element> that)
         }
 
     @Override
-    void close()
+    void close(Exception? cause = Null)
         {
         markCount = 0;
         position  = -1;
         buffer.clear();
-        that.close();
+        that.close(cause);
         }
     }

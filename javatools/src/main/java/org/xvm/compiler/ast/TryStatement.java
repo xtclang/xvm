@@ -27,7 +27,7 @@ import org.xvm.asm.op.FinallyStart;
 import org.xvm.asm.op.GuardAll;
 import org.xvm.asm.op.GuardEnd;
 import org.xvm.asm.op.GuardStart;
-import org.xvm.asm.op.Invoke_00;
+import org.xvm.asm.op.Invoke_10;
 import org.xvm.asm.op.JumpNType;
 import org.xvm.asm.op.JumpNotNull;
 import org.xvm.asm.op.Label;
@@ -412,7 +412,7 @@ public class TryStatement
             // EXIT
             TypeConstant   typeCloseable = pool.typeCloseable();
             MethodConstant methodClose   = typeCloseable.ensureTypeInfo(errs)
-                    .findMethods("close", 0, MethodKind.Method).iterator().next();
+                    .findMethods("close", 1, MethodKind.Method).iterator().next();
             for (int i = 0, c = resources.size(); i < c; ++i)
                 {
                 code.add(aFinallyClose[i]);
@@ -431,7 +431,7 @@ public class TryStatement
                     {
                     code.add(new JumpNType(argResource, typeCloseable, labelSkipClose));
                     }
-                code.add(new Invoke_00(argResource, methodClose));
+                code.add(new Invoke_10(argResource, methodClose, regException));
                 code.add(labelSkipClose);
                 code.add(new GuardEnd(labelFallThrough));
 

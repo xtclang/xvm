@@ -172,7 +172,7 @@ service Catalog
      * Close this `Catalog`.
      */
     @Override
-    void close()
+    void close(Exception? cause = Null)
         {
         switch (status)
             {
@@ -243,9 +243,6 @@ service Catalog
             assert requiredStatus.contains(oldStatus);
             }
 
-@Inject Console console;
-console.println($"** transition(): required status={requiredStatus}, target status={targetStatus}");
-
         if (readOnly)
             {
             assert allowReadOnly;
@@ -258,21 +255,15 @@ console.println($"** transition(): required status={requiredStatus}, target stat
                 // get a glance at the current status on disk, and verify that the requested
                 // transition is legal
                 Glance glance = glance();
-console.println($"** transition(): glance={glance}");
                 if (!canTransition?(glance))
                     {
-console.println($"** transition(): canTransition() failed");
                     throw new IllegalState($"Unable to transition {dir.path} from {oldStatus} to {targetStatus}");
                     }
 
                 // store the updated status
                 status = targetStatus;
 
-val info  = new SysInfo(this);
-val bytes = toBytes(info);
-dump($"** transition(): updating {statusFile.path} status from info={info}:\n", bytes);
-statusFile.contents = bytes;
-                // statusFile.contents = toBytes(new SysInfo(this));
+                statusFile.contents = toBytes(new SysInfo(this));
                 }
             }
         }
@@ -421,9 +412,6 @@ Byte[]? bytes = Null;
         Lock             lock  = new Lock(this);
         immutable Byte[] bytes = toBytes(lock);
 
-// TODO remove
-dump($"creating lock file {path} containing:", bytes);
-
         if (lockFile.exists && !ignorePreviousLock)
             {
             String msg = $"Lock file ({path}) already exists";
@@ -459,7 +447,7 @@ dump($"creating lock file {path} containing:", bytes);
 
         return new Closeable()
             {
-            @Override void close()
+            @Override void close(Exception? cause = Null)
                 {
                 lockFile.delete();
                 }

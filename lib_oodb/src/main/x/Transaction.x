@@ -20,14 +20,15 @@ interface Transaction<Schema extends RootSchema>
     Boolean commit();
 
     /**
-     * Roll back the transaction.
+     * Roll back the transaction. This allows the database to release any resources held by the
+     * transaction.
      *
      * @throws IllegalState  if the Transaction has already committed
      */
     void rollback();
 
     @Override
-    void close()
+    void close(Exception? e = Null)
         {
         commit();
         }

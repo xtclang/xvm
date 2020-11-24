@@ -79,9 +79,9 @@ class ObjectOutputStream(Schema schema, Writer writer)
         }
 
     @Override
-    void close()
+    void close(Exception? cause = Null)
         {
-        root?.close();
+        root?.close(cause);
         root    = Null;
         current = Null;
         closed  = True;
@@ -175,7 +175,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
             }
 
         @Override
-        ParentOutput close()
+        ParentOutput close(Exception? cause = Null)
             {
             assert &this == &current;
 
@@ -359,7 +359,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
             }
 
         @Override
-        ParentOutput close()
+        ParentOutput close(Exception? cause = Null)
             {
             if (&this != &current)
                 {
@@ -443,7 +443,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
         // <Serializable> ElementOutputStream addObjectArray(Iterable<Serializable> values);
 
         @Override
-        ParentOutput close()
+        ParentOutput close(Exception? cause = Null)
             {
             // if nothing was written, assume that the value was supposed to be `Null`
             if (canWrite)
@@ -539,7 +539,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
         // <Serializable> ArrayOutputStream addObjectArray(Iterable<Serializable> values);
 
         @Override
-        ParentOutput close()
+        ParentOutput close(Exception? cause = Null)
             {
             writer.add(']');
             return super();
@@ -631,7 +631,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
         // <Serializable> FieldOutputStream addObjectArray(String name, Iterable<Serializable> values);
 
         @Override
-        ParentOutput close()
+        ParentOutput close(Exception? cause = Null)
             {
             writer.add('}');
             return super();

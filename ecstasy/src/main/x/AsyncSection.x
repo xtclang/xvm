@@ -91,7 +91,7 @@ const AsyncSection
      * `try` with-resources keywords.
      */
     @Override
-    void close()
+    void close(Exception? cause = Null)
         {
         if (registered)
             {

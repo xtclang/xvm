@@ -49,7 +49,7 @@ interface BinaryOutput
         }
 
     @Override
-    void close()
+    void close(Exception? cause = Null)
         {
         }
     }

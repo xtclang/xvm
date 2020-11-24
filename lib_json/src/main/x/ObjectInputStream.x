@@ -122,7 +122,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         }
 
     @Override
-    void close()
+    void close(Exception? cause = Null)
         {
         root    = Null;
         current = Null;
@@ -326,7 +326,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         @Override
-        ParentInput close()
+        ParentInput close(Exception? cause = Null)
             {
             if (canRead && !peekingAhead)
                 {
@@ -519,7 +519,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         @Override
-        ParentInput close()
+        ParentInput close(Exception? cause = Null)
             {
             if (&this != &current)
                 {
@@ -641,7 +641,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         @Override
-        ParentInput close()
+        ParentInput close(Exception? cause = Null)
             {
             super();
             root = Null;
@@ -954,7 +954,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         @Override
-        ParentInput close()
+        ParentInput close(Exception? cause = Null)
             {
             ParentInput parent = super();
 

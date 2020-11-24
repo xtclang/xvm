@@ -17,7 +17,7 @@ module OO
             console.println($"{color} frog jumps {cm} centimeteres!");
             }
         @Override
-        void close()
+        void close(Exception? cause = Null)
             {
             }
         }

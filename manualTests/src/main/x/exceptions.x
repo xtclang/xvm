@@ -146,7 +146,7 @@ module TestTry
             }
 
         @Override
-        void close()
+        void close(Exception? cause = Null)
             {
             console.println("bye-bye!");
             }

@@ -282,8 +282,8 @@ class UTF8Reader
     // ----- Closeable -----------------------------------------------------------------------------
 
     @Override
-    void close()
+    void close(Exception? cause = Null)
         {
-        in.close();
+        in.close(cause);
         }
     }

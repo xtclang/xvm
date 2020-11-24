@@ -1,10 +1,28 @@
 /**
- * A database singleton object is a _containerless_ `DBObject` in the database; in other words, it
- * is not held in a `DBList` or a `DBMap`, or any other container. Instead, the name dereferences to
- * the object itself, which must be an immutable Const
+ * A database singleton object is a `DBObject` in the database that contains a single value; in
+ * other words, it is not held in a complex container such as a `DBList` or a `DBMap`. Instead, the
+ * singleton container contains a single value, which can be obtained or replaced.
  */
-interface DBSingleton
+interface DBSingleton<Value extends immutable Const>
         extends DBObject
-        extends immutable Const
     {
+    @Override
+    @RO Boolean transactional.get()
+        {
+        return True;
+        }
+
+    /**
+     * Obtain the singleton value.
+     *
+     * @return the value of the singleton
+     */
+    Value get();
+
+    /**
+     * Modify the singleton by replacing the value.
+     *
+     * @param value  the new value for the singleton
+     */
+    void set(Value value);
     }

@@ -116,7 +116,9 @@ module ecstasy.xtclang.org
          * This method is invoked to mark the end of the use of an object. The object may release
          * its resources at this point, and may subsequently be cantankerous and/or unusable as a
          * result.
+         *
+         * @param e  (optional) an exception that occurred that triggered the call to `close()`
          */
-        void close();
+        void close(Exception? cause = Null);
         }
     }
