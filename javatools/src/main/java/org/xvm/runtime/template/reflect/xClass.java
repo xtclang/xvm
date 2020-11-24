@@ -17,7 +17,7 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.CanonicalizedTypeComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -83,6 +83,14 @@ public class xClass
         }
 
     @Override
+    public TypeComposition ensureClass(TypeConstant typeActual)
+        {
+        return typeActual.equals(getCanonicalType())
+            ? super.ensureClass(typeActual)
+            : new CanonicalizedTypeComposition(getCanonicalClass(), typeActual);
+        }
+
+    @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof ClassConstant || constant instanceof DecoratedClassConstant)
@@ -106,7 +114,8 @@ public class xClass
                     template = this;
                     break;
                 }
-            ClassComposition clz = (ClassComposition) template.ensureClass(typeClz);
+
+            TypeComposition clz = template.ensureClass(typeClz);
 
             // skip the natural constructor; it's a "make believe" code anyway
             return template.construct(frame, null, clz, null, Utils.OBJECTS_NONE, Op.A_STACK);

@@ -45,6 +45,7 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
@@ -69,17 +70,17 @@ import org.xvm.util.ListMap;
 
 
 /**
- * Native Type implementation.
+ * Native RTType implementation.
  */
 public class xRTType
-        extends    ClassTemplate
+        extends xConst
         implements IndexSupport // for turtle types
     {
     public static xRTType INSTANCE;
 
     public xRTType(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
 
         if (fInstance)
             {
@@ -132,16 +133,11 @@ public class xRTType
         markNativeMethod("and", PARAM_TYPE   , null);
         markNativeMethod("or" , PARAM_TYPE   , null);
 
-        ClassConstant   idType       = pool().clzType();
-        ClassStructure  structType   = (ClassStructure) idType.getComponent();
-        ClassStructure  structRTType = getStructure();
+        ClassStructure structType = (ClassStructure) pool().clzType().getComponent();
 
-        structType  .findMethod("equals",   3).markNative();
-        structType  .findMethod("compare",  3).markNative();
-        structType  .findMethod("hashCode", 2).markNative();
-        structRTType.findMethod("equals",   3).markNative();
-        structRTType.findMethod("compare",  3).markNative();
-        structRTType.findMethod("hashCode", 2).markNative();
+        structType.findMethod("equals",   3).markNative();
+        structType.findMethod("compare",  3).markNative();
+        structType.findMethod("hashCode", 2).markNative();
 
         pool().typeType().invalidateTypeInfo();
         }
@@ -157,12 +153,9 @@ public class xRTType
     @Override
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
-        if (typeActual.equals(getCanonicalType()))
-            {
-            return super.ensureClass(typeActual);
-            }
-
-        return new CanonicalizedTypeComposition(getCanonicalClass(), typeActual);
+        return typeActual.equals(getCanonicalType())
+            ? super.ensureClass(typeActual)
+            : new CanonicalizedTypeComposition(getCanonicalClass(), typeActual);
         }
 
     @Override
@@ -278,25 +271,6 @@ public class xRTType
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
-        }
-
-    @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "compare":
-                return callCompare(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
-
-            case "equals":
-                return callEquals(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
-
-            case "hashCode":
-                return buildHashCode(frame, getCanonicalClass(), ahArg[1], iReturn);
-            }
-
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override

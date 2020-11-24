@@ -1,7 +1,9 @@
 package org.xvm.runtime;
 
 
-import org.xvm.asm.Constants;
+import java.util.Set;
+
+import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -71,7 +73,7 @@ public class CanonicalizedTypeComposition
         }
 
     @Override
-    public ObjectHandle ensureAccess(ObjectHandle handle, Constants.Access access)
+    public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
         {
         return access == f_typeActual.getAccess()
             ? handle
@@ -79,7 +81,7 @@ public class CanonicalizedTypeComposition
         }
 
     @Override
-    public TypeComposition ensureAccess(Constants.Access access)
+    public TypeComposition ensureAccess(Access access)
         {
         return access == f_typeActual.getAccess()
             ? this
@@ -90,7 +92,7 @@ public class CanonicalizedTypeComposition
     @Override
     public boolean isStruct()
         {
-        return f_typeActual.getAccess() == Constants.Access.STRUCT;
+        return f_typeActual.getAccess() == Access.STRUCT;
         }
 
     @Override
@@ -105,11 +107,16 @@ public class CanonicalizedTypeComposition
         CallChain chain = super.getMethodCallChain(nidMethod);
         if (chain.getDepth() == 0 && nidMethod instanceof SignatureConstant)
             {
-            SignatureConstant sig           = (SignatureConstant) nidMethod;
-            TypeInfo          infoCanonical = f_clzOrigin.getType().ensureTypeInfo();
-            MethodConstant    idMethod      = infoCanonical.findMethods(
-                sig.getName(), sig.getParamCount(), TypeInfo.MethodKind.Any).iterator().next();
-            chain = f_clzOrigin.getMethodCallChain(idMethod.getSignature());
+            // we assume that the information on the canonical TypeInfo is sufficient
+            ClassComposition    clzCanonical  = getCanonicalComposition();
+            SignatureConstant   sig           = (SignatureConstant) nidMethod;
+            TypeInfo            infoCanonical = clzCanonical.getType().ensureTypeInfo();
+            Set<MethodConstant> setMethods    = infoCanonical.findMethods(
+                    sig.getName(), sig.getParamCount(), TypeInfo.MethodKind.Any);
+            if (!setMethods.isEmpty())
+                {
+                chain = clzCanonical.getMethodCallChain(setMethods.iterator().next().getSignature());
+                }
             }
         return chain;
         }
