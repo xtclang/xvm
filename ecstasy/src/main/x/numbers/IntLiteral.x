@@ -104,14 +104,14 @@ const IntLiteral(String text)
 
                 default:
                     throw new IllegalArgument($|Illegal character {ch.toSourceString()} at \
-                                               |offset {of} in integer literal {text.quoted}
+                                               |offset {of} in integer literal {text.quoted()}
                                              );
                 }
 
             if (nch >= radix)
                 {
                 throw new IllegalArgument($|Illegal digit {ch.toSourceString()} for radix \
-                                           |{radix} in integer literal {text.quoted}
+                                           |{radix} in integer literal {text.quoted()}
                                          );
                 }
 
