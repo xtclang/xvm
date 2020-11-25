@@ -42,10 +42,9 @@ module db
 //            {
 //            console.println($"Reading {cat.statusFile.path} ...");
 //            Byte[]  bytes = cat.statusFile.contents;
-//// TODO GG cannot call function on an imported module
-////            jsondb.dump("- bytes", bytes);
-////            SysInfo info  = jsondb.fromBytes(SysInfo, bytes);
-////            jsondb.dump("- info", info);
+//            jsondb.dump("- bytes", bytes);
+//            SysInfo info  = jsondb.fromBytes(SysInfo, bytes);
+//            jsondb.dump("- info", info);
 //            dump("- bytes", bytes);
 //            SysInfo info  = fromBytes(SysInfo, bytes);
 //            dump("- info", info);

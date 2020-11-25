@@ -12,6 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.PackageStructure;
 import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.XvmStructure;
 
@@ -634,8 +635,17 @@ public abstract class IdentityConstant
         TypeConstant type;
         switch (getFormat())
             {
-            case Module:
             case Package:
+                {
+                PackageStructure pkg = (PackageStructure) getComponent();
+                if (pkg.isModuleImport())
+                    {
+                    type = pkg.getImportedModule().getCanonicalType();
+                    break;
+                    }
+                // fall through
+                }
+            case Module:
             case DecoratedClass:
                 type = getType();
                 break;
