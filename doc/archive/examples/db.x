@@ -887,3 +887,38 @@ const ContactsClientImpl // or service
         return result[0].as(Contact);
         }
     }
+
+
+// --
+
+// a database is defined in a module
+module AddressBookDB
+        incorporates db.Database
+    {
+    // ...
+    }
+
+// TODO need to figure out how to do annotations on a module ... maybe:
+@db.DBModule module AddressBookDB
+    {
+    // ...
+    }
+
+// the primary content is the root schema, with a read-only property for each desired database object
+interface AddressBookSchema
+        extends db.RootSchema
+    {
+    @RO db.DBMap<String, Contact> contacts;
+    }
+
+// or ...
+interface AddressBookSchema
+        extends db.RootSchema
+    {
+    @RO Contacts contacts;
+    }
+mixin Contacts
+        into db.DBMap<String, Contact>
+    {
+    // ...
+    }
