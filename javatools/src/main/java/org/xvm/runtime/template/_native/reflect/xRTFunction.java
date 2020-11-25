@@ -401,7 +401,7 @@ public class xRTFunction
          */
         protected FunctionHandle(MethodStructure function)
             {
-            this(function.getIdentityConstant().getType(), function);
+            this(function.getIdentityConstant().getSignature().asFunctionType(), function);
 
             m_fMutable = false;
             }
@@ -411,7 +411,8 @@ public class xRTFunction
          */
         protected FunctionHandle(CallChain chain, int nDepth)
             {
-            super(INSTANCE.ensureClass(chain.getMethod(nDepth).getIdentityConstant().getType()), chain, nDepth);
+            super(INSTANCE.ensureClass(chain.getMethod(nDepth).getIdentityConstant().
+                    getSignature().asFunctionType()), chain, nDepth);
 
             m_fMutable = false;
             }

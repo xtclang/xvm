@@ -1571,9 +1571,17 @@ public class NameExpression
                         break;
 
                     case MultiMethod:
-                        // TODO figure out what can cause this and adjust the error
-                        log(errs, Severity.ERROR, Compiler.UNEXPECTED_METHOD_NAME, sName);
-                        return null;
+                        {
+                        MultiMethodConstant  idMM = (MultiMethodConstant) constant;
+                        MultiMethodStructure mms  = (MultiMethodStructure) idMM.getComponent();
+
+                        Collection<MethodStructure> methods = mms.methods();
+
+                        m_arg = methods.size() == 1
+                                ? methods.iterator().next().getIdentityConstant()
+                                : idMM; // return the MultiMethod; the caller will decide what to do
+                        break;
+                        }
 
                     default:
                         throw new IllegalStateException("format=" + constant.getFormat()
@@ -2390,11 +2398,27 @@ public class NameExpression
                 {
                 // the constant refers to a method or function
                 MethodConstant idMethod = (MethodConstant) argRaw;
-                m_plan = idMethod.isFunction()
-                        ? Plan.None
-                        : Plan.BindTarget;
+                TypeConstant   typeFn;
 
-                TypeConstant typeFn = idMethod.getType();
+                if (idMethod.isFunction())
+                    {
+                    m_plan = Plan.None;
+                    typeFn = idMethod.getType();
+                    }
+                else
+                    {
+                    if (typeDesired != null && typeDesired.isA(pool.typeMethod()))
+                        {
+                        // they explicitly desire a method; give them the method
+                        m_plan = Plan.None;
+                        return idMethod.getType();
+                        }
+
+                    // "bind" the method into a function
+                    m_plan = Plan.BindTarget;
+                    typeFn = idMethod.getSignature().asFunctionType();
+                    }
+
                 if (typeDesired != null)
                     {
                     MethodStructure method = (MethodStructure) idMethod.getComponent();
@@ -2407,13 +2431,6 @@ public class NameExpression
                         MethodInfo infoMethod = infoLeft.getMethodBySignature(idMethod.getSignature());
                         method   = infoMethod.getTopmostMethodStructure(infoLeft);
                         assert method != null;
-                        }
-
-                    if (typeDesired.isA(pool.typeMethod()) && !method.isFunction())
-                        {
-                        // they explicitly specified a method; give them the method
-                        m_plan = Plan.None;
-                        return method.getIdentityConstant().getValueType(null);
                         }
 
                     int cTypeParams = method.getTypeParamCount();

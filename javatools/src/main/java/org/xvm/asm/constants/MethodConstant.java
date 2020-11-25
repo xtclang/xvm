@@ -333,10 +333,31 @@ public class MethodConstant
         TypeConstant type = m_type;
         if (type == null)
             {
-            // Note, that the implementation doesn't differentiate between methods and functions,
-            // making both the methods and the functions be of the "Function" type
-            // (@see InvocationExpression.generateArguments)
-            type = getSignature().asFunctionType();
+            if (isFunction())
+                {
+                type = getSignature().asFunctionType();
+                }
+            else
+                {
+                ConstantPool     pool     = getConstantPool();
+                IdentityConstant idTarget = getNamespace();
+                TypeConstant     typeTarget;
+
+                if (idTarget.isClass())
+                    {
+                    typeTarget = ((ClassStructure) idTarget.getComponent()).getFormalType();
+                    if (isConstructor())
+                        {
+                        typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.STRUCT);
+                        }
+                    }
+                else
+                    {
+                    typeTarget = idTarget.getType();
+                    }
+                type = getSignature().asMethodType(pool, typeTarget);
+                }
+
             if (!type.containsUnresolved())
                 {
                 m_type = type;
@@ -398,7 +419,7 @@ public class MethodConstant
     public TypeConstant getValueType(TypeConstant typeTarget)
         {
         SignatureConstant sig       = getSignature();
-        boolean           fFunction = isFunction() || isConstructor();
+        boolean           fFunction = isFunction();
 
         if (fFunction)
             {
@@ -408,7 +429,7 @@ public class MethodConstant
             {
             if (typeTarget == null)
                 {
-                typeTarget = getClassIdentity().getType();
+                typeTarget = ((ClassStructure) getClassIdentity().getComponent()).getFormalType();
                 }
             sig = sig.resolveAutoNarrowing(getConstantPool(), typeTarget);
             }

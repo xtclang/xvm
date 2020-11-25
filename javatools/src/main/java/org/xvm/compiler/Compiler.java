@@ -816,9 +816,9 @@ public class Compiler
      */
     public static final String MISSING_RELATIVE                   = "COMPILER-57";
     /**
-     * Unexpected method name "{0}" encountered.
+     * Incompatible target type {0} for the method {1}.
      */
-    public static final String UNEXPECTED_METHOD_NAME             = "COMPILER-58";
+    public static final String INVALID_METHOD_TARGET              = "COMPILER-58";
     /**
      * The "this." prefix must be followed by a parent class or parent property identity.
      */
@@ -1171,7 +1171,7 @@ public class Compiler
     /**
      * Function {0} refers to a generic type {1}.
      */
-    public static final String GENERIC_TYPE_NOT_ALLOWED            = "COMPILER-144";
+    public static final String GENERIC_FUNCTION_TYPE_NOT_ALLOWED   = "COMPILER-144";
     /**
      * Unresolvable type parameter(s): {0}.
      */
@@ -1256,6 +1256,10 @@ public class Compiler
      * Injection cannot be combined with any other Ref annotations.
      */
     public static final String ANNOTATED_INJECTION                 = "COMPILER-165";
+    /**
+     * Constant {0} refers to a generic type {1}.
+     */
+    public static final String GENERIC_PROPERTY_TYPE_NOT_ALLOWED   = "COMPILER-166";
     /**
      * {0} is not yet implemented.
      */

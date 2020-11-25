@@ -1,37 +1,25 @@
 module TestSimple
     {
     @Inject Console console;
-
-    import ecstasy.io.CharArrayReader;
-
-    package json import json.xtclang.org;
-
-    import json.Mapping;
-    import json.Schema;
+    @Inject Timer timer;
 
     void run()
         {
-        Schema schema = Schema.DEFAULT;
-        Point  point  = new Point(1, 2);
+        Test<Int> t = new Test();
+        console.println(t.toByte());
 
-        console.println($"point={point}");
-
-        testSer(schema, "point", point);
+        Bit[] bits = [1, 0, 0, 1];
+        console.println(bits.toByte());
         }
 
-    private <Ser> void testSer(Schema schema, String name, Ser val)
+    class Test<Element>
         {
-        @Inject Timer timer;
+        Method<Test, <>, <UInt8>> toByte = toUInt8;
 
-        StringBuffer buf = new StringBuffer();
-        schema.createObjectOutput(buf).write(val);
-
-        String s = buf.toString();
-        console.println($"JSON {name} written out={s} in {timer.elapsed}");
-
-        Ser val2 = schema.createObjectInput(new CharArrayReader(s)).read<Ser>();
-        console.println($"read {name} back in={val2} in {timer.elapsed}");
+        UInt8 toUInt8()
+            {
+            console.println("in " + this);
+            return 42;
+            }
         }
-
-    const Point(Int x, Int y);
     }

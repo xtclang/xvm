@@ -433,7 +433,7 @@ public class InvocationExpression
                     }
 
                 TypeConstant typeFn = m_fBindTarget
-                        ? idMethod.getType()
+                        ? idMethod.getSignature().asFunctionType()
                         : idMethod.getValueType(typeLeft);
 
                 if (cTypeParams > 0)
@@ -470,7 +470,7 @@ public class InvocationExpression
                 typeArg = argMethod.getType().resolveTypedefs();
                 }
 
-            return typeArg.isA(pool.typeFunction())
+            return typeArg.isA(pool.typeFunction()) || typeArg.isA(pool.typeMethod())
                     ? calculateReturnType(typeArg)
                     : TypeConstant.NO_TYPES;
             }
@@ -972,7 +972,7 @@ public class InvocationExpression
                             }
 
                         TypeConstant typeFn = m_fBindTarget
-                                ? idMethod.getType()
+                                ? idMethod.getSignature().asFunctionType()
                                 : idMethod.getValueType(typeLeft);
 
                         if (cTypeParams > 0)
@@ -1039,7 +1039,7 @@ public class InvocationExpression
                         }
                     }
 
-                if (!typeFn.isA(pool.typeFunction()))
+                if (!typeFn.isA(pool.typeFunction()) && !typeFn.isA(pool.typeMethod()))
                     {
                     log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                             "Function", typeFn.getValueString());
@@ -1048,6 +1048,11 @@ public class InvocationExpression
 
                 if (exprName.isSuppressDeref())
                     {
+                    if (typeFn.isA(pool.typeMethod()))
+                        {
+                        log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
+                        break Validate;
+                        }
                     assert argMethod instanceof Register && !fCall;
 
                     // this must be a scenario of binding a function at a register, e.g.:
@@ -1076,6 +1081,19 @@ public class InvocationExpression
 
                     expr   = exprNew;
                     typeFn = exprNew.getType();
+
+                    if (typeFn.isA(pool.typeMethod()))
+                        {
+                        TypeConstant typeTarget = typeFn.getParamType(0);
+                        if (!typeLeft.isA(typeTarget))
+                            {
+                            log(errs, Severity.ERROR, Compiler.INVALID_METHOD_TARGET,
+                                typeTarget.getValueString(), exprName.getName());
+                            break Validate;
+                            }
+                        m_fBindTarget = true;
+                        m_argMethod   = argMethod;
+                        }
                     }
 
                 TypeConstant[] atypeResult = validateFunction(ctx, typeFn,
@@ -1200,9 +1218,10 @@ public class InvocationExpression
         boolean  fLocalPropOk = cArgs == 0;
         Argument argFn;
 
-        Argument[] aargTypeParams = m_aargTypeParams;
-        int        cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
-        boolean    fTargetOnStack = cArgs == 0 || args.stream().allMatch(Expression::isConstant);
+        ConstantPool pool           = pool();
+        Argument[]   aargTypeParams = m_aargTypeParams;
+        int          cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
+        boolean      fTargetOnStack = cArgs == 0 || args.stream().allMatch(Expression::isConstant);
 
         if (expr instanceof NameExpression)
             {
@@ -1226,7 +1245,7 @@ public class InvocationExpression
                         {
                         // create a synthetic method constant for the formal type (for a funky
                         // interface type)
-                        argFn      = pool().ensureMethodConstant(m_idFormal, idMethod.getSignature());
+                        argFn      = pool.ensureMethodConstant(m_idFormal, idMethod.getSignature());
                         fConstruct = false;
                         }
                     }
@@ -1235,36 +1254,8 @@ public class InvocationExpression
                     // idMethod is a MethodConstant for a method (including "finally")
                     if (m_fBindTarget)
                         {
-                        // the method needs a target (its "this")
-                        Argument argTarget;
-                        if (exprLeft == null)
-                            {
-                            MethodStructure method = code.getMethodStructure();
-                            if (m_targetinfo == null)
-                                {
-                                argTarget = ctx.generateThisRegister(code, method.isConstructor(), errs);
-                                }
-                            else
-                                {
-                                TypeConstant typeTarget = m_targetinfo.getTargetType();
-                                int          cStepsOut  = m_targetinfo.getStepsOut();
-
-                                if (cStepsOut > 0)
-                                    {
-                                    argTarget = createRegister(typeTarget, fTargetOnStack);
-                                    code.add(new MoveThis(m_targetinfo.getStepsOut(), argTarget));
-                                    }
-                                else
-                                    {
-                                    argTarget = new Register(typeTarget, Op.A_THIS);
-                                    }
-                                }
-                            }
-                        else
-                            {
-                            argTarget = exprLeft.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
-                            }
-
+                        Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk,
+                                                fTargetOnStack, errs);
                         if (m_fCall)
                             {
                             updateLineNumber(code);
@@ -1446,16 +1437,46 @@ public class InvocationExpression
                 }
             else // it is a NameExpression but _NOT_ a MethodConstant
                 {
-                assert !m_fBindTarget;
-
-                if (m_argMethod instanceof Register)
+                if (m_fBindTarget)
                     {
-                    argFn = m_argMethod;
+                    // this is a method call; the method itself is a property or a register
+                    Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk,
+                                            fTargetOnStack, errs);
+                    Argument argMethod = m_argMethod;
+                    if (argMethod instanceof PropertyConstant)
+                        {
+                        PropertyConstant  idProp = (PropertyConstant) argMethod;
+                        PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+                        if (prop.isConstant() && prop.hasInitialValue())
+                            {
+                            MethodConstant idMethod = (MethodConstant) prop.getInitialValue();
+
+                            argFn = new Register(idMethod.getSignature().asFunctionType());
+                            code.add(new MBind(argTarget, idMethod, argFn));
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Dynamic method invocation");
+                            return;
+                            }
+                        }
+                    else
+                        {
+                        log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Dynamic method invocation");
+                        return;
+                        }
                     }
                 else
                     {
-                    // evaluate to find the argument (e.g. "var.prop", where prop holds a function)
-                    argFn = exprName.generateArgument(ctx, code, false, fTargetOnStack, errs);
+                    if (m_argMethod instanceof Register)
+                        {
+                        argFn = m_argMethod;
+                        }
+                    else
+                        {
+                        // evaluate to find the argument (e.g. "var.prop", where prop holds a function)
+                        argFn = exprName.generateArgument(ctx, code, false, fTargetOnStack, errs);
+                        }
                     }
                 }
             }
@@ -1464,7 +1485,7 @@ public class InvocationExpression
             // obtain the function that will be bound and/or called
             assert !m_fBindTarget;
             argFn = expr.generateArgument(ctx, code, false, fTargetOnStack, errs);
-            assert argFn.getType().isA(pool().typeFunction());
+            assert argFn.getType().isA(pool.typeFunction());
             }
 
         // bind arguments and/or generate a call to the function specified by argFn; first, convert
@@ -1479,7 +1500,7 @@ public class InvocationExpression
             argFn = regFn;
             }
 
-        TypeConstant[] atypeParams = pool().extractFunctionParams(typeFn);
+        TypeConstant[] atypeParams = pool.extractFunctionParams(typeFn);
         int            cAll        = atypeParams == null ? 0 : atypeParams.length;
 
         if (m_fCall)
@@ -1730,6 +1751,41 @@ public class InvocationExpression
                 lval.assign(regFn, code, errs);
                 }
             }
+        }
+
+    private Argument generateTarget(Context ctx, Code code, Expression exprLeft,
+                                    boolean fLocalPropOk, boolean fTargetOnStack, ErrorListener errs)
+        {
+        // the method needs a target (its "this")
+        Argument argTarget;
+        if (exprLeft == null)
+            {
+            MethodStructure method = code.getMethodStructure();
+            if (m_targetinfo == null)
+                {
+                argTarget = ctx.generateThisRegister(code, method.isConstructor(), errs);
+                }
+            else
+                {
+                TypeConstant typeTarget = m_targetinfo.getTargetType();
+                int          cStepsOut  = m_targetinfo.getStepsOut();
+
+                if (cStepsOut > 0)
+                    {
+                    argTarget = createRegister(typeTarget, fTargetOnStack);
+                    code.add(new MoveThis(m_targetinfo.getStepsOut(), argTarget));
+                    }
+                else
+                    {
+                    argTarget = new Register(typeTarget, Op.A_THIS);
+                    }
+                }
+            }
+        else
+            {
+            argTarget = exprLeft.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
+            }
+        return argTarget;
         }
 
 

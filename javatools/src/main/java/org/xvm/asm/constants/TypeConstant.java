@@ -393,9 +393,9 @@ public abstract class TypeConstant
      */
     public TypeConstant getParamType(int i)
         {
-        return getParamsCount() == 0
-                ? getConstantPool().typeObject()
-                : getParamTypesArray()[i];
+        return i < getParamsCount()
+                ? getParamTypesArray()[i]
+                : getConstantPool().typeObject();
         }
 
     /**
@@ -4825,18 +4825,18 @@ public abstract class TypeConstant
             PropertyInfo                        infoProp,
             ErrorListener                       errs)
         {
-        if (!infoProp.isVirtual())
-            {
-            mapProps.put(idMixinProp, infoProp);
-            return;
-            }
-
         Object           nidContrib = idMixinProp.getNestedIdentity(); // resolved
         PropertyConstant idResult   = (PropertyConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
         PropertyInfo     propBase   = infoBase.findPropertyByNid(nidContrib);
         if (propBase != null && infoProp.getIdentity().equals(propBase.getIdentity()))
             {
             // keep whatever the base has got
+            return;
+            }
+
+        if (!infoProp.isVirtual())
+            {
+            mapProps.put(idMixinProp, infoProp);
             return;
             }
 

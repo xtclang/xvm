@@ -571,7 +571,7 @@ public class MethodDeclarationStatement
                     {
                     if (type.containsGenericType(true))
                         {
-                        log(errs, Severity.ERROR, Compiler.GENERIC_TYPE_NOT_ALLOWED,
+                        log(errs, Severity.ERROR, Compiler.GENERIC_FUNCTION_TYPE_NOT_ALLOWED,
                                 method.getName(), type.getValueString());
                         }
                     }
@@ -579,7 +579,7 @@ public class MethodDeclarationStatement
                     {
                     if (type.containsGenericType(true))
                         {
-                        log(errs, Severity.ERROR, Compiler.GENERIC_TYPE_NOT_ALLOWED,
+                        log(errs, Severity.ERROR, Compiler.GENERIC_FUNCTION_TYPE_NOT_ALLOWED,
                                 method.getName(), type.getValueString());
                         }
                     }

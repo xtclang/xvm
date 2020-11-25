@@ -1344,8 +1344,7 @@ class Array<Element>
          * to alias the method, instead of creating a second delegating method, this prevents the
          * potential for accidentally overriding the wrong method.
          */
-        // TODO GG: static Method<BitArray<Element>, <>, <Byte>> toByte = toUInt8;
-        Byte toByte() {return  toUInt8();}
+        static Method<BitArray, <>, <Byte>> toByte = toUInt8;
 
         /**
          * Obtain the number as an array of bytes, in left-to-right order.
@@ -1660,8 +1659,7 @@ class Array<Element>
          * to alias the method, instead of creating a second delegating method, this prevents the
          * potential for accidentally overriding the wrong method.
          */
-        // TODO GG: static Method<ByteArray<Element>, <>, <Byte>> toByte = toUInt8;
-        Byte toByte() {return  toUInt8();}
+        static Method<ByteArray, <>, <Byte>> toByte = toUInt8;
 
         /**
          * Convert the byte array to a signed 8-bit integer.

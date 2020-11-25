@@ -3430,50 +3430,84 @@ public class ConstantPool
         }
 
     /**
-     * Get the parameter types from a function type.
+     * Get the parameter types from a function or a method type.
      *
      * @param typeFunction  the type to extract from
      *
-     * @return the parameter types for the function, or null if the types cannot be determined
+     * @return the parameter types for the function or the method, or null if the types cannot be
+     *         determined
      */
     public TypeConstant[] extractFunctionParams(TypeConstant typeFunction)
         {
-        if (typeFunction != null && typeFunction.isA(typeFunction()))
+        if (typeFunction != null)
             {
-            if (typeFunction.getParamsCount() > 0)
+            if (typeFunction.isA(typeFunction()))
                 {
-                TypeConstant typeParams = typeFunction.getParamType(0);
-                if (typeParams.isA(typeTuple()))
+                if (typeFunction.getParamsCount() > 0)
                     {
-                    return typeParams.getParamTypesArray();
+                    TypeConstant typeParams = typeFunction.getParamType(0);
+                    if (typeParams.isA(typeTuple()))
+                        {
+                        return typeParams.getParamTypesArray();
+                        }
                     }
+                return TypeConstant.NO_TYPES;
                 }
-            return TypeConstant.NO_TYPES;
+
+            if (typeFunction.isA(typeMethod()))
+                {
+                if (typeFunction.getParamsCount() > 1)
+                    {
+                    TypeConstant typeParams = typeFunction.getParamType(1);
+                    if (typeParams.isA(typeTuple()))
+                        {
+                        return typeParams.getParamTypesArray();
+                        }
+                    }
+                return TypeConstant.NO_TYPES;
+                }
             }
 
         return null;
         }
 
     /**
-     * Get the return types from a function type.
+     * Get the return types from a function type or a method type.
      *
      * @param typeFunction  the type to extract from
      *
-     * @return the return types of the function, or null if the types cannot be determined
+     * @return the return types of the function or the method, or null if the types cannot be
+     *         determined
      */
     public TypeConstant[] extractFunctionReturns(TypeConstant typeFunction)
         {
-        if (typeFunction != null && typeFunction.isA(typeFunction()))
+        if (typeFunction != null)
             {
-            if (typeFunction.getParamsCount() > 1)
+            if (typeFunction.isA(typeFunction()))
                 {
-                TypeConstant typeParams = typeFunction.getParamType(1);
-                if (typeParams.isA(typeTuple()))
+                if (typeFunction.getParamsCount() > 1)
                     {
-                    return typeParams.getParamTypesArray();
+                    TypeConstant typeParams = typeFunction.getParamType(1);
+                    if (typeParams.isA(typeTuple()))
+                        {
+                        return typeParams.getParamTypesArray();
+                        }
                     }
+                return TypeConstant.NO_TYPES;
                 }
-            return TypeConstant.NO_TYPES;
+
+            if (typeFunction.isA(typeMethod()))
+                {
+                if (typeFunction.getParamsCount() > 2)
+                    {
+                    TypeConstant typeParams = typeFunction.getParamType(2);
+                    if (typeParams.isA(typeTuple()))
+                        {
+                        return typeParams.getParamTypesArray();
+                        }
+                    }
+                return TypeConstant.NO_TYPES;
+                }
             }
 
         return null;

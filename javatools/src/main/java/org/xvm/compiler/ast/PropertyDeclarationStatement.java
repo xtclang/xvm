@@ -369,6 +369,13 @@ public class PropertyDeclarationStatement
                 return;
                 }
 
+            if (prop.isStatic() && type.containsGenericType(true))
+                {
+                log(errs, Severity.ERROR, Compiler.GENERIC_PROPERTY_TYPE_NOT_ALLOWED,
+                        prop.getName(), type.getValueString());
+                return;
+                }
+
             if (prop.hasInitialValue())
                 {
                 if (isInMethod() && !isStatic())
