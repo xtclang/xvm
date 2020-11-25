@@ -45,7 +45,6 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                     {
                     using (ElementInput elementInput = fieldInput.openField(field.name))
                         {
-                        // TODO GG: var mapping = field.mapping;
                         Mapping<field.Value> mapping = field.mapping;
                         if (field.subclassable && schema.enableMetadata,
                                 Doc typeName ?= in.peekMetadata(schema.typeKey),
@@ -85,8 +84,6 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                     }
                 else
                     {
-                    // TODO GG val type    = &fieldValue.actualType;
-                    //         var mapping = field.mapping;
                     Type<field.Value>    type    = &fieldValue.actualType;
                     Mapping<field.Value> mapping = field.mapping;
                     if (field.subclassable && type != mapping.Serializable,
