@@ -183,6 +183,61 @@ const String
         }
 
     /**
+     * Determine if this String _starts-with_ the specified character.
+     *
+     * @param ch  a character to look for at the beginning of this String
+     *
+     * @return True iff this String starts-with the specified character
+     */
+    Boolean startsWith(Char ch)
+        {
+        return size > 0 && chars[0] == ch;
+        }
+
+    /**
+     * Determine if `this` String _starts-with_ `that` String. A String `this` of at least `n`
+     * characters "starts-with" another String `that` of exactly `n` elements iff, for each index
+     * `[0..n)`, the character at the index in `this` String is equal to the character at the same
+     * index in `that` String.
+     *
+     * @param that  a String to look for at the beginning of this String
+     *
+     * @return True iff this String starts-with that String
+     */
+    Boolean startsWith(String that)
+        {
+        return this.chars.startsWith(that.chars);
+        }
+
+    /**
+     * Determine if this String _ends-with_ the specified character.
+     *
+     * @param ch  a character to look for at the end of this String
+     *
+     * @return True iff this String ends-with the specified character
+     */
+    Boolean endsWith(Char ch)
+        {
+        Int size = this.size;
+        return size > 0 && chars[size-1] == ch;
+        }
+
+    /**
+     * Determine if `this` String _ends-with_ `that` String. A String `this` of `m` characters
+     * "ends-with" another String `that` of `n` characters iff `n <= m` and, for each index `i`
+     * in the range `[0..n)`, the character at the index `m-n+i` in `this` String is equal to the
+     * character at index `i` in `that` String.
+     *
+     * @param that  a String to look for at the end of this String
+     *
+     * @return True iff this String ends-with that String
+     */
+    Boolean endsWith(String that)
+        {
+        return this.chars.endsWith(that.chars);
+        }
+
+    /**
      * Look for the specified character starting at the specified index.
      *
      * @param value    the character to search for
