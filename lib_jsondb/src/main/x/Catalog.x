@@ -329,7 +329,6 @@ service Catalog
 
         import ecstasy.fs.FileNotFound;
 
-{ // TODO GG
         Byte[]? bytes = Null;
         try
             {
@@ -357,9 +356,7 @@ service Catalog
             error ?:= e;
             }
 
-} { // TODO GG
-Byte[]? bytes = Null;
-        // bytes = Null;
+        bytes = Null;
         try
             {
             if (statusFile.exists)
@@ -385,7 +382,6 @@ Byte[]? bytes = Null;
             {
             error ?:= e;
             }
-} // TODO GG
 
         return new Glance(info, lock, error);
         }
