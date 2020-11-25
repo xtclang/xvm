@@ -6273,7 +6273,8 @@ public abstract class TypeConstant
                 ? ((UnresolvedTypeConstant) obj).getResolvedType()
                 : (TypeConstant) obj;
 
-        return typeThis.getFormat() == typeThat.getFormat()
+        return typeThis != null     && typeThat != null
+            && typeThis.getFormat() == typeThat.getFormat()
             && typeThis.compareDetails(typeThat) == 0;
         }
 
