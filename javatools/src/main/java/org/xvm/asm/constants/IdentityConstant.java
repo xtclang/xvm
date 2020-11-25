@@ -693,7 +693,7 @@ public abstract class IdentityConstant
                     return pool.ensureParameterizedTypeConstant(pool.typeEnumValue(), type);
 
                 default:
-                return pool.ensureParameterizedTypeConstant(pool.typeClass(), type,
+                    return pool.ensureParameterizedTypeConstant(pool.typeClass(), type,
                         pool.ensureAccessTypeConstant(type, Access.PROTECTED),
                         pool.ensureAccessTypeConstant(type, Access.PRIVATE),
                         pool.ensureAccessTypeConstant(type, Access.STRUCT));

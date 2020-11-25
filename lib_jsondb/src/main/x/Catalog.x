@@ -84,8 +84,7 @@ service Catalog
     @Override
     String toString()
         {
-// TODO GG: return $"{this:class.name}:\{dir={dir}, version={version}, status={status}, readOnly={readOnly}, unique-id={timestamp}}";
-        return $"Catalog:\{dir={dir}, version={version}, status={status}, readOnly={readOnly}, unique-id={timestamp}}";
+        return $"{this:class.name}:\{dir={dir}, version={version}, status={status}, readOnly={readOnly}, unique-id={timestamp}}";
         }
 
 

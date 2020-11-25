@@ -452,6 +452,11 @@ public class Frame
                     ? makeDeferredException("Run-time error: no target")
                     : f_hThis.ensureAccess(Access.STRUCT);
 
+            case Op.A_CLASS:
+                return f_hThis == null
+                    ? makeDeferredException("Run-time error: no target")
+                    : getConstHandle(poolContext().ensureClassConstant(f_hThis.getType()));
+
             case Op.A_SERVICE:
                 {
                 ObjectHandle hService = f_context.getService();
