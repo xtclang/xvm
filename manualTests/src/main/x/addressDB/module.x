@@ -50,7 +50,8 @@ module AddressBookDB
 
     const Contact(String firstName, String lastName, Email[] emails = [], Phone[] phones = [])
         {
-        @db.PKey String rolodexName.get()
+        // @db.PKey
+        String rolodexName.get()
             {
             return lastName + ", " + firstName;
             }

@@ -350,8 +350,8 @@ module TestRunner.xtclang.org
                 }
 
             throw wrongName
-                ? new Exception($"Invalid resource name: \"{name}\"")
-                : new Exception($"Invalid resource type: \"{type}\"");
+                ? new Exception($"Invalid resource name: \"{name}\" of type \"{type}\"")
+                : new Exception($"Invalid resource type: \"{type}\" for name \"{name}\"");
             }
         }
     }
