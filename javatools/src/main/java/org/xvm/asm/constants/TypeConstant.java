@@ -6094,11 +6094,10 @@ public abstract class TypeConstant
             {
             return frame.assignValue(iReturn, xBoolean.TRUE);
             }
-        TypeComposition clz1 = hValue1.getComposition();
-        TypeComposition clz2 = hValue2.getComposition();
-        TypeComposition clz = clz1 == clz2 ? clz1 : frame.ensureClass(this);
-        return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
-        }
+
+        // this type is a common [compile time] type that should be used for the comparison
+        TypeComposition clz = frame.ensureClass(this);
+        return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);        }
 
     /**
      * Compare for order (<=>) two object handles that both belong to this type.
@@ -6117,9 +6116,8 @@ public abstract class TypeConstant
             return frame.assignValue(iReturn, xOrdered.EQUAL);
             }
 
-        TypeComposition clz1 = hValue1.getComposition();
-        TypeComposition clz2 = hValue2.getComposition();
-        TypeComposition clz = clz1 == clz2 ? clz1 : frame.ensureClass(this);
+        // this type is a common [compile time] type that should be used for the comparison
+        TypeComposition clz = frame.ensureClass(this);
         return clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
         }
 
