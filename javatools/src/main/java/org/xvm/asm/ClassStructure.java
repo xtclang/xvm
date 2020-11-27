@@ -1869,8 +1869,58 @@ public class ClassStructure
                     }
                 }
             }
-
         return null;
+        }
+
+    /**
+     * Helper method to find a method by the name and a predicate for this class and all its
+     * contributions.
+     *
+     * @param sName  the method name to find
+     * @param test   the predicate to check whether a method is a one to return
+     *
+     * @return the specified MethodStructure or null if not found
+     */
+    public MethodStructure findMethodDeep(String sName, Predicate<MethodStructure> test)
+        {
+        MethodStructure method = findMethod(sName, test);
+        if (method == null)
+            {
+            for (Contribution contrib : getContributionsAsList())
+                {
+                TypeConstant typeContrib = contrib.getTypeConstant();
+                switch (contrib.getComposition())
+                    {
+                    case Into:
+                    case Delegates:
+                        break;
+
+                    case Annotation:
+                    case Incorporates:
+                    case Extends:
+                    case Implements:
+                        {
+                        if (typeContrib.isExplicitClassIdentity(true))
+                            {
+                            ClassStructure clzContrib = (ClassStructure)
+                                typeContrib.getSingleUnderlyingClass(true).getComponent();
+                            if (clzContrib == null)
+                                {
+                                // this method could be used before the pool is "connected"
+                                break;
+                                }
+                            method = clzContrib.findMethodDeep(sName, test);
+                            if (method != null)
+                                {
+                                return method;
+                                }
+                            }
+                        break;
+                        }
+                    }
+                }
+            }
+        return method;
         }
 
     /**
@@ -1919,7 +1969,7 @@ public class ClassStructure
      *
      * @return the first method that matches the specified types of null
      */
-    public MethodStructure findMethod(String sName, TypeConstant[] atypeParam, TypeConstant[] atypeReturn)
+    public MethodStructure findMethodDeep(String sName, TypeConstant[] atypeParam, TypeConstant[] atypeReturn)
         {
         ClassStructure struct = this;
         do
@@ -3169,7 +3219,7 @@ public class ClassStructure
      */
     private void synthesizeConstFunction(String sName, int cParams, TypeConstant typeReturn)
         {
-        MethodStructure fnThis = findMethod(sName, method ->
+        Predicate<MethodStructure> test = method ->
             {
             if (    method.getTypeParamCount() != 1
                  || method.getParamCount()     != 1  + cParams
@@ -3187,9 +3237,13 @@ public class ClassStructure
                     return false;
                     }
                 }
-            return true;
-            });
 
+            // abstract or synthesized functions don't count and neither do the Object methods
+            return method.hasCode() && !method.isTransient() &&
+                !method.getIdentityConstant().getNamespace().equals(getConstantPool().clzObject());
+            };
+
+        MethodStructure fnThis = findMethodDeep(sName, test);
 
         if (fnThis == null)
             {
@@ -3229,6 +3283,7 @@ public class ClassStructure
             fnThis = createMethod(/*function*/ true, Constants.Access.PUBLIC, null,
                     aReturn, sName, aParam, /*hasCode*/ true, /*usesSuper*/ false);
             fnThis.markNative();
+            fnThis.markTransient();
 
             // 3) resolve the identity
             MethodConstant idMethod    = fnThis.getIdentityConstant();

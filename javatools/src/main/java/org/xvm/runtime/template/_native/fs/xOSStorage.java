@@ -56,7 +56,7 @@ public class xOSStorage
     @Override
     public void initNative()
         {
-        s_methodOnEvent = getStructure().findMethod("onEvent", null, null);
+        s_methodOnEvent = getStructure().findMethodDeep("onEvent", null, null);
 
         markNativeProperty("homeDir");
         markNativeProperty("curDir");

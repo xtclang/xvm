@@ -1983,7 +1983,7 @@ public abstract class ClassTemplate
         TypeConstant[] atypeArg = getTypeConstants(this, asParamType);
         TypeConstant[] atypeRet = getTypeConstants(this, asRetType);
 
-        MethodStructure method = getStructure().findMethod(sName, atypeArg, atypeRet);
+        MethodStructure method = getStructure().findMethodDeep(sName, atypeArg, atypeRet);
         if (method == null)
             {
             System.err.println("Missing method " + f_sName + "." + sName +
