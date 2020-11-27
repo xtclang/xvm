@@ -255,7 +255,7 @@ public abstract class ClassTemplate
      *       (all formal parameters resolved)
      * Note2: the following should always hold true: typeInception.getOpSupport() == this;
      */
-    protected ClassComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
+    protected TypeComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
         {
         ClassComposition clz = typeInception.getConstantPool().
                 ensureClassComposition(typeInception, this);

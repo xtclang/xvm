@@ -87,7 +87,7 @@ public class xClass
         {
         return typeActual.equals(getCanonicalType())
             ? super.ensureClass(typeActual)
-            : new CanonicalizedTypeComposition(getCanonicalClass(), typeActual);
+            : getCanonicalClass().ensureCanonicalizedComposition(typeActual);
         }
 
     @Override

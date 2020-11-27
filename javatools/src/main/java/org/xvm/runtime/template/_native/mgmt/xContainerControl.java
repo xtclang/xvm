@@ -9,7 +9,6 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -161,5 +160,5 @@ public class xContainerControl
         protected final Container f_container;
         }
 
-    private ClassComposition m_clzControl;
+    private TypeComposition m_clzControl;
     }

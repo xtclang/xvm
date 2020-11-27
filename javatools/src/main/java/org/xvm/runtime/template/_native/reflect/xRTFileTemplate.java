@@ -6,10 +6,10 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
@@ -133,5 +133,5 @@ public class xRTFileTemplate
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static ClassComposition FILE_TEMPLATE_COMPOSITION;
+    private static TypeComposition FILE_TEMPLATE_COMPOSITION;
     }

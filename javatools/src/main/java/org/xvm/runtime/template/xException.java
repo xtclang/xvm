@@ -68,7 +68,7 @@ public class xException
     @Override
     public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        return makeMutableStruct(frame, (ClassComposition) clazz, null);
+        return makeMutableStruct(frame, clazz, null);
         }
 
     @Override
@@ -216,12 +216,12 @@ public class xException
         return makeHandle(frame, s_clzException, sMessage, hCause);
         }
 
-    public static ExceptionHandle makeHandle(Frame frame, ClassComposition clzEx, String sMessage)
+    public static ExceptionHandle makeHandle(Frame frame, TypeComposition clzEx, String sMessage)
         {
         return makeHandle(frame, clzEx, sMessage, null);
         }
 
-    public static ExceptionHandle makeHandle(Frame frame, ClassComposition clzEx,
+    public static ExceptionHandle makeHandle(Frame frame, TypeComposition clzEx,
                                              String sMessage, ExceptionHandle hCause)
         {
         ExceptionHandle hException = makeMutableStruct(frame, clzEx, null);
@@ -233,7 +233,7 @@ public class xException
         return (ExceptionHandle) hException.ensureAccess(Access.PUBLIC);
         }
 
-    private static ExceptionHandle makeMutableStruct(Frame frame, ClassComposition clxEx, Throwable eCause)
+    private static ExceptionHandle makeMutableStruct(Frame frame, TypeComposition clxEx, Throwable eCause)
         {
         clxEx = clxEx.ensureAccess(Access.STRUCT);
 
@@ -261,7 +261,6 @@ public class xException
     private static ClassComposition s_clzFileNotFoundException;
     private static ClassComposition s_clzAccessDeniedException;
     private static ClassComposition s_clzFileAlreadyExistsException;
-
     private static ClassComposition s_clzIOException;
 
     private static MethodStructure METHOD_FORMAT_EXCEPTION;

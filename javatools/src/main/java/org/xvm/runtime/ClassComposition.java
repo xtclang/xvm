@@ -108,6 +108,15 @@ public class ClassComposition
         return f_mapProxies.computeIfAbsent(typeProxy, (type) -> new ProxyComposition(this, type));
         }
 
+    /**
+     * @return a CanonicalizedTypeComposition for the specified type
+     */
+    public CanonicalizedTypeComposition ensureCanonicalizedComposition(TypeConstant typeActual)
+        {
+        return (CanonicalizedTypeComposition) f_mapCompositions.computeIfAbsent(typeActual,
+                (type) -> new CanonicalizedTypeComposition(this, type));
+        }
+
 
     // ----- TypeComposition interface -------------------------------------------------------------
 
@@ -136,7 +145,7 @@ public class ClassComposition
         }
 
     @Override
-    public ClassComposition maskAs(TypeConstant type)
+    public TypeComposition maskAs(TypeConstant type)
         {
         return type.equals(f_typeRevealed) ? this :
                f_typeRevealed.isA(type)
@@ -145,7 +154,7 @@ public class ClassComposition
         }
 
     @Override
-    public ClassComposition revealAs(TypeConstant type)
+    public TypeComposition revealAs(TypeConstant type)
         {
         return type.equals(f_typeRevealed)  ? this :
                type.equals(f_typeInception) ? f_clzInception :
@@ -178,7 +187,7 @@ public class ClassComposition
         }
 
     @Override
-    public ClassComposition ensureAccess(Access access)
+    public TypeComposition ensureAccess(Access access)
         {
         TypeConstant typeCurrent = f_typeRevealed;
 
@@ -662,7 +671,7 @@ public class ClassComposition
      * type is defined by a {@link NativeRebaseConstant} class constant and the revealed type refers
      * to the corresponding natural interface.
      * */
-    private final Map<TypeConstant, ClassComposition> f_mapCompositions;
+    private final Map<TypeConstant, TypeComposition> f_mapCompositions;
 
     /**
      * A cache of derivative ProxyCompositions keyed by the "proxy type".

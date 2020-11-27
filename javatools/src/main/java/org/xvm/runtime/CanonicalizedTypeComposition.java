@@ -83,10 +83,11 @@ public class CanonicalizedTypeComposition
     @Override
     public TypeComposition ensureAccess(Access access)
         {
-        return access == f_typeActual.getAccess()
+        TypeConstant typeActual = f_typeActual;
+        return access == typeActual.getAccess()
             ? this
-            : new CanonicalizedTypeComposition(getCanonicalComposition(),
-                f_typeActual.getConstantPool().ensureAccessTypeConstant(f_typeActual, access));
+            : getCanonicalComposition().ensureCanonicalizedComposition(
+                typeActual.getConstantPool().ensureAccessTypeConstant(typeActual, access));
         }
 
     @Override

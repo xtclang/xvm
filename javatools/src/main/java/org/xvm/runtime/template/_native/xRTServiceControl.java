@@ -154,12 +154,12 @@ public class xRTServiceControl
         }
 
 
-    // ----- Constants -----------------------------------------------------------------------------
+    // ----- constants -----------------------------------------------------------------------------
 
     /**
      * Enum used by the native properties.
      */
     protected static xEnum SERVICE_STATUS;
 
-    private ClassComposition m_clzControl;
+    private TypeComposition m_clzControl;
     }

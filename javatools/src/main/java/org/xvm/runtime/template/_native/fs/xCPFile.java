@@ -11,12 +11,12 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.FSNodeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ConstantHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xConst;
@@ -63,9 +63,9 @@ public class xCPFile
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static ClassComposition s_clz;
-    private static ClassComposition s_clzStruct;
-    private static MethodStructure  s_constructor;
+    private static TypeComposition s_clz;
+    private static TypeComposition s_clzStruct;
+    private static MethodStructure s_constructor;
 
 
     // ----- data members --------------------------------------------------------------------------

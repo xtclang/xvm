@@ -39,7 +39,7 @@ public class xBoolean
         }
 
     @Override
-    protected EnumHandle makeEnumHandle(ClassComposition clz, int iOrdinal)
+    protected EnumHandle makeEnumHandle(TypeComposition clz, int iOrdinal)
         {
         return new BooleanHandle(clz, iOrdinal != 0);
         }

@@ -18,7 +18,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -246,7 +245,7 @@ public class xEnum
      *
      * @return the corresponding EnumHandle
      */
-    protected EnumHandle makeEnumHandle(ClassComposition clz, int iOrdinal)
+    protected EnumHandle makeEnumHandle(TypeComposition clz, int iOrdinal)
         {
         // create an un-initialized struct, which will be properly initialized
         // by createConstHandle() below; overridden by native enums

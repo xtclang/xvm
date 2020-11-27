@@ -7,23 +7,23 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
+import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 
 
 /**
@@ -117,5 +117,5 @@ public class xRepository
             }
         }
 
-    private ClassComposition m_clzRepo;
+    private TypeComposition m_clzRepo;
     }
