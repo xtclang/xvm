@@ -4134,6 +4134,7 @@ public abstract class TypeConstant
             MethodStructure   method       = (MethodStructure) structContrib;
             boolean           fHasNoCode   = !method.hasCode();
             boolean           fNative      = method.isNative();
+            boolean           fStatic      = method.isStatic();
             boolean           fHasAbstract = method.findAnnotation(pool.clzAbstract()) != null;
             MethodConstant    id           = method.getIdentityConstant();
             SignatureConstant sig          = id.getSignature().resolveGenericTypes(pool,
@@ -4149,7 +4150,7 @@ public abstract class TypeConstant
             MethodBody body = new MethodBody(id, sig,
                     fNative                  ? Implementation.Native   :
                     fInterface && fHasNoCode ? Implementation.Declared :
-                    fInterface               ? Implementation.Default  :
+                    fInterface && !fStatic   ? Implementation.Default  :
                     fHasAbstract             ? Implementation.Abstract :
                     fHasNoCode               ? Implementation.SansCode :
                                                Implementation.Explicit);
