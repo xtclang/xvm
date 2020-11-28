@@ -373,7 +373,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
                 ensureActive();
                 }
 
-            return super();
+            return super(cause);
             }
         }
 
@@ -451,7 +451,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
                 add(Null);
                 }
 
-            return super();
+            return super(cause);
             }
         }
 
@@ -542,7 +542,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
         ParentOutput close(Exception? cause = Null)
             {
             writer.add(']');
-            return super();
+            return super(cause);
             }
         }
 
@@ -634,7 +634,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
         ParentOutput close(Exception? cause = Null)
             {
             writer.add('}');
-            return super();
+            return super(cause);
             }
         }
 

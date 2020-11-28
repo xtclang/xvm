@@ -533,7 +533,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                 ensureActive();
                 }
 
-            ParentInput parent = super();
+            ParentInput parent = super(cause);
             current = parent?.as(DocInputStream<>?) : Null;
             parent?.childClosed(this);
             return parent;
@@ -643,7 +643,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         @Override
         ParentInput close(Exception? cause = Null)
             {
-            super();
+            super(cause);
             root = Null;
             return Null;
             }
@@ -956,7 +956,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         @Override
         ParentInput close(Exception? cause = Null)
             {
-            ParentInput parent = super();
+            ParentInput parent = super(cause);
 
             if (peekingAhead)
                 {
