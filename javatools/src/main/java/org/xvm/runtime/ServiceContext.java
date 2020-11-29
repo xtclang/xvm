@@ -830,7 +830,7 @@ public class ServiceContext
     public boolean isContended()
         {
         return m_frameCurrent != null || !f_queueResponse.isEmpty() ||
-                !f_queueMsg.isEmpty() || !f_queueSuspended.isEmpty();
+                !f_queueMsg.isEmpty() || f_queueSuspended.isReady();
         }
 
     /**

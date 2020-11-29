@@ -41,6 +41,31 @@ public class FiberQueue
         return m_cSize == 0;
         }
 
+    /**
+     * @return {@code true} iff there are fibers which are ready for processing.
+     */
+    public boolean isReady()
+        {
+        if (m_cSize == 0)
+            {
+            return false;
+            }
+
+        int cFrames = m_aFrame.length;
+        int ixHead  = m_ixHead;
+        for (int i = 0; i < cFrames; i++)
+            {
+            int ix = (i + ixHead) % cFrames;
+
+            int iPriority = checkPriority(ix);
+            if (iPriority >= 0)
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
     public int size()
         {
         return m_cSize;
