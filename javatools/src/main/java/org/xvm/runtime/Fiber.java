@@ -212,7 +212,8 @@ public class Fiber
         int iResult = Op.R_NEXT;
         if (isTimedOut())
             {
-            iResult = frame.raiseException(xException.timedOut(frame, "The service has timed-out"));
+            m_ldtTimeout = 0; // reset the timeout value
+            iResult      = frame.raiseException(xException.timedOut(frame, "The service has timed-out"));
             }
         else
             {
