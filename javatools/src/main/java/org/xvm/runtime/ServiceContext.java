@@ -269,7 +269,10 @@ public class ServiceContext
      */
     protected boolean tryAcquireSchedulingLock()
         {
-        return !m_fLockScheduling && SCHEDULING_LOCK_HANDLE.compareAndSet(this, false, true);
+        // we avoid a pre-check for LOCK_AVAILABLE thus ensuring that if lock is currently held
+        // that our failure to obtain it is visible, see releaseSchedulingLock for details on how
+        // this is utilized
+        return (long) SCHEDULING_LOCK_HANDLE.getAndAdd(this, 1L) == 0L;
         }
 
     /**
@@ -277,12 +280,22 @@ public class ServiceContext
      */
     protected void releaseSchedulingLock()
         {
-        m_fLockScheduling = false;
+        // If isContended is true then the service requires more processing and we can immediately
+        // reschedule, thus transferring our lock ownership. Between checking that state and releasing
+        // the lock isContended could transition to true and the thread doing that transition would
+        // fail to get our yet to be released lock. We could defend against this by checking isContended
+        // after releasing but portions (FiberQueue) of isContended are not thread-safe and thus we
+        // shouldn't query it after releasing the lock. Instead we defend against this by detecting
+        // contention on the lock itself and inferring that the contending thread must have injected
+        // more work and thus we must reschedule on their behalf. Note if we're wrong and the contention
+        // doesn't represent new work then the scheduled task will be a no-op and just come back here
+        // to release again, and is thus safe.
 
-        // we've released the lock but work may have concurrently slipped in; if so try to re-lock
-        // and hand off processing to the runtime's thread-pool
-        if (isContended() && tryAcquireSchedulingLock())
+        long lLockPreState = m_lLockScheduling; // read lock state prior to isContended check
+        if (isContended() || ((long) SCHEDULING_LOCK_HANDLE.getAndSet(this, 0L)
+            != lLockPreState && tryAcquireSchedulingLock()))
             {
+            // we've detected service or lock contention, reschedule
             f_container.schedule(this);
             }
         }
@@ -1596,8 +1609,12 @@ public class ServiceContext
      * <p>
      * This lock must be acquired in order to schedule context processing and is not released until
      * the context is not longer scheduled.
+     * <p>
+     * The lock is implemented as a volatile counter, the thread which transitions from 0 to 1 becomes
+     * the lock holder will release the lock by setting back via a getAndSet(0), which if it yeilds
+     * a prior value of something other then 1 indicates lock contention.
      */
-    volatile boolean m_fLockScheduling;
+    volatile long m_lLockScheduling;
 
     /**
      * The current service status. Must be the same names as in natural Service.StatusIndicator.
@@ -1618,7 +1635,7 @@ public class ServiceContext
     final static ThreadLocal<ServiceContext[]> s_tloContext = ThreadLocal.withInitial(() -> new ServiceContext[1]);
 
     /**
-     * VarHandle for {@link #m_fLockScheduling}.
+     * VarHandle for {@link #m_lLockScheduling}.
      */
     final static VarHandle SCHEDULING_LOCK_HANDLE;
 
@@ -1627,7 +1644,7 @@ public class ServiceContext
         try
             {
             SCHEDULING_LOCK_HANDLE = MethodHandles.lookup().findVarHandle(ServiceContext.class,
-                "m_fLockScheduling", boolean.class);
+                "m_lLockScheduling", long.class);
             }
         catch (IllegalAccessException | NoSuchFieldException e)
             {
