@@ -442,7 +442,12 @@ public class CallChain
     @Override
     public String toString()
         {
-        return "depth=" + getDepth();
+        return f_aMethods.length == 0
+            ? "empty"
+            : f_aMethods[0].getIdentity().getSignature().getValueString() +
+                (isNative()
+                    ? "; native"
+                    : "; depth=" + getDepth());
         }
 
 

@@ -508,6 +508,12 @@ public class xClass
                 }
             return false;
             }
+
+        @Override
+        public String toString()
+            {
+            return "(Class) " + getType().getParamType(0);
+            }
         }
 
 
