@@ -5,7 +5,7 @@ class ServerDBMap<Key extends immutable Const, Value extends immutable Const>
     {
     construct(db.DBObject? parent, String name)
         {
-        construct ServerDBObject(parent, name);
+        construct ServerDBObject(parent, DBMap, name);
 
         contents = new HashMap<Key, Value>();
         dates    = new HashMap<Key, DateTime>();

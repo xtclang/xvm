@@ -5,9 +5,10 @@ package imdb
     class ServerDBObject
             implements db.DBObject
         {
-        construct(db.DBObject? parent, String name)
+        construct(db.DBObject? parent, DBCategory category, String name)
             {
             dbParent   = parent;
+            dbCategory = category;
             dbName     = name;
             dbChildren = Map:[];
             }
@@ -17,6 +18,9 @@ package imdb
 
         @Override
         public/private String dbName;
+
+        @Override
+        public/private DBCategory dbCategory;
 
         @Override
         public/protected Map<String, db.DBObject> dbChildren;
@@ -29,7 +33,7 @@ package imdb
         {
         construct()
             {
-            construct ServerDBObject(Null, "");
+            construct ServerDBObject(Null, DBSchema, "");
             }
 
         @Override
