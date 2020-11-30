@@ -1610,7 +1610,7 @@ public class ServiceContext
      * the context is not longer scheduled.
      * <p>
      * The lock is implemented as a volatile counter, the thread which transitions from 0 to 1 becomes
-     * the lock holder will release the lock by setting back via a getAndSet(0), which if it yeilds
+     * the lock holder will release the lock by setting back via a getAndSet(0), which if it yields
      * a prior value of something other then 1 indicates lock contention.
      */
     volatile long m_lLockScheduling;

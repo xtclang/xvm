@@ -80,7 +80,8 @@ module TestServices
             }
 
         Int responded = 0;
-        for (Int i : 0..4)
+        Int count     = 5;
+        for (Int i : [0..count))
             {
             console.println($"{tag()} calling service future-style: {i}");
             @Future Int result = svc.calcSomethingBig(Duration.ofSeconds(i));
@@ -88,7 +89,7 @@ module TestServices
                 {
                 console.println($"{tag()} result={(n ?: e ?: "???")}");
                 // when the last result comes back - shut down
-                if (++responded == 5)
+                if (++responded == count)
                     {
                     svc.done = True;
                     }

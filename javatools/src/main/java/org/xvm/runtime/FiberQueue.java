@@ -14,26 +14,26 @@ public class FiberQueue
 
     private int m_ixHead = -1; // head
     private int m_ixTail = 0;  // past the tail - insertion point
-    private int m_cSize = 0;
+    private int m_cSize  = 0;
 
     public void add(Frame frame)
         {
-        ensureCapacity(++m_cSize);
+        Frame[] aFrame = ensureCapacity(++m_cSize);
 
         int iInsert = m_ixTail;
 
-        if (m_aFrame[iInsert] != null)
+        if (aFrame[iInsert] != null)
             {
             compact();
             iInsert = m_ixTail;
             }
-        m_aFrame[iInsert] = frame;
+        aFrame[iInsert] = frame;
 
         if (m_ixHead < 0)
             {
             m_ixHead = iInsert;
             }
-        m_ixTail = (iInsert + 1) % m_aFrame.length;
+        m_ixTail = (iInsert + 1) % aFrame.length;
         }
 
     public boolean isEmpty()
@@ -118,7 +118,7 @@ public class FiberQueue
         return null;
         }
 
-    // return the priority of the fiber at the specified index and update the cache indexes:
+    // return the priority of the fiber at the specified index:
     // [2]  a waiting fiber that is marked as "ready"
     // [1]  initial associated or yielded
     // [0]  initial new
@@ -276,31 +276,46 @@ public class FiberQueue
         return frame;
         }
 
-    private void ensureCapacity(int cCapacity)
+    private Frame[] ensureCapacity(int cCapacity)
         {
-        if (cCapacity > m_aFrame.length)
+        Frame[] aFrame = m_aFrame;
+        int     cOld   = aFrame.length;
+        if (cCapacity > cOld)
             {
-            int cNewCapacity = cCapacity + (cCapacity >> 2); // 1.25
+            int     cNew = Math.max(cCapacity, cOld + (cOld >> 2)); // 1.25
+            Frame[] aNew = new Frame[cNew];
 
-            Frame[] aNew = new Frame[cNewCapacity];
-
-            System.arraycopy(m_aFrame, 0, aNew, 0, m_aFrame.length);
-            m_aFrame = aNew;
+            assert m_ixHead == m_ixTail;
+            if (m_ixHead == 0)
+                {
+                System.arraycopy(aFrame, 0, aNew, 0, cOld);
+                }
+            else
+                {
+                // copy and re-arrange
+                int cHead = cOld - m_ixHead;
+                System.arraycopy(aFrame, m_ixHead, aNew, 0,     cHead);
+                System.arraycopy(aFrame, 0       , aNew, cHead, m_ixHead);
+                m_ixHead = 0;
+                m_ixTail = cOld;
+                }
+            m_aFrame = aFrame = aNew;
             }
+        return aFrame;
         }
 
     // move all the not-empty spaces toward the head
     private void compact()
         {
         Frame[] aFrame  = m_aFrame;
-        int     cFrames = m_aFrame.length;
+        int     cFrames = aFrame.length;
 
         assert aFrame[m_ixHead] != null;
 
         int iFrom = (m_ixHead + 1) % cFrames;
         int iTo   = iFrom;
 
-        for (int i = 1, c = aFrame.length; i < c; i++)
+        for (int i = 1; i < cFrames; i++)
             {
             Frame frame = aFrame[iFrom];
             if (frame != null)
