@@ -292,8 +292,7 @@ public class ServiceContext
         // to release again, and is thus safe.
 
         long lLockPreState = m_lLockScheduling; // read lock state prior to isContended check
-        if (isContended() || ((long) SCHEDULING_LOCK_HANDLE.getAndSet(this, 0L)
-            != lLockPreState && tryAcquireSchedulingLock()))
+        if (isContended() || !SCHEDULING_LOCK_HANDLE.compareAndSet(this, lLockPreState, 0L))
             {
             // we've detected service or lock contention, reschedule
             f_container.schedule(this);
