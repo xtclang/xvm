@@ -1074,7 +1074,16 @@ public class FileStructure
     @Override
     public ErrorListener getErrorListener()
         {
-        return m_errs == null ? ErrorListener.RUNTIME : m_errs;
+        ErrorListener errs = m_errs;
+        if (errs == null)
+            {
+            ConstantPool poolCurrent = ConstantPool.getCurrentPool();
+            if (poolCurrent != m_pool)
+                {
+                errs = poolCurrent.getErrorListener();
+                }
+            }
+        return errs == null ? ErrorListener.RUNTIME : errs;
         }
 
     @Override
