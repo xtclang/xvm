@@ -435,11 +435,10 @@ public abstract class Utils
                         return Op.R_EXCEPTION;
 
                     default:
-                        if (iResult >= 0)
+                        // only the very last continuation can return a specific op index
+                        // (see OpCondJump) or an Op.R_RETURN
+                        if (index + 1 == f_list.size())
                             {
-                            // only the very last continuation can return a specific op index
-                            // (see OpCondJump)
-                            assert index + 1 == f_list.size();
                             return iResult;
                             }
                         throw new IllegalStateException();
