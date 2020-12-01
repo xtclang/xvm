@@ -37,13 +37,13 @@ interface Transaction<Schema extends RootSchema>
         {
         if (pending)
             {
-            if (e != Null)
+            if (e == Null)
                 {
-                rollback();
+                commit();
                 }
             else
                 {
-                commit();
+                rollback();
                 }
 
             assert !pending;

@@ -145,6 +145,12 @@ class ClientAddressBookSchema
             }
 
         @Override
+        Boolean pending.get()
+            {
+            return this.ClientAddressBookSchema.transaction == this;
+            }
+
+        @Override
         Boolean commit()
             {
             try

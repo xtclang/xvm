@@ -40,7 +40,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.CanonicalizedTypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
@@ -138,6 +137,10 @@ public class xRTType
         structType.findMethod("equals",   3).markNative();
         structType.findMethod("compare",  3).markNative();
         structType.findMethod("hashCode", 2).markNative();
+
+        // while the natural "isA()" implementation is almost correct, we need to deal with
+        // "foreign" types, which requires a native implementation
+        structType.findMethod("isA"    , 1).markNative();
 
         pool().typeType().invalidateTypeInfo();
         }
@@ -248,6 +251,9 @@ public class xRTType
         TypeHandle hType = (TypeHandle) hTarget;
         switch (method.getName())
             {
+            case "isA":
+                return invokeIsA(frame, hType, (TypeHandle) hArg, iReturn);
+
             case "add":
                 return invokeAdd(frame, hType, hArg, iReturn);
 
@@ -977,7 +983,7 @@ public class xRTType
     /**
      * Implementation for: {@code conditional Access accessSpecified()}.
      */
-    public int invokeAccessSpecified(Frame frame, TypeHandle hType, int[] aiReturn)
+    protected int invokeAccessSpecified(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         TypeConstant type = hType.getDataType();
         if (type.isAccessSpecified())
@@ -993,7 +999,7 @@ public class xRTType
     /**
      * Implementation for: {@code Type!<> annotate(Annotation annotation)}.
      */
-    public int invokeAnnotate(Frame frame, TypeHandle hType, ObjectHandle hArg, int iReturn)
+    protected int invokeAnnotate(Frame frame, TypeHandle hType, ObjectHandle hArg, int iReturn)
         {
         ConstantPool  pool     = frame.poolContext();
         TypeConstant  typeThis = hType.getDataType();
@@ -1023,7 +1029,7 @@ public class xRTType
     /**
      * Implementation for: {@code conditional Annotation annotated()}.
      */
-    public int invokeAnnotated(Frame frame, TypeHandle hType, int[] aiReturn)
+    protected int invokeAnnotated(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         if (hType.isForeign())
             {
@@ -1103,7 +1109,7 @@ public class xRTType
     /**
      * Implementation for: {@code conditional Type!<> contained()}.
      */
-    public int invokeContained(Frame frame, TypeHandle hType, int[] aiReturn)
+    protected int invokeContained(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         TypeConstant typeTarget = hType.getDataType();
         // REVIEW CP: include PropertyClassTypeConstant?
@@ -1121,7 +1127,7 @@ public class xRTType
     /**
      * Implementation for: {@code conditional Class fromClass()}.
      */
-    public int invokeFromClass(Frame frame, TypeHandle hType, int[] aiReturn)
+    protected int invokeFromClass(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         if (!hType.isForeign())
             {
@@ -1141,7 +1147,7 @@ public class xRTType
     /**
      * Implementation for: {@code conditional Property fromProperty()}.
      */
-    public int invokeFromProperty(Frame frame, TypeHandle hType, int[] aiReturn)
+    protected int invokeFromProperty(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         if (!hType.isForeign())
             {
@@ -1167,7 +1173,7 @@ public class xRTType
     /**
      * Implementation for: {@code conditional Type!<> modifying()}.
      */
-    public int invokeModifying(Frame frame, TypeHandle hType, int[] aiReturn)
+    protected int invokeModifying(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         TypeConstant type = hType.getDataType();
         return type.isModifyingType()
@@ -1179,7 +1185,7 @@ public class xRTType
     /**
      * Implementation for: {@code conditional String named()}.
      */
-    public int invokeNamed(Frame frame, TypeHandle hType, int[] aiReturn)
+    protected int invokeNamed(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         String       sName = null;
         TypeConstant type  = hType.getDataType();
@@ -1216,7 +1222,7 @@ public class xRTType
     /**
      * Implementation for: {@code conditional Type!<>[] parameterized()}.
      */
-    public int invokeParameterized(Frame frame, TypeHandle hType, int[] aiReturn)
+    protected int invokeParameterized(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         TypeConstant type = hType.getDataType();
         if (!type.isParamsSpecified())
@@ -1239,7 +1245,7 @@ public class xRTType
     /**
      * Implementation for: {@code Type!<> parameterize(Type!<>... paramTypes)}.
      */
-    public int invokeParameterize(Frame frame, TypeHandle hType, ObjectHandle hArg, int iReturn)
+    protected int invokeParameterize(Frame frame, TypeHandle hType, ObjectHandle hArg, int iReturn)
         {
         if (hType.isForeign())
             {
@@ -1289,7 +1295,7 @@ public class xRTType
     /**
      * Implementation for: {@code conditional Type!<> purify()}.
      */
-    public int invokePurify(Frame frame, TypeHandle hType, int iReturn)
+    protected int invokePurify(Frame frame, TypeHandle hType, int iReturn)
         {
         return frame.assignValue(iReturn, hType); // TODO GG - implement Pure type constant etc.
         }
@@ -1297,7 +1303,7 @@ public class xRTType
     /**
      * Implementation for: {@code conditional (Type!<>, Type!<>) relational()}.
      */
-    public int invokeRelational(Frame frame, TypeHandle hType, int[] aiReturn)
+    protected int invokeRelational(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         ConstantPool pool = frame.poolContext();
         TypeConstant type = hType.getDataType();
@@ -1308,6 +1314,15 @@ public class xRTType
                 : frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
+    /**
+     * Implementation for: {@code Boolean isA(Type! that)}.
+     */
+    protected int invokeIsA(Frame frame, TypeHandle hThis, TypeHandle hThat, int iReturn)
+        {
+        TypeConstant typeThis = hThis.getUnsafeType();
+        TypeConstant typeThat = hThat.getUnsafeType();
+        return frame.assignValue(iReturn, xBoolean.makeHandle(typeThis.isA(typeThat)));
+        }
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -1579,19 +1594,6 @@ public class xRTType
             return this;
             }
 
-        @Override
-        public TypeConstant getType()
-            {
-            return f_typeForeign == null
-                ? super.getType()
-                : f_typeForeign;
-            }
-
-        public boolean isForeign()
-            {
-            return f_typeForeign != null;
-            }
-
         public TypeConstant getDataType()
             {
             return getType().getParamType(0);
@@ -1600,6 +1602,22 @@ public class xRTType
         public TypeConstant getOuterType()
             {
             return getType().getParamType(1);
+            }
+
+        /**
+         * @return true iff this type handle represents a type from a "foreign" type system
+         */
+        public boolean isForeign()
+            {
+            return f_typeForeign != null;
+            }
+
+        /**
+         * @return a TypeConstant that *may* belong to a "foreign" type system
+         */
+        public TypeConstant getUnsafeType()
+            {
+            return f_typeForeign == null ? super.getType() : f_typeForeign;
             }
 
         @Override
@@ -1627,6 +1645,12 @@ public class xRTType
             {
             return obj instanceof TypeHandle &&
                     this.getDataType().equals(((TypeHandle) obj).getDataType());
+            }
+
+        @Override
+        public String toString()
+            {
+            return "(Type) " + getDataType().getValueString();
             }
 
         private final TypeConstant f_typeForeign;
