@@ -126,7 +126,20 @@ module TestRunner.xtclang.org
             console.println($"found {dbModuleName}");
             ModuleTemplate dbModuleTemplate = repository.getModule(dbModuleName);
 
-            Injector  dbInjector  = new Injector();
+            // give the db container the real console
+            Injector dbInjector = new Injector()
+                {
+                @Override
+                Object getResource(Type type, String name)
+                    {
+                    if (type.isA(Console))
+                        {
+                        return console;
+                        }
+                    return super(type, name);
+                    }
+                };
+
             Container dbContainer = new Container(dbModuleTemplate, Lightweight, repository, dbInjector);
 
             Tuple connTuple = dbContainer.invoke("simulateInjection", Tuple:());
@@ -144,7 +157,6 @@ module TestRunner.xtclang.org
                     return super(type, name);
                     }
                 };
-
             }
         else
             {
@@ -193,7 +205,10 @@ module TestRunner.xtclang.org
     const Injector
             implements ResourceProvider
         {
-        ConsoleBuffer consoleBuffer = new ConsoleBuffer(new ConsoleBack());
+        @Lazy ConsoleBuffer consoleBuffer.calc()
+            {
+            return new ConsoleBuffer(new ConsoleBack());
+            }
 
         /**
          * The "client" side of the ConsoleBuffer that operates in the injected space.
