@@ -81,11 +81,6 @@ public class AnnotationExpression
         return exprType;
         }
 
-    public List<Expression> getArguments()
-        {
-        return args;
-        }
-
     @Override
     public boolean isConstant()
         {
@@ -138,15 +133,15 @@ public class AnnotationExpression
             }
 
         Constant         constClass  = toTypeExpression().getIdentityConstant();
-        List<Expression> args        = getArguments();
+        List<Expression> listArgs    = args;
         Constant[]       aconstArgs  = Constant.NO_CONSTS;
-        int              cArgs       = args == null ? 0 : args.size();
+        int              cArgs       = listArgs == null ? 0 : listArgs.size();
         if (cArgs > 0)
             {
             aconstArgs = new Constant[cArgs];
             for (int iArg = 0; iArg < cArgs; ++iArg)
                 {
-                Expression exprArg = args.get(iArg);
+                Expression exprArg = listArgs.get(iArg);
                 if (exprArg.alreadyReached(Stage.Validated))
                     {
                     aconstArgs[iArg] = exprArg.isConstant()
@@ -245,13 +240,13 @@ public class AnnotationExpression
                 }
             }
 
-        List<Expression>  args  = getArguments();
-        int               cArgs = args == null ? 0 : args.size();
-        ValidatingContext ctx   = new ValidatingContext(getComponent().getContainingClass());
+        List<Expression>  listArgs = args;
+        int               cArgs    = listArgs == null ? 0 : listArgs.size();
+        ValidatingContext ctx      = new ValidatingContext(getComponent().getContainingClass());
 
         // find a matching constructor on the annotation class
         MethodConstant idConstruct = findMethod(ctx, typeAnno, infoAnno,
-                    "construct", args, MethodKind.Constructor, true, false, TypeConstant.NO_TYPES, errs);
+                    "construct", listArgs, MethodKind.Constructor, true, false, TypeConstant.NO_TYPES, errs);
 
         if (idConstruct == null)
             {
@@ -275,7 +270,7 @@ public class AnnotationExpression
 
             for (int iArg = 0; iArg < cArgs; ++iArg)
                 {
-                Expression exprOld = args.get(iArg);
+                Expression exprOld = listArgs.get(iArg);
                 int        iParam  = exprOld instanceof LabeledExpression
                         ? method.getParam(((LabeledExpression) exprOld).getName()).getIndex()
                         : iArg;
@@ -290,7 +285,7 @@ public class AnnotationExpression
                     {
                     if (exprNew != exprOld)
                         {
-                        args.set(iArg, exprNew);
+                        listArgs.set(iArg, exprNew);
                         }
 
                     // update the Annotation directly
@@ -325,7 +320,7 @@ public class AnnotationExpression
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         ConstantPool     pool     = pool();
-        List<Expression> listArgs = getArguments();
+        List<Expression> listArgs = args;
         int              cArgs    = listArgs == null ? 0 : listArgs.size();
 
         NamedTypeExpression exprTypeOld = toTypeExpression();
@@ -369,6 +364,17 @@ public class AnnotationExpression
             {
             log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getName());
             return null;
+            }
+
+        if (cArgs > 0 && containsNamedArgs(listArgs))
+            {
+            listArgs = rearrangeNamedArgs((MethodStructure) idConstruct.getComponent(), listArgs, errs);
+            if (listArgs == null)
+                {
+                return null;
+                }
+            args  = listArgs;
+            cArgs = listArgs.size();
             }
 
         // validate the arguments

@@ -41,7 +41,7 @@ public class Register
         m_type = type;
         m_iArg = iArg;
         m_fRO  = isPredefinedReadonly(iArg);
-        m_fOriginallyUnknown = iArg == UNKNOWN;
+        f_fOriginallyUnknown = iArg == UNKNOWN;
         }
 
     /**
@@ -229,7 +229,7 @@ public class Register
      */
     public void resetIndex()
         {
-        if (m_fOriginallyUnknown)
+        if (f_fOriginallyUnknown)
             {
             m_iArg = UNKNOWN;
             }
@@ -730,5 +730,5 @@ public class Register
     /**
      * A record of whether the register was created without its index being known.
      */
-    private boolean m_fOriginallyUnknown;
+    private final boolean f_fOriginallyUnknown;
     }

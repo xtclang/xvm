@@ -714,21 +714,17 @@ public class InvocationExpression
                 break Validate;
                 }
 
+            List<Expression> listArgs = args;
             if (m_fNamedArgs)
                 {
-                Map<String, Expression> mapNamedExpr = extractNamedArgs(args, errs);
-                if (mapNamedExpr == null)
-                    {
-                    break Validate;
-                    }
-
                 assert argMethod instanceof MethodConstant;
-                args = rearrangeNamedArgs(m_method, args, mapNamedExpr, errs);
-                if (args == null)
+                listArgs = rearrangeNamedArgs(m_method, listArgs, errs);
+                if (listArgs == null)
                     {
                     // invalid names encountered
                     break Validate;
                     }
+                args = listArgs;
                 }
 
             // when the expression is a name, and it is NOT a ".name", then we have to
@@ -771,7 +767,7 @@ public class InvocationExpression
                 }
             else if (m_fBjarne)
                 {
-                args.add(0, exprLeft);
+                listArgs.add(0, exprLeft);
                 }
 
             // handle conversion to function
@@ -811,7 +807,7 @@ public class InvocationExpression
                 TypeConstant[]  atypeParams = idMethod.getRawParams();
                 int             cTypeParams = method.getTypeParamCount();
                 int             cParams     = method.getVisibleParamCount();
-                int             cArgs       = args.size();
+                int             cArgs       = listArgs.size();
 
                 if (cTypeParams > 0)
                     {
@@ -837,13 +833,13 @@ public class InvocationExpression
 
                 // test the "regular fit" first and Tuple afterwards
                 TypeConstant typeTuple = null;
-                if (!testExpressions(ctx, args, atypeParams).isFit())
+                if (!testExpressions(ctx, listArgs, atypeParams).isFit())
                     {
                     // otherwise, check the tuple based invoke (see AstNode.findMethod)
                     if (cArgs == 1)
                         {
                         typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeParams);
-                        if (!args.get(0).testFit(ctx, typeTuple, null).isFit())
+                        if (!listArgs.get(0).testFit(ctx, typeTuple, null).isFit())
                             {
                             // the regular "validateExpressions" call will report an error
                             typeTuple = null;
@@ -854,11 +850,11 @@ public class InvocationExpression
                 TypeConstant[] atypeArgs;
                 if (typeTuple == null)
                     {
-                    atypeArgs = validateExpressions(ctx, args, atypeParams, errs);
+                    atypeArgs = validateExpressions(ctx, listArgs, atypeParams, errs);
                     }
                 else
                     {
-                    atypeArgs = validateExpressionsFromTuple(ctx, args, typeTuple, errs);
+                    atypeArgs = validateExpressionsFromTuple(ctx, listArgs, typeTuple, errs);
                     m_fTupleArg = true;
                     }
 

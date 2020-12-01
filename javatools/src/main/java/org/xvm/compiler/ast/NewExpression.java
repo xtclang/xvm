@@ -650,7 +650,7 @@ public class NewExpression
 
         if (fValid)
             {
-            List<Expression> listArgs = this.args;
+            List<Expression> listArgs = args;
             MethodConstant   idConstruct;
             if (fAnon)
                 {
@@ -747,20 +747,12 @@ public class NewExpression
                     {
                     if (containsNamedArgs(listArgs))
                         {
-                        Map<String, Expression> mapNamedExpr = extractNamedArgs(listArgs, errs);
-                        if (mapNamedExpr == null)
+                        listArgs = rearrangeNamedArgs(constructor, listArgs, errs);
+                        if (listArgs == null)
                             {
                             fValid = false;
                             }
-                        else
-                            {
-                            args = listArgs =
-                                    rearrangeNamedArgs(constructor, listArgs, mapNamedExpr, errs);
-                            if (listArgs == null)
-                                {
-                                fValid = false;
-                                }
-                            }
+                        args = listArgs;
                         }
 
                     fValid &= validateExpressions(ctx, listArgs, atypeArgs, errs) != null;

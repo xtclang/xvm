@@ -2273,13 +2273,7 @@ public class TypeCompositionStatement
             {
             if (containsNamedArgs(listArgs))
                 {
-                Map<String, Expression> mapNamedExpr = extractNamedArgs(listArgs, errs);
-                if (mapNamedExpr == null)
-                    {
-                    return;
-                    }
-
-                listArgs = rearrangeNamedArgs(constructSuper, listArgs, mapNamedExpr, errs);
+                listArgs = rearrangeNamedArgs(constructSuper, listArgs, errs);
                 if (listArgs == null)
                     {
                     // invalid names encountered

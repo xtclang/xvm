@@ -1428,6 +1428,22 @@ public abstract class AstNode
         }
 
     /**
+     * Rearrange the list of argument expressions for the specified method.
+     * All the missing arguments are filled with a {@link NonBindingExpression}s.
+     *
+     * @return a rearranged list of expression that matches the method's parameters
+     *         or null if an error has been reported
+     */
+    protected List<Expression> rearrangeNamedArgs(
+            MethodStructure method, List<Expression> listExprArgs, ErrorListener errs)
+        {
+        Map<String, Expression> mapNamedExpr = extractNamedArgs(listExprArgs, errs);
+        return mapNamedExpr == null
+                ? null
+                : rearrangeNamedArgs(method, listExprArgs, mapNamedExpr, errs);
+        }
+
+    /**
      * Rearrange the list of argument expressions for the specified method by taking into
      * consideration the map of named expressions. All the missing arguments are filled with
      * a {@link NonBindingExpression}s.
@@ -1436,10 +1452,8 @@ public abstract class AstNode
      *         or null if an error has been reported
      */
     protected List<Expression> rearrangeNamedArgs(
-            MethodStructure         method,
-            List<Expression>        listExprArgs,
-            Map<String, Expression> mapNamedExpr,
-            ErrorListener           errs)
+            MethodStructure method, List<Expression> listExprArgs,
+            Map<String, Expression> mapNamedExpr, ErrorListener errs)
         {
         int cParams  = method.getVisibleParamCount();
         int cArgs    = listExprArgs.size();
