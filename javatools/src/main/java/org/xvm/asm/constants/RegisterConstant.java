@@ -14,6 +14,9 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
+import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.writePackedLong;
+
 
 /**
  * Constant whose purpose is to represent a run-time register.
@@ -34,7 +37,7 @@ public class RegisterConstant
         super(pool);
 
         m_reg  = reg;
-        m_nReg = reg.isUnknown() ? Register.UNKNOWN : reg.getIndex();
+        f_nReg = reg.isUnknown() ? Register.UNKNOWN : reg.getIndex();
         }
 
     /**
@@ -50,7 +53,7 @@ public class RegisterConstant
         {
         super(pool);
 
-        m_nReg = in.readUnsignedShort();
+        f_nReg = readPackedInt(in);
         }
 
 
@@ -69,11 +72,11 @@ public class RegisterConstant
      */
     public int getRegisterIndex()
         {
-        return m_nReg == Register.UNKNOWN
+        return f_nReg == Register.UNKNOWN
                 ? m_reg.isUnknown()
                     ? Register.UNKNOWN
                     : m_reg.getIndex()
-                : m_nReg;
+                : f_nReg;
         }
 
     /**
@@ -134,7 +137,7 @@ public class RegisterConstant
         {
         super.assemble(out);
 
-        out.writeShort(m_reg.getIndex());
+        writePackedLong(out, m_reg.getIndex());
         }
 
     @Override
@@ -158,7 +161,7 @@ public class RegisterConstant
     /**
      * The register index.
      */
-    private int m_nReg;
+    private final int f_nReg;
 
     /**
      * The register.
