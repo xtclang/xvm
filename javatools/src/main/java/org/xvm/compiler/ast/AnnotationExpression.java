@@ -256,15 +256,26 @@ public class AnnotationExpression
 
         if (cArgs > 0)
             {
-            MethodStructure method = infoAnno.getMethodById(idConstruct).
-                                        getTopmostMethodStructure(infoAnno);
+            MethodStructure constructor = infoAnno.getMethodById(idConstruct).
+                                            getTopmostMethodStructure(infoAnno);
+            if (containsNamedArgs(listArgs))
+                {
+                listArgs = rearrangeNamedArgs(constructor, listArgs, errs);
+                if (listArgs == null)
+                    {
+                    return;
+                    }
+                args  = listArgs;
+                cArgs = listArgs.size();
+                }
 
             // validate the argument expressions and fix up all of the constants used as
             // arguments to construct the annotation
             TypeConstant[] atypeParams = idConstruct.getRawParams();
-            int            cAll        = method.getParamCount();
-            int            cDefault    = method.getDefaultParamCount();
+            int            cAll        = constructor.getParamCount();
+            int            cDefault    = constructor.getDefaultParamCount();
             Constant[]     aconstArgs  = new Constant[cAll];
+            boolean        fDefaults   = cArgs < cAll;
 
             assert cArgs <= cAll && cArgs >= cAll - cDefault;
 
@@ -272,40 +283,46 @@ public class AnnotationExpression
                 {
                 Expression exprOld = listArgs.get(iArg);
                 int        iParam  = exprOld instanceof LabeledExpression
-                        ? method.getParam(((LabeledExpression) exprOld).getName()).getIndex()
+                        ? constructor.getParam(((LabeledExpression) exprOld).getName()).getIndex()
                         : iArg;
 
                 Expression exprNew = exprOld.validate(ctx, atypeParams[iParam], errs);
-
-                if (exprNew == null || !exprNew.isRuntimeConstant())
-                    {
-                    exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
-                    }
-                else
+                if (exprNew != null)
                     {
                     if (exprNew != exprOld)
                         {
                         listArgs.set(iArg, exprNew);
                         }
 
-                    // update the Annotation directly
-                    // Note: this is quite unusual, in that normally things like an annotation are
-                    //       treated as a constant once instantiated, but in this case, it was
-                    //       impossible to validate the arguments of the annotation when it was
-                    //       constructed, because we were too early in the compile cycle to resolve
-                    //       any constant expressions that refer to anything _by name_
-                    aconstArgs[iParam] = exprNew.toConstant();
+                    if (exprNew.isRuntimeConstant())
+                        {
+                        // update the Annotation directly
+                        // Note: this is quite unusual, in that normally things like an annotation are
+                        //       treated as a constant once instantiated, but in this case, it was
+                        //       impossible to validate the arguments of the annotation when it was
+                        //       constructed, because we were too early in the compile cycle to resolve
+                        //       any constant expressions that refer to anything _by name_
+                        aconstArgs[iParam] = exprNew.toConstant();
+                        }
+                    else if (exprNew.isNonBinding())
+                        {
+                        fDefaults = true;
+                        }
+                    else
+                        {
+                        exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                        }
                     }
                 }
 
-            if (cArgs < cAll)
+            if (fDefaults)
                 {
                 // fill the default values
                 for (int iParam = 0; iParam < cAll; ++iParam)
                     {
                     if (aconstArgs[iParam] == null)
                         {
-                        Constant constDefault = method.getParam(iParam).getDefaultValue();
+                        Constant constDefault = constructor.getParam(iParam).getDefaultValue();
                         assert constDefault != null;
                         aconstArgs[iParam] = constDefault;
                         }

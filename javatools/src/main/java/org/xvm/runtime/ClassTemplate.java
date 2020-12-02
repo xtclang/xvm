@@ -30,6 +30,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -2229,14 +2230,28 @@ public abstract class ClassTemplate
                                 }
                             else
                                 {
-                                ObjectHandle[]  ahArgs        = new ObjectHandle[constructAnno.getMaxVars()];
-                                for (int i = 0, c = aconstArgs.length; i < c; i++)
-                                    {
-                                    ahArgs[i] = frameCaller.getConstHandle(aconstArgs[i]);
-                                    }
+                                ObjectHandle[] ahArgs = new ObjectHandle[constructAnno.getMaxVars()];
 
                                 Frame frameCtor = frameCaller.createFrame1(
                                         constructAnno, hStruct, ahArgs, Op.A_IGNORE);
+
+                                // if an annotation argument is represented by a RegisterConstant,
+                                // then it's either a default value or a current frame's register
+                                // value;
+                                // otherwise, Frame#getConstHandle() may return a deferred handle,
+                                // and since we are going to pass it as an argument for the
+                                // constructor, we need to use the constructor's frame to
+                                // [potentially] create that deferred handle
+                                for (int i = 0, c = aconstArgs.length; i < c; i++)
+                                    {
+                                    Constant constArg = aconstArgs[i];
+
+                                    ahArgs[i] = constArg instanceof RegisterConstant
+                                            ? ((RegisterConstant) constArg).getRegisterIndex() == Op.A_DEFAULT
+                                                ? ObjectHandle.DEFAULT
+                                                : frameCaller.getConstHandle(constArg)
+                                        : frameCtor.getConstHandle(constArg);
+                                    }
 
                                 prepareFinalizer(frameCtor, constructAnno, ahArgs);
 

@@ -4,6 +4,7 @@ package org.xvm.runtime.template.annotations;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -171,7 +172,8 @@ public class xAtomicVar
     @Override
     public RefHandle createRefHandle(Frame frame, TypeComposition clazz, String sName)
         {
-        return new AtomicHandle(clazz, sName, null);
+        // native handle - no further initialization is required
+        return new AtomicHandle(clazz.ensureAccess(Access.PUBLIC), sName, null);
         }
 
     @Override

@@ -4,6 +4,7 @@ package org.xvm.runtime.template.annotations;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -67,7 +68,8 @@ public class xAtomicIntNumber
     @Override
     public RefHandle createRefHandle(Frame frame, TypeComposition clazz, String sName)
         {
-        return new AtomicIntVarHandle(clazz, sName);
+        // native handle - no further initialization is required
+        return new AtomicIntVarHandle(clazz.ensureAccess(Access.PUBLIC), sName);
         }
 
     @Override

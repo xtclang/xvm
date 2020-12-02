@@ -4,9 +4,9 @@ package org.xvm.runtime.template.annotations;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -15,6 +15,10 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.runtime.template.xNullable;
+
+import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template.reflect.xRef;
 
@@ -56,13 +60,24 @@ public class xInjectedRef
             throw new IllegalArgumentException("Name is not present");
             }
 
-        AnnotatedTypeConstant typeInject = (AnnotatedTypeConstant) clazz.getType();
-        Annotation            anno       = typeInject.getAnnotation();
-        Constant[]            aParams    = anno.getParams();
-        String                sResource  = aParams.length > 0
-                ? ((StringConstant) aParams[0]).getValue()
-                : sName;
+        Annotation anno    = clazz.getType().getAnnotations()[0];
+        Constant[] aParams = anno.getParams();
 
+        Constant constName = aParams.length == 0 ? null : aParams[0];
+        String   sResource = constName instanceof StringConstant
+                                ? ((StringConstant) constName).getValue()
+                                : sName;
+        if (aParams.length < 2)
+            {
+            // opts are not specified; the handle could be trivially initialized on-the-spot
+            InjectedHandle hInject = new InjectedHandle(clazz.ensureAccess(Access.PUBLIC), sName, sResource);
+            hInject.setField("resourceName", xString.makeHandle(sResource));
+            hInject.setField("opts", xNullable.NULL);
+            return hInject;
+            }
+
+        // arguments initialization and assignment will be handled in the generic manner
+        assert clazz.isStruct();
         return new InjectedHandle(clazz, sName, sResource);
         }
 
@@ -73,13 +88,13 @@ public class xInjectedRef
         ObjectHandle   hValue    = hInjected.getReferent();
         if (hValue == null)
             {
-            TypeConstant typeEl = hInjected.getType().resolveGenericType("Referent");
+            TypeConstant typeResource = hInjected.getType().resolveGenericType("Referent");
+            String       sResource    = hInjected.getResourceName();
 
-            hValue = frame.f_context.f_container.getInjectable(frame, hInjected.getResourceName(), typeEl);
+            hValue = frame.f_context.f_container.getInjectable(frame, sResource, typeResource);
             if (hValue == null)
                 {
-                return frame.raiseException(
-                    "Unknown injectable property \"" + hInjected.getResourceName() +'"');
+                return frame.raiseException("Unknown injectable resource \"" + sResource +'"');
                 }
 
             if (Op.isDeferred(hValue))

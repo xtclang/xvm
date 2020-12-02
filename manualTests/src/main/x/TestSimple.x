@@ -1,13 +1,17 @@
 module TestSimple
     {
     @Inject Console console;
-    @Inject Timer timer;
 
-    package db import jsondb.xtclang.org;
+    @Inject(opts=Map:["shared"=True]) Random random;
 
-    void run()
+    void run( )
         {
-        Byte[] bytes = [4, 2];
-        db.dump("bytes", bytes);
+        console.println(random.int());
+
+        @Inject(resourceName="random", opts=Map:["shared"=True]) Random random1;
+        console.println(random1.int());
+
+        @Inject(resourceName="random") Random random2;
+        console.println(random2.int());
         }
     }

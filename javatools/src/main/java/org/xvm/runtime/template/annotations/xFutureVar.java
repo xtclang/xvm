@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutionException;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -350,8 +351,8 @@ public class xFutureVar
     @Override
     public RefHandle createRefHandle(Frame frame, TypeComposition clazz, String sName)
         {
-        // the future for a property needs to be initialized
-        return new FutureHandle(clazz, sName,
+        // native handle; the future for a property needs to be initialized
+        return new FutureHandle(clazz.ensureAccess(Access.PUBLIC), sName,
             frame == null ? new CompletableFuture<>() : null);
         }
 

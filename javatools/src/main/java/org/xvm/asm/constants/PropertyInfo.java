@@ -1226,9 +1226,15 @@ public class PropertyInfo
         assert isInjected();
 
         Constant[] aParams = getRefAnnotations()[0].getParams();
-        return aParams.length > 0
-                ? ((StringConstant) aParams[0]).getValue()
-                : getName();
+        if (aParams.length > 0)
+            {
+            Constant constParam = aParams[0];
+            if (constParam instanceof StringConstant)
+                {
+                return ((StringConstant) constParam).getValue();
+                }
+            }
+        return getName();
         }
 
 

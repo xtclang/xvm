@@ -247,14 +247,6 @@ public class xRef
     @Override
     public int introduceRef(Frame frame, TypeComposition clazz, String sName, int iReturn)
         {
-        if (this != INSTANCE && this != xVar.INSTANCE)
-            {
-            // native Ref/Var no need for further initialization
-            frame.introduceResolvedVar(iReturn, clazz.getType(), sName,
-                    Frame.VAR_DYNAMIC_REF, createRefHandle(frame, clazz, sName));
-            return Op.R_NEXT;
-            }
-
         RefHandle hRef;
         int       iResult;
         boolean   fStack;
@@ -262,9 +254,17 @@ public class xRef
         TypeConstant typeRef = clazz.getType();
         if (typeRef instanceof AnnotatedTypeConstant)
             {
-            hRef    = createRefHandle(frame, clazz.ensureAccess(Access.STRUCT), sName);
-            iResult = clazz.getTemplate().proceedConstruction(frame, null, true, hRef, Utils.OBJECTS_NONE, Op.A_STACK);
-            fStack  = true;
+            hRef = createRefHandle(frame, clazz.ensureAccess(Access.STRUCT), sName);
+            if (hRef.isStruct())
+                {
+                iResult = proceedConstruction(frame, null, true, hRef, Utils.OBJECTS_NONE, Op.A_STACK);
+                fStack  = true;
+                }
+            else
+                {
+                iResult = Op.R_NEXT;
+                fStack  = false;
+                }
             }
         else
             {
