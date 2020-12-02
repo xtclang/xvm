@@ -2063,7 +2063,7 @@ public abstract class Component
             // certain stage)
             if (typeContrib.isVirtualChild())
                 {
-                // check the paren't formal type
+                // check the parent's formal type
                 TypeConstant typeFormal = typeContrib.getParentType().resolveGenericType(sName);
                 if (typeFormal != null)
                     {

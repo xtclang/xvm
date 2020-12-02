@@ -2,16 +2,28 @@ module TestSimple
     {
     @Inject Console console;
 
-    @Inject(opts=Map:["shared"=True]) Random random;
-
     void run( )
         {
-        console.println(random.int());
+        new Parent<String>.Child();
+        }
 
-        @Inject(resourceName="random", opts=Map:["shared"=True]) Random random1;
-        console.println(random1.int());
+    void foo(Parent<String>.Child c)
+        {
+        }
 
-        @Inject(resourceName="random") Random random2;
-        console.println(random2.int());
+    class Parent<T>
+            implements IParent<T>
+        {
+        static class Child
+                implements IChild
+            {
+            }
+        }
+
+    interface IParent<T>
+        {
+        static interface IChild
+            {
+            }
         }
     }

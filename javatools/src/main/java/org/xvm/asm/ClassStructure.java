@@ -487,7 +487,7 @@ public class ClassStructure
      */
     public ClassStructure getVirtualChild(String sName)
         {
-        Component child = findChild(sName, true);
+        Component child = findChildDeep(sName, true);
         return child instanceof ClassStructure &&
             ((ClassStructure) child).isVirtualChild()
                 ? (ClassStructure) child
@@ -497,7 +497,12 @@ public class ClassStructure
     /**
      * Find a child with a given name in the class or any of its contributions.
      */
-    private Component findChild(String sName, boolean fAllowInto)
+    public Component findChildDeep(String sName)
+        {
+        return findChildDeep(sName, true);
+        }
+
+    private Component findChildDeep(String sName, boolean fAllowInto)
         {
         Component child = getChild(sName);
         if (child != null)
@@ -509,6 +514,7 @@ public class ClassStructure
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
 
+            // TODO: allow union types to be traversed as well
             if (   typeContrib.containsUnresolved()
                || !typeContrib.isExplicitClassIdentity(true)) // disregard relational type contributions
                 {
@@ -530,7 +536,7 @@ public class ClassStructure
                     {
                     ClassStructure clzContrib = (ClassStructure)
                             typeContrib.getSingleUnderlyingClass(true).getComponent();
-                    child = clzContrib.findChild(sName, false);
+                    child = clzContrib.findChildDeep(sName, false);
                     if (child != null)
                         {
                         return child;
@@ -1325,6 +1331,7 @@ public class ClassStructure
                                 {
                                 ConstantPool pool = getConstantPool();
                                 clzSuper  = (ClassStructure) o;
+                                assert clzSuper.isVirtualChild();
                                 typeSuper = pool.ensureVirtualChildTypeConstant(
                                         ((ClassStructure) component).getFormalType(), idThis.getName());
                                 if (clzSuper.isParameterized())

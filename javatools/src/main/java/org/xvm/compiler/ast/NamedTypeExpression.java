@@ -1119,7 +1119,35 @@ public class NamedTypeExpression
                         {
                         for (Token name : names)
                             {
-                            type = pool.ensureVirtualChildTypeConstant(type, name.getValueText());
+                            if (!type.isExplicitClassIdentity(true))
+                                {
+                                log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, type.getValueString());
+                                break;
+                                }
+
+                            ClassConstant  idLeft  = (ClassConstant) type.getSingleUnderlyingClass(true);
+                            ClassStructure clzLeft = (ClassStructure) idLeft.getComponent();
+                            String         sChild  = name.getValueText();
+                            Component      child   = clzLeft.findChildDeep(sChild);
+                            if (child instanceof ClassStructure)
+                                {
+                                ClassStructure clzChild = (ClassStructure) child;
+
+                                if (clzChild.isVirtualChild())
+                                    {
+                                    type = pool.ensureVirtualChildTypeConstant(type, sChild);
+                                    }
+                                else
+                                    {
+                                    type = clzChild.getIdentityConstant().getType();
+                                    }
+                                }
+                            else
+                                {
+                                log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE,
+                                        child.getIdentityConstant());
+                                break;
+                                }
                             }
                         }
                     return type;

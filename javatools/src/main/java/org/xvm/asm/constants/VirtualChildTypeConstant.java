@@ -136,6 +136,12 @@ public class VirtualChildTypeConstant
                 }
             }
 
+        // there is a possibility of a union type contribution, e.g.:
+        //      mixin ListFreezer<Element extends ImmutableAble>
+        //        into List<Element> + CopyableCollection<Element>
+        // in which case parent.getVirtualChild(sChild) fails to find the child;
+        // TODO it could be too early in the compilation cycle to use the TypeInfo
+        // so the logic below may need to be removed and getVirtualChild() made more accommodating
         ChildInfo info = typeParent.ensureTypeInfo().getChildInfosByName().get(sChild);
         if (info != null)
             {

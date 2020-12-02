@@ -131,7 +131,7 @@ public abstract class OpCallable extends Op
      * The run-time type of the parent could extend the compile-time type and that parent
      * may have a corresponding child extension.
      *
-     * @return a child constructor for the specified parent
+     * @return a child constructor for the specified parent; null if it cannot be found
      */
     protected MethodStructure getChildConstructor(Frame frame, ObjectHandle hParent)
         {
@@ -162,12 +162,14 @@ public abstract class OpCallable extends Op
             {
             // find the run-time target's constructor;
             // note that we don't need to resolve the actual types
-            String         sChild      = clzTargetC.getSimpleName();
             ClassStructure clzParentR  = (ClassStructure) idParentR.getComponent();
-            ClassStructure clzChild    = clzParentR.getVirtualChild(sChild);
-            TypeInfo       infoTarget  = clzChild.getFormalType().ensureTypeInfo();
-
-            MethodInfo info = infoTarget.getMethodBySignature(
+            ClassStructure clzChild    = clzParentR.getVirtualChild(clzTargetC.getSimpleName());
+            if (clzChild == null)
+                {
+                return null;
+                }
+            TypeInfo   infoTarget = clzChild.getFormalType().ensureTypeInfo();
+            MethodInfo info       = infoTarget.getMethodBySignature(
                 constructor.getIdentityConstant().getSignature());
             constructor = info.getTopmostMethodStructure(infoTarget);
             }
