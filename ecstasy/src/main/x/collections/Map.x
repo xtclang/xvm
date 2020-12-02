@@ -570,7 +570,10 @@ interface Map<Key, Value>
          * @throws ReadOnly    if an attempt is made to write the value of the entry and the map
          *                     is not `inPlace`, or does not support mutation
          */
-        void delete();
+        void delete()
+            {
+            throw new ReadOnly();
+            }
 
         /**
          * If the entry is a temporary object, for example an entry that can be re-used to represent

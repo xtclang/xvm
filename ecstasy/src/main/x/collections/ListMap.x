@@ -32,6 +32,7 @@ class ListMap<Key, Value>
         {
         listKeys = new Array(initCapacity);
         listVals = new Array(initCapacity);
+        inPlace  = True;
         }
 
     /**
@@ -45,6 +46,7 @@ class ListMap<Key, Value>
         {
         listKeys = keys;
         listVals = vals;
+        inPlace  = False;
 
         // TODO various checks, and do we need to copy the array(s) if they aren't immutable?
         assert keys.size == vals.size;
@@ -59,6 +61,8 @@ class ListMap<Key, Value>
 
 
     // ----- internal ------------------------------------------------------------------------------
+
+    @Override public/private Boolean inPlace;
 
     /**
      * The list of keys in the map, in order of insertion.
