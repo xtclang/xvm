@@ -693,6 +693,13 @@ public abstract class TypeConstant
             return this;
             }
 
+        if (that.isExplicitClassIdentity(false) &&
+            that.getExplicitClassFormat() == Component.Format.ENUMVALUE
+            || that.isOnlyNullable())
+            {
+            return that;
+            }
+
         // theoretically speaking, we could have done the same Enum value check for "that" type
         // as above; the problem is, however, that this method is expected to return a type that is
         // equal to or narrower than "this" and returning "that" might may break that expectation

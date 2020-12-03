@@ -900,7 +900,7 @@ public abstract class Expression
             return false;
             }
 
-        TypeConstant typeOutResolved = typeOut.resolveGenerics(pool(), ctx.getThisType());
+        TypeConstant typeOutResolved = typeOut.resolveGenerics(pool(), ctx.getFormalTypeResolver());
         return typeOutResolved != typeOut && typeIn.isA(typeOutResolved);
         }
 
@@ -919,7 +919,7 @@ public abstract class Expression
             return false;
             }
 
-        TypeConstant typeOutResolved = typeOut.resolveGenerics(pool(), ctx.getThisType());
+        TypeConstant typeOutResolved = typeOut.resolveGenerics(pool(), ctx.getFormalTypeResolver());
         return typeOutResolved != typeOut && typeIn.isAssignableTo(typeOutResolved);
         }
 

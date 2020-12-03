@@ -1263,7 +1263,8 @@ public class Context
         {
         // a formal type could be narrowed to its constraint, but is not assignable from it
         assert typeNarrow.isA(reg.getType()) || typeNarrow.isA(reg.getOriginalType()) ||
-               reg.getOriginalType().isFormalType();
+               reg.getOriginalType().isFormalType() ||
+               reg.getOriginalType().getParamType(0).isFormalType();
 
         replaceArgument(sName, branch, reg.narrowType(typeNarrow));
         }
