@@ -93,8 +93,7 @@ const Schema
             // add a reflection mapping that "handles" any object (by providing a more specific
             // mapping for whatever object type is requested)
             import mapping.*;
-            // TODO GG (??): val mapping = new @Narrowable ReflectionMapping("Object", Object, []);
-            val mapping = new @Narrowable ReflectionMapping<Object, Object:struct>("Object", Object, []);
+            Mapping<Object> mapping = new @Narrowable ReflectionMapping("Object", Object, []);
             mappingByType.putIfAbsent(Object, mapping);
             typeByName.putIfAbsent("Object", Object);
             }
