@@ -3,15 +3,10 @@
  * other words, it is not held in a complex container such as a `DBList` or a `DBMap`. Instead, the
  * singleton container contains a single value, which can be obtained or replaced.
  */
-interface DBSingleton<Value extends immutable Const>
+interface DBSingleton<Value>
+// TODO GG interface DBSingleton<Value extends immutable Const>
         extends DBObject
     {
-    @Override
-    @RO Boolean transactional.get()
-        {
-        return True;
-        }
-
     /**
      * Obtain the singleton value.
      *
@@ -23,6 +18,26 @@ interface DBSingleton<Value extends immutable Const>
      * Modify the singleton by replacing the value.
      *
      * @param value  the new value for the singleton
+     *
+     * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
-    void set(Value value);
+    void set(Value value)
+        {
+        throw new ReadOnly($"Singleton value modification is not supported for {dbPath}");
+        }
+
+
+    // ----- DBObject methods ----------------------------------------------------------------------
+
+    @Override
+    @RO DBCategory dbCategory.get()
+        {
+        return DBSingleton;
+        }
+
+    @Override
+    @RO Boolean transactional.get()
+        {
+        return True;
+        }
     }

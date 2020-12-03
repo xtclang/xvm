@@ -4,6 +4,14 @@
 interface DBSchema
         extends DBObject
     {
+    // ----- DBObject methods ----------------------------------------------------------------------
+
+    @Override
+    @RO DBCategory dbCategory.get()
+        {
+        return DBSchema;
+        }
+
     @Override
     @RO Boolean transactional.get()
         {

@@ -26,11 +26,23 @@ interface DBQueue<Element>
      */
     List<Element> takeAll();
 
+
+    // ----- DBObject methods ----------------------------------------------------------------------
+
+    @Override
+    @RO DBCategory dbCategory.get()
+        {
+        return DBSchema;
+        }
+
     @Override
     @RO Boolean transactional.get()
         {
         return True;
         }
+
+
+    // ----- transaction records -------------------------------------------------------------------
 
     /**
      * Represents a change to a database queue.
@@ -39,7 +51,8 @@ interface DBQueue<Element>
      * expensive to provide to the caller.
      */
     @Override
-    interface Change
+    static interface Change
+            extends DBObject.Change
         {
         /**
          * The elements appended to the `Queue`.

@@ -19,4 +19,13 @@ interface DBFunction<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends T
      * The callable function that can be used to invoke this database procedure.
      */
     @RO Function<ParamTypes, ReturnTypes> callable;
+
+
+    // ----- DBObject methods ----------------------------------------------------------------------
+
+    @Override
+    @RO DBCategory dbCategory.get()
+        {
+        return DBFunction;
+        }
     }

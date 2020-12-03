@@ -32,6 +32,8 @@
 interface DBCounter
         extends DBSingleton<Int>
     {
+    // ----- DBSingleton methods -------------------------------------------------------------------
+
     /**
      * Obtain the counter value without modifying the counter.
      *
@@ -173,13 +175,23 @@ interface DBCounter
         }
 
 
+    // ----- DBObject methods ----------------------------------------------------------------------
+
+    @Override
+    @RO DBCategory dbCategory.get()
+        {
+        return DBCounter;
+        }
+
+
     // ----- transaction records -------------------------------------------------------------------
 
     /**
      * Represents values emitted and/or operations conducted by a transactional database counter.
      */
     @Override
-    interface Change
+    static interface Change
+            extends DBObject.Change
         {
         /**
          * The amount that the counter was adjusted by the transaction. In theory, a transactional

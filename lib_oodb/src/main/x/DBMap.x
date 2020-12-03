@@ -8,6 +8,23 @@ interface DBMap<Key, Value>
         extends Map<Key, Value>
         extends DBObject
     {
+    // ----- DBObject methods ----------------------------------------------------------------------
+
+    @Override
+    @RO DBCategory dbCategory.get()
+        {
+        return DBSingleton;
+        }
+
+    @Override
+    @RO Boolean transactional.get()
+        {
+        return True;
+        }
+
+
+    // ----- Map.Entry extensions ------------------------------------------------------------------
+
     @Override
     interface Entry
         {
@@ -24,17 +41,14 @@ interface DBMap<Key, Value>
 
         /**
          * If the DBMap is audited, then this contains previous versions of the Entry, indexed by
-         * DateTime. If the DBMap is not audited, then this list will contain the current Entry, and
-         * if a modification is in the process of occurring, the original Entry.
+         * DateTime. If the DBMap is not audited, then this list will contain at least the current
+         * Entry, and if a modification is in the process of occurring, the original Entry.
          */
         @RO List<Entry> changeLog;
         }
 
-    @Override
-    @RO Boolean transactional.get()
-        {
-        return True;
-        }
+
+    // ----- DBMap Change information --------------------------------------------------------------
 
     /**
      * Represents a change to a database `Map`. Changes are represented by the key/value pairs that
@@ -45,7 +59,8 @@ interface DBMap<Key, Value>
      * * A "delete" is represented by an entry in the [removed] map;
      */
     @Override
-    interface Change
+    static interface Change
+            extends DBObject.Change
         {
         /**
          * The key/value pairs inserted-into/updated-in the `DBMap`.

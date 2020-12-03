@@ -1,12 +1,17 @@
 /**
- * A database transaction, as viewed from outside of the database.
+ * A database transaction, as viewed from outside of the database. In other words, this is the
+ * client interface for managing a database transaction.
+ *
+ * A transaction represents the union of the contents of the database (the "root of the schema")
+ * with the ability to commit or roll back the transaction.
  */
 interface Transaction<Schema extends RootSchema>
         extends RootSchema
         extends Closeable
     {
     /**
-     * The database connection. This property is only available from within an `Active` transaction.
+     * The database connection. This property is only guaranteed to be available from within an
+     * [pending] transaction.
      */
     @RO (Connection<Schema> + Schema) connection;
 

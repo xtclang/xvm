@@ -28,7 +28,7 @@ interface SystemSchema
     /**
      * The [DBInfo] singleton for this Database.
      */
-    @RO DBInfo info;
+    @RO DBSingleton<DBInfo> info;
 
     /**
      * A [DBMap] of user name to [DBUser].

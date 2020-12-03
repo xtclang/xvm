@@ -8,11 +8,22 @@ interface DBList<Element>
         extends List<Element>
         extends DBObject
     {
+    // ----- DBObject methods ----------------------------------------------------------------------
+
+    @Override
+    @RO DBCategory dbCategory.get()
+        {
+        return DBList;
+        }
+
     @Override
     @RO Boolean transactional.get()
         {
         return True;
         }
+
+
+    // ----- transaction records -------------------------------------------------------------------
 
     /**
      * Represents a change to a database list. Most list changes are extremely compact, representing
@@ -25,7 +36,8 @@ interface DBList<Element>
      * available, and if they are available, they may be expensive to reconstruct.
      */
     @Override
-    interface Change
+    static interface Change
+            extends DBObject.Change
         {
         /**
          * The elements added to the `List`. The key of this map is the index of the added element

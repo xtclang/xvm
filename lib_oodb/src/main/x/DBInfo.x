@@ -2,6 +2,7 @@
  * A simple set of meta-data describing a database.
  */
 interface DBInfo
+        extends immutable Const
     {
     /**
      * The name of the database.

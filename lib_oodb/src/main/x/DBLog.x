@@ -82,11 +82,24 @@ interface DBLog<Element>
      */
     void truncateExcept(UInt retainSize);
 
+
+    // ----- DBObject methods ----------------------------------------------------------------------
+
+    @Override
+    @RO DBCategory dbCategory.get()
+        {
+        return DBLog;
+        }
+
+
+    // ----- transaction records -------------------------------------------------------------------
+
     /**
      * Represents additions to a transactional database log.
      */
     @Override
-    interface Change
+    static interface Change
+            extends DBObject.Change
         {
         /**
          * The elements appended to the `Log`.
