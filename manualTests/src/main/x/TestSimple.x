@@ -4,15 +4,14 @@ module TestSimple
 
     void run( )
         {
-        TestService s = new TestService();
-        console.println($"foo()={s.foo^()}");
         }
 
-    service TestService
+    <Serializable> Serializable findMapping(Type<Serializable> type, List<Serializable> list)
         {
-        Int foo()
+        if (list.Serializable.is(Type<type>))
             {
-            return 42;
+            assert;
             }
+        TODO
         }
     }

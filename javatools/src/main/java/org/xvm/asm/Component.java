@@ -41,6 +41,8 @@ import org.xvm.compiler.Constants;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
+import org.xvm.compiler.ast.AstNode;
+
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -3586,6 +3588,14 @@ public abstract class Component
          * @param constant  either a PropertyConstant or a TypeParameterConstant
          */
         ResolutionResult resolvedConstant(Constant constant);
+
+        /**
+         * Provide an AstNode to report resolution issues for.
+         */
+        default AstNode getNode()
+            {
+            return null;
+            }
 
         /**
          * Provide an ErrorListener to report resolution issues to.

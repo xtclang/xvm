@@ -73,14 +73,6 @@ public class NameResolver
         }
 
     /**
-     * @return the AstNode for which this NameResolver exists
-     */
-    public AstNode getNode()
-        {
-        return m_node;
-        }
-
-    /**
      * If the compilation stage is past the stage in which deferral can occur, then just force the
      * completion of the resolution and treat anything else as an error.
      *
@@ -756,6 +748,12 @@ public class NameResolver
                 : m_fTypeGoal ? TypeMode.TYPE : null;
 
         return ResolutionResult.RESOLVED;
+        }
+
+    @Override
+    public AstNode getNode()
+        {
+        return m_node;
         }
 
     @Override

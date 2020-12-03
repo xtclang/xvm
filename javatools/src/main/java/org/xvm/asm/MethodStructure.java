@@ -33,10 +33,15 @@ import org.xvm.asm.Op.Prefix;
 import org.xvm.asm.op.Nop;
 import org.xvm.asm.op.Var_DN;
 
+import org.xvm.compiler.Compiler;
+
+import org.xvm.compiler.ast.AstNode;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Utils;
 
 import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 import static org.xvm.util.Handy.readIndex;
@@ -1372,15 +1377,32 @@ public class MethodStructure
     @Override
     public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector)
         {
-        for (int i = 0, c = m_cTypeParams; i < c; ++i)
+        for (int i = 0, c = getParamCount(); i < c; ++i)
             {
             Parameter param = m_aParams[i];
-            assert param.isTypeParameter();
 
             if (param.getName().equals(sName))
                 {
-                return collector.resolvedConstant(
-                        getConstantPool().ensureRegisterConstant(getIdentityConstant(), i, sName));
+                if (i < getTypeParamCount())
+                    {
+                    assert param.isTypeParameter();
+                    return collector.resolvedConstant(
+                            getConstantPool().ensureRegisterConstant(getIdentityConstant(), i, sName));
+                    }
+
+                // REVIEW need a better error?
+                AstNode node = collector.getNode();
+                if (node == null)
+                    {
+                    collector.getErrorListener().log(Severity.ERROR,
+                        Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS, null, this);
+                    }
+                else
+                    {
+                    node.log(collector.getErrorListener(), Severity.ERROR,
+                        Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS);
+                    }
+                return ResolutionResult.ERROR;
                 }
             }
 
