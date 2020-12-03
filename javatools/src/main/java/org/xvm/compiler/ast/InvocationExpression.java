@@ -200,9 +200,10 @@ public class InvocationExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public InvocationExpression(Expression expr, List<Expression> args, long lEndPos)
+    public InvocationExpression(Expression expr, boolean async, List<Expression> args, long lEndPos)
         {
         this.expr    = expr;
+        this.async   = async;
         this.args    = args;
         this.lEndPos = lEndPos;
         }
@@ -2856,8 +2857,12 @@ public class InvocationExpression
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
-        sb.append(expr)
-          .append('(');
+        sb.append(expr);
+        if (async)
+            {
+            sb.append('^');
+            }
+        sb.append('(');
 
         boolean first = true;
         for (Expression arg : args)
@@ -2911,6 +2916,7 @@ public class InvocationExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected Expression       expr;
+    protected boolean          async;
     protected List<Expression> args;
     protected long             lEndPos;
 

@@ -482,6 +482,7 @@ public class Token
         AT           ("@"              ),
         COND         ("?"              ),
         L_PAREN      ("("              ),
+        ASYNC_PAREN  ("^("             ),
         R_PAREN      (")"              ),
         L_CURLY      ("{"              ),
         R_CURLY      ("}"              ),

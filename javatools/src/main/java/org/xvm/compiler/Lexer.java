@@ -563,6 +563,9 @@ public class Lexer
 
                         case '=':
                             return new Token(lInitPos, source.getPosition(), Id.BIT_XOR_ASN);
+
+                        case '(':
+                            return new Token(lInitPos, source.getPosition(), Id.ASYNC_PAREN);
                         }
                     source.rewind();
                     }

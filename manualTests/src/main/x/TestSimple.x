@@ -4,26 +4,15 @@ module TestSimple
 
     void run( )
         {
-        new Parent<String>.Child();
+        TestService s = new TestService();
+        console.println($"foo()={s.foo^()}");
         }
 
-    void foo(Parent<String>.Child c)
+    service TestService
         {
-        }
-
-    class Parent<T>
-            implements IParent<T>
-        {
-        static class Child
-                implements IChild
+        Int foo()
             {
-            }
-        }
-
-    interface IParent<T>
-        {
-        static interface IChild
-            {
+            return 42;
             }
         }
     }

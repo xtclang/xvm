@@ -3336,9 +3336,10 @@ public class Parser
                     }
 
                 case L_PAREN:
+                case ASYNC_PAREN:
                     // ArgumentList
-                    expr = new InvocationExpression(expr, parseArgumentList(true, true, false),
-                            prev().getEndPosition());
+                    expr = new InvocationExpression(expr, peek().getId() == Id.ASYNC_PAREN,
+                            parseArgumentList(true, true, false), prev().getEndPosition());
                     break;
 
                 case L_SQUARE:
@@ -5213,6 +5214,11 @@ public class Parser
         boolean  fArray = false;
         switch (peek().getId())
             {
+            case ASYNC_PAREN:
+                expect(Id.ASYNC_PAREN);
+                idClose = Id.R_PAREN;
+                break;
+
             case L_PAREN:
                 expect(Id.L_PAREN);
                 idClose = Id.R_PAREN;
