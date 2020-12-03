@@ -489,14 +489,14 @@ module TestReflection
                 console.println($|prop={prop.name}, constant={prop.isConstant()}, readOnly={prop.readOnly}
                                  |     hasUnreachableSetter={prop.hasUnreachableSetter}, formal={prop.formal}
                                  |     hasField={prop.hasField}, injected={prop.injected}, lazy={prop.lazy}
-                                 |     atomic={prop.atomic}, abstract={prop.abstract}
+                                 |     atomic={prop.atomic}, abstract={prop.abstract},
                                );
 
                 // need to get a Ref for the property:
                 // - must be assigned
                 // - actual type cannot be Service
                 val ref = prop.of(o);
-                console.println($|assigned={ref.assigned}, peek()={ref.peek()}, actualType={ref.actualType}
+                console.println($|     assigned={ref.assigned}, peek()={ref.peek()}, actualType={ref.actualType}
                                  |     isService={ref.isService}, isConst={ref.isConst}
                                  |     isImmutable={ref.isImmutable}, hasName={{String name = "n/a"; name := ref.hasName(); return name;}}, var={ref.is(Var)}
                                );
