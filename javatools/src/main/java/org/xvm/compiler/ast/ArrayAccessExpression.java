@@ -408,7 +408,12 @@ public class ArrayAccessExpression
 
                 if (typeElement != null)
                     {
-                    typeArrayReq = pool.ensureParameterizedTypeConstant(typeArrayReq, typeElement);
+                    TypeConstant typeArrayTest =
+                            pool.ensureParameterizedTypeConstant(typeArrayReq, typeElement);
+                    if (exprArray.testFit(ctx, typeArrayTest, null).isFit())
+                        {
+                        typeArrayReq = typeArrayTest;
+                        }
                     }
                 }
             }
@@ -445,7 +450,12 @@ public class ArrayAccessExpression
                 if (typeElement == null)
                     {
                     // we can only figure out the index type
-                    typeArrayReq = pool.ensureParameterizedTypeConstant(typeArrayReq, typeIndex);
+                    TypeConstant typeArrayTest =
+                            pool.ensureParameterizedTypeConstant(typeArrayReq, typeIndex);
+                    if (exprArray.testFit(ctx, typeArrayTest, null).isFit())
+                        {
+                        typeArrayReq = typeArrayTest;
+                        }
                     }
                 }
             }
@@ -479,7 +489,12 @@ public class ArrayAccessExpression
 
                 if (typeElement != null)
                     {
-                    typeArrayReq = pool.ensureParameterizedTypeConstant(typeArrayReq, typeRequired);
+                    TypeConstant typeArrayTest =
+                            pool.ensureParameterizedTypeConstant(typeArrayReq, typeRequired);
+                    if (exprArray.testFit(ctx, typeArrayTest, null).isFit())
+                        {
+                        typeArrayReq = typeArrayTest;
+                        }
                     }
 
                 // test for Matrix[_,?] or Matrix[?,_]
