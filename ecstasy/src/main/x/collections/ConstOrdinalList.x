@@ -359,7 +359,7 @@ const ConstOrdinalList
         Int remainingBits = bitsPerVal;
         while (remainingBits > 0)
             {
-            Int  byteVal    = contents[packedOffset + bitOffset / 8].toInt64(); // TODO GG get rid of ".toInt64()"
+            Int  byteVal    = contents[packedOffset + bitOffset / 8];
             Int  partOffset = bitOffset & 0x7;
             Int  partLength = (8 - partOffset).minOf(remainingBits);
 
