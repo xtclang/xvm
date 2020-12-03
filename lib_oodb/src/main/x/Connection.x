@@ -34,8 +34,8 @@ interface Connection<Schema extends RootSchema>
     /**
      * Create a new transaction.
      *
-     * @param timeout     the requested time-out, which allows the database to roll back and discard
-     *                    the transaction after that period of time has elapsed
+     * @param timeout     (optional) the requested time-out, which allows the database to roll back
+     *                    and discard the transaction after that period of time has elapsed
      * @param name        (optional) a descriptive name to associate with the transaction
      * @param id          (optional) an integer identifier to associate with the transaction
      * @param priority    (optional) the transactional priority
@@ -58,7 +58,6 @@ interface Connection<Schema extends RootSchema>
         if (Transaction tx ?= transaction)
             {
             tx.close(e);
-            assert transaction == Null;
             }
         }
     }
