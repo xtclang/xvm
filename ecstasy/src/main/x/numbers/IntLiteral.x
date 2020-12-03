@@ -412,8 +412,7 @@ const IntLiteral(String text)
      * to alias the method, instead of creating a second delegating method, this prevents the
      * potential for accidentally overriding the wrong method.
      */
-    // TODO GG: static Method<IntLiteral, <>, <Byte>> toByte = toUInt8;
-    Byte toByte() {return toUInt8();}
+    static Method<IntLiteral, <>, <Byte>> toByte = toUInt8;
 
     /**
      * Convert the number to a variable-length signed integer.

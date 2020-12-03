@@ -289,8 +289,7 @@ const Number
      * to alias the method, instead of creating a second delegating method, this prevents the
      * potential for accidentally overriding the wrong method.
      */
-    // TODO GG: static Method<Number, <>, <Byte>> toByte = toUInt8;
-    Byte toByte() {return  toUInt8();}
+    static Method<Number, <>, <Byte>> toByte = toUInt8;
 
     /**
      * Obtain the number as an array of bytes, in left-to-right order.
