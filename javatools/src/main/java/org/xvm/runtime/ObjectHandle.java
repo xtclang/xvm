@@ -467,7 +467,7 @@ public abstract class ObjectHandle
                 return true;
                 }
 
-            if (h1.isMutable() || h2.isMutable())
+            if (h1.isMutable() != h2.isMutable())
                 {
                 return false;
                 }

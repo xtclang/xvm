@@ -878,6 +878,16 @@ public abstract class ClassTemplate
             RefHandle hRef = (RefHandle) hValue;
             if (!(hRef instanceof FutureHandle))
                 {
+                if (hRef.getComposition().isStruct())
+                    {
+                    Frame.Continuation stepNext = frameCaller ->
+                        {
+                        RefHandle hR = (RefHandle) frameCaller.popStack();
+                        return ((xRef) hR.getTemplate()).getReferent(frameCaller, hR, iReturn);
+                        };
+
+                    return finishRefConstruction(frame, hRef, hThis, idProp, stepNext);
+                    }
                 return ((xRef) hRef.getTemplate()).getReferent(frame, hRef, iReturn);
                 }
             // Frame deals with FutureHandle itself
