@@ -547,7 +547,7 @@ public class xRTType
             PropertyInfo infoProp = entry.getValue();
             if (infoProp.isConstant())
                 {
-                listProps.add(xRTProperty.makeHandle(frame, typeTarget, entry.getKey()));
+                listProps.add(xRTProperty.makeHandle(frame, typeTarget, infoProp));
                 }
             }
         return makePropertyArray(frame, typeTarget, listProps, iReturn);
@@ -906,7 +906,7 @@ public class xRTType
             PropertyInfo     infoProp = entry.getValue();
             if (!infoProp.isConstant() && idProp.getNestedDepth() == 1)
                 {
-                listProps.add(xRTProperty.makeHandle(frame, typeTarget, idProp));
+                listProps.add(xRTProperty.makeHandle(frame, typeTarget, infoProp));
                 }
             }
         return makePropertyArray(frame, typeTarget, listProps, iReturn);
@@ -1157,12 +1157,19 @@ public class xRTType
                 Constant constDef = type.getDefiningConstant();
                 if (constDef instanceof PropertyConstant)
                     {
-                    ObjectHandle hProp = xRTProperty.makeHandle(frame, null, (PropertyConstant) constDef);
+                    PropertyConstant idProp     = (PropertyConstant) constDef;
+                    TypeConstant     typeParent = idProp.getParentConstant().getType();
+                    PropertyInfo     infoProp   = frame.poolContext().ensureAccessTypeConstant(
+                        typeParent, Constants.Access.PRIVATE).ensureTypeInfo().findProperty(idProp);
 
-                    return Op.isDeferred(hProp)
-                        ? hProp.proceed(frame, frameCaller ->
-                            frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack()))
-                        : frame.assignValues(aiReturn, xBoolean.TRUE, hProp);
+                    if (infoProp != null)
+                        {
+                        ObjectHandle hProp = xRTProperty.makeHandle(frame, typeParent, infoProp);
+                        return Op.isDeferred(hProp)
+                            ? hProp.proceed(frame, frameCaller ->
+                                frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack()))
+                            : frame.assignValues(aiReturn, xBoolean.TRUE, hProp);
+                        }
                     }
                 }
             }

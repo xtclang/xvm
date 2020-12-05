@@ -585,17 +585,16 @@ public class xRef
             String       sName      = hRef.getName();
             if (hContainer != null && sName != null)
                 {
-                ConstantPool pool          = frame.poolContext();
                 TypeConstant typeContainer = hContainer.getType();
-                PropertyInfo infoProp      = pool.ensureAccessTypeConstant(typeContainer, Access.PRIVATE).
-                                                ensureTypeInfo().findProperty(sName);
+                PropertyInfo infoProp      = frame.poolContext().ensureAccessTypeConstant(
+                        typeContainer, Access.PRIVATE).ensureTypeInfo().findProperty(sName);
                 if (infoProp == null)
                     {
                     return frame.raiseException("Unknown property \"" + sName + "\" at" +
                             typeContainer.getValueString());
                     }
 
-                ObjectHandle hProp = xRTProperty.makeHandle(frame, typeContainer, infoProp.getIdentity());
+                ObjectHandle hProp = xRTProperty.makeHandle(frame, typeContainer, infoProp);
 
                 return Op.isDeferred(hProp)
                     ? hProp.proceed(frame, frameCaller ->

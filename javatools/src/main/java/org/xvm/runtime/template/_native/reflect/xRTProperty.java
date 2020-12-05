@@ -77,9 +77,9 @@ public class xRTProperty
         {
         if (constant instanceof PropertyClassTypeConstant)
             {
-            TypeConstant     typeParent = ((PropertyClassTypeConstant) constant).getParentType();
-            PropertyConstant idProperty = ((PropertyClassTypeConstant) constant).getProperty();
-            ObjectHandle     hProperty  = makeHandle(frame, typeParent, idProperty);
+            TypeConstant typeParent = ((PropertyClassTypeConstant) constant).getParentType();
+            PropertyInfo infoProp   = ((PropertyClassTypeConstant) constant).getPropertyInfo();
+            ObjectHandle hProperty  = makeHandle(frame, typeParent, infoProp);
 
             return Op.isDeferred(hProperty)
                 ? hProperty.proceed(frame, Utils.NEXT)
@@ -179,15 +179,14 @@ public class xRTProperty
      *
      * @param frame       the current frame
      * @param typeTarget  (optional) the type of the property target
-     * @param idProp      the property id
+     * @param infoProp    the property info
      *
      * @return the resulting {@link PropertyHandle} or a {@link DeferredCallHandle}
      */
-    public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, PropertyConstant idProp)
+    public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, PropertyInfo infoProp)
         {
-        PropertyInfo infoProp = typeTarget.ensureTypeInfo().findProperty(idProp);
         Annotation[] aAnno    = infoProp.getPropertyAnnotations();
-        TypeConstant typeProp = idProp.getValueType(typeTarget);
+        TypeConstant typeProp = infoProp.getIdentity().getValueType(typeTarget);
 
         if (aAnno != null && aAnno.length > 0)
             {

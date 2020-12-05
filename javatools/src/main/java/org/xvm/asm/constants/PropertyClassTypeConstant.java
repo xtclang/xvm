@@ -124,6 +124,7 @@ public class PropertyClassTypeConstant
         if (info == null)
             {
             m_info = info = m_typeParent.ensureTypeInfo().findProperty(m_idProp);
+            assert info != null;
             }
         return info;
         }
