@@ -38,7 +38,6 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                 field.Value value;
                 if (fieldInput.isNull(field.name))
                     {
-                    // TODO GG: value = field.defaultValue.as(field.Value);
                     value = field.defaultValue;
                     }
                 else
