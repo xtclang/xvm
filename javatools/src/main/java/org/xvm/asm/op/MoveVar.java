@@ -55,7 +55,7 @@ public class MoveVar
         {
         Frame.VarInfo infoSrc = frame.getVarInfo(m_nFromValue);
 
-        if (infoSrc.isDynamic())
+        if (infoSrc.isDynamicVar())
             {
             // the "dynamic ref" register must contain a RefHandle itself
             RefHandle hRef = (RefHandle) frame.f_ahVar[m_nFromValue];

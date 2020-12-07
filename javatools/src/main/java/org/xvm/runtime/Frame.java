@@ -87,8 +87,13 @@ public class Frame
     private ObjectHandle            m_hStackTop;    // the top of the local stack
     private Deque<ObjectHandle>     m_stack;        // a remainder of the stack
 
-    public static final int VAR_STANDARD         = 0;
-    public static final int VAR_DYNAMIC_REF      = 1;
+    public static final int VAR_MASK        = 0x1;
+    public static final int VAR_STANDARD    = 0x0;
+    public static final int VAR_DYNAMIC_REF = 0x1;
+
+    public static final int TYPE_MASK       = 0x2;
+    public static final int TYPE_FIXED      = 0x0;
+    public static final int TYPE_DYNAMIC    = 0x2;
 
     /**
      * Construct a frame.
@@ -645,80 +650,17 @@ public class Frame
             {
             VarInfo info = getVarInfo(nVar);
 
-            switch (info.getStyle())
+            if (info.isDynamicVar())
                 {
-                case VAR_STANDARD:
-                    break;
-
-                case VAR_DYNAMIC_REF:
-                    {
-                    RefHandle hVar = (RefHandle) f_ahVar[nVar];
-                    // TODO: consider moving the "transfer the referent" logic here (see xVar)
-                    // TODO: check the "weak" assignment (here or inside)
-                    return hVar.getVarSupport().setReferent(this, hVar, hValue);
-                    }
-
-                default:
-                    throw new IllegalStateException();
+                RefHandle hVar = (RefHandle) f_ahVar[nVar];
+                // TODO: consider moving the "transfer the referent" logic here (see xVar)
+                // TODO: check the "weak" assignment (here or inside)
+                return hVar.getVarSupport().setReferent(this, hVar, hValue);
                 }
 
-            TypeConstant typeFrom = hValue.getType();
-            if (typeFrom.getPosition() != info.m_nTypeId) // quick check
+            if (info.isFixedType())
                 {
-                // TODO: how to minimize the probability of getting here?
-                TypeConstant typeTo = info.getType();
-
-                switch (typeFrom.calculateRelation(typeTo))
-                    {
-                    case IS_A:
-                        // no need to do anything
-                        break;
-
-                    case IS_A_WEAK:
-                        if (typeTo.isTypeOfType())
-                            {
-                            // the Type type is mostly native and safe
-                            break;
-                            }
-                        // fall through
-                    default:
-                        // check the revealed type as the last resource
-                        typeFrom = hValue.revealOrigin().getType();
-                        switch (typeFrom.calculateRelation(typeTo))
-                            {
-                            case IS_A:
-                                break;
-
-                            case IS_A_WEAK:
-                                // the types are assignable, but we need to inject a "safe-wrapper" proxy;
-                                // for example, in the case of:
-                                //      List<Object> lo;
-                                //      List<String> ls = ...;
-                                //      lo = ls;
-                                // "add(Object o)" method needs to be wrapped on "lo" reference, to ensure the
-                                // run-time type of "String"
-                                if (REPORT_WRAPPING)
-                                    {
-                                    System.err.println("WARNING: wrapping required from: " +
-                                        typeFrom.getValueString() + " to: " + typeTo.getValueString());
-                                    }
-                                break;
-
-                            default:
-                                // why did the compiler/verifier allow this?
-                                if (typeFrom.isAutoNarrowing())
-                                    {
-                                    // TODO: how to get the narrowing context?
-                                    }
-                                else
-                                    {
-                                    System.err.println("WARNING: suspicious assignment from: " +
-                                        typeFrom.getValueString() + " to: " + typeTo.getValueString());
-                                    }
-                                break;
-                            }
-                        break;
-                    }
+                checkType(hValue, info);
                 }
 
             f_ahVar[nVar] = hValue;
@@ -748,6 +690,74 @@ public class Frame
                     {
                     throw new IllegalArgumentException("nVar=" + nVar);
                     }
+            }
+        }
+
+    /**
+     * Check the type matching between the source value and the destination register.
+     *
+     * @param hValueFrom  the source value
+     * @param infoTo      the destination register
+     */
+    private void checkType(ObjectHandle hValueFrom, VarInfo infoTo)
+        {
+        TypeConstant typeFrom = hValueFrom.getType();
+        if (typeFrom.getPosition() != infoTo.m_nTypeId) // quick check
+            {
+            // TODO: how to minimize the probability of getting here?
+            TypeConstant typeTo = infoTo.getType();
+
+            switch (typeFrom.calculateRelation(typeTo))
+                {
+                case IS_A:
+                    // no need to do anything
+                    break;
+
+                case IS_A_WEAK:
+                    if (typeTo.isTypeOfType())
+                        {
+                        // the Type type is mostly native and safe
+                        break;
+                        }
+                    // fall through
+                default:
+                    // check the revealed type as the last resource
+                    typeFrom = hValueFrom.revealOrigin().getType();
+                    switch (typeFrom.calculateRelation(typeTo))
+                        {
+                        case IS_A:
+                            break;
+
+                        case IS_A_WEAK:
+                            // the types are assignable, but we need to inject a "safe-wrapper" proxy;
+                            // for example, in the case of:
+                            //      List<Object> lo;
+                            //      List<String> ls = ...;
+                            //      lo = ls;
+                            // "add(Object o)" method needs to be wrapped on "lo" reference, to ensure the
+                            // run-time type of "String"
+                            if (REPORT_WRAPPING)
+                                {
+                                System.err.println("WARNING: wrapping required from: " +
+                                    typeFrom.getValueString() + " to: " + typeTo.getValueString());
+                                }
+                            break;
+
+                        default:
+                            // why did the compiler/verifier allow this?
+                            if (typeFrom.isAutoNarrowing())
+                                {
+                                // TODO: how to get the narrowing context?
+                                }
+                            else
+                                {
+                                System.err.println("WARNING: suspicious assignment from: " +
+                                    typeFrom.getValueString() + " to: " + typeTo.getValueString());
+                                }
+                            break;
+                        }
+                    break;
+                }
             }
         }
 
@@ -1236,7 +1246,7 @@ public class Frame
     protected TypeConstant getRegisterType(int nRegister)
         {
         VarInfo info = getVarInfo(nRegister);
-        if (info.isStandard())
+        if (info.isStandardVar())
             {
             return info.getType(); // always resolved
             }
@@ -1317,36 +1327,24 @@ public class Frame
                 }
 
             VarInfo info = f_aInfo[iArg];
-            if (info != null)
+            if (info != null && info.isDynamicVar())
                 {
-                switch (info.getStyle())
+                RefHandle hRef = (RefHandle) hValue;
+                switch (hRef.getVarSupport().getReferent(this, hRef, Op.A_STACK))
                     {
-                    case VAR_STANDARD:
-                        break;
+                    case Op.R_NEXT:
+                        return popStack();
 
-                    case VAR_DYNAMIC_REF:
-                        {
-                        RefHandle hRef = (RefHandle) hValue;
-                        switch (hRef.getVarSupport().getReferent(this, hRef, Op.A_STACK))
-                            {
-                            case Op.R_NEXT:
-                                return popStack();
+                    case Op.R_CALL:
+                        return new DeferredCallHandle(m_frameNext);
 
-                            case Op.R_CALL:
-                                return new DeferredCallHandle(m_frameNext);
-
-                            case Op.R_EXCEPTION:
-                                throw m_hException.getException();
-
-                            default:
-                                throw new IllegalStateException();
-                            }
-                        }
+                    case Op.R_EXCEPTION:
+                        throw m_hException.getException();
 
                     default:
                         throw new IllegalStateException();
                     }
-                }
+                 }
             return hValue;
             }
 
@@ -1587,7 +1585,7 @@ public class Frame
      */
     public boolean isDynamicVar(int nVar)
         {
-        return nVar >= 0 && getVarInfo(nVar).isDynamic();
+        return nVar >= 0 && getVarInfo(nVar).isDynamicVar();
         }
 
     /**
@@ -1995,7 +1993,9 @@ public class Frame
         private int m_ixGuardBase; // the index of the AllGuard to stop at
         }
 
-    // variable into (support for Refs and debugger)
+    /**
+     * The variable (register) info.
+     */
     public class VarInfo
         {
         private int             m_nTypeId;
@@ -2038,6 +2038,9 @@ public class Frame
             m_resolver  = resolver;
             }
 
+        /**
+         * @return the register's name
+         */
         public String getName()
             {
             String sName = m_sVarName;
@@ -2048,11 +2051,30 @@ public class Frame
             return sName;
             }
 
-        public void setName(String sName)
+        protected void setName(String sName)
             {
             m_sVarName = sName;
             }
 
+        /**
+         * @return iff the register's type is fixed
+         */
+        public boolean isFixedType()
+            {
+            return (m_nStyle & TYPE_MASK) == TYPE_FIXED;
+            }
+
+        /**
+         * @return iff the register's type is dynamic
+         */
+        public boolean isDynamicType()
+            {
+            return (m_nStyle & TYPE_MASK) == TYPE_DYNAMIC;
+            }
+
+        /**
+         * @return the register's type
+         */
         public TypeConstant getType()
             {
             TypeConstant type = m_type;
@@ -2072,7 +2094,11 @@ public class Frame
 
                 type = type.resolveGenerics(poolContext(), getGenericsResolver());
 
-                if (!fDynamic)
+                if (fDynamic)
+                    {
+                    m_nStyle |= TYPE_DYNAMIC;
+                    }
+                else
                     {
                     m_type    = type;
                     m_nTypeId = type.getPosition();
@@ -2081,19 +2107,20 @@ public class Frame
             return type;
             }
 
-        public int getStyle()
+        /**
+         * @return iff the register holds an actual handle
+         */
+        public boolean isStandardVar()
             {
-            return m_nStyle;
+            return (m_nStyle & VAR_MASK) == VAR_STANDARD;
             }
 
-        public boolean isStandard()
+        /**
+         * @return iff the register holds a dynamic ref
+         */
+        public boolean isDynamicVar()
             {
-            return m_nStyle == VAR_STANDARD;
-            }
-
-        public boolean isDynamic()
-            {
-            return m_nStyle == VAR_DYNAMIC_REF;
+            return (m_nStyle & VAR_MASK) == VAR_DYNAMIC_REF;
             }
 
         public RefHandle getRef()
@@ -2115,22 +2142,9 @@ public class Frame
                 }
             }
 
-        protected String getStyleName()
-            {
-            switch (m_nStyle)
-                {
-                case VAR_STANDARD:
-                    return "";
-                case VAR_DYNAMIC_REF:
-                    return "<dynamic> ";
-                default:
-                    return "unknown ";
-                }
-            }
-
         public String toString()
             {
-            return getStyleName() + getName();
+            return (isStandardVar() ? "" : "<dynamic> ") + getName();
             }
         }
 
