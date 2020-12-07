@@ -117,7 +117,7 @@ public class DynamicFormalConstant
         if (reg != null)
             {
             TypeConstant typeConstraint = reg.getType().resolveFormalType(m_constFormal);
-            if (typeConstraint != null && !typeConstraint.isDynamicType())
+            if (typeConstraint != null)
                 {
                 return typeConstraint;
                 }
