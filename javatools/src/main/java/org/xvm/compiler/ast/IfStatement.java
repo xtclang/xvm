@@ -108,23 +108,20 @@ public class IfStatement
 
         ctx = ctx.enterIf();
 
-        int cExits = 0;
-        for (int i = 0, c = getConditionCount(); i < c; ++i)
+        int cConditions = getConditionCount();
+        for (int i = 0; i < cConditions; ++i)
             {
             AstNode cond = getCondition(i);
+
+            if (i > 0)
+                {
+                ctx = ctx.enterAnd();
+                }
 
             // the condition is either a boolean expression or an assignment statement whose R-value
             // is a multi-value with the first value being a boolean
             if (cond instanceof AssignmentStatement)
                 {
-                if (i > 0)
-                    {
-                    // AssignmentStatement implicitly introduces a new scope that is only applicable
-                    // to the "then" portion of the "if"
-                    ctx = ctx.enterAnd().enterIf();
-                    cExits += 2;
-                    }
-
                 AssignmentStatement stmtOld = (AssignmentStatement) cond;
                 AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
                 if (stmtNew == null)
@@ -139,11 +136,6 @@ public class IfStatement
                 }
             else
                 {
-                if (i > 0)
-                    {
-                    ctx = ctx.enterAnd();
-                    }
-
                 Expression exprOld = (Expression) cond;
                 Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
                 if (exprNew == null)
@@ -154,11 +146,6 @@ public class IfStatement
                     {
                     cond = exprNew;
                     conds.set(i, cond);
-                    }
-
-                if (i > 0)
-                    {
-                    ctx = ctx.exit();
                     }
                 }
             }
@@ -173,11 +160,6 @@ public class IfStatement
         else
             {
             stmtThen = stmtThenNew;
-            }
-
-        while (cExits-- > 0)
-            {
-            ctx = ctx.exit();
             }
 
         // create a context for "else" even if there is no statement, thus facilitating a merge;
@@ -220,11 +202,13 @@ public class IfStatement
             }
         ctx = ctx.exit(); // "else"
 
+        while (--cConditions > 0)
+            {
+            ctx = ctx.exit(); // "and"s
+            }
         ctx = ctx.exit(); // "if"
 
-        return fValid
-                ? this
-                : null;
+        return fValid ? this : null;
         }
 
     @Override

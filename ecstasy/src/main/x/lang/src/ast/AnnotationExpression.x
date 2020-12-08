@@ -27,7 +27,7 @@ const AnnotationExpression(TypeExpression name,
      */
     conditional Annotation resolveAnnotation(TypeSystem typeSystem, Boolean hideExceptions = False)
         {
-        Class mixinClass = Object;
+        Class mixinClass;
         if (Type mixinType  := name.resolveType(typeSystem, hideExceptions),
                  mixinClass := mixinType.fromClass())
             {
