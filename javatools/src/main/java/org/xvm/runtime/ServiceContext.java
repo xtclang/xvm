@@ -1012,12 +1012,14 @@ public class ServiceContext
         if (cReturns == 0)
             {
             // in the case of an ignored return and underwhelmed queue - fire and forget
-            fiber.registerUncapturedRequest(future);
             if (!fOverwhelmed)
                 {
-                return future.isDone()
-                    ? frameCaller.assignFutureResult(iReturn, future)
-                    : Op.R_NEXT;
+                if (future.isDone())
+                    {
+                    return frameCaller.assignFutureResult(iReturn, future);
+                    }
+                fiber.registerUncapturedRequest(future);
+                return Op.R_NEXT;
                 }
 
             // consider not to block the caller if it is *not* the reason of the callee being

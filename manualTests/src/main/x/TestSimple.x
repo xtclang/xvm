@@ -2,16 +2,39 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run( )
+    void run()
         {
+        TestService svc = new TestService();
+
+        try
+            {
+            svc.terminateExceptionally("implicit sync");
+            }
+        catch (Exception e)
+            {
+            console.println($"expected exception={e.text}");
+            }
+
+        try
+            {
+            svc.terminateExceptionally("implicit sync with delay", 200);
+            }
+        catch (Exception e)
+            {
+            console.println($"expected exception={e.text}");
+            }
+
+        console.println("finished");
         }
 
-    <Serializable> Serializable findMapping(Type<Serializable> type, List<Serializable> list)
+    service TestService
         {
-        if (list.Serializable.is(Type<type>))
+        Int terminateExceptionally(String message, Int ops = 0)
             {
-            assert;
+            while (ops-- > 0)
+                {
+                }
+            throw new Exception(message);
             }
-        TODO
         }
     }
