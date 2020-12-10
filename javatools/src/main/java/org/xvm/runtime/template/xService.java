@@ -457,6 +457,18 @@ public class xService
             }
 
         @Override
+        public boolean isService()
+            {
+            return true;
+            }
+
+        @Override
+        public ServiceHandle getService()
+            {
+            return this;
+            }
+
+        @Override
         public boolean isAtomic(PropertyConstant idProp)
             {
             return s_setAtomicProperties.contains(idProp.getName()) || super.isAtomic(idProp);

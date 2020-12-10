@@ -51,7 +51,7 @@ public class Child
     @Override
     public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        ServiceHandle hService = getService((GenericHandle) hTarget);
+        ServiceHandle hService = hTarget.getService();
         return hService == null || hService.f_context == frame.f_context || chain.isAtomic()
             ? super.invoke1(frame, chain, hTarget, ahVar, iReturn)
             : makeAsyncHandle(hTarget, chain).call1(frame, hService, ahVar, iReturn);
@@ -60,7 +60,7 @@ public class Child
     @Override
     public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        ServiceHandle hService = getService((GenericHandle) hTarget);
+        ServiceHandle hService = hTarget.getService();
         return hService == null || hService.f_context == frame.f_context || chain.isAtomic()
             ? super.invokeN(frame, chain, hTarget, ahVar, aiReturn)
             : makeAsyncHandle(hTarget, chain).callN(frame, hService, ahVar, aiReturn);
@@ -69,7 +69,7 @@ public class Child
     @Override
     public int invokeT(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        ServiceHandle hService = getService((GenericHandle) hTarget);
+        ServiceHandle hService = hTarget.getService();
         return hService == null || hService.f_context == frame.f_context || chain.isAtomic()
             ? super.invokeT(frame, chain, hTarget, ahVar, iReturn)
             : makeAsyncHandle(hTarget, chain).callT(frame, hService, ahVar, iReturn);
@@ -78,7 +78,7 @@ public class Child
     @Override
     public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        ServiceHandle hService = getService((GenericHandle) hTarget);
+        ServiceHandle hService = hTarget.getService();
         return hService == null || hService.f_context == frame.f_context || hTarget.isAtomic(idProp)
             ? super.getPropertyValue(frame, hTarget, idProp, iReturn)
             : hService.f_context.sendProperty01Request(frame, idProp, iReturn,
@@ -89,7 +89,7 @@ public class Child
     @Override
     public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        ServiceHandle hService = getService((GenericHandle) hTarget);
+        ServiceHandle hService = hTarget.getService();
         if (hService == null || hService.f_context == frame.f_context || hTarget.isAtomic(idProp))
             {
             return super.getFieldValue(frame, hTarget, idProp, iReturn);
@@ -101,7 +101,7 @@ public class Child
     public int setPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp,
                                 ObjectHandle hValue)
         {
-        ServiceHandle hService = getService((GenericHandle) hTarget);
+        ServiceHandle hService = hTarget.getService();
         return hService == null || hService.f_context == frame.f_context || hTarget.isAtomic(idProp)
             ? super.setPropertyValue(frame, hTarget, idProp, hValue)
             : hService.f_context.sendProperty10Request(frame, idProp, hValue,
@@ -113,7 +113,7 @@ public class Child
     public int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp,
                              ObjectHandle hValue)
         {
-        ServiceHandle hService = getService((GenericHandle) hTarget);
+        ServiceHandle hService = hTarget.getService();
 
         if (hService == null || hService.f_context == frame.f_context || hTarget.isAtomic(idProp))
             {
@@ -121,24 +121,6 @@ public class Child
             }
 
         throw new IllegalStateException("Invalid context");
-        }
-
-    private ServiceHandle getService(GenericHandle hTarget)
-        {
-        while (true)
-            {
-            GenericHandle hParent = (GenericHandle) hTarget.getField(GenericHandle.OUTER);
-            if (hParent == null)
-                {
-                return null;
-                }
-
-            if (hParent instanceof ServiceHandle)
-                {
-                return (ServiceHandle) hParent;
-                }
-            hTarget = hParent;
-            }
         }
 
     private FunctionHandle makeAsyncHandle(ObjectHandle hTarget, CallChain chain)

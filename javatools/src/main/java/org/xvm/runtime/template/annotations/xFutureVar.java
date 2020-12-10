@@ -28,6 +28,7 @@ import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
+import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
@@ -370,6 +371,21 @@ public class xFutureVar
     @Override
     protected int getReferentImpl(Frame frame, RefHandle hRef, boolean fNative, int iReturn)
         {
+        if (hRef.isProperty())
+            {
+            ObjectHandle hHolder = hRef.getReferentHolder();
+            if (hHolder.isService())
+                {
+                ServiceHandle hService = hHolder.getService();
+                if (frame.f_context != hService.f_context)
+                    {
+                    return hService.f_context.sendProperty01Request(frame, null, iReturn,
+                        (frameCaller, hTarget_, idProp_, iRet) ->
+                            getReferentImpl(frameCaller, hRef, true, iRet));
+                    }
+                }
+            }
+
         FutureHandle hFuture = (FutureHandle) hRef;
 
         CompletableFuture<ObjectHandle> cf = hFuture.m_future;
@@ -396,6 +412,21 @@ public class xFutureVar
     @Override
     protected int setReferentImpl(Frame frame, RefHandle hRef, boolean fNative, ObjectHandle hValue)
         {
+        if (hRef.isProperty())
+            {
+            ObjectHandle hHolder = hRef.getReferentHolder();
+            if (hHolder.isService())
+                {
+                ServiceHandle hService = hHolder.getService();
+                if (frame.f_context != hService.f_context)
+                    {
+                    return hService.f_context.sendProperty10Request(frame, null, hValue,
+                        (frameCaller, hTarget_, idProp_, hVal) ->
+                            setReferentImpl(frameCaller, hRef, true, hVal));
+                    }
+                }
+            }
+
         FutureHandle hFuture = (FutureHandle) hRef;
 
         assert hValue != null;

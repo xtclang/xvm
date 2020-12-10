@@ -90,8 +90,7 @@ module TestServices
                 // when the last result comes back - shut down
                 if (++responded == count)
                     {
-                    svc.done = True;
-                    // svc.&done.set^(True); // TODO GG should be a service call!!
+                    svc.&done.set^(True);
                     }
                 });
             }

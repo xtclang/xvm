@@ -15,6 +15,7 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.xObject;
+import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 
@@ -188,7 +189,18 @@ public abstract class ObjectHandle
      */
     public boolean isService()
         {
-        return getTemplate().isService();
+        return false;
+        }
+
+    /**
+     * If method invocations and properties access for this handle need to be proxied across
+     * service boundaries, return the corresponding ServiceHandle.
+     *
+     * @return a ServiceHandle ir null of this handle is "not a Service"
+     */
+    public ServiceHandle getService()
+        {
+        return null;
         }
 
     /**
@@ -348,18 +360,17 @@ public abstract class ObjectHandle
         @Override
         public boolean isService()
             {
-            ClassTemplate template = getTemplate();
-            if (template.isService())
-                {
-                return true;
-                }
+            ObjectHandle hParent = getField(OUTER);
+            return hParent != null && hParent.isService();
+            }
 
-            if (template.getStructure().isVirtualChild())
-                {
-                ObjectHandle hOuter = getField(OUTER);
-                return hOuter != null && hOuter.isService();
-                }
-            return false;
+        @Override
+        public ServiceHandle getService()
+            {
+            GenericHandle hParent = (GenericHandle) getField(OUTER);
+            return hParent == null
+                ? null
+                : hParent.getService();
             }
 
         @Override
