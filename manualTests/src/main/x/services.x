@@ -17,7 +17,7 @@ module TestServices
         Int n = svc.calcSomethingBig(new Duration(0));
         console.println($"{tag()} async/wait-style result={n}");
 
-        @Future Int n0 = svc.terminateExceptionally("n0");
+        Int n0 = svc.terminateExceptionally^("n0");
         &n0.whenComplete((n, e) ->
             {
             assert e != Null;
@@ -34,7 +34,7 @@ module TestServices
             console.println($"{tag()} 1. expected exception={e.text}");
             }
 
-        @Future Int n2 = svc.terminateExceptionally("n2");
+        Int n2 = svc.terminateExceptionally^("n2");
         try
             {
             n2++;
@@ -56,9 +56,8 @@ module TestServices
         timer.start();
         Loop: for (TestService each : svcs)
             {
-            @Future Int spinResult = each.spin(10_000);
             val i = Loop.count;
-            &spinResult.whenComplete((n, e) ->
+            each.spin^(10_000).whenComplete((n, e) ->
                 {
                 // TODO CP console.println($"{tag()} spin {Loop.count} yielded {n}; took {timer.elapsed.milliseconds} ms");
                 console.println($"{tag()} spin {i} yielded {n}; took {timer.elapsed.milliseconds} ms");
@@ -71,7 +70,7 @@ module TestServices
             {
             using (Timeout timeout = new Timeout(Duration:0.1S, True))
                 {
-                Int unused = svc.calcSomethingBig(Duration:10S);
+                svc.calcSomethingBig(Duration:30M);
                 assert;
                 }
             }
@@ -92,21 +91,21 @@ module TestServices
                 if (++responded == count)
                     {
                     svc.done = True;
+                    // svc.&done.set^(True); // TODO GG should be a service call!!
                     }
                 });
             }
 
         Boolean done = svc.waitForCompletion();
-        console.println($"{tag()} done={done}");
+        console.println($"{tag()} done={done}; shutting down");
 
-        console.println($"{tag()} shutting down");
-
-        @Future Int longWait = svc.calcSomethingBig(Duration.ofMinutes(10));
+        // without the left side an exception would be reported by the default handler
+        Int ignoreException = svc.calcSomethingBig^(Duration.ofMinutes(10));
         svc.serviceControl.shutdown();
 
         try
             {
-            Int unused = svc.spin(0);
+            svc.spin(0);
             assert;
             }
         catch (Exception e)

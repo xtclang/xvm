@@ -385,7 +385,8 @@ public class AssignmentStatement
                 exprLeftCopy = (Expression) nodeLeft.getLValueExpression().clone();
             }
 
-        Context ctxLValue = ctx;
+        ConstantPool pool      = pool();
+        Context      ctxLValue = ctx;
 
         // a LValue represented by a statement indicates one or more variable declarations
         if (nodeLeft instanceof Statement)
@@ -445,7 +446,7 @@ public class AssignmentStatement
                     {
                     int cLeft = atypeLeft.length;
                     atypeTest = new TypeConstant[cLeft + 1];
-                    atypeTest[0] = pool().typeBoolean();
+                    atypeTest[0] = pool.typeBoolean();
                     System.arraycopy(atypeLeft, 0, atypeTest, 1, cLeft);
                     }
 
@@ -504,6 +505,28 @@ public class AssignmentStatement
                     if (fInfer)
                         {
                         ctx = ctx.exit();
+                        }
+
+                    if (exprRight instanceof InvocationExpression &&
+                            ((InvocationExpression) exprRight).isAsync() &&
+                        exprLeft instanceof NameExpression)
+                        {
+                        // auto-convert to a @Future register, e.g.
+                        //      Int i = svc.f^();
+                        // into
+                        //      @Future Int i = svc.f^();
+                        Argument argLeft = ctxLValue.getVar(((NameExpression) exprLeft).getName());
+                        if (argLeft instanceof Register)
+                            {
+                            Register     regLeft = (Register) argLeft;
+                            TypeConstant typeRef = regLeft.ensureRegType(false);
+
+                            if (!typeRef.containsAnnotation(pool.clzFuture()))
+                                {
+                                regLeft.specifyRegType(pool.ensureAnnotatedTypeConstant(
+                                        typeRef, pool.ensureAnnotation(pool.clzFuture())));
+                                }
+                            }
                         }
                     }
                 else

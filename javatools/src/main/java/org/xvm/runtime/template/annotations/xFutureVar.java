@@ -95,8 +95,8 @@ public class xFutureVar
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        FutureHandle hThis = (FutureHandle) hTarget;
-        CompletableFuture cf = hThis.m_future;
+        FutureHandle      hThis = (FutureHandle) hTarget;
+        CompletableFuture cf    = hThis.m_future;
 
         switch (sPropName)
             {
@@ -159,7 +159,6 @@ public class xFutureVar
                 ExceptionHandle hException = (ExceptionHandle) hArg;
 
                 hThis.m_future.completeExceptionally(hException.getException());
-
                 return Op.R_NEXT;
                 }
 
@@ -365,6 +364,12 @@ public class xFutureVar
     @Override
     protected int invokeGetReferent(Frame frame, RefHandle hRef, int iReturn)
         {
+        return getReferentImpl(frame, hRef, true, iReturn);
+        }
+
+    @Override
+    protected int getReferentImpl(Frame frame, RefHandle hRef, boolean fNative, int iReturn)
+        {
         FutureHandle hFuture = (FutureHandle) hRef;
 
         CompletableFuture<ObjectHandle> cf = hFuture.m_future;
@@ -385,7 +390,13 @@ public class xFutureVar
     @Override
     protected int invokeSetReferent(Frame frame, RefHandle hTarget, ObjectHandle hValue)
         {
-        FutureHandle hFuture = (FutureHandle) hTarget;
+        return setReferentImpl(frame, hTarget, true, hValue);
+        }
+
+    @Override
+    protected int setReferentImpl(Frame frame, RefHandle hRef, boolean fNative, ObjectHandle hValue)
+        {
+        FutureHandle hFuture = (FutureHandle) hRef;
 
         assert hValue != null;
 
@@ -422,7 +433,7 @@ public class xFutureVar
             return Op.R_NEXT;
             }
 
-        CompletableFuture cf = hFuture.m_future;
+        CompletableFuture<ObjectHandle> cf = hFuture.m_future;
         if (cf == null)
             {
             hFuture.m_future = CompletableFuture.completedFuture(hValue);
@@ -526,7 +537,7 @@ public class xFutureVar
                 {
                 // since this ref can only be changed by this service,
                 // we can safely add a completable future now
-                cf = m_future = new CompletableFuture();
+                cf = m_future = new CompletableFuture<>();
                 }
             else if (cf.isDone())
                 {

@@ -670,6 +670,7 @@ public class Frame
         switch (nVar)
             {
             case Op.A_IGNORE:
+            case Op.A_IGNORE_ASYNC:
             case Op.A_BLOCK:
                 return Op.R_NEXT;
 
@@ -949,6 +950,7 @@ public class Frame
         switch (f_iReturn)
             {
             case Op.A_IGNORE:
+            case Op.A_IGNORE_ASYNC:
             case Op.A_BLOCK:
                 return Op.R_RETURN;
 
@@ -1104,6 +1106,7 @@ public class Frame
         switch (f_iReturn)
             {
             case Op.A_IGNORE:
+            case Op.A_IGNORE_ASYNC:
             case Op.A_BLOCK:
                 return Op.R_RETURN;
 

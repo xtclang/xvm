@@ -211,6 +211,14 @@ public class InvocationExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return true iff this invocation is marked as asynchronous
+     */
+    public boolean isAsync()
+        {
+        return async;
+        }
+
     @Override
     public boolean validateCondition(ErrorListener errs)
         {
@@ -631,9 +639,9 @@ public class InvocationExpression
         // validated as possible, but if some of the expressions didn't validate, we can't
         // predictably find the desired method or function (e.g. without a left expression
         // providing validated type information)
-        boolean      fValid = true;
-        boolean      fCall  = !isSuppressCall();
-        ConstantPool pool   = pool();
+        ConstantPool   pool        = pool();
+        boolean        fCall       = !isSuppressCall();
+        TypeConstant[] atypeResult = null;
 
         // when we have a name expression on our immediate left, we do NOT (!!!) validate it,
         // because the name resolution is the responsibility of this InvocationExpression, and
@@ -651,23 +659,21 @@ public class InvocationExpression
                 Expression exprNew = exprLeft.validate(ctx, null, errs);
                 if (exprNew == null)
                     {
-                    fValid = false;
+                    return null;
                     }
-                else
-                    {
-                    if (exprNew != exprLeft)
-                        {
-                        // WARNING: mutating contents of the NameExpression, which has been
-                        //          _subsumed_ by this InvocationExpression
-                        exprName.left = exprLeft = exprNew;
-                        }
 
-                    typeLeft = exprLeft.getType();
-                    if (typeLeft == null)
-                        {
-                        exprLeft.log(errs, Severity.ERROR, Compiler.RETURN_REQUIRED);
-                        fValid = false;
-                        }
+                if (exprNew != exprLeft)
+                    {
+                    // WARNING: mutating contents of the NameExpression, which has been
+                    //          _subsumed_ by this InvocationExpression
+                    exprName.left = exprLeft = exprNew;
+                    }
+
+                typeLeft = exprLeft.getType();
+                if (typeLeft == null)
+                    {
+                    exprLeft.log(errs, Severity.ERROR, Compiler.RETURN_REQUIRED);
+                    return null;
                     }
                 }
 
@@ -677,12 +683,10 @@ public class InvocationExpression
             if (listRedundant != null)
                 {
                 atypeReturn = applyRedundantTypes(ctx, atypeRequired, listRedundant, true, errs);
-                fValid      = atypeReturn != null;
-                }
-
-            if (!fValid)
-                {
-                break Validate;
+                if (atypeReturn == null)
+                    {
+                    return null;
+                    }
                 }
 
             // transform the return types using the current context if possible
@@ -712,7 +716,7 @@ public class InvocationExpression
             Argument argMethod = resolveName(ctx, true, typeLeft, atypeReturn, errs);
             if (argMethod == null)
                 {
-                break Validate;
+                return null;
                 }
 
             List<Expression> listArgs = args;
@@ -723,7 +727,7 @@ public class InvocationExpression
                 if (listArgs == null)
                     {
                     // invalid names encountered
-                    break Validate;
+                    return null;
                     }
                 args = listArgs;
                 }
@@ -758,7 +762,8 @@ public class InvocationExpression
 
                     if (!fStatic)
                         {
-                        // there is a read of the implicit "this" variable TODO use TargetInfo to figure out how many "this" steps there are
+                        // there is a read of the implicit "this" variable
+                        // TODO use TargetInfo to figure out how many "this" steps there are
                         Token tokName = exprName.getNameToken();
                         long  lPos    = tokName.getStartPosition();
                         Token tokThis = new Token(lPos, lPos, Id.THIS);
@@ -783,7 +788,6 @@ public class InvocationExpression
 
                 assert typeFn.isA(pool.typeFunction());
 
-                TypeConstant[] atypeResult;
                 if (fCall)
                     {
                     atypeResult = pool.extractFunctionReturns(typeFn);
@@ -796,7 +800,7 @@ public class InvocationExpression
                         }
                     atypeResult = new TypeConstant[]{typeFn};
                     }
-                return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+                break Validate;
                 }
 
             // handle method or function
@@ -881,7 +885,7 @@ public class InvocationExpression
                             {
                             log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
                                     method.collectUnresolvedTypeParameters(mapTypeParams.keySet()));
-                            break Validate;
+                            return null;
                             }
 
                         Argument[] aargTypeParam = new Argument[mapTypeParams.size()];
@@ -892,7 +896,7 @@ public class InvocationExpression
                                 {
                                 log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
                                         method.getParam(ix).getName());
-                                break Validate;
+                                return null;
                                 }
 
                             TypeConstant typeParam = idMethod.getRawParams()[ix].getParamType(0);
@@ -908,16 +912,14 @@ public class InvocationExpression
                             if (!typeArg.isA(typeParam))
                                 {
                                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                                        typeParam.getValueString(),
-                                        typeArg.getValueString());
-                                break Validate;
+                                        typeParam.getValueString(), typeArg.getValueString());
+                                return null;
                                 }
                             aargTypeParam[ix++] = typeArg.getType();
                             }
                         m_aargTypeParams = aargTypeParam;
                         }
 
-                    TypeConstant[] atypeResult;
                     if (fCall)
                         {
                         SignatureConstant sigMethod = idMethod.getSignature();
@@ -941,7 +943,7 @@ public class InvocationExpression
                                 {
                                 log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
                                     method.getIdentityConstant().getValueString());
-                                break Validate;
+                                return null;
                                 }
                             }
                         else if (atypeReturn != null)
@@ -965,7 +967,7 @@ public class InvocationExpression
                             {
                             log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
                                     method.getIdentityConstant().getValueString());
-                            break Validate;
+                            return null;
                             }
 
                         TypeConstant typeFn = m_fBindTarget
@@ -989,8 +991,6 @@ public class InvocationExpression
 
                         atypeResult = new TypeConstant[] {typeFn};
                         }
-
-                    return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                     }
                 }
             else
@@ -1040,7 +1040,7 @@ public class InvocationExpression
                     {
                     log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                             "Function", typeFn.getValueString());
-                    break Validate;
+                    return null;
                     }
 
                 if (exprName.isSuppressDeref())
@@ -1048,7 +1048,7 @@ public class InvocationExpression
                     if (typeFn.isA(pool.typeMethod()))
                         {
                         log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
-                        break Validate;
+                        return null;
                         }
                     assert argMethod instanceof Register && !fCall;
 
@@ -1073,7 +1073,7 @@ public class InvocationExpression
                     Expression exprNew = exprName.validate(ctx, typeFn, errs);
                     if (exprNew == null)
                         {
-                        break Validate;
+                        return null;
                         }
 
                     expr   = exprNew;
@@ -1086,19 +1086,14 @@ public class InvocationExpression
                             {
                             log(errs, Severity.ERROR, Compiler.INVALID_METHOD_TARGET,
                                 typeTarget.getValueString(), exprName.getName());
-                            break Validate;
+                            return null;
                             }
                         m_fBindTarget = true;
                         m_argMethod   = argMethod;
                         }
                     }
 
-                TypeConstant[] atypeResult = validateFunction(ctx, typeFn,
-                                                cTypeParams, cDefaults, atypeRequired, errs);
-                if (atypeResult != null)
-                    {
-                    return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
-                    }
+                atypeResult = validateFunction(ctx, typeFn, cTypeParams, cDefaults, atypeRequired, errs);
                 }
             }
         else // the expr is NOT a NameExpression
@@ -1119,18 +1114,43 @@ public class InvocationExpression
                 // sufficient information about parameter and return types, and that it fits with
                 // the arguments that we have
                 TypeConstant typeFn = testFunction(ctx, exprNew.getType(), 0, 0, atypeRequired, errs);
-                if (typeFn != null)
+                if (typeFn == null)
                     {
-                    TypeConstant[] atypeResult = validateFunction(ctx, typeFn, 0, 0, atypeRequired, errs);
-                    if (atypeResult != null)
-                        {
-                        return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
-                        }
+                    return null;
                     }
+
+                atypeResult = validateFunction(ctx, typeFn, 0, 0, atypeRequired, errs);
                 }
             }
 
-        return null;
+        if (atypeResult == null)
+            {
+            return null;
+            }
+
+        if (async)
+            {
+            if (!fCall)
+                {
+                log(errs, Severity.ERROR, Compiler.ASYNC_NOT_ALLOWED);
+                return null;
+                }
+
+            if (atypeRequired == null || atypeRequired.length == 0)
+                {
+                // no required type means there's no left; however, there could be a continuation
+                // expression, assuming the result is a future, e.g.:
+                //      svc.f^().whenComplete(handler);
+                // this expression will produce the result as "@Future Var<T>"
+                m_fAutoFuture = true;
+                atypeResult   = atypeResult.clone(); // don't mess up the actual types
+                for (int i = 0, c = atypeResult.length; i < c; i++)
+                    {
+                    atypeResult[i] = pool.ensureFutureVar(atypeResult[i]);
+                    }
+                }
+            }
+        return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
         }
 
     @Override
@@ -1173,10 +1193,45 @@ public class InvocationExpression
         }
 
     @Override
+    public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk,
+                                        boolean fUsedOnce, ErrorListener errs)
+        {
+        if (m_fAutoFuture)
+            {
+            TypeConstant[] atype      = getTypes();
+            int            cRVals     = getValueCount();
+            Argument[]     aargResult = new Argument[cRVals];
+            Assignable[]   aLVal      = new Assignable[cRVals];
+
+            for (int i = 0; i < cRVals; i++)
+                {
+                code.add(new Var_D(atype[i]));
+
+                aLVal[i] = new Assignable(code.lastRegister());
+                }
+
+            generateAssignments(ctx, code, aLVal, errs);
+
+            for (int i = 0; i < cRVals; i++)
+                {
+                Register regVar = createRegister(atype[i], false);
+
+                code.add(new MoveVar(aLVal[i].getRegister(), regVar));
+                aargResult[i] = regVar;
+                }
+            return aargResult;
+            }
+
+        return super.generateArguments(ctx, code, fLocalPropOk, fUsedOnce, errs);
+        }
+
+    @Override
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
-        int cLVals = aLVal.length;
-        int cRVals = getValueCount();
+        ConstantPool pool   = pool();
+        int          cLVals = aLVal.length;
+        int          cRVals = getValueCount();
+        boolean      fAsync = async;
 
         assert !m_fPack || cLVals == 1; // pack must be into a single LValue
 
@@ -1197,7 +1252,8 @@ public class InvocationExpression
                 }
             else
                 {
-                aargResult[i] = generateBlackHole(null);
+                aargResult[i] = new Register(pool.typeObject(),
+                                    fAsync ? Op.A_IGNORE_ASYNC : Op.A_IGNORE);
                 }
             }
 
@@ -1215,10 +1271,9 @@ public class InvocationExpression
         boolean  fLocalPropOk = cArgs == 0;
         Argument argFn;
 
-        ConstantPool pool           = pool();
-        Argument[]   aargTypeParams = m_aargTypeParams;
-        int          cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
-        boolean      fTargetOnStack = cArgs == 0 || args.stream().allMatch(Expression::isConstant);
+        Argument[] aargTypeParams = m_aargTypeParams;
+        int        cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
+        boolean    fTargetOnStack = cArgs == 0 || args.stream().allMatch(Expression::isConstant);
 
         if (expr instanceof NameExpression)
             {
@@ -1309,14 +1364,24 @@ public class InvocationExpression
                                     }
                                 }
 
-                            char chRets = '0';
-                            if (cRets == 1)
+                            char chRets;
+                            switch (cRets)
                                 {
-                                chRets = '1';
-                                }
-                            else if (cRets > 1)
-                                {
-                                chRets = 'N';
+                                case 0:
+                                    if (!fAsync)
+                                        {
+                                        chRets = '0';
+                                        break;
+                                        }
+                                    aargResult = new Argument[] {Register.ASYNC};
+                                    // fall through
+                                case 1:
+                                    chRets = '1';
+                                    break;
+
+                                default:
+                                    chRets = 'N';
+                                    break;
                                 }
 
                             switch (combine(chArgs, chRets))
@@ -1512,46 +1577,48 @@ public class InvocationExpression
             assert !m_fBindParams || cArgs > 0;
             assert cDefaults >= 0;
 
-            if (cAll == 0)
+            switch (cAll)
                 {
-                chArgs = '0';
-                aArgs  = NO_RVALUES;
-                }
-            else if (cAll == 1)
-                {
-                chArgs = '1';
-                if (cArgs == 1)
-                    {
-                    arg = args.get(0).generateArgument(ctx, code, true, true, errs);
-                    }
-                else if (cTypeParams == 1)
-                    {
-                    arg = aargTypeParams[0];
-                    }
-                else if (cDefaults == 1)
-                    {
-                    arg = Register.DEFAULT;
-                    }
-                }
-            else
-                {
-                chArgs = 'N';
-                aArgs  = new Argument[cAll];
+                case 0:
+                    chArgs = '0';
+                    aArgs  = NO_RVALUES;
+                    break;
 
-                if (cTypeParams > 0)
-                    {
-                    System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
-                    }
+                case 1:
+                    chArgs = '1';
+                    if (cArgs == 1)
+                        {
+                        arg = args.get(0).generateArgument(ctx, code, true, true, errs);
+                        }
+                    else if (cTypeParams == 1)
+                        {
+                        arg = aargTypeParams[0];
+                        }
+                    else if (cDefaults == 1)
+                        {
+                        arg = Register.DEFAULT;
+                        }
+                    break;
 
-                for (int i = 0, of = cTypeParams; i < cArgs; ++i)
-                    {
-                    aArgs[of + i] = args.get(i).generateArgument(ctx, code, true, true, errs);
-                    }
+                default:
+                    chArgs = 'N';
+                    aArgs  = new Argument[cAll];
 
-                for (int i = 0, of = cTypeParams + cArgs; i < cDefaults; ++i)
-                    {
-                    aArgs[of + i] = Register.DEFAULT;
-                    }
+                    if (cTypeParams > 0)
+                        {
+                        System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
+                        }
+
+                    for (int i = 0, of = cTypeParams; i < cArgs; ++i)
+                        {
+                        aArgs[of + i] = args.get(i).generateArgument(ctx, code, true, true, errs);
+                        }
+
+                    for (int i = 0, of = cTypeParams + cArgs; i < cDefaults; ++i)
+                        {
+                        aArgs[of + i] = Register.DEFAULT;
+                        }
+                    break;
                 }
 
             if (fConstruct)
@@ -1579,14 +1646,23 @@ public class InvocationExpression
                 }
 
             // generate registers for the return values
-            char chRets = '0';
-            if (cRets == 1)
+            char chRets;
+            switch (cRets)
                 {
-                chRets = '1';
-                }
-            else if (cRets > 1)
-                {
-                chRets = 'N';
+                case 0:
+                    if (!fAsync)
+                        {
+                        chRets = '0';
+                        break;
+                        }
+                    aargResult = new Argument[] {Register.ASYNC};
+                    // fall through
+                case 1:
+                    chRets = '1';
+                    break;
+                default:
+                    chRets = 'N';
+                    break;
                 }
 
             switch (combine(chArgs, chRets))
@@ -2944,6 +3020,7 @@ public class InvocationExpression
                                                          // type (e.g. Value.hashCode(value))
     private transient Argument[]      m_aargTypeParams;  // "hidden" type parameters
     private transient MethodConstant  m_idConvert;       // conversion method
+    private transient boolean         m_fAutoFuture;     // implicit FutureVar
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(InvocationExpression.class, "expr", "args");
     }

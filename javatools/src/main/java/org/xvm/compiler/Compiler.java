@@ -1261,6 +1261,10 @@ public class Compiler
      */
     public static final String GENERIC_PROPERTY_TYPE_NOT_ALLOWED   = "COMPILER-166";
     /**
+     * An explicitly asynchronous invocation “^()” is indicated, but an invocation is not actually being performed.
+     */
+    public static final String ASYNC_NOT_ALLOWED                   = "COMPILER-167";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

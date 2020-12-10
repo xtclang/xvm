@@ -1937,81 +1937,86 @@ public abstract class Op
     /**
      * Pre-defined argument: a frame-local stack
      */
-    public static final int A_STACK     = -1;
+    public static final int A_STACK         = -1;
 
     /**
-     * Pre-defined argument: a write-only "black hole" register, akin to {@code /dev/null}
+     * Pre-defined argument: a write-only "black hole" return register, akin to {@code /dev/null}
      */
-    public static final int A_IGNORE    = -2;
+    public static final int A_IGNORE        = -2;
 
     /**
-     * Pre-defined argument: an argument value to be retrieved from a method structure
+     * Pre-defined argument: a write-only "non-blocking black hole" return register.
      */
-    public static final int A_DEFAULT   = -3;
-
-    /**
-     * Pre-defined argument: {@code this}
-     */
-    public static final int A_THIS      = -4;
-
-    /**
-     * Pre-defined argument: {@code this:target}
-     */
-    public static final int A_TARGET    = -5;
-
-    /**
-     * Pre-defined argument: {@code this:public}
-     */
-    public static final int A_PUBLIC    = -6;
-
-    /**
-     * Pre-defined argument: {@code this:protected}
-     */
-    public static final int A_PROTECTED = -7;
-
-    /**
-     * Pre-defined argument: {@code this:private}
-     */
-    public static final int A_PRIVATE   = -8;
-
-    /**
-     * Pre-defined argument: {@code this:struct}
-     */
-    public static final int A_STRUCT    = -9;
-
-    /**
-     * Pre-defined argument: {@code this:class}
-     */
-    public static final int A_CLASS     = -10;
-
-    /**
-     * Pre-defined argument: {@code this:service}
-     */
-    public static final int A_SERVICE   = -11;
-
-    /**
-     * Pre-defined argument: {@code super} (function).
-     */
-    public static final int A_SUPER     = -12;
+    public static final int A_IGNORE_ASYNC  = -3;
 
     /**
      * Pre-defined argument: an indicator for a "blocking wait" return value. It's similar to
      * {@link #A_IGNORE}, but effectively turns on the "forbidden" reentrancy.
      */
-    public static final int A_BLOCK     = -13;
+    public static final int A_BLOCK         = -4;
+
+    /**
+     * Pre-defined argument: an argument value to be retrieved from a method structure
+     */
+    public static final int A_DEFAULT       = -5;
+
+    /**
+     * Pre-defined argument: {@code this}
+     */
+    public static final int A_THIS          = -6;
+
+    /**
+     * Pre-defined argument: {@code this:target}
+     */
+    public static final int A_TARGET        = -7;
+
+    /**
+     * Pre-defined argument: {@code this:public}
+     */
+    public static final int A_PUBLIC        = -8;
+
+    /**
+     * Pre-defined argument: {@code this:protected}
+     */
+    public static final int A_PROTECTED     = -9;
+
+    /**
+     * Pre-defined argument: {@code this:private}
+     */
+    public static final int A_PRIVATE       = -10;
+
+    /**
+     * Pre-defined argument: {@code this:struct}
+     */
+    public static final int A_STRUCT        = -11;
+
+    /**
+     * Pre-defined argument: {@code this:class}
+     */
+    public static final int A_CLASS         = -12;
+
+    /**
+     * Pre-defined argument: {@code this:service}
+     */
+    public static final int A_SERVICE       = -13;
+
+    /**
+     * Pre-defined argument: {@code super} (function).
+     */
+    public static final int A_SUPER         = -14;
 
     /**
      * Pre-defined argument: an indicator for "multiple return values" (internal)
      */
-    public final static int A_MULTI     = -14;
+    public final static int A_MULTI         = -15;
     /**
      * Pre-defined argument: an indicator for a "tuple return" (internal)
      */
-    public final static int A_TUPLE     = -15;
+    public final static int A_TUPLE         = -16;
     /**
      * Pre-defined and compile-time only argument: A label.
      */
-    public final static int A_LABEL     = -16;
+    public final static int A_LABEL         = -17;
 
     /**
      * The first constant, constant #0, is at this index (which is a negative). For a constant whose
@@ -2025,17 +2030,17 @@ public abstract class Op
     /**
      * Result from process() method: execute the next op-code.
      */
-    public static final int R_NEXT = -1;
+    public static final int R_NEXT             = -1;
 
     /**
      * Result from process() method: resume the previous frame execution.
      */
-    public static final int R_RETURN = -2;
+    public static final int R_RETURN           = -2;
 
     /**
      * Result from process() method: process the exception placed in frame.m_hException.
      */
-    public static final int R_EXCEPTION = -3;
+    public static final int R_EXCEPTION        = -3;
 
     /**
      * Result from process() method: process the exception raised during return.
@@ -2045,35 +2050,35 @@ public abstract class Op
     /**
      * Result from process() method: call the frame placed in frame.m_frameNext.
      */
-    public static final int R_CALL = -5;
+    public static final int R_CALL             = -5;
 
     /**
      * Result from process() method: call the frame placed in frame.f_framePrev.m_frameNext.
      */
-    public static final int R_RETURN_CALL = -6;
+    public static final int R_RETURN_CALL      = -6;
 
     /**
      * Result from process() method: some registers are not ready for a read; yield and repeat the
      * same op-code.
      */
-    public static final int R_REPEAT = -7;
+    public static final int R_REPEAT           = -7;
 
     /**
      * Result from process() method: at the moment used only by Service.registerAsyncSection() API;
      * the execution must be blocked until Fiber.m_resume continuation allows it to proceed.
      */
-    public static final int R_BLOCK = -8;
+    public static final int R_BLOCK            = -8;
 
     /**
      * Result from process() method: yield before executing the next op-code.
      */
-    public static final int R_YIELD = -9;
+    public static final int R_YIELD            = -9;
 
     /**
      * Result from process() method: some registers are not ready for a read; block any other
      * fibers from execution and repeat the same op-code.
      */
-    public static final int R_PAUSE = -10;
+    public static final int R_PAUSE            = -10;
 
 
     // ----- other constants -----------------------------------------------------------------------

@@ -31,9 +31,17 @@ public class Register
      */
     public Register(TypeConstant type, int iArg)
         {
-        if (type == null && iArg != Op.A_DEFAULT)
+        if (type == null)
             {
-            throw new IllegalArgumentException("type required");
+            switch (iArg)
+                {
+                case Op.A_DEFAULT:
+                case Op.A_IGNORE:
+                case Op.A_IGNORE_ASYNC:
+                    break;
+                default:
+                    throw new IllegalArgumentException("type required");
+                }
             }
 
         validateIndex(iArg);
@@ -262,6 +270,7 @@ public class Register
             default:
             case Op.A_STACK:
             case Op.A_IGNORE:
+            case Op.A_IGNORE_ASYNC:
                 return false;
             }
         }
@@ -317,7 +326,16 @@ public class Register
      */
     public boolean isReadable()
         {
-        return m_iArg != Op.A_IGNORE && m_iArg != Op.A_LABEL;
+        switch (m_iArg)
+            {
+            case Op.A_IGNORE:
+            case Op.A_IGNORE_ASYNC:
+            case Op.A_LABEL:
+                return false;
+
+            default:
+                return true;
+            }
         }
 
     /**
@@ -443,6 +461,7 @@ public class Register
             {
             case Op.A_STACK:
             case Op.A_IGNORE:
+            case Op.A_IGNORE_ASYNC:
             case Op.A_DEFAULT:
             case Op.A_PUBLIC:
             case Op.A_PROTECTED:
@@ -480,6 +499,7 @@ public class Register
                 return "this:stack";
 
             case Op.A_IGNORE:
+            case Op.A_IGNORE_ASYNC:
                 return "_";
 
             case Op.A_DEFAULT:
@@ -696,6 +716,11 @@ public class Register
      * Register representing a default method argument.
      */
     public static final Register DEFAULT = new Register(null, Op.A_DEFAULT);
+
+    /**
+     * Register representing an "async ignore" return.
+     */
+    public static final Register ASYNC = new Register(null, Op.A_IGNORE_ASYNC);
 
     /**
      * A reserved argument index that represents an unknown or otherwise unassigned index.

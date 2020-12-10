@@ -222,11 +222,11 @@ public class VariableDeclarationStatement
         ConstantPool   pool      = pool();
         StringConstant constName = pool.ensureStringConstant((String) name.getValue());
 
-        // declare named var
+        // declare a named var
         Register reg = m_reg;
         if (reg.isDVar())
             {
-            if (!m_fConstAnno)
+            if (!m_fConstAnno && type instanceof AnnotatedTypeExpression)
                 {
                 // replace the non-constant args with the corresponding registers
                 AnnotatedTypeExpression exprAnnoType = (AnnotatedTypeExpression) type;
