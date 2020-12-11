@@ -3647,9 +3647,9 @@ public abstract class TypeConstant
                         if (methodMatch != null && !methodMatch.getIdentity().equals(methodContrib.getIdentity()))
                             {
                             log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
-                                getValueString(),
-                                methodMatch.getIdentity(),
-                                methodContrib.getIdentity().getPathString()
+                                removeAccess().getValueString(),
+                                methodMatch.getSignature().getValueString(),
+                                methodMatch.getIdentity().getNamespace().getValueString()
                                 );
                             }
                         }
