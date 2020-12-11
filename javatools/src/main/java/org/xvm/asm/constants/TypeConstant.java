@@ -1795,6 +1795,17 @@ public abstract class TypeConstant
                         }
                     break;
                     }
+
+                case Incorporates:
+                    {
+                    ClassConstant idMixin = (ClassConstant) contrib.getTypeConstant().
+                            getSingleUnderlyingClass(true);
+                    if (listAnnos == null)
+                        {
+                        listAnnos = new ArrayList<>();
+                        }
+                    listAnnos.add(idMixin.getConstantPool().ensureAnnotation(idMixin));
+                    }
                 }
             }
         return listAnnos == null
@@ -4793,10 +4804,14 @@ public abstract class TypeConstant
         typeTarget.layerOnMethods(idBase, false, annoMixin != null, null, mapMethods, mapVirtMethods,
                 typeMixin, mapMixinMethods, errs);
 
-        List<Contribution> listProcess = infoSource.getContributionList();
-        if (annoMixin != null)
+        List<Contribution> listProcess = new ArrayList<>(infoSource.getContributionList());
+        if (annoMixin == null)
             {
-            listProcess = new ArrayList<>(listProcess);
+            // we don't pass the constraints since the type is known to satisfy the "condition"
+            listProcess.add(new Contribution(typeMixin, ListMap.EMPTY));
+            }
+        else
+            {
             listProcess.add(new Contribution(annoMixin, typeMixin));
             }
 

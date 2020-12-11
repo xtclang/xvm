@@ -3044,7 +3044,7 @@ public abstract class Component
          * @param constType       the type of the mixin
          * @param mapConstraints  the type constraints that make the mixin conditional
          */
-        protected Contribution(TypeConstant constType,
+        public Contribution(TypeConstant constType,
                                ListMap<StringConstant, TypeConstant> mapConstraints)
             {
             this(Composition.Incorporates, constType);
