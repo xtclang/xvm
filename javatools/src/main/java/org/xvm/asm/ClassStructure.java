@@ -2995,7 +2995,7 @@ public class ClassStructure
                 aReturns = Parameter.NO_PARAMS;
                 }
 
-            methodDelegate = createMethod(false, prop.getAccess(), null,
+            methodDelegate = propHost.createMethod(false, prop.getAccess(), null,
                     aReturns, sigAccessor.getName(), aParams, true, false);
 
             MethodStructure.Code code       = methodDelegate.createCode();
