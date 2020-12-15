@@ -370,6 +370,13 @@ public class IntersectionTypeConstant
         }
 
     @Override
+    public boolean isIntoMethodParameterType()
+        {
+        return getUnderlyingType().isIntoMethodParameterType()
+            || getUnderlyingType2().isIntoMethodParameterType();
+        }
+
+    @Override
     public boolean isIntoVariableType()
         {
         return getUnderlyingType().isIntoVariableType()

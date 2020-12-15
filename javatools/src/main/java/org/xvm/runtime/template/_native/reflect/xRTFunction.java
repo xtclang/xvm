@@ -1300,7 +1300,7 @@ public class xRTFunction
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeListMap   = pool.ensureEcstasyTypeConstant("collections.ListMap");
-            TypeConstant typeParameter = pool.ensureEcstasyTypeConstant("reflect.Parameter");
+            TypeConstant typeParameter = pool.typeParameter();
 
             typeListMap = pool.ensureParameterizedTypeConstant(typeListMap, typeParameter, pool.typeObject());
             LISTMAP_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeListMap);

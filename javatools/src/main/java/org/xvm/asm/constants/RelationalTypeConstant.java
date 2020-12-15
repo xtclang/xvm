@@ -490,6 +490,12 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public boolean isIntoMethodParameterType()
+        {
+        return false;
+        }
+
+    @Override
     public boolean isIntoVariableType()
         {
         return false;

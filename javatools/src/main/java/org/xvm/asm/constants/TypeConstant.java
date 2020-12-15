@@ -5882,6 +5882,15 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this type can be used in an "into" clause for a mixin for a method parameter,
+     *         which means that the mix-in applies to the meta-data of the parameter
+     */
+    public boolean isIntoMethodParameterType()
+        {
+        return getUnderlyingType().isIntoMethodParameterType();
+        }
+
+    /**
      * @return true iff this type can be used in an "into" clause for a mixin for a local variable
      */
     public boolean isIntoVariableType()

@@ -2168,6 +2168,7 @@ public class ConstantPool
     public TypeConstant      typeCloseable()    {TypeConstant      c = m_typeCloseable;   if (c == null) {m_typeCloseable   = c = ensureTerminalTypeConstant(clzCloseable()                  );} return c;}
     public TypeConstant      typeProperty()     {TypeConstant      c = m_typeProperty;    if (c == null) {m_typeProperty    = c = ensureTerminalTypeConstant(clzProperty()                   );} return c;}
     public TypeConstant      typeMethod()       {TypeConstant      c = m_typeMethod;      if (c == null) {m_typeMethod      = c = ensureTerminalTypeConstant(clzMethod()                     );} return c;}
+    public TypeConstant      typeParameter()    {TypeConstant      c = m_typeParameter;   if (c == null) {m_typeParameter   = c = ensureTerminalTypeConstant(clzParameter()                  );} return c;}
     public TypeConstant      typeFunction()     {TypeConstant      c = m_typeFunction;    if (c == null) {m_typeFunction    = c = ensureTerminalTypeConstant(clzFunction()                   );} return c;}
     public TypeConstant      typeBoolean()      {TypeConstant      c = m_typeBoolean;     if (c == null) {m_typeBoolean     = c = ensureTerminalTypeConstant(clzBoolean()                    );} return c;}
     public TypeConstant      typeTrue()         {TypeConstant      c = m_typeTrue;        if (c == null) {m_typeTrue        = c = ensureTerminalTypeConstant(clzTrue()                       );} return c;}
@@ -2241,6 +2242,7 @@ public class ConstantPool
     // ---- internal class helpers -----------------------------------------------------------------
 
     protected ClassConstant  clzClass()        {return (ClassConstant) getImplicitlyImportedIdentity("Class"         );}
+    protected ClassConstant  clzParameter()    {return (ClassConstant) getImplicitlyImportedIdentity("Parameter"     );}
     protected ClassConstant  clzBoolean()      {return (ClassConstant) getImplicitlyImportedIdentity("Boolean"       );}
     protected ClassConstant  clzFalse()        {return (ClassConstant) getImplicitlyImportedIdentity("False"         );}
     protected ClassConstant  clzTrue()         {return (ClassConstant) getImplicitlyImportedIdentity("True"          );}
@@ -2946,6 +2948,7 @@ public class ConstantPool
         m_typeException१  = null;
         m_typeProperty    = null;
         m_typeMethod      = null;
+        m_typeParameter   = null;
         m_typeFunction    = null;
         m_typeBoolean     = null;
         m_typeTrue        = null;
@@ -3811,6 +3814,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeException१;
     private transient TypeConstant      m_typeProperty;
     private transient TypeConstant      m_typeMethod;
+    private transient TypeConstant      m_typeParameter;
     private transient TypeConstant      m_typeFunction;
     private transient TypeConstant      m_typeBoolean;
     private transient TypeConstant      m_typeTrue;

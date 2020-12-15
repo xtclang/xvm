@@ -202,7 +202,7 @@ public class AnnotationExpression
         TypeInfo infoAnno = typeAnno.ensureTypeInfo(errs);
         if (infoAnno.getFormat() != Format.MIXIN)
             {
-            log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, idAnno.getName());
+            log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, anno.getValueString());
             return;
             }
 
@@ -250,7 +250,7 @@ public class AnnotationExpression
 
         if (idConstruct == null)
             {
-            log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getName());
+            log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getValueString());
             return;
             }
 
@@ -379,7 +379,7 @@ public class AnnotationExpression
                 MethodKind.Constructor, true, false, null, errs);
         if (idConstruct == null)
             {
-            log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getName());
+            log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getValueString());
             return null;
             }
 

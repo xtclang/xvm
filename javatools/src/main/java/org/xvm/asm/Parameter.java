@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -15,6 +16,7 @@ import org.xvm.util.Handy;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -44,10 +46,18 @@ public class Parameter
         {
         super(pool);
 
+        int          cAnnos = readPackedInt(in);
+        Annotation[] aAnnos = cAnnos == 0 ? Annotation.NO_ANNOTATIONS : new Annotation[cAnnos];
+        for (int i = 0; i < cAnnos; ++i)
+            {
+            aAnnos[i] = (Annotation) pool.getConstant(readMagnitude(in));
+            }
+
         int iType      = readMagnitude(in);
         int iName      = fReturn ? readIndex(in) : readMagnitude(in);
         int iDefault   = readIndex(in);
 
+        m_aAnnotations = aAnnos;
         m_constType    = (TypeConstant)   pool.getConstant(iType   );
         m_constName    = (StringConstant) pool.getConstant(iName   );
         m_constDefault =                  pool.getConstant(iDefault);
@@ -56,8 +66,7 @@ public class Parameter
         }
 
     /**
-     * Construct a constant whose value is a Parameter definition.
-     *
+     * Construct a Parameter definition structure.
      * @param pool          the ConstantPool that will contain this Constant
      * @param constType     the type of the parameter
      * @param sName         the parameter name
@@ -66,8 +75,8 @@ public class Parameter
      * @param index         index of the return value or parameter
      * @param fSpecial      true iff the "condition" return value or a type-param parameter
      */
-    public Parameter(ConstantPool pool, TypeConstant constType, String sName, Constant constDefault,
-            boolean fReturn, int index, boolean fSpecial)
+    public Parameter(ConstantPool pool, TypeConstant constType, String sName,
+                     Constant constDefault, boolean fReturn, int index, boolean fSpecial)
         {
         super(pool);
 
@@ -81,6 +90,7 @@ public class Parameter
             throw new IllegalArgumentException("parameter name required");
             }
 
+        m_aAnnotations = Annotation.NO_ANNOTATIONS;
         m_constType    = constType;
         m_constName    = sName == null ? null : pool.ensureStringConstant(sName);
         m_constDefault = constDefault;
@@ -111,6 +121,97 @@ public class Parameter
     public boolean isParameter()
         {
         return m_iParam >= 0;
+        }
+
+    /**
+     * @return an array of Annotation structures that represent all annotations of the parameter
+     */
+    public Annotation[] getAnnotations()
+        {
+        return m_aAnnotations;
+        }
+
+    /**
+     * Check if all annotations are resolved; extract those that apply to the Parameter itself.
+     *
+     * @return true if the annotations have been resolved; false if this method has to be called
+     *         later in order to resolve annotations
+     */
+    public boolean resolveAnnotations()
+        {
+        TypeConstant typeParam = m_constType;
+        if (typeParam.containsUnresolved())
+            {
+            return false;
+            }
+
+        if (!typeParam.isAnnotated())
+            {
+            return true;
+            }
+
+        int          cExtract = 0;
+        TypeConstant typeBase = typeParam.resolveTypedefs();
+        while (typeBase instanceof AnnotatedTypeConstant)
+            {
+            AnnotatedTypeConstant typeAnno  = (AnnotatedTypeConstant) typeBase;
+            Annotation            anno      = typeAnno.getAnnotation();
+            TypeConstant          typeMixin = anno.getAnnotationType();
+
+            if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+                {
+                // no need to do anything; an error will be reported later
+                return true;
+                }
+
+            TypeConstant typeInto = typeMixin.getExplicitClassInto();
+            if (typeInto.containsUnresolved())
+                {
+                return false;
+                }
+
+            if (typeInto.isIntoMethodParameterType())
+                {
+                ++cExtract;
+                }
+            typeBase = typeAnno.getUnderlyingType();
+            }
+
+        if (cExtract == 0)
+            {
+            return true;
+            }
+
+        Annotation[] aAnnos = typeParam.getAnnotations();
+        int          cAll   = aAnnos.length;
+        if (cExtract == cAll)
+            {
+            m_aAnnotations = aAnnos;
+            m_constType    = typeBase;
+            return true;
+            }
+
+        int          cKeep = cAll - cExtract;
+        Annotation[] aKeep = new Annotation[cKeep];
+        Annotation[] aMove = new Annotation[cExtract];
+        int          iKeep = 0;
+        int          iMove = 0;
+
+        for (Annotation annotation : aAnnos)
+            {
+            if (annotation.getAnnotationType().getExplicitClassInto().isIntoMethodParameterType())
+                {
+                aMove[iMove++] = annotation;
+                }
+            else
+                {
+                aKeep[iKeep++] = annotation;
+                }
+            }
+
+        m_constType    = getConstantPool().ensureAnnotatedTypeConstant(typeBase, aKeep);
+        m_aAnnotations = aMove;
+        return true;
         }
 
     /**
@@ -295,6 +396,11 @@ public class Parameter
     @Override
     protected void registerConstants(ConstantPool pool)
         {
+        for (int i = 0, c = m_aAnnotations.length; i < c; i++)
+            {
+            m_aAnnotations[i] = (Annotation) pool.register(m_aAnnotations[i]);
+            }
+
         m_constType    = (TypeConstant)   pool.register(m_constType   );
         m_constName    = (StringConstant) pool.register(m_constName   );
         m_constDefault =                  pool.register(m_constDefault);
@@ -304,6 +410,12 @@ public class Parameter
     protected void assemble(DataOutput out)
             throws IOException
         {
+        writePackedLong(out, m_aAnnotations.length);
+        for (Annotation anno : m_aAnnotations)
+            {
+            writePackedLong(out, anno.getPosition());
+            }
+
         writePackedLong(out, Constant.indexOf(m_constType));
         writePackedLong(out, Constant.indexOf(m_constName));
         writePackedLong(out, Constant.indexOf(m_constDefault));
@@ -393,6 +505,11 @@ public class Parameter
      * Empty array of Parameters.
      */
     public static final Parameter[] NO_PARAMS = new Parameter[0];
+
+    /**
+     * The parameter annotations.
+     */
+    private Annotation[] m_aAnnotations;
 
     /**
      * The constant that represents the type of this parameter.

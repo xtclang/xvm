@@ -1384,6 +1384,12 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean isIntoMethodParameterType()
+        {
+        return this.equals(getConstantPool().typeParameter());
+        }
+
+    @Override
     public boolean isIntoVariableType()
         {
         return this.isA(getConstantPool().typeRef());

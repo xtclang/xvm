@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -15,6 +16,8 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UnresolvedNameConstant;
+import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Constants;
@@ -172,33 +175,7 @@ public class AnnotatedTypeExpression
     @Override
     protected TypeConstant instantiateTypeConstant(Context ctx)
         {
-        // this is a bit complicated:
-        // 1) we need the class of the annotation, which is resolved during validateContent()
-        // 2) we need a constant for each parameter, but those are only guaranteed to be correct
-        //    after validateContent()
-        // 3) a "dis-associated" annotation is one that does not apply to the underlying type, so
-        //    the underlying type is unchanged by this AnnotatedTypeExpression
-        ConstantPool pool           = pool();
-        TypeConstant typeUnderlying = type.ensureTypeConstant(ctx);
-
-        Annotation anno      = annotation.ensureAnnotation(pool());
-        Constant   constAnno = anno.getAnnotationClass();
-
-        // until it's resolved let's assume it's disassociated
-        boolean fIntoVar = true;
-        if (!constAnno.containsUnresolved())
-            {
-            IdentityConstant idAnno   = (IdentityConstant) constAnno;
-            TypeConstant     typeInto = ((ClassStructure) idAnno.getComponent()).getTypeInto();
-
-            fIntoVar = !typeInto.containsUnresolved() && typeInto.isIntoVariableType();
-            }
-
-        m_fDisassociate = fIntoVar;
-
-        return fIntoVar
-                ? typeUnderlying    // our annotation is not added to the underlying type constant
-                : pool.ensureAnnotatedTypeConstant(typeUnderlying, anno);
+        return calculateType(ctx, ErrorListener.BLACKHOLE);
         }
 
     @Override
@@ -210,6 +187,27 @@ public class AnnotatedTypeExpression
 
 
     // ----- Expression methods --------------------------------------------------------------------
+
+    @Override
+    public void resolveNames(StageMgr mgr, ErrorListener errs)
+        {
+        if (!mgr.processChildren())
+            {
+            mgr.requestRevisit();
+            return;
+            }
+
+        calculateType(null, errs);
+
+        if (m_typeUnresolved == null)
+            {
+            resetTypeConstant();
+            }
+        else
+            {
+            mgr.requestRevisit();
+            }
+        }
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
@@ -320,6 +318,66 @@ public class AnnotatedTypeExpression
         return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, constValue, errs);
         }
 
+    /**
+     * Calculate the "pre-validation" annotated type.
+     */
+    protected TypeConstant calculateType(Context ctx, ErrorListener errs)
+        {
+        // this is a bit complicated:
+        // 1) we need the class of the annotation, which is resolved during validateContent()
+        // 2) we need a constant for each parameter, but those are only guaranteed to be correct
+        //    after validateContent()
+        // 3) a "dis-associated" annotation is one that does not apply to the underlying type, so
+        //    the underlying type is unchanged by this AnnotatedTypeExpression
+
+        ConstantPool pool           = pool();
+        TypeConstant typeUnderlying = type.ensureTypeConstant(ctx);
+        Annotation   anno           = annotation.ensureAnnotation(pool());
+        Constant     constAnno      = anno.getAnnotationClass();
+        boolean      fResolved      = !constAnno.containsUnresolved();
+
+        if (fResolved)
+            {
+            IdentityConstant idAnno   = (IdentityConstant) constAnno;
+            ClassStructure   clzAnno  = (ClassStructure) idAnno.getComponent();
+            if (clzAnno.getFormat() != Component.Format.MIXIN)
+                {
+                log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, clzAnno.getName());
+                return idAnno.getType();
+                }
+
+            TypeConstant typeInto = clzAnno.getTypeInto();
+            if (typeInto.containsUnresolved())
+                {
+                fResolved = false;
+                }
+            else
+                {
+                m_fDisassociate = typeInto.isIntoVariableType();
+                }
+            }
+
+        if (!fResolved)
+            {
+            return m_typeUnresolved == null
+                    ? m_typeUnresolved = new UnresolvedTypeConstant(pool,
+                        new UnresolvedNameConstant(pool, constAnno.getValueString()))
+                    : m_typeUnresolved;
+            }
+
+        TypeConstant type = m_fDisassociate
+                ? typeUnderlying    // our annotation is not added to the underlying type constant
+                : pool.ensureAnnotatedTypeConstant(typeUnderlying, anno);
+
+        if (m_typeUnresolved != null)
+            {
+            m_typeUnresolved.resolve(type);
+            m_typeUnresolved = null;
+            }
+
+        return type;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -351,6 +409,9 @@ public class AnnotatedTypeExpression
     private transient boolean m_fVar;
     private transient boolean m_fInjected;
     private transient boolean m_fFinal;
+
+    // unresolved constant that may have been created by this expression
+    private transient UnresolvedTypeConstant m_typeUnresolved;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AnnotatedTypeExpression.class,
             "annotation", "type");

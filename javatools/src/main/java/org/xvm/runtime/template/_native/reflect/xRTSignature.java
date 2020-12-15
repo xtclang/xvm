@@ -1,6 +1,7 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -242,8 +243,7 @@ public class xRTSignature
         TypeConstant type = PARAM_TYPE;
         if (type == null)
             {
-            ConstantPool pool = INSTANCE.pool();
-            PARAM_TYPE = type = pool.ensureEcstasyTypeConstant("reflect.Parameter");
+            PARAM_TYPE = type = INSTANCE.pool().typeParameter();
             assert type != null;
             }
         return type;
@@ -295,22 +295,32 @@ public class xRTSignature
     /**
      * @return the TypeComposition for an RTReturn of the specified type
      */
-    public static TypeComposition ensureRTReturn(TypeConstant typeValue)
+    public static TypeComposition ensureRTReturn(ConstantPool pool, TypeConstant typeValue)
         {
         assert typeValue != null;
-        TypeConstant typeRTReturn = INSTANCE.pool().
-                ensureParameterizedTypeConstant(ensureRTReturnType(), typeValue);
+
+        TypeConstant typeRTReturn =
+                pool.ensureParameterizedTypeConstant(ensureRTReturnType(), typeValue);
+
         return INSTANCE.f_templates.resolveClass(typeRTReturn);
         }
 
     /**
-     * @return the TypeComposition for a RTParameter of the specified type
+     * @return the TypeComposition for a RTParameter of the specified type and annotations
      */
-    public static TypeComposition ensureRTParameter(TypeConstant typeValue)
+    public static TypeComposition ensureRTParameter(ConstantPool pool, TypeConstant typeValue,
+                                                    Annotation[] aAnno)
         {
         assert typeValue != null;
-        TypeConstant typeRTParam = INSTANCE.pool().
-                ensureParameterizedTypeConstant(ensureRTParamType(), typeValue);
+
+        TypeConstant typeRTParam =
+                pool.ensureParameterizedTypeConstant(ensureRTParamType(), typeValue);
+
+        if (aAnno.length > 0)
+            {
+            typeRTParam = pool.ensureAnnotatedTypeConstant(typeRTParam, aAnno);
+            }
+
         return INSTANCE.f_templates.resolveClass(typeRTParam);
         }
 
@@ -323,8 +333,8 @@ public class xRTSignature
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeReturnArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                    ensureReturnType());
+            TypeConstant typeReturnArray =
+                    pool.ensureParameterizedTypeConstant(pool.typeArray(), ensureReturnType());
             RETURN_ARRAY = clz = INSTANCE.f_templates.resolveClass(typeReturnArray);
             assert clz != null;
             }
@@ -551,10 +561,14 @@ public class xRTSignature
             {
             while (++index < cElements)
                 {
+                ConstantPool     pool  = frameCaller.poolContext();
                 Parameter        param = fRetVals ? hMethod.getReturn(index)     : hMethod.getParam(index);
                 TypeConstant     type  = fRetVals ? hMethod.getReturnType(index) : hMethod.getParamType(index);
-                TypeComposition clz    = fRetVals ? ensureRTReturn(type)         : ensureRTParameter(type);
                 String           sName = param.getName();
+                TypeComposition clz    = fRetVals
+                        ? ensureRTReturn(pool, type)
+                        : ensureRTParameter(pool, type, param.getAnnotations());
+
                 ahParams[0] = xInt64.makeHandle(index);
                 ahParams[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
                 if (!fRetVals)

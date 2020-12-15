@@ -130,6 +130,7 @@ import ecstasy.reflect.EnumValue;
 import ecstasy.reflect.Function;
 import ecstasy.reflect.Property;
 import ecstasy.reflect.Method;
+import ecstasy.reflect.Parameter;
 import ecstasy.reflect.Module;
 import ecstasy.reflect.Outer;
 import ecstasy.reflect.Outer.Inner;

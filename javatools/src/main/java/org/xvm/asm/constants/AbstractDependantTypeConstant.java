@@ -228,6 +228,12 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
+    public boolean isIntoMethodParameterType()
+        {
+        return false;
+        }
+
+    @Override
     public boolean isIntoVariableType()
         {
         return false;

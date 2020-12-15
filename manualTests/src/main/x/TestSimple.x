@@ -4,40 +4,18 @@ module TestSimple
 
     void run()
         {
-        C<Int> c = new C(1);
-
-        console.println(c.format(5));
+        Method m = test;
+        assert Parameter p := m.findParam("name");
+        assert p.is(QueryParam);
+        console.println($"attribute={p.attribute}");
         }
 
-    interface Iface<T extends Int>
+    void test(@QueryParam(42) String name)
         {
-        String format(T t);
         }
 
-    mixin M<T extends Int>
-            into Iface<T>
+    mixin QueryParam(Int attribute)
+            into Parameter
         {
-        construct()
-            {
-            prefix = T.toString() + ": ";
-            }
-
-        String prefix;
-
-        @Override
-        String format(T t)
-            {
-            return prefix + t.toString();
-            }
-        }
-
-    class C<T>
-            incorporates conditional M<T extends Int>
-        {
-        construct(T t)
-            {
-            base = t;
-            }
-        T base;
         }
     }

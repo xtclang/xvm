@@ -21,7 +21,6 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -31,6 +30,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -559,7 +559,8 @@ public class MethodDeclarationStatement
             // validateContent() stage
             mgr.processChildrenExcept((child) -> child == body);
 
-            // sort out which annotations go on the method, and which belong to the return type
+            // sort out which annotations go on the method or its parameters, and which belong to
+            // the return type
             if (!method.resolveAnnotations() || !method.resolveTypedefs())
                 {
                 mgr.requestRevisit();
@@ -614,6 +615,48 @@ public class MethodDeclarationStatement
                 }
             }
 
+        // check for "disassociated" parameters
+        List<Parameter> listParams = params;
+        if (listParams != null && listParams.size() > 0)
+            {
+            for (int i = 0, c = listParams.size(); i < c; i++)
+                {
+                Parameter param = listParams.get(i);
+
+                TypeExpression exprType = param.getType();
+                if (exprType instanceof AnnotatedTypeExpression &&
+                        ((AnnotatedTypeExpression) exprType).isDisassociated())
+                    {
+                    log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                            ((AnnotatedTypeExpression) exprType).getAnnotation());
+                    return;
+                    }
+                }
+            }
+
+        // check for invalid method annotations
+        Annotation[] aAnnos = method.getAnnotations();
+        if (aAnnos.length > 0)
+            {
+            for (Annotation anno : aAnnos)
+                {
+                TypeConstant typeMixin = anno.getAnnotationType();
+                if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+                    {
+                    // no need to do anything; an error will be reported later
+                    log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, anno.getValueString());
+                    return;
+                    }
+
+                if (!typeMixin.getExplicitClassInto().isIntoMethodType())
+                    {
+                    log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                            anno.getValueString());
+                    return;
+                    }
+                }
+            }
+
         // validate annotations added to the return type by MethodStructure.resolveAnnotations() call
         org.xvm.asm.Parameter[] aReturns = method.getReturnArray();
         if (aReturns.length > 0)
@@ -621,20 +664,25 @@ public class MethodDeclarationStatement
             TypeConstant typeRet = (aReturns[0].isConditionalReturn()
                     ? aReturns[1]
                     : aReturns[0]).getType();
-            while (typeRet instanceof AnnotatedTypeConstant)
-                {
-                AnnotatedTypeConstant typeAnno = (AnnotatedTypeConstant) typeRet;
-                Annotation            anno     = typeAnno.getAnnotation();
-                TypeConstant          typeInto = anno.getAnnotationType().getExplicitClassInto();
 
+            for (Annotation anno : typeRet.getAnnotations())
+                {
+                TypeConstant typeMixin = anno.getAnnotationType();
+                if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+                    {
+                    // no need to do anything; an error will be reported later
+                    log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, anno.getValueString());
+                    return;
+                    }
+
+                TypeConstant typeInto = typeMixin.getExplicitClassInto();
                 if (typeInto.isIntoClassType()    ||
                     typeInto.isIntoPropertyType() ||
                     typeInto.isIntoVariableType())
                     {
                     log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE, anno.getValueString());
-                    break;
+                    return;
                     }
-                typeRet = typeAnno.getUnderlyingType();
                 }
             }
         }

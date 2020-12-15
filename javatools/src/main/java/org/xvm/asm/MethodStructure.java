@@ -238,6 +238,9 @@ public class MethodStructure
         }
 
     /**
+     * Check if all annotations are resolved; move those that don't apply to the method to the
+     * return value type.
+     *
      * @return true if the annotations have been resolved; false if this method has to be called
      *         later in order to resolve annotations
      */
@@ -252,7 +255,14 @@ public class MethodStructure
                 return false;
                 }
 
-            TypeConstant typeInto = annotation.getAnnotationType().getExplicitClassInto();
+            TypeConstant typeMixin = annotation.getAnnotationType();
+            if (typeMixin.getExplicitClassFormat() != Format.MIXIN)
+                {
+                // no need to do anything; an error will be reported later
+                return true;
+                }
+
+            TypeConstant typeInto = typeMixin.getExplicitClassInto();
             if (typeInto.containsUnresolved())
                 {
                 return false;
@@ -263,8 +273,28 @@ public class MethodStructure
                 ++cMove;
                 }
             }
+
+        boolean fRebuildId = false;
+        for (Parameter parameter : m_aParams)
+            {
+            TypeConstant typeOld = parameter.getType();
+            if (!parameter.resolveAnnotations())
+                {
+                return false;
+                }
+
+            if (!typeOld.equals(parameter.getType()))
+                {
+                fRebuildId = true;
+                }
+            }
+
         if (cMove == 0)
             {
+            if (fRebuildId)
+                {
+                rebuildIdentityConstant();
+                }
             return true;
             }
 
@@ -325,9 +355,18 @@ public class MethodStructure
                 : pool.ensureAnnotatedTypeConstant(ret.getType(), annotations);
         m_aReturns[iRet] = new Parameter(pool, type, ret.getName(), ret.getDefaultValue(), true, iRet, false);
 
-        // build a new MethodConstant
+        rebuildIdentityConstant();
+        }
+
+    /**
+     * Build a new MethodConstant.
+     */
+    private void rebuildIdentityConstant()
+        {
+        ConstantPool   pool  = getConstantPool();
         MethodConstant idOld = getIdentityConstant();
-        MethodConstant idNew = pool.ensureMethodConstant(idOld.getParentConstant(), idOld.getName(), getParamTypes(), getReturnTypes());
+        MethodConstant idNew = pool.ensureMethodConstant(idOld.getParentConstant(), idOld.getName(),
+                getParamTypes(), getReturnTypes());
         replaceThisIdentityConstant(idNew);
         }
 
