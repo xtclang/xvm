@@ -165,7 +165,7 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
         }
 
     class ClientChange
-            implements db.DBMap<Key, Value>.Change<Key, Value>
+            implements db.DBMap.Change<Key, Value>
         {
         construct()
             {
