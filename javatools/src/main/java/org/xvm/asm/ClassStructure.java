@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -321,6 +322,62 @@ public class ClassStructure
                     throw new IllegalStateException();
                 }
             }
+        }
+
+    /**
+     * @return true iff this class is a virtual child of the specified class (or is that class)
+     */
+    public boolean isVirtualChildOf(ClassConstant idParent)
+        {
+        return getIdentityConstant().equals(idParent) ||
+                isVirtualChild() && getVirtualParent().isVirtualChildOf(idParent);
+        }
+
+    /**
+     * Ensure that all generic types referred to by the specified type are accessible in the context
+     * of this class.
+     *
+     * @param type  the type to check
+     *
+     * @return null iff all generic types are accessible; otherwise a non-accessible generic
+     *         property (used for error reporting)
+     */
+    public PropertyConstant checkGenericTypeVisibility(TypeConstant type)
+        {
+        PropertyConstant[] aid = new PropertyConstant[1];
+
+        Consumer<Constant> visitor = new Consumer<>()
+            {
+            public void accept(Constant c)
+                {
+                if (c instanceof TypeConstant)
+                    {
+                    TypeConstant t = (TypeConstant) c;
+                    if (t.isGenericType())
+                        {
+                        Constant constId = t.getDefiningConstant();
+                        if (constId.getFormat() == Constant.Format.Property)
+                            {
+                            PropertyConstant idGeneric = (PropertyConstant) constId;
+                            ClassConstant    idParent  = (ClassConstant) idGeneric.getParentConstant();
+                            if (!containsGenericParamType(idGeneric.getName())
+                                     && !isVirtualChildOf(idParent)
+                                     && aid[0] == null)
+                                {
+                                aid[0] = idGeneric;
+                                }
+                            }
+                        }
+                    else
+                        {
+                        t.forEachUnderlying(this);
+                        }
+                    }
+                }
+            };
+
+        type.forEachUnderlying(visitor);
+        return aid[0];
         }
 
     /**

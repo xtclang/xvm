@@ -657,10 +657,34 @@ public class MethodDeclarationStatement
                 }
             }
 
-        // validate annotations added to the return type by MethodStructure.resolveAnnotations() call
+        // validate accessibility of all generic types
+        ClassStructure clz = method.getContainingClass(false);
+
+        org.xvm.asm.Parameter[] aParams = method.getReturnArray();
+        for (org.xvm.asm.Parameter param : aParams)
+            {
+            PropertyConstant id = clz.checkGenericTypeVisibility(param.getType());
+            if (id != null)
+                {
+                log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, id.getValueString());
+                return;
+                }
+            }
+
         org.xvm.asm.Parameter[] aReturns = method.getReturnArray();
         if (aReturns.length > 0)
             {
+            for (org.xvm.asm.Parameter param : aReturns)
+                {
+                PropertyConstant id = clz.checkGenericTypeVisibility(param.getType());
+                if (id != null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, id.getValueString());
+                    return;
+                    }
+                }
+
+            // validate annotations added to the return type by MethodStructure.resolveAnnotations()
             TypeConstant typeRet = (aReturns[0].isConditionalReturn()
                     ? aReturns[1]
                     : aReturns[0]).getType();

@@ -93,7 +93,7 @@ public class ClassConstant
      */
     public ClassConstant getOuterClass()
         {
-        IdentityConstant parent = getNamespace();
+        IdentityConstant parent = getParentConstant();
         while (true)
             {
             switch (parent.getFormat())

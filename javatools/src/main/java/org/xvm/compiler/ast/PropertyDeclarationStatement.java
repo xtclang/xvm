@@ -376,6 +376,14 @@ public class PropertyDeclarationStatement
                 return;
                 }
 
+            ClassStructure   clz = prop.getContainingClass(false);
+            PropertyConstant id  = clz.checkGenericTypeVisibility(type);
+            if (id != null)
+                {
+                log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, id.getValueString());
+                return;
+                }
+
             if (prop.hasInitialValue())
                 {
                 if (isInMethod() && !isStatic())

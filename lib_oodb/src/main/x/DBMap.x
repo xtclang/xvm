@@ -59,7 +59,7 @@ interface DBMap<Key, Value>
      * * A "delete" is represented by an entry in the [removed] map;
      */
     @Override
-    static interface Change
+    static interface Change<Key, Value>
             extends DBObject.Change
         {
         /**

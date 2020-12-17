@@ -36,7 +36,7 @@ interface DBList<Element>
      * available, and if they are available, they may be expensive to reconstruct.
      */
     @Override
-    static interface Change
+    static interface Change<Element>
             extends DBObject.Change
         {
         /**

@@ -98,7 +98,7 @@ interface DBLog<Element>
      * Represents additions to a transactional database log.
      */
     @Override
-    static interface Change
+    static interface Change<Element>
             extends DBObject.Change
         {
         /**

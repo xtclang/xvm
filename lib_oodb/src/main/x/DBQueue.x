@@ -51,7 +51,7 @@ interface DBQueue<Element>
      * expensive to provide to the caller.
      */
     @Override
-    static interface Change
+    static interface Change<Element>
             extends DBObject.Change
         {
         /**

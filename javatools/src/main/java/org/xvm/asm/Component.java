@@ -223,10 +223,24 @@ public abstract class Component
      */
     public ClassStructure getContainingClass()
         {
+        return getContainingClass(true);
+        }
+
+    /**
+     * Find the first component walking up the parentage chain of this component that is a
+     * ClassStructure, or null if none can be found.
+     *
+     * @param fAllowAnonymous  if false, skip the anonymous classes
+     *
+     * @return the first ClassStructure parent component
+     */
+    public ClassStructure getContainingClass(boolean fAllowAnonymous)
+        {
         Component parent = getParent();
         while (parent != null)
             {
-            if (parent instanceof ClassStructure)
+            if (parent instanceof ClassStructure &&
+                    (fAllowAnonymous || !((ClassStructure) parent).isAnonInnerClass()))
                 {
                 return (ClassStructure) parent;
                 }
