@@ -376,11 +376,11 @@ public class PropertyDeclarationStatement
                 return;
                 }
 
-            ClassStructure   clz = prop.getContainingClass(false);
-            PropertyConstant id  = clz.checkGenericTypeVisibility(type);
-            if (id != null)
+            ClassStructure clz      = prop.getContainingClass(false);
+            String         sInvalid = clz.checkGenericTypeVisibility(type);
+            if (sInvalid != null)
                 {
-                log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, id.getValueString());
+                log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, sInvalid);
                 return;
                 }
 

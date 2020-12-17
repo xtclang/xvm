@@ -663,10 +663,10 @@ public class MethodDeclarationStatement
         org.xvm.asm.Parameter[] aParams = method.getReturnArray();
         for (org.xvm.asm.Parameter param : aParams)
             {
-            PropertyConstant id = clz.checkGenericTypeVisibility(param.getType());
-            if (id != null)
+            String sInvalid = clz.checkGenericTypeVisibility(param.getType());
+            if (sInvalid != null)
                 {
-                log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, id.getValueString());
+                log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, sInvalid);
                 return;
                 }
             }
@@ -676,10 +676,10 @@ public class MethodDeclarationStatement
             {
             for (org.xvm.asm.Parameter param : aReturns)
                 {
-                PropertyConstant id = clz.checkGenericTypeVisibility(param.getType());
-                if (id != null)
+                String sInvalid = clz.checkGenericTypeVisibility(param.getType());
+                if (sInvalid != null)
                     {
-                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, id.getValueString());
+                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, sInvalid);
                     return;
                     }
                 }
