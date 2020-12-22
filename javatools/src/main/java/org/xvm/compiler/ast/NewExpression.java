@@ -1493,8 +1493,19 @@ public class NewExpression
      */
     TypeConstant getCaptureType(String sCaptureName)
         {
-        Register reg = m_mapRegisters.get(sCaptureName);
-        return reg.getType();
+        assert m_mapRegisters.containsKey(sCaptureName);
+
+        return m_mapRegisters.get(sCaptureName).getType();
+        }
+
+    /**
+     * @return true iff the captured variable has been marked as being effectively final
+     */
+    boolean isCaptureFinal(String sCaptureName)
+        {
+        assert m_mapRegisters.containsKey(sCaptureName);
+
+        return m_mapRegisters.get(sCaptureName).isEffectivelyFinal();
         }
 
     /**

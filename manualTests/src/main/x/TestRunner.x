@@ -152,7 +152,6 @@ module TestRunner.xtclang.org
                     {
                     if (type.isA(oodb.Connection))
                         {
-                         // TODO GG why "connection" is not effectively final and passed in as a Ref?
                         return connection;
                         }
                     return super(type, name);

@@ -881,17 +881,19 @@ public class StatementBlock
                     PropertyStructure prop = (PropertyStructure) getEnclosingClass().getChild(sName);
                     assert prop.isSynthetic();
 
-                    TypeConstant type = exprNew.getCaptureType(sName);
-                    Register     reg  = new Register(type);
+                    TypeConstant type   = exprNew.getCaptureType(sName);
+                    boolean      fFinal = exprNew.isCaptureFinal(sName);
+                    Register     reg    = new Register(type);
                     mapByName.put(sName, reg);
                     ensureCaptureVars().put(sName, reg);
 
-                    // TODO we need to know the definite assignment of the variable at the point
+                    // TODO REVIEW CP
+                    //      we need to know the definite assignment of the variable at the point
                     //      that it was captured, which is either what it was at that point (if it
                     //      was effectively final) or the implied result of what it was plus the
                     //      impact of NOT being effectively final
-                    ensureDefiniteAssignments().put(sName, Assignment.Assigned); // TODO wrong!!!
-
+                    ensureDefiniteAssignments().put(sName,
+                            fFinal ? Assignment.AssignedOnce : Assignment.Assigned);
                     return reg;
                     }
                 }
