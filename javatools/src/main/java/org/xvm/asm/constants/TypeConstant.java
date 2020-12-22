@@ -2245,8 +2245,12 @@ public abstract class TypeConstant
                     }
                 else
                     {
-                    // Object does not (and must not) implement anything
-                    if (!constId.equals(pool.clzObject()))
+                    // Object does not (and must not) implement anything despite what it says
+                    if (constId.equals(pool.clzObject()))
+                        {
+                        cContribs = 0;
+                        }
+                    else
                         {
                         // an interface implies the set of methods present in Object
                         // (use the "Into" composition to make the Object methods implicit-only, as

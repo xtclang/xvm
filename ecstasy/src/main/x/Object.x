@@ -14,6 +14,7 @@
  *   masked by {@link Ref.maskAs<AsType>()}.
  */
 interface Object
+        extends Comparable
     {
     /**
      * By default, comparing any two objects will only result in equality if they are the
