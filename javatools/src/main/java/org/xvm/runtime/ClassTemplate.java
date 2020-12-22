@@ -32,6 +32,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -45,6 +46,7 @@ import org.xvm.runtime.Utils.UnaryAction;
 import org.xvm.runtime.template.InterfaceProxy;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xOrdered;
 
@@ -897,23 +899,39 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Get the injected property.
+     * Get the injected property value.
+     *
+     * Strictly speaking we would need to create an InjectedHandle, but for now just keep the
+     * value itself.
      */
-    private int getInjectedProperty(Frame frame, GenericHandle hThis, PropertyConstant idProp, int iReturn)
+    private int getInjectedProperty(Frame frame, GenericHandle hThis, PropertyConstant idProp,
+                                    int iReturn)
         {
-        TypeInfo     info = hThis.getType().ensureTypeInfo();
-        PropertyInfo prop = info.findProperty(idProp);
+        TypeInfo     info      = hThis.getType().ensureTypeInfo();
+        PropertyInfo prop      = info.findProperty(idProp);
+        Annotation   anno      = prop.getRefAnnotations()[0];
+        Constant[]   aParams   = anno.getParams();
+        Constant     constName = aParams.length == 0 ? null : aParams[0];
+        String       sResource = constName instanceof StringConstant
+                                ? ((StringConstant) constName).getValue()
+                                : prop.getName();
+
+        ObjectHandle hOpts = aParams.length < 2 ? xNullable.NULL : frame.getConstHandle(aParams[1]);
+        if (Op.isDeferred(hOpts))
+            {
+            return hOpts.proceed(frame, frameCaller ->
+                getInjectedProperty(frameCaller, hThis, idProp, iReturn));
+            }
 
         ObjectHandle hValue = frame.f_context.f_container.getInjectable(
-                frame, prop.getInjectedResourceName(), prop.getType());
-
+                frame, sResource, prop.getType(), hOpts);
         if (hValue == null)
             {
             return frame.raiseException(
                 xException.illegalState(frame, "Unknown injectable property \"" + idProp + '"'));
             }
 
-        // store off the value (even if deferred), so the concurrent operation wouldn't "double dip"
+        // store off the value (even if deferred), so a concurrent operation wouldn't "double dip"
         hThis.setField(idProp, hValue);
 
         // native injection can return a deferred handle

@@ -9,10 +9,15 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
@@ -27,8 +32,6 @@ import org.xvm.runtime.template.numbers.xFloat64;
 import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xUInt64;
 import org.xvm.runtime.template.numbers.xUInt8;
-
-
 
 
 /**
@@ -194,6 +197,28 @@ public class xRTRandom
         return frame.assignValue(iReturn, xFloat64.INSTANCE.makeHandle(rnd(hTarget).nextDouble()));
         }
 
+    public ServiceHandle createRandomHandle(ServiceContext context,
+                                            ClassComposition clz, TypeConstant typeMask, long lSeed)
+        {
+        RandomHandle hService = new RandomHandle(clz.maskAs(typeMask), context,
+                                        lSeed == 0 ? null : new Random(lSeed));
+        context.setService(hService);
+        return hService;
+        }
+
+    static public class RandomHandle
+            extends ServiceHandle
+        {
+        public final Random f_random;
+
+        public RandomHandle(TypeComposition clazz, ServiceContext context, Random random)
+            {
+            super(clazz, context);
+
+            f_random = random;
+            }
+        }
+
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -202,6 +227,8 @@ public class xRTRandom
      */
     protected Random rnd(ObjectHandle hTarget)
         {
-        return ThreadLocalRandom.current();
+        Random random = ((RandomHandle) hTarget).f_random;
+
+        return random == null ? ThreadLocalRandom.current() : random;
         }
     }

@@ -1,8 +1,8 @@
 package org.xvm.runtime;
 
 
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.InjectionKey;
@@ -15,6 +15,11 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
+
+import org.xvm.runtime.template.xService.ServiceHandle;
+
+import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 
 import org.xvm.runtime.template._native.xTerminalConsole;
 
@@ -23,7 +28,6 @@ import org.xvm.runtime.template._native.mgmt.xRepository;
 
 import org.xvm.runtime.template._native.numbers.xRTRandom;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
@@ -97,9 +101,9 @@ public class CoreContainer
         // +++ LocalClock
         TypeConstant typeClock = pool.ensureEcstasyTypeConstant("temporal.Clock");
 
-        f_mapResources.put(new InjectionKey("clock"     , typeClock), this::ensureDefaultClock);
-        f_mapResources.put(new InjectionKey("localClock", typeClock), this::ensureLocalClock);
-        f_mapResources.put(new InjectionKey("utcClock"  , typeClock), this::ensureUTCClock);
+        addResourceSupplier(new InjectionKey("clock"     , typeClock), this::ensureDefaultClock);
+        addResourceSupplier(new InjectionKey("localClock", typeClock), this::ensureLocalClock);
+        addResourceSupplier(new InjectionKey("utcClock"  , typeClock), this::ensureUTCClock);
 
         // +++ NanosTimer
         xNanosTimer templateRTTimer = (xNanosTimer) f_templates.getTemplate("_native.temporal.NanosTimer");
@@ -107,11 +111,11 @@ public class CoreContainer
             {
             TypeConstant typeTimer = pool.ensureEcstasyTypeConstant("temporal.Timer");
 
-            Function<Frame, ObjectHandle> supplierTimer = (frame) ->
+            BiFunction<Frame, ObjectHandle, ObjectHandle> supplierTimer = (frame, hOpts) ->
                 templateRTTimer.createServiceHandle(
                     createServiceContext("Timer"),
                     templateRTTimer.getCanonicalClass(), typeTimer);
-            f_mapResources.put(new InjectionKey("timer", typeTimer), supplierTimer);
+            addResourceSupplier(new InjectionKey("timer", typeTimer), supplierTimer);
             }
 
         // +++ Console
@@ -120,46 +124,46 @@ public class CoreContainer
             {
             TypeConstant typeConsole = pool.ensureEcstasyTypeConstant("io.Console");
 
-            Function<Frame, ObjectHandle> supplierConsole = (frame) ->
+            BiFunction<Frame, ObjectHandle, ObjectHandle> supplierConsole = (frame, hOpts) ->
                 templateRTConsole.createServiceHandle(
                     createServiceContext("Console"),
                     templateRTConsole.getCanonicalClass(), typeConsole);
 
-            f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
+            addResourceSupplier(new InjectionKey("console", typeConsole), supplierConsole);
             }
 
         // +++ Random
         TypeConstant typeRandom = pool.ensureEcstasyTypeConstant("numbers.Random");
 
-        f_mapResources.put(new InjectionKey("rnd"   , typeRandom), this::ensureDefaultRandom);
-        f_mapResources.put(new InjectionKey("random", typeRandom), this::ensureDefaultRandom);
+        addResourceSupplier(new InjectionKey("rnd"   , typeRandom), this::ensureDefaultRandom);
+        addResourceSupplier(new InjectionKey("random", typeRandom), this::ensureDefaultRandom);
 
         // +++ OSFileStore etc.
         TypeConstant typeFileStore = pool.ensureEcstasyTypeConstant("fs.FileStore");
         TypeConstant typeDirectory = pool.ensureEcstasyTypeConstant("fs.Directory");
 
-        f_mapResources.put(new InjectionKey("storage", typeFileStore), this::ensureFileStore);
-        f_mapResources.put(new InjectionKey("rootDir", typeDirectory), this::ensureRootDir);
-        f_mapResources.put(new InjectionKey("homeDir", typeDirectory), this::ensureHomeDir);
-        f_mapResources.put(new InjectionKey("curDir" , typeDirectory), this::ensureCurDir);
-        f_mapResources.put(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
+        addResourceSupplier(new InjectionKey("storage", typeFileStore), this::ensureFileStore);
+        addResourceSupplier(new InjectionKey("rootDir", typeDirectory), this::ensureRootDir);
+        addResourceSupplier(new InjectionKey("homeDir", typeDirectory), this::ensureHomeDir);
+        addResourceSupplier(new InjectionKey("curDir" , typeDirectory), this::ensureCurDir);
+        addResourceSupplier(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
 
         // +++ Linker
         TypeConstant typeLinker = pool.ensureEcstasyTypeConstant("mgmt.Container.Linker");
-        f_mapResources.put(new InjectionKey("linker" , typeLinker), this::ensureLinker);
+        addResourceSupplier(new InjectionKey("linker" , typeLinker), this::ensureLinker);
 
         // +++ ModuleRepository
         TypeConstant typeRepo = pool.ensureEcstasyTypeConstant("mgmt.ModuleRepository");
-        f_mapResources.put(new InjectionKey("repository" , typeRepo), this::ensureModuleRepository);
+        addResourceSupplier(new InjectionKey("repository" , typeRepo), this::ensureModuleRepository);
         }
 
-    protected ObjectHandle ensureDefaultClock(Frame frame)
+    protected ObjectHandle ensureDefaultClock(Frame frame, ObjectHandle hOpts)
         {
         // TODO
-        return ensureLocalClock(frame);
+        return ensureLocalClock(frame, hOpts);
         }
 
-    protected ObjectHandle ensureLocalClock(Frame frame)
+    protected ObjectHandle ensureLocalClock(Frame frame, ObjectHandle hOpts)
         {
         ObjectHandle hClock = m_hLocalClock;
         if (hClock == null)
@@ -177,13 +181,13 @@ public class CoreContainer
         return hClock;
         }
 
-    protected ObjectHandle ensureUTCClock(Frame frame)
+    protected ObjectHandle ensureUTCClock(Frame frame, ObjectHandle hOpts)
         {
         // TODO
-        return ensureDefaultClock(frame);
+        return ensureDefaultClock(frame, hOpts);
         }
 
-    protected ObjectHandle ensureOSStorage(Frame frame)
+    protected ObjectHandle ensureOSStorage(Frame frame, ObjectHandle hOpts)
         {
         ObjectHandle hStorage = m_hOSStorage;
         if (hStorage == null)
@@ -222,8 +226,24 @@ public class CoreContainer
         return hStorage;
         }
 
-    protected ObjectHandle ensureDefaultRandom(Frame frame)
+    protected ObjectHandle ensureDefaultRandom(Frame frame, ObjectHandle hOpts)
         {
+        long lSeed = hOpts instanceof JavaLong   ? ((JavaLong) hOpts).getValue() :
+                     hOpts instanceof IntNHandle ? ((IntNHandle) hOpts).getValue().getLong() :
+                     0;
+        if (lSeed != 0)
+            {
+            xRTRandom templateRTRandom = (xRTRandom) f_templates.getTemplate("_native.numbers.RTRandom");
+            if (templateRTRandom != null)
+                {
+                TypeConstant typeRandom = frame.poolContext().ensureEcstasyTypeConstant("numbers.Random");
+                ServiceHandle hRnd = templateRTRandom.createRandomHandle(
+                    createServiceContext("Random"),
+                    templateRTRandom.getCanonicalClass(), typeRandom, lSeed);
+                return hRnd;
+                }
+            }
+
         ObjectHandle hRnd = m_hRandom;
         if (hRnd == null)
             {
@@ -231,21 +251,21 @@ public class CoreContainer
             if (templateRTRandom != null)
                 {
                 TypeConstant typeRandom = frame.poolContext().ensureEcstasyTypeConstant("numbers.Random");
-                m_hRandom = hRnd = templateRTRandom.createServiceHandle(
+                m_hRandom = hRnd = templateRTRandom.createRandomHandle(
                     createServiceContext("Random"),
-                    templateRTRandom.getCanonicalClass(), typeRandom);
+                    templateRTRandom.getCanonicalClass(), typeRandom, 0l);
                 }
             }
 
         return hRnd;
         }
 
-    protected ObjectHandle ensureFileStore(Frame frame)
+    protected ObjectHandle ensureFileStore(Frame frame, ObjectHandle hOpts)
         {
         ObjectHandle hStore = m_hFileStore;
         if (hStore == null)
             {
-            ObjectHandle hOSStorage = ensureOSStorage(frame);
+            ObjectHandle hOSStorage = ensureOSStorage(frame, hOpts);
             if (hOSStorage != null)
                 {
                 ClassTemplate    template = f_templates.getTemplate("_native.fs.OSStorage");
@@ -259,12 +279,12 @@ public class CoreContainer
         return hStore;
         }
 
-    protected ObjectHandle ensureRootDir(Frame frame)
+    protected ObjectHandle ensureRootDir(Frame frame, ObjectHandle hOpts)
         {
         ObjectHandle hDir = m_hRootDir;
         if (hDir == null)
             {
-            ObjectHandle hOSStorage = ensureOSStorage(frame);
+            ObjectHandle hOSStorage = ensureOSStorage(frame, hOpts);
             if (hOSStorage != null)
                 {
                 ClassTemplate    template = f_templates.getTemplate("_native.fs.OSStorage");
@@ -278,12 +298,12 @@ public class CoreContainer
         return hDir;
         }
 
-    protected ObjectHandle ensureHomeDir(Frame frame)
+    protected ObjectHandle ensureHomeDir(Frame frame, ObjectHandle hOpts)
         {
         ObjectHandle hDir = m_hHomeDir;
         if (hDir == null)
             {
-            ObjectHandle hOSStorage = ensureOSStorage(frame);
+            ObjectHandle hOSStorage = ensureOSStorage(frame, hOpts);
             if (hOSStorage != null)
                 {
                 ClassTemplate    template = f_templates.getTemplate("_native.fs.OSStorage");
@@ -297,12 +317,12 @@ public class CoreContainer
         return hDir;
         }
 
-    protected ObjectHandle ensureCurDir(Frame frame)
+    protected ObjectHandle ensureCurDir(Frame frame, ObjectHandle hOpts)
         {
         ObjectHandle hDir = m_hCurDir;
         if (hDir == null)
             {
-            ObjectHandle hOSStorage = ensureOSStorage(frame);
+            ObjectHandle hOSStorage = ensureOSStorage(frame, hOpts);
             if (hOSStorage != null)
                 {
                 ClassTemplate    template = f_templates.getTemplate("_native.fs.OSStorage");
@@ -316,12 +336,12 @@ public class CoreContainer
         return hDir;
         }
 
-    protected ObjectHandle ensureTmpDir(Frame frame)
+    protected ObjectHandle ensureTmpDir(Frame frame, ObjectHandle hOpts)
         {
         ObjectHandle hDir = m_hTmpDir;
         if (hDir == null)
             {
-            ObjectHandle hOSStorage = ensureOSStorage(frame);
+            ObjectHandle hOSStorage = ensureOSStorage(frame, hOpts);
             if (hOSStorage != null)
                 {
                 ClassTemplate    template = f_templates.getTemplate("_native.fs.OSStorage");
@@ -335,7 +355,7 @@ public class CoreContainer
         return hDir;
         }
 
-    protected ObjectHandle ensureLinker(Frame frame)
+    protected ObjectHandle ensureLinker(Frame frame, ObjectHandle hOpts)
         {
         ObjectHandle hLinker = m_hLinker;
         if (hLinker == null)
@@ -356,7 +376,7 @@ public class CoreContainer
         return hLinker;
         }
 
-    protected ObjectHandle ensureModuleRepository(Frame frame)
+    protected ObjectHandle ensureModuleRepository(Frame frame, ObjectHandle hOpts)
         {
         ObjectHandle hRepository = m_hRepository;
         if (hRepository == null)

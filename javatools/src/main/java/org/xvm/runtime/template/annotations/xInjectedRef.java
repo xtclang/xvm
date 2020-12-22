@@ -90,8 +90,9 @@ public class xInjectedRef
             {
             TypeConstant typeResource = hInjected.getType().resolveGenericType("Referent");
             String       sResource    = hInjected.getResourceName();
+            ObjectHandle hOpts        = hInjected.getField("opts");
 
-            hValue = frame.f_context.f_container.getInjectable(frame, sResource, typeResource);
+            hValue = frame.f_context.f_container.getInjectable(frame, sResource, typeResource, hOpts);
             if (hValue == null)
                 {
                 return frame.raiseException("Unknown injectable resource \"" + sResource +'"');
@@ -114,7 +115,7 @@ public class xInjectedRef
         }
 
 
-    // ----- handle class -----
+    // ----- handle class --------------------------------------------------------------------------
 
     public static class InjectedHandle
             extends RefHandle

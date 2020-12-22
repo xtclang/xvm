@@ -3,21 +3,23 @@
  */
 interface ResourceProvider
     {
+    import annotations.InjectedRef.Options;
+
     /**
-     * Obtain a resource for specified type and name. Most commonly, failure
-     * a provider to return a resource (throwing an exception) will fail to load or
-     * terminate the requesting container.
+     * While we can only postulate that the compile-time type of a resource is Object, at run-time
+     * it is known to be an immutable Const or a Service.
      */
-    Object getResource(Type type, String name);
+    typedef Object                                  Resource;
+    typedef (Resource | function Resource(Options)) Supplier;
 
-    // --- alternative: split between static and dynamic resources ---
-
-//        enum Category {Unavailable, Static, Dynamic}
-//
-//        <Resource> Category getResourceCategory(Type<Resource> type, String name);
-//
-//        <Resource> Resource getStaticResource(Type<Resource> type, String name);
-//
-//        <Resource> function Resource() getDynamicResource(Type<Resource> type, String name);
+    /**
+     * Obtain a resource supplier for specified type and name. Most commonly, a failure of the
+     * provider to return a resource supplier (throwing an exception) will fail to load or
+     * terminate the requesting container.
+     *
+     * Furthermore, in the unlikely case of a failure of the supplier itself, a run-time exception
+     * will be thrown at the injection point, possibly causing the termination of the container.
+     */
+    Supplier getResource(Type type, String name);
     }
 

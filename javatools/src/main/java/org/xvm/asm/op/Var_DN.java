@@ -6,7 +6,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
@@ -15,10 +14,6 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.VarSupport;
-
-import org.xvm.runtime.template.annotations.xInjectedRef.InjectedHandle;
-
-import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -84,31 +79,10 @@ public class Var_DN
     @Override
     public int process(Frame frame, int iPC)
         {
-        String sName = frame.getString(m_nNameId);
+        String          sName = frame.getString(m_nNameId);
+        TypeComposition clz   = frame.resolveClass(m_nType);
 
-        RefHandle hRef = m_ref;
-        int       iRet = iPC + 1;
-        if (hRef == null)
-            {
-            TypeComposition clz = frame.resolveClass(m_nType);
-
-            iRet = ((VarSupport) clz.getSupport()).introduceRef(frame, clz, sName, m_nVar);
-
-            if (iRet == Op.R_NEXT)
-                {
-                if (frame.f_ahVar[m_nVar] instanceof InjectedHandle)
-                    {
-                    m_ref = (InjectedHandle) frame.f_ahVar[m_nVar];
-                    }
-                iRet = iPC + 1;
-                }
-            }
-        else
-            {
-            frame.introduceResolvedVar(m_nVar, hRef.getType(), sName, Frame.VAR_DYNAMIC_REF, hRef);
-            }
-
-        return iRet;
+        return ((VarSupport) clz.getSupport()).introduceRef(frame, clz, sName, m_nVar);
         }
 
     @Override
@@ -128,10 +102,4 @@ public class Var_DN
     private int m_nNameId;
 
     private StringConstant m_constName;
-
-    /**
-     * cached InjectedRef.
-     * NOTE: the injected ref must be named, so this caching is not needed on the VAR_D op
-     */
-    transient private RefHandle m_ref;
     }

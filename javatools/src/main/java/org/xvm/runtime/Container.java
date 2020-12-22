@@ -8,7 +8,7 @@ import java.util.Set;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import java.util.stream.Collectors;
 
@@ -27,14 +27,20 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
 
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xService;
+import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xBooleanArray;
 
 import org.xvm.runtime.template.reflect.xModule;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 
 /**
@@ -188,20 +194,19 @@ public abstract class Container
     /**
      * Obtain an injected handle for the specified name and type.
      *
-     * TODO: need to be able to provide "injectionAttributes"
-     *
      * @param frame  the current frame
      * @param sName  the name of the injected object
      * @param type   the type of the injected object
+     * @param hOpts  an optional "opts" handle (see InjectedRef.x)
      *
-     * @return the injectable handle or null, if the name not resolvable
+     * @return the injectable handle (can be a DeferredCallHandle) or null, if the name not resolvable
      */
-    public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type)
+    public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts)
         {
-        Function<Frame, ObjectHandle> fnResource =
+        BiFunction<Frame, ObjectHandle, ObjectHandle> fnResource =
             f_mapResources.get(new InjectionKey(sName, type));
 
-        return fnResource == null ? null : fnResource.apply(frame);
+        return fnResource == null ? null : fnResource.apply(frame, hOpts);
         }
 
     /**
@@ -296,6 +301,69 @@ public abstract class Container
         return idModule.getName().equals(ModuleStructure.ECSTASY_MODULE);
         }
 
+    /**
+     * Add a native resource supplier for an injection.
+     *
+     * @param key  the injection key
+     * @param fn   the resource supplier bi-function
+     */
+    public void addResourceSupplier(InjectionKey key, BiFunction<Frame, ObjectHandle, ObjectHandle> fn)
+        {
+        f_mapResources.put(key, fn);
+        }
+
+    /**
+     * Add a natural resource supplier for an injection.
+     *
+     * @param key        the injection key
+     * @param hProvider  the resource provider handle (service)
+     * @param hSupplier  the resource supplier handle (the resource itself or a function)
+     */
+    public void addResourceSupplier(InjectionKey key, ServiceHandle hProvider, ObjectHandle hSupplier)
+        {
+        TypeConstant typeResource = key.f_type;
+        if (hSupplier instanceof FunctionHandle)
+            {
+            Container      container = hProvider.f_context.f_container;
+            FunctionHandle hProxy    = xRTFunction.makeAsyncDelegatingHandle(
+                                            hProvider, (FunctionHandle) hSupplier);
+            f_mapResources.put(key, (frame, hOpts) ->
+                {
+                ObjectHandle[] ahArg = new ObjectHandle[hProxy.getParamCount()];
+                ahArg[0] = hOpts;
+
+                switch (hProxy.call1(frame, null, ahArg, Op.A_STACK))
+                    {
+                    case Op.R_NEXT:
+                        // mask the injection type (and ensure the ownership)
+                        return frame.popStack().maskAs(container, typeResource);
+
+                    case Op.R_CALL:
+                        {
+                        DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
+                        hDeferred.addContinuation(frameCaller ->
+                            {
+                            frameCaller.pushStack(frameCaller.popStack().maskAs(container, typeResource));
+                            return Op.R_NEXT;
+                            });
+                        return hDeferred;
+                        }
+
+                    case Op.R_EXCEPTION:
+                        return new DeferredCallHandle(frame.m_hException);
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                });
+            }
+        else if (hSupplier.isPassThrough())
+            {
+            f_mapResources.put(key, (frame, hOpts) -> hSupplier);
+            }
+        }
+
+
     // ----- LinkerContext interface ---------------------------------------------------------------
 
     @Override
@@ -379,8 +447,11 @@ public abstract class Container
 
     /**
      * Map of resources that are injectable to this container, keyed by their InjectionKey.
+     * The values are bi-functions that take a current frame and "opts" object as arguments.
+     *
+     * (See annotations.InjectRef and mgmt.ResourceProvider.DynamicResource natural sources.)
      */
-    protected final Map<InjectionKey, Function<Frame, ObjectHandle>> f_mapResources = new HashMap<>();
+    protected final Map<InjectionKey, BiFunction<Frame, ObjectHandle, ObjectHandle>> f_mapResources = new HashMap<>();
 
     /**
      * Set of services that were started by this container.

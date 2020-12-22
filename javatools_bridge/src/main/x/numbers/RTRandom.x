@@ -1,7 +1,8 @@
 /**
- * Random number generator.
+ * Random number generator. Injected with an optional (Int | IntLiteral) seed value to produce
+ * a "repetitive" pseudo-random values.
  */
-class RTRandom
+service RTRandom
         implements Random
     {
     @Override Bit bit()               {TODO("native");}

@@ -39,15 +39,4 @@ public class SimpleContainer
         module.getFileStructure().collectInjections(setInjections);
         return setInjections;
         }
-
-    /**
-     * Add a static resource.
-     *
-     * @param key        the injection key
-     * @param hResource  the resource handle
-     */
-    public void addStaticResource(InjectionKey key, ObjectHandle hResource)
-        {
-        f_mapResources.put(key, (k) -> hResource);
-        }
     }

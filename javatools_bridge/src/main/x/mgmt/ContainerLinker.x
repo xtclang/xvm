@@ -20,7 +20,7 @@ service ContainerLinker
             ModuleSpec        primarySpec,
             Model             model           = Secure,
             ModuleRepository? repository      = Null,
-            ResourceProvider? injector        = Null,
+            ResourceProvider? provider        = Null,
             Module[]          sharedModules   = [],
             ModuleSpec[]      additionalSpecs = [],
             String[]          namedConditions = [])
@@ -47,7 +47,7 @@ service ContainerLinker
             return repository.getModule(spec);
             });
 
-        return resolveAndLink(primaryModule, model, repository, injector,
+        return resolveAndLink(primaryModule, model, repository, provider,
             sharedModules, additionalModules, namedConditions);
         }
 
@@ -58,7 +58,7 @@ service ContainerLinker
             ModuleTemplate    primaryModule,
             Model             model,
             ModuleRepository? repository,
-            ResourceProvider? injector,
+            ResourceProvider? provider,
             Module[]          sharedModules,
             ModuleTemplate[]  additionalModules,
             String[]          namedConditions)

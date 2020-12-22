@@ -1218,25 +1218,6 @@ public class PropertyInfo
         return getHead().getDelegate();
         }
 
-    /**
-     * @return the injected resource name
-     */
-    public String getInjectedResourceName()
-        {
-        assert isInjected();
-
-        Constant[] aParams = getRefAnnotations()[0].getParams();
-        if (aParams.length > 0)
-            {
-            Constant constParam = aParams[0];
-            if (constParam instanceof StringConstant)
-                {
-                return ((StringConstant) constParam).getValue();
-                }
-            }
-        return getName();
-        }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

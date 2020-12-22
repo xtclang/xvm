@@ -4,18 +4,19 @@ module TestSimple
 
     void run()
         {
-        Method m = test;
-        assert Parameter p := m.findParam("name");
-        assert p.is(QueryParam);
-        console.println($"attribute={p.attribute}");
-        }
+        @Inject("random")     Random r0;
+        @Inject("random", 42) Random r1;
 
-    void test(@QueryParam(42) String name)
-        {
-        }
+        console.println("random");
+        for (Int i : [0..2))
+            {
+            console.println($"r0={r0.byte()}");
+            }
 
-    mixin QueryParam(Int attribute)
-            into Parameter
-        {
+        console.println("pseudo");
+        for (Int i : [0..2))
+            {
+            console.println($"r1={r1.byte()}");
+            }
         }
     }

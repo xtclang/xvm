@@ -1002,6 +1002,9 @@ public class xRTFunction
             };
         }
 
+    /**
+     * An asynchronous function handle.
+     */
     public static class AsyncHandle
             extends FunctionHandle
         {
@@ -1120,6 +1123,90 @@ public class xRTFunction
             }
         }
 
+    /**
+     * An asynchronous delegating function handle.
+     */
+    public static class AsyncDelegatingHandle
+            extends DelegatingHandle
+        {
+        private final ServiceHandle f_hService;
+
+        /**
+         * Create an asynchronous delegating handle.
+         */
+        protected AsyncDelegatingHandle(ServiceHandle hService, FunctionHandle hDelegate)
+            {
+            super(hDelegate.getType(), hDelegate);
+
+            f_hService = hService;
+            }
+
+        // ----- FunctionHandle interface ----------------------------------------------------------
+
+        @Override
+        public boolean isAsync()
+            {
+            return true;
+            }
+
+        @Override
+        protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+            {
+            ServiceHandle hService = f_hService;
+
+            if (frame.f_context == hService.f_context)
+                {
+                return super.call1Impl(frame, null, ahVar, iReturn);
+                }
+
+            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
+                {
+                return frame.raiseException(xException.mutableObject(frame));
+                }
+
+            return hService.f_context.sendInvoke1Request(frame, this, hService, ahVar, false, iReturn);
+            }
+
+        @Override
+        protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+            {
+            ServiceHandle hService = f_hService;
+
+            if (frame.f_context == hService.f_context)
+                {
+                return super.callTImpl(frame, null, ahVar, iReturn);
+                }
+
+            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
+                {
+                return frame.raiseException(xException.mutableObject(frame));
+                }
+
+            return hService.f_context.sendInvoke1Request(frame, this, hService, ahVar, true, iReturn);
+            }
+
+        @Override
+        protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+            {
+            ServiceHandle hService = f_hService;
+
+            if (frame.f_context == hService.f_context)
+                {
+                return super.callNImpl(frame, null, ahVar, aiReturn);
+                }
+
+            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
+                {
+                return frame.raiseException(xException.mutableObject(frame));
+                }
+
+            return hService.f_context.sendInvokeNRequest(frame, this, hService, ahVar, aiReturn);
+            }
+        }
+
+    /**
+     * A function proxy handle.
+     */
     public static class FunctionProxyHandle
             extends DelegatingHandle
         {
@@ -1226,6 +1313,20 @@ public class xRTFunction
     public static AsyncHandle makeAsyncHandle(CallChain chain)
         {
         return new AsyncHandle(chain);
+        }
+
+    /**
+     * Create a function handle representing an asynchronous (service) call.
+     *
+     * @param hService  the service in which context the function should be called
+     * @param hDelegate the function to delegate calls to
+     *
+     * @return the corresponding delegating function handle
+     */
+    public static AsyncDelegatingHandle makeAsyncDelegatingHandle(
+            ServiceHandle hService, FunctionHandle hDelegate)
+        {
+        return new AsyncDelegatingHandle(hService, hDelegate);
         }
 
     /**

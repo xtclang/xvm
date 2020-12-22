@@ -130,7 +130,7 @@ module TestRunner.xtclang.org
             Injector dbInjector = new Injector()
                 {
                 @Override
-                Object getResource(Type type, String name)
+                Supplier getResource(Type type, String name)
                     {
                     if (type.isA(Console))
                         {
@@ -148,10 +148,11 @@ module TestRunner.xtclang.org
             injector = new Injector()
                 {
                 @Override
-                Object getResource(Type type, String name)
+                Supplier getResource(Type type, String name)
                     {
                     if (type.isA(oodb.Connection))
                         {
+                         // TODO GG why "connection" is not effectively final and passed in as a Ref?
                         return connection;
                         }
                     return super(type, name);
@@ -202,7 +203,7 @@ module TestRunner.xtclang.org
         return False;
         }
 
-    const Injector
+    service Injector
             implements ResourceProvider
         {
         @Lazy ConsoleBuffer consoleBuffer.calc()
@@ -213,7 +214,7 @@ module TestRunner.xtclang.org
         /**
          * The "client" side of the ConsoleBuffer that operates in the injected space.
          */
-        static const ConsoleBuffer(ConsoleBack backService)
+        const ConsoleBuffer(ConsoleBack backService)
                 implements Console
             {
             @Override
@@ -255,7 +256,7 @@ module TestRunner.xtclang.org
         /**
          * The "service" side of the ConsoleBuffer.
          */
-        static service ConsoleBack
+        class ConsoleBack
             {
             private StringBuffer buffer = new StringBuffer();
 
@@ -278,18 +279,9 @@ module TestRunner.xtclang.org
             }
 
         @Override
-        Object getResource(Type type, String name)
+        Supplier getResource(Type type, String name)
             {
             import Container.Linker;
-
-            @Inject Clock     clock;
-            @Inject Timer     timer;
-            @Inject FileStore storage;
-            @Inject Directory rootDir;
-            @Inject Directory homeDir;
-            @Inject Directory tmpDir;
-            @Inject Linker    linker;
-            @Inject Random    random;
 
             Boolean wrongName = False;
             switch (type)
@@ -305,6 +297,7 @@ module TestRunner.xtclang.org
                 case Clock:
                     if (name == "clock")
                         {
+                        @Inject Clock clock;
                         return clock;
                         }
                     wrongName = True;
@@ -313,6 +306,7 @@ module TestRunner.xtclang.org
                 case Timer:
                     if (name == "timer")
                         {
+                        @Inject Timer timer;
                         return timer;
                         }
                     wrongName = True;
@@ -321,6 +315,7 @@ module TestRunner.xtclang.org
                 case FileStore:
                     if (name == "storage")
                         {
+                        @Inject FileStore storage;
                         return storage;
                         }
                     wrongName = True;
@@ -330,15 +325,19 @@ module TestRunner.xtclang.org
                     switch (name)
                         {
                         case "rootDir":
+                            @Inject Directory rootDir;
                             return rootDir;
 
                         case "homeDir":
+                            @Inject Directory homeDir;
                             return homeDir;
 
                         case "curDir":
+                            @Inject Directory curDir;
                             return curDir;
 
                         case "tmpDir":
+                            @Inject Directory tmpDir;
                             return tmpDir;
 
                         default:
@@ -350,6 +349,7 @@ module TestRunner.xtclang.org
                 case Linker:
                     if (name == "linker")
                         {
+                        @Inject Linker linker;
                         return linker;
                         }
                     wrongName = True;
@@ -358,7 +358,13 @@ module TestRunner.xtclang.org
                 case Random:
                     if (name == "random")
                         {
-                        return random;
+                        import ecstasy.annotations.InjectedRef;
+
+                        return (InjectedRef.Options opts) ->
+                            {
+                            @Inject(opts=opts) Random random;
+                            return random;
+                            };
                         }
                     wrongName = True;
                     break;

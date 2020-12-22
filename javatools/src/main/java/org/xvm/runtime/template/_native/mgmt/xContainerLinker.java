@@ -112,9 +112,9 @@ public class xContainerLinker
             case "resolveAndLink":
                 {
                 ComponentTemplateHandle hTemplate   = (ComponentTemplateHandle) ahArg[0];
-                ObjectHandle            hModel      = ahArg[1];
-                ObjectHandle            hRepo       = ahArg[2];
-                ObjectHandle            hInjector   = ahArg[3];
+                ObjectHandle            hModel      = ahArg[1]; // mgmt.Container.Model
+                ObjectHandle            hRepo       = ahArg[2]; // mgmt.ModuleRepository
+                ObjectHandle            hProvider   = ahArg[3]; // mgmt.ResourceProvider
                 ArrayHandle             hShared     = (ArrayHandle) ahArg[4];
                 ArrayHandle             hAdditional = (ArrayHandle) ahArg[5];
                 ArrayHandle             hConditions = (ArrayHandle) ahArg[6];
@@ -133,10 +133,15 @@ public class xContainerLinker
                     moduleApp = fileApp.getModule(moduleApp.getName());
                     }
 
+                if (!hProvider.isService())
+                    {
+                    return frame.raiseException("ResourceProvider must be a service");
+                    }
+
                 SimpleContainer container =
                         new SimpleContainer(frame.f_context, moduleApp.getIdentityConstant());
 
-                return new CollectResources(container, hInjector, aiReturn).doNext(frame);
+                return new CollectResources(container, hProvider, aiReturn).doNext(frame);
                 }
             }
 
@@ -164,14 +169,11 @@ public class xContainerLinker
 
         protected void updateResult(Frame frameCaller)
             {
-            // the resource for the current key is on the frame's stack
-            InjectionKey key       = aKeys[index];
-            ObjectHandle hResource = frameCaller.popStack();
+            // the resource supplier for the current key is on the frame's stack
+            ServiceHandle hProvider = this.hProvider.getService();
+            ObjectHandle  hSupplier = frameCaller.popStack();
 
-            // mask the injection type (and ensure the ownership)
-            hResource = hResource.maskAs(frameCaller.f_context.f_container, key.f_type);
-
-            container.addStaticResource(key, hResource);
+            container.addResourceSupplier(aKeys[index], hProvider, hSupplier);
             }
 
         public int doNext(Frame frameCaller)
