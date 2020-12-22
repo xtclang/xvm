@@ -174,14 +174,6 @@ public class StatementBlock
                 {
                 importsWild = new ArrayList<>();
                 }
-
-            // make sure that no existing import uses the same alias
-            String sName = stmt.getQualifiedNameString();
-            if (importsWild.contains(sName))
-                {
-                log(errs, Severity.WARNING, Compiler.DUPLICATE_IMPORT, sName);
-                }
-
             importsWild.add(stmt);
             }
         else
@@ -217,10 +209,11 @@ public class StatementBlock
      * point in that file are considered to be visible at that point.
      *
      * @param sName  the import alias
+     * @param errs   the error listener
      *
      * @return the ImportStatement, or null
      */
-    public ImportStatement getImport(String sName)
+    public ImportStatement getImport(String sName, ErrorListener errs)
         {
         if (imports != null)
             {
@@ -233,10 +226,10 @@ public class StatementBlock
 
         if (importsWild != null)
             {
-            for (int i = importsWild.size()-1; i >= 0; --i)
+            ImportStatement stmtResult = null;
+            for (ImportStatement stmt : importsWild)
                 {
-                ImportStatement stmt     = importsWild.get(i);
-                Constant        constant = stmt.getNameResolver().getConstant();
+                Constant constant = stmt.getNameResolver().getConstant();
                 if (constant instanceof IdentityConstant && constant.isClass())
                     {
                     ClassStructure clz = (ClassStructure) ((IdentityConstant) constant).getComponent();
@@ -244,11 +237,21 @@ public class StatementBlock
                         {
                         if (clz.getChild(sName) instanceof ClassStructure)
                             {
-                            return stmt;
+                            if (stmtResult == null)
+                                {
+                                stmtResult = stmt;
+                                }
+                            else
+                                {
+                                stmt.log(errs, Severity.ERROR, Compiler.DUPLICATE_IMPORT, sName);
+                                break;
+                                }
                             }
                         }
                     }
                 }
+
+            return stmtResult;
             }
 
         return null;
@@ -501,7 +504,7 @@ public class StatementBlock
     // ----- name resolution -----------------------------------------------------------------------
 
     @Override
-    protected ImportStatement resolveImportBySingleName(String sName)
+    protected ImportStatement resolveImportBySingleName(String sName, ErrorListener errs)
         {
         // if this is a synthetic block statement that acts as a collection of multiple files, then
         // the search for the import has just crossed a file boundary, and nothing was found
@@ -510,9 +513,9 @@ public class StatementBlock
             return null;
             }
 
-        ImportStatement stmtImport = getImport(sName);
+        ImportStatement stmtImport = getImport(sName, errs);
         return stmtImport == null
-                ? super.resolveImportBySingleName(sName)
+                ? super.resolveImportBySingleName(sName, errs)
                 : stmtImport;
         }
 
@@ -590,13 +593,13 @@ public class StatementBlock
         public RootContext(MethodStructure method)
             {
             super(null, false);
-            m_method = method;
+            f_method = method;
             }
 
         @Override
         public MethodStructure getMethod()
             {
-            return m_method;
+            return f_method;
             }
 
         public StatementBlock getStatementBlock()
@@ -683,7 +686,7 @@ public class StatementBlock
                 NewExpression exprNew = getAnonymousInnerClassExpression();
                 return (ClassStructure) exprNew.anon.getComponent();
                 }
-            Component parent = m_method;
+            Component parent = f_method;
             while (!(parent instanceof ClassStructure))
                 {
                 parent = parent.getParent();
@@ -694,7 +697,7 @@ public class StatementBlock
         @Override
         public ConstantPool pool()
             {
-            return m_method.getConstantPool();
+            return f_method.getConstantPool();
             }
 
         @Override
@@ -916,7 +919,7 @@ public class StatementBlock
                 idOuter = ((ClassConstant) idOuter).getOutermost();
                 }
 
-            WalkUpToTheRoot: while (node != null)
+            while (node != null)
                 {
                 // otherwise, if the node has a component associated with it that is
                 // prepared to resolve names, then ask it to resolve the name
@@ -1141,7 +1144,7 @@ public class StatementBlock
                     {
                     // the name may specify an import
                     StatementBlock  block      = (StatementBlock) node;
-                    ImportStatement stmtImport = block.getImport(sName);
+                    ImportStatement stmtImport = block.getImport(sName, errs);
                     if (stmtImport != null)
                         {
                         NameResolver resolver = stmtImport.getNameResolver();
@@ -1303,7 +1306,7 @@ public class StatementBlock
         @Override
         protected void initNameMap(Map<String, Argument> mapByName)
             {
-            MethodStructure         method      = m_method;
+            MethodStructure         method      = f_method;
             MethodConstant          idMethod    = method.getIdentityConstant();
             Map<String, Assignment> mapAssigned = ensureDefiniteAssignments();
             for (int i = 0, c = method.getParamCount(); i < c; ++i)
@@ -1341,7 +1344,7 @@ public class StatementBlock
         @Override
         public boolean isFunction()
             {
-            MethodStructure method = m_method;
+            MethodStructure method = f_method;
             if (method.isValidator() ||
                     method.isConstructor() && !method.isPropertyInitializer())
                 {
@@ -1386,12 +1389,12 @@ public class StatementBlock
         @Override
         public boolean isConstructor()
             {
-            return m_method.isConstructor() || m_method.isValidator();
+            return f_method.isConstructor() || f_method.isValidator();
             }
 
         ModuleStructure getModule()
             {
-            Component parent = m_method;
+            Component parent = f_method;
             while (!(parent instanceof ModuleStructure))
                 {
                 parent = parent.getParent();
@@ -1554,9 +1557,9 @@ public class StatementBlock
             return map;
             }
 
-        private MethodStructure m_method;
-        private Context         m_ctxValidating;
-        private boolean         m_fEmitting;
+        private final MethodStructure f_method;
+        private       Context         m_ctxValidating;
+        private       boolean         m_fEmitting;
 
         /**
          * A lazily created mapping of captured variables that is collected during the validation

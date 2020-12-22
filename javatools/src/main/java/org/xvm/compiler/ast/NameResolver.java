@@ -130,7 +130,7 @@ public class NameResolver
                 // and store off the result); even if we find the name in the imports, we do NOT use
                 // it at this point -- it is held in case we work our way up to the point where the
                 // import is registered, at which point we will use the result that we found here
-                m_stmtImport = m_node.resolveImportBySingleName(m_sName);
+                m_stmtImport = m_node.resolveImportBySingleName(m_sName, errs);
                 if (m_stmtImport != null)
                     {
                     AstNode parent = m_stmtImport.getParent();

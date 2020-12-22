@@ -801,14 +801,15 @@ public abstract class AstNode
     /**
      * Determine if this particular node has an import registered on it of the specified name.
      *
-     * @param sName  a simple name
+     * @param sName  the simple name
+     * @param errs   the error listener
      *
      * @return an ImportStatement, or null
      */
-    protected ImportStatement resolveImportBySingleName(String sName)
+    protected ImportStatement resolveImportBySingleName(String sName, ErrorListener errs)
         {
         AstNode parent = getParent();
-        return parent == null ? null : parent.resolveImportBySingleName(sName);
+        return parent == null ? null : parent.resolveImportBySingleName(sName, errs);
         }
 
     /**
