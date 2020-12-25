@@ -17,4 +17,15 @@ interface ModuleRepository
      * @throws IllegalArgument if the module does not exist
      */
     ModuleTemplate getModule(String name);
+
+    /**
+     * Store the specified module template in the repository.
+     *
+     * @param template  a ModuleTemplate to store in the repository
+     *
+     * @throws Exception  various runtime exceptions could be thrown to
+     *         indicate that the repository is read-only, that the specified
+     *         module is not able to be stored in the repository, etc.
+     */
+    void storeModule(ModuleTemplate template);
     }

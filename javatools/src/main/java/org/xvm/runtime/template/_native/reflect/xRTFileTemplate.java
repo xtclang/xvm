@@ -16,7 +16,7 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template._native.mgmt.xRepository;
+import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 
 /**
  * Native FileTemplate implementation.
@@ -93,7 +93,7 @@ public class xRTFileTemplate
                 FileStructure file = (FileStructure) hTemplate.getComponent();
                 if (!file.isLinked())
                     {
-                    if (hArg.getTemplate() instanceof xRepository)
+                    if (hArg.getTemplate() instanceof xCoreRepository)
                         {
                         file = f_templates.createFileStructure(file.getModule());
 

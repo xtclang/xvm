@@ -2,7 +2,7 @@ import ecstasy.mgmt.ModuleRepository;
 
 import ecstasy.reflect.ModuleTemplate;
 
-class Repository
+class CoreRepository
         implements ModuleRepository
     {
     @Override immutable Set<String> moduleNames.get()
@@ -11,4 +11,10 @@ class Repository
     @Override
     ModuleTemplate getModule(String name)
         {TODO("Native");}
+
+    @Override
+    void storeModule(ModuleTemplate template)
+        {
+        throw new UnsupportedOperation();
+        }
     }

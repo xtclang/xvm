@@ -26,6 +26,9 @@ const InstantRepository
         }
 
     @Override
+    public/private immutable Set<String> moduleNames;
+
+    @Override
     ModuleTemplate getModule(String name)
         {
         return name == moduleName
@@ -36,7 +39,10 @@ const InstantRepository
         }
 
     @Override
-    public/private immutable Set<String> moduleNames;
+    void storeModule(ModuleTemplate template)
+        {
+        throw new UnsupportedOperation();
+        }
 
     /**
      * An optional underlying repository.

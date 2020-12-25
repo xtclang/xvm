@@ -27,12 +27,12 @@ import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 
 
 /**
- * Native ModuleRepository functionality.
+ * Native ModuleRepository functionality for the core repository.
  */
-public class xRepository
+public class xCoreRepository
         extends ClassTemplate
     {
-    public xRepository(TemplateRegistry registry, ClassStructure structure, boolean fInstance)
+    public xCoreRepository(TemplateRegistry registry, ClassStructure structure, boolean fInstance)
         {
         super(registry, structure);
         }

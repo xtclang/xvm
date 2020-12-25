@@ -24,7 +24,7 @@ import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 import org.xvm.runtime.template._native.xTerminalConsole;
 
 import org.xvm.runtime.template._native.mgmt.xContainerLinker;
-import org.xvm.runtime.template._native.mgmt.xRepository;
+import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 
 import org.xvm.runtime.template._native.numbers.xRTRandom;
 
@@ -119,7 +119,8 @@ public class CoreContainer
             }
 
         // +++ Console
-        xTerminalConsole templateRTConsole = (xTerminalConsole) f_templates.getTemplate("_native.TerminalConsole");
+        xTerminalConsole templateRTConsole = (xTerminalConsole)
+                f_templates.getTemplate("_native.TerminalConsole");
         if (templateRTConsole != null)
             {
             TypeConstant typeConsole = pool.ensureEcstasyTypeConstant("io.Console");
@@ -168,7 +169,8 @@ public class CoreContainer
         ObjectHandle hClock = m_hLocalClock;
         if (hClock == null)
             {
-            xLocalClock templateRTClock = (xLocalClock) f_templates.getTemplate("_native.temporal.LocalClock");
+            xLocalClock templateRTClock = (xLocalClock)
+                    f_templates.getTemplate("_native.temporal.LocalClock");
             if (templateRTClock != null)
                 {
                 TypeConstant typeClock = frame.poolContext().ensureEcstasyTypeConstant("temporal.Clock");
@@ -236,8 +238,8 @@ public class CoreContainer
             xRTRandom templateRTRandom = (xRTRandom) f_templates.getTemplate("_native.numbers.RTRandom");
             if (templateRTRandom != null)
                 {
-                TypeConstant typeRandom = frame.poolContext().ensureEcstasyTypeConstant("numbers.Random");
-                ServiceHandle hRnd = templateRTRandom.createRandomHandle(
+                TypeConstant  typeRandom = frame.poolContext().ensureEcstasyTypeConstant("numbers.Random");
+                ServiceHandle hRnd       = templateRTRandom.createRandomHandle(
                     createServiceContext("Random"),
                     templateRTRandom.getCanonicalClass(), typeRandom, lSeed);
                 return hRnd;
@@ -360,7 +362,8 @@ public class CoreContainer
         ObjectHandle hLinker = m_hLinker;
         if (hLinker == null)
             {
-            xContainerLinker templateRTLinker = (xContainerLinker) f_templates.getTemplate("_native.mgmt.ContainerLinker");
+            xContainerLinker templateRTLinker = (xContainerLinker)
+                    f_templates.getTemplate("_native.mgmt.ContainerLinker");
             if (templateRTLinker != null)
                 {
                 ConstantPool pool       = frame.poolContext();
@@ -381,7 +384,8 @@ public class CoreContainer
         ObjectHandle hRepository = m_hRepository;
         if (hRepository == null)
             {
-            xRepository templateRTRepository = (xRepository) f_templates.getTemplate("_native.mgmt.Repository");
+            xCoreRepository templateRTRepository = (xCoreRepository)
+                    f_templates.getTemplate("_native.mgmt.CoreRepository");
             if (templateRTRepository != null)
                 {
                 m_hRepository = hRepository = templateRTRepository.makeHandle();
