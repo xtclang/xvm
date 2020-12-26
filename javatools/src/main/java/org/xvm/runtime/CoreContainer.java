@@ -23,6 +23,8 @@ import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 
 import org.xvm.runtime.template._native.xTerminalConsole;
 
+import org.xvm.runtime.template._native.lang.src.xRTCompiler;
+
 import org.xvm.runtime.template._native.mgmt.xContainerLinker;
 import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 
@@ -106,7 +108,8 @@ public class CoreContainer
         addResourceSupplier(new InjectionKey("utcClock"  , typeClock), this::ensureUTCClock);
 
         // +++ NanosTimer
-        xNanosTimer templateRTTimer = (xNanosTimer) f_templates.getTemplate("_native.temporal.NanosTimer");
+        xNanosTimer templateRTTimer = (xNanosTimer)
+                f_templates.getTemplate("_native.temporal.NanosTimer");
         if (templateRTTimer != null)
             {
             TypeConstant typeTimer = pool.ensureEcstasyTypeConstant("temporal.Timer");
@@ -156,6 +159,10 @@ public class CoreContainer
         // +++ ModuleRepository
         TypeConstant typeRepo = pool.ensureEcstasyTypeConstant("mgmt.ModuleRepository");
         addResourceSupplier(new InjectionKey("repository" , typeRepo), this::ensureModuleRepository);
+
+        // +++ Compiler
+        TypeConstant typeCompiler = pool.ensureEcstasyTypeConstant("lang.src.Compiler");
+        addResourceSupplier(new InjectionKey("compiler" , typeCompiler), this::ensureCompiler);
         }
 
     protected ObjectHandle ensureDefaultClock(Frame frame, ObjectHandle hOpts)
@@ -173,7 +180,8 @@ public class CoreContainer
                     f_templates.getTemplate("_native.temporal.LocalClock");
             if (templateRTClock != null)
                 {
-                TypeConstant typeClock = frame.poolContext().ensureEcstasyTypeConstant("temporal.Clock");
+                TypeConstant typeClock =
+                        frame.poolContext().ensureEcstasyTypeConstant("temporal.Clock");
                 m_hLocalClock = hClock = templateRTClock.createServiceHandle(
                     createServiceContext("LocalClock"),
                     templateRTClock.getCanonicalClass(), typeClock);
@@ -249,10 +257,12 @@ public class CoreContainer
         ObjectHandle hRnd = m_hRandom;
         if (hRnd == null)
             {
-            xRTRandom templateRTRandom = (xRTRandom) f_templates.getTemplate("_native.numbers.RTRandom");
+            xRTRandom templateRTRandom = (xRTRandom)
+                    f_templates.getTemplate("_native.numbers.RTRandom");
             if (templateRTRandom != null)
                 {
-                TypeConstant typeRandom = frame.poolContext().ensureEcstasyTypeConstant("numbers.Random");
+                TypeConstant typeRandom =
+                        frame.poolContext().ensureEcstasyTypeConstant("numbers.Random");
                 m_hRandom = hRnd = templateRTRandom.createRandomHandle(
                     createServiceContext("Random"),
                     templateRTRandom.getCanonicalClass(), typeRandom, 0l);
@@ -357,6 +367,22 @@ public class CoreContainer
         return hDir;
         }
 
+    protected ObjectHandle ensureModuleRepository(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hRepository = m_hRepository;
+        if (hRepository == null)
+            {
+            xCoreRepository templateRTRepository =
+                    (xCoreRepository) f_templates.getTemplate("_native.mgmt.CoreRepository");
+            if (templateRTRepository != null)
+                {
+                m_hRepository = hRepository = templateRTRepository.makeHandle();
+                }
+            }
+
+        return hRepository;
+        }
+
     protected ObjectHandle ensureLinker(Frame frame, ObjectHandle hOpts)
         {
         ObjectHandle hLinker = m_hLinker;
@@ -379,20 +405,24 @@ public class CoreContainer
         return hLinker;
         }
 
-    protected ObjectHandle ensureModuleRepository(Frame frame, ObjectHandle hOpts)
+    protected ObjectHandle ensureCompiler(Frame frame, ObjectHandle hOpts)
         {
-        ObjectHandle hRepository = m_hRepository;
-        if (hRepository == null)
+        ObjectHandle hCompiler = m_hCompiler;
+        if (hCompiler == null)
             {
-            xCoreRepository templateRTRepository = (xCoreRepository)
-                    f_templates.getTemplate("_native.mgmt.CoreRepository");
-            if (templateRTRepository != null)
+            xRTCompiler templateRTCompiler =
+                    (xRTCompiler) f_templates.getTemplate("_native.lang.src.RTCompiler");
+            if (templateRTCompiler != null)
                 {
-                m_hRepository = hRepository = templateRTRepository.makeHandle();
+                TypeConstant typeCompiler =
+                        frame.poolContext().ensureEcstasyTypeConstant("lang.src.Compiler");
+                m_hCompiler = hCompiler = templateRTCompiler.createServiceHandle(
+                    createServiceContext("Compiler"),
+                    templateRTCompiler.getCanonicalClass(), typeCompiler);
                 }
             }
 
-        return hRepository;
+        return hCompiler;
         }
 
     /**
@@ -488,4 +518,5 @@ public class CoreContainer
     private ObjectHandle m_hTmpDir;
     private ObjectHandle m_hLinker;
     private ObjectHandle m_hRepository;
+    private ObjectHandle m_hCompiler;
     }

@@ -133,8 +133,6 @@ public class Compiler
                     }
                 }
             }
-        Node[] allNodes = mapTargets.values().toArray(new Node[0]);
-        flushAndCheckErrors(allNodes);
 
         if (mapTargets.isEmpty())
             {
@@ -142,23 +140,27 @@ public class Compiler
             return;
             }
 
+        Node[] allNodes = mapTargets.values().toArray(new Node[0]);
+        flushAndCheckErrors(allNodes);
+
         // repository setup
         log(Severity.INFO, "Creating and pre-populating library and build repositories");
-        ModuleRepository repo = configureLibraryRepo(options().getModulePath());
+        ModuleRepository repoLib = configureLibraryRepo(options().getModulePath());
         checkErrors();
 
         if (cSystemModules == 0)
             {
             log(Severity.INFO, "Pre-loading and linking system libraries");
-            prelinkSystemLibraries(repo);
+            prelinkSystemLibraries(repoLib);
             }
         checkErrors();
 
         ModuleRepository repoOutput = configureResultRepo(fileOutput);
         checkErrors();
 
+        // the code below could be extracted if necessary: compile(allNodes, repoLib, repoOutput);
         log(Severity.INFO, "Creating empty modules and populating namespaces");
-        Map<String, org.xvm.compiler.Compiler> mapCompilers = populateNamespace(mapTargets, repo);
+        Map<String, org.xvm.compiler.Compiler> mapCompilers = populateNamespace(allNodes, repoLib);
         flushAndCheckErrors(allNodes);
 
         log(Severity.INFO, "Resolving names and dependencies");
@@ -166,7 +168,7 @@ public class Compiler
         resolveNames(compilers);
         flushAndCheckErrors(allNodes);
 
-        injectNativeTurtle(repo);
+        injectNativeTurtle(repoLib);
         checkErrors();
 
         log(Severity.INFO, "Validating expressions");
@@ -178,7 +180,7 @@ public class Compiler
         flushAndCheckErrors(allNodes);
 
         log(Severity.INFO, "Storing results of compilation");
-        emitModules(mapTargets, repoOutput);
+        emitModules(allNodes, repoOutput);
         flushAndCheckErrors(allNodes);
 
         log(Severity.INFO, "Finished; terminating compiler");
@@ -214,17 +216,17 @@ public class Compiler
      * Link all of the AST objects for each module into a single parse tree, and create the outline
      * of the finished FileStructure.
      *
-     * @param mapModules  the various module sources being compiled
-     * @param repo        the library repository (with the build repository at the front)
+     * @param allNodes  the array of module sources being compiled
+     * @param repo      the library repository (with the build repository at the front)
      *
      * @return a map from module name to compiler, one for each module being compiled
      */
-    protected Map<String, org.xvm.compiler.Compiler> populateNamespace(Map<File, Node> mapModules, ModuleRepository repo)
+    protected Map<String, org.xvm.compiler.Compiler> populateNamespace(Node[] allNodes, ModuleRepository repo)
         {
         Map<String, org.xvm.compiler.Compiler> mapCompilers = new ListMap<>();
 
         ModuleRepository repoBuild = extractBuildRepo(repo);
-        for (Node node : mapModules.values())
+        for (Node node : allNodes)
             {
             String name = node.name();
             if (mapCompilers.containsKey(name))
@@ -372,10 +374,10 @@ public class Compiler
     /**
      * Emit the results of compilation.
      */
-    protected void emitModules(Map<File, Node> mapModules, ModuleRepository repoOutput)
+    protected void emitModules(Node[] allNodes, ModuleRepository repoOutput)
         {
         Version version = options().getVersion();
-        for (Node nodeModule : mapModules.values())
+        for (Node nodeModule : allNodes)
             {
             ModuleStructure module = (ModuleStructure) nodeModule.type().getComponent();
 

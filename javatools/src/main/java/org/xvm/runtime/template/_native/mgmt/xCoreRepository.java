@@ -103,13 +103,13 @@ public class xCoreRepository
 
     public ObjectHandle makeHandle()
         {
-        return new RepoHandle(m_clzRepo);
+        return new CoreRepoHandle(m_clzRepo);
         }
 
-    protected static class RepoHandle
+    public static class CoreRepoHandle
             extends ObjectHandle
         {
-        protected RepoHandle(TypeComposition clazz)
+        protected CoreRepoHandle(TypeComposition clazz)
             {
             super(clazz);
 

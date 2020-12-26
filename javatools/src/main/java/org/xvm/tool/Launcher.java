@@ -2608,10 +2608,10 @@ public abstract class Launcher
             return m_sDesc;
             }
 
-        private String  m_sName;
-        private Form    m_form;
-        private boolean m_fMulti;
-        private String  m_sDesc;
+        private final String  m_sName;
+        private final Form    m_form;
+        private final boolean m_fMulti;
+        private final String  m_sDesc;
         }
 
     enum Stage {Init, Parsed, Named, Linked}
@@ -2622,7 +2622,7 @@ public abstract class Launcher
     /**
      * The command-line arguments.
      */
-    private String[] m_asArgs;
+    private final String[] m_asArgs;
 
     /**
      * The parsed options.
@@ -2632,10 +2632,10 @@ public abstract class Launcher
     /**
      * The worst severity issue encountered thus far.
      */
-    private Severity m_sevWorst = Severity.NONE;
+    protected Severity m_sevWorst = Severity.NONE;
 
     /**
      * The number of times that errors have been suspended without being resumed.
      */
-    private int m_cSuspended;
+    protected int m_cSuspended;
     }
