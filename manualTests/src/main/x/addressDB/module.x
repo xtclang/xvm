@@ -1,7 +1,8 @@
 module AddressBookDB
         incorporates db.Database
     {
-    package db import oodb.xtclang.org;
+    package db   import oodb.xtclang.org;
+    package imdb import imdb;
 
     // @DBSchemaDDL
     interface AddressBookSchema

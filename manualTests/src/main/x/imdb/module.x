@@ -1,5 +1,7 @@
-package imdb
+module imdb
     {
+    package db import oodb.xtclang.org;
+
     // ---- server side ----------------------------------------------------------------------------
 
     class ServerDBObject
