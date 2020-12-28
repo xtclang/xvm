@@ -73,10 +73,11 @@ public class DirRepository
 
     @Override
     public void storeModule(ModuleStructure module)
+            throws IOException
         {
         if (m_fRO)
             {
-            throw new IllegalStateException("repository is read-only: " + this);
+            throw new IOException("repository is read-only: " + this);
             }
 
         String name = module.getIdentityConstant().getName();
@@ -87,18 +88,10 @@ public class DirRepository
 
         if (file.exists() && !file.delete())
             {
-            throw new IllegalStateException("unable to delete " + file);
+            throw new IOException("unable to delete " + file);
             }
 
-        try
-            {
-            module.getFileStructure().writeTo(file);
-            }
-        catch (IOException e)
-            {
-            System.out.println("Error writing module to file: " + file);
-            e.printStackTrace();
-            }
+        module.getFileStructure().writeTo(file);
 
         if (file.exists())
             {

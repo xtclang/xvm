@@ -245,8 +245,15 @@ public class Compiler
 
             // hold on to the resulting module structure (it will be in the build repository)
             assert repoBuild.loadModule(name) == null;
-            repo.storeModule(struct.getModule());
-            assert repoBuild.loadModule(name) != null;
+            try
+                {
+                repo.storeModule(struct.getModule());
+                assert repoBuild.loadModule(name) != null;
+                }
+            catch (IOException e)
+                {
+                log(Severity.FATAL, e.toString());
+                }
             }
 
         return mapCompilers;
@@ -389,7 +396,14 @@ public class Compiler
 
             if (repoOutput != null)
                 {
-                repoOutput.storeModule(module);
+                try
+                    {
+                    repoOutput.storeModule(module);
+                    }
+                catch (IOException e)
+                    {
+                    log(Severity.FATAL, e.toString());
+                    }
                 }
             else
                 {
@@ -425,7 +439,7 @@ public class Compiler
                     }
                 catch (IOException e)
                     {
-                    log(Severity.ERROR, "Exception (" + e
+                    log(Severity.FATAL, "Exception (" + e
                             + ") occurred while attempting to write module file \""
                             + file.getAbsolutePath() + "\"");
                     }

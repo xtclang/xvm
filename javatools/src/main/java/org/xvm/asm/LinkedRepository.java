@@ -1,6 +1,8 @@
 package org.xvm.asm;
 
 
+import java.io.IOException;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -117,10 +119,17 @@ public class LinkedRepository
                 // technically we could automatically merge this module with all the other versions
                 // found in all of the other repositories; the choice at this point is to defer
                 // that work
-
                 if (i > 0 && readThrough)
                     {
-                    repos[0].storeModule(module);
+                    try
+                        {
+                        repos[0].storeModule(module);
+                        }
+                    catch (IOException e)
+                        {
+                        System.err.println(e.toString());
+                        break;
+                        }
                     }
 
                 return module;
@@ -140,7 +149,15 @@ public class LinkedRepository
                 {
                 if (i > 0 && readThrough)
                     {
-                    repos[0].storeModule(module);
+                    try
+                        {
+                        repos[0].storeModule(module);
+                        }
+                    catch (IOException e)
+                        {
+                        System.err.println(e.toString());
+                        break;
+                        }
                     }
 
                 return module;
@@ -151,6 +168,7 @@ public class LinkedRepository
 
     @Override
     public void storeModule(ModuleStructure module)
+            throws IOException
         {
         repos[0].storeModule(module);
         }

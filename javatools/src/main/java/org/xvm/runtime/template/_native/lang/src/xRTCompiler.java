@@ -2,11 +2,14 @@ package org.xvm.runtime.template._native.lang.src;
 
 
 import java.io.File;
+import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.DirRepository;
+import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
@@ -104,23 +107,42 @@ public class xRTCompiler
             {
             throw new UnsupportedOperationException(); // TODO
             }
-        compiler.setResultLocation(hDirOut.getPath().toFile());
 
-        boolean fError;
+        boolean fSuccess;
+        String  sErrors;
         try
             {
             compiler.run();
 
-            fError = compiler.getSeverity().compareTo(Severity.ERROR) >= 0;
+            fSuccess = compiler.getSeverity().compareTo(Severity.ERROR) < 0;
+            if (fSuccess)
+                {
+                // TODO: eventually, we should be returning an in-memory build repository,
+                //       leaving the persistence aspects up to the caller
+                File             fileOut   = hDirOut.getPath().toFile();
+                ModuleRepository repoBuild = compiler.getBuildRepository();
+                ModuleRepository repoOut   = fileOut.isDirectory()
+                        ? new DirRepository(fileOut, false)
+                        : new FileRepository(fileOut, false);
+                for (String sModule : repoBuild.getModuleNames())
+                    {
+                    repoOut.storeModule(repoBuild.loadModule(sModule));
+                    }
+                }
+            sErrors = compiler.getErrors();
             }
         catch (CompilerException e)
             {
-            fError  = true;
+            fSuccess = false;
+            sErrors  = compiler.getErrors();
+            }
+        catch (IOException e)
+            {
+            fSuccess = false;
+            sErrors  = e.toString();
             }
 
-        return frame.assignValues(aiReturn,
-                xBoolean.makeHandle(!fError),
-                xString.makeHandle(compiler.getErrors()));
+        return frame.assignValues(aiReturn, xBoolean.makeHandle(fSuccess), xString.makeHandle(sErrors));
         }
 
     @Override
@@ -180,16 +202,6 @@ public class xRTCompiler
             m_listSources = listSources;
             }
 
-        public File getResultLocation()
-            {
-            return m_fileResult;
-            }
-
-        public void setResultLocation(File fileResult)
-            {
-            m_fileResult = fileResult;
-            }
-
         public Version getVersion()
             {
             return m_version;
@@ -225,11 +237,6 @@ public class xRTCompiler
             return m_repoResults;
             }
 
-        public void setBuildRepository(ModuleRepository repoResults)
-            {
-            m_repoResults = repoResults;
-            }
-
         // ----- Compiler API ----------------------------------------------------------------------
 
         @Override
@@ -246,17 +253,15 @@ public class xRTCompiler
             }
 
         @Override
-        public void run()
+        protected ModuleRepository configureResultRepo(File fileDest)
             {
-            process();
+            return m_repoResults = makeBuildRepo();
             }
 
         @Override
-        protected void emitModules(Node[] allNodes, ModuleRepository repoOutput)
+        public void run()
             {
-            super.emitModules(allNodes, repoOutput);
-
-            setBuildRepository(repoOutput);
+            process();
             }
 
         @Override
@@ -303,12 +308,6 @@ public class xRTCompiler
                 }
 
             @Override
-            public File getOutputLocation()
-                {
-                return CompilerAdapter.this.getResultLocation();
-                }
-
-            @Override
             public Version getVersion()
                 {
                 return CompilerAdapter.this.getVersion();
@@ -331,10 +330,9 @@ public class xRTCompiler
 
         private ModuleRepository m_repoLib;
         private List<File>       m_listSources;
-        private File             m_fileResult;
+        private ModuleRepository m_repoResults;
         private Version          m_version  = new Version("CI");
         private boolean          m_fRebuild = true;
         private StringBuffer     m_sbErrs   = new StringBuffer();
-        private ModuleRepository m_repoResults;
         }
     }

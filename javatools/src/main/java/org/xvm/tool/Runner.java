@@ -82,11 +82,24 @@ public class Runner
                     FileStructure struct = new FileStructure(in);
                     module = struct.getModule();
                     }
-                repo.storeModule(module);
                 }
             catch (IOException e)
                 {
-                log(Severity.ERROR, "I/O exception (" + e + ") reading module file: " + fileModule);
+                log(Severity.FATAL, "I/O exception (" + e + ") reading module file: " + fileModule);
+                abort(true);
+                }
+
+            if (module != null)
+                {
+                try
+                    {
+                    repo.storeModule(module);
+                    }
+                catch (IOException e)
+                    {
+                    log(Severity.FATAL, "I/O exception (" + e + ") storing module file: " + fileModule);
+                    abort(true);
+                    }
                 }
             }
         else

@@ -95,28 +95,28 @@ public class FileRepository
 
     @Override
     public void storeModule(ModuleStructure module)
+            throws IOException
         {
         if (fRO)
             {
-            throw new IllegalStateException("repository is read-only: " + this);
+            throw new IOException("repository is read-only: " + this);
             }
 
         if (file.exists() && !file.delete())
             {
             err = true;
-            throw new IllegalStateException("unable to delete " + file);
+            throw new IOException("unable to delete " + file);
             }
 
         try
             {
             module.getFileStructure().writeTo(file);
-            this.err = false;
+            err = false;
             }
         catch (IOException e)
             {
-            System.out.println("Error writing module to file: " + file);
-            e.printStackTrace();
-            this.err = true;
+            err = true;
+            throw new IOException("Error writing module to file: " + file);
             }
 
         this.name      = module.getIdentityConstant().getName();

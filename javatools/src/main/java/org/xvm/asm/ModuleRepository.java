@@ -1,6 +1,8 @@
 package org.xvm.asm;
 
 
+import java.io.IOException;
+
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -150,9 +152,10 @@ public interface ModuleRepository
      *
      * @param module  a ModuleStructure to store in the repository
      *
-     * @throws RuntimeException  various runtime exceptions could be thrown to
+     * @throws IOException  various IO exceptions could be thrown to
      *         indicate that the repository is read-only, that the specified
      *         module is not able to be stored in the repository, etc.
      */
-    void storeModule(ModuleStructure module);
+    void storeModule(ModuleStructure module)
+            throws IOException;
     }
