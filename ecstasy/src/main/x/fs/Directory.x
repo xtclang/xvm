@@ -37,6 +37,38 @@ interface Directory
     conditional Directory|File find(String name);
 
     /**
+     * Obtain the Directory for the specified name.
+     *
+     * @param name  the name of the Directory
+     *
+     * @return the Directory, only if is exists
+     */
+    conditional Directory findDir(String name)
+        {
+        if (Directory|File node := find(name), node.is(Directory))
+            {
+            return True, node;
+            }
+        return False;
+        }
+
+    /**
+     * Obtain the File for the specified name.
+     *
+     * @param name  the name of the File
+     *
+     * @return the File, only if is exists
+     */
+    conditional File findFile(String name)
+        {
+        if (Directory|File node := find(name), node.is(File))
+            {
+            return True, node;
+            }
+        return False;
+        }
+
+    /**
      * Obtain a Directory object for the specified path, whether or not the directory actually
      * exists. This method allows the caller to obtain a Directory object that can be watched,
      * created, etc., even if the directory did not previously exist.
