@@ -1,3 +1,7 @@
+import UserDbApp_.AddressBookSchema;
+import UserDbApp_.Contacts;
+import UserDbApp_.Contact;
+
 /**
  * Singleton schema.
  */
@@ -32,7 +36,7 @@ static service ServerAddressBookSchema
      * the IMDB RootSchema service.
      */
     class ClientAddressBookSchema
-            extends AddressBookDB.ClientAddressBookSchema
+            extends AddressBookDB_auto.ClientAddressBookSchema
         {
         }
 

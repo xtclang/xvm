@@ -1,3 +1,8 @@
+import UserDbApp_.AddressBookSchema;
+import UserDbApp_.Contacts;
+import UserDbApp_.Contact;
+import UserDbApp_.Phone;
+
 class ClientAddressBookSchema
         extends imdb.ClientRootSchema
         implements AddressBookSchema

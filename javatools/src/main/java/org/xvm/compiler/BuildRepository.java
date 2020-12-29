@@ -33,6 +33,7 @@ public class BuildRepository
     @Override
     public void storeModule(ModuleStructure module)
         {
+        assert module != null;
         modulesByName.put(module.getIdentityConstant().getName(), module);
         }
 
@@ -50,6 +51,6 @@ public class BuildRepository
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private Map<String, ModuleStructure> modulesByName = new TreeMap<>();
+    private final Map<String, ModuleStructure> modulesByName = new TreeMap<>();
     }
 

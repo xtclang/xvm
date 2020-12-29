@@ -80,11 +80,4 @@ module AddressBookDB
     enum PhoneCat {Home, Work, Mobile, Fax, Other}
 
     const Phone(PhoneCat category, String number);
-
-    // !!! TEMPORARY !!!
-    Connection simulateInjection()
-        {
-        Connection connection = ServerAddressBookSchema.createConnection();
-        return &connection.maskAs<Connection>();
-        }
     }

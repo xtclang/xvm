@@ -124,7 +124,7 @@ module TestRunner.xtclang.org
         if (String dbModuleName := detectDatabase(fileTemplate))
             {
             console.println($"found {dbModuleName}");
-            ModuleTemplate dbModuleTemplate = repository.getModule(dbModuleName);
+            ModuleTemplate dbModuleTemplate = generateStubs(repository, dbModuleName);
 
             // give the db container the real console
             Injector dbInjector = new Injector()
@@ -200,6 +200,15 @@ module TestRunner.xtclang.org
                 }
             }
         return False;
+        }
+
+    /**
+     * Generate all the necessary classes.
+     */
+    ModuleTemplate generateStubs(ModuleRepository repository, String dbModuleName)
+        {
+        // hack for now
+        return repository.getModule(dbModuleName + "_auto");
         }
 
     service Injector

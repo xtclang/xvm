@@ -17,6 +17,7 @@ import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.CompilerException;
 
 import org.xvm.runtime.ClassComposition;
@@ -214,12 +215,7 @@ public class xRTCompiler
 
         public boolean isForcedRebuild()
             {
-            return m_fRebuild;
-            }
-
-        public void setForcedRebuild(boolean fRebuild)
-            {
-            m_fRebuild = fRebuild;
+            return true;
             }
 
         public Severity getSeverity()
@@ -244,12 +240,19 @@ public class xRTCompiler
             {
             // TODO: this is a temporary hack
             LinkedRepository repoCore = (LinkedRepository) getLibraryRepo();
-            List<ModuleRepository> list = repoCore.asList();
-            ModuleRepository[] repos = new ModuleRepository[3];
-            repos[0] = makeBuildRepo();
-            repos[1] = list.get(1); // ecstasy
-            repos[2] = list.get(2); // _native
-            return new LinkedRepository(true, repos);
+
+            List<ModuleRepository> listCore   = repoCore.asList();
+            BuildRepository        repoLib    = new BuildRepository();
+            ModuleRepository       repoXdk    = listCore.get(1);
+            ModuleRepository       repoNative = listCore.get(2);
+            ModuleRepository       repoManual = listCore.get(3);
+
+            repoLib.storeModule(repoXdk.loadModule("ecstasy.xtclang.org"));
+            repoLib.storeModule(repoNative.loadModule("_native.xtclang.org"));
+            repoLib.storeModule(repoXdk.loadModule("oodb.xtclang.org"));
+            repoLib.storeModule(repoManual.loadModule("imdb"));
+
+            return new LinkedRepository(true, makeBuildRepo(), repoLib);
             }
 
         @Override
@@ -332,7 +335,6 @@ public class xRTCompiler
         private List<File>       m_listSources;
         private ModuleRepository m_repoResults;
         private Version          m_version  = new Version("CI");
-        private boolean          m_fRebuild = true;
         private StringBuffer     m_sbErrs   = new StringBuffer();
         }
     }
