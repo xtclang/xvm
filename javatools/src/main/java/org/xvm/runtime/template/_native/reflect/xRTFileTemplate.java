@@ -14,9 +14,11 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
+import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.mgmt.xCoreRepository;
+
 
 /**
  * Native FileTemplate implementation.
@@ -112,6 +114,13 @@ public class xRTFileTemplate
                 }
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        FileStructure module = (FileStructure) ((ComponentTemplateHandle) hTarget).getComponent();
+        return frame.assignValue(iReturn, xString.makeHandle(module.getModuleName()));
         }
 
 
