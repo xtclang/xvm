@@ -1422,6 +1422,21 @@ public class TypeCompositionStatement
             }
         while (clz != null);
 
+        // check for cyclical contributions
+        TypeConstant typeThis = component.getIdentityConstant().getType();
+        for (Contribution contrib : component.getContributionsAsList())
+            {
+            // for now, we're just checking self-referencing; circular references should be caught
+            // by TypeInfo computation logic, it would be best TODO it here
+            if (contrib.getTypeConstant().equals(typeThis))
+                {
+                log(errs, Severity.ERROR, Constants.VE_CYCLICAL_CONTRIBUTION,
+                    component.getIdentityConstant().getValueString(),
+                    contrib.toString());
+                return;
+                }
+            }
+
         if (m_fVirtChild)
             {
             // all of the enclosing component containers must have resolved, because we will depend

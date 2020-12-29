@@ -3765,7 +3765,8 @@ public class ClassStructure
                         {
                         // the constraint type itself could be formal, depending on another parameter
                         TypeConstant typeConstraint = entries.get(i).getValue();
-                        listActual.set(i, typeConstraint.isFormalTypeSequence() ||
+                        listActual.set(i,  typeConstraint.containsUnresolved()   ||
+                                           typeConstraint.isFormalTypeSequence() ||
                                           !typeConstraint.containsFormalType(true)
                                 ? typeConstraint
                                 : typeConstraint.resolveGenerics(pool, this));
