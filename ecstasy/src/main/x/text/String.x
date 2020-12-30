@@ -422,13 +422,13 @@ const String
             StringBuffer buffer = new StringBuffer(thisSize - matchSize + replaceSize);
             do
                 {
-                buffer.append(this[startOffset..matchOffset))
-                      .append(replace);
+                buffer.addAll(chars[startOffset..matchOffset))
+                      .addAll(replace.chars);
                 startOffset = matchOffset + matchSize;
                 }
             while (startOffset < thisSize, matchOffset := indexOf(match, startOffset));
 
-            return buffer.append(this[startOffset..thisSize)).toString();
+            return buffer.addAll(chars[startOffset..thisSize)).toString();
             }
         return this;
         }
