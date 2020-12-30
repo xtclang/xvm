@@ -400,6 +400,39 @@ const String
             }
         }
 
+    /**
+    * Replace every appearance of the `match` substring in this String with the `replace` String.
+    *
+    * @param match    the substring to be replaced
+    * @param replace  the replacement String
+    *
+    * @return the resulting String
+    */
+    String! replace(String! match, String! replace)
+        {
+        Int replaceSize = replace.size;
+        assert:arg replaceSize > 0;
+
+        if (Int matchOffset := indexOf(match))
+            {
+            Int thisSize    = this.size;
+            Int matchSize   = match.size;
+            Int startOffset = 0;
+
+            StringBuffer buffer = new StringBuffer(thisSize - matchSize + replaceSize);
+            do
+                {
+                buffer.append(this[startOffset..matchOffset))
+                      .append(replace);
+                startOffset = matchOffset + matchSize;
+                }
+            while (startOffset < thisSize, matchOffset := indexOf(match, startOffset));
+
+            return buffer.append(this[startOffset..thisSize)).toString();
+            }
+        return this;
+        }
+
 
     // ----- Iterable methods ----------------------------------------------------------------------
 
