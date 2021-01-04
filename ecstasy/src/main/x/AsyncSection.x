@@ -19,9 +19,9 @@
  *
  *   using (new AsyncSection(listUnguarded.add))
  *       {
- *       svc1.asyncCall1();
- *       svc2.asyncCall2();
- *       svc3.asyncCall3();
+ *       svc1.asyncCall1^();
+ *       svc2.asyncCall2^();
+ *       svc3.asyncCall3^();
  *       }
  *
  *   // by now all the unguarded async calls must have completed
