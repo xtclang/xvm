@@ -2332,7 +2332,6 @@ public class ClassStructure
         {
         assert indexOfGenericParameter(sName) >= 0;
 
-        NextChild:
         for (Component child : children())
             {
             if (child instanceof MultiMethodStructure)
@@ -2368,17 +2367,10 @@ public class ClassStructure
                     return true;
                     }
 
-                Annotation[] aAnno = property.getPropertyAnnotations();
-                if (aAnno.length > 0)
+                if (property.isExplicitReadOnly())
                     {
-                    for (int i = 0, c = aAnno.length; i < c; i++)
-                        {
-                        if (aAnno[i].getAnnotationClass().equals(pool.clzRO()))
-                            {
-                            // read-only; skip the setter's check
-                            continue NextChild;
-                            }
-                        }
+                    // read-only; skip the setter's check
+                    continue;
                     }
 
                 if (property.isVarAccessible(access)
@@ -2486,7 +2478,6 @@ public class ClassStructure
         {
         assert indexOfGenericParameter(sName) >= 0;
 
-        NextChild:
         for (Component child : children())
             {
             if (child instanceof MultiMethodStructure)
@@ -2522,17 +2513,10 @@ public class ClassStructure
                     return true;
                     }
 
-                Annotation[] aAnno = property.getPropertyAnnotations();
-                if (aAnno.length > 0)
+                if (property.isExplicitReadOnly())
                     {
-                    for (int i = 0, c = aAnno.length; i < c; i++)
-                        {
-                        if (aAnno[i].getAnnotationClass().equals(pool.clzRO()))
-                            {
-                            // read-only; skip the setter's check
-                            continue NextChild;
-                            }
-                        }
+                    // read-only; skip the setter's check
+                    continue;
                     }
 
                 if (property.isVarAccessible(access)

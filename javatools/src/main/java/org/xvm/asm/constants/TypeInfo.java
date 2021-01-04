@@ -121,7 +121,7 @@ public class TypeInfo
         f_cacheByNid = new ConcurrentHashMap<>(mapVirtMethods);
 
         m_fExplicitAbstract = fSynthetic || !isClass() || struct.isExplicitlyAbstract() ||
-                TypeInfo.containsAnnotation(aannoClass, "Abstract");
+                containsAnnotation(aannoClass, "Abstract");
 
         assert cInvalidations == 0 // necessary for TYPEINFO_PLACEHOLDER construction
             || cInvalidations <= type.getConstantPool().getInvalidationCount();

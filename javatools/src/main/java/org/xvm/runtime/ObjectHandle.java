@@ -348,7 +348,7 @@ public abstract class ObjectHandle
                 {
                 for (ObjectHandle hValue : m_mapFields.values())
                     {
-                    if (hValue.isMutable())
+                    if (hValue != null && hValue.isMutable())
                         {
                         return true;
                         }

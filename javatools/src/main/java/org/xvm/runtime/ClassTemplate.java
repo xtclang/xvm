@@ -2133,9 +2133,12 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Mark the specified property as native.
-     *
-     * Note: this also makes the property "calculated" (no storage)
+     * Mark the specified property and its accessors as native.
+     * <p/>
+     * Note: if there are no accessors and the native property is a read/write
+     *       (not ref-annotated and no explicit read-only at the declaration level),
+     *       then we will mark the property as @Unassigned, which will retain the property field,
+     *       but will exempt it from the post-construction assignability check.
      */
     protected void markNativeProperty(String sPropName)
         {
@@ -2158,6 +2161,12 @@ public abstract class ClassTemplate
             if (methSetter != null)
                 {
                 methSetter.markNative();
+                }
+
+            if (methGetter == null && methSetter == null &&
+                    !prop.isExplicitReadOnly() && !prop.isExplicitOverride() && !prop.isRefAnnotated())
+                {
+                prop.addAnnotation(pool().clzUnassigned());
                 }
             }
         }

@@ -19,6 +19,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -185,6 +186,22 @@ public class PropertyStructure
             assert aAnno != null;
             }
         return aAnno;
+        }
+
+    /**
+     * @return true if the property is annotated by "@RO"
+     */
+    public boolean isExplicitReadOnly()
+        {
+        return TypeInfo.containsAnnotation(getPropertyAnnotations(), "RO");
+        }
+
+    /**
+     * @return true if the property is annotated by "@Override"
+     */
+    public boolean isExplicitOverride()
+        {
+        return TypeInfo.containsAnnotation(getPropertyAnnotations(), "Override");
         }
 
     /**
@@ -666,6 +683,16 @@ public class PropertyStructure
                 setInjections.add(new InjectionKey(sName, type));
                 }
             }
+        }
+
+    @Override
+    public void addAnnotation(Annotation annotation)
+        {
+        super.addAnnotation(annotation);
+
+        // clear the cache
+        m_aPropAnno = null;
+        m_aRefAnno  = null;
         }
 
 

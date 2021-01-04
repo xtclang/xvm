@@ -4589,8 +4589,8 @@ public abstract class TypeConstant
                 // - if the native property has a Var annotation (e.g. @Lazy), the field needs to
                 //   be there
                 fGetSupers      = false;
-                fGetBlocksSuper = true;
-                fField          = fHasVarAnno;
+                fGetBlocksSuper = methodGet != null;
+                fField          = !fHasRO && !fGetBlocksSuper || fHasVarAnno;
                 fRO             = fHasRO;
                 fRW             = !fHasRO;
                 }
