@@ -92,6 +92,25 @@ val compileOne = tasks.register<JavaExec>("compileOne") {
     main = "org.xvm.tool.Compiler"
 }
 
+tasks.register<JavaExec>("runOne") {
+    group       = "Test"
+    description = "Run a \"testName\" test"
+
+    dependsOn(xdk.tasks["build"])
+
+    val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
+    classpath(
+        "${javatools.buildDir}/classes/java/main",
+        "${javatools.buildDir}/resources/main",
+        "${javatools.buildDir}/classes/java/test")
+
+    args("src/main/x/$name.x")
+    main = "org.xvm.runtime.TestConnector"
+}
+
 val compileRunner = tasks.register<JavaExec>("compileRunner") {
     description = "Compile TestRunner"
 
