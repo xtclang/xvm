@@ -246,7 +246,7 @@ interface Ref<Referent>
     *     @A1 @A2 List list = ...
     * would produce the `annotations` array holding `A1` at index zero.
     */
-    Annotation[] annotations;
+    @RO Annotation[] annotations;
 
     /**
      * The reference uses a number of bytes for its own storage; while the size of the reference is
