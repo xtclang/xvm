@@ -208,7 +208,7 @@ module TestRunner.xtclang.org
     ModuleTemplate generateStubs(ModuleRepository repository, String dbModuleName)
         {
         // hack for now
-        return repository.getModule(dbModuleName + "_auto");
+        return repository.getModule(dbModuleName + "_imdb");
         }
 
     service Injector

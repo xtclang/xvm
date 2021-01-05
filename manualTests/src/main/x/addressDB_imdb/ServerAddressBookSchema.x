@@ -34,7 +34,7 @@ static service ServerAddressBookSchema
      * the IMDB RootSchema service.
      */
     class ClientAddressBookSchema
-            extends AddressBookDB_auto.ClientAddressBookSchema
+            extends AddressBookDB_imdb.ClientAddressBookSchema
         {
         }
 

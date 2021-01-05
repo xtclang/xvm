@@ -1,4 +1,4 @@
-module AddressBookDB_auto
+module AddressBookDB_imdb
     {
     package db import oodb.xtclang.org;
     package imdb import imdb;
