@@ -1,7 +1,4 @@
-import UserDbApp_.AddressBookSchema;
-import UserDbApp_.Contacts;
-import UserDbApp_.Contact;
-import UserDbApp_.Phone;
+import AddressBookDB.AddressBookSchema;
 
 class ClientAddressBookSchema
         extends imdb.ClientRootSchema
@@ -18,38 +15,38 @@ class ClientAddressBookSchema
         }
 
     @Override
-    @Unassigned Contacts contacts;
+    @Unassigned AddressBookDB.Contacts contacts;
 
     @Override
     @Unassigned db.DBUser dbUser;
 
     @Override
-    public/protected ClientAddressBookTransaction? transaction;
+    public/protected ClientTransaction? transaction;
 
     @Override
-    ClientAddressBookTransaction createTransaction(
+    ClientTransaction createTransaction(
                 Duration? timeout = Null, String? name = Null,
                 UInt? id = Null, db.DBTransaction.Priority priority = Normal,
                 Int retryCount = 0)
         {
-        ClientAddressBookTransaction tx = new ClientAddressBookTransaction();
+        ClientTransaction tx = new ClientTransaction();
         transaction = tx;
         return tx;
         }
 
     class ClientContacts
-            extends imdb.ClientDBMap<String, Contact>
-            incorporates Contacts
+            extends imdb.ClientDBMap<String, AddressBookDB.Contact>
+            incorporates AddressBookDB.Contacts
         {
         construct(ServerAddressBookSchema.ServerContacts contacts)
             {
             construct imdb.ClientDBMap(contacts);
             }
 
-        // ----- Contacts mixin --------------------------------------------------------------------
+        // ----- mixin methods ---------------------------------------------------------------------
 
         @Override
-        void addContact(Contact contact)
+        void addContact(AddressBookDB.Contact contact)
             {
             (Boolean autoCommit, db.Transaction tx) = ensureTransaction();
 
@@ -62,7 +59,7 @@ class ClientAddressBookSchema
             }
 
         @Override
-        void addPhone(String name, Phone phone)
+        void addPhone(String name, AddressBookDB.Phone phone)
             {
             (Boolean autoCommit, db.Transaction tx) = ensureTransaction();
 
@@ -78,7 +75,7 @@ class ClientAddressBookSchema
 
         protected (Boolean, db.Transaction) ensureTransaction()
             {
-            ClientAddressBookTransaction? tx = this.ClientAddressBookSchema.transaction;
+            ClientTransaction? tx = this.ClientAddressBookSchema.transaction;
             return tx == Null
                     ? (True, createTransaction())
                     : (False, tx);
@@ -97,7 +94,7 @@ class ClientAddressBookSchema
             {
             if (fn == "addPhone" && when == Null)
                 {
-                assert args.is(Tuple<String, Phone>);
+                assert args.is(Tuple<String, AddressBookDB.Phone>);
 
                 return addPhone(args[0], args[1]);
                 }
@@ -109,19 +106,19 @@ class ClientAddressBookSchema
             {
             construct()
                 {
-                 // TODO CP - would be nice if it read "construct super();"
+                // TODO CP - would be nice if it read "construct super();"
                 construct imdb.ClientDBMap.ClientChange();
                 }
             finally
                 {
-                ClientAddressBookTransaction? tx = this.ClientAddressBookSchema.transaction;
+                ClientTransaction? tx = this.ClientAddressBookSchema.transaction;
                 assert tx != Null;
                 tx.dbTransaction.contents.put("Contacts", this);
                 }
             }
         }
 
-    class ClientAddressBookTransaction
+    class ClientTransaction
             extends imdb.ClientTransaction<AddressBookSchema>
             implements AddressBookSchema
         {
@@ -144,7 +141,7 @@ class ClientAddressBookSchema
             }
 
         @Override
-        Contacts contacts.get()
+        AddressBookDB.Contacts contacts.get()
             {
             return this.ClientAddressBookSchema.contacts;
             }

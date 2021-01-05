@@ -1,6 +1,4 @@
-import UserDbApp_.AddressBookSchema;
-import UserDbApp_.Contacts;
-import UserDbApp_.Contact;
+import AddressBookDB.AddressBookSchema;
 
 /**
  * Singleton schema.
@@ -41,8 +39,8 @@ static service ServerAddressBookSchema
         }
 
     class ServerContacts
-            extends imdb.ServerDBMap<String, Contact>
-            incorporates Contacts
+            extends imdb.ServerDBMap<String, AddressBookDB.Contact>
+            incorporates AddressBookDB.Contacts
         {
         construct()
             {

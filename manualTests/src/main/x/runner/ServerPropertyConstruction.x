@@ -1,0 +1,1 @@
+        %propertyName% = new Server%propertyTypeName%();
