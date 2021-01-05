@@ -100,7 +100,7 @@ tasks.register<JavaExec>("runOne") {
 
     val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+    jvmArgs("-showversion", "-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(
         "${javatools.buildDir}/classes/java/main",
