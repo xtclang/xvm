@@ -245,10 +245,7 @@ public class xRTMethod
         ObjectHandle[] ahPass  = hTuple.m_ahValue;            // TODO GG+CP do we need to check these?
         CallChain      chain   = hMethod.getCallChain(frame, hTarget);
 
-        return chain.isNative()
-                ? hTarget.getTemplate().invokeNativeT(frame, chain.getTop(), hTarget, ahPass, iReturn)
-                : hTarget.getTemplate().invokeT(frame, chain, hTarget,
-                        Utils.ensureSize(ahPass, chain.getMaxVars()), iReturn);
+        return chain.invokeT(frame, hTarget, ahPass, iReturn);
         }
 
     /**

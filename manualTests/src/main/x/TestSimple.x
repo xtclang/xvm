@@ -11,13 +11,19 @@ module TestSimple
         {
         }
 
-    class Test1
-            extends Test2
+    @M("Hello")
+    conditional String foo()
         {
+        return True, "hi";
         }
 
-    class Test2
-            extends Test1
+
+    mixin M(String greeting = "?")
+            into Method
         {
+        conditional String bar()
+            {
+            return True, greeting;
+            }
         }
     }

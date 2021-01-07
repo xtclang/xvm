@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+import org.xvm.asm.Component.ResolutionCollector;
+import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -57,6 +59,12 @@ public class TypeSequenceTypeConstant
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         return this;
+        }
+
+    @Override
+    public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
+        {
+        return ResolutionResult.UNKNOWN;
         }
 
     @Override
