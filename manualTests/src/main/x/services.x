@@ -68,7 +68,7 @@ module TestServices
         import ecstasy.Timeout;
         try
             {
-            using (Timeout timeout = new Timeout(Duration:0.1S, True))
+            using (Timeout timeout = new Timeout(Duration:0.5S, True))
                 {
                 svc.calcSomethingBig(Duration:30M);
                 assert;

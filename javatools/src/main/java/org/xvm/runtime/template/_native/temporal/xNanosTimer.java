@@ -114,7 +114,7 @@ public class xNanosTimer
         }
 
     /**
-     * Helper method to convert Timeout? handle into milliseconds.
+     * Helper method to convert Timeout? handle into a "delay" milliseconds.
      */
     public static long millisFromTimeout(ObjectHandle hTimeout)
         {

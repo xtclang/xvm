@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.TimerTask;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -49,7 +50,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
-import org.xvm.runtime.template._native.temporal.xNanosTimer;
+import org.xvm.runtime.template._native.temporal.xLocalClock;
 
 
 /**
@@ -98,16 +99,21 @@ public class ServiceContext
         m_hService = hService;
         }
 
-    public long getTimeoutMillis()
-        {
-        return xNanosTimer.millisFromTimeout(m_hTimeout);
-        }
-
+    /**
+     * Supporting method for natural Service.registerTimeout() API.
+     *
+     * @return the current Timeout? handle
+     */
     public ObjectHandle getTimeoutHandle()
         {
         return m_hTimeout;
         }
 
+    /**
+     * Supporting method for natural Service.registerTimeout() API.
+     *
+     * @param hTimeout  the new Timeout? handle
+     */
     public void setTimeoutHandle(ObjectHandle hTimeout)
         {
         assert hTimeout != null;
@@ -297,6 +303,24 @@ public class ServiceContext
             // we've detected service or lock contention, reschedule
             f_container.schedule(this);
             }
+        else if (!f_setFibers.isEmpty())
+            {
+            // make sure to wake up for the nearest timeout
+            long ldtTimeout = Long.MAX_VALUE;
+            for (Fiber fiber : f_setFibers)
+                {
+                long ldtTimeoutFiber = fiber.getTimeoutStamp();
+                if (ldtTimeoutFiber > 0)
+                    {
+                    ldtTimeout = Math.min(ldtTimeout, ldtTimeoutFiber);
+                    }
+                }
+
+            if (ldtTimeout != Long.MAX_VALUE)
+                {
+                f_wakeUpScheduler.schedule(ldtTimeout);
+                }
+            }
         }
 
     /**
@@ -325,7 +349,6 @@ public class ServiceContext
      * Add a message to the service request queue.
      *
      * @param response  the response message
-     *
      */
     public void respond(Response response)
         {
@@ -1536,6 +1559,45 @@ public class ServiceContext
             }
         }
 
+    /**
+     * The wake up scheduler.
+     */
+    protected class WakeUpScheduler
+        {
+        protected void schedule(long ldtWakeUp)
+            {
+            long ldtNow = System.currentTimeMillis();
+            if (f_ldtScheduled > 0)
+                {
+                if (ldtNow <= f_ldtScheduled && f_ldtScheduled <= ldtWakeUp)
+                    {
+                    // the current wake up covers the new one; nothing to do
+                    return;
+                    }
+
+                if (ldtNow < f_ldtScheduled)
+                    {
+                    m_taskCurrent.cancel();
+                    }
+                }
+
+            f_ldtScheduled = ldtWakeUp;
+            m_taskCurrent  = new TimerTask()
+                {
+                public void run()
+                    {
+                    ensureScheduled();
+                    }
+                };
+
+            xLocalClock.TIMER.schedule(m_taskCurrent, Math.max(1, ldtWakeUp - ldtNow));
+            }
+
+        private long      f_ldtScheduled; // when
+        private TimerTask m_taskCurrent;  // what
+        }
+
+
     // ----- constants and fields ------------------------------------------------------------------
 
     public final Container        f_container;
@@ -1656,7 +1718,6 @@ public class ServiceContext
      * VarHandle for {@link #m_lLockScheduling}.
      */
     final static VarHandle SCHEDULING_LOCK_HANDLE;
-
     static
         {
         try
@@ -1675,4 +1736,9 @@ public class ServiceContext
      * Since only one fiber can access the service context at any time, a simple HashMap is used.
      */
     private final Map<Op, EnumMap> f_mapOpInfo = new HashMap<>();
+
+    /**
+     * A wake up scheduler to process registered timeouts.
+     */
+    private final WakeUpScheduler f_wakeUpScheduler = new WakeUpScheduler();
     }

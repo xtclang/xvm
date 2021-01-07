@@ -58,14 +58,15 @@ public class Fiber
             long ldtTimeoutFiber = fiberCaller.m_ldtTimeout;
             if (ldtTimeoutFiber > 0)
                 {
-                // inherit the caller's timeout,
+                // inherit the caller's fiber timeout stamp,
                 // but stagger it a bit to have the callee to time-out first
                 // TODO: what if it's already timed out or below the staggered amount?
                 m_ldtTimeout = ldtTimeoutFiber - 20;
                 }
             else
                 {
-                long cTimeoutMillis = context.getTimeoutMillis();
+                // inherit the caller's service timeout
+                long cTimeoutMillis = xNanosTimer.millisFromTimeout(context.getTimeoutHandle());
                 if (cTimeoutMillis > 0)
                     {
                     m_ldtTimeout = System.currentTimeMillis() + cTimeoutMillis;
@@ -100,6 +101,14 @@ public class Fiber
 
         m_hTimeout   = hTimeout;
         m_ldtTimeout = cDelayMillis <= 0 ? 0 : System.currentTimeMillis() + cDelayMillis;
+        }
+
+    /**
+     * @return the current timeout timestamp in milliseconds (using System.currentTimeMillis())
+     */
+    public long getTimeoutStamp()
+        {
+        return m_ldtTimeout;
         }
 
     /**
@@ -181,7 +190,7 @@ public class Fiber
             case Paused:
             case Yielded:
             case Terminating:
-                return  m_frame;
+                return m_frame;
             }
         }
 
