@@ -5811,10 +5811,10 @@ public class Parser
             return token;
             }
 
-        log(Severity.ERROR, EXPECTED_TOKEN, m_tokenPrev.getEndPosition(), m_tokenPrev.getEndPosition(),
-                id, m_token.getId());
+        long lPos = m_tokenPrev == null ? m_token.getEndPosition() : m_tokenPrev.getEndPosition();
+        log(Severity.ERROR, EXPECTED_TOKEN, lPos, lPos, id, m_token.getId());
 
-        throw new CompilerException("expected token: " + id + " (found: " + token + ")");
+        throw new CompilerException("expected token: " + id + " (found: " + m_token.getId() + ")");
         }
 
     /**
