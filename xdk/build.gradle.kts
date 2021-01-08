@@ -6,15 +6,17 @@ val ecstasy      = project(":ecstasy")
 val javatools    = project(":javatools")
 val bridge       = project(":javatools_bridge")
 val json         = project(":lib_json");
-val jsondb       = project(":lib_jsondb");
 val oodb         = project(":lib_oodb");
+val jsondb       = project(":lib_jsondb");
+val host         = project(":lib_host");
 
 val ecstasyMain  = "${ecstasy.projectDir}/src/main"
 val bridgeMain   = "${bridge.projectDir}/src/main"
 val javatoolsJar = "${javatools.buildDir}/libs/javatools.jar"
 val jsonMain     = "${json.projectDir}/src/main";
-val jsondbMain   = "${jsondb.projectDir}/src/main";
 val oodbMain     = "${oodb.projectDir}/src/main";
+val jsondbMain   = "${jsondb.projectDir}/src/main";
+val hostMain     = "${host.projectDir}/src/main";
 
 val libDir       = "$buildDir/xdk/lib"
 val coreLib      = "$libDir/ecstasy.xtc"
@@ -123,6 +125,23 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     main = "org.xvm.tool.Compiler"
 }
 
+val compileHost = tasks.register<JavaExec>("compileHost") {
+    group       = "Execution"
+    description = "Build host.xtc module"
+
+    shouldRunAfter(compileOODB)
+
+    classpath(javatoolsJar)
+    args("-verbose",
+            "-o", "$libDir",
+            "-version", "$version",
+            "-L", "$coreLib",
+            "-L", "$bridgeLib",
+            "-L", "$libDir",
+            "$hostMain/x/module.x")
+    main = "org.xvm.tool.Compiler"
+}
+
 tasks.register("build") {
     group       = "Build"
     description = "Build the XDK"
@@ -172,6 +191,15 @@ tasks.register("build") {
 
     if (jsondbSrc > jsondbDest) {
         dependsOn(compileJsonDB)
+    }
+
+    // compile HOST
+    val hostSrc = fileTree(hostMain).getFiles().stream().
+    mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val hostDest = file("$libDir/host.xtc").lastModified()
+
+    if (hostSrc > hostDest) {
+        dependsOn(compileHost)
     }
 
     doLast {

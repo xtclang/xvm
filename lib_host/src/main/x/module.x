@@ -1,4 +1,4 @@
-module TestRunner.xtclang.org
+module host.xtclang.org
     {
     package oodb import oodb.xtclang.org;
 

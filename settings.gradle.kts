@@ -9,6 +9,7 @@ include(":javatools_launcher")  // produces native (Win, Mac, Linux) executables
 include(":lib_json")            // produces json.xtc
 include(":lib_oodb")            // produces oodb.xtc
 include(":lib_jsondb")          // produces jsondb.xtc
+include(":lib_host")            // produces host.xtc
 // TODO(":wiki")
 include(":xdk")         // builds the above modules (ecstasy.xtc, javatools_bridge.xtc, json.xtc, etc.)
 // drags in Java libraries (utils, javatools), native launchers, wiki, etc.
