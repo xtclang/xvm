@@ -56,6 +56,19 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public boolean isOnlyNullable()
+        {
+        return false;
+        }
+
+    @Override
+    public TypeConstant combine(ConstantPool pool, TypeConstant that)
+        {
+        // a union of the turtle type with any other tuple is that tuple
+        return that.isTuple() ? that : super.combine(pool, that);
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         return this;
@@ -89,6 +102,12 @@ public class TypeSequenceTypeConstant
     public TypeConstant[] collectGenericParameters()
         {
         // turtle type is not formalizable
+        return null;
+        }
+
+    @Override
+    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
+        {
         return null;
         }
 
@@ -144,6 +163,18 @@ public class TypeSequenceTypeConstant
     public boolean isTuple()
         {
         return true;
+        }
+
+    @Override
+    public boolean containsTypeParameter(boolean fAllowParams)
+        {
+        return false;
+        }
+
+    @Override
+    public boolean containsRecursiveType()
+        {
+        return false;
         }
 
     @Override

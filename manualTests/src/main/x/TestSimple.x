@@ -11,19 +11,8 @@ module TestSimple
         {
         }
 
-    @M("Hello")
-    conditional String foo()
+    String foo()
         {
-        return True, "hi";
-        }
-
-
-    mixin M(String greeting = "?")
-            into Method
-        {
-        conditional String bar()
-            {
-            return True, greeting;
-            }
+        return "hi";
         }
     }
