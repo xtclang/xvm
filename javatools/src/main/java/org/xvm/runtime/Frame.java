@@ -1116,10 +1116,12 @@ public class Frame
             case Op.A_TUPLE:
                 if (afDynamic == null)
                     {
-                    int             iReturn = f_aiReturn[0];
-                    TypeComposition clazz   = ensureClass(f_framePrev.getVarInfo(iReturn).getType());
-
-                    return returnValue(iReturn, xTuple.makeHandle(clazz, ahValue), false);
+                    int          iReturn = f_aiReturn[0];
+                    TypeConstant type    = iReturn >= 0
+                            ? f_framePrev.getRegisterType(iReturn)
+                            : poolContext().typeTuple();
+                    return returnValue(iReturn,
+                        xTuple.makeHandle(ensureClass(type), ahValue), false);
                     }
                 else
                     {
