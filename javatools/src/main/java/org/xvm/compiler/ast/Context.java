@@ -1942,24 +1942,29 @@ public class Context
             Context ctxPromote = fWhenTrue ? m_ctxWhenFalse : m_ctxWhenTrue;
             if (ctxPromote != null)
                 {
-                Map<String, Assignment> mapPromote = ctxPromote.getDefiniteAssignments();
-                Map<String, Assignment> mapAssign  = ensureDefiniteAssignments();
-                for (Map.Entry<String, Assignment> entry : mapPromote.entrySet())
+                Set<String> setVars = new HashSet<>();
+                ctxPromote.collectVariables(setVars);
+
+                Map<String, Assignment> mapAssign = ensureDefiniteAssignments();
+                for (String sName : setVars)
                     {
-                    String sName = entry.getKey();
                     if (!ctxPromote.isVarDeclaredInThisScope(sName))
                         {
-                        Assignment assignment = mapAssign.get(sName);
-                        if (assignment == null)
+                        Assignment asnPromote = ctxPromote.getVarAssignment(sName);
+                        Assignment asnCurrent = mapAssign.get(sName);
+
+                        assert asnPromote != null;
+
+                        if (asnCurrent == null)
                             {
-                            assignment = entry.getValue();
+                            asnCurrent = asnPromote;
                             }
                         else
                             {
-                            assignment = fWhenTrue ? assignment.whenFalse() : assignment.whenTrue();
-                            assignment = assignment.join(entry.getValue());
+                            asnCurrent = fWhenTrue ? asnCurrent.whenFalse() : asnCurrent.whenTrue();
+                            asnCurrent = asnCurrent.join(asnPromote);
                             }
-                        mapAssign.put(entry.getKey(), assignment);
+                        mapAssign.put(sName, asnCurrent);
                         }
                     }
                 }
