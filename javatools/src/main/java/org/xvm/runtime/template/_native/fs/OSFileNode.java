@@ -8,18 +8,13 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Constants.Access;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.runtime.ClassComposition;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
@@ -87,7 +82,7 @@ public abstract class OSFileNode
                     }
                 catch (IOException e)
                     {
-                    return raisePathException(frame, e, hNode);
+                    return raisePathException(frame, e, hNode.f_path);
                     }
                 }
 
@@ -100,7 +95,7 @@ public abstract class OSFileNode
                     }
                 catch (IOException e)
                     {
-                    return raisePathException(frame, e, hNode);
+                    return raisePathException(frame, e, hNode.f_path);
                     }
                 }
 
@@ -113,7 +108,7 @@ public abstract class OSFileNode
                     }
                 catch (IOException e)
                     {
-                    return raisePathException(frame, e, hNode);
+                    return raisePathException(frame, e, hNode.f_path);
                     }
                 }
 
@@ -126,7 +121,7 @@ public abstract class OSFileNode
                     }
                 catch (IOException e)
                     {
-                    return raisePathException(frame, e, hNode);
+                    return raisePathException(frame, e, hNode.f_path);
                     }
                 }
             }
@@ -155,10 +150,18 @@ public abstract class OSFileNode
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    protected int raisePathException(Frame frame, IOException e, NodeHandle hNode)
+    public static int raisePathException(Frame frame, IOException e, Path path)
         {
-        // TODO: how to get the natural Path efficiently from hNode.f_path?
-        return frame.raiseException(xException.pathException(frame, e.getMessage(), xNullable.NULL));
+        // TODO: how to get the natural Path efficiently from path?
+        // TODO: consider translating IOExceptions into corresponding natural exceptions
+
+        // strip the exception name from the exception class and prepend to the message
+        Class clzException = e.getClass();
+        String sException  = clzException == IOException.class
+                ? ""
+                : clzException.getSimpleName().replace("Exception", "") + ": ";
+        return frame.raiseException(
+            xException.pathException(frame, sException + e.getMessage(), xNullable.NULL));
         }
 
 

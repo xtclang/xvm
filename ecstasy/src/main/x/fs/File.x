@@ -67,14 +67,8 @@ interface File
     enum WriteOption
         {
         /**
-         * Disallow write access.
-         *
-         * Incompatible with all other write options.
-         */
-        NoWrite,
-
-        /**
-         * Allow write access.
+         * Allow write access. If neither [Ensure] nor [Create] are specified or implied, then the
+         * [open] will fail if the file does not exist.
          *
          * Implied by all following write options.
          */
@@ -146,10 +140,16 @@ interface File
         }
 
     /**
+     * An empty array of WriteOption(s) is used to indicate that the file should be opened without
+     * write access.
+     */
+    static WriteOption[] NoWrite = [];
+
+    /**
      * Open the file, creating a channel.
      *
      * @param read   the ReadOption to use when opening the channel; defaults to Read
-     * @param write  the WriteOption to use when opening the channel; defaults to Write
+     * @param write  the WriteOption(s) to use when opening the channel; defaults to NoWrite
      *
      * @throws FileNotFound       if the file does not exist, and neither Create nor Ensure are
      *                            specified or implied
@@ -159,7 +159,7 @@ interface File
      * @throws FileAlreadyExists  if the file exists, but the WriteOption of Create is specified or
      *                            implied
      */
-    FileChannel open(ReadOption read=Read, WriteOption[] write = [Write]);
+    FileChannel open(ReadOption read=Read, WriteOption[] write = NoWrite);
 
     @Override
     Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "")

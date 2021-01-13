@@ -1,7 +1,15 @@
 package org.xvm.runtime.template._native.fs;
 
 
+import java.io.File;
+import java.io.IOException;
+
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+
+import java.nio.file.attribute.BasicFileAttributes;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants;
@@ -15,9 +23,7 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.xService;
-
-import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template.xBoolean;
 
 
 /**
@@ -71,13 +77,7 @@ public class xOSDirectory
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
         {
-        xService.ServiceHandle hStorage = (xService.ServiceHandle) hTarget;
-
-        if (frame.f_context != hStorage.f_context)
-            {
-            return xRTFunction.makeAsyncNativeHandle(method).
-                call1(frame, hTarget, new ObjectHandle[] {hArg}, iReturn);
-            }
+        NodeHandle hNode = (NodeHandle) hTarget;
 
         switch (method.getName())
             {
@@ -93,19 +93,47 @@ public class xOSDirectory
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        xService.ServiceHandle hStorage = (xService.ServiceHandle) hTarget;
-
-        if (frame.f_context != hStorage.f_context)
-            {
-            // for now let's make sure all the calls are processed on the service fibers
-            return xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
-            }
+        NodeHandle hNode = (NodeHandle) hTarget;
 
         switch (method.getName())
             {
             case "deleteRecursively":
-                // TODO GG
-                throw new UnsupportedOperationException("deleteRecursively");
+                {
+                Path pathDir = hNode.f_path;
+                File file    = pathDir.toFile();
+                if (!file.isDirectory())
+                    {
+                    return frame.assignValue(iReturn, xBoolean.FALSE);
+                    }
+
+                try
+                    {
+                    Files.walkFileTree(pathDir,
+                        new SimpleFileVisitor<>()
+                            {
+                            @Override
+                            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                                    throws IOException
+                               {
+                               Files.delete(file);
+                               return FileVisitResult.CONTINUE;
+                               }
+
+                           @Override
+                           public FileVisitResult postVisitDirectory(Path dir, IOException exc)
+                                    throws IOException
+                               {
+                               Files.delete(dir);
+                               return FileVisitResult.CONTINUE;
+                               }
+                        });
+                    return frame.assignValue(iReturn, xBoolean.TRUE);
+                    }
+                catch (IOException e)
+                    {
+                    return raisePathException(frame, e, hNode.f_path);
+                    }
+                }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
