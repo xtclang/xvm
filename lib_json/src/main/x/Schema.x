@@ -490,7 +490,7 @@ const Schema
                 {
                 // first encode the character as UTF8, then convert each non-ASCII byte (i.e. all of
                 // them) to the %-encoded form
-                for (Byte b : ch.utf())
+                for (Byte b : ch.utf8())
                     {
                     buf.add('%').add((b >>> 4).toHexit()).add(b.toHexit());
                     }

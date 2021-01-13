@@ -1601,6 +1601,163 @@ class Array<Element>
     static mixin ByteArray<Element extends Byte>
             into Array<Element>
         {
+        import io.IllegalUTF;
+
+        /**
+         * Translate a series of bytes from the UTF-8 format into a single Unicode character.
+         *
+         * @param offset  (optional) the byte offset of the UTF-8 data within the byte array
+         *
+         * @return the character represented by the UTF-8 bytes from this byte array at the
+         *         specified offset
+         * @return the number of bytes used to represent the UTF-8 formatted character value
+         *
+         * @throws IllegalUTF  if the UTF-8 data was not valid
+         */
+        (Char ch, Int length) utf8Char(Int offset = 0)
+            {
+            Byte b = this[offset];
+            if (b < 0x80)
+                {
+                // ASCII
+                return b.toChar(), 1;
+                }
+
+            private UInt32 trailing(Int offset)
+                {
+                if (offset >= size)
+                    {
+                    throw new IllegalUTF($"missing trailing unicode byte at offset {offset}");
+                    }
+
+                Byte b = this[offset];
+                if (b & 0b11000000 != 0b10000000)
+                    {
+                    throw new IllegalUTF(
+                        $"trailing unicode byte {b} at offset {offset} does not match 10xxxxxx");
+                    }
+
+                return (b & 0b00111111).toUInt32();
+                }
+
+            UInt32 n = b.toUInt32();
+            Int    len;
+            switch ((~b).leftmostBit)
+                {
+                case 0b00100000:
+                    return (n & 0b00011111 << 6 | trailing(offset+1)).toChar(), 2;
+
+                case 0b00010000:
+                    n = n & 0b00001111 << 6
+                        | trailing(offset+1) << 6
+                        | trailing(offset+2);
+                    len = 3;
+                    break;
+
+                case 0b00001000:
+                    n = n & 0b00000111 << 6
+                        | trailing(offset+1) << 6
+                        | trailing(offset+2) << 6
+                        | trailing(offset+3);
+                    len = 4;
+                    break;
+
+                case 0b00000100:
+                    n = n & 0b00000011 << 6
+                        | trailing(offset+1) << 6
+                        | trailing(offset+2) << 6
+                        | trailing(offset+3) << 6
+                        | trailing(offset+4);
+                    len = 5;
+                    break;
+
+                case 0b00000010:
+                    n = n & 0b00000001 << 6
+                        | trailing(offset+1) << 6
+                        | trailing(offset+2) << 6
+                        | trailing(offset+3) << 6
+                        | trailing(offset+4) << 6
+                        | trailing(offset+5);
+                    len = 6;
+                    break;
+
+                default:
+                    throw new IllegalUTF($"initial byte: {b}");
+                }
+
+            Char ch = n.toChar();
+            if (ch.requiresTrailingSurrogate())
+                {
+                (Char ch2, Int len2) = utf8Char(offset + len);
+                return ch.addTrailingSurrogate(ch2), len + len2;
+                }
+
+            return ch, len;
+            }
+
+        /**
+         * Translate the byte array from the UTF-8 format into a String.
+         *
+         * @return the string represented by the UTF-8 bytes from this byte array
+         *
+         * @throws IllegalUTF  if the UTF-8 data was not valid
+         */
+        String utf8String()
+            {
+            Int size = this.size;
+            if (size == 0)
+                {
+                return "";
+                }
+
+            Int          offset = 0;
+            StringBuffer buf    = new StringBuffer(size);
+            while (offset < size)
+                {
+                (Char ch, Int chLen) = utf8Char(offset);
+                buf.add(ch);
+                offset += chLen;
+                }
+
+            return buf.toString();
+            }
+
+        /**
+         * Translate a series of bytes from the UTF-8 format into a String.
+         *
+         * Note that this requires an exact count of **characters** to be passed. If the number of
+         * bytes is known, but not the number of characters, then slice this byte array to obtain
+         * just the slice that contains the UTF-8 data, and use the no-parameter [utf8String()]
+         * method to convert it to a String.
+         *
+         * @param offset  the byte offset of the UTF-8 data within the byte array
+         * @param count   the number of **characters** in the string
+         *
+         * @return the string represented by the UTF-8 bytes from this byte array at the
+         *         specified offset
+         * @return the number of bytes that held the UTF-8 formatted string value
+         *
+         * @throws IllegalUTF  if the UTF-8 data was not valid
+         */
+        (String string, Int length) utf8String(Int offset, Int count)
+            {
+            if (count == 0)
+                {
+                return "", 0;
+                }
+
+            Char[] chars = new Char[count];
+            Int    len   = 0;
+            for (Int i = 0; i < count; ++i)
+                {
+                (Char ch, Int chLen) = utf8Char(offset + len);
+                chars[i] = ch;
+                len     += chLen;
+                }
+
+            return new String(chars.freeze()), len;
+            }
+
         /**
          * Obtain a view of this array as an array of bits. The array is immutable if this array is
          * immutable, and shares the mutability attribute of this array, except that the resulting

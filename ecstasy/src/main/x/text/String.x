@@ -470,6 +470,18 @@ const String
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
+     * @return the UTF-8 conversion of this String into a byte array
+     */
+    immutable Byte[] utf8()
+        {
+        Int    length = calcUtf8Length();
+        Byte[] bytes  = new Byte[length];
+        Int    actual = formatUtf8(bytes, 0);
+        assert actual == length;
+        return bytes.makeImmutable();
+        }
+
+    /**
      * @return the characters of this String as an array
      */
     immutable Char[] toCharArray()
@@ -485,6 +497,37 @@ const String
 
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * @return the minimum number of bytes necessary to encode the string in UTF8 format
+     */
+    Int calcUtf8Length()
+        {
+        Int len = 0;
+        for (Char ch : chars)
+            {
+            len += ch.calcUtf8Length();
+            }
+        return len;
+        }
+
+    /**
+     * Encode this string into the passed byte array using the UTF8 format.
+     *
+     * @param bytes  the byte array to write the UTF8 bytes into
+     * @param of     the offset into the byte array to write the first byte
+     *
+     * @return the number of bytes used to encode the character in UTF8 format
+     */
+    Int formatUtf8(Byte[] bytes, Int of)
+        {
+        Int len = 0;
+        for (Char ch : chars)
+            {
+            len += ch.formatUtf8(bytes, of + len);
+            }
+        return len;
+        }
 
     /**
      * Determine if the string needs to be escaped in order to be displayed.
