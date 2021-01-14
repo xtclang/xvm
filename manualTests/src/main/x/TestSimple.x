@@ -8,9 +8,7 @@ module TestSimple
         @Inject Directory rootDir;
 
         File fileXtc;
-        if (fileXtc := curDir.findFile("build/AddressBookApp.xtc"))
-            {
-            }
+        if (fileXtc := curDir.findFile("build/AddressBookApp.xtc")) {}
         else
             {
             console.println("not found");
@@ -20,7 +18,7 @@ module TestSimple
 
         // simulate the code gen logic
         Path?     buildPath = fileXtc.path.parent;
-        Directory buildDir  = rootDir.dirFor(buildPath?.toString()) : curDir;
+        Directory buildDir  = fileXtc.store.dirFor(buildPath?) : curDir;
 
         Directory moduleDir = buildDir.dirFor("AddressBookApp_imdb");
         if (moduleDir.exists)

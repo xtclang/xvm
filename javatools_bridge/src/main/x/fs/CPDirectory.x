@@ -10,8 +10,8 @@ import ecstasy.fs.Path;
 /**
  * Constant Pool Directory implementation.
  */
-const CPDirectory(Object cookie, Path path, DateTime created, DateTime modified, Int size)
-        extends CPFileNode(cookie, path, created, modified, size)
+const CPDirectory(Object cookie, CPFileStore? fileStore, Path path, DateTime created, DateTime modified, Int size)
+        extends CPFileNode(cookie, fileStore, path, created, modified, size)
         implements Directory
     {
     construct (Object cookie)
@@ -105,7 +105,7 @@ const CPDirectory(Object cookie, Path path, DateTime created, DateTime modified,
         Object cookie = contents.get(name);
         assert cookie != Null;
 
-        return True, new CPDirectory(cookie, path + name, created, modified, 1);
+        return True, new CPDirectory(cookie, fileStore, path + name, created, modified, 1);
         }
 
     @Override
@@ -151,8 +151,8 @@ const CPDirectory(Object cookie, Path path, DateTime created, DateTime modified,
             Object cookie = cookies[i];
             (Boolean isdir, String name, DateTime created, DateTime modified, Int size) = CPFileStore.loadNode(cookie);
             nodes[i] = isdir
-                    ? new CPDirectory(cookie, path + name, created, modified, size)
-                    : new CPFile(cookie, path + name, created, modified, size);
+                    ? new CPDirectory(cookie, fileStore, path + name, created, modified, size)
+                    : new CPFile(cookie, fileStore, path + name, created, modified, size);
             }
         return new ListMap(names, nodes);
         }

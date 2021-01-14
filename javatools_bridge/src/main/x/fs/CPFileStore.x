@@ -16,12 +16,7 @@ const CPFileStore(String path, Object constRoot)
         {
         (Boolean isdir, String name, DateTime created, DateTime modified, Int size) = loadNode(constRoot);
         assert isdir;
-        return new CPDirectory(
-                constRoot,
-                Path.ROOT,
-                created,
-                modified,
-                size);
+        return new CPDirectory(constRoot, this, Path.ROOT, created, modified, size);
         }
 
     @Override
@@ -91,7 +86,7 @@ const CPFileStore(String path, Object constRoot)
                 }
             }
 
-        return new CPDirectory(Null, path, DateTime.EPOCH, DateTime.EPOCH, 0);
+        return new CPDirectory(Null, this, path, DateTime.EPOCH, DateTime.EPOCH, 0);
         }
 
     @Override
@@ -105,7 +100,7 @@ const CPFileStore(String path, Object constRoot)
                 }
             }
 
-        return new CPFile(Null, path, DateTime.EPOCH, DateTime.EPOCH, 0);
+        return new CPFile(Null, this, path, DateTime.EPOCH, DateTime.EPOCH, 0);
         }
 
     @Override

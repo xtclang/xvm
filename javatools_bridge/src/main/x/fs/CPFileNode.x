@@ -7,7 +7,7 @@ import ecstasy.fs.Path;
 /**
  * Constant Pool FileNode implementation.
  */
-const CPFileNode(Object cookie, Path path, DateTime created, DateTime modified, Int size)
+const CPFileNode(Object cookie, CPFileStore? fileStore, Path path, DateTime created, DateTime modified, Int size)
         implements FileNode
         delegates  Stringable(path)
     {
@@ -15,7 +15,14 @@ const CPFileNode(Object cookie, Path path, DateTime created, DateTime modified, 
         {
         (Boolean isdir, String name, DateTime created, DateTime modified, Int size) =
                 CPFileStore.loadNode(cookie);
-        construct CPFileNode(cookie, new Path(name), created, modified, size);
+        construct CPFileNode(cookie, fileStore, new Path(name), created, modified, size);
+        }
+
+    @Override
+    FileStore store.get()
+        {
+        // TODO GG: create a "single node" FileStore
+        return fileStore ?: throw new IllegalState("standalone resource") ;
         }
 
     @Override

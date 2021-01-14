@@ -8,13 +8,22 @@ interface FileNode
      * The FileStore that contains this FileNode. Each FileNode object is created by the FileStore
      * that contains it, and its path is relative to the root of that FileStore.
      */
-    @RO FileStore fileStore;
+    @RO FileStore store;
 
     /**
      * The parent FileNode of this FileNode. The root directory of the FileStore does not have a
      * parent; its `parent` property evaluates to `Null`.
      */
-    @RO Directory? parent;
+    @RO Directory? parent.get()
+        {
+        if (path.form == Root)
+            {
+            return Null;
+            }
+
+        Path parentPath = path.parent ?: assert;
+        return store.dirFor(parentPath);
+        }
 
     /**
      * The Path of this file-node as it is identified within its FileStore.
@@ -24,7 +33,10 @@ interface FileNode
     /**
      * The name of this file-node within its directory. (The root directory name may be blank.)
      */
-    @RO String name;
+    @RO String name.get()
+        {
+        return path.form == Root ? "" : path.name;
+        }
 
     /**
      * True iff the file-node entry actually exists in the directory that contains it.

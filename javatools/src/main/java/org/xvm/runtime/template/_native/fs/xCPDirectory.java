@@ -23,7 +23,7 @@ import org.xvm.runtime.template.xConst;
 
 
 /**
- * Native OSFileStore implementation.
+ * Native CPDirectory implementation.
  */
 public class xCPDirectory
         extends xConst

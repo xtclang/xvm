@@ -25,7 +25,8 @@ const OSFile
     @Override
     Cancellable watch(FileWatcher watcher)
         {
-        if (!parentDir.exists)
+        Directory parent = this.parent ?: assert;
+        if (!parent.exists)
             {
             throw new FileNotFound(path, "No parent directory");
             }
@@ -34,17 +35,6 @@ const OSFile
 
     @Override
     FileChannel open(ReadOption read=Read, WriteOption[] write = [Write]);
-
-    /**
-     * The parent directory.
-     */
-    Directory parentDir.get()
-        {
-        assert Path parentPath ?= path.parent;
-        assert File|Directory dir := store.find(parentPath);
-        assert dir.is(Directory);
-        return dir;
-        }
 
 
     // ----- native --------------------------------------------------------------------------------

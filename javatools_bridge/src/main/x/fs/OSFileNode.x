@@ -13,15 +13,12 @@ const OSFileNode
         delegates  Stringable(pathString)
     {
     @Override
+    OSFileStore store;
+
+    @Override
     @Lazy Path path.calc()
         {
         return new Path(pathString);
-        }
-
-    @Override
-    String name.get()
-        {
-        return path.form == Root ? "" : path.name;
         }
 
     @Override
@@ -83,6 +80,9 @@ const OSFileNode
     @Override
     conditional FileNode renameTo(String name);
 
+    @Override
+    Int size.get() { TODO("native"); }
+
 
     // ----- equality support ----------------------------------------------------------------------
 
@@ -98,11 +98,7 @@ const OSFileNode
         }
 
 
-    // ----- native --------------------------------------------------------------------------------
-
-    @Unassigned protected OSFileStore store;
-
-    @Override Int size.get()          { TODO("native"); }
+    // ----- internal ------------------------------------------------------------------------------
 
     protected String pathString.get() { TODO("native"); }
 

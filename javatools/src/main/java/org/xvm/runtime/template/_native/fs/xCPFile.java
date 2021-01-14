@@ -23,7 +23,7 @@ import org.xvm.runtime.template.xConst;
 
 
 /**
- * Native OSFileStore implementation.
+ * Native CPFile implementation.
  */
 public class xCPFile
         extends xConst
