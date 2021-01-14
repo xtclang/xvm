@@ -93,7 +93,7 @@ module host.xtclang.org
             return Null;
             }
 
-        immutable Byte[] bytes;
+        Byte[] bytes;
         try
             {
             bytes = fileXtc.contents;

@@ -1,5 +1,5 @@
 /**
- * Directory represents a directory in a FileStore.
+ * A `Directory` represents a directory inside a FileStore.
  */
 interface Directory
         extends FileNode

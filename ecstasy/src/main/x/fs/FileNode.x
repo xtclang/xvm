@@ -1,8 +1,21 @@
 /**
- * FileNode represents an entry (or a potential entry) in a directory, either a directory or a file.
+ * FileNode represents an entry (or a potential entry) in a directory, which is generally either a
+ * directory or a file.
  */
 interface FileNode
     {
+    /**
+     * The FileStore that contains this FileNode. Each FileNode object is created by the FileStore
+     * that contains it, and its path is relative to the root of that FileStore.
+     */
+    @RO FileStore fileStore;
+
+    /**
+     * The parent FileNode of this FileNode. The root directory of the FileStore does not have a
+     * parent; its `parent` property evaluates to `Null`.
+     */
+    @RO Directory? parent;
+
     /**
      * The Path of this file-node as it is identified within its FileStore.
      */

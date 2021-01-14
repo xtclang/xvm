@@ -1,5 +1,5 @@
 /**
- * File represents a file in a FileStore.
+ * A `File` represents a file inside a FileStore.
  */
 interface File
         extends FileNode
@@ -17,7 +17,7 @@ interface File
      * @throws AccessDenied  if the necessary file permissions to get or set the property have not
      *                       been granted
      */
-    immutable Byte[] contents;
+    Byte[] contents;
 
     /**
      * Modify the contents of the file so that it has the specified size.
@@ -34,10 +34,13 @@ interface File
     /**
      * Determine if this file is an _archive_, which is a directory structure encoded into a file,
      * and which may contain any number of directories and files nested within it. If the file is
-     * an archive **and** the archive format is known and supported, then this method allows a
-     * caller to obtain a [FileStore] reference representing the contents of the archive.
+     * an archive **and** the archive format is known and supported by the containing [FileStore],
+     * then this method creates a [FileStore] that represents the contents of the archive.
      *
-     * Common archive formats include: .zip, .tar, .gz, .dmg.
+     * Common archive formats include: `.zip`, `.tar`, `.gz`, and `.dmg`.
+     *
+     * @return True iff this File is an archive that can be opened as a FileStore
+     * @return (conditional) the FileStore that represents the contents of the archive
      */
     conditional FileStore openArchive();
 
