@@ -106,12 +106,13 @@ public class PropertyInfo
 
         // types must match (but it is possible that an annotation is wider than the specific type
         // that it annotates)
-        if (!(that.getType().isA(this.getType()) || fAnno && this.getType().isA(that.getType())))
+        TypeConstant typeThis = this.getType();
+        TypeConstant typeThat = that.getType();
+        boolean fAllowWidening = fAnno || !that.isVar();
+        if (!(typeThat.isA(typeThis) || fAllowWidening && typeThis.isA(typeThat)))
             {
             constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
-                    constId.getValueString(),
-                    this.getType().getValueString(),
-                    that.getType().getValueString());
+                    constId.getValueString(), typeThis.getValueString(), typeThat.getValueString());
             return this;
             }
 
