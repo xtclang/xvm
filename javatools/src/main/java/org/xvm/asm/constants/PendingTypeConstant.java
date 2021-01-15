@@ -58,6 +58,12 @@ public class PendingTypeConstant
         }
 
     @Override
+    public boolean isOnlyNullable()
+        {
+        return false;
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
         {
         return this;
