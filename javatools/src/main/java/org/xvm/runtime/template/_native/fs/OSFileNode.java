@@ -41,7 +41,6 @@ public abstract class OSFileNode
     public void initNative()
         {
         // common native properties between OSFile and OSDirectory
-        markNativeProperty("store");
         markNativeProperty("pathString");
         markNativeProperty("exists");
         markNativeProperty("readable");
@@ -58,9 +57,6 @@ public abstract class OSFileNode
         NodeHandle hNode = (NodeHandle) hTarget;
         switch (sPropName)
             {
-            case "store":
-                return frame.assignValue(iReturn, hNode.getField(sPropName));
-
             case "pathString":
                 return frame.assignValue(iReturn, xString.makeHandle(hNode.f_path.toString()));
 
