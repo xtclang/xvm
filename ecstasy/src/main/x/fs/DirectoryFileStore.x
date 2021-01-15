@@ -199,8 +199,7 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
             }
 
         @Override
-// TODO GG @Lazy Path path.calc()
-        @RO Path path.get()
+        @Lazy Path path.calc()
             {
             assert Path path := fromOrig(origNode.path);
             return path;

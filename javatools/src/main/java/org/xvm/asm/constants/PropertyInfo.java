@@ -223,7 +223,7 @@ public class PropertyInfo
         // determine whether a field is required
         boolean fRequireField = this.m_fRequireField | that.m_fRequireField;
         if (!fRequireField && Arrays.stream(aBase).allMatch(
-                body -> body.getImplementation().compareTo(Implementation.Abstract) <= 0))
+                body -> body.getImplementation().compareTo(Implementation.Delegating) <= 0))
             {
             // one of the bodies being added could cause the resulting property to require a field
             for (int i = cAdd - 1; i >= 0; --i)

@@ -3291,7 +3291,7 @@ public abstract class TypeConstant
             PropertyBody bodyDelegate = new PropertyBody(head.getStructure(),
                     Implementation.Delegating, idDelegate, type,
                     head.isRO(), head.isRW(), /*fCustom*/ false,
-                    Effect.BlocksSuper, Effect.BlocksSuper,
+                    Effect.BlocksSuper, head.isRO() ? Effect.None : Effect.BlocksSuper,
                     /*fReqField*/ false, /*fConstant*/ false, null, null);
             propResult = new PropertyInfo(propResult, bodyDelegate);
             }
