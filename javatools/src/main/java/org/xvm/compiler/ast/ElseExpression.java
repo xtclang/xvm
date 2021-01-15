@@ -21,7 +21,7 @@ import org.xvm.util.Severity;
  * The trailing "else" expression for any short-circuited expressions that precede it:
  *
  * <ul>
- * <li><tt>COLON:      ":"</tt> - an "else" for nullability checks</li>
+ * <li><tt>COLON: ":"</tt> - an "else" for nullability checks</li>
  * </ul>
  */
 public class ElseExpression
@@ -44,6 +44,12 @@ public class ElseExpression
     public TypeConstant getImplicitType(Context ctx)
         {
         TypeConstant type1 = expr1.getImplicitType(ctx);
+        if (!expr2.isCompletable())
+            {
+            // a non-completable expression (e.g. "parent? : assert") doesn't contribute to the type
+            return type1;
+            }
+
         TypeConstant type2 = expr2.getImplicitType(ctx);
         if (type1 == null || type2 == null)
             {
@@ -60,7 +66,7 @@ public class ElseExpression
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         TypeFit fit = expr1.testFit(ctx, typeRequired, errs);
-        if (fit.isFit())
+        if (fit.isFit() && expr2.isCompletable())
             {
             fit.combineWith(expr2.testFit(ctx, typeRequired, errs));
             }

@@ -195,8 +195,7 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
             {
             return isRoot
                     ? Null
-         // TODO GG : wrap(origNode.parent ?: assert);
-                    : wrap(origNode.parent?) : assert;
+                    : wrap(origNode.parent? : assert);
             }
 
         @Override
