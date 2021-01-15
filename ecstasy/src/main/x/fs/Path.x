@@ -271,7 +271,68 @@ const Path
     Path relativize(Path that)
         {
         assert this.absolute == that.absolute;
-        TODO
+
+        Path thisNorm = this.normalize();
+        Path thatNorm = that.normalize();
+
+        if (thisNorm == thatNorm)
+            {
+            return CURRENT;
+            }
+        else if (thisNorm.startsWith(thatNorm))
+            {
+            // TODO this algorithm may not work for relative paths
+            assert this.absolute && that.absolute;
+
+            Int steps = thisNorm.size - thatNorm.size;
+            assert steps > 0;
+            Path result = PARENT;
+            for (Int i = 1; i < steps; ++i)
+                {
+                result = new Path(result, Parent);
+                }
+            return result;
+            }
+        else if (thatNorm.startsWith(thisNorm))
+            {
+            // TODO this algorithm may not work for relative paths
+            assert this.absolute && that.absolute;
+
+            Int start = thisNorm.size;
+            Int stop  = thatNorm.size;
+            assert stop > start;
+            return that[start..stop);
+            }
+        else
+            {
+            // TODO this algorithm may not work for relative paths
+            assert this.absolute && that.absolute;
+
+            Int thisSize = thisNorm.size;
+            Int thatSize = thatNorm.size;
+
+            // find the size of the common path
+            Int common = 0;
+            while (thisNorm[common] == thatNorm[common])
+                {
+                ++common;
+                }
+            assert common > 0;          // both paths are normalized and must be absolute
+            assert common < thisSize;   // already tested that.startsWith(this); it was false
+            assert common < thatSize;   // already tested this.startsWith(that); it was false
+
+            // for each segment that "this" has beyond the common path, add a "Parent" mode to the
+            // result
+            Path result = PARENT;
+            for (Int i = common + 1; i < thisSize; ++i)
+                {
+                result = new Path(result, Parent);
+                }
+
+            // for each segment that "that" has beyond the common path, copy the segment from "that"
+            // onto the end of the result
+            return result + that[common..thatSize);
+            }
         }
 
     /**

@@ -19,30 +19,38 @@ module TestFiles
     void testPaths()
         {
         console.println("\n** testPaths()");
-        console.println("root=" + Path.ROOT);
-        console.println("parent=" + Path.PARENT);
-        console.println("current=" + Path.CURRENT);
+        console.println($"root={Path.ROOT}");
+        console.println($"parent={Path.PARENT}");
+        console.println($"current={Path.CURRENT}");
 
         Path path = new Path(Null, "test");
-        console.println("path=" + path);
+        console.println($"path={path}");
 
         path = new Path(path, "sub");
-        console.println("path=" + path);
+        console.println($"path={path}");
 
         path = new Path(path, "more");
-        console.println("path=" + path);
+        console.println($"path={path}");
 
         for (Int i : 0..2)
             {
-            console.println("path[" + i + "]=" + path[i]);
+            console.println($"path[{i}]={path[i]}");
             }
 
-        console.println("path[1..2]=" + path[1..2]);
-        console.println("path[0..1]=" + path[0..1]);
-        console.println("path[2..0]=" + path[2..0]);
+        console.println($"path[1..2]={path[1..2]}");
+        console.println($"path[0..1]={path[0..1]}");
+        console.println($"path[2..0]={path[2..0]}");
 
         path = ROOT + path;
         console.println("path=" + path);
+
+        console.println($"relativize root={Path.ROOT.relativize(Path.ROOT)}");
+        console.println($"relativize parent={Path.PARENT.relativize(Path.PARENT)}");
+        console.println($"relativize current={Path.CURRENT.relativize(Path.CURRENT)}");
+        console.println($"relativize path to root = {Path.ROOT.relativize(path)}");
+        console.println($"relativize root to path = {path.relativize(Path.ROOT)}");
+        console.println($"relativize /a/b/c to /a/p/d/q = {new Path("/a/p/d/q").relativize(new Path("/a/b/c"))}");
+        console.println($"relativize /a/p/d/q to /a/b/c = {new Path("/a/b/c").relativize(new Path("/a/p/d/q"))}");
         }
 
     void testInject()
