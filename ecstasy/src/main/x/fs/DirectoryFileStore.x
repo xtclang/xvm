@@ -150,27 +150,13 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
      *         leaks of information outside of the original directory [origDir], and respects the
      *         [readOnly] setting of the DirectoryFileStore
      */
-// TODO GG
-//    protected <Node extends File|Directory> Node wrap(Node origNode)
-//        {
-//        return origNode.is(File)
-//                ? new FileWrapper(origNode)
-//                : new DirectoryWrapper(origNode);
-//        }
-protected File wrap(File origNode)
-    {
-    return new FileWrapper(origNode);
-    }
-protected Directory wrap(Directory origNode)
-    {
-    return new DirectoryWrapper(origNode);
-    }
-protected File|Directory wrap(File|Directory origNode)
-    {
-    return origNode.is(File)
-            ? new FileWrapper(origNode)
-            : new DirectoryWrapper(origNode);
-    }
+    protected <Node extends File|Directory> Node wrap(Node origNode)
+        {
+        return (origNode.is(File)
+                    ? new FileWrapper(origNode)
+                    : new DirectoryWrapper(origNode))
+                .as(Node);
+        }
 
 
     // ----- file node wrappers --------------------------------------------------------------------
