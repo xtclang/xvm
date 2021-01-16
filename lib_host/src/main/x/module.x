@@ -75,18 +75,7 @@ module host.xtclang.org
     Tuple<FutureVar, Buffer>? loadAndRun(String path)
         {
         File fileXtc;
-        if (File|Directory node := curDir.find(path))
-            {
-            if (node.is(File))
-                {
-                fileXtc = node;
-                }
-            else
-                {
-                console.println($"'{path}' - not a file");
-                return Null;
-                }
-            }
+        if (fileXtc := curDir.findFile(path)) {}
         else
             {
             console.println($"'{path}' - not found");
@@ -124,7 +113,10 @@ module host.xtclang.org
         if (String dbModuleName := detectDatabase(fileTemplate))
             {
             console.println($"found {dbModuleName}");
-            ModuleTemplate dbModuleTemplate = generateStubs(repository, dbModuleName);
+            Path?     buildPath = fileXtc.path.parent;
+            Directory buildDir  = fileXtc.store.dirFor(buildPath?) : curDir;
+
+            ModuleTemplate dbModuleTemplate = generateStubs(repository, dbModuleName, buildDir);
 
             // give the db container the real console
             Injector dbInjector = new Injector()
@@ -205,10 +197,10 @@ module host.xtclang.org
     /**
      * Generate all the necessary classes.
      */
-    ModuleTemplate generateStubs(ModuleRepository repository, String dbModuleName)
+    ModuleTemplate generateStubs(ModuleRepository repository, String dbModuleName, Directory buildDir)
         {
-        // hack for now
-        return repository.getModule(dbModuleName + "_imdb");
+        // TODO: pick which generator to use
+        return new ImdbCodeGenerator().generateStubs(repository, dbModuleName, buildDir);
         }
 
     service Injector

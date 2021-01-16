@@ -48,14 +48,6 @@ public class xRTComponentTemplate
     @Override
     public void initNative()
         {
-        TemplateRegistry registry = f_templates;
-
-        // register templates for "RT*" classes that don't have any specialized native behaviors
-        registerNativeTemplate(new xRTComponentTemplate(registry, (ClassStructure)
-                registry.getComponent("_native.reflect.RTMultiMethodTemplate"), true));
-        registerNativeTemplate(new xRTComponentTemplate(registry, (ClassStructure)
-                registry.getComponent("_native.reflect.RTMethodTemplate"), true));
-
         markNativeProperty("access");
         markNativeProperty("doc");
         markNativeProperty("format");
@@ -117,6 +109,17 @@ public class xRTComponentTemplate
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        ComponentTemplateHandle hTemplate1 = (ComponentTemplateHandle) hValue1;
+        ComponentTemplateHandle hTemplate2 = (ComponentTemplateHandle) hValue2;
+
+        return frame.assignValue(iReturn,
+            xBoolean.makeHandle(hTemplate1.getComponent().equals(hTemplate2.getComponent())));
         }
 
 

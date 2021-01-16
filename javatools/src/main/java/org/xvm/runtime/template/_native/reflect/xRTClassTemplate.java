@@ -1,14 +1,18 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.PackageStructure;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -23,7 +27,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
-import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -57,12 +60,16 @@ public class xRTClassTemplate
         {
         if (this == INSTANCE)
             {
-            CLASS_TEMPLATE_CLZCOMP = ensureClass(getCanonicalType(),
-                pool().ensureEcstasyTypeConstant("reflect.ClassTemplate"));
-            CONTRIBUTION_CLZCOMP = f_templates.resolveClass(
-                pool().ensureEcstasyTypeConstant("reflect.ClassTemplate.Composition.Contribution"));
+            ConstantPool     pool     = pool();
+            TemplateRegistry registry = f_templates;
 
-            ACTION = (xEnum) f_templates.getTemplate("reflect.ClassTemplate.Composition.Action");
+            TypeConstant typeClassTemplate = pool.ensureEcstasyTypeConstant("reflect.ClassTemplate");
+
+            CLASS_TEMPLATE_COMP = ensureClass(getCanonicalType(), typeClassTemplate);
+            CONTRIBUTION_COMP   = registry.resolveClass(
+                pool.ensureEcstasyTypeConstant("reflect.ClassTemplate.Composition.Contribution"));
+
+            ACTION = (xEnum) registry.getTemplate("reflect.ClassTemplate.Composition.Action");
 
             CREATE_CONTRIB_METHOD = getStructure().findMethod("createContribution", 5);
 
@@ -162,8 +169,36 @@ public class xRTClassTemplate
      */
     public int getPropertyClasses(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz    = (ClassStructure) hComponent.getComponent();
-        GenericHandle  hArray = null; // TODO
+        ClassStructure clz = (ClassStructure) hComponent.getComponent();
+
+        List<ComponentTemplateHandle> listTemplates = new ArrayList<>();
+        for (Component child : clz.children())
+            {
+            switch (child.getFormat())
+                {
+                case INTERFACE:
+                case CLASS:
+                case CONST:
+                case ENUM:
+                case ENUMVALUE:
+                case MIXIN:
+                case SERVICE:
+                    listTemplates.add(xRTClassTemplate.makeHandle((ClassStructure) child));
+                    break;
+
+                case PACKAGE:
+                    listTemplates.add(xRTPackageTemplate.makeHandle((PackageStructure) child));
+                    break;
+
+                case MODULE:
+                    listTemplates.add(xRTModuleTemplate.makeHandle((ModuleStructure) child));
+                    break;
+                }
+            }
+
+        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
+                ensureClassTemplateArrayComposition(),
+                listTemplates.toArray(new ComponentTemplateHandle[0]));
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -172,12 +207,7 @@ public class xRTClassTemplate
      */
     public int getPropertyContribs(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz = (ClassStructure) hComponent.getComponent();
-        if (!clz.getFileStructure().isLinked())
-            {
-            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
-            }
-
+        ClassStructure     clz         = (ClassStructure) hComponent.getComponent();
         List<Contribution> listContrib = clz.getContributionsAsList();
 
         Utils.ValueSupplier supplier = (frameCaller, index) ->
@@ -189,7 +219,7 @@ public class xRTClassTemplate
             ObjectHandle haNames     = xNullable.NULL;
             ObjectHandle haTypes     = xNullable.NULL;
 
-            String       sAction;
+            String sAction;
             switch (contrib.getComposition())
                 {
                 case Annotation:
@@ -246,29 +276,8 @@ public class xRTClassTemplate
             return frameCaller.call1(CREATE_CONTRIB_METHOD, null, ahVar, Op.A_STACK);
             };
 
-        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(ensureContribArrayComposition(),
-                listContrib.size(), xArray.Mutability.Fixed);
-
-        switch (new Utils.FillArray(hArray, supplier, iReturn).doNext(frame))
-            {
-            case Op.R_NEXT:
-                hArray.m_mutability = xArray.Mutability.Constant;
-                return Op.R_NEXT;
-
-            case Op.R_CALL:
-                frame.m_frameNext.addContinuation(frameCaller ->
-                    {
-                    hArray.m_mutability = xArray.Mutability.Constant;
-                    return Op.R_NEXT;
-                    });
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
-            default:
-                throw new IllegalStateException();
-            }
+        return xArray.createAndFill(frame, ensureContribArrayComposition(),
+                listContrib.size(), supplier, iReturn);
         }
 
     /**
@@ -386,7 +395,7 @@ public class xRTClassTemplate
     public static ComponentTemplateHandle makeHandle(ClassStructure structClz)
         {
         // note: no need to initialize the struct because there are no natural fields
-        return new ComponentTemplateHandle(CLASS_TEMPLATE_CLZCOMP, structClz);
+        return new ComponentTemplateHandle(CLASS_TEMPLATE_COMP, structClz);
         }
 
     /**
@@ -394,13 +403,30 @@ public class xRTClassTemplate
      */
     private static TypeComposition ensureContribArrayComposition()
         {
-        TypeComposition clz = CONTRIBUTION_ARRAY_CLZCOMP;
+        TypeComposition clz = CONTRIBUTION_ARRAY_COMP;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeContribArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                CONTRIBUTION_CLZCOMP.getType());
-            CONTRIBUTION_ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeContribArray);
+                CONTRIBUTION_COMP.getType());
+            CONTRIBUTION_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeContribArray);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    /**
+     * @return the ClassComposition for an Array of ClassTemplates
+     */
+    private static TypeComposition ensureClassTemplateArrayComposition()
+        {
+        TypeComposition clz = CLASS_TEMPLATE_ARRAY_COMP;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeClassTemplateArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                CLASS_TEMPLATE_COMP.getType());
+            CLASS_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeClassTemplateArray);
             assert clz != null;
             }
         return clz;
@@ -409,9 +435,10 @@ public class xRTClassTemplate
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static TypeComposition CLASS_TEMPLATE_CLZCOMP;
-    private static TypeComposition CONTRIBUTION_CLZCOMP;
-    private static TypeComposition CONTRIBUTION_ARRAY_CLZCOMP;
+    private static TypeComposition CLASS_TEMPLATE_COMP;
+    private static TypeComposition CONTRIBUTION_COMP;
+    private static TypeComposition CONTRIBUTION_ARRAY_COMP;
+    private static TypeComposition CLASS_TEMPLATE_ARRAY_COMP;
     private static xEnum           ACTION;
     private static MethodStructure CREATE_CONTRIB_METHOD;
     }

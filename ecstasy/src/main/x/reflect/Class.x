@@ -217,7 +217,7 @@ const Class<PublicType, ProtectedType extends PublicType,
 
     /**
      * The underlying ClassTemplate of this Class. For example, given a composition
-     * `@A1 @A2 C`, the `baseTemplate` property would retrun `C`.
+     * `@A1 @A2 C`, the `baseTemplate` property would return `C`.
      */
      ClassTemplate baseTemplate.get()
         {

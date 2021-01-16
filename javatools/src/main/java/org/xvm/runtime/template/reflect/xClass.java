@@ -17,7 +17,6 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.CanonicalizedTypeComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -39,6 +38,7 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTClassTemplate;
 import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
@@ -231,8 +231,11 @@ public class xClass
      */
     public int getPropertyComposition(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        TypeConstant typeTarget = getClassType(hTarget);
-        ObjectHandle hResult    = null; // TODO CP
+        // TODO CP: can typeTarget be annotated?
+        TypeConstant     typeTarget = getClassType(hTarget);
+        IdentityConstant idClz      = typeTarget.getSingleUnderlyingClass(true);
+        ClassStructure   clz        = (ClassStructure) idClz.getComponent();
+        ObjectHandle     hResult    = xRTClassTemplate.makeHandle(clz);
         return frame.assignValue(iReturn, hResult);
         }
 

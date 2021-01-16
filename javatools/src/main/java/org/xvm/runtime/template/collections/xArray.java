@@ -1026,6 +1026,39 @@ public class xArray
 
     // ----- helper methods ------------------------------------------------------------------------
 
+
+    /**
+     * Create an immutable one dimensional array for a specified type and size filled based the
+     * specified supplier.
+     */
+    public static int createAndFill(Frame frame, TypeComposition clzArray, int cSize,
+                                    Utils.ValueSupplier supplier, int iReturn)
+        {
+        // make it "Fixed" first; freeze after filling up
+        ArrayHandle hArray = INSTANCE.createArrayHandle(clzArray, cSize, xArray.Mutability.Fixed);
+
+        switch (new Utils.FillArray(hArray, supplier, iReturn).doNext(frame))
+            {
+            case Op.R_NEXT:
+                hArray.m_mutability = xArray.Mutability.Constant;
+                return Op.R_NEXT;
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    {
+                    hArray.m_mutability = xArray.Mutability.Constant;
+                    return Op.R_NEXT;
+                    });
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
     private xArray getArrayTemplate(TypeConstant typeParam)
         {
         xArray template = ARRAY_TEMPLATES.get(typeParam);
