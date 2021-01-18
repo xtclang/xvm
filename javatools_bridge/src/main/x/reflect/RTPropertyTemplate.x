@@ -1,4 +1,5 @@
 import ecstasy.reflect.PropertyTemplate;
+import ecstasy.reflect.TypeTemplate;
 
 
 /**
@@ -8,4 +9,6 @@ class RTPropertyTemplate
         extends RTComponentTemplate
         implements PropertyTemplate
     {
+    @Override
+    TypeTemplate type.get()  { TODO("native"); }
     }

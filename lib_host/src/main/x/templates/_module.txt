@@ -8,7 +8,6 @@ module %appName%_imdb
 
     typedef (db.Connection<%appSchema%> + %appSchema%) Connection;
 
-    // !!! TEMPORARY !!!
     Connection simulateInjection()
         {
         Connection connection = Server%appSchema%.createConnection();

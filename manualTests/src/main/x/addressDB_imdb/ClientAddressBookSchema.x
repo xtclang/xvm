@@ -1,9 +1,7 @@
-import AddressBookDB.AddressBookSchema;
-
 class ClientAddressBookSchema
         extends imdb.ClientRootSchema
-        implements AddressBookSchema
-        implements db.Connection<AddressBookSchema>
+        implements AddressBookDB.AddressBookSchema
+        implements db.Connection<AddressBookDB.AddressBookSchema>
     {
     construct()
         {
@@ -119,8 +117,8 @@ class ClientAddressBookSchema
         }
 
     class ClientTransaction
-            extends imdb.ClientTransaction<AddressBookSchema>
-            implements AddressBookSchema
+            extends imdb.ClientTransaction<AddressBookDB.AddressBookSchema>
+            implements AddressBookDB.AddressBookSchema
         {
         construct()
             {
@@ -135,7 +133,7 @@ class ClientAddressBookSchema
             }
 
         @Override
-        (db.Connection<AddressBookSchema> + AddressBookSchema) connection.get()
+        (db.Connection<AddressBookDB.AddressBookSchema> + AddressBookDB.AddressBookSchema) connection.get()
             {
             return this.ClientAddressBookSchema;
             }

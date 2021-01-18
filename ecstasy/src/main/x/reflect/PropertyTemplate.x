@@ -4,5 +4,5 @@
 interface PropertyTemplate
         extends ComponentTemplate
     {
-    // TODO
+    TypeTemplate type;
     }

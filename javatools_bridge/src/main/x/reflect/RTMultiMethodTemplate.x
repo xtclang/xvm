@@ -9,5 +9,6 @@ class RTMultiMethodTemplate
         extends RTComponentTemplate
         implements MultiMethodTemplate
     {
-    @Override Iterator<MethodTemplate> children();
+    @Override
+    Iterator<MethodTemplate> children();
     }

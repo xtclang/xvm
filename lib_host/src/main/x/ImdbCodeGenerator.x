@@ -4,6 +4,7 @@ import ecstasy.reflect.ClassTemplate;
 import ecstasy.reflect.ClassTemplate.Contribution;
 import ecstasy.reflect.FileTemplate;
 import ecstasy.reflect.ModuleTemplate;
+import ecstasy.reflect.PropertyTemplate;
 import ecstasy.reflect.TypeTemplate;
 
 /**
@@ -20,8 +21,7 @@ class ImdbCodeGenerator
         {
         ModuleTemplate dbModule = repository.getModule(dbModuleName);
 
-        String moduleTemplate = $./templates/_module.txt;
-        String appName        = dbModuleName; // TODO GG: allow fully qualified name
+        String appName = dbModuleName; // TODO GG: allow fully qualified name
 
         Directory moduleDir = buildDir.dirFor(appName + "_imdb");
         if (moduleDir.exists)
@@ -30,27 +30,28 @@ class ImdbCodeGenerator
             }
         moduleDir.create();
 
-        // create module.x
-        File moduleFile = moduleDir.fileFor("module.x");
-        moduleFile.create();
-
-        String appSchema;
-        if (appSchema := findSchema(dbModule)) {}
+        ClassTemplate appSchemaTemplate;
+        if (appSchemaTemplate := findSchema(dbModule)) {}
         else
             {
             throw new IllegalState($"Schema is not found in {dbModuleName} module");
             }
 
-        String moduleSource = moduleTemplate
-                                .replace("%appName%",   appName)
-                                .replace("%appSchema%", appSchema);
-        writeUtf(moduleFile, moduleSource);
+        String appSchema  = appSchemaTemplate.name;
+        File   moduleFile = moduleDir.fileFor("module.x");
+
+        createModule(moduleFile, appName, appSchema);
+
+        String clientSchema = "Client" + appSchema;
+        File   clientFile   = moduleDir.fileFor($"{clientSchema}.x");
+
+        createClient(clientFile, appName, appSchema, clientSchema, appSchemaTemplate);
 
         // temporary; replace with the compilation of generated source
         return repository.getModule(dbModuleName + "_imdb");
         }
 
-    conditional String findSchema(ModuleTemplate dbModule)
+    conditional ClassTemplate findSchema(ModuleTemplate dbModule)
         {
         Class         schemaClass    = oodb.RootSchema;
         ClassTemplate schemaTemplate = schemaClass.baseTemplate;
@@ -66,13 +67,56 @@ class ImdbCodeGenerator
                         ClassTemplate template = contrib.ingredient.as(ClassTemplate);
                         if (template == schemaTemplate)
                             {
-                            return (True, classTemplate.name);
+                            return (True, classTemplate);
                             }
                         }
                     }
                 }
             }
         return False;
+        }
+
+    /**
+     * Create module.x source file.
+     */
+    void createModule(File moduleFile, String appName, String appSchema)
+        {
+        String moduleTemplate = $./templates/_module.txt;
+        String moduleSource   = moduleTemplate
+                                .replace("%appName%",   appName)
+                                .replace("%appSchema%", appSchema);
+        moduleFile.create();
+        writeUtf(moduleFile, moduleSource);
+        }
+
+    /**
+     * Create Client%appSchema%.x source file.
+     */
+     void createClient(File clientFile, String appName, String appSchema, String clientSchema,
+                       ClassTemplate appSchemaTemplate)
+        {
+        String clientTemplate = $./templates/ClientClass.txt;
+        String clientSource   = clientTemplate
+                                .replace("%appName%",   appName)
+                                .replace("%appSchema%", appSchema);
+
+        // TODO
+        // Map<String, ClassTemplate> mapDbProps = collectDBProps(appSchemaTemplate);
+
+        clientFile.create();
+        writeUtf(clientFile, clientSource);
+        }
+
+    /**
+     * Collect all DB properties.
+     */
+    Map<String, ClassTemplate> collectDBProps(ClassTemplate appSchemaTemplate)
+        {
+        for (PropertyTemplate prop : appSchemaTemplate.properties)
+            {
+            console.println(prop);
+            }
+        TODO
         }
 
     /**

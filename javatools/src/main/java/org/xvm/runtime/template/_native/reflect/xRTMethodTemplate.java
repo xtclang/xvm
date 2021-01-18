@@ -11,7 +11,7 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 /**
- * Native Method implementation.
+ * Native MethodTemplate implementation.
  */
 public class xRTMethodTemplate
         extends xRTComponentTemplate

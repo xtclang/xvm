@@ -3,12 +3,6 @@ class Client%appSchema%
         implements %appName%.%appSchema%
         implements db.Connection<%appName%.%appSchema%>
     {
-    // custom property type declarations
-    // example:
-    //     @Override
-    //     @Unassigned AddressBookDB.Contacts contacts;
-    %ClientPropertyDeclarations%
-
     construct()
         {
         construct imdb.ClientRootSchema(Server%appSchema%);
@@ -20,6 +14,12 @@ class Client%appSchema%
         //    contacts = new ClientContacts(ServerAddressBookSchema.contacts);
         %ClientPropertyConstruction%
         }
+
+    // custom property type declarations
+    // example:
+    //     @Override
+    //     @Unassigned AddressBookDB.Contacts contacts;
+    %ClientPropertyDeclarations%
 
     @Override
     @Unassigned db.DBUser dbUser;
