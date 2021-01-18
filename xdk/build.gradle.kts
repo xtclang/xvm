@@ -7,6 +7,7 @@ val javatools    = project(":javatools")
 val bridge       = project(":javatools_bridge")
 val json         = project(":lib_json");
 val oodb         = project(":lib_oodb");
+val imdb         = project(":lib_imdb");
 val jsondb       = project(":lib_jsondb");
 val host         = project(":lib_host");
 
@@ -15,6 +16,7 @@ val bridgeMain   = "${bridge.projectDir}/src/main"
 val javatoolsJar = "${javatools.buildDir}/libs/javatools.jar"
 val jsonMain     = "${json.projectDir}/src/main";
 val oodbMain     = "${oodb.projectDir}/src/main";
+val imdbMain     = "${imdb.projectDir}/src/main";
 val jsondbMain   = "${jsondb.projectDir}/src/main";
 val hostMain     = "${host.projectDir}/src/main";
 
@@ -52,7 +54,7 @@ val copyJavatools = tasks.register<Copy>("copyJavatools") {
 }
 
 val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
-    group       = "Execution"
+    group       = "Build"
     description = "Build ecstasy.xtc and _native.xtc modules"
 
     dependsOn(javatools.tasks["build"])
@@ -76,7 +78,7 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
 }
 
 val compileJson = tasks.register<JavaExec>("compileJson") {
-    group       = "Execution"
+    group       = "Build"
     description = "Build json.xtc module"
 
     shouldRunAfter(compileEcstasy)
@@ -92,7 +94,7 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
 }
 
 val compileOODB = tasks.register<JavaExec>("compileOODB") {
-    group       = "Execution"
+    group       = "Build"
     description = "Build oodb.xtc module"
 
     shouldRunAfter(compileEcstasy)
@@ -107,8 +109,25 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
     main = "org.xvm.tool.Compiler"
 }
 
+val compileIMDB = tasks.register<JavaExec>("compileIMDB") {
+    group       = "Build"
+    description = "Build imdb.xtc module"
+
+    shouldRunAfter(compileOODB)
+
+    classpath(javatoolsJar)
+    args("-verbose",
+            "-o", "$libDir",
+            "-version", "$version",
+            "-L", "$coreLib",
+            "-L", "$bridgeLib",
+            "-L", "$libDir",
+            "$imdbMain/x/module.x")
+    main = "org.xvm.tool.Compiler"
+}
+
 val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
-    group       = "Execution"
+    group       = "Build"
     description = "Build jsondb.xtc module"
 
     shouldRunAfter(compileJson)
@@ -126,7 +145,7 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
 }
 
 val compileHost = tasks.register<JavaExec>("compileHost") {
-    group       = "Execution"
+    group       = "Build"
     description = "Build host.xtc module"
 
     shouldRunAfter(compileOODB)
@@ -182,6 +201,15 @@ tasks.register("build") {
 
     if (oodbSrc > oodbDest) {
         dependsOn(compileOODB)
+        }
+
+    // compile IMDB
+    val imdbSrc = fileTree(imdbMain).getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val imdbDest = file("$libDir/imdb.xtc").lastModified()
+
+    if (imdbSrc > imdbDest) {
+        dependsOn(compileIMDB)
         }
 
     // compile JSON-DB

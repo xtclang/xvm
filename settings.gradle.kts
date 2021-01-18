@@ -8,6 +8,7 @@ include(":javatools")           // produces javatools.jar
 include(":javatools_launcher")  // produces native (Win, Mac, Linux) executables, only on request
 include(":lib_json")            // produces json.xtc
 include(":lib_oodb")            // produces oodb.xtc
+include(":lib_imdb")            // produces imdb.xtc
 include(":lib_jsondb")          // produces jsondb.xtc
 include(":lib_host")            // produces host.xtc
 // TODO(":wiki")
