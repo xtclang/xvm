@@ -86,18 +86,19 @@ public class Var_M
 
         int c = readMagnitude(in);
 
-        int[] ai = new int[c];
+        int[] aiKey = new int[c];
         for (int i = 0; i < c; ++i)
             {
-            ai[i] = readPackedInt(in);
+            aiKey[i] = readPackedInt(in);
             }
-        m_anArgKey = ai;
+        m_anArgKey = aiKey;
 
+        int[] aiVal = new int[c];
         for (int i = 0; i < c; ++i)
             {
-            ai[i] = readPackedInt(in);
+            aiVal[i] = readPackedInt(in);
             }
-        m_anArgVal = ai;
+        m_anArgVal = aiVal;
         }
 
     @Override
