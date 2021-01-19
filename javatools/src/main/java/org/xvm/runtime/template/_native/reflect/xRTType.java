@@ -1574,16 +1574,12 @@ public class xRTType
         TypeHandle hType = fShared
             ? new TypeHandle(INSTANCE.ensureClass(type.getType()), null)
             : new TypeHandle(INSTANCE.getCanonicalClass(), type.getType());
+
         GenericHandle hMulti = (GenericHandle) hType.getField("multimethods");
-
-        ClassStructure struct = hMulti.getTemplate().getStructure();
-        if (struct.hasOuter())
-            {
-            hMulti.setField(GenericHandle.OUTER, hType);
-            }
-
+        hMulti.setField(GenericHandle.OUTER, hType);
         hMulti.setField("calculate",  xNullable.NULL);
         hMulti.setField("assignable", xBoolean.FALSE);
+
         return hType;
         }
 

@@ -2,9 +2,10 @@ package org.xvm.runtime.template;
 
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -13,7 +14,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -55,14 +55,25 @@ public class xConst
 
     public xConst(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, Collections.singleton(
-            new PropertyConstant(structure.getConstantPool(),
-                structure.getIdentityConstant(), PROP_HASH)));
+        super(templates, structure);
 
         if (fInstance)
             {
             INSTANCE = this;
             }
+        }
+
+    @Override
+    protected Set<String> registerImplicitFields(Set<String> setFields)
+        {
+        if (setFields == null)
+            {
+            setFields = new HashSet<>();
+            }
+
+        setFields.add(PROP_HASH);
+
+        return super.registerImplicitFields(setFields);
         }
 
     @Override
@@ -259,7 +270,7 @@ public class xConst
                     if (listFreezable != null)
                         {
                         ObjectHandle[]     ahFreezable = listFreezable.toArray(Utils.OBJECTS_NONE);
-                        String[]           asName      = listName.toArray(new String[0]);
+                        String[]           asName      = listName.toArray(Utils.NO_NAMES);
                         GenericArrayHandle hValues     = (GenericArrayHandle)
                             xArray.makeObjectArrayHandle(ahFreezable, xArray.Mutability.Fixed);
 

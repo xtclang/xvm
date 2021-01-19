@@ -1809,15 +1809,15 @@ public class Handy
     /**
      * A constant empty array of <tt>byte</tt>.
      */
-    public static byte[] EMPTY_BYTE_ARRAY = new byte[0];
+    public final static byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
     /**
      * A constant empty array of <tt>char</tt>.
      */
-    public static char[] EMPTY_CHAR_ARRAY = new char[0];
+    public final static char[] EMPTY_CHAR_ARRAY = new char[0];
 
     /**
      * A constant empty array of <tt>String</tt>.
      */
-    public static String[] NO_ARGS = new String[0];
+    public final static String[] NO_ARGS = new String[0];
     }

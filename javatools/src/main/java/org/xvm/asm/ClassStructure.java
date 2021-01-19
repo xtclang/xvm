@@ -42,7 +42,7 @@ import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Constants;
 
-import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.ClassComposition.FieldInfo;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
@@ -393,19 +393,13 @@ public class ClassStructure
      */
     public boolean hasOuter()
         {
-        if (isStatic())
+        if (isVirtualChild())
             {
-            // a class that is static can not have an outer
-            return false;
-            }
-        else if (getIdentityConstant() instanceof ClassConstant)
-            {
-            // TODO: MF is this check correct?
             return true;
             }
-        else if (!isInnerClass())
+
+        if (isStatic() || !isInnerClass())
             {
-            // a class that is NOT an inner class can not have an outer (i.e. MUST be an inner class)
             return false;
             }
 
@@ -431,6 +425,8 @@ public class ClassStructure
                         }
                     break;
 
+                case MODULE:
+                case PACKAGE:
                 case INTERFACE:
                 case CLASS:
                 case CONST:
@@ -2882,12 +2878,11 @@ public class ClassStructure
      *       to initialize.
      *
      * @param typeStruct  the type, for which a default constructor is to be created
-     * @param mapFields   the fields template
+     * @param mapFields   the field infos keyed by properties nids
      *
      * @return the [synthetic] MethodStructure for the corresponding default constructor
      */
-    public MethodStructure createInitializer(TypeConstant typeStruct,
-                                             Map<Object, ClassComposition.FieldInfo> mapFields)
+    public MethodStructure createInitializer(TypeConstant typeStruct, Map<Object, FieldInfo> mapFields)
         {
         ConstantPool pool   = typeStruct.getConstantPool();
         int          nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS;
@@ -2904,7 +2899,7 @@ public class ClassStructure
         assert typeStruct.getAccess() == Access.STRUCT;
 
         TypeInfo infoType = typeStruct.ensureTypeInfo();
-        for (Map.Entry<Object, ClassComposition.FieldInfo> entry : mapFields.entrySet())
+        for (Map.Entry<Object, FieldInfo> entry : mapFields.entrySet())
             {
             Object          nid      = entry.getKey();
             TypeComposition clzRef   = entry.getValue().getTypeComposition();

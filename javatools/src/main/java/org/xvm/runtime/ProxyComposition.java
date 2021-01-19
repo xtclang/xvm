@@ -110,7 +110,7 @@ public class ProxyComposition
     @Override
     public ObjectHandle[] initializeStructure()
         {
-        return null;
+        return Utils.OBJECTS_NONE;
         }
 
     @Override

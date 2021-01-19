@@ -1687,6 +1687,7 @@ public abstract class Utils
     // ----- constants -----------------------------------------------------------------------------
 
     public final static ObjectHandle[] OBJECTS_NONE = new ObjectHandle[0];
+    public final static String[]       NO_NAMES     = new String[0];
 
     public final static Frame.Continuation NEXT = frame -> Op.R_NEXT;
 

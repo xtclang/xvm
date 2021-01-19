@@ -3,7 +3,7 @@ package org.xvm.runtime;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,12 +75,6 @@ public abstract class ClassTemplate
     // construct the template
     public ClassTemplate(TemplateRegistry templates, ClassStructure structClass)
         {
-        this (templates, structClass, Collections.emptySet());
-        }
-
-    public ClassTemplate(TemplateRegistry templates, ClassStructure structClass,
-                         Set<PropertyConstant> setFieldsImplicit)
-        {
         f_templates = templates;
         f_struct    = structClass;
         f_sName     = structClass.getIdentityConstant().getPathString();
@@ -99,17 +93,28 @@ public abstract class ClassTemplate
 
         f_structSuper = structSuper;
 
-        if (f_struct.getIdentityConstant() instanceof ClassConstant || structClass.hasOuter()) // TODO MF: WTF
+        Set<String> setFieldsImplicit = registerImplicitFields(null);
+
+        f_asFieldsImplicit = setFieldsImplicit == null
+                ? Utils.NO_NAMES
+                : setFieldsImplicit.toArray(Utils.NO_NAMES);
+        }
+
+    /**
+     * Add all implicit fields to the specified set.
+     */
+    protected Set<String> registerImplicitFields(Set<String> setFields)
+        {
+        if (f_struct.hasOuter())
             {
-            // TODO MF: is there a more appropriate place for this?
-            IdentityConstant clazz = getClassConstant();
-            f_aFieldsImplicit = setFieldsImplicit.toArray(new PropertyConstant[setFieldsImplicit.size() + 1]);
-            f_aFieldsImplicit[f_aFieldsImplicit.length - 1] = new PropertyConstant(clazz.getConstantPool(), clazz, GenericHandle.OUTER);
+            if (setFields == null)
+                {
+                setFields = new HashSet<>();
+                }
+
+            setFields.add(GenericHandle.OUTER);
             }
-        else
-            {
-            f_aFieldsImplicit = setFieldsImplicit.toArray(EMPTY_PROP_CONST_ARRAY);
-            }
+        return setFields;
         }
 
     /**
@@ -478,14 +483,12 @@ public abstract class ClassTemplate
             hTarget.makeImmutable();
             if (hTarget instanceof GenericHandle)
                 {
-                TypeComposition clz      = hTarget.getComposition();
                 GenericHandle   hGeneric = (GenericHandle) hTarget;
-                for (Object nid : hGeneric.getComposition().getFieldNids())
+                TypeComposition clz      = hGeneric.getComposition();
+                ObjectHandle[]  ahFields = hGeneric.getFields();
+                for (Object nid : clz.getFieldNids())
                     {
-                    ObjectHandle hValue = nid instanceof String
-                        ? hGeneric.getField((String) nid)
-                        : hGeneric.getField((PropertyConstant) nid); // TODO MF: are these the only nid types?
-
+                    ObjectHandle hValue = clz.getFieldFromStructure(ahFields, nid);
                     if (hValue != null && hValue.isMutable() && !clz.isLazy(nid))
                         {
                         switch (hValue.getTemplate().makeImmutable(frame, hValue))
@@ -502,8 +505,7 @@ public abstract class ClassTemplate
                         }
                     }
 
-                return hTarget.getComposition()
-                    .makeStructureImmutable(frame, ((GenericHandle) hTarget).getFields());
+                return clz.makeStructureImmutable(frame, hGeneric.getFields());
                 }
             }
         return Op.R_NEXT;
@@ -801,14 +803,14 @@ public abstract class ClassTemplate
     // ----- property operations -------------------------------------------------------------------
 
     /**
-     * Return the implicit fields for this template. These are fields which are not declared but are
-     * required by the runtime.
+     * Return the implicit field names for this template. These are fields which are not declared,
+     * but are required by the runtime.
      *
-     * @return the implicit fields
+     * @return the implicit field names
      */
-    public PropertyConstant[] getImplicitFields()
+    public String[] getImplicitFields()
         {
-        return f_aFieldsImplicit;
+        return f_asFieldsImplicit;
         }
 
     /**
@@ -917,7 +919,7 @@ public abstract class ClassTemplate
             return waitForInjectedProperty(frame, hThis, idProp, iReturn);
             }
 
-        if (hTarget.isInflated(idProp) && hValue instanceof RefHandle) // TODO MF: is this correct?
+        if (hTarget.isInflated(idProp))
             {
             RefHandle hRef = (RefHandle) hValue;
             if (!(hRef instanceof FutureHandle))
@@ -2454,7 +2456,6 @@ public abstract class ClassTemplate
     public static String[] INT     = new String[] {"numbers.Int64"};
     public static String[] STRING  = new String[] {"text.String"};
     public static String[] BOOLEAN = new String[] {"Boolean"};
-    public static final PropertyConstant[] EMPTY_PROP_CONST_ARRAY = new PropertyConstant[0];
 
     /**
      * The TemplateRegistry.
@@ -2482,14 +2483,13 @@ public abstract class ClassTemplate
     protected ClassTemplate m_templateSuper;
 
     /**
-     * The implicit fields of this template.
+     * The implicit field names of this template. Generally speaking, this should be an array of
+     * Object (NestedIdentity | String), but at the moment all implicit fields are not composites.
      */
-    protected final PropertyConstant[] f_aFieldsImplicit;
-
-    // ----- caches ------
+    protected final String[] f_asFieldsImplicit;
 
     /**
-     * Canonical type composition.
+     * Cached canonical type composition.
      */
     protected ClassComposition m_clazzCanonical;
     }

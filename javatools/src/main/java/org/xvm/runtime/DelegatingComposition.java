@@ -127,21 +127,21 @@ abstract public class DelegatingComposition
         }
 
     @Override
-    public ObjectHandle getFieldFromStructure(ObjectHandle[] structure, Object nid)
+    public ObjectHandle getFieldFromStructure(ObjectHandle[] ahField, Object nid)
         {
-        return f_clzOrigin.getFieldFromStructure(structure, nid);
+        return f_clzOrigin.getFieldFromStructure(ahField, nid);
         }
 
     @Override
-    public void setFieldInStructure(ObjectHandle[] structure, Object nid, ObjectHandle hValue)
+    public void setFieldInStructure(ObjectHandle[] ahField, Object nid, ObjectHandle hValue)
         {
-        f_clzOrigin.setFieldInStructure(structure, nid, hValue);
+        f_clzOrigin.setFieldInStructure(ahField, nid, hValue);
         }
 
     @Override
-    public int makeStructureImmutable(Frame frame, ObjectHandle[] structure)
+    public int makeStructureImmutable(Frame frame, ObjectHandle[] ahField)
         {
-        return f_clzOrigin.makeStructureImmutable(frame, structure);
+        return f_clzOrigin.makeStructureImmutable(frame, ahField);
         }
 
     @Override

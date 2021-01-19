@@ -360,7 +360,7 @@ public abstract class ObjectHandle
         public ServiceHandle getService()
             {
             GenericHandle hParent = (GenericHandle) getField(OUTER);
-            return hParent == null
+            return hParent == null || !hParent.isService()
                 ? null
                 : hParent.getService();
             }
@@ -407,7 +407,7 @@ public abstract class ObjectHandle
                     ObjectHandle hValue = clazz.getFieldFromStructure(aFields, idProp);
                     if (hValue == null)
                         {
-                        if (!getComposition().isAllowedUnassigned(idProp))
+                        if (!clazz.isAllowedUnassigned(idProp))
                             {
                             if (listUnassigned == null)
                                 {

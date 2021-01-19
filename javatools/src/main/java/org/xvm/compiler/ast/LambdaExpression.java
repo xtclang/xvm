@@ -46,6 +46,7 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Context.CaptureContext;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
+import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
@@ -1373,7 +1374,7 @@ public class LambdaExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private static final String[] NO_NAMES = new String[0];
+    private static final String[] NO_NAMES = Handy.NO_ARGS;
 
     public static final String METHOD_NAME = "->";
 

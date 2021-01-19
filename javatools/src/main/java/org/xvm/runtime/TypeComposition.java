@@ -114,30 +114,31 @@ public interface TypeComposition
     /**
      * Return the specified field's {@link ObjectHandle} from the structure.
      *
-     * @param nid the field nid
+     * @param ahField  the field array representing the object structure
+     * @param nid      the field nid
      *
      * @return the {@link ObjectHandle}
      */
-    ObjectHandle getFieldFromStructure(ObjectHandle[] structure, Object nid);
+    ObjectHandle getFieldFromStructure(ObjectHandle[] ahField, Object nid);
 
     /**
      * Update the specified field's {@link ObjectHandle} value in the structure.
      *
-     * @param structure the structure to store the value in
-     * @param nid the field nid
-     * @param hValue the updated value
+     * @param ahField  the field array representing the object structure
+     * @param nid      the field nid
+     * @param hValue   the updated value
      */
-    void setFieldInStructure(ObjectHandle[] structure, Object nid, ObjectHandle hValue);
+    void setFieldInStructure(ObjectHandle[] ahField, Object nid, ObjectHandle hValue);
 
     /**
      * Make all the fields of the specified structure immutable.
      *
-     * @param frame     the current frame
-     * @param structure the structure
+     * @param frame    the current frame
+     * @param ahField  the field array representing the object structure
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    int makeStructureImmutable(Frame frame, ObjectHandle[] structure);
+    int makeStructureImmutable(Frame frame, ObjectHandle[] ahField);
 
     /**
      * @return the set of field nids for instances of this type.
