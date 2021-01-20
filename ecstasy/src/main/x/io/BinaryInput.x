@@ -46,6 +46,7 @@ interface BinaryInput
         assert offset >= 0 && count >= 0;
 
         Int last = offset + count;
+        assert last <= bytes.size;
         while (offset < last)
             {
             bytes[offset++] = readByte();
