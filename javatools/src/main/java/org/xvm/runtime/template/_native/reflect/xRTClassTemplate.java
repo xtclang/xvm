@@ -13,6 +13,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -27,6 +28,7 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -170,6 +172,10 @@ public class xRTClassTemplate
     public int getPropertyClasses(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         ClassStructure clz = (ClassStructure) hComponent.getComponent();
+        if (!clz.getFileStructure().isLinked())
+            {
+            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
+            }
 
         List<ComponentTemplateHandle> listTemplates = new ArrayList<>();
         for (Component child : clz.children())
@@ -207,10 +213,14 @@ public class xRTClassTemplate
      */
     public int getPropertyContribs(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure     clz         = (ClassStructure) hComponent.getComponent();
-        List<Contribution> listContrib = clz.getContributionsAsList();
+        ClassStructure clz = (ClassStructure) hComponent.getComponent();
+        if (!clz.getFileStructure().isLinked())
+            {
+            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
+            }
 
-        Utils.ValueSupplier supplier = (frameCaller, index) ->
+        List<Contribution>  listContrib = clz.getContributionsAsList();
+        Utils.ValueSupplier supplier    = (frameCaller, index) ->
             {
             ConstantPool pool        = frameCaller.poolContext();
             Contribution contrib     = listContrib.get(index);
@@ -305,8 +315,24 @@ public class xRTClassTemplate
      */
     public int getPropertyProperties(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz    = (ClassStructure) hComponent.getComponent();
-        GenericHandle  hArray = null; // TODO
+        ClassStructure clz = (ClassStructure) hComponent.getComponent();
+        if (!clz.getFileStructure().isLinked())
+            {
+            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
+            }
+
+        List<ComponentTemplateHandle> listProps = new ArrayList<>();
+        for (Component child : clz.children())
+            {
+            if (child instanceof PropertyStructure)
+                {
+                listProps.add(xRTPropertyTemplate.makeMethodHandle((PropertyStructure) child));
+                }
+            }
+
+        ComponentTemplateHandle[] ahProp = listProps.toArray(new ComponentTemplateHandle[0]);
+        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
+                xRTPropertyTemplate.ensureArrayComposition(), ahProp);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -335,8 +361,12 @@ public class xRTClassTemplate
      */
     public int getPropertyType(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz  = (ClassStructure) hComponent.getComponent();
-        TypeConstant   type = clz.getIdentityConstant().getType(); // REVIEW GG
+        ClassStructure clz = (ClassStructure) hComponent.getComponent();
+        if (!clz.getFileStructure().isLinked())
+            {
+            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
+            }
+        TypeConstant type = clz.getIdentityConstant().getType();
         return frame.assignValue(iReturn, xRTTypeTemplate.makeHandle(type));
         }
 

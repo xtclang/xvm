@@ -5,6 +5,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -202,12 +203,18 @@ public class xRTComponentTemplate
             {
             switch (parent.getFormat())
                 {
-                case MULTIMETHOD:
-                    hParent = new ComponentTemplateHandle(ensureMultiMethodTemplateComposition(), parent);
+                case FILE:
+                    hParent = xRTFileTemplate.makeHandle((FileStructure) parent);
                     break;
 
+                case MODULE:
+                case PACKAGE:
                 case CLASS:
                     hParent = xRTClassTemplate.makeHandle((ClassStructure) parent);
+                    break;
+
+                case MULTIMETHOD:
+                    hParent = new ComponentTemplateHandle(ensureMultiMethodTemplateComposition(), parent);
                     break;
 
                 default:
@@ -278,23 +285,6 @@ public class xRTComponentTemplate
             TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                     pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
             COMPONENT_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeTypeArray);
-            assert clz != null;
-            }
-        return clz;
-        }
-
-    /**
-     * @return the TypeComposition for an RTMethodTemplate
-     */
-    public static TypeComposition ensureMethodTemplateComposition()
-        {
-        TypeComposition clz = METHOD_TEMPLATE_COMP;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            ClassTemplate templateRT   = INSTANCE.f_templates.getTemplate("_native.reflect.RTMethodTemplate");
-            TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
-            METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(typeTemplate);
             assert clz != null;
             }
         return clz;
@@ -372,19 +362,6 @@ public class xRTComponentTemplate
             }
         }
 
-    /**
-     * Create a handle for a MethodTemplate class.
-     *
-     * @param method  the corresponding MethodStructure
-     *
-     * @return the newly created handle
-     */
-    static ComponentTemplateHandle makeMethodHandle(MethodStructure method)
-        {
-        return new ComponentTemplateHandle(ensureMethodTemplateComposition(), method);
-        }
-
-
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     /**
@@ -413,6 +390,5 @@ public class xRTComponentTemplate
     // ----- constants -----------------------------------------------------------------------------
 
     private static TypeComposition COMPONENT_ARRAY_COMP;
-    private static TypeComposition METHOD_TEMPLATE_COMP;
     private static TypeComposition MULTI_METHOD_TEMPLATE_COMP;
     }

@@ -430,7 +430,7 @@ public class xRTProperty
         }
 
     /**
-     * @return the TypeComposition for an Array of Property
+     * @return the TypeComposition for an Array of Property for a given target type
      */
     public static TypeComposition ensureArrayComposition(TypeConstant typeTarget)
         {
@@ -443,7 +443,7 @@ public class xRTProperty
         }
 
 
-    // ----- data members --------------------------------------------------------------------------
+    // ----- constants -----------------------------------------------------------------------------
 
     private static TypeComposition ARRAY_CLZCOMP;
     private static ArrayHandle     ARRAY_EMPTY;

@@ -14,7 +14,6 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -24,6 +23,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xNullable;
@@ -37,13 +37,13 @@ import org.xvm.runtime.template.text.xString;
  * Native TypeTemplate implementation.
  */
 public class xRTTypeTemplate
-        extends ClassTemplate
+        extends xConst
     {
     public static xRTTypeTemplate INSTANCE;
 
     public xRTTypeTemplate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
 
         if (fInstance)
             {

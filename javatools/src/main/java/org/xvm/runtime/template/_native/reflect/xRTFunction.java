@@ -318,7 +318,7 @@ public class xRTFunction
 
             // TODO: what if any of the assigns below return R_CALL?
             frame.assignValue(aiReturn[0], xBoolean.TRUE);
-            frame.assignValue(aiReturn[1], xRTComponentTemplate.makeMethodHandle(method));
+            frame.assignValue(aiReturn[1], xRTMethodTemplate.makeMethodHandle(method));
             frame.assignValue(aiReturn[2], makeHandle(method));
 
             Frame.Continuation stepNext = frameCaller ->
