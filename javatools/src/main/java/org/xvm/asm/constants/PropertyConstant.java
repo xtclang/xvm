@@ -240,10 +240,8 @@ public class PropertyConstant
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
-    public TypeConstant getValueType(TypeConstant typeTarget)
+    public TypeConstant getValueType(ConstantPool pool, TypeConstant typeTarget)
         {
-        ConstantPool pool = getConstantPool();
-
         if (typeTarget == null)
             {
             typeTarget = getClassIdentity().getType();

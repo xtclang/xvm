@@ -2,55 +2,39 @@ module TestSimple
     {
     @Inject Console console;
 
+    package oodb import oodb.xtclang.org;
+
+    import ecstasy.reflect.PropertyTemplate;
+    import ecstasy.reflect.TypeTemplate;
+
+    import oodb.DBObject.DBCategory;
+
     void run()
         {
-        @Inject Directory curDir;
-        @Inject Directory rootDir;
-
-        File fileXtc;
-        if (fileXtc := curDir.findFile("build/AddressBookApp.xtc")) {}
-        else
-            {
-            console.println("not found");
-            return;
-            }
-        console.println(fileXtc);
-
-        // simulate the code gen logic
-        Path?     buildPath = fileXtc.path.parent;
-        Directory buildDir  = fileXtc.store.dirFor(buildPath?) : curDir;
-
-        Directory moduleDir = buildDir.dirFor("AddressBookApp_imdb");
-        if (moduleDir.exists)
-            {
-            moduleDir.deleteRecursively();
-            }
-
-        moduleDir.create();
-
-        console.println($"moduleDir={moduleDir}");
-
-        File   moduleFile   = moduleDir.fileFor("module.x");
-        String moduleSource = "module AddressBookApp_imdb{}";
-
-        moduleFile.create();
-
-        // the line below should be:
-        // moduleSource.contents = moduleSource.utfBytes();
-        writeUtf(moduleFile, moduleSource);
-
-        console.println(moduleSource);
         }
 
-    void writeUtf(File file, String content)
+    void test(PropertyTemplate prop)
         {
-        import ecstasy.io.ByteArrayOutputStream as Stream;
-        import ecstasy.io.UTF8Writer;
-        import ecstasy.io.Writer;
+        Map<DBCategory, PropertyTemplate[]> mapProps = new HashMap();
 
-        Stream out    = new Stream(content.size);
-        Writer writer = new UTF8Writer(out);
-        writer.addAll(content);
-        file.contents = out.bytes.freeze(True);
+        for ((DBCategory category, TypeTemplate dbType) : DB_TEMPLATES)
+            {
+            if (prop.type.isA(dbType))
+                {
+                mapProps.process(category, entry ->
+                    {
+                    PropertyTemplate[] props = entry.exists
+                            ? entry.value
+                            : new Array<PropertyTemplate>();
+                    entry.value = props.add(prop);
+                    return entry.key;
+                    });
+                }
+            }
         }
+
+    static Map<DBCategory, TypeTemplate> DB_TEMPLATES =
+        Map:[
+            DBMap = oodb.DBMap.baseTemplate.type
+            ];
     }

@@ -186,7 +186,7 @@ public class xRTProperty
     public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, PropertyInfo infoProp)
         {
         Annotation[] aAnno    = infoProp.getPropertyAnnotations();
-        TypeConstant typeProp = infoProp.getIdentity().getValueType(typeTarget);
+        TypeConstant typeProp = infoProp.getIdentity().getValueType(frame.poolContext(), typeTarget);
 
         if (aAnno != null && aAnno.length > 0)
             {

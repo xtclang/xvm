@@ -302,7 +302,7 @@ public class AnnotatedTypeExpression
                 {
                 // class of type conversion
                 IdentityConstant clzAnno = pool.ensureClassConstant(typeAnno);
-                typeType   = clzAnno.getValueType(null);
+                typeType   = clzAnno.getValueType(pool, null);
                 constValue = clzAnno;
                 }
             else

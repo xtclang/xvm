@@ -678,21 +678,19 @@ public abstract class IdentityConstant
      * constant into an object that corresponds to that identity; this method calculates the type
      * of that runtime value.
      *
+     * @param pool        the ConstantPool to use
      * @param typeTarget  the target type (null if the identity is itself the target)
      *
      * @return a TypeConstant
      */
-    public TypeConstant getValueType(TypeConstant typeTarget)
+    public TypeConstant getValueType(ConstantPool pool, TypeConstant typeTarget)
         {
         if (isClass())
             {
             // if a class name is specified in code, and it resolves to a class constant, then the type
             // of the expression that yields this constant is the Class type:
             //  Class<PublicType, ProtectedType, PrivateType, StructType>
-            ConstantPool pool = getConstantPool();
-            TypeConstant type = getType();
-
-            type = type.removeAccess().normalizeParameters();
+            TypeConstant type = getType().removeAccess().normalizeParameters();
 
             switch (getComponent().getFormat())
                 {

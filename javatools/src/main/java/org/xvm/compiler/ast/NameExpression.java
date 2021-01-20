@@ -1716,7 +1716,7 @@ public class NameExpression
                     }
                 TypeInfo         info       = getTypeInfo(ctx, idLeft.getType(), errs);
                 IdentityConstant idChild    = info.findName(pool, sName);
-                TypeInfo         infoClz    = idLeft.getValueType(null).ensureTypeInfo(errs);
+                TypeInfo         infoClz    = idLeft.getValueType(pool, null).ensureTypeInfo(errs);
                 IdentityConstant idClzChild = infoClz.findName(pool, sName);
 
                 if (idChild == null)
@@ -2147,7 +2147,7 @@ public class NameExpression
                         IdentityConstant clz = pool.ensureClassConstant(type);
                         m_plan = Plan.None;
                         m_arg  = clz;
-                        return clz.getValueType(type);
+                        return clz.getValueType(pool, type);
                         }
                     }
                 else
@@ -2161,7 +2161,7 @@ public class NameExpression
                         }
 
                     TypeConstant typeThisClass = ctx.getThisClass().getFormalType();
-                    return ((IdentityConstant) constant).getValueType(typeThisClass);
+                    return ((IdentityConstant) constant).getValueType(pool, typeThisClass);
                     }
 
             case Property:
@@ -2215,7 +2215,7 @@ public class NameExpression
                         }
 
                     m_plan = Plan.PropertySelf;
-                    return idProp.getValueType(typeLeft);
+                    return idProp.getValueType(pool, typeLeft);
                     }
 
                 if (idProp.isTypeSequenceTypeParameter())
@@ -2290,7 +2290,7 @@ public class NameExpression
                             }
 
                         m_plan = Plan.None;
-                        return idProp.getValueType(typeLeft);
+                        return idProp.getValueType(pool, typeLeft);
                         }
 
                     infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);

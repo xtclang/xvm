@@ -443,7 +443,7 @@ public class InvocationExpression
 
                 TypeConstant typeFn = m_fBindTarget
                         ? idMethod.getSignature().asFunctionType()
-                        : idMethod.getValueType(typeLeft);
+                        : idMethod.getValueType(pool, typeLeft);
 
                 if (cTypeParams > 0)
                     {
@@ -972,7 +972,7 @@ public class InvocationExpression
 
                         TypeConstant typeFn = m_fBindTarget
                                 ? idMethod.getSignature().asFunctionType()
-                                : idMethod.getValueType(typeLeft);
+                                : idMethod.getValueType(pool, typeLeft);
 
                         if (cTypeParams > 0)
                             {

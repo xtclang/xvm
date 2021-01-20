@@ -96,7 +96,7 @@ public class xClass
         if (constant instanceof ClassConstant || constant instanceof DecoratedClassConstant)
             {
             IdentityConstant idClz    = (IdentityConstant) constant;
-            TypeConstant     typeClz  = idClz.getValueType(null).
+            TypeConstant     typeClz  = idClz.getValueType(frame.poolContext(), null).
                 resolveGenerics(frame.poolContext(), frame.getGenericsResolver());
 
             ClassTemplate template;

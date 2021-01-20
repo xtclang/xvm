@@ -416,7 +416,7 @@ public class MethodConstant
         }
 
     @Override
-    public TypeConstant getValueType(TypeConstant typeTarget)
+    public TypeConstant getValueType(ConstantPool pool, TypeConstant typeTarget)
         {
         SignatureConstant sig       = getSignature();
         boolean           fFunction = isFunction();
@@ -431,7 +431,7 @@ public class MethodConstant
                 {
                 typeTarget = ((ClassStructure) getClassIdentity().getComponent()).getFormalType();
                 }
-            sig = sig.resolveAutoNarrowing(getConstantPool(), typeTarget);
+            sig = sig.resolveAutoNarrowing(pool, typeTarget);
             }
 
         MethodStructure method = (MethodStructure) getComponent();
@@ -445,7 +445,7 @@ public class MethodConstant
             }
         return fFunction
                 ? sig.asFunctionType()
-                : sig.asMethodType(getConstantPool(), typeTarget);
+                : sig.asMethodType(pool, typeTarget);
         }
 
 
@@ -489,8 +489,9 @@ public class MethodConstant
             return this;
             }
 
-        MethodConstant idNew = (MethodConstant) getConstantPool().register(new MethodConstant(
-                        getConstantPool(), idNewParent, sigNew, m_iLambda));
+        ConstantPool   pool  = getConstantPool();
+        MethodConstant idNew = (MethodConstant) pool.register(
+                                    new MethodConstant(pool, idNewParent, sigNew, m_iLambda));
         if (sigNew != null && !sigNew.containsUnresolved())
             {
             // it's the responsibility of the MethodConstant to bind all the TypeParameters

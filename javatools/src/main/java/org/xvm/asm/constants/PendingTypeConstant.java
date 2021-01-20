@@ -172,6 +172,12 @@ public class PendingTypeConstant
         }
 
     @Override
+    public Relation calculateRelation(TypeConstant typeLeft)
+        {
+        return Relation.IS_A;
+        }
+
+    @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
         return Relation.IS_A;
