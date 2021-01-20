@@ -16,11 +16,17 @@ interface ModuleTemplate
     @RO immutable Map<String, String> moduleNamesByPath;
 
     /**
+     * Module's parent is always a FileTemplate.
+     */
+    @Override
+    @RO FileTemplate parent;
+
+    /**
      * Indicates whether this template has been "resolved", which means that it is ready to answer
      * all questions about the module's content (children, contributions, etc.)
      */
     @RO Boolean resolved.get()
         {
-        return parent.as(FileTemplate).resolved;
+        return parent.resolved;
         }
     }

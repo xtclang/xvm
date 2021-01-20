@@ -19,6 +19,17 @@ interface ModuleRepository
     ModuleTemplate getModule(String name);
 
     /**
+     * Obtain a resolved module template for the specified module.
+     *
+     * @throws IllegalArgument if the module does not exist
+     * @throws Exception       if the module cannot be resolved
+     */
+    ModuleTemplate getResolvedModule(String name)
+        {
+        return getModule(name).parent.resolve(this).mainModule;
+        }
+
+    /**
      * Store the specified module template in the repository.
      *
      * @param template  a ModuleTemplate to store in the repository

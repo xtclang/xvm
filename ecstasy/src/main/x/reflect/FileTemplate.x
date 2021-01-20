@@ -22,6 +22,8 @@ interface FileTemplate
      * be ready to answer all questions about its children and their contributions.
      *
      * @return the resolved FileTemplate
+     *
+     * @throws Exception if some of the dependent modules cannot be resolved
      */
     FileTemplate resolve(ModuleRepository repository);
 
