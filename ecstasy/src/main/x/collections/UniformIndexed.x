@@ -7,12 +7,19 @@
 interface UniformIndexed<Index, Element>
     {
     /**
-     * Obtain the value of the specified element.
+     * Obtain the element value at the specified index.
+     *
+     * @param index  the index of the element
+     *
+     * @return the element value at the specified index
      */
     @Op("[]") Element getElement(Index index);
 
     /**
      * Modify the value in the specified element.
+     *
+     * @param index  the index of the element
+     * @param value  the element value to store
      */
     @Op("[]=") void setElement(Index index, Element value)
         {
@@ -21,6 +28,10 @@ interface UniformIndexed<Index, Element>
 
     /**
      * Obtain a Ref for the specified element.
+     *
+     * @param index  the index of the element
+     *
+     * @return the Var reference to the element at the specified index
      */
     Var<Element> elementAt(Index index)
         {
