@@ -1,5 +1,6 @@
 import ecstasy.fs.FileChannel;
-import ecstasy.io.Buffer;
+import ecstasy.io.ReadBuffer;
+import ecstasy.io.WriteBuffer;
 
 /**
  * Native OS FileChannel implementation.
@@ -29,11 +30,11 @@ service OSFileChannel
         {TODO("native");}
 
     @Override
-    conditional Int read(Buffer<Byte> buffer, Int minBytes = Int.maxvalue)
+    conditional Int read(WriteBuffer buffer, Int minBytes = Int.maxvalue)
         {TODO("native");}
 
     @Override
-    conditional (Int, Int) read(Buffer<Byte>[] buffers, Int minBytes = Int.maxvalue)
+    conditional (Int, Int) read(WriteBuffer[] buffers, Int minBytes = Int.maxvalue)
         {TODO("native");}
 
     @Override
@@ -41,11 +42,11 @@ service OSFileChannel
         {TODO("native");}
 
     @Override
-    Int write(Buffer<Byte> buffer)
+    Int write(ReadBuffer buffer)
         {TODO("native");}
 
     @Override
-    (Int, Int) write(Buffer<Byte>[] buffers)
+    (Int, Int) write(ReadBuffer[] buffers)
         {TODO("native");}
 
 

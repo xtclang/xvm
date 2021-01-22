@@ -4,6 +4,9 @@
 interface Channel
         extends Closeable
     {
+    /**
+     * True iff the channel can be used to read data.
+     */
     @RO Boolean readable;
 
     /**
@@ -38,7 +41,7 @@ interface Channel
      *
      * @throw IOException if the operation fails to complete due to an unrecoverable IO error
      */
-    conditional Int read(Buffer<Byte> buffer, Int minBytes = Int.maxvalue);
+    conditional Int read(WriteBuffer buffer, Int minBytes = Int.maxvalue);
 
     /**
      * Read a sequence of bytes from this channel into the specified buffers.
@@ -52,8 +55,11 @@ interface Channel
      *         written into (e.g. if all the buffers are filled, the second return value would be
      *         equal to the buffer array length) or False if the end-of-stream has been reached
      */
-    conditional (Int, Int) read(Buffer<Byte>[] buffers, Int minBytes = Int.maxvalue);
+    conditional (Int, Int) read(WriteBuffer[] buffers, Int minBytes = Int.maxvalue);
 
+    /**
+     * True iff the channel can be used to write data.
+     */
     @RO Boolean writable;
 
     /**
@@ -76,7 +82,7 @@ interface Channel
      *
      * @throws IOException if an I/O error occurs
      */
-    Int write(Buffer<Byte> buffer);
+    Int write(ReadBuffer buffer);
 
     /**
      * Write a sequence of bytes from the specified buffers into this channel into starting at
@@ -88,5 +94,5 @@ interface Channel
      *
      * @throws IOException if an I/O error occurs
      */
-    (Int, Int) write(Buffer<Byte>[] buffers);
+    (Int, Int) write(ReadBuffer[] buffers);
     }
