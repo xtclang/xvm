@@ -747,6 +747,24 @@ public class ClassComposition
             return f_fSynthetic;
             }
 
+        @Override
+        public String toString()
+            {
+            StringBuilder sb = new StringBuilder();
+
+            if (f_fSynthetic)
+                {
+                sb.append("synthetic ");
+                }
+            if (f_clz != null)
+                {
+                sb.append("inflated ");
+                }
+            sb.append(f_nIndex);
+
+            return sb.toString();
+            }
+
         // ----- fields ----------------------------------------------------------------------------
 
         private final int             f_nIndex;
