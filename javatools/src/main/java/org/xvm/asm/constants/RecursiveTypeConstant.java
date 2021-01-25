@@ -41,6 +41,14 @@ public class RecursiveTypeConstant
     // ----- type specific methods -----------------------------------------------------------------
 
     /**
+     * @return the underlying TypedefConstant
+     */
+    public TypedefConstant getTypedef()
+        {
+        return (TypedefConstant) ensureResolvedConstant();
+        }
+
+    /**
      * @return the underlying type that the typedef represents
      */
     protected TypeConstant getReferredToType()

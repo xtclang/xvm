@@ -1220,6 +1220,10 @@ public class xRTType
                     break;
                 }
             }
+        else if (type instanceof RecursiveTypeConstant)
+            {
+            sName = ((RecursiveTypeConstant) type).getTypedef().getName();
+            }
 
         return sName == null
             ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
