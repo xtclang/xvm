@@ -15,7 +15,7 @@ const RTProperty<Target, Referent, Implementation extends Ref<Referent>>
     @Override @RO Boolean      lazy                  .get() { TODO("native"); }
     @Override @RO Boolean      atomic                .get() { TODO("native"); }
     @Override @RO Boolean      abstract              .get() { TODO("native"); }
-    @Override @RO Annotation[] annotations           .get() { TODO("native"); }
+    @Override @RO immutable Annotation[] annotations .get() { TODO("native"); }
 
     @Override conditional Referent isConstant()             { TODO("native"); }
     @Override Implementation of(Target target)              { TODO("native"); }

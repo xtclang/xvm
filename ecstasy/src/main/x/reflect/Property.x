@@ -69,7 +69,7 @@ interface Property<Target, Referent, Implementation extends Ref<Referent>>
     *     @A1 @A2 List list = ...
     * would produce the `annotations` array holding `A1` at index zero.
     */
-    Annotation[] annotations;
+    @RO immutable Annotation[] annotations;
 
 
     // ----- dynamic behavior ----------------------------------------------------------------------
