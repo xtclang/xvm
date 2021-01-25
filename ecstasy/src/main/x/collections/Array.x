@@ -17,7 +17,6 @@ class Array<Element>
         implements List<Element>
         implements Freezable
         implements Stringable
-        incorporates text.Stringer
         incorporates conditional BitArray<Element extends Bit>
         incorporates conditional ByteArray<Element extends Byte>
         incorporates conditional ArrayOrderer<Element extends Orderable>
