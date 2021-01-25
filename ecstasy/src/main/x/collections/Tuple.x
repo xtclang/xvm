@@ -27,6 +27,7 @@
  */
 interface Tuple<ElementTypes extends Tuple<ElementTypes>>
         extends Freezable
+        extends Stringable
     {
     /**
      * The number of elements in the tuple. A tuple cannot change its size; a size change requires
@@ -245,6 +246,42 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      */
     @Override
     immutable Tuple freeze(Boolean inPlace = False);
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return 10*size;
+        }
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf)
+        {
+        buf.add('(');
+
+        for (Int i : [0..size))
+            {
+            if (i > 0)
+                {
+                buf.addAll(", ");
+                }
+
+            Object v = this[i];
+
+            if (v.is(Stringable))
+                {
+                v.appendTo(buf);
+                }
+            else
+                {
+                v.toString().appendTo(buf);
+                }
+            }
+
+        return buf.add(')');
+        }
 
 
     // ----- Comparable ----------------------------------------------------------------------------
