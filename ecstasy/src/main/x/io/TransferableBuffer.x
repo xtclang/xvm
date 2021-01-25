@@ -1,16 +1,26 @@
 /**
- * TransferableBuffer represents a transferable holder for a uniform array of bytes. As such,
- * it is implemented as a service, so that it can be reached from different services. The objects
- * that are actually crossing the service boundaries are the const inner classes ReadBuffer and
+ * TransferableBuffer represents a transferable holder for an array of bytes. As such, it is
+ * implemented as a service, so that it can be reached from different services. The objects that
+ * are actually crossing the service boundaries are the const inner classes ReadBuffer and
  * WriteBuffer, which have no mutable state of their own, but which delegate their operations to a
- * hidden implementation class, [ActualBuffer], that is part of (inside of) the service.
+ * hidden implementation class, [ActualBuffer], that is part of (hidden inside of) the service.
  *
  * There is an exclusive access contract for the buffer; it is enforced by strictly invalidating a
  * buffer when either its lifecycle reaches closure, or when a new ReadBuffer or WriteBuffer is
- * created (since the new instance would then have exclusive access). It is expected that a runtime
- * will (intrinsically and automatically) provide a lighter weight implementation of this service,
- * potentially eliminating both the service boundary itself and the requirement for unique proxy
- * instantiation, without weakening any of the contracts.
+ * created (since the new instance would then have exclusive access). This prevents an old reference
+ * (to either a ReadBuffer or a WriteBuffer) to be held and later used to access the data in the
+ * underlying buffer, which would represent a security risk. Additionally, the exclusive access is
+ * _from_ the context of a particular service; in other words, when a ReadBuffer or WriteBuffer is
+ * used from a service, that will be the only service that the buffer will be permitted to be used
+ * from. While this contract may seem unnecessarily rigid, it represents the purpose of the buffer,
+ * which is to provide an abstraction that can be efficiently written-to within one service, and
+ * then subsequently read-from in another service. Regarding efficiency, the implementation as
+ * provided here is correct and reasonable, but it is necessarily inefficient, because the Ecstasy
+ * language does not provide explicit language support for the concept of exclusive access when
+ * references are passed across service boundaries. It is expected that an implementation of the
+ * Ecstasy runtime would provide an intrinsic implementation of this service that adheres to the
+ * specified contracts, while minimizing the implied costs of (i) the buffer's service boundary
+ * and (ii) the creation of one-time-use proxy references.
  */
 service TransferableBuffer(Int size)
     {
@@ -24,7 +34,7 @@ service TransferableBuffer(Int size)
      *                    buffer is ready to be re-used
      * @param alwaysZero  pass True to always zero the buffer contents when invalidating a buffer
      */
-    construct(Int size, function void()? recycle = Null, Boolean alwaysZero = False)
+    construct(Int size, function void(TransferableBuffer)? recycle = Null, Boolean alwaysZero = False)
         {
         }
     finally
@@ -73,7 +83,7 @@ service TransferableBuffer(Int size)
         }
 
 
-    // ----- internal properties -------------------------------------------------------------------
+    // ----- ActualBuffer hidden implementation class ----------------------------------------------
 
     /**
      * An internal implementation that provides support for both the read- and the write-buffers.
@@ -89,7 +99,7 @@ service TransferableBuffer(Int size)
          *                    buffer is ready to be re-used
          * @param alwaysZero  pass True to always zero the buffer contents when invalidating
          */
-        construct(Int size, function void()? recycle = Null, Boolean alwaysZero = False)
+        construct(Int size, function void(TransferableBuffer)? recycle = Null, Boolean alwaysZero = False)
             {
             this.bytes      = new Byte[size];
             this.recycle    = recycle;
@@ -133,7 +143,7 @@ service TransferableBuffer(Int size)
          * The optional notification function (probably from the buffer provider) that this buffer
          * calls when it is ready to be recycled.
          */
-        function void()? recycle;
+        function void(TransferableBuffer)? recycle;
 
         /**
          * If True, then always zero the buffer contents when invalidating.
@@ -184,9 +194,11 @@ service TransferableBuffer(Int size)
          */
         void destroyReadBuffer(Int ticket)
             {
-            checkValid(ticket);
-            invalidateCurrent();
-            recycle?();
+            if (ticket == currentTicket)
+                {
+                invalidateCurrent();
+                recycle?(this.TransferableBuffer);
+                }
             }
 
         /**
