@@ -369,20 +369,23 @@ public class xRTProperty
     /**
      * Implementation for: {@code Implementation of(Target)}.
      */
-    public int invokeOf(Frame frame, PropertyHandle hProp, ObjectHandle hArg, int iReturn)
+    public int invokeOf(Frame frame, PropertyHandle hProp, ObjectHandle hTarget, int iReturn)
         {
         PropertyConstant idProp   = hProp.getPropertyConstant();
         PropertyInfo     infoProp = hProp.getPropertyInfo();
-        return hArg.getTemplate().createPropertyRef(frame, hArg, idProp, !infoProp.isVar(), iReturn);
+        Access           access   = hProp.getType().getParamType(0).getAccess();
+
+        return hTarget.getTemplate().createPropertyRef(frame, hTarget.ensureAccess(access),
+                idProp, !infoProp.isVar(), iReturn);
         }
 
     /**
      * Implementation for: {@code Referent get(Target)}.
      */
-    public int invokeGet(Frame frame, PropertyHandle hProp, ObjectHandle hArg, int iReturn)
+    public int invokeGet(Frame frame, PropertyHandle hProp, ObjectHandle hTarget, int iReturn)
         {
-        ObjectHandle     hTarget = hArg;
-        PropertyConstant idProp  = hProp.getPropertyConstant();
+        PropertyConstant idProp = hProp.getPropertyConstant();
+
         return hTarget.getTemplate().getPropertyValue(frame, hTarget, idProp, iReturn);
         }
 
@@ -394,6 +397,7 @@ public class xRTProperty
         ObjectHandle     hTarget = ahArg[0];
         PropertyConstant idProp  = hProp.getPropertyConstant();
         ObjectHandle     hValue  = ahArg[1];
+
         return hTarget.getTemplate().setPropertyValue(frame, hTarget, idProp, hValue);
         }
 

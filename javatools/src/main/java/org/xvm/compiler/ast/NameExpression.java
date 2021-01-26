@@ -1013,7 +1013,7 @@ public class NameExpression
                         }
 
                     PropertyConstant idProp = (PropertyConstant) argRaw;
-                    switch (calculatePropertyAccess())
+                    switch (calculatePropertyAccess(false))
                         {
                         case SingletonParent:
                             {
@@ -1050,7 +1050,7 @@ public class NameExpression
                 case PropertyRef:
                     {
                     PropertyConstant idProp    = (PropertyConstant) argRaw;
-                    Argument         argTarget = generatePropertyTarget(ctx, code, idProp, errs);
+                    Argument         argTarget = generateRefTarget(ctx, code, idProp, errs);
 
                     code.add(m_fAssignable
                             ? new P_Var(idProp, argTarget, argLVal)
@@ -1193,7 +1193,7 @@ public class NameExpression
                 PropertyConstant idProp  = (PropertyConstant) argRaw;
                 Register         regTemp = createRegister(getType(), fUsedOnce);
 
-                switch (calculatePropertyAccess())
+                switch (calculatePropertyAccess(false))
                     {
                     case SingletonParent:
                         {
@@ -1268,7 +1268,7 @@ public class NameExpression
             case PropertyRef:
                 {
                 PropertyConstant idProp    = (PropertyConstant) argRaw;
-                Argument         argTarget = generatePropertyTarget(ctx, code, idProp, errs);
+                Argument         argTarget = generateRefTarget(ctx, code, idProp, errs);
                 Register         regRef    = createRegister(getType(), fUsedOnce);
                 code.add(m_fAssignable
                         ? new P_Var(idProp, argTarget, regRef)
@@ -1334,12 +1334,12 @@ public class NameExpression
         }
 
     /**
-     * Helper method to generate an argument for the property target.
+     * Helper method to generate an argument for the property Ref target.
      */
-    private Argument generatePropertyTarget(Context ctx, Code code,
-                                            PropertyConstant idProp, ErrorListener errs)
+    private Argument generateRefTarget(Context ctx, Code code,
+                                       PropertyConstant idProp, ErrorListener errs)
         {
-        switch (calculatePropertyAccess())
+        switch (calculatePropertyAccess(true))
             {
             case SingletonParent:
                 return pool().ensureSingletonConstConstant(idProp.getParentConstant());
@@ -1347,8 +1347,8 @@ public class NameExpression
             case Outer:
                 {
                 int cSteps = m_targetInfo.getStepsOut();
-                Register regOuter = createRegister(m_targetInfo.getType(), true);
-                code.add(new MoveThis(cSteps, regOuter));
+                Register regOuter = createRegister(m_targetInfo.getTargetType(), true);
+                code.add(new MoveThis(cSteps, regOuter, Access.PRIVATE));
                 return regOuter;
                 }
 
@@ -2688,7 +2688,7 @@ public class NameExpression
         return null;
         }
 
-    protected PropertyAccess calculatePropertyAccess()
+    protected PropertyAccess calculatePropertyAccess(boolean fRef)
         {
         if (m_propAccessPlan != null)
             {
@@ -2704,7 +2704,8 @@ public class NameExpression
             {
             NameExpression exprLeft = (NameExpression) left;
             // check that "this" is not "OuterThis"
-            if (exprLeft.getName().equals("this") && exprLeft.m_plan == Plan.None)
+            if (exprLeft.getName().equals("this") &&
+                    (fRef || exprLeft.m_plan == Plan.None))
                 {
                 return PropertyAccess.This;
                 }

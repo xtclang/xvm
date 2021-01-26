@@ -166,37 +166,22 @@ module TestReflection
         console.println($"Point type={t}");
         for (Property<Point> prop : t.properties)
             {
-            console.println($"prop={prop}");
-//            console.println($"prop.get(point)={prop.get(point)}");
+            console.println($"prop={prop} prop.get(point)={prop.get(point)}");
 
             Ref impl = prop.of(point);
-//            console.println($"Ref={impl}, type={impl.actualType}, get()={impl.get()}");
+            console.println($"Ref={impl}, type={impl.actualType}, get()={impl.get()}");
 
             Type typeImpl = &impl.actualType;
-            if (Property prop2 := typeImpl.fromProperty())
-                {
-                console.println($"impl.fromProp={prop2}");
-                // TODO val={prop2.get(point)}");
-                }
-            else
-                {
-                console.println("not from property?!?!");
-                }
+            assert Property prop2 := typeImpl.fromProperty();
+            console.println($"impl.fromProp={prop2}");
             }
 
         Ref impl = point.&x;
         console.println($"Ref={impl}, type={impl.actualType}, get()={impl.get()}");
 
         Type typeImpl = &impl.actualType;
-        if (Property prop2 := typeImpl.fromProperty())
-            {
-            console.println($"impl.fromProp={prop2}");
-            // TODO val={prop2.get(point)}");
-            }
-        else
-            {
-            console.println("not from property?!?!");
-            }
+        assert Property propX := typeImpl.fromProperty();
+        console.println($"impl.fromProp={propX} val={propX.get(point)}");
 
         for (Property prop : t.constants)
             {

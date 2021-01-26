@@ -38,14 +38,14 @@ public class PropertyComposition
      */
     public PropertyComposition(ClassComposition clzParent, PropertyInfo infoProp)
         {
+        assert !clzParent.isStruct();
+
         f_clzParent  = clzParent;
         f_infoProp   = infoProp;
         f_clzRef     = clzParent.getRegistry().resolveClass(infoProp.getBaseRefType());
         f_mapMethods = new ConcurrentHashMap<>();
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();
-
-        assert !clzParent.isStruct();
         }
 
     /**
@@ -121,7 +121,7 @@ public class PropertyComposition
         }
 
     @Override
-    public TypeComposition ensureAccess(Access access)
+    public PropertyComposition ensureAccess(Access access)
         {
         if (access == Access.STRUCT)
             {

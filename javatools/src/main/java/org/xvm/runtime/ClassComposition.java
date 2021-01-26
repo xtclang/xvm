@@ -75,6 +75,7 @@ public class ClassComposition
         f_typeRevealed    = typeInception;
         f_mapCompositions = new ConcurrentHashMap<>();
         f_mapProxies      = new ConcurrentHashMap<>();
+        f_mapProperties   = new ConcurrentHashMap<>();
         f_mapMethods      = new ConcurrentHashMap<>();
         f_mapGetters      = new ConcurrentHashMap<>();
         f_mapSetters      = new ConcurrentHashMap<>();
@@ -93,6 +94,7 @@ public class ClassComposition
         f_typeRevealed    = typeRevealed;
         f_mapCompositions = f_clzInception.f_mapCompositions;
         f_mapProxies      = f_clzInception.f_mapProxies;
+        f_mapProperties   = f_clzInception.f_mapProperties;
         f_mapMethods      = f_clzInception.f_mapMethods;
         f_mapGetters      = f_clzInception.f_mapGetters;
         f_mapSetters      = f_clzInception.f_mapSetters;
@@ -116,6 +118,15 @@ public class ClassComposition
         {
         return (CanonicalizedTypeComposition) f_mapCompositions.computeIfAbsent(typeActual,
                 (type) -> new CanonicalizedTypeComposition(this, type));
+        }
+
+    /**
+     * @return a PropertyComposition for the specified property
+     */
+    public PropertyComposition ensurePropertyComposition(PropertyInfo infoProp)
+        {
+        return f_mapProperties.computeIfAbsent(infoProp.getIdentity(),
+                (idProp) -> new PropertyComposition(f_clzInception, infoProp));
         }
 
 
@@ -627,7 +638,7 @@ public class ClassComposition
                 {
                 if (infoProp.isCustomLogic())
                     {
-                    clzRef = new PropertyComposition(this, infoProp);
+                    clzRef = ensurePropertyComposition(infoProp);
                     }
                 else if (!infoProp.isSimpleUnassigned())
                     {
@@ -682,6 +693,14 @@ public class ClassComposition
         {
         PropertyInfo info = getInceptionType().ensureTypeInfo().findProperty(sProp);
         return info == null ? null : info.getType();
+        }
+
+    /**
+     * @return the compile-time PropertyInfo for a given property
+     */
+    public PropertyInfo getPropertyInfo(PropertyConstant idProp)
+        {
+        return getInceptionType().ensureTypeInfo().findProperty(idProp);
         }
 
     @Override
@@ -830,6 +849,11 @@ public class ClassComposition
      * A cache of derivative ProxyCompositions keyed by the "proxy type".
      */
     private final Map<TypeConstant, ProxyComposition> f_mapProxies;
+
+    /**
+     * A cache of derivative PropertyCompositions keyed by the property id.
+     */
+    private final Map<PropertyConstant, PropertyComposition> f_mapProperties;
 
     // cached method call chain by nid (the top-most method first)
     private final Map<Object, CallChain> f_mapMethods;

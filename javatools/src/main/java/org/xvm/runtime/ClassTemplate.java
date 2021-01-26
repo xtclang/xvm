@@ -1514,12 +1514,14 @@ public abstract class ClassTemplate
     public int createPropertyRef(Frame frame, ObjectHandle hTarget,
                                  PropertyConstant idProp, boolean fRO, int iReturn)
         {
-        GenericHandle hThis = (GenericHandle) hTarget;
+        GenericHandle    hThis   = (GenericHandle) hTarget;
+        ClassComposition clzThis = (ClassComposition) hThis.getComposition();
 
         if (!hThis.containsField(idProp) &&
-                hThis.getComposition().getPropertyGetterChain(idProp) == null)
+                clzThis.getPropertyGetterChain(idProp) == null)
             {
-            return frame.raiseException("Unknown property: \"" + idProp + "\" on " + f_sName);
+            return frame.raiseException("Unknown property: \"" + idProp + "\" on " +
+                    clzThis.getType().getValueString());
             }
 
         if (hThis.isInflated(idProp))
@@ -1534,14 +1536,16 @@ public abstract class ClassTemplate
             return frame.assignValue(iReturn, hRef);
             }
 
-        ConstantPool pool         = frame.poolContext();
-        TypeConstant typeReferent = idProp.getType().resolveGenerics(pool, hTarget.getType());
+        PropertyInfo infoProp = clzThis.getPropertyInfo(idProp);
+        if (infoProp == null)
+            {
+            return frame.raiseException("Unknown property: \"" + idProp + "\" on " +
+                    clzThis.getType().getValueString());
+            }
 
-        TypeComposition clzRef = fRO
-            ? xRef.INSTANCE.ensureParameterizedClass(pool, typeReferent)
-            : xVar.INSTANCE.ensureParameterizedClass(pool, typeReferent);
+        TypeComposition clzRef = clzThis.ensurePropertyComposition(infoProp);
+        RefHandle       hRef   = new RefHandle(clzRef, hThis, idProp);
 
-        RefHandle hRef = new RefHandle(clzRef, hThis, idProp);
         return frame.assignValue(iReturn, hRef);
         }
 
