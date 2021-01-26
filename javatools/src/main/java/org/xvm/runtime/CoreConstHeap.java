@@ -106,6 +106,7 @@ public class CoreConstHeap
 
             case Class:
             case DecoratedClass:
+            case NativeClass:
                 sComponent = "reflect.Class";
                 break;
 

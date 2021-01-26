@@ -50,7 +50,7 @@ public class DecoratedClassConstant
         {
         super(pool);
 
-        assert type.isExplicitClassIdentity(true);
+        assert type.isSingleDefiningConstant();
         m_type = type;
         }
 

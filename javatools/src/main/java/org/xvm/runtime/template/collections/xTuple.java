@@ -15,7 +15,6 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -643,27 +642,6 @@ public class xTuple
         TupleHandle hTuple = (TupleHandle) hTarget;
 
         return hTuple.m_ahValue.length;
-        }
-
-    @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        TupleHandle hTuple = (TupleHandle) hTarget;
-
-        ObjectHandle[] ahValue = hTuple.m_ahValue;
-        if (ahValue.length > 0)
-            {
-            StringBuilder sb = new StringBuilder("(");
-
-            Frame.Continuation stepNext = frameCaller ->
-                frameCaller.assignValue(iReturn, xString.makeHandle(sb.toString()));
-
-            return new Utils.TupleToString(sb, hTuple.m_ahValue, null, stepNext).doNext(frame);
-            }
-        else
-            {
-            return frame.assignValue(iReturn, xString.makeHandle("()"));
-            }
         }
 
     @Override

@@ -388,6 +388,15 @@ interface Service
      */
     void registerUnhandledExceptionNotification(function void notify(Exception));
 
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    String toString()
+        {
+        return this:service.toString();
+        }
+
     @Override
     immutable Service makeImmutable()
         {

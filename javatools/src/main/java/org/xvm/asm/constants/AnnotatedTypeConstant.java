@@ -229,6 +229,25 @@ public class AnnotatedTypeConstant
                 : this;
         }
 
+    /**
+     * @return true iff {@link #getAnnotationParams() annotation parameters} contain any
+     *         {@link RegisterConstant}.
+     */
+    public boolean containsRegisterParameters()
+        {
+        for (Constant constParam : getAnnotationParams())
+            {
+            if (constParam instanceof RegisterConstant)
+                {
+                return true;
+                }
+            }
+
+        TypeConstant typeUnderlying = getUnderlyingType();
+        return typeUnderlying instanceof AnnotatedTypeConstant &&
+             ((AnnotatedTypeConstant) typeUnderlying).containsRegisterParameters();
+        }
+
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -614,6 +633,12 @@ public class AnnotatedTypeConstant
     public Format getFormat()
         {
         return Format.AnnotatedType;
+        }
+
+    @Override
+    public boolean isValueCacheable()
+        {
+        return super.isValueCacheable() && !containsRegisterParameters();
         }
 
     @Override

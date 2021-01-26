@@ -21,6 +21,9 @@ const Argument<Referent extends immutable Const>(Referent value, String? name = 
                 n := value.isEscaped();
                 return 2 + n;
 
+            case Register:
+                return 2;
+
             default:
                 return value.estimateStringLength();
             }
@@ -41,6 +44,11 @@ const Argument<Referent extends immutable Const>(Referent value, String? name = 
                 buf.add('\"');
                 value.appendEscaped(buf);
                 buf.add('\"');
+                break;
+
+            case Register:
+                buf.add('#');
+                value.register.appendTo(buf);
                 break;
 
             default:

@@ -1116,42 +1116,49 @@ public class ConstantPool
     public IdentityConstant ensureClassConstant(TypeConstant type)
         {
         // check the pre-existing constants first
-        IdentityConstant constant = (DecoratedClassConstant) ensureLocatorLookup(
-                Format.DecoratedClass).get(type);
-        if (constant == null)
+        Map<Object, Constant> mapLocator = ensureLocatorLookup(Format.DecoratedClass);
+        IdentityConstant      constant   = (IdentityConstant) mapLocator.get(type);
+        if (constant != null)
             {
-            if (!type.isExplicitClassIdentity(true))
-                {
-                throw new IllegalArgumentException("type must have an explicit class identity: " + type);
-                }
-
-            if (type.isImmutabilitySpecified() || type.isAccessSpecified())
-                {
-                throw new IllegalArgumentException("type must not have immutability or access: " + type);
-                }
-
-            // try to avoid using the more complicated "decorated" form of the class constant
-            boolean      fUseType = false;
-            TypeConstant typeCur  = type;
-            do
-                {
-                if (typeCur.getParamsCount() > 0 || typeCur.isAnnotated())
-                    {
-                    fUseType = true;
-                    break;
-                    }
-
-                typeCur = typeCur.isVirtualChild()
-                        ? typeCur.getParentType()
-                        : null;
-                }
-            while (typeCur != null);
-
-            constant = fUseType || !(type.getDefiningConstant() instanceof ClassConstant)
-                    ? (DecoratedClassConstant) register(new DecoratedClassConstant(this, type))
-                    : (ClassConstant) type.getDefiningConstant();
+            return constant;
             }
-        return constant;
+
+        if (!type.isSingleDefiningConstant())
+            {
+            throw new IllegalArgumentException("type must a single defining constant: " + type);
+            }
+
+        // drop the immutability and access
+        if (type.isImmutabilitySpecified() || type.isAccessSpecified())
+            {
+            type     = type.removeImmutable().removeAccess();
+            constant = (IdentityConstant) mapLocator.get(type);
+            if (constant != null)
+                {
+                return constant;
+                }
+            }
+
+        // try to avoid using the more complicated "decorated" form of the class constant
+        boolean      fUseType = false;
+        TypeConstant typeCur  = type;
+        do
+            {
+            if (typeCur.getParamsCount() > 0 || typeCur.isAnnotated())
+                {
+                fUseType = true;
+                break;
+                }
+
+            typeCur = typeCur.isVirtualChild()
+                    ? typeCur.getParentType()
+                    : null;
+            }
+        while (typeCur != null);
+
+        return fUseType || !(type.getDefiningConstant() instanceof ClassConstant)
+                ? (DecoratedClassConstant) register(new DecoratedClassConstant(this, type))
+                : (ClassConstant)          register(type.getDefiningConstant());
         }
 
     /**

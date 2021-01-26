@@ -275,7 +275,7 @@ public class AccessTypeConstant
             // an access type constant can modify an annotated, a parameterized, or a terminal type
             // constant that refers to a class/interface
             TypeConstant type = m_constType.resolveTypedefs();
-            if (!(type instanceof AnnotatedTypeConstant || type.isExplicitClassIdentity(true)))
+            if (!(type instanceof PropertyClassTypeConstant || type.isExplicitClassIdentity(true)))
                 {
                 log(errs, Severity.ERROR, VE_ACCESS_TYPE_ILLEGAL, type.getValueString());
                 return true;

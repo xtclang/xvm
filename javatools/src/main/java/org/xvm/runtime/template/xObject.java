@@ -34,7 +34,6 @@ public class xObject
             {
             CLASS = getCanonicalClass();
 
-            markNativeMethod("toString", VOID, STRING);
             markNativeMethod("equals", null, BOOLEAN);
             markNativeMethod("makeImmutable", VOID, null);
 

@@ -75,6 +75,10 @@ public class xService
         setAtomic.add("serviceControl");
         setAtomic.add("timeout");
         s_setAtomicProperties = setAtomic;
+
+        markNativeMethod("toString", VOID, STRING);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override

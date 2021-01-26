@@ -42,6 +42,7 @@ import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
+import org.xvm.runtime.template.reflect.xClass.ClassHandle;
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
@@ -530,6 +531,9 @@ public abstract class Utils
 
     // ----- toString support ----------------------------------------------------------------------
 
+    /**
+     * This is no longer used by Tuple, only by AssertV.
+     */
     public static class TupleToString
             implements Frame.Continuation
         {
@@ -1416,21 +1420,14 @@ public abstract class Utils
 
                         // constructing Argument<Referent extends immutable Const>
                         //                  (Referent value, String? name = Null)
-                        MethodStructure constructor = ARGUMENT_CONSTRUCT;
-                        Parameter       param       = constructMixin.getParam(iArg);
-                        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
-                        ahArg[0] = hValue;
-                        ahArg[1] = xString.makeHandle(param.getName());
-
-                        TypeComposition clzArg = ARGUMENT_TEMPLATE.
-                            ensureParameterizedClass(frameCaller.poolContext(), param.getType());
-                        int iResult = ARGUMENT_TEMPLATE.construct(frameCaller, constructor,
-                                            clzArg, null, ahArg, Op.A_STACK);
+                        Parameter param  = constructMixin.getParam(iArg);
+                        int      iResult = constructArgument(frameCaller, param.getType(),
+                                                hValue, param.getName());
                         if (iResult == Op.R_CALL)
                             {
                             frameCaller.m_frameNext.addContinuation(this);
 
-                            stageNext = Stage.Value;
+                            stageNext = CreateAnnos.Stage.Value;
                             }
                         else
                             {
@@ -1444,14 +1441,7 @@ public abstract class Utils
                         assert hMixin    != null;
                         assert ahAnnoArg != null;
 
-                        MethodStructure constructor = ANNOTATION_CONSTRUCT;
-                        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
-                        ahArg[0] = hMixin;
-                        ahArg[1] = makeArgumentArrayHandle(frameCaller.poolContext(), ahAnnoArg);
-
-                        ClassTemplate templateAnno = ANNOTATION_TEMPLATE;
-                        int iResult = templateAnno.construct(frameCaller, constructor,
-                                templateAnno.getCanonicalClass(), null, ahArg, Op.A_STACK);
+                        int iResult = constructAnnotation(frameCaller, (ClassHandle) hMixin, ahAnnoArg, Op.A_STACK);
                         if (iResult == Op.R_CALL)
                             {
                             frameCaller.m_frameNext.addContinuation(this);
@@ -1619,6 +1609,52 @@ public abstract class Utils
         ahArg[1] = haValues;
 
         return clzMap.getTemplate().construct(frame, constructor, clzMap, null, ahArg, iReturn);
+        }
+
+    /**
+     * Construct a  reflect.Argument constant and place it on the stack.
+     *
+     * @param frame         the current frame
+     * @param typeReferent  the type of Referent
+     * @param hValue        the value of Referent
+     * @param sName         (optional) name
+     *
+     * @return R_CALL or R_EXCEPTION
+     */
+    public static int constructArgument(Frame frame, TypeConstant typeReferent,
+                                        ObjectHandle hValue, String sName)
+        {
+        MethodStructure constructor = ARGUMENT_CONSTRUCT;
+        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
+        ahArg[0] = hValue;
+        ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
+
+        TypeComposition clzArg = ARGUMENT_TEMPLATE.
+                ensureParameterizedClass(frame.poolContext(), typeReferent);
+        return ARGUMENT_TEMPLATE.construct(frame, constructor, clzArg, null, ahArg, Op.A_STACK);
+        }
+
+    /**
+     * Construct a  reflect.Annotation constant.
+     *
+     * @param frame      the current frame
+     * @param hMixin     the mixin class handle
+     * @param ahAnnoArg  the array of annotation arguments
+     * @param iReturn    the register to assign the value into
+     *
+     * @return R_CALL or R_EXCEPTION
+     */
+    public static int constructAnnotation(Frame frame, ClassHandle hMixin,
+                                          ObjectHandle[] ahAnnoArg, int iReturn)
+        {
+        MethodStructure constructor = ANNOTATION_CONSTRUCT;
+        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
+        ahArg[0] = hMixin;
+        ahArg[1] = makeArgumentArrayHandle(frame.poolContext(), ahAnnoArg);
+
+        ClassTemplate templateAnno = ANNOTATION_TEMPLATE;
+        return templateAnno.construct(frame, constructor,
+                templateAnno.getCanonicalClass(), null, ahArg, iReturn);
         }
 
     /**

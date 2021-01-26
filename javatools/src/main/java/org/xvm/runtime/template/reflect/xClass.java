@@ -233,7 +233,7 @@ public class xClass
         {
         // TODO CP: can typeTarget be annotated?
         TypeConstant     typeTarget = getClassType(hTarget);
-        IdentityConstant idClz      = typeTarget.getSingleUnderlyingClass(true);
+        IdentityConstant idClz      = (IdentityConstant) typeTarget.getDefiningConstant();
         ClassStructure   clz        = (ClassStructure) idClz.getComponent();
         ObjectHandle     hResult    = xRTClassTemplate.makeHandle(clz);
         return frame.assignValue(iReturn, hResult);
@@ -245,7 +245,7 @@ public class xClass
     public int getPropertyImplicitName(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         TypeConstant     typeTarget = getClassType(hTarget);
-        IdentityConstant idClz      = typeTarget.getSingleUnderlyingClass(true);
+        IdentityConstant idClz      = (IdentityConstant) typeTarget.getDefiningConstant();
         ModuleConstant   idModule   = idClz.getModuleConstant();
         if (idModule.isEcstasyModule())
             {
@@ -264,7 +264,7 @@ public class xClass
     public int getPropertyName(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         TypeConstant     typeTarget = getClassType(hTarget);
-        IdentityConstant idClz      = typeTarget.getSingleUnderlyingClass(true);
+        IdentityConstant idClz      = (IdentityConstant) typeTarget.getDefiningConstant();
         String           sName      = idClz.getName();
         return frame.assignValue(iReturn, xString.makeHandle(sName));
         }
@@ -275,7 +275,7 @@ public class xClass
     public int getPropertyPath(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         TypeConstant     typeTarget = getClassType(hTarget);
-        IdentityConstant idClz      = typeTarget.getSingleUnderlyingClass(true);
+        IdentityConstant idClz      = (IdentityConstant) typeTarget.getDefiningConstant();
         String           sPath      = idClz.getModuleConstant().getName() + ':' + idClz.getPathString();
         return frame.assignValue(iReturn, xString.makeHandle(sPath));
         }
@@ -358,12 +358,18 @@ public class xClass
         if (hMap == null)
             {
             TypeConstant   typeClz = getClassType(hClass);
-            ClassStructure clz     = (ClassStructure) typeClz.getSingleUnderlyingClass(true).getComponent();
             boolean        fTuple  = typeClz.isTuple();
+            ClassStructure clz     = null;
+            int            cParams = 0;
 
-            int cParams = fTuple
-                    ? typeClz.getParamsCount()
-                    : clz.getTypeParamCount();
+            if (typeClz.isSingleUnderlyingClass(true))
+                {
+                clz     = (ClassStructure) typeClz.getSingleUnderlyingClass(true).getComponent();
+                cParams = fTuple
+                        ? typeClz.getParamsCount()
+                        : clz.getTypeParamCount();
+                }
+
             int iResult;
             if (cParams == 0)
                 {
@@ -372,7 +378,6 @@ public class xClass
                 }
             else
                 {
-
                 StringHandle[] ahNames = new StringHandle[cParams];
                 TypeHandle  [] ahTypes = new TypeHandle  [cParams];
                 if (fTuple)

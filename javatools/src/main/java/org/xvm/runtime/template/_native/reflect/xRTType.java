@@ -9,7 +9,7 @@ import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
@@ -28,6 +28,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.RecursiveTypeConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -36,6 +37,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -91,9 +93,6 @@ public class xRTType
     @Override
     public void initNative()
         {
-        ANNOTATION_TEMPLATE  = f_templates.getTemplate("reflect.Annotation");
-        ANNOTATION_CONSTRUCT = ANNOTATION_TEMPLATE.getStructure().findMethod("construct", 2);
-
         markNativeProperty("childTypes");
         markNativeProperty("constants");
         markNativeProperty("constructors");
@@ -599,7 +598,7 @@ public class xRTType
         if (infoTarget.isNewable())
             {
             ConstantPool    pool       = frame.poolContext();
-            TypeConstant    typeStruct = pool.ensureAccessTypeConstant(typeTarget, Constants.Access.STRUCT);
+            TypeConstant    typeStruct = pool.ensureAccessTypeConstant(typeTarget, Access.STRUCT);
             TypeComposition clzTarget  = f_templates.resolveClass(typeTarget);
 
             ArrayList<FunctionHandle> listHandles   = new ArrayList<>();
@@ -1063,20 +1062,24 @@ public class xRTType
                 ahArg = new ObjectHandle[cArgs];
                 for (int i = 0; i < cArgs; i++)
                     {
-                    ahArg[i] = frame.getConstHandle(aconstArg[i]);
+                    Constant constArg = aconstArg[i];
+                    ahArg[i] = constArg instanceof RegisterConstant
+                        ? makeArgumentHandle(frame, (RegisterConstant) constArg)
+                        : makeArgumentHandle(frame, constArg);
                     }
                 }
 
             return Op.isDeferred(hClass)
                     ? hClass.proceed(frame, frameCaller ->
-                        resolveInvokeAnnotatedArgs(frameCaller, frameCaller.popStack(), ahArg, aiReturn))
-                    : resolveInvokeAnnotatedArgs(frame, hClass, ahArg, aiReturn);
+                        resolveInvokeAnnotatedArgs(
+                            frameCaller, (ClassHandle) frameCaller.popStack(), ahArg, aiReturn))
+                    : resolveInvokeAnnotatedArgs(frame, (ClassHandle) hClass, ahArg, aiReturn);
             }
 
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
-    private int resolveInvokeAnnotatedArgs(Frame frame, ObjectHandle hClass,
+    private int resolveInvokeAnnotatedArgs(Frame frame, ClassHandle hClass,
                                            ObjectHandle[] ahArg, int[] aiReturn)
         {
         if (Op.anyDeferred(ahArg))
@@ -1088,23 +1091,11 @@ public class xRTType
         return completeInvokeAnnotated(frame, hClass, ahArg, aiReturn);
         }
 
-    private int completeInvokeAnnotated(Frame frame, ObjectHandle hClass,
+    private int completeInvokeAnnotated(Frame frame, ClassHandle hClass,
                                         ObjectHandle[] ahArg, int[] aiReturn)
         {
-        ClassTemplate   templateAnno  = ANNOTATION_TEMPLATE;
-        MethodStructure constructAnno = ANNOTATION_CONSTRUCT;
-
-        ArrayHandle hArgs = ahArg.length == 0
-            ? ensureEmptyArgumentArray()
-            : xArray.INSTANCE.createArrayHandle(ensureArgumentArrayComposition(), ahArg);
-
-        ObjectHandle[] ahVar = new ObjectHandle[constructAnno.getMaxVars()];
-        ahVar[0] = hClass;
-        ahVar[1] = hArgs;
-
         frame.assignValue(aiReturn[0], xBoolean.TRUE);
-        return templateAnno.construct(frame, constructAnno,
-                templateAnno.getCanonicalClass(), null, ahVar, aiReturn[1]);
+        return Utils.constructAnnotation(frame, hClass, ahArg, aiReturn[1]);
         }
 
     /**
@@ -1161,7 +1152,7 @@ public class xRTType
                     PropertyConstant idProp     = (PropertyConstant) constDef;
                     TypeConstant     typeParent = idProp.getParentConstant().getType();
                     PropertyInfo     infoProp   = frame.poolContext().ensureAccessTypeConstant(
-                        typeParent, Constants.Access.PRIVATE).ensureTypeInfo().findProperty(idProp);
+                        typeParent, Access.PRIVATE).ensureTypeInfo().findProperty(idProp);
 
                     if (infoProp != null)
                         {
@@ -1346,7 +1337,7 @@ public class xRTType
      *
      * @return the handle to the appropriate Ecstasy {@code Type.Access} enum value
      */
-    public static EnumHandle makeAccessHandle(Frame frame, Constants.Access access)
+    public static EnumHandle makeAccessHandle(Frame frame, Access access)
         {
         xEnum enumAccess = (xEnum) INSTANCE.f_templates.getTemplate("reflect.Access");
         switch (access)
@@ -1480,6 +1471,74 @@ public class xRTType
             }
 
         return frame.assignValue(iReturn, xArray.INSTANCE.createArrayHandle(clzArray, ahProps));
+        }
+
+    private ObjectHandle makeArgumentHandle(Frame frame, Constant constArg)
+        {
+        ObjectHandle hArg = frame.getConstHandle(constArg);
+        if (Op.isDeferred(hArg))
+            {
+            DeferredCallHandle hDeferred = (DeferredCallHandle) hArg;
+            hDeferred.addContinuation(frameCaller ->
+                {
+                ObjectHandle hValue = frameCaller.popStack();
+                return Utils.constructArgument(frameCaller, hValue.getType(), hValue, null);
+                });
+            return hDeferred;
+            }
+
+        int iResult = Utils.constructArgument(frame, hArg.getType(), hArg, null);
+        switch (iResult)
+            {
+            case Op.R_NEXT:
+                return frame.popStack();
+
+            case Op.R_CALL:
+                return new DeferredCallHandle(frame.m_frameNext);
+
+            case Op.R_EXCEPTION:
+                return new DeferredCallHandle(frame.m_hException);
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    private ObjectHandle makeArgumentHandle(Frame frame, RegisterConstant constReg)
+        {
+        TypeComposition clz  = REGISTER_CLZCOMP;
+        MethodStructure ctor = REGISTER_CONSTRUCT;
+        if (clz == null)
+            {
+            TypeConstant typeReg = pool().ensureEcstasyTypeConstant("reflect.Register");
+            REGISTER_CLZCOMP = clz = f_templates.resolveClass(typeReg);
+            REGISTER_CONSTRUCT = ctor = REGISTER_CLZCOMP.getTemplate().getStructure().findMethod("construct", 1);
+            }
+
+        ObjectHandle[] ahArg = new ObjectHandle[ctor.getMaxVars()];
+        ahArg[0] = xInt64.makeHandle(constReg.getRegisterIndex());
+
+        int iResult = clz.getTemplate().construct(frame, ctor, clz, null, ahArg, Op.A_STACK);
+        switch (iResult)
+            {
+            case Op.R_NEXT:
+                return frame.popStack();
+
+            case Op.R_CALL:
+                {
+                DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
+                hDeferred.addContinuation(frameCaller ->
+                     Utils.constructArgument(
+                         frameCaller, REGISTER_CLZCOMP.getType(), frameCaller.popStack(), null));
+                return hDeferred;
+                }
+
+            case Op.R_EXCEPTION:
+                return new DeferredCallHandle(frame.m_hException);
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
 
@@ -1677,8 +1736,9 @@ public class xRTType
     private static ArrayHandle     TYPE_ARRAY_EMPTY;
     private static TypeComposition LISTMAP_CLZCOMP;
 
-    private static ClassTemplate   ANNOTATION_TEMPLATE;
-    private static MethodStructure ANNOTATION_CONSTRUCT;
     private static TypeComposition ARGUMENT_ARRAY_CLZCOMP;
     private static ArrayHandle     ARGUMENT_ARRAY_EMPTY;
+
+    private static TypeComposition REGISTER_CLZCOMP;
+    private static MethodStructure REGISTER_CONSTRUCT;
     }
