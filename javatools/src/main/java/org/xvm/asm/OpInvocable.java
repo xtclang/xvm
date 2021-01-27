@@ -218,7 +218,7 @@ public abstract class OpInvocable extends Op
         }
     protected String getMethodString()
         {
-        return m_constMethod == null ? "???" : m_constMethod.getName();
+        return Argument.toIdString(m_constMethod, m_nMethodId);
         }
     protected String getParamsString()
         {
