@@ -242,10 +242,10 @@ public class CallChain
      */
     public int callSuper01(Frame frame, int iReturn)
         {
-        ObjectHandle hThis  = frame.getThis();
-        int          nDepth = frame.m_nChainDepth + 1;
+        ObjectHandle hThis     = frame.getThis();
+        int          nDepth    = frame.m_nChainDepth + 1;
+        MethodBody   bodySuper = f_aMethods[nDepth];
 
-        MethodBody bodySuper = f_aMethods[nDepth];
         switch (bodySuper.getImplementation())
             {
             case Field:
@@ -254,11 +254,12 @@ public class CallChain
 
             case Native:
                 {
+                ClassTemplate   template  = hThis.getTemplate();
                 MethodStructure method    = bodySuper.getMethodStructure();
                 Component       container = method.getParent().getParent();
                 return container instanceof PropertyStructure
-                    ? hThis.getTemplate().invokeNativeGet(frame, container.getName(), hThis, iReturn)
-                    : hThis.getTemplate().invokeNativeN(frame, method, hThis, Utils.OBJECTS_NONE, iReturn);
+                    ? template.invokeNativeGet(frame, container.getName(), hThis, iReturn)
+                    : template.invokeNativeN(frame, method, hThis, Utils.OBJECTS_NONE, iReturn);
                 }
             case Default:
             case Explicit:
@@ -279,10 +280,10 @@ public class CallChain
      */
     public int callSuper10(Frame frame, ObjectHandle hArg)
         {
-        ObjectHandle hThis  = frame.getThis();
-        int          nDepth = frame.m_nChainDepth + 1;
+        ObjectHandle hThis     = frame.getThis();
+        int          nDepth    = frame.m_nChainDepth + 1;
+        MethodBody   bodySuper = f_aMethods[nDepth];
 
-        MethodBody bodySuper = f_aMethods[nDepth];
         switch (bodySuper.getImplementation())
             {
             case Field:
@@ -297,7 +298,7 @@ public class CallChain
             case Explicit:
                 {
                 MethodStructure methodSuper = bodySuper.getMethodStructure();
-                ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getMaxVars()];
+                ObjectHandle[]  ahVar       = new ObjectHandle[methodSuper.getMaxVars()];
                 ahVar[0] = hArg;
 
                 return frame.invoke1(this, nDepth, hThis, ahVar, Op.A_IGNORE);
@@ -313,19 +314,22 @@ public class CallChain
      */
     public int callSuperN1(Frame frame, ObjectHandle[] ahArg, int iReturn, boolean fReturnTuple)
         {
-        ObjectHandle hThis  = frame.getThis();
-        int          nDepth = frame.m_nChainDepth + 1;
-
-        MethodBody bodySuper = f_aMethods[nDepth];
+        ObjectHandle    hThis       = frame.getThis();
+        int             nDepth      = frame.m_nChainDepth + 1;
+        MethodBody      bodySuper   = f_aMethods[nDepth];
         MethodStructure methodSuper = bodySuper.getMethodStructure();
 
         switch (bodySuper.getImplementation())
             {
             case Native:
+                {
+                ClassTemplate template = hThis.getTemplate();
                 return fReturnTuple
-                    ? hThis.getTemplate().invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn)
-                    : hThis.getTemplate().invokeNativeT(frame, methodSuper, hThis, ahArg, iReturn);
-
+                    ? template.invokeNativeT(frame, methodSuper, hThis, ahArg, iReturn)
+                    : ahArg.length == 1
+                        ? template.invokeNative1(frame, methodSuper, hThis, ahArg[0], iReturn)
+                        : template.invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn);
+                }
             case Default:
             case Explicit:
                 {
@@ -346,10 +350,9 @@ public class CallChain
      */
     public int callSuperNN(Frame frame, ObjectHandle[] ahArg, int[] aiReturn)
         {
-        ObjectHandle hThis  = frame.getThis();
-        int          nDepth = frame.m_nChainDepth + 1;
-
-        MethodBody bodySuper = f_aMethods[nDepth];
+        ObjectHandle    hThis       = frame.getThis();
+        int             nDepth      = frame.m_nChainDepth + 1;
+        MethodBody      bodySuper   = f_aMethods[nDepth];
         MethodStructure methodSuper = bodySuper.getMethodStructure();
 
         switch (bodySuper.getImplementation())

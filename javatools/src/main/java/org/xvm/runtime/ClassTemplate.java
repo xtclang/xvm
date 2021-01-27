@@ -717,6 +717,11 @@ public abstract class ClassTemplate
                         case Op.R_NEXT:
                             return frame.assignValue(iReturn, xTuple.H_VOID);
 
+                        case Op.R_CALL:
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                frameCaller.assignTuple(iReturn, xTuple.H_VOID));
+                            return Op.R_CALL;
+
                         case Op.R_EXCEPTION:
                             return Op.R_EXCEPTION;
 
@@ -729,6 +734,11 @@ public abstract class ClassTemplate
                         {
                         case Op.R_NEXT:
                             return frame.assignTuple(iReturn, frame.popStack());
+
+                        case Op.R_CALL:
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                frameCaller.assignTuple(iReturn, frameCaller.popStack()));
+                            return Op.R_CALL;
 
                         case Op.R_EXCEPTION:
                             return Op.R_EXCEPTION;
@@ -1992,13 +2002,12 @@ public abstract class ClassTemplate
                 return continuation.proceed(frame);
 
             case Op.R_CALL:
-                Frame.Continuation stepNext = frameCaller ->
+                frame.m_frameNext.addContinuation(frameCaller ->
                     {
                     RefHandle hRefPublic = (RefHandle) frameCaller.peekStack();
                     hOuter.setField(idProp, hRefPublic);
                     return continuation.proceed(frameCaller);
-                    };
-                frame.m_frameNext.addContinuation(stepNext);
+                    });
                 return Op.R_CALL;
 
             case Op.R_EXCEPTION:
