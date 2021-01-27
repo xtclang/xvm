@@ -144,18 +144,29 @@ public class MethodInfo
             {
             MethodBody bodyThat = aAdd[iThat];
             // allow duplicate interface methods to survive (we need the correct "default" to be on
-            // top, and we don't want to yank its duplicate from underneath)
-            if (bodyThat.getImplementation().getExistence() != MethodBody.Existence.Interface)
+            // top, and we don't want to yank its duplicate from underneath), except when the
+            // equivalent bodies would sit next to each other
+            boolean fAllowDuplicate =
+                bodyThat.getImplementation().getExistence() == MethodBody.Existence.Interface;
+
+            for (int iThis = 0; iThis < cBase; ++iThis)
                 {
-                for (int iThis = 0; iThis < cBase; ++iThis)
+                // discard duplicate "into" and class methods
+                if (bodyThat.equals(aBase[iThis]))
                     {
-                    // discard duplicate "into" and class methods
-                    if (bodyThat.equals(aBase[iThis]))
+                    if (fAllowDuplicate && !(iThis == 0 && iThat == cAdd - 1))
                         {
-                        // we found a duplicate, so we can ignore it (it'll get added when we add
-                        // all of the bodies from this)
-                        continue NextLayer;
+                        continue;
                         }
+
+                    // we found a duplicate, so we can ignore it (it'll get added when we add
+                    // all of the bodies from this)
+                    if (cBase == 1)
+                        {
+                        // the duplicate was the only body at the base
+                        return that;
+                        }
+                    continue NextLayer;
                     }
                 }
             if (listMerge == null)
