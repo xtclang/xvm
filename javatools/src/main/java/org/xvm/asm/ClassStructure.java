@@ -3355,13 +3355,13 @@ public class ClassStructure
         }
 
     /**
-     * If explicit "toString()" exists and "appendTo()" does not, generate "appendTo()" to route to
-     * "toString" and a trivial "estimateStringLength".
+     * If explicit "toString()" exists, not using the "super()", and "appendTo()" does not exist,
+     * generate "appendTo()" to route to "toString" and a trivial "estimateStringLength".
      */
     private void synthesizeAppendTo(boolean fRegisterConstants)
         {
         MethodStructure methToString = findMethod("toString", 0);
-        if (methToString != null)
+        if (methToString != null && !methToString.usesSuper())
             {
             ConstantPool pool         = getConstantPool();
             TypeConstant typeAppender = pool.ensureParameterizedTypeConstant(
