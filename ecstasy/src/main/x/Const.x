@@ -29,12 +29,4 @@ interface Const
      * compare each of the fields for equality.
      */
     static <CompileType extends Const> Boolean equals(CompileType value1, CompileType value2);
-
-    @Override
-    String toString()
-        {
-        StringBuffer buf = new StringBuffer(estimateStringLength());
-        appendTo(buf);
-        return buf.toString();
-        }
     }
