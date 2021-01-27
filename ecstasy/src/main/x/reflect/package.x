@@ -205,6 +205,9 @@ package reflect
          */
         conditional ParamType defaultValue();
 
+
+        // ----- Stringable methods ----------------------------------------------------------------
+
         @Override
         Int estimateStringLength()
             {
@@ -247,6 +250,9 @@ package reflect
          * @return (conditional) the return value name
          */
         conditional String hasName();
+
+
+        // ----- Stringable methods ----------------------------------------------------------------
 
         @Override
         Int estimateStringLength()
