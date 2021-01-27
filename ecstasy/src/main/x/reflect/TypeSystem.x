@@ -238,17 +238,17 @@ const TypeSystem
             typeExpr = parser.parseTypeExpression();
 
             // if the parser left something unparsed, then the type name is not valid
-            if (!parser.eof)
-                {
-                failure = $"Type name contains unparsable element(s): {name.quoted()}";
-                }
-            else
+            if (parser.eof)
                 {
                 if (Type result := typeExpr.resolveType(this))
                     {
                     lookupCache[name] = new CacheEntry(result);
                     return True, result;
                     }
+                }
+            else
+                {
+                failure = $"Type name contains unparsable element(s): {name.quoted()}";
                 }
             }
         catch (Exception e)
@@ -258,8 +258,12 @@ const TypeSystem
 
         if (failure == Null && exception != Null)
             {
-            failure = &exception.actualClass.name;
-            if (exception.text != Null)
+            failure = $"Type name contains unparsable element(s): {name.quoted()}";
+            if (exception.text == Null)
+                {
+                failure += &exception.actualClass.name;
+                }
+            else
                 {
                 failure += ": " + exception.text;
                 }
