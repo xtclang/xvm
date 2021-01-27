@@ -21,21 +21,4 @@ const RTProperty<Target, Referent, Implementation extends Ref<Referent>>
     @Override Implementation of(Target target)              { TODO("native"); }
     @Override Referent get(Target target)                   { TODO("native"); }
     @Override void set(Target target, Referent value)       { TODO("native"); }
-
-
-    // ----- Stringable methods --------------------------------------------------------------------
-
-    @Override
-    Int estimateStringLength()
-        {
-        return Referent.estimateStringLength() + 1 + name.size;
-        }
-
-    @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
-        Referent.appendTo(buf);
-        buf.add(' ');
-        return name.appendTo(buf);
-        }
     }

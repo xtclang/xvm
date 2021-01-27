@@ -123,4 +123,21 @@ interface Property<Target, Referent, Implementation extends Ref<Referent>>
 
         this.of(target).as(Var<Referent>).set(value);
         }
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return Referent.estimateStringLength() + 1 + name.size;
+        }
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf)
+        {
+        Referent.appendTo(buf);
+        buf.add(' ');
+        return name.appendTo(buf);
+        }
     }

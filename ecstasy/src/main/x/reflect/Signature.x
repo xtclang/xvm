@@ -83,6 +83,9 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
      */
     conditional MethodTemplate hasTemplate();
 
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
     @Override
     Int estimateStringLength()
         {
@@ -138,7 +141,7 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
         Int      count   = returns.size;
         if (count == 0)
             {
-            buf.addAll("void");
+            "void".appendTo(buf);
             }
         else
             {
@@ -148,7 +151,7 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
                 {
                 if (conditionalResult)
                     {
-                    buf.addAll("conditional ");
+                    "conditional ".appendTo(buf);
                     first  = 1;
                     parens = count > 2;
                     }
@@ -167,7 +170,7 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
                 {
                 if (!EachReturn.first)
                     {
-                    buf.addAll(", ");
+                    ", ".appendTo(buf);
                     }
                 returns[i].appendTo(buf);
                 }
@@ -186,7 +189,7 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
             {
             if (!EachParam.first)
                 {
-                buf.addAll(", ");
+                ", ".appendTo(buf);
                 }
             param.appendTo(buf);
             }

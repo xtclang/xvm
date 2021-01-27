@@ -899,14 +899,16 @@ public class MethodInfo
                         break;
 
                     case Default:
-                        // all defaults should be placed at the end of the chain
+                        // all defaults should be placed below any explicit or delegating methods
                         if (listDefault == null)
                             {
-                            // check if there's anything, but defaults below this point
+                            // check if there's anything of higher priority below this point
                             boolean fAllDefaults = true;
                             for (int j = i + 1; j < c; j++)
                                 {
-                                if (chain[j].getImplementation() != Implementation.Default)
+                                Implementation implPrev = chain[j].getImplementation();
+                                if (implPrev == Implementation.Explicit ||
+                                    implPrev == Implementation.Delegating)
                                     {
                                     fAllDefaults = false;
                                     break;

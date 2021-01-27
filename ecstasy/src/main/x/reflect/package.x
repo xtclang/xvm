@@ -222,8 +222,8 @@ package reflect
             ParamType.appendTo(buf);
             if (String name := hasName())
                 {
-                buf.add(' ')
-                   .addAll(name);
+                buf.add(' ');
+                name.appendTo(buf);
                 }
             return buf;
             }
@@ -265,8 +265,8 @@ package reflect
             ReturnType.appendTo(buf);
             if (String name := hasName())
                 {
-                buf.add(' ')
-                   .addAll(name);
+                buf.add(' ');
+                name.appendTo(buf);
                 }
             return buf;
             }
