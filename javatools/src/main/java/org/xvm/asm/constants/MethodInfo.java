@@ -116,6 +116,11 @@ public class MethodInfo
         assert !this.isFunction() && !this.isConstructor() && !that.isFunction() && !that.isConstructor();
         assert this.getAccess().isAsAccessibleAs(Access.PROTECTED) && that.getAccess().isAsAccessibleAs(Access.PROTECTED);
 
+        if (this.equals(that))
+            {
+            return this;
+            }
+
         MethodBody[] aBase = this.m_aBody;
         MethodBody[] aAdd  = that.m_aBody;
         int          cBase = aBase.length;
@@ -424,7 +429,6 @@ public class MethodInfo
             }
 
         MethodBody bodyFirstNonDefault = null;
-        MethodBody bodyFirstDefault    = null;
         for (MethodBody body : m_aBody)
             {
             switch (body.getImplementation())
@@ -442,14 +446,6 @@ public class MethodInfo
                     break;
 
                 case Default:
-                    // the first encountered default body is "made real" if there are no
-                    // non-interface bodies
-                    if (bodyFirstDefault == null)
-                        {
-                        bodyFirstDefault = body;
-                        }
-                    break;
-
                 case Native:
                 case Explicit:
                 case Capped:
@@ -465,12 +461,8 @@ public class MethodInfo
                 }
             }
 
-        MethodBody bodyResult = bodyFirstDefault == null
-            ? new MethodBody(bodyFirstNonDefault.getIdentity(),
-                bodyFirstNonDefault.getSignature(), Implementation.Native)
-            : new MethodBody(bodyFirstDefault.getIdentity(),
-                bodyFirstDefault.getSignature(), Implementation.Explicit);
-
+        MethodBody bodyResult = new MethodBody(bodyFirstNonDefault.getIdentity(),
+                bodyFirstNonDefault.getSignature(), Implementation.Native);
         return layerOn(new MethodInfo(bodyResult), true, errs);
         }
 
