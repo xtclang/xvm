@@ -7,6 +7,9 @@ interface DBSchema
     // ----- DBObject methods ----------------------------------------------------------------------
 
     @Override
+    @RO DBSchema!? dbParent;
+
+    @Override
     @RO DBCategory dbCategory.get()
         {
         return DBSchema;
