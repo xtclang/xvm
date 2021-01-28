@@ -712,7 +712,7 @@ interface Type<DataType, OuterType>
         }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(Appender<Char> buf, Boolean insideIntersection = False)
         {
         switch (form)
             {
@@ -773,7 +773,7 @@ interface Type<DataType, OuterType>
 
             case Intersection:
                 assert (Type!<> t1, Type!<> t2) := relational();
-                if (t1 == Nullable)
+                if (t1 == Nullable && !insideIntersection)
                     {
                     if (t2.relational())
                         {
@@ -789,7 +789,7 @@ interface Type<DataType, OuterType>
                     }
                 else
                     {
-                    t1   .appendTo(buf);
+                    t1   .appendTo(buf, insideIntersection=True);
                     " | ".appendTo(buf);
                     if (t2.relational())
                         {
