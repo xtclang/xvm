@@ -7,6 +7,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.PackageStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -208,8 +210,19 @@ public class xRTComponentTemplate
                     break;
 
                 case MODULE:
+                    hParent = xRTModuleTemplate.makeHandle((ModuleStructure) parent);
+                    break;
+
                 case PACKAGE:
+                    hParent = xRTPackageTemplate.makeHandle((PackageStructure) parent);
+                    break;
+
                 case CLASS:
+                case INTERFACE:
+                case ENUM:
+                case ENUMVALUE:
+                case MIXIN:
+                case SERVICE:
                     hParent = xRTClassTemplate.makeHandle((ClassStructure) parent);
                     break;
 

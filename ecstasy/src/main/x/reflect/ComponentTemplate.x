@@ -39,7 +39,7 @@ interface ComponentTemplate
     @RO Format format;
 
     /**
-     * The template within which this template exists. For runtime templates, only the file template
+     * The template within which this template exists. For runtime templates, only the [FileTemplate]
      * will have no parent.
      */
     @RO ComponentTemplate!? parent;
@@ -49,7 +49,7 @@ interface ComponentTemplate
      */
     @RO ClassTemplate? containingClass.get()
         {
-        ComponentTemplate!? parent = this.parent;
+        ComponentTemplate? parent = this.parent;
         while (parent != Null)
             {
             if (parent.is(ClassTemplate))
@@ -62,14 +62,66 @@ interface ComponentTemplate
         }
 
     /**
+     * The ModuleTemplate this template belongs to. For runtime templates, only the [FileTemplate]
+     * will have no `containingModule`.
+     */
+    @RO ModuleTemplate? containingModule.get()
+        {
+        ComponentTemplate? parent = this.parent;
+        while (parent != Null)
+            {
+            if (parent.is(ModuleTemplate))
+                {
+                return parent;
+                }
+            parent = parent.parent;
+            }
+        return Null;
+        }
+
+    /**
+     * The FileTemplate this template belongs to.
+     */
+    @RO FileTemplate containingFile.get()
+        {
+        if (this.is(FileTemplate))
+            {
+            return this;
+            }
+
+        ComponentTemplate? parent = this.parent;
+        while (True)
+            {
+            if (parent.is(FileTemplate))
+                {
+                return parent;
+                }
+
+            assert parent != Null;
+            parent = parent.parent;
+            }
+        }
+
+    /**
      * The simple name of the template. The name ordinarily identifies the template within the scope
      * of its parent; the exceptions to this rule are the file and method templates.
      */
     @RO String name;
 
+    /**
+     * The path of the template is composed of its module qualified name followed by a colon,
+     * followed by a dot-delimited sequence of names necessary to identify this class within its
+     * module.
+     */
     @RO String path.get()
         {
-        return parent?.path + '.' + name : name;
+        ComponentTemplate? parent = this.parent;
+        if (parent == Null)
+            {
+            return name;
+            }
+        Char separator = parent.is(ModuleTemplate) ? ':' : '.';
+        return parent.path + separator + name;
         }
 
     /**

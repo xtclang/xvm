@@ -19,7 +19,4 @@ class RTComponentTemplate
 
     @Override Iterator<ComponentTemplate> children();
     @Override String toString();                            // TODO eventually make this natural
-
-    // natural
-    //   @RO ClassTemplate? containingClass;
     }

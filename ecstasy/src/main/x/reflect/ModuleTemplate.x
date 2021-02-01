@@ -21,6 +21,12 @@ interface ModuleTemplate
     @Override
     @RO FileTemplate parent;
 
+    @Override
+    @RO String path.get()
+        {
+        return qualifiedName;
+        }
+
     /**
      * Indicates whether this template has been "resolved", which means that it is ready to answer
      * all questions about the module's content (children, contributions, etc.)
