@@ -165,7 +165,7 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
         }
 
     class ClientChange
-            implements db.DBMap.Change<Key, Value>
+            implements db.DBMap<Key, Value>.TxChange
         {
         construct()
             {
@@ -175,18 +175,6 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
 
         protected HashMap<Key, Value> internalAdded;
         protected HashMap<Key, Value> internalRemoved;
-
-        @Override
-        ClientDBMap pre.get()
-            {
-            TODO("read-only new ClientDBMap(...)");
-            }
-
-        @Override
-        ClientDBMap post.get()
-            {
-            TODO("read-only this.ClientDBMap");
-            }
 
         @Override
         Map<Key, Value> added.get()

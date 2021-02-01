@@ -15,7 +15,7 @@ class ClientTransaction<Schema extends db.RootSchema>
     @Override
     Boolean commit()
         {
-        for (db.DBObject.Change change : dbTransaction.contents.values)
+        for (db.DBObject.TxChange change : dbTransaction.contents.values)
             {
             if (change.is(ClientDBMap.ClientChange) && !change.apply())
                 {
@@ -28,7 +28,7 @@ class ClientTransaction<Schema extends db.RootSchema>
     @Override
     void rollback()
         {
-        for (db.DBObject.Change change : dbTransaction.contents.values)
+        for (db.DBObject.TxChange change : dbTransaction.contents.values)
             {
             if (change.is(ClientDBMap.ClientChange))
                 {
