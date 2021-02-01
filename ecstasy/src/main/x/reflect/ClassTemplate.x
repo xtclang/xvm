@@ -465,11 +465,13 @@ interface ClassTemplate
         }
 
     /**
-     * Determine the path that identifies this ClassTemplate within its FileTemplate.
+     * Determine the path that identifies this ClassTemplate within the main module of its
+     * containing FileTemplate.
      *
-     * @return True iff the class exists within the specified TODO
-     * @return (optional) the qualified path to the class within the TypeSystem, in a format that
-     *         is supported by [TypeSystem.classForName]
+     * @return True iff the class template can be addressed within the the main module of its
+     *         enclosing FileTemplate
+     * @return (optional) the qualified path to the class from the main module of the enclosing
+     *         FileTemplate
      */
     conditional String pathWithin()
         {
