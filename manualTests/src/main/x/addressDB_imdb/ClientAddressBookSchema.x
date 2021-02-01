@@ -9,9 +9,11 @@ class ClientAddressBookSchema
         }
     finally
         {
+        // custom schema property constructions
         contacts = new ClientContacts(ServerAddressBookSchema.contacts);
         }
 
+    // custom custom schema property declarations
     @Override
     @Unassigned AddressBookDB.Contacts contacts;
 

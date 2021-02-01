@@ -1,11 +1,15 @@
 import ecstasy.mgmt.ModuleRepository;
 
 import ecstasy.reflect.ClassTemplate;
+import ecstasy.reflect.ClassTemplate.Composition;
 import ecstasy.reflect.ClassTemplate.Contribution;
 import ecstasy.reflect.FileTemplate;
 import ecstasy.reflect.ModuleTemplate;
 import ecstasy.reflect.PropertyTemplate;
 import ecstasy.reflect.TypeTemplate;
+
+import oodb.DBObject;
+import oodb.DBObject.DBCategory;
 
 /**
  * Code generator for imdb connection.
@@ -19,7 +23,7 @@ class ImdbCodeGenerator
      */
     ModuleTemplate generateStubs(ModuleRepository repository, String dbModuleName, Directory buildDir)
         {
-        ModuleTemplate dbModule = repository.getModule(dbModuleName);
+        ModuleTemplate dbModule = repository.getResolvedModule(dbModuleName);
 
         String appName = dbModuleName; // TODO GG: allow fully qualified name
 
@@ -95,13 +99,51 @@ class ImdbCodeGenerator
      void createClient(File clientFile, String appName, String appSchema, String clientSchema,
                        ClassTemplate appSchemaTemplate)
         {
-        String clientTemplate = $./templates/ClientClass.txt;
+        String clientTemplate = $./templates/ClientSchema.txt;
         String clientSource   = clientTemplate
                                 .replace("%appName%",   appName)
                                 .replace("%appSchema%", appSchema);
 
-        // TODO
-        // Map<String, ClassTemplate> mapDbProps = collectDBProps(appSchemaTemplate);
+        Tuple<PropertyTemplate, DBCategory>[] dbProps = collectDBProps(appSchemaTemplate);
+
+        String propertyDeclarations  = "";
+        String propertyConstructions = "";
+
+        for (Tuple<PropertyTemplate, DBCategory> propInfo : dbProps)
+            {
+            PropertyTemplate property = propInfo[0];
+            DBCategory       category = propInfo[1];
+
+            String declarationTemplate  = $./templates/ClientPropertyDeclaration.txt;
+            String constructionTemplate = $./templates/ClientPropertyConstruction.txt;
+
+            String propertyName     = property.name;
+            assert Composition comp := property.type.fromClass();
+            assert comp.is(ClassTemplate);
+
+            String propertyType     = comp.name; // displayName
+            String propertyTypeName = propertyType; // TODO handle composite type
+
+            propertyDeclarations  += declarationTemplate
+                                    .replace("%propertyName%", propertyName)
+                                    .replace("%propertyType%", propertyType);
+            propertyConstructions += constructionTemplate
+                                    .replace("%appSchema%"       , appSchema)
+                                    .replace("%propertyName%"    , propertyName)
+                                    .replace("%propertyTypeName%", propertyTypeName);
+            switch (category)
+                {
+                case DBMap:
+                    break;
+
+                default:
+                    TODO
+                }
+            }
+
+        clientSource = clientSource
+                        .replace("%ClientPropertyDeclarations%",  propertyDeclarations)
+                        .replace("%ClientPropertyConstructions%", propertyConstructions);
 
         clientFile.create();
         writeUtf(clientFile, clientSource);
@@ -110,13 +152,26 @@ class ImdbCodeGenerator
     /**
      * Collect all DB properties.
      */
-    Map<String, ClassTemplate> collectDBProps(ClassTemplate appSchemaTemplate)
+    Tuple<PropertyTemplate, DBCategory>[] collectDBProps(ClassTemplate appSchemaTemplate)
         {
+        Tuple<PropertyTemplate, DBCategory>[] properties = new Array();
+
+        NextProperty:
         for (PropertyTemplate prop : appSchemaTemplate.properties)
             {
-            console.println(prop);
+            for ((DBCategory category, TypeTemplate dbType) : DB_TEMPLATES)
+                {
+                if (prop.type.isA(dbType))
+                    {
+                    properties += Tuple:(prop, category);
+                    continue NextProperty;
+                    }
+                }
+            throw new UnsupportedOperation($"Unsupported property type {prop.name} {prop.type}");
             }
-        TODO
+
+        // TODO recurse to super template
+        return properties;
         }
 
     /**
@@ -135,4 +190,21 @@ class ImdbCodeGenerator
 
         file.contents = out.bytes.freeze(True);
         }
+
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    static TypeTemplate DBObject_TEMPLATE = DBObject.baseTemplate.type;
+
+    static Map<DBCategory, TypeTemplate> DB_TEMPLATES =
+        Map:[
+            DBMap       = oodb.DBMap     .baseTemplate.type,
+            DBList      = oodb.DBList    .baseTemplate.type,
+            DBQueue     = oodb.DBQueue   .baseTemplate.type,
+            DBLog       = oodb.DBLog     .baseTemplate.type,
+            DBCounter   = oodb.DBCounter .baseTemplate.type,
+            DBValue     = oodb.DBValue   .baseTemplate.type,
+            DBFunction  = oodb.DBFunction.baseTemplate.type,
+            DBSchema    = oodb.DBSchema  .baseTemplate.type
+            ];
     }

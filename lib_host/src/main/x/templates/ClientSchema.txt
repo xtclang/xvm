@@ -9,17 +9,12 @@ class Client%appSchema%
         }
     finally
         {
-        // custom schema property construction
-        // example:
-        //    contacts = new ClientContacts(ServerAddressBookSchema.contacts);
-        %ClientPropertyConstruction%
+        // custom schema property constructions
+%ClientPropertyConstructions%
         }
 
-    // custom property type declarations
-    // example:
-    //     @Override
-    //     @Unassigned AddressBookDB.Contacts contacts;
-    %ClientPropertyDeclarations%
+    // custom custom schema property declarations
+%ClientPropertyDeclarations%
 
     @Override
     @Unassigned db.DBUser dbUser;
@@ -40,11 +35,7 @@ class Client%appSchema%
 
 
     // custom ClientDB* classes
-    // example:
-    // class ClientContacts
-    //      extends imdb.ClientDBMap<String, Contact>
-    //      incorporates Contacts
-    %ClientChildrenClasses%
+%ClientChildrenClasses%
 
     class ClientTransaction
             extends imdb.ClientTransaction<%appName%.%appSchema%>
@@ -68,7 +59,7 @@ class Client%appSchema%
             return this.Client%appSchema%;
             }
 
-        %ClientTxPropertyGetters%
+%ClientTxPropertyGetters%
 
         @Override
         Boolean pending.get()
