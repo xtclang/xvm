@@ -105,7 +105,7 @@ interface DBTransaction<Schema extends RootSchema>
      * The contents of the transaction, which define the total net change represented by the
      * transaction.
      */
-    @RO Map<String, DBObject.Change> contents;
+    @RO Map<String, DBObject.TxChange> contents;
 
     /**
      * Add a transaction _condition_ that indicates additional requirements that must be met for

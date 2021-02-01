@@ -7,7 +7,7 @@
  * information as it desires via its schema, but there will always exist the following contents,
  * regardless of the database implementation:
  *
- * * `sys/info` - the [DBInfo] singleton for this Database
+ * * `sys/info` - the [DBValue] containing the [DBInfo] value for this Database
  * * `sys/users` - a [DBMap] of user name to [DBUser]
  * * `sys/types` - a [DBList] of all distinct `Type` objects that are supported by the Database
  * * `sys/objects` - a [DBMap] of name (path) to [DBObject]
@@ -17,7 +17,7 @@
  * * `sys/lists` - a [DBMap] of name (path) to [DBList]
  * * `sys/logs` - a [DBMap] of name (path) to [DBLog]
  * * `sys/counters` - a [DBMap] of name (path) to [DBCounter]
- * * `sys/singletons` - a [DBMap] of name (path) to singleton DBObjects
+ * * `sys/values` - a [DBMap] of name (path) to [DBValue] DBObjects
  * * `sys/functions` - a [DBMap] of name (path) to [DBFunction]
  * * `sys/pending` - a [DBList] ordered by scheduled invocation date/time of [DBInvoke] objects
  * * `sys/transactions` - a [DBLog] of [Transaction] objects
@@ -26,9 +26,9 @@ interface SystemSchema
         extends DBSchema
     {
     /**
-     * The [DBInfo] singleton for this Database.
+     * The [DBValue] containing the [DBInfo] value for this Database.
      */
-    @RO DBSingleton<DBInfo> info;
+    @RO DBValue<DBInfo> info;
 
     /**
      * A [DBMap] of user name to [DBUser].
@@ -76,9 +76,9 @@ interface SystemSchema
     @RO DBMap<String, DBCounter> counters;
 
     /**
-     * A [DBMap] of name (path) to [DBSingleton].
+     * A [DBMap] of name (path) to [DBValue].
      */
-    @RO DBMap<String, DBSingleton> singletons;
+    @RO DBMap<String, DBValue> values;
 
     /**
      * A [DBMap] of name (path) to [DBFunction].

@@ -36,20 +36,14 @@ interface DBLog<Element>
     interface Entry
         {
         /**
-         * The `DateTime` that the item was logged.
-         */
-        @RO DateTime datetime;
-
-        /**
-         * The [DBTransaction] within which the item was logged. Note that it may be expensive to
-         * obtain historical transactional data.
-         */
-        @RO DBTransaction transaction;
-
-        /**
          * The element that was logged.
          */
         @RO Element value;
+
+        /**
+         * The `DateTime` that the item was logged.
+         */
+        @RO DateTime datetime;
 
         /**
          * An estimated size, in bytes, for the log entry.
@@ -92,14 +86,16 @@ interface DBLog<Element>
         }
 
 
-    // ----- transaction records -------------------------------------------------------------------
+    // ----- transactional information -------------------------------------------------------------
 
     /**
-     * Represents additions to a transactional database log.
+     * Represents specific database changes that occurred to a transactional database log.
+     *
+     * This interface represents the change without the context of the `DBLog`, thus it is `static`,
+     * and cannot provide a before and after view on its own; when combined with the `TxChange`
+     * interface, it can provide both the change information, and a before/after view of the data.
      */
-    @Override
-    static interface Change<Element>
-            extends DBObject.Change
+    static interface DBChange<Element>
         {
         /**
          * The elements appended to the `Log`.
@@ -116,5 +112,35 @@ interface DBLog<Element>
          * any items subsequently logged within the transaction _may_ appear in the list.
          */
         List<Element> removed;
+        }
+
+    /**
+     * Represents a transactional change to a database log.
+     *
+     * This interface provides both the discrete change information, as well as the contextual
+     * before-and-after view of the transaction. Obtaining a 'before' or 'after' transactional view
+     * of the log should be assumed to be a relatively expensive operation, particularly for an
+     * historical `TxChange` (one pulled from some previous point in the a commit history).
+     */
+    @Override
+    interface TxChange
+            extends DBChange<Element>
+        {
+        }
+
+
+    // ----- transaction trigger API ---------------------------------------------------------------
+
+    /**
+     * Represents an automatic response to a change that occurs when a transaction commits.
+     *
+     * This interface can be used in lieu of the more generic [DBObject.Trigger] interface, but it
+     * exists only as a convenience, in that it can save the application developer a few type-casts
+     * that might otherwise be necessary.
+     */
+    @Override
+    static interface Trigger<TxChange extends DBLog.TxChange>
+            extends DBObject.Trigger<TxChange>
+        {
         }
     }

@@ -23,7 +23,7 @@ interface DBList<Element>
         }
 
 
-    // ----- transaction records -------------------------------------------------------------------
+    // ----- transactional information -------------------------------------------------------------
 
     /**
      * Represents a change to a database list. Most list changes are extremely compact, representing
@@ -32,12 +32,11 @@ interface DBList<Element>
      * change may be such that it is easiest to represent as the removal of all previous contents,
      * followed by the addition of those same contents in a different order.
      *
-     * If the transaction is historical, the "pre" and "post" versions of the `List` may not be
-     * available, and if they are available, they may be expensive to reconstruct.
+     * This interface represents the change without the context of the `DBList`, thus it is `static`
+     * and cannot provide a before and after view on its own; when combined with the `TxChange`
+     * interface, it can provide both the change information, and a before/after view of the data.
      */
-    @Override
-    static interface Change<Element>
-            extends DBObject.Change
+    static interface DBChange<Element>
         {
         /**
          * The elements added to the `List`. The key of this map is the index of the added element
@@ -65,5 +64,39 @@ interface DBList<Element>
          * specified by [added] into that list.
          */
         @RO Map<Int, Element> removed;
+        }
+
+    /**
+     * Represents a change to a database list. Most list changes are extremely compact, representing
+     * a limited set of additions and/or removals from the previous version of the list; however, a
+     * list may be used to represent the order of a set of values, and if that order changes, the
+     * change may be such that it is easiest to represent as the removal of all previous contents,
+     * followed by the addition of those same contents in a different order.
+     *
+     * This interface provides both the discrete change information, as well as the contextual
+     * before-and-after view of the transaction. Obtaining a 'before' or 'after' transactional
+     * view of the list should be assumed to be a relatively expensive operation, particularly for
+     * an historical `TxChange` (one pulled from some previous point in the a commit history).
+     */
+    @Override
+    interface TxChange
+            extends DBChange<Element>
+        {
+        }
+
+
+    // ----- transaction trigger API ---------------------------------------------------------------
+
+    /**
+     * Represents an automatic response to a change that occurs when a transaction commits.
+     *
+     * This interface can be used in lieu of the more generic [DBObject.Trigger] interface, but it
+     * exists only as a convenience, in that it can save the application developer a few type-casts
+     * that might otherwise be necessary.
+     */
+    @Override
+    static interface Trigger<TxChange extends DBList.TxChange>
+            extends DBObject.Trigger<TxChange>
+        {
         }
     }

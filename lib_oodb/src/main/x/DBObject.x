@@ -2,6 +2,17 @@
  * The base interface for all "database objects", which are the representations of database
  * organization, functionality, and storage. Examples including [DBMap], [DBQueue], [DBList],
  * [DBLog], [DBCounter], and [DBFunction].
+ *
+ * The various `DBObject` interfaces are expected to be implemented as part of a database engine
+ * implementation, but support orthogonal functionality that can be provided by an application
+ * developer, packaged in the form of a `mixin`. Additionally, it is expected that database engine
+ * implementations will make use of code generation to form a deployable database type system for
+ * an application's database module; while not required, the code generation is expected to support
+ * a richer set of capabilities (such as database evolution) without a dramatic performance impact.
+ * The result is that an application's database design is independent of a specific database engine
+ * implementation, coupling to it only through the implementation-independent `oodb` module
+ * interfaces, yet still able to provide the custom application object interfaces as if they were
+ * built into the database design itself.
  */
 interface DBObject
     {
@@ -13,7 +24,7 @@ interface DBObject
     /**
      * Categorizations of the various forms of `DBObject`s.
      */
-    enum DBCategory {DBSchema, DBMap, DBList, DBQueue, DBLog, DBCounter, DBSingleton, DBFunction}
+    enum DBCategory {DBSchema, DBMap, DBList, DBQueue, DBLog, DBCounter, DBValue, DBFunction}
 
     /**
      * The category of this `DBObject`.
@@ -228,6 +239,9 @@ interface DBObject
         throw new IllegalArgument($"Function does not exists: {fn}");
         }
 
+
+    // ----- transactional information -------------------------------------------------------------
+
     /**
      * Indicates whether the database object is both stateful and transactional, meaning that
      * mutations to the object are collected transactionally. Most database objects are
@@ -244,11 +258,16 @@ interface DBObject
 
     /**
      * Represents a change within a transactional database object.
+     *
+     * This interface provides a contextual before-and-after view of the transaction. Obtaining a
+     * 'before' or 'after' transactional view of the `DBObject` should be assumed to be a relatively
+     * expensive operation, particularly for a historical `TxChange` (one pulled from some previous
+     * point in the a commit history).
      */
-    static interface Change
+    interface TxChange
         {
         /**
-         * The state of of the `DBObject`, before this change was made.
+         * The state of the `DBObject`, before this change was made.
          *
          * The returned `DBObject` does not allow mutation.
          *
@@ -257,7 +276,7 @@ interface DBObject
         @RO DBObject pre;
 
         /**
-         * The contents of the `DBObject`, after this change was made.
+         * The state of the `DBObject`, after this change was made.
          *
          * The returned `DBObject` does not allow mutation.
          *
@@ -266,10 +285,23 @@ interface DBObject
         @RO DBObject post;
         }
 
+
+    // ----- transaction trigger API ---------------------------------------------------------------
+
     /**
      * Represents an automatic response to a change that occurs when a transaction commits.
+     *
+     * Triggers can be pre-commit or post-commit. The pre-commit form should be used when a trigger
+     * has to _prevent_ a transaction, or if it is essential that the information (changes) from the
+     * transaction be hidden until after the trigger has executed. The post-commit ("async") form
+     * should generally be used in all other scenarios.
+     *
+     * The `Trigger` is a static interface, because it is expected to (generally) be implemented
+     * separately from the `DBObject` itself. For example, it is expected that a `DBObject`
+     * implementation will be provided by a database engine implementer, while the `Trigger` will be
+     * authored by the application developer.
      */
-    static interface Trigger
+    static interface Trigger<TxChange extends DBObject.TxChange>
         {
         /**
          * `True` iff the trigger is interested in changes made by other triggers. It is possible
@@ -290,7 +322,7 @@ interface DBObject
          *
          * @return `True` iff the trigger is interested in the specified change
          */
-        Boolean appliesTo(Change change)
+        Boolean appliesTo(TxChange change)
             {
             return True;
             }
@@ -301,7 +333,7 @@ interface DBObject
         @RO Boolean async.get()
             {
             // when possible, a trigger should be asynchronous, but the typical use case is a
-            // trigger that needs to execute within a transaction in order to be able to prevent
+            // trigger thaj t needs to execute within a transaction in order to be able to prevent
             // the transaction from committing if something about the transaction is wrong
             return False;
             }
@@ -311,6 +343,6 @@ interface DBObject
          *
          * @param change  the change that the Trigger is firing in response to
          */
-        void process(Change change);
+        void process(TxChange change);
         }
     }

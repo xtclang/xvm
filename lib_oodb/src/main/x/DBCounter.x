@@ -1,5 +1,5 @@
 /**
- * A database counter is a specialized form of a `DBSingleton` that is used to generate unique keys
+ * A database counter is a specialized form of a `DBValue` that is used to generate unique keys
  * or to count things in a highly concurrent manner. Unlike most database objects, a counter can be
  * used in an _extra-transactional_ manner, which is extremely useful for unique id (e.g. sequential
  * key) generation. When used correctly, a `DBCounter` can support extremely high levels of
@@ -30,9 +30,9 @@
  * execution.)
  */
 interface DBCounter
-        extends DBSingleton<Int>
+        extends DBValue<Int>
     {
-    // ----- DBSingleton methods -------------------------------------------------------------------
+    // ----- DBValue methods -----------------------------------------------------------------------
 
     /**
      * Obtain the counter value without modifying the counter.
@@ -184,33 +184,64 @@ interface DBCounter
         }
 
 
-    // ----- transaction records -------------------------------------------------------------------
+    // ----- transactional information -------------------------------------------------------------
 
     /**
-     * Represents values emitted and/or operations conducted by a transactional database counter.
+     * Represents specific database changes that occurred to a transactional database counter.
      */
     @Override
-    static interface Change
-            extends DBObject.Change
+    static interface DBChange
+            extends DBValue.DBChange<Int>
         {
         /**
-         * The amount that the counter was adjusted by the transaction. In theory, a transactional
-         * change may have an exact "before" and "after" value, but might only have the amount by
-         * which the counter was adjusted.
+         * True iff the change represents a counter modification that was able to avoid reading the
+         * previous value. In theory, a change to a counter may be possible without reading the
+         * original value, by making the adjustment into a relative adjustment, and thus making the
+         * transaction more easily composable with other transactions (e.g. for purposes of
+         * re-ordering and/or reducing the frequency of roll-backs).
+         *
+         * Note that if `relativeOnly` is true, that the `oldValue` and `newValue` may not be known
+         * until the point that the transaction commits.
+         */
+        @RO Boolean relativeOnly;
+
+        /**
+         * The amount that the counter was adjusted by, during the transaction. In theory, a change
+         * to a counter may not have the "before" and "after" values, and instead may only have the
+         * size of the adjustment (which allows the transaction to be composed with, and re-ordered
+         * vis-a-vis other similar transactions).
          */
         @RO Int adjustment.get()
             {
-            return post.get() - pre.get();
+            return newValue - oldValue;
             }
+        }
 
-        /**
-         * True iff the counter was read during the transaction.
-         */
-        @RO Boolean valueRead;
+    /**
+     * Represents a transactional change to a database counter.
+     *
+     * This interface provides both the discrete change information, as well as the contextual
+     * before-and-after view of the counter modified in the transaction.
+     */
+    @Override
+    interface TxChange
+            extends DBChange
+        {
+        }
 
-        /**
-         * True iff the counter was written during the transaction.
-         */
-        @RO Boolean valueModified;
+
+    // ----- transaction trigger API ---------------------------------------------------------------
+
+    /**
+     * Represents an automatic response to a change that occurs when a transaction commits.
+     *
+     * This interface can be used in lieu of the more generic [DBObject.Trigger] interface, but it
+     * exists only as a convenience, in that it can save the application developer a few type-casts
+     * that might otherwise be necessary.
+     */
+    @Override
+    static interface Trigger<TxChange extends DBCounter.TxChange>
+            extends DBValue.Trigger<TxChange>
+        {
         }
     }
