@@ -2,39 +2,26 @@ module TestSimple
     {
     @Inject Console console;
 
-    package oodb import oodb.xtclang.org;
+    package db import oodb.xtclang.org;
 
+    import ecstasy.reflect.ClassTemplate;
+    import ecstasy.reflect.ComponentTemplate;
     import ecstasy.reflect.PropertyTemplate;
     import ecstasy.reflect.TypeTemplate;
 
-    import oodb.DBObject.DBCategory;
+    import db.DBObject.DBCategory;
 
     void run()
         {
+        Class clz = DBCategory;
+        ClassTemplate ct = clz.baseTemplate;
+
+        console.println($"ct={ct} path={ct.path} display={ct.displayName}");
+        console.println(ct.containingFile.mainModule.moduleNamesByPath);
+
+        Type type = DBCategory;
+        TypeTemplate tt = type.template;
+
+        console.println($"tt={tt}");
         }
-
-    void test(PropertyTemplate prop)
-        {
-        Map<DBCategory, PropertyTemplate[]> mapProps = new HashMap();
-
-        for ((DBCategory category, TypeTemplate dbType) : DB_TEMPLATES)
-            {
-            if (prop.type.isA(dbType))
-                {
-                mapProps.process(category, entry ->
-                    {
-                    PropertyTemplate[] props = entry.exists
-                            ? entry.value
-                            : new Array<PropertyTemplate>();
-                    entry.value = props.add(prop);
-                    return entry.key;
-                    });
-                }
-            }
-        }
-
-    static Map<DBCategory, TypeTemplate> DB_TEMPLATES =
-        Map:[
-            DBMap = oodb.DBMap.baseTemplate.type
-            ];
     }

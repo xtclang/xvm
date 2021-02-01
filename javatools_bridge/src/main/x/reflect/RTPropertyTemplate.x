@@ -9,6 +9,9 @@ class RTPropertyTemplate
         extends RTComponentTemplate
         implements PropertyTemplate
     {
-    @Override
-    TypeTemplate type.get()  { TODO("native"); }
+    @Override @RO TypeTemplate type;
+    @Override @RO Boolean      isConstant;
+
+    @Override conditional Const hasInitialValue();
+    @Override conditional (function Const ()) hasInitializer();
     }

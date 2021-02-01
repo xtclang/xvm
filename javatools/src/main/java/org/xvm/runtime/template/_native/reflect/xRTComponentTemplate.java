@@ -251,7 +251,7 @@ public class xRTComponentTemplate
     // ----- method implementations ----------------------------------------------------------------
 
     /**
-     * Implementation for: {@code Iterator<ComponentTemplate> children()}.
+     * Implementation for: {@code ComponentTemplate[] children()}.
      */
     public int invokeChildren(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
@@ -262,7 +262,7 @@ public class xRTComponentTemplate
         int i = 0;
         for (Component child : component.children())
             {
-            ahChildren[i++] = null; // TODO CP
+            ahChildren[i++] = null; // TODO GG
             }
         assert i == cChildren;
 

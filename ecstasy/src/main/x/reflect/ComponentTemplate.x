@@ -152,7 +152,7 @@ interface ComponentTemplate
     @RO String? doc;
 
     /**
-     * Iterate over the child templates of this template.
+     * The child templates of this template.
      */
-    Iterator<ComponentTemplate!> children();
+    ComponentTemplate![] children();
     }

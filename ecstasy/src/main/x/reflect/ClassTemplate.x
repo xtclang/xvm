@@ -417,9 +417,92 @@ interface ClassTemplate
         }
 
 
-    // ----- attributes ----------------------------------------------------------------------------
+    // ----- ClassTemplate API ---------------------------------------------------------------------
 
     /**
+     * TODO CP please explain
+     *
+     * @return True iff the class represents an inflated property
+     * @return (optional) the PropertyTemplate this class comes from
+     */
+    conditional PropertyTemplate fromProperty();
+
+
+    // ----- attributes ----------------------------------------------------------------------------
+
+    @Override
+    @RO ModuleTemplate containingModule.get()
+        {
+        ModuleTemplate? template = super();
+        assert template != Null;
+        return template;
+        }
+
+    /**
+     * Identically to [Class.implicitName], a name by which the Class represented by this
+     * ClassTemplate is globally visible at compile time.
+     */
+    @RO String? implicitName;
+
+    /**
+     * A name intended to be more easily human-readable than a fully qualified path (if possible).
+     */
+    @RO String displayName.get()
+        {
+        String? alias = implicitName;
+        if (alias != Null)
+            {
+            return alias;
+            }
+
+        if (String relative := pathWithin())
+            {
+            return relative;
+            }
+
+        // use absolute path
+        return path;
+        }
+
+    /**
+     * Determine the path that identifies this ClassTemplate within its FileTemplate.
+     *
+     * @return True iff the class exists within the specified TODO
+     * @return (optional) the qualified path to the class within the TypeSystem, in a format that
+     *         is supported by [TypeSystem.classForName]
+     */
+    conditional String pathWithin()
+        {
+        String path       = this.path;
+        assert Int colon := path.indexOf(':');
+        String moduleName = path[0 .. colon);
+
+        if (moduleName == containingModule.name)
+            {
+            String relPath = path.substring(colon+1);
+
+            for ((String name, String qualifiedName) :
+                    containingFile.mainModule.moduleNamesByPath)
+                {
+                if (qualifiedName == moduleName)
+                    {
+                    return True, name + '.' + relPath;
+                    }
+                }
+            }
+
+        return False;
+        }
+
+    /**
+     * TODO CP please explain
+     *
+     * @return True iff the class represents an inflated property
+     * @return (optional) the PropertyTemplate this class comes from
+     */
+    conditional PropertyTemplate fromProperty();
+
+     /**
      * Determine if the class is an inner class, which must be instantiated virtually.
      *
      * Consider the following example:
@@ -460,7 +543,7 @@ interface ClassTemplate
     /**
      * If the class is a mixin, this is the class to which it can be applied.
      */
-    @RO ClassTemplate! mixesInto;
+    @RO ClassTemplate!? mixesInto;
 
     /**
      * The classes contained within this class.

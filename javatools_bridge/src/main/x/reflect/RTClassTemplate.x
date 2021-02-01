@@ -16,9 +16,11 @@ class RTClassTemplate
         extends RTComponentTemplate
         implements ClassTemplate
     {
+    // ----- Composition methods -------------------------------------------------------------------
+
     @Override @RO ClassTemplate[]       classes;
     @Override @RO Contribution[]        contribs;
-    @Override @RO ClassTemplate         mixesInto;
+    @Override @RO ClassTemplate?        mixesInto;
     @Override @RO MultiMethodTemplate[] multimethods;
     @Override @RO PropertyTemplate[]    properties;
     @Override @RO Boolean               singleton;
@@ -37,6 +39,17 @@ class RTClassTemplate
     //   Boolean derivesFrom(Composition composition)
     //   conditional ClassTemplate hasSuper()
     //   Composition! annotate(AnnotationTemplate annotation)
+
+
+    // ----- ClassTemplate API ---------------------------------------------------------------------
+
+    @Override
+    conditional PropertyTemplate fromProperty()
+        {
+        return False;
+        }
+
+    @Override @RO String? implicitName;
 
     // helper function to create a Contribution
     static Contribution createContribution(Action           action,

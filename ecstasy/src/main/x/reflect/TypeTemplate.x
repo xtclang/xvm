@@ -150,9 +150,10 @@ interface TypeTemplate // TODO move
      * A type of form `Property` always represents a property.
      *
      * @return True iff this type represents a property
-     * @return (conditional) the property
+     * @return (conditional) the property class composition (whose `baseTemplate` is known to be
+     *         `fromProperty`)
      */
-    conditional PropertyTemplate fromProperty();
+    conditional Composition fromProperty();
 
     /**
      * Determine if this type modifies an underlying type, and if it does, obtain that underlying
@@ -304,7 +305,7 @@ interface TypeTemplate // TODO move
                        .add(' ');
                     }
                 assert cmp.is(ClassTemplate);
-                buf.addAll(cmp.name);
+                buf.addAll(cmp.displayName);
                 fParams = True;
                 break;
 

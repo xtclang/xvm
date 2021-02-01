@@ -15,6 +15,8 @@ import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -40,7 +42,7 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**
- * Native ClassTemplate implementation.
+ * Native RTClassTemplate implementation.
  */
 public class xRTClassTemplate
         extends xRTComponentTemplate
@@ -75,6 +77,7 @@ public class xRTClassTemplate
 
             CREATE_CONTRIB_METHOD = getStructure().findMethod("createContribution", 5);
 
+            markNativeProperty("implicitName");
             markNativeProperty("classes");
             markNativeProperty("contribs");
             markNativeProperty("mixesInto");
@@ -101,6 +104,9 @@ public class xRTClassTemplate
         ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
         switch (sPropName)
             {
+            case "implicitName":
+                return getPropertyImplicitName(frame, hComponent, iReturn);
+
             case "classes":
                 return getPropertyClasses(frame, hComponent, iReturn);
 
@@ -165,6 +171,24 @@ public class xRTClassTemplate
 
 
     // ----- property implementations --------------------------------------------------------------
+
+    /**
+     * Implements property: implicitName.get()
+     */
+    public int getPropertyImplicitName(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+        {
+        ClassStructure   clz   = (ClassStructure) hComponent.getComponent();
+        IdentityConstant idClz = clz.getIdentityConstant();
+        if (idClz instanceof ClassConstant)
+            {
+            String sAlias = ((ClassConstant) idClz).getImplicitImportName();
+            if (sAlias != null)
+                {
+                return frame.assignValue(iReturn, xString.makeHandle(sAlias));
+                }
+            }
+        return frame.assignValue(iReturn, xNullable.NULL);
+        }
 
     /**
      * Implements property: classes.get()
@@ -326,7 +350,7 @@ public class xRTClassTemplate
             {
             if (child instanceof PropertyStructure)
                 {
-                listProps.add(xRTPropertyTemplate.makeMethodHandle((PropertyStructure) child));
+                listProps.add(xRTPropertyTemplate.makePropertyHandle((PropertyStructure) child));
                 }
             }
 
@@ -396,7 +420,7 @@ public class xRTClassTemplate
     /**
      * Implementation for: {@code Class<> ensureClass(Type... actualTypes)}.
      */
-    public int invokeEnsureClass(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+    protected int invokeEnsureClass(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         ClassStructure clz = (ClassStructure) hComponent.getComponent();
         // TODO CP
@@ -406,7 +430,7 @@ public class xRTClassTemplate
     /**
      * Implementation for: {@code conditional (Annotation, Composition) deannotate()}.
      */
-    public int invokeDeannotate(Frame frame, ComponentTemplateHandle hComponent, int[] aiReturn)
+    protected int invokeDeannotate(Frame frame, ComponentTemplateHandle hComponent, int[] aiReturn)
         {
         // a Composition that is a ClassTemplate is not annotated
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -431,7 +455,7 @@ public class xRTClassTemplate
     /**
      * @return the ClassComposition for an Array of Contributions
      */
-    private static TypeComposition ensureContribArrayComposition()
+    public static TypeComposition ensureContribArrayComposition()
         {
         TypeComposition clz = CONTRIBUTION_ARRAY_COMP;
         if (clz == null)
@@ -448,7 +472,7 @@ public class xRTClassTemplate
     /**
      * @return the ClassComposition for an Array of ClassTemplates
      */
-    private static TypeComposition ensureClassTemplateArrayComposition()
+    public static TypeComposition ensureClassTemplateArrayComposition()
         {
         TypeComposition clz = CLASS_TEMPLATE_ARRAY_COMP;
         if (clz == null)
@@ -469,6 +493,7 @@ public class xRTClassTemplate
     private static TypeComposition CONTRIBUTION_COMP;
     private static TypeComposition CONTRIBUTION_ARRAY_COMP;
     private static TypeComposition CLASS_TEMPLATE_ARRAY_COMP;
-    private static xEnum           ACTION;
-    private static MethodStructure CREATE_CONTRIB_METHOD;
+
+    public static xEnum           ACTION;
+    public static MethodStructure CREATE_CONTRIB_METHOD;
     }

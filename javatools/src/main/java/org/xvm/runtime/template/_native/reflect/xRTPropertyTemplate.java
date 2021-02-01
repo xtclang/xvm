@@ -114,7 +114,7 @@ public class xRTPropertyTemplate
      *
      * @return the newly created handle
      */
-    static ComponentTemplateHandle makeMethodHandle(PropertyStructure prop)
+    static ComponentTemplateHandle makePropertyHandle(PropertyStructure prop)
         {
         return new ComponentTemplateHandle(ensurePropertyTemplateComposition(), prop);
         }

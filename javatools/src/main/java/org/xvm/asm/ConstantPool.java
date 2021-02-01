@@ -1331,7 +1331,7 @@ public class ConstantPool
      *
      * @return the "import as" name, or null
      */
-    public String getImplicitImportName(String sPath)
+    public static String getImplicitImportName(String sPath)
         {
         return s_implicitsByPath.get(sPath);
         }

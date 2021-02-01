@@ -89,15 +89,10 @@ const Class<PublicType, ProtectedType extends PublicType,
      *                         for each type parameter, and not the actual specified type for each
      * @param allocateStruct   the function that is used to allocate an initial structure that can
      *                         be populated and used to instantiate an object of this class
-     * @param implicitName     for a small number of commonly used classes in the
-     *                         `ecstasy.xtclang.org` module, an implicit name is provided to make
-     *                         the usage of the class as simple as having imported the class "as"
-     *                         the implicit name
      */
     construct(Composition            composition,
               ListMap<String, Type>? canonicalParams = Null,
-              function StructType()? allocateStruct  = Null,
-              String?                implicitName    = Null)
+              function StructType()? allocateStruct  = Null)
         {
         if (Type[] formalTypes := PublicType.parameterized(), formalTypes.size > 0)
             {
@@ -119,7 +114,6 @@ const Class<PublicType, ProtectedType extends PublicType,
         this.composition     = composition;
         this.canonicalParams = canonicalParams ?: new ListMap();
         this.allocateStruct  = allocateStruct;
-        this.implicitName    = implicitName;
         }
 
 
@@ -138,7 +132,10 @@ const Class<PublicType, ProtectedType extends PublicType,
      * subset of classes in the core Ecstasy module; for example, `numbers.Int64` has the implicit
      * name `Int`.
      */
-    String? implicitName;
+    @RO String? implicitName.get()
+        {
+        return baseTemplate.implicitName;
+        }
 
     /**
      * The path of a class is composed of its module qualified name followed by a colon, followed
@@ -219,7 +216,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      * The underlying ClassTemplate of this Class. For example, given a composition
      * `@A1 @A2 C`, the `baseTemplate` property would return `C`.
      */
-     ClassTemplate baseTemplate.get()
+    ClassTemplate baseTemplate.get()
         {
         (Class!<> baseClass, _) = deannotate();
 
@@ -390,7 +387,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     @RO Boolean abstract.get()
         {
-        return baseTemplate.isAbstract; // TODO the composition itself should have abstract as a property
+        return baseTemplate.isAbstract; // TODO CP the composition itself should have abstract as a property
         }
 
     /**

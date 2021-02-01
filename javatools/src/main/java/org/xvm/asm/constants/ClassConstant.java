@@ -313,6 +313,18 @@ public class ClassConstant
         }
 
 
+    /**
+     * @return if this ClassConstant represents a an implicitly imported class return it's
+     *         implicit name; null otherwise
+     */
+    public String getImplicitImportName()
+        {
+        return getModuleConstant().isEcstasyModule()
+                ? ConstantPool.getImplicitImportName("ecstasy." + getPathString())
+                : null;
+        }
+
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -345,18 +357,12 @@ public class ClassConstant
     @Override
     public String getValueString()
         {
-        if (getModuleConstant().isEcstasyModule())
-            {
-            String sPath   = "ecstasy." + getPathString();
-            String sImport = getConstantPool().getImplicitImportName(sPath);
-            if (sImport != null)
-                {
-                return sImport;
-                }
-            }
-
-        return super.getValueString();
+        String sImport = getImplicitImportName();
+        return sImport == null
+                ? super.getValueString()
+                : sImport;
         }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

@@ -10,5 +10,5 @@ class RTMultiMethodTemplate
         implements MultiMethodTemplate
     {
     @Override
-    Iterator<MethodTemplate> children();
+    MethodTemplate[] children();
     }

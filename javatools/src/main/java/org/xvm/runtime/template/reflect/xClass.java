@@ -9,11 +9,11 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecoratedClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -39,6 +39,7 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTClassTemplate;
+import org.xvm.runtime.template._native.reflect.xRTPropertyClassTemplate;
 import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
@@ -184,8 +185,6 @@ public class xClass
 
             case "isSingleton":
                 return invokeIsSingleton(frame, hTarget, aiReturn);
-
-            // TODO CP
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -232,11 +231,31 @@ public class xClass
     public int getPropertyComposition(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         // TODO CP: can typeTarget be annotated?
-        TypeConstant     typeTarget = getClassType(hTarget);
-        IdentityConstant idClz      = (IdentityConstant) typeTarget.getDefiningConstant();
-        ClassStructure   clz        = (ClassStructure) idClz.getComponent();
-        ObjectHandle     hResult    = xRTClassTemplate.makeHandle(clz);
-        return frame.assignValue(iReturn, hResult);
+        TypeConstant     typeTarget  = getClassType(hTarget);
+        Constant         constTarget = typeTarget.getDefiningConstant();
+        switch (constTarget.getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+                {
+                IdentityConstant idClz   = (IdentityConstant) constTarget;
+                ClassStructure   clz     = (ClassStructure) idClz.getComponent();
+                ObjectHandle     hResult = xRTClassTemplate.makeHandle(clz);
+                return frame.assignValue(iReturn, hResult);
+                }
+
+            case Property:
+                {
+                IdentityConstant  idProp  = (IdentityConstant) constTarget;
+                PropertyStructure prop    = (PropertyStructure) idProp.getComponent();
+                ObjectHandle      hResult = xRTPropertyClassTemplate.makeHandle(prop);
+                return frame.assignValue(iReturn, hResult);
+                }
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     /**
@@ -246,10 +265,10 @@ public class xClass
         {
         TypeConstant     typeTarget = getClassType(hTarget);
         IdentityConstant idClz      = (IdentityConstant) typeTarget.getDefiningConstant();
-        ModuleConstant   idModule   = idClz.getModuleConstant();
-        if (idModule.isEcstasyModule())
+
+        if (idClz instanceof ClassConstant)
             {
-            String sAlias = pool().getImplicitImportName("ecstasy." + idClz.getPathString());
+            String sAlias = ((ClassConstant) idClz).getImplicitImportName();
             if (sAlias != null)
                 {
                 return frame.assignValue(iReturn, xString.makeHandle(sAlias));

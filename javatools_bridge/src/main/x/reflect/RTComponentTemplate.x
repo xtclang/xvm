@@ -17,6 +17,6 @@ class RTComponentTemplate
     @Override @RO ComponentTemplate? parent;
     @Override @RO Boolean            synthetic;
 
-    @Override Iterator<ComponentTemplate> children();
+    @Override ComponentTemplate[] children();
     @Override String toString();                            // TODO eventually make this natural
     }

@@ -7,5 +7,5 @@ interface MultiMethodTemplate
         extends ComponentTemplate
     {
     @Override
-    Iterator<MethodTemplate> children();
+    MethodTemplate[] children();
     }

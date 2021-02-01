@@ -22,7 +22,7 @@ class RTTypeTemplate
     @Override conditional AnnotationTemplate annotated();
     @Override conditional TypeTemplate contained();
     @Override conditional Composition fromClass();
-    @Override conditional PropertyTemplate fromProperty();
+    @Override conditional Composition fromProperty();
     @Override Boolean isA(TypeTemplate that);
     @Override conditional TypeTemplate modifying();
     @Override conditional TypeTemplate[] parameterized();
