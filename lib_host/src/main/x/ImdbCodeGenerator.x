@@ -117,12 +117,12 @@ class ImdbCodeGenerator
             String declarationTemplate  = $./templates/ClientPropertyDeclaration.txt;
             String constructionTemplate = $./templates/ClientPropertyConstruction.txt;
 
-            String propertyName     = property.name;
             assert Composition comp := property.type.fromClass();
             assert comp.is(ClassTemplate);
 
-            String propertyType     = comp.name; // displayName
-            String propertyTypeName = propertyType; // TODO handle composite type
+            String propertyName     = property.name;
+            String propertyType     = appName + '.' + comp.displayName;
+            String propertyTypeName = comp.displayName; // TODO handle composite type
 
             propertyDeclarations  += declarationTemplate
                                     .replace("%propertyName%", propertyName)

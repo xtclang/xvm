@@ -483,8 +483,13 @@ interface ClassTemplate
             {
             String relPath = path.substring(colon+1);
 
-            for ((String name, String qualifiedName) :
-                    containingFile.mainModule.moduleNamesByPath)
+            ModuleTemplate mainModule = containingFile.mainModule;
+            if (moduleName == mainModule.name)
+                {
+                return True, relPath;
+                }
+
+            for ((String name, String qualifiedName) : mainModule.moduleNamesByPath)
                 {
                 if (qualifiedName == moduleName)
                     {
