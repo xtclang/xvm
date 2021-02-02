@@ -717,6 +717,11 @@ public class TerminalTypeConstant
                 }
 
             case ParentClass:
+                if (typeTarget != null && typeTarget.isVirtualChild())
+                    {
+                    return typeTarget.getParentType();
+                    }
+                // fall through
             case ChildClass:
                 {
                 IdentityConstant idClass = null;
