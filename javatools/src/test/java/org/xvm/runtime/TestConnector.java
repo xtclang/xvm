@@ -62,11 +62,16 @@ public class TestConnector
         Compiler compiler = new Compiler(listCompileArgs.toArray(Handy.NO_ARGS));
         compiler.run();
 
-        String[]   asNames     = new String[cModules];
-        List<File> listSrcFile = compiler.options().getInputLocations();
+        List<File> listSrcFile   = compiler.options().getInputLocations();
+        String[]   asFileNames   = new String[cModules];
+        String[]   asModuleNames = new String[cModules];
         for (int i = 0; i < cModules; i++)
             {
-            asNames[i] = compiler.getModuleName(listSrcFile.get(i));
+            String sName = compiler.getModuleName(listSrcFile.get(i));
+            int    ofDot = sName.indexOf('.');
+
+            asFileNames[i]   = ofDot < 0 ? sName : sName.substring(0, ofDot);
+            asModuleNames[i] = sName;
             }
 
         List<File> listSysPaths = compiler.options().getModulePath();
@@ -88,7 +93,7 @@ public class TestConnector
 
         for (int i = 0; i < cModules; ++i)
             {
-            File file = new File(dirBuild, asNames[i] + ".xtc");
+            File file = new File(dirBuild, asFileNames[i] + ".xtc");
 
             try
                 {
@@ -106,7 +111,7 @@ public class TestConnector
         ModuleRepository repository = new LinkedRepository(true, aRepo);
         Connector        connector  = new Connector(repository);
 
-        for (String sModule : asNames)
+        for (String sModule : asModuleNames)
             {
             System.out.println("\n++++++ Loading module: " + sModule + " +++++++\n");
 
