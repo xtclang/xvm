@@ -4,5 +4,11 @@
 interface PackageTemplate
         extends ClassTemplate
     {
-    // TODO
+    /**
+     * Obtain the module that this package imports.
+     *
+     * @return True iff this package represents an imported module
+     * @return (optional) the ModuleTemplate this package represents
+     */
+    conditional ModuleTemplate imported();
     }

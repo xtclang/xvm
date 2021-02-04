@@ -74,4 +74,10 @@ class RTClassTemplate
 
         return new Contribution(action, ingredient, delegatee, constraints);
         }
+
+    // helper function to create an array of TypeParameters
+    static TypeParameter[] createTypeParameters(String[] names, TypeTemplate[] types)
+        {
+        return new Array(names.size, i -> new TypeParameter(names[i], types[i]));
+        }
     }

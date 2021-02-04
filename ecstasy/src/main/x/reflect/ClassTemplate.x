@@ -5,6 +5,7 @@
 interface ClassTemplate
         extends ComponentTemplate
         extends Composition
+        extends Stringable
     {
     // ----- local types ---------------------------------------------------------------------------
 
@@ -445,7 +446,9 @@ interface ClassTemplate
     @RO String? implicitName;
 
     /**
-     * A name intended to be more easily human-readable than a fully qualified path (if possible).
+     * A name intended to be more easily human-readable than a fully qualified path (if possible),
+     * while still being sufficiently descriptive that it would be accepted by the Ecstasy compiler
+     * within the context of the module that this ClassTemplate was resolved within.
      */
     @RO String displayName.get()
         {
@@ -475,16 +478,14 @@ interface ClassTemplate
      */
     conditional String pathWithin()
         {
-        String path       = this.path;
-        assert Int colon := path.indexOf(':');
-        String moduleName = path[0 .. colon);
-
-        if (moduleName == containingModule.name)
+        String path = this.path;
+        if (Int colon := path.indexOf(':'))
             {
-            String relPath = path.substring(colon+1);
+            String moduleName = path[0..colon);
+            String relPath    = path.substring(colon+1);
 
             ModuleTemplate mainModule = containingFile.mainModule;
-            if (moduleName == mainModule.name)
+            if (moduleName == mainModule.qualifiedName)
                 {
                 return True, relPath;
                 }
@@ -571,4 +572,54 @@ interface ClassTemplate
      * The information that identifies the location of the source code for this class.
      */
     @RO SourceCodeInfo? sourceInfo;
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        Int size = 0;
+
+        size += displayName.size;
+
+        TypeParameter[] params = typeParams;
+        if (!params.empty)
+            {
+            size += 2;
+            Params: for (TypeParameter type : params)
+                {
+                if (!Params.first)
+                    {
+                    size += 2;
+                    }
+                size += type.estimateStringLength();
+                }
+            }
+
+        return size;
+        }
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf)
+        {
+        displayName.appendTo(buf);
+
+        TypeParameter[] params = typeParams;
+        if (!params.empty)
+            {
+            buf.add('<');
+            Params: for (TypeParameter param : params)
+                {
+                if (!Params.first)
+                    {
+                    ", ".appendTo(buf);
+                    }
+                param.type.appendTo(buf);
+                }
+            buf.add('>');
+            }
+
+        return buf;
+        }
     }

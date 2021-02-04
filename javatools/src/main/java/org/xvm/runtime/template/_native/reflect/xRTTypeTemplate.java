@@ -181,7 +181,9 @@ public class xRTTypeTemplate
         protected TypeTemplateHandle(TypeComposition clz, TypeConstant type)
             {
             super(clz);
-            f_type = type;
+
+            f_type     = type;
+            m_fMutable = false;
             }
 
         public TypeConstant getDataType()
@@ -346,7 +348,7 @@ public class xRTTypeTemplate
 
         IdentityConstant idClz  = type.getSingleUnderlyingClass(true);
         ClassStructure   clz    = (ClassStructure) idClz.getComponent();
-        GenericHandle    hClass = xRTClassTemplate.makeHandle(clz);
+        GenericHandle    hClass = xRTComponentTemplate.makeComponentHandle(clz);
         // TODO (temporarily defer) - type could be explicitly annotated (recursively) so we would
         //      have to wrap the handle that many times in an AnnotatingComposition
         return frame.assignValues(aiReturn, xBoolean.TRUE, hClass);
@@ -450,16 +452,16 @@ public class xRTTypeTemplate
     // ----- TypeComposition caching ---------------------------------------------------------------
 
     /**
-     * @return the TypeComposition for an Array of TypeTemplate
+     * @return the TypeComposition for the TypeTemplate
      */
-    public TypeComposition ensureClassComposition()
+    public static TypeComposition ensureClassComposition()
         {
-        TypeComposition clz = TYPETEMPLATE;
+        TypeComposition clz = TYPE_TEMPLATE;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant type = pool.ensureEcstasyTypeConstant("reflect.TypeTemplate");
-            TYPETEMPLATE = clz = f_templates.resolveClass(type);
+            TYPE_TEMPLATE = clz = INSTANCE.f_templates.resolveClass(type);
             assert clz != null;
             }
         return clz;
@@ -468,22 +470,22 @@ public class xRTTypeTemplate
     /**
      * @return the TypeComposition for an Array of TypeTemplate
      */
-    public TypeComposition ensureArrayClassComposition()
+    public static TypeComposition ensureArrayClassComposition()
         {
-        TypeComposition clz = TYPETEMPLATE_ARRAY;
+        TypeComposition clz = TYPE_TEMPLATE_ARRAY;
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeArray(),
                     pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
-            TYPETEMPLATE_ARRAY = clz = f_templates.resolveClass(type);
+            TYPE_TEMPLATE_ARRAY = clz = INSTANCE.f_templates.resolveClass(type);
             assert clz != null;
             }
         return clz;
         }
 
-    private static TypeComposition TYPETEMPLATE;
-    private static TypeComposition TYPETEMPLATE_ARRAY;
+    private static TypeComposition TYPE_TEMPLATE;
+    private static TypeComposition TYPE_TEMPLATE_ARRAY;
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -532,6 +534,7 @@ public class xRTTypeTemplate
 
         switch (type.getFormat())
             {
+            case ParameterizedType:
             case TerminalType:
                 if (type.isSingleDefiningConstant())
                     {
@@ -575,9 +578,6 @@ public class xRTTypeTemplate
 
             case AnnotatedType:
                 return enumForm.getEnumByName("Annotated");
-
-            case ParameterizedType:
-                return enumForm.getEnumByName("Parameterized");
 
             case TurtleType:
                 return enumForm.getEnumByName("Sequence");

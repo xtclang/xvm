@@ -99,7 +99,7 @@ public class xRTMethodTemplate
      *
      * @return the newly created handle
      */
-    static ComponentTemplateHandle makeMethodHandle(MethodStructure method)
+    static ComponentTemplateHandle makeHandle(MethodStructure method)
         {
         return new ComponentTemplateHandle(ensureMethodTemplateComposition(), method);
         }

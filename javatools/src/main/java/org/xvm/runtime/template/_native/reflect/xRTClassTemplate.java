@@ -10,9 +10,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -66,6 +64,7 @@ public class xRTClassTemplate
             {
             ConstantPool     pool     = pool();
             TemplateRegistry registry = f_templates;
+            ClassStructure   struct   = f_struct;
 
             TypeConstant typeClassTemplate = pool.ensureEcstasyTypeConstant("reflect.ClassTemplate");
 
@@ -75,7 +74,8 @@ public class xRTClassTemplate
 
             ACTION = (xEnum) registry.getTemplate("reflect.ClassTemplate.Composition.Action");
 
-            CREATE_CONTRIB_METHOD = getStructure().findMethod("createContribution", 5);
+            CREATE_CONTRIB_METHOD         = struct.findMethod("createContribution", 5);
+            CREATE_TYPE_PARAMETERS_METHOD = struct.findMethod("createTypeParameters", 2);
 
             markNativeProperty("implicitName");
             markNativeProperty("classes");
@@ -214,14 +214,6 @@ public class xRTClassTemplate
                 case MIXIN:
                 case SERVICE:
                     listTemplates.add(xRTClassTemplate.makeHandle((ClassStructure) child));
-                    break;
-
-                case PACKAGE:
-                    listTemplates.add(xRTPackageTemplate.makeHandle((PackageStructure) child));
-                    break;
-
-                case MODULE:
-                    listTemplates.add(xRTModuleTemplate.makeHandle((ModuleStructure) child));
                     break;
                 }
             }
@@ -399,9 +391,31 @@ public class xRTClassTemplate
      */
     public int getPropertyTypeParams(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz    = (ClassStructure) hComponent.getComponent();
-        GenericHandle  hArray = null; // TODO
-        return frame.assignValue(iReturn, hArray);
+        ClassStructure clz = (ClassStructure) hComponent.getComponent();
+        List<Map.Entry<StringConstant, TypeConstant>> listParams = clz.getTypeParamsAsList();
+
+        if (listParams.isEmpty())
+            {
+            return frame.assignValue(iReturn, ensureEmptyTypeParameterArray());
+            }
+
+        int            cParams = listParams.size();
+        StringHandle[] ahName  = new StringHandle[cParams];
+        ObjectHandle[] ahType  = new ObjectHandle[cParams];
+
+        int i = 0;
+        for (Map.Entry<StringConstant, TypeConstant> entry : listParams)
+            {
+            ahName[i]   = xString.makeHandle(entry.getKey().getValue());
+            ahType[i++] = xRTTypeTemplate.makeHandle(entry.getValue());
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[CREATE_TYPE_PARAMETERS_METHOD.getMaxVars()];
+        ahVar[0] = xArray.makeStringArrayHandle(ahName);
+        ahVar[1] = xArray.INSTANCE.createArrayHandle(
+                    xRTTypeTemplate.ensureArrayClassComposition(), ahType);
+
+        return frame.call1(CREATE_TYPE_PARAMETERS_METHOD, null, ahVar, iReturn);
         }
 
     /**
@@ -486,14 +500,34 @@ public class xRTClassTemplate
         return clz;
         }
 
+    /**
+     * @return the handle for an empty Array of TypeParameters
+     */
+    public static ArrayHandle ensureEmptyTypeParameterArray()
+        {
+        if (TYPE_PARAMETER_ARRAY_EMPTY == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeTypeParamArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                pool.ensureEcstasyTypeConstant("reflect.TypeParameter"));
+            TypeComposition clz = INSTANCE.f_templates.resolveClass(typeTypeParamArray);
+
+            TYPE_PARAMETER_ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(clz, Utils.OBJECTS_NONE);
+            }
+        return TYPE_PARAMETER_ARRAY_EMPTY;
+        }
+
 
     // ----- constants -----------------------------------------------------------------------------
 
     private static TypeComposition CLASS_TEMPLATE_COMP;
+    private static TypeComposition CLASS_TEMPLATE_ARRAY_COMP;
     private static TypeComposition CONTRIBUTION_COMP;
     private static TypeComposition CONTRIBUTION_ARRAY_COMP;
-    private static TypeComposition CLASS_TEMPLATE_ARRAY_COMP;
+
+    private static ArrayHandle     TYPE_PARAMETER_ARRAY_EMPTY;
 
     public static xEnum           ACTION;
     public static MethodStructure CREATE_CONTRIB_METHOD;
+    public static MethodStructure CREATE_TYPE_PARAMETERS_METHOD;
     }

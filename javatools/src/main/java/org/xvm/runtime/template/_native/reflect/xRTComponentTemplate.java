@@ -9,6 +9,7 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -45,6 +46,17 @@ public class xRTComponentTemplate
         if (fInstance)
             {
             INSTANCE = this;
+            }
+        }
+
+    @Override
+    public void registerNativeTemplates()
+        {
+        if (this == INSTANCE)
+            {
+            ClassStructure struct = (ClassStructure) f_templates.getComponent(
+                "_native.reflect.RTMultiMethodTemplate");
+            registerNativeTemplate(new xRTComponentTemplate(f_templates, struct, false));
             }
         }
 
@@ -133,8 +145,8 @@ public class xRTComponentTemplate
      */
     public int getPropertyAccess(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component    component = hComponent.getComponent();
-        Access       access    = component.getAccess();
+        Component component = hComponent.getComponent();
+        Access    access    = component.getAccess();
         return Utils.assignInitializedEnum(frame, xRTType.makeAccessHandle(frame, access), iReturn);
         }
 
@@ -186,7 +198,7 @@ public class xRTComponentTemplate
     public int getPropertyName(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         Component component = hComponent.getComponent();
-        String    sName     = component.getName();
+        String    sName     = component.getSimpleName();
         return frame.assignValue(iReturn, xString.makeHandle(sName));
         }
 
@@ -196,44 +208,7 @@ public class xRTComponentTemplate
     public int getPropertyParent(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         Component    parent  = hComponent.getComponent().getParent();
-        ObjectHandle hParent;
-        if (parent == null)
-            {
-            hParent = xNullable.NULL;
-            }
-        else
-            {
-            switch (parent.getFormat())
-                {
-                case FILE:
-                    hParent = xRTFileTemplate.makeHandle((FileStructure) parent);
-                    break;
-
-                case MODULE:
-                    hParent = xRTModuleTemplate.makeHandle((ModuleStructure) parent);
-                    break;
-
-                case PACKAGE:
-                    hParent = xRTPackageTemplate.makeHandle((PackageStructure) parent);
-                    break;
-
-                case CLASS:
-                case INTERFACE:
-                case ENUM:
-                case ENUMVALUE:
-                case MIXIN:
-                case SERVICE:
-                    hParent = xRTClassTemplate.makeHandle((ClassStructure) parent);
-                    break;
-
-                case MULTIMETHOD:
-                    hParent = new ComponentTemplateHandle(ensureMultiMethodTemplateComposition(), parent);
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException();
-                }
-            }
+        ObjectHandle hParent = parent == null ? xNullable.NULL : makeComponentHandle(parent);
         return frame.assignValue(iReturn, hParent);
         }
 
@@ -378,6 +353,45 @@ public class xRTComponentTemplate
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     /**
+     * Given a Component structure, create ComponentTemplateHandle for it.
+     */
+    public static ComponentTemplateHandle makeComponentHandle(Component component)
+        {
+        switch (component.getFormat())
+            {
+            case FILE:
+                return xRTFileTemplate.makeHandle((FileStructure) component);
+
+            case MODULE:
+                return xRTModuleTemplate.makeHandle((ModuleStructure) component);
+
+            case PACKAGE:
+                return xRTPackageTemplate.makeHandle((PackageStructure) component);
+
+            case CLASS:
+            case CONST:
+            case INTERFACE:
+            case ENUM:
+            case ENUMVALUE:
+            case MIXIN:
+            case SERVICE:
+                return xRTClassTemplate.makeHandle((ClassStructure) component);
+
+            case MULTIMETHOD:
+                return new ComponentTemplateHandle(ensureMultiMethodTemplateComposition(), component);
+
+            case METHOD:
+                return xRTMethodTemplate.makeHandle((MethodStructure) component);
+
+            case PROPERTY:
+                return xRTPropertyClassTemplate.makeHandle((PropertyStructure) component);
+
+            default:
+                throw new UnsupportedOperationException("unsupported format " + component.getFormat());
+            }
+        }
+
+    /**
      * Inner class: ComponentTemplateHandle. This is a handle to a native Component.
      */
     public static class ComponentTemplateHandle
@@ -394,6 +408,12 @@ public class xRTComponentTemplate
         public Component getComponent()
             {
             return f_struct;
+            }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + f_struct.getName();
             }
 
         private final Component f_struct;

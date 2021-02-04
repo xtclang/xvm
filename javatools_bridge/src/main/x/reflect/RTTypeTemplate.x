@@ -8,7 +8,7 @@ import ecstasy.reflect.TypeTemplate;
 /**
  * The native reflected TypeTemplate implementation.
  */
-class RTTypeTemplate
+const RTTypeTemplate
         implements TypeTemplate
     {
     @Override @RO String         desc;

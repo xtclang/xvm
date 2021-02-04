@@ -34,6 +34,12 @@ class RTPropertyClassTemplate
     @Override @RO TypeTemplate          type;
 
     @Override
+    @RO String? implicitName.get()
+        {
+        return Null;
+        }
+
+    @Override
     @RO TypeParameter[] typeParams.get()
         {
         return [];

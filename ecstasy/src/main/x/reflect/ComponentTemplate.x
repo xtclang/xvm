@@ -68,6 +68,11 @@ interface ComponentTemplate
     @RO ModuleTemplate? containingModule.get()
         {
         ComponentTemplate? parent = this.parent;
+        if (parent.is(FileTemplate))
+            {
+            return this.as(ModuleTemplate);
+            }
+
         while (parent != Null)
             {
             if (parent.is(ModuleTemplate))
@@ -116,12 +121,11 @@ interface ComponentTemplate
     @RO String path.get()
         {
         ComponentTemplate? parent = this.parent;
-        if (parent == Null)
-            {
-            return name;
-            }
-        Char separator = parent.is(ModuleTemplate) ? ':' : '.';
-        return parent.path + separator + name;
+        return parent == Null
+                ? name
+                : parent.is(ModuleTemplate) // ModuleTemplate.path is always ':'-terminated
+                    ? parent.path + name
+                    : parent.path + '.' + name;
         }
 
     /**

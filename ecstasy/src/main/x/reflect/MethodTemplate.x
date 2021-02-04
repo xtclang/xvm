@@ -14,4 +14,12 @@ interface MethodTemplate
     * would produce the `annotations` array holding `A1` at index zero.
     */
     Annotation[] annotations;
+
+    @Override
+    @RO String path.get()
+        {
+        // the method name is always the same as the its parent's (multimethod)
+        // TODO GG: use the parameter types to fill inside the parenthesis
+        return parent.path + "()";
+        }
     }

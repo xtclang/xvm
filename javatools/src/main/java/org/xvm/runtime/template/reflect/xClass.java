@@ -4,12 +4,12 @@ package org.xvm.runtime.template.reflect;
 import java.util.Iterator;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecoratedClassConstant;
@@ -28,7 +28,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
-import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -38,8 +37,7 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template._native.reflect.xRTClassTemplate;
-import org.xvm.runtime.template._native.reflect.xRTPropertyClassTemplate;
+import org.xvm.runtime.template._native.reflect.xRTComponentTemplate;
 import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
@@ -68,9 +66,6 @@ public class xClass
         markNativeProperty("abstract");
         markNativeProperty("canonicalParams");
         markNativeProperty("composition");
-        markNativeProperty("implicitName");
-        markNativeProperty("name");
-        markNativeProperty("path");
         markNativeProperty("virtualChild");
 
         markNativeMethod("allocate"              , null, null);
@@ -144,15 +139,6 @@ public class xClass
 
             case "composition":
                 return getPropertyComposition(frame, hTarget, iReturn);
-
-            case "implicitName":
-                return getPropertyImplicitName(frame, hTarget, iReturn);
-
-            case "name":
-                return getPropertyName(frame, hTarget, iReturn);
-
-            case "path":
-                return getPropertyPath(frame, hTarget, iReturn);
 
             case "virtualChild":
                 return getPropertyVirtualChild(frame, hTarget, iReturn);
@@ -231,72 +217,16 @@ public class xClass
     public int getPropertyComposition(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         // TODO CP: can typeTarget be annotated?
-        TypeConstant     typeTarget  = getClassType(hTarget);
-        Constant         constTarget = typeTarget.getDefiningConstant();
-        switch (constTarget.getFormat())
+        TypeConstant typeTarget  = getClassType(hTarget);
+        Constant     constTarget = typeTarget.getDefiningConstant();
+
+        if  (constTarget instanceof IdentityConstant)
             {
-            case Module:
-            case Package:
-            case Class:
-                {
-                IdentityConstant idClz   = (IdentityConstant) constTarget;
-                ClassStructure   clz     = (ClassStructure) idClz.getComponent();
-                ObjectHandle     hResult = xRTClassTemplate.makeHandle(clz);
-                return frame.assignValue(iReturn, hResult);
-                }
-
-            case Property:
-                {
-                IdentityConstant  idProp  = (IdentityConstant) constTarget;
-                PropertyStructure prop    = (PropertyStructure) idProp.getComponent();
-                ObjectHandle      hResult = xRTPropertyClassTemplate.makeHandle(prop);
-                return frame.assignValue(iReturn, hResult);
-                }
-
-            default:
-                throw new IllegalStateException();
+            Component component = ((IdentityConstant) constTarget).getComponent();
+            return frame.assignValue(iReturn, xRTComponentTemplate.makeComponentHandle(component));
             }
-        }
 
-    /**
-     * Implements property: implicitName.get()
-     */
-    public int getPropertyImplicitName(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        TypeConstant     typeTarget = getClassType(hTarget);
-        IdentityConstant idClz      = (IdentityConstant) typeTarget.getDefiningConstant();
-
-        if (idClz instanceof ClassConstant)
-            {
-            String sAlias = ((ClassConstant) idClz).getImplicitImportName();
-            if (sAlias != null)
-                {
-                return frame.assignValue(iReturn, xString.makeHandle(sAlias));
-                }
-            }
-        return frame.assignValue(iReturn, xNullable.NULL);
-        }
-
-    /**
-     * Implements property: name.get()
-     */
-    public int getPropertyName(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        TypeConstant     typeTarget = getClassType(hTarget);
-        IdentityConstant idClz      = (IdentityConstant) typeTarget.getDefiningConstant();
-        String           sName      = idClz.getName();
-        return frame.assignValue(iReturn, xString.makeHandle(sName));
-        }
-
-    /**
-     * Implements property: path.get()
-     */
-    public int getPropertyPath(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        TypeConstant     typeTarget = getClassType(hTarget);
-        IdentityConstant idClz      = (IdentityConstant) typeTarget.getDefiningConstant();
-        String           sPath      = idClz.getModuleConstant().getName() + ':' + idClz.getPathString();
-        return frame.assignValue(iReturn, xString.makeHandle(sPath));
+        throw new IllegalStateException();
         }
 
     /**

@@ -2,7 +2,7 @@
  * A ModuleTemplate is a representation of an Ecstasy `module`.
  */
 interface ModuleTemplate
-        extends PackageTemplate
+        extends ClassTemplate
     {
     /**
      * The fully qualified name of the module, such as "ecstasy.xtclang.org".
@@ -21,10 +21,26 @@ interface ModuleTemplate
     @Override
     @RO FileTemplate parent;
 
+//    TODO GG: this should replace the "parent.is(FileTemplate)" check at ComponentTemplate
+//    @Override
+//    @RO ModuleTemplate containingModule.get()
+//        {
+//        return this;
+//        }
+
     @Override
     @RO String path.get()
         {
-        return qualifiedName;
+        return qualifiedName + ':';
+        }
+
+    @Override
+    @RO String displayName.get()
+        {
+        ModuleTemplate mainModule = containingFile.mainModule;
+        return mainModule.qualifiedName == this.qualifiedName
+                ? name
+                : qualifiedName;
         }
 
     /**
