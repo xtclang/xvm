@@ -206,9 +206,9 @@ public class PropertyInfo
                     // type has been narrowed
                     typeResult = typeAdd;
                     }
-                // the property type can only be wider if it is a read-only interface/into method
+                // the property type can only be wider if it is a read-only method
                 // or the layer-on is an annotation; otherwise it is an error
-                else if (!(exAdd != Existence.Class && bodyAdd.isRO() && typeResult.isA(typeAdd))
+                else if (!(bodyAdd.isRO() && typeResult.isA(typeAdd))
                         && !bodyAdd.isSynthetic() // synthetic might not be marked
                         && !fAnno)
                     {

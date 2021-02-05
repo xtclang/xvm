@@ -38,4 +38,10 @@ interface FileTemplate
      * @throws IllegalArgument if the module does not exist
      */
     ModuleTemplate getModule(String name);
+
+    @Override
+    @RO FileTemplate containingFile.get()
+        {
+        return this;
+        }
     }

@@ -21,12 +21,11 @@ interface ModuleTemplate
     @Override
     @RO FileTemplate parent;
 
-//    TODO GG: this should replace the "parent.is(FileTemplate)" check at ComponentTemplate
-//    @Override
-//    @RO ModuleTemplate containingModule.get()
-//        {
-//        return this;
-//        }
+    @Override
+    @RO ModuleTemplate containingModule.get()
+        {
+        return this;
+        }
 
     @Override
     @RO String path.get()
@@ -50,5 +49,21 @@ interface ModuleTemplate
     @RO Boolean resolved.get()
         {
         return parent.resolved;
+        }
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return qualifiedName.size;
+        }
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf)
+        {
+        qualifiedName.appendTo(buf);
+        return buf;
         }
     }

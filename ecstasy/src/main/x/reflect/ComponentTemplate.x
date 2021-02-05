@@ -68,11 +68,6 @@ interface ComponentTemplate
     @RO ModuleTemplate? containingModule.get()
         {
         ComponentTemplate? parent = this.parent;
-        if (parent.is(FileTemplate))
-            {
-            return this.as(ModuleTemplate);
-            }
-
         while (parent != Null)
             {
             if (parent.is(ModuleTemplate))
@@ -89,11 +84,6 @@ interface ComponentTemplate
      */
     @RO FileTemplate containingFile.get()
         {
-        if (this.is(FileTemplate))
-            {
-            return this;
-            }
-
         ComponentTemplate? parent = this.parent;
         while (True)
             {
