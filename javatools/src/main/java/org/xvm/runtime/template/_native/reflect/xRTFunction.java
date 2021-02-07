@@ -1035,11 +1035,13 @@ public class xRTFunction
          * service context.
          *
          * @param frame     the current frame
-         * @param hService  the service for which the initial async method call was created for
+         * @param hService  the object for which the initial async method call was created for;
+         *                  it must be an object for which {@link ObjectHandle#isService()
+         *                  all method invocations need to be proxied}
          *
          * @return an ObjectHandle for the target (may be deferred)
          */
-        protected ObjectHandle getContextTarget(Frame frame, ServiceHandle hService)
+        protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
             {
             return hService;
             }
@@ -1056,15 +1058,17 @@ public class xRTFunction
         @Override
         protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
-            ServiceHandle hService = (ServiceHandle) hTarget;
+            assert hTarget.isService();
 
-            if (frame.f_context == hService.f_context)
+            ServiceContext ctxTarget = hTarget.getService().f_context;
+
+            if (frame.f_context == ctxTarget)
                 {
-                hTarget = getContextTarget(frame, hService);
+                hTarget = getContextTarget(frame, hTarget);
 
                 return Op.isDeferred(hTarget)
                         ? hTarget.proceed(frame, frameCaller ->
-                            super.call1Impl(frame, frameCaller.popStack(), ahVar, iReturn))
+                            super.call1Impl(frameCaller, frameCaller.popStack(), ahVar, iReturn))
                         : super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
 
@@ -1073,21 +1077,23 @@ public class xRTFunction
                 return frame.raiseException(xException.mutableObject(frame));
                 }
 
-            return hService.f_context.sendInvoke1Request(frame, this, hService, ahVar, false, iReturn);
+            return ctxTarget.sendInvoke1Request(frame, this, hTarget, ahVar, false, iReturn);
             }
 
         @Override
         protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
-            ServiceHandle hService = (ServiceHandle) hTarget;
+            assert hTarget.isService();
 
-            if (frame.f_context == hService.f_context)
+            ServiceContext ctxTarget = hTarget.getService().f_context;
+
+            if (frame.f_context == ctxTarget)
                 {
-                hTarget = getContextTarget(frame, hService);
+                hTarget = getContextTarget(frame, hTarget);
 
                 return Op.isDeferred(hTarget)
                         ? hTarget.proceed(frame, frameCaller ->
-                            super.callTImpl(frame, frameCaller.popStack(), ahVar, iReturn))
+                            super.callTImpl(frameCaller, frameCaller.popStack(), ahVar, iReturn))
                         : super.callTImpl(frame, hTarget, ahVar, iReturn);
                 }
 
@@ -1096,21 +1102,23 @@ public class xRTFunction
                 return frame.raiseException(xException.mutableObject(frame));
                 }
 
-            return hService.f_context.sendInvoke1Request(frame, this, hService, ahVar, true, iReturn);
+            return ctxTarget.sendInvoke1Request(frame, this, hTarget, ahVar, true, iReturn);
             }
 
         @Override
         protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
             {
-            ServiceHandle hService = (ServiceHandle) hTarget;
+            assert hTarget.isService();
 
-            if (frame.f_context == hService.f_context)
+            ServiceContext ctxTarget = hTarget.getService().f_context;
+
+            if (frame.f_context == ctxTarget)
                 {
-                hTarget = getContextTarget(frame, hService);
+                hTarget = getContextTarget(frame, hTarget);
 
                 return Op.isDeferred(hTarget)
                         ? hTarget.proceed(frame, frameCaller ->
-                            super.callNImpl(frame, frameCaller.popStack(), ahVar, aiReturn))
+                            super.callNImpl(frameCaller, frameCaller.popStack(), ahVar, aiReturn))
                         : super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
 
@@ -1119,7 +1127,7 @@ public class xRTFunction
                 return frame.raiseException(xException.mutableObject(frame));
                 }
 
-            return hService.f_context.sendInvokeNRequest(frame, this, hService, ahVar, aiReturn);
+            return ctxTarget.sendInvokeNRequest(frame, this, hTarget, ahVar, aiReturn);
             }
         }
 

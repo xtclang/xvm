@@ -121,7 +121,7 @@ public class xContainerControl
         FunctionHandle  hFunction = new xRTFunction.AsyncHandle(chain)
             {
             @Override
-            protected ObjectHandle getContextTarget(Frame frame, ServiceHandle hService)
+            protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
                 {
                 return frame.getConstHandle(idModule);
                 }

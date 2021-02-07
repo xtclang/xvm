@@ -128,7 +128,7 @@ public class Child
         return new xRTFunction.AsyncHandle(chain)
             {
             @Override
-            protected ObjectHandle getContextTarget(Frame frame, ServiceHandle hService)
+            protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
                 {
                 return hTarget;
                 }
