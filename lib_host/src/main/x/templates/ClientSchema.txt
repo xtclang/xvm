@@ -33,6 +33,19 @@ class Client%appSchema%
         return tx;
         }
 
+    protected (Boolean, db.Transaction) ensureTransaction()
+        {
+        ClientTransaction? tx = transaction;
+        return tx == Null
+                ? (True, createTransaction())
+                : (False, tx);
+        }
+
+    Boolean checkAutoCommit()
+        {
+        return transaction == Null;
+        }
+
 
     // custom ClientDB* classes
 %ClientChildrenClasses%

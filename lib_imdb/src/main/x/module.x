@@ -51,12 +51,15 @@ module imdb
             implements db.DBObject
             delegates db.DBObject(dbObject)
         {
-        construct(ServerDBObject dbObject)
+        construct(ServerDBObject dbObject,
+                 function Boolean() isAutoCommit = () -> False)
             {
-            this.dbObject = dbObject;
+            this.dbObject     = dbObject;
+            this.isAutoCommit = isAutoCommit;
             }
 
-        protected db.DBObject dbObject;
+        protected db.DBObject        dbObject;
+        protected function Boolean() isAutoCommit;
 
         @Override
         Map<String, db.DBObject> dbChildren.get()

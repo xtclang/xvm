@@ -4,30 +4,14 @@
         {
         construct(Server%appSchema%.Server%propertyTypeName% %propertyName%)
             {
-            construct imdb.ClientDBMap(%propertyName%);
+            construct imdb.ClientDBMap(%propertyName%, checkAutoCommit);
             }
 
         // ----- mixin methods ---------------------------------------------------------------------
 
         %ClientDBMapMethods%
 
-        // ----- class specific --------------------------------------------------------------------
-
-        protected (Boolean, db.Transaction) ensureTransaction()
-            {
-            ClientTransaction? tx = this.Client%appSchema%.transaction;
-            return tx == Null
-                    ? (True, createTransaction())
-                    : (False, tx);
-            }
-
         // ----- ClientDBMap interface ------------------------------------------------------------
-
-        @Override
-        Boolean autoCommit.get()
-            {
-            return this.Client%appSchema%.transaction == Null;
-            }
 
         @Override
         Tuple dbInvoke(String | Function fn, Tuple args = Tuple:(), (Duration|DateTime)? when = Null)

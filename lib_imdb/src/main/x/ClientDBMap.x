@@ -3,17 +3,15 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
         implements db.DBMap<Key, Value>
         delegates Map<Key, Value>(serverDBMap) // temporary; should be all overridden
     {
-    construct((ServerDBObject + db.DBMap) dbMap)
+    construct((ServerDBObject + db.DBMap) dbMap, function Boolean() isAutoCommit)
         {
-        construct ClientDBObject(dbMap);
+        construct ClientDBObject(dbMap, isAutoCommit);
         }
 
     protected db.DBMap<Key, Value> serverDBMap.get()
         {
         return dbObject.as(db.DBMap<Key, Value>);
         }
-
-    protected @Abstract @RO Boolean autoCommit;
 
     protected ClientChange? change;
 
@@ -49,7 +47,7 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
     @Override
     ClientDBMap put(Key key, Value value)
         {
-        if (autoCommit)
+        if (isAutoCommit())
             {
             serverDBMap.put(key, value);
             }

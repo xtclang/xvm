@@ -34,13 +34,30 @@ class ClientAddressBookSchema
         return tx;
         }
 
+    protected (Boolean, db.Transaction) ensureTransaction()
+        {
+        ClientTransaction? tx = transaction;
+        return tx == Null
+                ? (True, createTransaction())
+                : (False, tx);
+        }
+
+    Boolean checkAutoCommit()
+        {
+        // TODO GG: this should've not compiled
+        // return this.ClientAddressBookSchema.transaction == Null;
+        return transaction == Null;
+        }
+
     class ClientContacts
             extends imdb.ClientDBMap<String, AddressBookDB.Contact>
             incorporates AddressBookDB.Contacts
         {
         construct(ServerAddressBookSchema.ServerContacts contacts)
             {
-            construct imdb.ClientDBMap(contacts);
+            // TODO GG: the following compiles incorrectly
+            // construct imdb.ClientDBMap(contacts, checkAutoCommit);
+            construct imdb.ClientDBMap(contacts, this.ClientAddressBookSchema.checkAutoCommit);
             }
 
         // ----- mixin methods ---------------------------------------------------------------------
@@ -71,23 +88,7 @@ class ClientAddressBookSchema
                 }
             }
 
-        // ----- class specific --------------------------------------------------------------------
-
-        protected (Boolean, db.Transaction) ensureTransaction()
-            {
-            ClientTransaction? tx = this.ClientAddressBookSchema.transaction;
-            return tx == Null
-                    ? (True, createTransaction())
-                    : (False, tx);
-            }
-
         // ----- ClientDBMap interface ------------------------------------------------------------
-
-        @Override
-        Boolean autoCommit.get()
-            {
-            return this.ClientAddressBookSchema.transaction == Null;
-            }
 
         @Override
         Tuple dbInvoke(String | Function fn, Tuple args = Tuple:(), (Duration|DateTime)? when = Null)
