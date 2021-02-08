@@ -11,6 +11,7 @@ const URI(String? scheme,
           String? fragment,
           String? schemeSpecificPart)
         implements Hashable
+        delegates Stringable (stringValue)
     {
     construct (String? scheme, String? schemeSpecificPart, String? fragment)
         {
@@ -48,10 +49,13 @@ const URI(String? scheme,
 
     @Lazy String stringValue.calc()
         {
+        // REVIEW JK: "buf" would be a better name :)
         StringBuffer sb = new StringBuffer();
-        if (this.scheme != Null)
+
+        String? scheme = this.scheme;
+        if (scheme != Null)
             {
-            sb.append(this.scheme.as(String));
+            sb.append(scheme);
             sb.append(':');
             }
         if (this.opaque)
@@ -61,15 +65,16 @@ const URI(String? scheme,
         else
             {
             String? host = this.host;
-            if (host.is(String))
+            if (host != Null)
                 {
                 sb.append("//");
-                if (this.userInfo.is(String))
+                if (this.userInfo != Null)
                     {
                     sb.append(this.userInfo);
                     sb.append('@');
                     }
-                Boolean needBrackets = host.size > 0 && host.indexOf(':') && host[0] != '[' && host[host.size - 1] != ']';
+                Boolean needBrackets = host.size > 0 && host.indexOf(':') &&
+                                       host[0] != '[' && host[host.size - 1] != ']';
                 if (needBrackets)
                     {
                     sb.append('[');
@@ -85,25 +90,25 @@ const URI(String? scheme,
                     sb.append(this.port);
                     }
             }
-            else if (this.authority.is(String))
+            else if (this.authority != Null)
                 {
                 sb.append("//");
                 sb.append(this.authority);
                 }
-            if (this.path.is(String))
-                {
-                sb.append(this.path);
-                }
-            if (this.query.is(String))
+
+            sb.append(this.path?);
+
+            if (this.query != Null)
                 {
                 sb.append('?');
                 sb.append(this.query);
                 }
             }
-        if (this.fragment.is(String))
+        String? fragment = this.fragment;
+        if (fragment != Null)
             {
             sb.append('#');
-            sb.append(this.fragment.as(String));
+            sb.append(fragment);
             }
         return sb.toString();
         }
@@ -111,20 +116,6 @@ const URI(String? scheme,
     static URI create(String uri)
         {
         return new Parser(uri).parseURI();
-        }
-
-    // ----- Stringable Interface implementation ---------------------------------------------------
-
-    @Override
-    public Int estimateStringLength()
-        {
-        return this.stringValue.size;
-        }
-
-    @Override
-    public Appender<Char> appendTo(Appender<Char> buf)
-        {
-        return this.stringValue.appendTo(buf);
         }
 
     // ----- Orderable & Hashable funky Interface implementations ----------------------------------
@@ -231,13 +222,13 @@ const URI(String? scheme,
             next();
             String? comp = parseComponent(":/?#", true);
 
-            if (hasNext()) 
+            if (hasNext())
                 {
                 this.ssp = input[index + 1..size];
                 }
 
             this.opaque = False;
-            if (current() == ':') 
+            if (current() == ':')
                 {
                 // absolute
                 if (comp == Null)
@@ -251,26 +242,26 @@ const URI(String? scheme,
                     return;
                 }
                 Char c = next();
-                if (c == '/') 
+                if (c == '/')
                     {
                     // hierarchical
                     parseHierarchicalUri();
-                    } 
+                    }
                 else
                     {
                     // opaque
                     this.opaque = True;
                     }
-                } 
-            else 
+                }
+            else
                 {
                 setPosition(0);
                 // relative
                 if (current() == '/')
                     {
                     parseHierarchicalUri();
-                    } 
-                else 
+                    }
+                else
                     {
                     parsePath();
                     }
@@ -305,6 +296,7 @@ const URI(String? scheme,
             Char         c                   = current();
 
             while (!endOfInput) {
+                // REVIEW JK: looks like a perfect "switch" candidate
                 if (c == '{')
                     {
                     curlyBracketsCount++;

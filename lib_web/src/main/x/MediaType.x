@@ -1,7 +1,8 @@
 /**
  * A representation of a media type.
- * See https://www.iana.org/assignments/media-types/media-types.xhtml
- * and https://tools.ietf.org/html/rfc2046
+ *
+ * @see [Media Types](https://www.iana.org/assignments/media-types/media-types.xhtml)
+ * @see [RFC 2046](https://tools.ietf.org/html/rfc2046)
  */
 const MediaType
         implements Stringable
@@ -22,18 +23,18 @@ const MediaType
         name = name.trim();
 
         String withoutArgs;
-        this.parameters = new HashMap();
+        HashMap<String, String> parameters = new HashMap();
         if (name.indexOf(";"))
             {
             String[] tokenWithArgs = name.split(';');
-            String[] paramsList    = tokenWithArgs[1..tokenWithArgs.size - 1];
+            String[] paramsList    = tokenWithArgs[1..tokenWithArgs.size);
             withoutArgs = tokenWithArgs[0];
             for (String param : paramsList)
                 {
                 if (param.indexOf("="))
                     {
                     String[] parts = param.split('=');
-                    this.parameters.put(parts[0].trim(), parts[1].trim());
+                    parameters.put(parts[0].trim(), parts[1].trim());
                     }
                 }
             }
@@ -44,8 +45,8 @@ const MediaType
 
         if (Int index := withoutArgs.indexOf('/'))
             {
-            this.type    = index == 0 ? "" : withoutArgs[0..index - 1];
-            this.subType = withoutArgs[index + 1..withoutArgs.size];
+            this.type    = index == 0 ? "" : withoutArgs[0..index);
+            this.subType = withoutArgs.substring(index + 1);
             }
         else
             {
@@ -60,7 +61,7 @@ const MediaType
             {
             if (Int j := subType.indexOf('+'))
                 {
-                this.extension = subType[j + 1..subType.size];
+                this.extension = subType.substring(j + 1);
                 }
             else
                 {
@@ -68,9 +69,10 @@ const MediaType
                 }
             }
 
-        this.parameters.putAll(params);
+        parameters.putAll(params);
 
         this.name        = withoutArgs;
+        this.parameters  = parameters;
         this.extension   = extension;
         this.allTypes    = this.type == "*";
         this.allSubTypes = this.subType == "*";

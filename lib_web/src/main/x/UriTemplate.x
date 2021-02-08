@@ -7,7 +7,7 @@ import ecstasy.text.Pattern;
 const UriTemplate(String template, List<PathSegment> segments, Int variableCount, Int rawLength)
         implements Orderable
         implements Hashable
-        implements Stringable
+        delegates Stringable(template)
     {
 
     // ----- properties ----------------------------------------------------------------------------
@@ -72,28 +72,9 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
         {
         //using value2 compareTo value1 because more raw length should have higher precedence
         Ordered rawCompare = value2.rawLength <=> value1.rawLength;
-        if (rawCompare == Ordered.Equal)
-            {
-            return value1.variableCount <=> value2.variableCount;
-            }
-        else
-            {
-            return rawCompare;
-            }
-        }
-
-    // ----- Stringable methods --------------------------------------------------------------------
-
-    @Override
-    Int estimateStringLength()
-        {
-        return template.size;
-        }
-
-    @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
-        return template.appendTo(buf);
+        return rawCompare == Ordered.Equal
+            ? value1.variableCount <=> value2.variableCount
+            : rawCompare;
         }
 
     // ----- inner types ---------------------------------------------------------------------------
@@ -106,6 +87,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
      */
     protected static class UriTemplateParser(String template, Object[] arguments = [])
         {
+        // REVIEW JK: why not public and Lazy?
         private UriTemplate? uriTemplate = Null;
 
         /**
@@ -115,10 +97,10 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
          */
         protected UriTemplate parse()
             {
-            UriTemplate? t = this.uriTemplate;
-            if (t.is(UriTemplate))
+            UriTemplate? uriTemplate = this.uriTemplate;
+            if (uriTemplate != Null)
                 {
-                return t;
+                return uriTemplate;
                 }
 
             ParserResult result = parse(template);
@@ -127,8 +109,8 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                                           result.segments,
                                           result.variableCount,
                                           result.rawLength);
-
-            return uriTemplate.as(UriTemplate);
+            this.uriTemplate = uriTemplate;
+            return uriTemplate;
             }
 
         protected ParserResult parse(String template)
@@ -137,6 +119,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                 {
                 if (template.size > 1)
                     {
+                    // REVIEW JK: this is a no op
                     template = template[0..template.size - 1];
                     }
                 }
@@ -155,28 +138,29 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                         segments.add(new RawPathSegment(False, scheme + "://"));
                         }
 
+                    // REVIEW JK: introduced name constants for the indexes?
                     String? userInfo = matcher.group(5);
-                    String? host = matcher.group(6);
-                    String? port = matcher.group(8);
-                    String? path = matcher.group(9);
-                    String? query = matcher.group(11);
+                    String? host     = matcher.group(6);
+                    String? port     = matcher.group(8);
+                    String? path     = matcher.group(9);
+                    String? query    = matcher.group(11);
                     String? fragment = matcher.group(13);
 
-                    if (userInfo.is(String))
+                    if (userInfo != Null)
                         {
                         createSegmentParser(userInfo, arguments).parse(segments);
                         }
-                    if (host.is(String))
+                    if (host != Null)
                         {
                         createSegmentParser(host, arguments).parse(segments);
                         }
-                    if (port.is(String))
+                    if (port != Null)
                         {
                         createSegmentParser(':' + port, arguments).parse(segments);
                         }
-                    if (path.is(String))
+                    if (path != Null)
                         {
-                        if (fragment.is(String))
+                        if (fragment != Null)
                             {
                             createSegmentParser(path + HASH_OPERATOR + fragment, [])
                                     .parse(segments);
@@ -186,7 +170,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                             createSegmentParser(path, arguments).parse(segments);
                             }
                         }
-                    if (query.is(String))
+                    if (query != Null)
                         {
                         createSegmentParser(query, arguments).parse(segments);
                         }
@@ -275,7 +259,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
             StringBuffer buff     = new StringBuffer();
             StringBuffer modBuff  = new StringBuffer();
             Int          varCount = 0;
-            
+
             NextChar: for (Char c : templateText)
                 {
                 switch (state)
@@ -291,10 +275,10 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                             buff.clear();
                             state = STATE_VAR_START;
                             continue NextChar;
-                            } 
-                        else 
+                            }
+                        else
                             {
-                            if (c == QUERY_OPERATOR || c == HASH_OPERATOR) 
+                            if (c == QUERY_OPERATOR || c == HASH_OPERATOR)
                                 {
                                 isQuerySegment = True;
                                 }
@@ -314,7 +298,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                             {
                             case ':':
                             case EXPAND_MODIFIER: // arrived to expansion modifier
-                                if (state == STATE_VAR_MODIFIER || state == STATE_VAR_NEXT_MODIFIER) 
+                                if (state == STATE_VAR_MODIFIER || state == STATE_VAR_NEXT_MODIFIER)
                                     {
                                     modBuff.append(c);
                                     continue NextChar;
@@ -326,14 +310,14 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                                 state = STATE_VAR_NEXT;
                                 continue;
                             case VAR_END: // arrived to variable end
-                                if (buff.size > 0) 
+                                if (buff.size > 0)
                                     {
                                     String  value  = buff.toString();
                                     String? prefix = Null;
                                     String  delimiter;
                                     Boolean encode;
                                     Boolean repeatPrefix;
-                                    switch (operator) 
+                                    switch (operator)
                                         {
                                         case '+':
                                             encode = False;
@@ -383,13 +367,13 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                                             repeatPrefix, modifierStr, modifierChar, operator,
                                             previous, isQuerySegment);
                                     }
-    
+
                                 Boolean hasAnotherVar = state == STATE_VAR_NEXT && c != VAR_END;
-    
-                                if (hasAnotherVar) 
+
+                                if (hasAnotherVar)
                                     {
                                     String? delimiter;
-                                    switch (operator) 
+                                    switch (operator)
                                         {
                                         case ';':
                                             delimiter = Null;
@@ -408,8 +392,8 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                                         }
                                     varDelimiter = delimiter;
                                     varCount++;
-                                    } 
-                                else 
+                                    }
+                                else
                                     {
                                     varCount = 0;
                                     }
@@ -417,13 +401,13 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                                 modBuff.clear();
                                 buff.clear();
                                 modifier = OPERATOR_NONE;
-                                if (!hasAnotherVar) 
+                                if (!hasAnotherVar)
                                     {
                                     operator = OPERATOR_NONE;
                                     }
                                 continue NextChar;
                             default:
-                                switch (modifier) 
+                                switch (modifier)
                                     {
                                     case EXPAND_MODIFIER:
                                         throw new IllegalState("Expansion modifier * must be immediately followed by a closing brace '}'");
@@ -436,7 +420,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                                     }
                             }
                     case STATE_VAR_START:
-                        switch (c) 
+                        switch (c)
                             {
                             case ' ':
                                 continue NextChar;
@@ -537,16 +521,18 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
          *
          * @return The variable name if present
          */
-        conditional String getVariable() {
+        conditional String getVariable()
+            {
             return False;
-        }
+            }
 
         /**
          * @return True if this is a variable segment
          */
-        Boolean isVariable() {
+        Boolean isVariable()
+            {
             return getVariable();
-        }
+            }
 
         /**
          * Expands this segment using the specified parameters.
@@ -576,6 +562,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
      */
     static const RawPathSegment(Boolean isQuerySegment, String value)
             implements PathSegment
+            delegates Stringable(value)
         {
         @Override
         Int size.get()
@@ -604,20 +591,6 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
             {
             return value.slice(indexes);
             }
-
-        // ----- Stringable methods ------------------------------------------------------------
-
-        @Override
-        Int estimateStringLength()
-            {
-            return value.size;
-            }
-
-        @Override
-        Appender<Char> appendTo(Appender<Char> buf)
-            {
-            return value.appendTo(buf);
-            }
         }
 
     // ----- inner class: VariablePathSegment ------------------------------------------------------
@@ -630,6 +603,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                               Boolean encode, Char modifierChar, Char operator,
                               String modifierStr, String? previousDelimiter, Boolean repeatPrefix)
             implements PathSegment
+            delegates Stringable(stringValue)
         {
         // ----- properties --------------------------------------------------------------------
 
@@ -682,20 +656,6 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
             return Null;
             }
 
-        // ----- Stringable methods ------------------------------------------------------------
-
-        @Override
-        Int estimateStringLength()
-            {
-            return stringValue.size;
-            }
-
-        @Override
-        Appender<Char> appendTo(Appender<Char> buf)
-            {
-            return stringValue.appendTo(buf);
-            }
-
         // ----- helper methods ----------------------------------------------------------------
 
         /**
@@ -705,6 +665,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
         private String escape(String v)
             {
             String s = PATTERN_PERCENT.match(v).replaceAll("%25");
+            // REVIEW JK: s is not used
             return PATTERN_SPACE.match(v).replaceAll("%20");
             }
 

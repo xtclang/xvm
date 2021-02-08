@@ -4,7 +4,6 @@ package org.xvm.runtime;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-import java.util.regex.Pattern;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.InjectionKey;
 import org.xvm.asm.MethodStructure;
@@ -18,14 +17,10 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
-import org.xvm.runtime.template._native.text.xRTPattern;
-import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 
-import org.xvm.runtime.template._native.proxy.xRTWebServerProxy;
-import org.xvm.runtime.template._native.text.xRTRegExp;
 import org.xvm.runtime.template._native.xTerminalConsole;
 
 import org.xvm.runtime.template._native.lang.src.xRTCompiler;
@@ -35,11 +30,15 @@ import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 
 import org.xvm.runtime.template._native.numbers.xRTRandom;
 
+import org.xvm.runtime.template._native.proxy.xRTWebServerProxy;
+
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
 import org.xvm.runtime.template._native.temporal.xLocalClock;
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
+
+import org.xvm.runtime.template._native.text.xRTRegExp;
 
 
 /**

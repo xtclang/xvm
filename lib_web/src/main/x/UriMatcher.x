@@ -6,10 +6,10 @@ public interface UriMatcher
     /**
      * Match the given URI object.
      *
-     * @param uri The URI
+     * @param uri  the URI
      *
      * @return True iff this matcher matches the URI
-     * @return the resulting UriMatchInfo
+     * @return (optional) the resulting UriMatchInfo
      */
     conditional UriMatchInfo match(URI uri)
         {
@@ -19,10 +19,10 @@ public interface UriMatcher
     /**
      * Match the given URI object.
      *
-     * @param uri The URI
+     * @param uri  the URI
      *
      * @return True iff this matcher matches the URI
-     * @return the resulting UriMatchInfo
+     * @return (optional) the resulting UriMatchInfo
      */
     conditional UriMatchInfo match(String uri);
     }

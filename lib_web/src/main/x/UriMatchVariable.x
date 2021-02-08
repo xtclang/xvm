@@ -18,7 +18,11 @@ const UriMatchVariable(String name, Char modifier, Char operator)
      */
     Boolean isQuery.get()
         {
-        return operator == '?' || operator == '#' || operator == '&';
+        return switch(operator)
+            {
+            case '?', '#', '&': True;
+            default           : False;
+            };
         }
 
     /**
@@ -29,7 +33,11 @@ const UriMatchVariable(String name, Char modifier, Char operator)
      */
     Boolean isOptional.get()
         {
-        return operator == '?' || operator == '#' || operator == '&' || operator == '/';
+        return switch(operator)
+            {
+            case '?', '#', '&', '/': True;
+            default                : False;
+            };
         }
 
     // ----- Hashable & Orderable ------------------------------------------------------------------

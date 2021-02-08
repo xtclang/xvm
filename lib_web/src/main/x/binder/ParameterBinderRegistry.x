@@ -3,16 +3,16 @@ import ecstasy.reflect.Parameter;
 /**
  * A registry of ParameterBinder instances for a given source type.
  *
- * @param <S> the source type
+ * @param <Source> the source type
  */
-interface ParameterBinderRegistry<S>
+interface ParameterBinderRegistry<Source>
     {
     /**
      * Adds a parameter binder to the registry.
      *
      * @param binder the binder to add
      */
-    void addParameterBinder(ParameterBinder<S> binder)
+    void addParameterBinder(ParameterBinder<Source> binder)
         {
         throw new UnsupportedOperation("Binder registry is not mutable");
         }
@@ -27,5 +27,5 @@ interface ParameterBinderRegistry<S>
      * @return True iff a ParameterBinder exists for the given parameter
      * @return the ParameterBinder for the given parameter
      */
-    conditional ParameterBinder<S> findParameterBinder(Parameter parameter, S source);
+    conditional ParameterBinder<Source> findParameterBinder(Parameter parameter, Source source);
     }

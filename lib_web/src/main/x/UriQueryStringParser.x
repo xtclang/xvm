@@ -18,7 +18,9 @@ class UriQueryStringParser
      * Creates a new decoder that decodes the specified URI encoded in the
      * specified charset.
      */
-    construct(String uri, Boolean hasPath = True, Int maxParams = 1024, Boolean semicolonIsNormalChar = False) {
+    construct(String uri, Boolean hasPath = True, Int maxParams = 1024,
+              Boolean semicolonIsNormalChar = False)
+        {
         this.uri                   = uri;
         this.maxParams             = maxParams;
         this.semicolonIsNormalChar = semicolonIsNormalChar;
@@ -44,16 +46,29 @@ class UriQueryStringParser
 
     /**
      * The end of the path value in the URI.
+     * The index is lazily initialized.
      */
-    private Int pathEndIdx;
+    // TODO GG private access should be allowed
+    protected Int pathEndIdx.get()
+        {
+        Int ix = super();
+        if (ix == -1)
+            {
+            ix = findPathEndIndex(uri);
+            set(ix);
+            }
+        return ix;
+        }
 
     /**
      * The decoded path value.
+     * REVIEW JK: why not make it public and @Lazy?
      */
     private String? path;
 
     /**
      * The decoded parameters.
+     * REVIEW JK: why not make it public and @Lazy?
      */
     private Map<String, List<String>>? params;
 
@@ -62,11 +77,12 @@ class UriQueryStringParser
      */
     String getPath()
         {
+        String? path = this.path;
         if (path == Null)
             {
-            path = decodeComponent(uri, 0, getPathEndIdx(), True);
+            path = decodeComponent(uri, 0, pathEndIdx, True);
             }
-        return path.as(String);
+        return path;
         }
 
     /**
@@ -74,11 +90,12 @@ class UriQueryStringParser
      */
     public Map<String, List<String>> getParameters()
         {
+        Map<String, List<String>>? params = this.params;
         if (params == null)
             {
-            params = decodeParams(uri, getPathEndIdx());
+            params = decodeParams(uri, pathEndIdx);
             }
-        return params.as(Map<String, List<String>>);
+        return params;
         }
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -105,16 +122,16 @@ class UriQueryStringParser
             }
         if (firstEscaped == -1)
             {
-            return s[from..toExcluded - 1];
+            return s[from..toExcluded);
             }
 
         // Each encoded byte takes 3 characters (e.g. "%20")
         Int          decodedCapacity = (toExcluded - firstEscaped) / 3;
-        Array<Char>  buf             = new Array(decodedCapacity);
+        Char[]       buf             = new Array(decodedCapacity);
         StringBuffer strBuf          = new StringBuffer();
         Int          bufIdx;
 
-        s[from..firstEscaped - 1].appendTo(strBuf);
+        s[from..firstEscaped).appendTo(strBuf);
 
         for (Int i = firstEscaped; i < toExcluded; i++)
             {
@@ -135,10 +152,10 @@ class UriQueryStringParser
                     }
                 buf[bufIdx++] = decodeHex(s, i + 1);
                 i += 3;
-            } while (i < toExcluded && s[i] == '%');
+                } while (i < toExcluded && s[i] == '%');
             i--;
 
-            new String(buf[0..bufIdx - 1]).appendTo(strBuf);
+            strBuf.addAll(buf[0..bufIdx));
             }
         return strBuf.toString();
         }
@@ -154,43 +171,44 @@ class UriQueryStringParser
     private Map<String, List<String>> decodeParams(String s, Int from)
         {
         Int len = s.size;
-        if (from >= len) 
+        if (from >= len)
             {
             return Map:[];
             }
-        if (s[from] == '?') 
+        if (s[from] == '?')
             {
             from++;
             }
-        Map<String, List<String>> params     = new ListMap<String, List<String>>();
+        Map<String, List<String>> params     = new ListMap();
         Int                       nameStart  = from;
         Int                       valueStart = -1;
         Int                       i;
 
         loop:
-        for (i = from; i < len; i++) 
+        for (i = from; i < len; i++)
             {
-            switch (s[i]) 
+            switch (s[i])
                 {
                 case '=':
-                    if (nameStart == i) 
+                    if (nameStart == i)
                         {
                         nameStart = i + 1;
-                        } 
-                    else if (valueStart < nameStart) 
+                        }
+                    else if (valueStart < nameStart)
                         {
                         valueStart = i + 1;
                         }
                     break;
+
                 case ';':
-                    if (semicolonIsNormalChar) 
+                    if (semicolonIsNormalChar)
                         {
                         break loop;
                         }
-                    // fall-through
                     continue;
+
                 case '&':
-                    if (addParam(s, nameStart, valueStart, i, params)) 
+                    if (addParam(s, nameStart, valueStart, i, params))
                         {
                         maxParams--;
                         if (maxParams == 0)
@@ -200,6 +218,7 @@ class UriQueryStringParser
                         }
                     nameStart = i + 1;
                     break;
+
                 case '#':
                     break loop;
                 }
@@ -212,7 +231,7 @@ class UriQueryStringParser
      * Add a parsed parameter to the parameter map.
      */
     private Boolean addParam(String s, Int nameStart, Int valueStart,
-            Int valueEnd, Map<String, List<String>> params)
+                             Int valueEnd, Map<String, List<String>> params)
         {
         if (nameStart >= valueEnd)
             {
@@ -223,8 +242,8 @@ class UriQueryStringParser
             valueStart = valueEnd + 1;
             }
 
-        String name   = decodeComponent(s, nameStart, valueStart - 1, false);
-        String value  = decodeComponent(s, valueStart, valueEnd, false);
+        String name  = decodeComponent(s, nameStart, valueStart - 1, false);
+        String value = decodeComponent(s, valueStart, valueEnd, false);
 
         if (List<String> values := params.get(name))
             {
@@ -232,41 +251,24 @@ class UriQueryStringParser
             }
         else
             {
-            values = new Array(1);
-            values.add(value);
-            params.put(name, values);
+            params.put(name, new Array(Mutable, [value]));
             }
         return True;
     }
-
-    /**
-     * Get the index in the URI that is the end of the path.
-     * The index is lazily intiailized.
-     */
-    private Int getPathEndIdx()
-        {
-        if (pathEndIdx == -1)
-            {
-            pathEndIdx = findPathEndIndex(uri);
-            }
-        return pathEndIdx;
-        }
 
     /**
      * Calculate the index in the URI that is the end of the path.
      */
     private Int findPathEndIndex(String uri)
         {
-        Int len = uri.size;
-        for (Int i = 0; i < len; i++)
+        Loop: for (Char c : uri)
             {
-            Char c = uri[i];
             if (c == '?' || c == '#')
                 {
-                return i;
+                return Loop.count;
                 }
             }
-        return len;
+        return uri.size;
         }
 
     /**

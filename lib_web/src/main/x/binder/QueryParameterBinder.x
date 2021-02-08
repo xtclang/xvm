@@ -11,13 +11,12 @@ const QueryParameterBinder
     @Override
     <ParamType> BindingResult<ParamType> bind(Parameter<ParamType> parameter, HttpRequest request)
         {
-        Parameter queryParam = parameter;
-        if (queryParam.is(QueryParam))
+        if (parameter.is(QueryParam))
             {
             String name = "";
-            if (queryParam.is(ParameterBinding))
+            if (parameter.is(ParameterBinding))
                 {
-                name = queryParam.templateParameter;
+                name = parameter.templateParameter;
                 }
             if (name == "")
                 {
@@ -26,12 +25,9 @@ const QueryParameterBinder
 
             Map<String, List<String>> queryParamMap = request.parameters;
             // ToDo: this process is actually a lot more complex, e.g. type conversion
-            if (List<String> list := queryParamMap.get(name))
+            if (List<String> list := queryParamMap.get(name), !list.empty)
                 {
-                if (!list.empty)
-                    {
-                    return new BindingResult<ParamType>(list[0].as(ParamType), True);
-                    }
+                return new BindingResult<ParamType>(list[0].as(ParamType), True);
                 }
             }
         return new BindingResult();

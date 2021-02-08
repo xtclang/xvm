@@ -2,33 +2,38 @@ package org.xvm.runtime.template._native.proxy;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
+
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
+
 import java.util.List;
 import java.util.Map;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xByteArray;
-import org.xvm.runtime.template.numbers.xInt64;
-import org.xvm.runtime.template.text.xString;
+
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
-import org.xvm.util.Handy;
+
+import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xByteArray;
+
+import org.xvm.runtime.template.text.xString;
+
 import org.xvm.util.ListMap;
 
 /**
@@ -65,7 +70,6 @@ public class xRTHttpRequestProxy
         TypeComposition clzOSFile    = ensureClass(templateFile.getCanonicalType());
 
         s_clzRequestStruct = clzOSFile.ensureAccess(Constants.Access.STRUCT);
-        s_constructorRequest = getStructure().findConstructor();
         }
 
     @Override
@@ -149,13 +153,11 @@ public class xRTHttpRequestProxy
 
     private ObjectHandle makePossiblyNullHandle(String s)
         {
-        if (s == null)
-            {
-            return xNullable.NULL;
-            }
-        return xString.makeHandle(s);
+        return s == null
+            ? xNullable.NULL
+            : xString.makeHandle(s);
         }
-    
+
     /**
      * Construct a new {@link RequestHandle} representing the specified request.
      *
@@ -194,5 +196,4 @@ public class xRTHttpRequestProxy
     // ----- constants -----------------------------------------------------------------------------
 
     private static TypeComposition s_clzRequestStruct;
-    private static MethodStructure s_constructorRequest;
     }

@@ -4,22 +4,33 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+
 import java.io.IOException;
 import java.io.OutputStream;
+
 import java.net.InetSocketAddress;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.runtime.template.xService;
+
+import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
+import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
+import org.xvm.runtime.template.collections.xTuple.TupleHandle;
+
+import org.xvm.runtime.template.text.xString.StringHandle;
+
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xByteArray;
-import org.xvm.runtime.template.collections.xTuple;
-import org.xvm.runtime.template.text.xString;
-import org.xvm.runtime.template.xService;
+import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
+
 
 /**
  * Native implementation of a simple http server proxy.
@@ -48,8 +59,7 @@ public class xRTWebServerProxy
             {
             case "start":
                 {
-                xRTFunction.FunctionHandle hHandler   = (xRTFunction.FunctionHandle) hArg;
-
+                FunctionHandle hHandler       = (FunctionHandle) hArg;
                 RequestHandler requestHandler = new RequestHandler(frame, hTarget, hHandler);
 
                 frame.f_context.registerNotification();
@@ -75,7 +85,7 @@ public class xRTWebServerProxy
     protected static class RequestHandler
             implements HttpHandler
         {
-        public RequestHandler(Frame frame, ObjectHandle hObject, xRTFunction.FunctionHandle hHandler)
+        public RequestHandler(Frame frame, ObjectHandle hObject, FunctionHandle hHandler)
             {
             f_frame    = frame;
             f_hObject  = hObject;
@@ -85,42 +95,42 @@ public class xRTWebServerProxy
         @Override
         public void handle(HttpExchange exchange) throws IOException
             {
-            FunctionHandle hFunction = new xRTFunction.NativeFunctionHandle((_frame, _ahArg, _iReturn) ->
-                            {
-                            try
-                                {
-                                ObjectHandle.JavaLong      nStatus  = (ObjectHandle.JavaLong) _ahArg[0];
-                                xByteArray.ByteArrayHandle abBody   = (xByteArray.ByteArrayHandle) _ahArg[1];
-                                xArray.GenericArrayHandle  ahHeader = (xArray.GenericArrayHandle) _ahArg[2];
+            FunctionHandle hFunction = new NativeFunctionHandle((_frame, _ahArg, _iReturn) ->
+                    {
+                    try
+                        {
+                        JavaLong           nStatus  = (JavaLong) _ahArg[0];
+                        ByteArrayHandle    abBody   = (ByteArrayHandle) _ahArg[1];
+                        GenericArrayHandle ahHeader = (GenericArrayHandle) _ahArg[2];
 
-                                Headers responseHeaders = exchange.getResponseHeaders();
-                                for (int i = 0; i < ahHeader.m_cSize; i++)
-                                    {
-                                    xTuple.TupleHandle        hTuple  = (xTuple.TupleHandle) ahHeader.m_ahValue[i];
-                                    xString.StringHandle      hName   = (xString.StringHandle) hTuple.m_ahValue[0];
-                                    xArray.GenericArrayHandle hValues = (xArray.GenericArrayHandle) hTuple.m_ahValue[1];
-                                    for (int j = 0; j < hValues.m_cSize; j++)
-                                        {
-                                        xString.StringHandle hValue = (xString.StringHandle) hValues.m_ahValue[j];
-                                        responseHeaders.add(hName.getStringValue(), hValue.getStringValue());
-                                        }
-                                    }
-                                exchange.sendResponseHeaders((int) nStatus.getValue(), abBody.m_cSize);
-                                try (OutputStream out = exchange.getResponseBody())
-                                    {
-                                    if (abBody.m_cSize > 0)
-                                        {
-                                        out.write(abBody.m_abValue, 0, abBody.m_cSize);
-                                        }
-                                    }
-                                return Op.R_NEXT;
-                                }
-                            catch (IOException e)
+                        Headers responseHeaders = exchange.getResponseHeaders();
+                        for (int i = 0; i < ahHeader.m_cSize; i++)
+                            {
+                            TupleHandle        hTuple  = (TupleHandle) ahHeader.m_ahValue[i];
+                            StringHandle      hName   = (StringHandle) hTuple.m_ahValue[0];
+                            GenericArrayHandle hValues = (GenericArrayHandle) hTuple.m_ahValue[1];
+                            for (int j = 0; j < hValues.m_cSize; j++)
                                 {
-                                e.printStackTrace();
-                                return Op.R_EXCEPTION;
+                                StringHandle hValue = (StringHandle) hValues.m_ahValue[j];
+                                responseHeaders.add(hName.getStringValue(), hValue.getStringValue());
                                 }
-                            });
+                            }
+                        exchange.sendResponseHeaders((int) nStatus.getValue(), abBody.m_cSize);
+                        try (OutputStream out = exchange.getResponseBody())
+                            {
+                            if (abBody.m_cSize > 0)
+                                {
+                                out.write(abBody.m_abValue, 0, abBody.m_cSize);
+                                }
+                            }
+                        return Op.R_NEXT;
+                        }
+                    catch (IOException e)
+                        {
+                        e.printStackTrace();
+                        return Op.R_EXCEPTION;
+                        }
+                    });
 
             ObjectHandle hRequest = xRTHttpRequestProxy.INSTANCE.createHandle(f_frame, exchange, 0);
             f_frame.f_context.callLater(f_hHandler, new ObjectHandle[]{hRequest, hFunction}, true);

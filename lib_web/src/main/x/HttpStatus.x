@@ -1,6 +1,7 @@
 /**
  * A representation of HTTP status codes.
- * See https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html.
+ *
+ * @see [RFC 2616 §10](https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html)
  */
 enum HttpStatus(Int code, String reason)
     {
@@ -71,4 +72,4 @@ enum HttpStatus(Int code, String reason)
     NotExtended(510, "Not Extended"),
     NetworkAuthenticationRequired(511, "Network Authentication Required"),
     ConnectionTimedOut(522, "Connection Timed Out");
-}
+    }

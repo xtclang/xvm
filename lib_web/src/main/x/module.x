@@ -149,7 +149,7 @@ module web.xtclang.org
      */
     interface ExecutableFunction
         {
-        @RO Function<Tuple, Tuple> fn;
+        @RO function void () fn;
 
         @RO Boolean conditionalResult;
         }

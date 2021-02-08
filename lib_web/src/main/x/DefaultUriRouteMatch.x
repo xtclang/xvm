@@ -95,21 +95,20 @@ class DefaultUriRouteMatch
             {
             return True;
             }
-        else
+
+        if (route.produces.contains(MediaType.ALL_TYPE))
             {
-            if (route.produces.contains(MediaType.ALL_TYPE))
+            return True;
+            }
+
+        for (MediaType acceptableType : acceptableTypes)
+            {
+            if (acceptableType == MediaType.ALL_TYPE || route.produces.contains(acceptableType))
                 {
                 return True;
                 }
-
-            for (MediaType acceptableType : acceptableTypes)
-                {
-                if (acceptableType == MediaType.ALL_TYPE || route.produces.contains(acceptableType))
-                    {
-                    return True;
-                    }
-                }
             }
+
         return False;
         }
 

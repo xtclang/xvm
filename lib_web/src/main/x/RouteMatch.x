@@ -45,12 +45,9 @@ interface RouteMatch
                 {
                 for (Parameter parameter : parameters)
                     {
-                    if (String name := parameter.hasName())
+                    if (String name := parameter.hasName(), !matchVariables.contains(name))
                         {
-                        if (!matchVariables.contains(name))
-                            {
-                            requiredParameters.add(parameter);
-                            }
+                        requiredParameters.add(parameter);
                         }
                     }
                 }
@@ -106,47 +103,40 @@ interface RouteMatch
             {
             return this;
             }
-        else
+
+        Map<String, Object> newVariables          = new ListMap();
+        Parameter[]         parameters            = fn.params;
+        Boolean             hasRequiredParameters = requiredParameters.empty;
+        Parameter?          bodyParameter         = bodyParameter;
+        String?             bodyParameterName     = Null;
+
+        if (bodyParameter.is(Parameter), String name := bodyParameter.hasName())
             {
-            Map<String, Object> newVariables          = new ListMap();
-            Parameter[]         parameters            = fn.params;
-            Boolean             hasRequiredParameters = requiredParameters.empty;
-            Parameter?          bodyParameter         = bodyParameter;
-            String?             bodyParameterName     = Null;
-
-            if (bodyParameter.is(Parameter))
-                {
-                if (String name := bodyParameter.hasName())
-                    {
-                    bodyParameterName = name;
-                    }
-                }
-
-            newVariables.putAll(this.variableValues);
-
-            for (Parameter requiredParameter : parameters)
-                {
-                if (String argumentName := requiredParameter.hasName())
-                    {
-                    if (Object value := arguments.get(argumentName))
-                        {
-                        if (bodyParameterName != Null && bodyParameterName.as(String) == argumentName)
-                            {
-                            requiredParameter = bodyParameter.as(Parameter);
-                            }
-
-                        if (hasRequiredParameters)
-                            {
-                            requiredParameters.remove(requiredParameter);
-                            }
-
-                        newVariables.put(argumentName, value);
-                        }
-                    }
-                }
-
-            return newFulfilled(newVariables, requiredParameters);
+            bodyParameterName = name;
             }
+
+        newVariables.putAll(this.variableValues);
+
+        for (Parameter requiredParameter : parameters)
+            {
+            if (String argumentName := requiredParameter.hasName(),
+                Object value        := arguments.get(argumentName))
+                {
+                if (bodyParameterName != Null && bodyParameterName == argumentName)
+                    {
+                    requiredParameter = bodyParameter.as(Parameter);
+                    }
+
+                if (hasRequiredParameters)
+                    {
+                    requiredParameters.remove(requiredParameter);
+                    }
+
+                newVariables.put(argumentName, value);
+                }
+            }
+
+        return newFulfilled(newVariables, requiredParameters);
         }
 
     RouteMatch newFulfilled(Map<String, Object> variables, List<Parameter> parameters);

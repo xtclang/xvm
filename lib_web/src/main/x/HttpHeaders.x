@@ -6,7 +6,7 @@ import ecstasy.collections.CaseInsensitiveHasher;
  * Headers keys are case-insensitive.
  */
 class HttpHeaders
-        implements Stringable
+        delegates Stringable(headers)
     {
     construct()
         {
@@ -33,18 +33,11 @@ class HttpHeaders
         validateHeaderName(name);
         headers.process(name, e ->
             {
-            List<String> list;
-            if (e.exists)
-                {
-                list = e.value;
-                }
-            else
-                {
-                list = new Array();
-                }
-            list.add(value);
-            e.value = list;
-            return list;
+            String[] headers = e.exists
+                ? e.value
+                : new Array();
+            e.value = headers.add(value);
+            return headers;
             });
 
         return this;
@@ -70,18 +63,11 @@ class HttpHeaders
         validateHeaderName(name);
         headers.process(name, e ->
             {
-            List<String> list;
-            if (e.exists)
-                {
-                list = e.value;
-                }
-            else
-                {
-                list = new Array();
-                }
-            list.addAll(values);
-            e.value = list;
-            return list;
+            String[] headers = e.exists
+                ? e.value
+                : new Array();
+            e.value = headers.addAll(values);
+            return headers;
             });
 
         return this;
@@ -99,8 +85,7 @@ class HttpHeaders
     HttpHeaders set(String name, String value)
         {
         validateHeaderName(name);
-        String[] values = [value];
-        headers.put(name, values);
+        headers.put(name, new Array(Mutable, [value]));
         return this;
         }
 
@@ -115,16 +100,11 @@ class HttpHeaders
      */
     HttpHeaders set(String name, String[] values)
         {
-        if (values.size == 0)
+        if (values.size > 0)
             {
-            return this;
+            validateHeaderName(name);
+            headers.put(name, new Array(Mutable, values));
             }
-
-        validateHeaderName(name);
-        String[] list = new Array();
-        list.addAll(values);
-        headers.put(name, list);
-
         return this;
         }
 
@@ -223,34 +203,19 @@ class HttpHeaders
     ListMap<String, String[]> toMap()
         {
         ListMap<String, String[]> map = new ListMap();
-        map.putAll(headers);
-        return map;
+        return map.putAll(headers);
         }
 
     Tuple<String, String[]>[] toTuples()
         {
         Tuple<String, String[]>[] tuples = new Array(headers.size);
-        Int                       i      = 0;
-        for (HashMap.Entry entry : headers.entries)
+        Headers: for ((String key, String[] values) : headers)
             {
-            tuples[i++] = (entry.key.as(String), entry.value.as(String[]));
+            tuples[Headers.count] = (key, values);
             }
         return tuples;
         }
 
-    // ----- Stringable interface implementation ---------------------------------------------------
-
-    @Override
-    public Int estimateStringLength()
-        {
-        return headers.estimateStringLength();
-        }
-
-    @Override
-    public Appender<Char> appendTo(Appender<Char> buf)
-        {
-        return headers.appendTo(buf);
-        }
 
     // ----- helper methods ----------------------------------------------------------------------------
 

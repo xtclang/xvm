@@ -2,6 +2,7 @@ import ecstasy.reflect.Parameter;
 
 import codec.MediaTypeCodec;
 import codec.MediaTypeCodecRegistry;
+
 import web.Body;
 
 /**
@@ -13,32 +14,29 @@ class BodyParameterBinder(MediaTypeCodecRegistry registry)
     @Override
     Int priority.get()
         {
-        return DefaultPriority + 1;
+        return DEFAULT_PRIORITY + 1;
         }
 
     @Override
     Boolean canBind(Parameter parameter)
         {
-        String name = "";
-        if (String paramName := parameter.hasName())
+        if (parameter.is(Body))
             {
-            name = paramName;
+            return True;
             }
 
-        return parameter.is(Body) || "body" == name;
+        if (String name := parameter.hasName())
+            {
+            return name == "body";
+            }
+
+        return False;
         }
 
     @Override
     <ParamType> BindingResult<ParamType> bind(Parameter<ParamType> parameter, HttpRequest request)
         {
-        String name = "";
-        if (String paramName := parameter.hasName())
-            {
-            name = paramName;
-            }
-
-        Parameter bodyParam = parameter;
-        if (bodyParam.is(Body) || "body" == name)
+        if (canBind(parameter))
             {
             if (ParamType body := request.attributes.getAttribute(HttpAttributes.BODY))
                 {
@@ -46,17 +44,14 @@ class BodyParameterBinder(MediaTypeCodecRegistry registry)
                 }
 
             MediaType? mediaType = request.contentType;
-            if (mediaType != Null)
+            if (mediaType != Null, MediaTypeCodec codec := registry.findCodec(mediaType))
                 {
-                if (MediaTypeCodec codec := registry.findCodec(mediaType))
+                Object? requestBody = request.body;
+                if (requestBody.is(Byte[]))
                     {
-                    Object? requestBody = request.body;
-                    if (requestBody.is(Byte[]))
-                        {
-                        ParamType body = codec.decode<ParamType>(requestBody);
-                        request.attributes.add(HttpAttributes.BODY, body);
-                        return new BindingResult<ParamType>(body, True);
-                        }
+                    ParamType body = codec.decode<ParamType>(requestBody);
+                    request.attributes.add(HttpAttributes.BODY, body);
+                    return new BindingResult<ParamType>(body, True);
                     }
                 }
             }

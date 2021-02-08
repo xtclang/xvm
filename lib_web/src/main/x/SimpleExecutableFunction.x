@@ -1,6 +1,5 @@
 /**
- * A simple implementation of an ExecutableFunction that
- * executes a method bound to a target.
+ * A simple implementation of an ExecutableFunction that executes a method bound to a target.
  */
 class SimpleExecutableFunction
         implements ExecutableFunction
@@ -9,8 +8,7 @@ class SimpleExecutableFunction
      * Create a SimpleExecutableFunction.
      *
      * @param method  the method to bind to the target
-     * @param target  the target to bind the method to when creating the
-     *                function to execute
+     * @param target  the target to bind the method to when creating the function to execute
      */
     construct(Method<Object, Tuple, Tuple> method, Object target)
         {
@@ -19,7 +17,7 @@ class SimpleExecutableFunction
         }
 
     @Override
-    public/private Function<Tuple, Tuple> fn;
+    public/private function void () fn;
 
     @Override
     public/private Boolean conditionalResult;

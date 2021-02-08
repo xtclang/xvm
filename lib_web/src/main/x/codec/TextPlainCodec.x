@@ -11,8 +11,7 @@ const TextPlainCodec
         HashSet<MediaType> mediaTypes = new HashSet();
         mediaTypes.addAll(additionalTypes);
         mediaTypes.add(MediaType.TEXT_PLAIN_TYPE);
-        mediaTypes.freeze(True);
-        types = mediaTypes;
+        types = mediaTypes.freeze(True);
         }
 
     private Set<MediaType> types;
@@ -32,7 +31,7 @@ const TextPlainCodec
     @Override
     <ObjectType> ObjectType decode<ObjectType>(InputStream in)
         {
-        if ("".is(ObjectType))
+        if (ObjectType.is(Type<String>))
             {
             StringBuffer buffer = new StringBuffer();
             new UTF8Reader(in).pipeTo(buffer);

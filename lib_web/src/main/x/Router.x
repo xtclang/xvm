@@ -11,34 +11,32 @@ class Router
     /**
      * The routes this Router can route requests to.
      */
-    private Array<UriRoute> routes;
+    private UriRoute[] routes;
 
     /**
      * Add all of the Routes for the annotated endpoints in the specified Type.
      *
      * @param controller  the endpoints to add
      */
-    <T> void addRoutes(T controller)
+    <ControllerType> void addRoutes(ControllerType controller)
         {
-        Type<T> t = &controller.actualType;
-        for (Method<Object, Tuple, Tuple> method : t.methods)
+        for (Method<Object, Tuple, Tuple> endpoint : &controller.actualType.methods)
             {
-            Method endpoint = method;
             if (endpoint.is(HttpEndpoint))
                 {
-                ExecutableFunction executable = new SimpleExecutableFunction(method, controller);
-                Array<MediaType>   produces   = new Array<MediaType>();
-                Array<MediaType>   consumes   = new Array<MediaType>();
+                ExecutableFunction executable = new SimpleExecutableFunction(endpoint, controller);
+                MediaType[]        produces   = new Array<MediaType>();
+                MediaType[]        consumes   = new Array<MediaType>();
                 UriMatchTemplate   template   = UriMatchTemplate.from(endpoint.path);
 
-                if (method.is(Produces))
+                if (endpoint.is(Produces))
                     {
-                    produces.add(new MediaType(method.mediaType));
+                    produces.add(new MediaType(endpoint.mediaType));
                     }
 
-                if (method.is(Consumes))
+                if (endpoint.is(Consumes))
                     {
-                    consumes.add(new MediaType(method.mediaType));
+                    consumes.add(new MediaType(endpoint.mediaType));
                     }
 
                 routes.add(new DefaultUriRoute(endpoint.method, template,
@@ -77,7 +75,8 @@ class Router
             {
             // take the highest priority accepted type
             MediaType           mediaType    = acceptedProducedTypes[0];
-            List<UriRouteMatch> mostSpecific = matches.filter(match -> match.canProduce(mediaType), new Array()).as(List<UriRouteMatch>);
+            List<UriRouteMatch> mostSpecific = matches.filter(
+                    match -> match.canProduce(mediaType), new Array()).as(List<UriRouteMatch>);
 
             if (!mostSpecific.empty || !acceptedProducedTypes.contains(MediaType.ALL_TYPE))
                 {
@@ -92,7 +91,7 @@ class Router
 
             for (UriRouteMatch match: matches)
                 {
-                MediaType explicitType = contentType != Null ? contentType : MediaType.ALL_TYPE;
+                MediaType explicitType = contentType ?: MediaType.ALL_TYPE;
                 if (match.explicitlyConsumes(explicitType))
                     {
                     explicitlyConsumedRoutes.add(match);
@@ -112,7 +111,7 @@ class Router
             Int                 variableCount  = 0;
             Int                 rawLength      = 0;
 
-            for (Int i: 0..matches.size - 1)
+            for (Int i : [0..matches.size))
                 {
                 UriRouteMatch    match    = matches[i];
                 UriMatchTemplate template = match.route.uriMatchTemplate;
@@ -145,16 +144,13 @@ class Router
      */
     List<UriRouteMatch> findRoutes(HttpMethod method, HttpRequest req)
         {
-        Array<UriRouteMatch> matches = new Array<UriRouteMatch>();
-        URI                  uri     = req.uri;
+        UriRouteMatch[] matches = new Array<UriRouteMatch>();
+        URI             uri     = req.uri;
         for (UriRoute route : routes)
             {
-            if (route.matchesMethod(method))
+            if (route.matchesMethod(method), UriRouteMatch match := route.match(uri))
                 {
-                if (UriRouteMatch match := route.match(uri))
-                    {
-                    matches.add(match);
-                    }
+                matches.add(match);
                 }
             }
         return matches;
@@ -181,8 +177,7 @@ class Router
             this.executable       = executable;
             this.consumes         = consumes;
             this.produces         = produces;
-            this.nestedRoutes     = new Array();
-            this.nestedRoutes.addAll(nestedRoutes);
+            this.nestedRoutes     = new Array(Mutable, nestedRoutes);
             }
 
         // ----- properties ------------------------------------------------------------------------
@@ -226,8 +221,7 @@ class Router
             {
             if (UriMatchInfo info := uriMatchTemplate.match(uri))
                 {
-                DefaultUriRouteMatch route = new DefaultUriRouteMatch(info, this);
-                return True, route;
+                return True, new DefaultUriRouteMatch(info, this);
                 }
             return False;
             }
@@ -235,13 +229,13 @@ class Router
         // ----- Orderable methods -----------------------------------------------------------------
 
         @Override
-        static <T extends DefaultUriRoute> Boolean equals(T value1, T value2)
+        static <CompileType extends DefaultUriRoute> Boolean equals(CompileType value1, CompileType value2)
             {
             return value1.uriMatchTemplate == value2.uriMatchTemplate;
             }
 
         @Override
-        static <T extends DefaultUriRoute> Ordered compare(T value1, T value2)
+        static <CompileType extends DefaultUriRoute> Ordered compare(CompileType value1, CompileType value2)
             {
             return value1.uriMatchTemplate <=> value2.uriMatchTemplate;
             }
@@ -258,16 +252,16 @@ class Router
         Appender<Char> appendTo(Appender<Char> buf)
             {
             "DefaultUriRoute(".appendTo(buf);
-            httpMethod.appendTo(buf);
-            ", ".appendTo(buf);
-            uriMatchTemplate.appendTo(buf);
-            ", ".appendTo(buf);
-            consumes.toString().appendTo(buf);
-            ", ".appendTo(buf);
-            produces.toString().appendTo(buf);
-            ")".appendTo(buf);
+            httpMethod        .appendTo(buf);
+            ", "              .appendTo(buf);
+            uriMatchTemplate  .appendTo(buf);
+            ", "              .appendTo(buf);
+            consumes          .appendTo(buf);
+            ", "              .appendTo(buf);
+            produces          .appendTo(buf);
+            ")"               .appendTo(buf);
 
-            return buf;
-            }
+           return buf;
+           }
         }
     }

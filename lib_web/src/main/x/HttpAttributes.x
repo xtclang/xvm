@@ -7,7 +7,7 @@ class HttpAttributes
         {
         attributes = new HashMap();
         }
-        
+
     private Map<String, Object> attributes;
 
     /**
@@ -39,12 +39,9 @@ class HttpAttributes
      */
     <T> conditional T getAttribute(String key)
         {
-        if (Object attribute := attributes.get(key))
+        if (Object attribute := attributes.get(key), attribute.is(T))
             {
-            if (attribute.is(T))
-                {
-                return True, attribute;
-                }
+            return True, attribute;
             }
         return False;
         }

@@ -1,4 +1,6 @@
-
+/**
+ * TODO JK: explain please
+ */
 interface Pattern
         extends immutable Const
         extends Stringable
@@ -9,8 +11,7 @@ interface Pattern
 
     static Pattern compile(String pattern)
         {
-        @Inject
-        RegExp regExp;
+        @Inject RegExp regExp;
 
         return regExp.compile(pattern);
         }
@@ -24,7 +25,8 @@ interface Pattern
      * will be given no special meaning.
      *
      * @param s  the String to be turned into a a literal pattern
-     * @return  A literal string pattern
+     *
+     * @return a literal string pattern
      */
     static String createLiteralPattern(String s)
         {
@@ -35,10 +37,11 @@ interface Pattern
             sb.append("\\Q");
             do
                 {
-                sb.append(s[current..slashEIndex - 1]).append("\\E\\\\E\\Q");
+                sb.append(s[current..slashEIndex)).append("\\E\\\\E\\Q");
                 current = slashEIndex + 2;
-                } while (slashEIndex := s.indexOf("\\E", current));
-    
+                }
+            while (slashEIndex := s.indexOf("\\E", current));
+
             return sb.append(s[current..s.size - 1])
                     .append("\\E")
                     .toString();

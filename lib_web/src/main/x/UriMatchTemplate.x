@@ -25,8 +25,7 @@ const UriMatchTemplate(String             template,
 
     public static UriMatchTemplate from(String template)
         {
-        UriMatchTemplateParser parser = new UriMatchTemplateParser(template);
-        return parser.parse();
+        return new UriMatchTemplateParser(template).parse();
         }
 
     // ----- UriMatcher methods --------------------------------------------------------------------
@@ -50,48 +49,41 @@ const UriMatchTemplate(String             template,
         //Remove any url parameters before matching
         if (Int parameterIndex := uri.indexOf('?'))
             {
-            uri = uri[0..parameterIndex - 1];
+            uri = uri[0..parameterIndex);
             }
 
         // remove any trailing /
         if (uri[uri.size - 1] == '/')
             {
-            if (uri.size > 1)
-                {
-                uri = uri[0..uri.size - 2];
-                }
-            else
-                {
-                uri = "";
-                }
+            uri = uri.size > 1 ? uri[0..uri.size - 2] : "";
             }
 
         Matcher matcher = matchPattern.match(uri);
         if (matcher.matched)
             {
-            if (this.variables.empty)
+            if (variables.empty)
                 {
-                return True, new DefaultUriMatchInfo(uri, Map<String, Object>:[], this.variables);
+                return True, new DefaultUriMatchInfo(uri, Map<String, Object>:[], variables);
                 }
-            else
+
+            Int                     count       = matcher.groupCount;
+            ListMap<String, String> variableMap = new ListMap();
+            for (Int j = 0; j < this.variables.size; j++)
                 {
-                Int count = matcher.groupCount;
-                ListMap<String, String> variableMap = new ListMap();
-                for (Int j = 0; j < this.variables.size; j++) {
-                    Int index = (j * 2) + 2;
-                    if (index > count) {
-                        break;
+                Int index = (j * 2) + 2;
+                if (index > count)
+                    {
+                    break;
                     }
-                    UriMatchVariable variable = this.variables[j];
-                    String? value = matcher[index];
-                    if (value != Null)
-                        {
-                        variableMap.put(variable.name, value);
-                        }
+                UriMatchVariable variable = variables[j];
+                String?          value    = matcher[index];
+                if (value != Null)
+                    {
+                    variableMap.put(variable.name, value);
                     }
-                variableMap.freeze(true);
-                return True, new DefaultUriMatchInfo(uri, variableMap, this.variables);
                 }
+            variableMap.freeze(true);
+            return True, new DefaultUriMatchInfo(uri, variableMap, variables);
             }
         return False;
         }
@@ -111,28 +103,28 @@ const UriMatchTemplate(String             template,
 
         protected StringBuffer? pattern = Null;
 
-        protected Array<UriMatchVariable> variables = new Array<UriMatchVariable>();
+        protected UriMatchVariable[] variables = new Array<UriMatchVariable>();
 
         @Override
         protected UriMatchTemplate parse()
             {
-            UriMatchTemplate? t = this.matchTemplate;
-            if (t.is(UriMatchTemplate))
+            UriMatchTemplate? matchTemplate = matchTemplate;
+            if (matchTemplate != Null)
                 {
-                return t;
+                return matchTemplate;
                 }
 
-            ParserResult  result  = parse(template);
-            StringBuffer? pattern = this.pattern;
-            assert pattern.is(StringBuffer);
-            this.matchTemplate = new UriMatchTemplate(result.template,
-                                     result.segments,
-                                     result.variableCount,
-                                     result.rawLength,
-                                     Pattern.compile(this.pattern.toString()),
-                                     this.variables);
+            ParserResult result  = parse(template);
+            StringBuffer pattern = this.pattern? : assert;
 
-            return this.matchTemplate.as(UriMatchTemplate);
+            matchTemplate = new UriMatchTemplate(result.template,
+                                                 result.segments,
+                                                 result.variableCount,
+                                                 result.rawLength,
+                                                 Pattern.compile(pattern.toString()),
+                                                 variables);
+            this.matchTemplate = matchTemplate;
+            return matchTemplate;
             }
 
         @Override
@@ -159,8 +151,7 @@ const UriMatchTemplate(String             template,
                                             String                        value,
                                             Boolean                       isQuerySegment)
             {
-            StringBuffer? pattern = templateParser.pattern;
-            assert pattern.is(StringBuffer);
+            StringBuffer pattern = templateParser.pattern? : assert;
             pattern.append(Pattern.createLiteralPattern(value));
             super(segments, value, isQuerySegment);
             }
@@ -179,9 +170,6 @@ const UriMatchTemplate(String             template,
                                        Boolean isQuerySegment)
             {
             templateParser.variables.add(new UriMatchVariable(variable, modifierChar, operator));
-
-            StringBuffer? pattern = templateParser.pattern;
-            assert pattern.is(StringBuffer);
 
             Int     modLen             = modifierStr.size;
             Boolean hasModifier        = modifierChar == ':' && modLen > 0;
@@ -221,27 +209,29 @@ const UriMatchTemplate(String             template,
                     }
                 }
 
-            Boolean operatorAppended = False;
+            StringBuffer pattern          = templateParser.pattern? : assert;
+            Boolean      operatorAppended = False;
 
             switch (operator)
                 {
                 case '.':
                 case '/':
                     pattern.append("(")
-                        .append(operatorPrefix)
-                        .append("\\")
-                        .append(operator)
-                        .append(operatorQuantifier);
+                           .append(operatorPrefix)
+                           .append("\\")
+                           .append(operator)
+                           .append(operatorQuantifier);
                     operatorAppended = True;
                     continue;
                 case '+':
                 case '0': // no active operator
-                    if (!operatorAppended) {
+                    if (!operatorAppended)
+                        {
                         pattern.append("(").append(operatorPrefix);
-                    }
+                        }
                     pattern.append(variablePattern)
-                        .append(variableQuantifier)
-                        .append(")");
+                           .append(variableQuantifier)
+                           .append(")");
                     break;
                 default:
                     // no-op
@@ -252,6 +242,8 @@ const UriMatchTemplate(String             template,
                 {
                 pattern.append("?");
                 }
+
+            // TODO JK: "pattern" is not used
             super(segments, variable, prefix, delimiter, encode, repeatPrefix, modifierStr,
                     modifierChar, operator, previousDelimiter, isQuerySegment);
             }

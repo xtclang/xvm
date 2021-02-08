@@ -1,16 +1,15 @@
 /**
- * A representation of a http request.
+ * A representation of an http request.
  */
 class HttpRequest(URI uri, HttpHeaders headers, HttpMethod method, Object? body)
         extends HttpMessage(headers, body)
     {
-
     construct (URI uri, Map<String, String[]> headerMap, HttpMethod method, Object? body)
         {
         HttpHeaders headers = new HttpHeaders();
-        for (Map<String, String[]>.Entry entry : headerMap.entries)
+        for ((String key, String[] values) : headerMap)
             {
-            headers.set(entry.key, new Array(Mutable, entry.value));
+            headers.set(key, new Array(Mutable, values));
             }
         construct HttpRequest(uri, headers, method, body);
         }
@@ -28,7 +27,6 @@ class HttpRequest(URI uri, HttpHeaders headers, HttpMethod method, Object? body)
      */
     @Lazy Map<String, List<String>> parameters.calc()
         {
-        UriQueryStringParser parser = new UriQueryStringParser(uri.toString());
-        return parser.getParameters();
+        return new UriQueryStringParser(uri.toString()).getParameters();
         }
     }

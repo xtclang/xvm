@@ -23,7 +23,7 @@ class RequestBinderRegistry
 
     @Override
     conditional ParameterBinder<HttpRequest>
-    findParameterBinder(Parameter parameter, HttpRequest source)
+            findParameterBinder(Parameter parameter, HttpRequest source)
         {
         ParameterBinder<HttpRequest>? binder = Null;
         for (ParameterBinder<HttpRequest> pb : binders)
@@ -37,11 +37,7 @@ class RequestBinderRegistry
                 }
             }
 
-        if (binder == Null)
-            {
-            return False;
-            }
-        return True, binder;
+        return binder == Null ? False : (True, binder);
         }
 
     /**
@@ -57,15 +53,13 @@ class RequestBinderRegistry
         Map<String, Object> arguments = new HashMap();
         for (Parameter p : route.requiredParameters)
             {
-            if (String name := p.hasName())
+            if (String                       name   := p.hasName(),
+                ParameterBinder<HttpRequest> binder := findParameterBinder(p, req))
                 {
-                if (ParameterBinder<HttpRequest> binder := findParameterBinder(p, req))
+                BindingResult result = binder.bind(p, req);
+                if (result.bound)
                     {
-                    BindingResult result = binder.bind(p, req);
-                    if (result.bound)
-                        {
-                        arguments.put(name, result.value);
-                        }
+                    arguments.put(name, result.value);
                     }
                 }
             }

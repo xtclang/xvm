@@ -1,51 +1,52 @@
 /**
  * An enum containing the valid HTTP methods.
- * See https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html.
+ *
+ * @see [RFC 2616 §9.2](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html.
  */
 enum HttpMethod
     {
     /**
-     * See https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.2.
+     * @see [RFC 2616 §9.2](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.2)
      */
     OPTIONS,
 
     /**
-     * See https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.3.
+     * @see [RFC 2616 §9.3](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.3)
      */
     GET,
 
     /**
-     * See https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.4.
+     * @see [RFC 2616 §9.4](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.4)
      */
     HEAD,
 
     /**
-     * See https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.5.
+     * @see [RFC 2616 §9.5](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.5)
      */
     POST,
 
     /**
-     * See https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.6.
+     * @see [RFC 2616 §9.6](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.6)
      */
     PUT,
 
     /**
-     * See https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.7.
+     * @see [RFC 2616 §9.7](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.7)
      */
     DELETE,
 
     /**
-     * See https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.8.
+     * @see [RFC 2616 §9.8](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.8)
      */
     TRACE,
 
     /**
-     * See https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.9.
+     * @see [RFC 2616 §9.9](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.9)
      */
     CONNECT,
 
     /**
-     * See https://tools.ietf.org/html/rfc5789.
+     * @see [RFC 25789](https://tools.ietf.org/html/rfc5789)
      */
     PATCH,
 

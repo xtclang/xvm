@@ -16,8 +16,7 @@ class MediaTypeCodecRegistry
         codecsByType      = new HashMap();
         codecsByExtension = new HashMap();
 
-        MediaTypeCodec[] defaultCodecs = codec.DEFAULT_CODECS;
-        codecs = codecs.empty ? defaultCodecs : (new MediaTypeCodec[]) + defaultCodecs + codecs;
+        codecs += codec.DEFAULT_CODECS;
 
         for (MediaTypeCodec codec : codecs)
             {
