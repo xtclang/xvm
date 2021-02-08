@@ -56,7 +56,14 @@ const UriMatchTemplate(String             template,
         // remove any trailing /
         if (uri[uri.size - 1] == '/')
             {
-            uri = uri[0..uri.size - 2];
+            if (uri.size > 1)
+                {
+                uri = uri[0..uri.size - 2];
+                }
+            else
+                {
+                uri = "";
+                }
             }
 
         Matcher matcher = matchPattern.match(uri);
