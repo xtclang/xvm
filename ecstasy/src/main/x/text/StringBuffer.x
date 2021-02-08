@@ -53,6 +53,13 @@ class StringBuffer
         return new String(chars);
         }
 
+    /**
+     * Clear the contents of this StringBuffer.
+     */
+    void clear()
+        {
+        chars = new Array<Char>(chars.capacity);
+        }
 
     // ----- Stringable methods --------------------------------------------------------------------
 

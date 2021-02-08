@@ -4,6 +4,7 @@ package org.xvm.runtime;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
+import java.util.regex.Pattern;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.InjectionKey;
 import org.xvm.asm.MethodStructure;
@@ -17,10 +18,14 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
+import org.xvm.runtime.template._native.text.xRTPattern;
+import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 
+import org.xvm.runtime.template._native.proxy.xRTWebServerProxy;
+import org.xvm.runtime.template._native.text.xRTRegExp;
 import org.xvm.runtime.template._native.xTerminalConsole;
 
 import org.xvm.runtime.template._native.lang.src.xRTCompiler;
@@ -141,6 +146,16 @@ public class CoreContainer
 
         addResourceSupplier(new InjectionKey("rnd"   , typeRandom), this::ensureDefaultRandom);
         addResourceSupplier(new InjectionKey("random", typeRandom), this::ensureDefaultRandom);
+
+        // +++ RegExp
+        TypeConstant typeRegExp = pool.ensureEcstasyTypeConstant("text.RegExp");
+        f_mapResources.put(new InjectionKey("regExp" , typeRegExp), this::ensureRegExp);
+
+        // +++ WebServer
+        TypeConstant typeWebServer = pool.ensureEcstasyTypeConstant("proxy.WebServerProxy");
+
+        f_mapResources.put(new InjectionKey("webServer" , typeWebServer), this::ensureWebServerProxy);
+        f_mapResources.put(new InjectionKey("proxy" , typeWebServer), this::ensureWebServerProxy);
 
         // +++ OSFileStore etc.
         TypeConstant typeFileStore = pool.ensureEcstasyTypeConstant("fs.FileStore");
@@ -270,6 +285,42 @@ public class CoreContainer
             }
 
         return hRnd;
+        }
+
+    protected ObjectHandle ensureRegExp(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hRegExp = m_hRegExp;
+        if (hRegExp == null)
+            {
+            xRTRegExp template = (xRTRegExp) f_templates.getTemplate("_native.text.RTRegExp");
+            if (template != null)
+                {
+                TypeConstant typeRegExp = frame.poolContext().ensureEcstasyTypeConstant("text.RegExp");
+                m_hRegExp = hRegExp = template.createServiceHandle(
+                    createServiceContext("RegExp"),
+                    template.getCanonicalClass(), typeRegExp);
+                }
+            }
+
+        return hRegExp;
+        }
+
+    protected ObjectHandle ensureWebServerProxy(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hServer = m_hWebServer;
+        if (hServer == null)
+            {
+            xRTWebServerProxy template = (xRTWebServerProxy) f_templates.getTemplate("_native.proxy.RTWebServerProxy");
+            if (template != null)
+                {
+                TypeConstant typeWebServer = frame.poolContext().ensureEcstasyTypeConstant("proxy.WebServerProxy");
+                m_hWebServer = hServer = template.createServiceHandle(
+                    createServiceContext("WebServerProxy"),
+                    template.getCanonicalClass(), typeWebServer);
+                }
+            }
+
+        return hServer;
         }
 
     protected ObjectHandle ensureFileStore(Frame frame, ObjectHandle hOpts)
@@ -510,6 +561,8 @@ public class CoreContainer
 
     private ObjectHandle m_hLocalClock;
     private ObjectHandle m_hRandom;
+    private ObjectHandle m_hRegExp;
+    private ObjectHandle m_hWebServer;
     private ObjectHandle m_hOSStorage;
     private ObjectHandle m_hFileStore;
     private ObjectHandle m_hRootDir;
