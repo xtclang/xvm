@@ -837,7 +837,7 @@ public class xRTType
             {
             MethodConstant id   = entry.getKey();
             MethodInfo     info = entry.getValue();
-            if (info.isFunction() && id.getNestedDepth() == 2)
+            if (info.isFunction() && id.isTopLevel())
                 {
                 listHandles.add(xRTFunction.makeHandle(info.getHead().getMethodStructure()));
                 }
@@ -867,7 +867,7 @@ public class xRTType
             MethodConstant idMethod = entry.getKey();
             MethodInfo     info     = entry.getValue();
             if (!info.isCapped() && !info.isFunction() && !info.isConstructor()
-                    && idMethod.getNestedDepth() == 2)
+                    && idMethod.isTopLevel())
                 {
                 listHandles.add(xRTMethod.makeHandle(frame, typeTarget, info.getIdentity()));
                 }
@@ -904,7 +904,7 @@ public class xRTType
             {
             PropertyConstant idProp   = entry.getKey();
             PropertyInfo     infoProp = entry.getValue();
-            if (!infoProp.isConstant() && idProp.getNestedDepth() == 1)
+            if (!infoProp.isConstant() && idProp.isTopLevel())
                 {
                 listProps.add(xRTProperty.makeHandle(frame, typeTarget, infoProp));
                 }

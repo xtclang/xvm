@@ -48,8 +48,7 @@ class UriQueryStringParser
      * The end of the path value in the URI.
      * The index is lazily initialized.
      */
-    // TODO GG private access should be allowed
-    protected Int pathEndIdx.get()
+    private Int pathEndIdx.get()
         {
         Int ix = super();
         if (ix == -1)

@@ -203,7 +203,7 @@ public class TypeInfo
             PropertyConstant id       = entry.getKey();
             PropertyInfo     prop     = entry.getValue();
             boolean          fVirtual = prop.isVirtual();
-            if (id.getNestedDepth() <= 1 || isIdentityReachable(prop.getIdentity(), fVirtual, access))
+            if (id.isTopLevel() || isIdentityReachable(prop.getIdentity(), fVirtual, access))
                 {
                 // now ask the Property itself to reduce its capabilities based on the new access level
                 prop = prop.limitAccess(access);
@@ -225,8 +225,8 @@ public class TypeInfo
             {
             MethodConstant id = entry.getKey();
             MethodInfo method = entry.getValue();
-            if (method.getAccess().isAsAccessibleAs(access) && (id.getNestedDepth() <= 1
-                    || isIdentityReachable(method.getIdentity(), method.isVirtual(), access)))
+            if (method.getAccess().isAsAccessibleAs(access) &&
+                    isIdentityReachable(method.getIdentity(), method.isVirtual(), access))
                 {
                 mapMethods.put(id, method);
 
@@ -896,7 +896,7 @@ public class TypeInfo
                 PropertyInfo     prop = entry.getValue();
 
                 // only include the non-nested properties
-                if (id.getNestedDepth() == 1)
+                if (id.isTopLevel())
                     {
                     // have to pick one that is more visible than the other
                     map.compute(prop.getName(), (sName, propPrev) ->
@@ -1162,13 +1162,13 @@ public class TypeInfo
                 }
             }
 
-        int cDeep = id.getNestedDepth();
-        if (cDeep == 1)
+        if (id.isTopLevel())
             {
             infoProp = findProperty(id.getName());
             return infoProp != null && infoProp.isIdentityValid(id) ? infoProp : null;
             }
 
+        int    cDeep   = id.getNestedDepth();
         Object nidThis = id.getNestedIdentity();
         for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet())
             {
@@ -1247,7 +1247,7 @@ public class TypeInfo
                 MethodConstant idMethod = entry.getKey();
 
                 // only include the non-nested Methods
-                if (idMethod.getNestedDepth() == 2)
+                if (idMethod.isTopLevel())
                     {
                     map.put(idMethod.getSignature(), entry.getValue());
                     }
@@ -1301,7 +1301,7 @@ public class TypeInfo
                 }
 
             // only include non-nested methods
-            if (idTest.getNestedDepth() != 2)
+            if (!idTest.isTopLevel())
                 {
                 continue;
                 }
@@ -1540,7 +1540,7 @@ public class TypeInfo
             // 5) matching (i.e. isA()) any specified redundant return types
             MethodConstant id   = entry.getKey();
             MethodInfo     info = entry.getValue();
-            if (id.getNestedDepth() == 2
+            if (id.isTopLevel()
                     && id.getName().equals(sName)
                     && id.getRawParams() .length >= cArgs
                     && id.getRawReturns().length >= cRedundant
@@ -1652,9 +1652,9 @@ public class TypeInfo
      */
     public boolean containsMultiMethod(String sName)
         {
-        for (MethodConstant method : f_mapMethods.keySet())
+        for (MethodConstant idMethod : f_mapMethods.keySet())
             {
-            if (method.getNestedDepth() == 2 && method.getName().equals(sName))
+            if (idMethod.getName().equals(sName) && idMethod.isTopLevel())
                 {
                 return true;
                 }
@@ -1824,7 +1824,7 @@ public class TypeInfo
                 MethodConstant idMethod = entry.getKey();
 
                 // only include the non-nested Methods
-                if (idMethod.getName().equals(sName) && idMethod.getNestedDepth() == 2)
+                if (idMethod.getName().equals(sName) && idMethod.isTopLevel())
                     {
                     mapCandidates.put(idMethod, entry.getValue());
                     }

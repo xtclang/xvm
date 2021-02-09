@@ -280,7 +280,7 @@ public class PropertyComposition
         {
         RefHandle hRef = (RefHandle) hTarget;
 
-        if (idProp.getNestedDepth() == 1)
+        if (idProp.isTopLevel())
             {
             xRef template = (xRef) getTemplate();
             return f_infoProp.getIdentity().equals(idProp)
@@ -295,7 +295,7 @@ public class PropertyComposition
         {
         RefHandle hRef = (RefHandle) hTarget;
 
-        if (idProp.getNestedDepth() == 1)
+        if (idProp.isTopLevel())
             {
             xRef template = (xRef) getTemplate();
             return f_infoProp.getIdentity().equals(idProp)

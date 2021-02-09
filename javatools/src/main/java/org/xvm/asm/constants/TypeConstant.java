@@ -3454,7 +3454,7 @@ public abstract class TypeConstant
                             }
                         }
                     }
-                else if (idContrib.getNestedDepth() == 2)
+                else if (idContrib.isTopLevel())
                     {
                     List<MethodConstant> listMatches =
                             collectCoveredFunctions(sigContrib, mapMethods);
@@ -3711,7 +3711,7 @@ public abstract class TypeConstant
                     // ensure that the delegating body "belongs" to this layer in the chain
                     MethodBody     head     = methodResult.getHead();
                     MethodConstant idMethod = head.getIdentity().ensureNestedIdentity(pool, constId);
-                    if (idMethod.getNestedDepth() == 2)
+                    if (idMethod.isTopLevel())
                         {
                         MethodBody bodyDelegate = new MethodBody(
                             idMethod, head.getSignature(), Implementation.Delegating, idDelegate);
@@ -3793,7 +3793,7 @@ public abstract class TypeConstant
             MethodInfo     info = entry.getValue();
 
             if (info.isFunction()
-                    && id.getName().equals(sigSub.getName()) && id.getNestedDepth() == 2)
+                    && id.getName().equals(sigSub.getName()) && id.isTopLevel())
                 {
                 if (sigSub.isSubstitutableFor(id.getSignature(), this))
                     {
@@ -3895,7 +3895,7 @@ public abstract class TypeConstant
         for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
             MethodConstant idCandidate = entry.getKey();
-            if (idCandidate.getNestedDepth() != 2)
+            if (!idCandidate.isTopLevel())
                 {
                 continue;
                 }

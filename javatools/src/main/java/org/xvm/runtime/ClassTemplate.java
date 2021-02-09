@@ -534,7 +534,7 @@ public abstract class ClassTemplate
                 {
                 MethodConstant idMethod   = entry.getKey();
                 MethodInfo     infoMethod = entry.getValue();
-                if (idMethod.getNestedDepth() == 2 && infoMethod.isVirtual())
+                if (idMethod.isTopLevel() && infoMethod.isVirtual())
                     {
                     MethodBody      body   = infoMethod.getHead();
                     MethodStructure method = body.getMethodStructure();
@@ -553,7 +553,7 @@ public abstract class ClassTemplate
                 {
                 PropertyConstant idProp   = entry.getKey();
                 PropertyInfo     infoProp = entry.getValue();
-                if (idProp.getNestedDepth() == 1 && infoProp.isVirtual())
+                if (idProp.isTopLevel() && infoProp.isVirtual())
                     {
                     if (!infoProp.getType().isProxyable())
                         {

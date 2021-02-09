@@ -797,9 +797,12 @@ public class StatementBlock
 
                 case "super":
                     {
-                    TypeConstant   typePro    = pool().ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
-                    TypeInfo       info       = typePro.ensureTypeInfo();
+                    // if the current method is a property accessor, the containing property itself
+                    // may have private access
                     MethodConstant idMethod   = getMethod().getIdentityConstant();
+                    Access         access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
+                    TypeConstant   typeCtx    = pool().ensureAccessTypeConstant(getThisType(), access);
+                    TypeInfo       info       = typeCtx.ensureTypeInfo();
                     MethodInfo     infoMethod = info.getMethodById(idMethod);
                     return infoMethod != null && infoMethod.hasSuper(info);
                     }

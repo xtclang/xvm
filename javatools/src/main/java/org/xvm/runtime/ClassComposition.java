@@ -613,7 +613,7 @@ public class ClassComposition
             PropertyInfo     infoProp = entry.getValue();
             boolean          fField   = infoProp.hasField();
 
-            if (fField && idProp.getNestedDepth() > 1)
+            if (fField && !idProp.isTopLevel())
                 {
                 IdentityConstant idParent = idProp.getParentConstant();
                 switch (idParent.getFormat())

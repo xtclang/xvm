@@ -236,6 +236,14 @@ public class PropertyConstant
                 : infoThis.getBaseRefType();
         }
 
+    /**
+     * @return true iff this property is nested directly inside of a class
+     */
+    public boolean isTopLevel()
+        {
+        return getParentConstant().isClass();
+        }
+
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 

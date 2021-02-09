@@ -237,7 +237,7 @@ public class MethodConstant
      *
      * @return true iff this method represents a constructor
      */
-    boolean isConstructor()
+    public boolean isConstructor()
         {
         assert !isNascent();
         MethodStructure method = (MethodStructure) getComponent();
@@ -245,6 +245,14 @@ public class MethodConstant
         // we treat an absence of a component as a sign that the method is virtual
         // (because when this code was written, that could only occur on a method "cap")
         return method != null && method.isConstructor();
+        }
+
+    /**
+     * @return true iff this method is nested directly inside of a class
+     */
+    public boolean isTopLevel()
+        {
+        return getParentConstant().getParentConstant().isClass();
         }
 
 
