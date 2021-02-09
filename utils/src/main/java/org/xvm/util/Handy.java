@@ -1817,6 +1817,11 @@ public class Handy
     public final static char[] EMPTY_CHAR_ARRAY = new char[0];
 
     /**
+     * A constant empty array of <tt>long</tt>.
+     */
+    public final static long[] EMPTY_LONG_ARRAY = new long[0];
+
+    /**
      * A constant empty array of <tt>String</tt>.
      */
     public final static String[] NO_ARGS = new String[0];

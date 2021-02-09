@@ -637,6 +637,7 @@ public abstract class ObjectHandle
         abstract public void setCapacity(int nCapacity);
         abstract public ObjectHandle getElement(int ix);
         abstract public void deleteElement(int ix);
+        abstract public void clear();
 
         @Override
         public void makeImmutable()

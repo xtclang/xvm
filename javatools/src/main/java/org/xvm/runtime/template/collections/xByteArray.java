@@ -25,6 +25,8 @@ import org.xvm.runtime.template.numbers.xUInt8;
 
 import org.xvm.runtime.template.text.xChar;
 
+import org.xvm.util.Handy;
+
 
 /**
  * Native Array<Byte> implementation.
@@ -99,7 +101,7 @@ public class xByteArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
+    public ArrayHandle createEmptyArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
         {
         return new ByteArrayHandle(clzArray, cCapacity, mutability);
         }
@@ -367,6 +369,13 @@ public class xByteArray
                 System.arraycopy(m_abValue, ix+1, m_abValue, ix, m_cSize-ix-1);
                 }
             m_abValue[--m_cSize] = 0;
+            }
+
+        @Override
+        public void clear()
+            {
+            m_abValue = Handy.EMPTY_BYTE_ARRAY;
+            m_cSize   = 0;
             }
 
         @Override

@@ -15,6 +15,8 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
+import org.xvm.util.Handy;
+
 
 /**
  * A base class for native Array implementations based on bit arrays.
@@ -50,7 +52,7 @@ public abstract class BitBasedArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
+    public ArrayHandle createEmptyArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
         {
         return new BitArrayHandle(clzArray, 0, cCapacity, mutability);
         }
@@ -454,6 +456,13 @@ public abstract class BitBasedArray
                 }
 
             setBit(ab, --m_cSize, false);
+            }
+
+        @Override
+        public void clear()
+            {
+            m_abValue = Handy.EMPTY_BYTE_ARRAY;
+            m_cSize   = 0;
             }
 
         @Override

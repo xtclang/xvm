@@ -3,34 +3,17 @@ module TestSimple.test.org
     @Inject Console console;
     void run()
         {
-        C c = new C();
-        c.foo();
+        Int[] ints = new Array<Int>(Mutable, [Int:1, Int:2]);
+        clear(ints);
 
-        String? s = Null;
-        StringBuffer sb = new StringBuffer();
-        sb.append(s?).append("shit");
-        console.println(sb);
+        Object[] objs = ["a", Int:1];
+        clear(objs);
         }
 
-    class C
+    void clear(Object[] array)
         {
-        construct()
-            {
-            n = -1;
-            }
-
-        // TODO private
-        public Int n.get()
-            {
-            Int i = super();
-            return i;
-            }
-
-        void foo()
-            {
-            console.println(n);
-            n = 5;
-            console.println(n);
-            }
+        console.println($"{array} {&array.actualType}");
+        array = array.clear();
+        console.println($"{array} {&array.actualType}");
         }
     }

@@ -58,9 +58,7 @@ class StringBuffer
      */
     void clear()
         {
-        // TODO GG: implement Array.clear
-        // chars.clear();
-        chars = new Array<Char>(chars.capacity);
+        chars.clear();
         }
 
     // ----- Stringable methods --------------------------------------------------------------------

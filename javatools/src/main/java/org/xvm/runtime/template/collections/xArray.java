@@ -154,6 +154,7 @@ public class xArray
         markNativeMethod("delete", new String[] {"numbers.Int64"}, null);
         markNativeMethod("slice", new String[] {"Range<numbers.Int64>"}, ARRAY);
         markNativeMethod("freeze", BOOLEAN, null);
+        markNativeMethod("clear", VOID, ARRAY);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -285,7 +286,7 @@ public class xArray
         }
 
     /**
-     * Create a one dimensional array for a specified type and arity.
+     * Create an empty one dimensional array for a specified type and arity.
      *
      * @param clzArray    the class of the array
      * @param cCapacity   the array size
@@ -293,7 +294,7 @@ public class xArray
      *
      * @return the array handle
      */
-    public ArrayHandle createArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
+    public ArrayHandle createEmptyArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
         {
         return new GenericArrayHandle(clzArray, cCapacity, mutability);
         }
@@ -327,7 +328,7 @@ public class xArray
                     }
 
                 xArray      template = (xArray) clzArray.getTemplate();
-                ArrayHandle hArray   = template.createArrayHandle(clzArray, (int) cCapacity, Mutability.Mutable);
+                ArrayHandle hArray   = template.createEmptyArrayHandle(clzArray, (int) cCapacity, Mutability.Mutable);
                 return frame.assignValue(iReturn, hArray);
                 }
 
@@ -343,7 +344,7 @@ public class xArray
                     }
 
                 xArray      template = (xArray) clzArray.getTemplate();
-                ArrayHandle hArray   = template.createArrayHandle(clzArray, (int) cCapacity, Mutability.Fixed);
+                ArrayHandle hArray   = template.createEmptyArrayHandle(clzArray, (int) cCapacity, Mutability.Fixed);
 
                 int cSize = (int) cCapacity;
                 if (cSize > 0)
@@ -612,6 +613,9 @@ public class xArray
 
             case "setElement":
                 return assignArrayValue(frame, hTarget, ((JavaLong) ahArg[0]).getValue(), ahArg[1]);
+
+            case "clear":
+                return invokeClear(frame, hTarget, iReturn);
             }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
@@ -675,7 +679,7 @@ public class xArray
         }
 
     /**
-     * add(Element) implementation
+     * add(Element) implementation.
      */
     protected int addElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
@@ -713,7 +717,7 @@ public class xArray
         }
 
     /**
-     * addAll(Iterable<Element> values) implementation
+     * addAll(Iterable<Element> values) implementation.
      */
     protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
@@ -751,7 +755,7 @@ public class xArray
         }
 
     /**
-     * insert(Int, Element) implementation
+     * insert(Int, Element) implementation.
      */
     protected int insertElement(Frame frame, ObjectHandle hTarget,
                                 JavaLong hIndex, ObjectHandle hValue, int iReturn)
@@ -790,7 +794,7 @@ public class xArray
         }
 
     /**
-     * insertAll(Int, Iterable<Element>) implementation
+     * insertAll(Int, Iterable<Element>) implementation.
      */
     protected int insertElements(Frame frame, ObjectHandle hTarget,
                                  JavaLong hIndex, ObjectHandle hValue, int iReturn)
@@ -859,7 +863,7 @@ public class xArray
         }
 
     /**
-     * delete(index) implementation
+     * delete(index) implementation.
      */
     protected int deleteElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
@@ -894,16 +898,13 @@ public class xArray
         }
 
     /**
-     * slice(Interval<Int>) implementation
+     * slice(Interval<Int>) implementation.
      */
-    protected int slice(Frame        frame,
-                        ObjectHandle hTarget,
-                        long         ixLower,
-                        boolean      fExLower,
-                        long         ixUpper,
-                        boolean      fExUpper,
-                        boolean      fReverse,
-                        int          iReturn)
+    protected int slice(Frame frame, ObjectHandle hTarget,
+                        long ixLower, boolean fExLower,
+                        long ixUpper, boolean fExUpper,
+                        boolean fReverse,
+                        int     iReturn)
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
 
@@ -952,6 +953,35 @@ public class xArray
             return frame.raiseException(
                 xException.outOfBounds(frame, ixLower < 0 || ixLower >= c ? ixLower : ixUpper, c));
             }
+        }
+
+    /**
+     * clear() implementation.
+     */
+    protected int invokeClear(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        ArrayHandle hArray = (ArrayHandle) hTarget;
+
+        if (hArray.m_cSize > 0)
+            {
+            Mutability mutability = hArray.m_mutability;
+            switch (mutability)
+                {
+                case Fixed:
+                    return frame.raiseException(xException.readOnly(frame));
+
+                case Constant:
+                case Persistent:
+                    hArray = createEmptyArrayHandle(hArray.getComposition(), 0, mutability);
+                    break;
+
+                case Mutable:
+                    hArray.clear();
+                    break;
+                }
+            }
+
+        return frame.assignValue(iReturn, hArray);
         }
 
 
@@ -1035,7 +1065,7 @@ public class xArray
                                     Utils.ValueSupplier supplier, int iReturn)
         {
         // make it "Fixed" first; freeze after filling up
-        ArrayHandle hArray = INSTANCE.createArrayHandle(clzArray, cSize, xArray.Mutability.Fixed);
+        ArrayHandle hArray = INSTANCE.createEmptyArrayHandle(clzArray, cSize, xArray.Mutability.Fixed);
 
         switch (new Utils.FillArray(hArray, supplier, iReturn).doNext(frame))
             {
@@ -1195,11 +1225,17 @@ public class xArray
         {
         public ObjectHandle[] m_ahValue;
 
+        /**
+         * Construct an array with specified content and mutability.
+         */
         public GenericArrayHandle(TypeComposition clzArray, ObjectHandle[] ahValue, Mutability mutability)
             {
             this(clzArray, ahValue, ahValue.length, mutability);
             }
 
+        /**
+         * Construct an array with specified content, capacity and mutability.
+         */
         public GenericArrayHandle(TypeComposition clzArray, ObjectHandle[] ahValue,
                                   int cSize, Mutability mutability)
             {
@@ -1209,6 +1245,9 @@ public class xArray
             m_cSize   = cSize;
             }
 
+        /**
+         * Construct an empty array with specified capacity and mutability.
+         */
         public GenericArrayHandle(TypeComposition clzArray, long cCapacity, Mutability mutability)
             {
             super(clzArray, mutability);
@@ -1245,6 +1284,13 @@ public class xArray
                 System.arraycopy(m_ahValue, ix+1, m_ahValue, ix, m_cSize-ix-1);
                 }
             m_ahValue[--m_cSize] = null;
+            }
+
+        @Override
+        public void clear()
+            {
+            m_ahValue = Utils.OBJECTS_NONE;
+            m_cSize   = 0;
             }
 
         @Override

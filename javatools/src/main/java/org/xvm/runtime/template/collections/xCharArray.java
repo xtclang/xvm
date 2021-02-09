@@ -22,6 +22,8 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.text.xChar;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.util.Handy;
+
 
 /**
  * Native Array<Char> implementation.
@@ -84,7 +86,7 @@ public class xCharArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
+    public ArrayHandle createEmptyArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
         {
         return new CharArrayHandle(clzArray, cCapacity, mutability);
         }
@@ -364,6 +366,13 @@ public class xCharArray
                 System.arraycopy(m_achValue, ix+1, m_achValue, ix, m_cSize-ix-1);
                 }
             m_achValue[--m_cSize] = 0;
+            }
+
+        @Override
+        public void clear()
+            {
+            m_achValue = Handy.EMPTY_CHAR_ARRAY;
+            m_cSize    = 0;
             }
 
         @Override

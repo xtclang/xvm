@@ -21,6 +21,8 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
+import org.xvm.util.Handy;
+
 
 /**
  * Native Array<Int> implementation.
@@ -83,7 +85,7 @@ public class xIntArray
         }
 
     @Override
-    public ArrayHandle createArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
+    public ArrayHandle createEmptyArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
         {
         return new IntArrayHandle(clzArray, cCapacity, mutability);
         }
@@ -355,6 +357,13 @@ public class xIntArray
                 System.arraycopy(m_alValue, ix+1, m_alValue, ix, m_cSize-ix-1);
                 }
             m_alValue[--m_cSize] = 0;
+            }
+
+        @Override
+        public void clear()
+            {
+            m_alValue = Handy.EMPTY_LONG_ARRAY;
+            m_cSize   = 0;
             }
 
         @Override
