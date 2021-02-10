@@ -5128,26 +5128,20 @@ public class Parser
         if (match(Id.L_PAREN, required) != null)
             {
             params = new ArrayList<>();
-            boolean first = true;
-            while (match(Id.R_PAREN) == null)
+            if (match(Id.R_PAREN) == null)
                 {
-                if (first)
+                do
                     {
-                    first = false;
+                    TypeExpression type  = parseTypeExpression();
+                    Token          name  = expect(Id.IDENTIFIER);
+                    Expression     value = null;
+                    if (match(Id.ASN) != null)
+                        {
+                        value = parseExpression();
+                        }
+                    params.add(new Parameter(type, name, value));
                     }
-                else
-                    {
-                    expect(Id.COMMA);
-                    }
-
-                TypeExpression type  = parseTypeExpression();
-                Token          name  = expect(Id.IDENTIFIER);
-                Expression     value = null;
-                if (match(Id.ASN) != null)
-                    {
-                    value = parseExpression();
-                    }
-                params.add(new Parameter(type, name, value));
+                while (match(Id.R_PAREN, (match(Id.COMMA) == null)) == null);
                 }
             }
         return params;
@@ -5245,72 +5239,66 @@ public class Parser
             }
 
         List<Expression> args = new ArrayList<>();
-        boolean first = true;
-        while (match(idClose) == null)
+        if (match(idClose) == null)
             {
-            if (first)
+            do
                 {
-                first = false;
-                }
-            else
-                {
-                expect(Id.COMMA);
-                }
-
-            Token label = null;
-            if (!fArray)
-                {
-                // special case where the parameter names are being specified with the arguments
-                if (peek().getId() == Id.IDENTIFIER)
+                Token label = null;
+                if (!fArray)
                     {
-                    Token name = expect(Id.IDENTIFIER);
-                    if (match(Id.ASN) == null)
+                    // special case where the parameter names are being specified with the arguments
+                    if (peek().getId() == Id.IDENTIFIER)
                         {
-                        // oops, it wasn't a "name=value" argument
-                        putBack(name);
-                        }
-                    else
-                        {
-                        label = name;
+                        Token name = expect(Id.IDENTIFIER);
+                        if (match(Id.ASN) == null)
+                            {
+                            // oops, it wasn't a "name=value" argument
+                            putBack(name);
+                            }
+                        else
+                            {
+                            label = name;
+                            }
                         }
                     }
-                }
 
-            Expression expr;
-            if (allowCurrying && !fArray)
-                {
-                switch (peek().getId())
+                Expression expr;
+                if (allowCurrying && !fArray)
                     {
-                    case ANY:
+                    switch (peek().getId())
                         {
-                        Token tokUnbound = expect(Id.ANY);
-                        expr = new NonBindingExpression(tokUnbound.getStartPosition(),
-                                tokUnbound.getEndPosition(), null);
-                        }
-                        break;
+                        case ANY:
+                            {
+                            Token tokUnbound = expect(Id.ANY);
+                            expr = new NonBindingExpression(tokUnbound.getStartPosition(),
+                                    tokUnbound.getEndPosition(), null);
+                            }
+                            break;
 
-                    case COMP_LT:
-                        {
-                        Token          tokOpen    = expect(Id.COMP_LT);
-                        TypeExpression type       = parseTypeExpression();
-                        Token          tokClose   = expect(Id.COMP_GT);
-                        Token          tokUnbound = expect(Id.ANY);
-                        expr = new NonBindingExpression(tokOpen.getStartPosition(),
-                                tokUnbound.getEndPosition(), type);
-                        }
-                        break;
+                        case COMP_LT:
+                            {
+                            Token          tokOpen    = expect(Id.COMP_LT);
+                            TypeExpression type       = parseTypeExpression();
+                            Token          tokClose   = expect(Id.COMP_GT);
+                            Token          tokUnbound = expect(Id.ANY);
+                            expr = new NonBindingExpression(tokOpen.getStartPosition(),
+                                    tokUnbound.getEndPosition(), type);
+                            }
+                            break;
 
-                    default:
-                        expr = parseExpression();
-                        break;
+                        default:
+                            expr = parseExpression();
+                            break;
+                        }
                     }
-                }
-            else
-                {
-                expr = parseExpression();
-                }
+                else
+                    {
+                    expr = parseExpression();
+                    }
 
-            args.add(label == null ? expr : new LabeledExpression(label, expr));
+                args.add(label == null ? expr : new LabeledExpression(label, expr));
+                }
+            while (match(idClose, (match(Id.COMMA) == null)) == null);
             }
 
         return args;
@@ -5354,8 +5342,7 @@ public class Parser
                 {
                 listReturn.add(new Parameter(parseTypeExpression(), match(Id.IDENTIFIER)));
                 }
-            while (match(Id.COMMA) != null);
-            expect(Id.R_PAREN);
+            while (match(Id.R_PAREN, (match(Id.COMMA) == null)) == null);
             }
         return listReturn;
         }
