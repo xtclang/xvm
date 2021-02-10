@@ -334,7 +334,6 @@ public class CmpExpression
                 return pool.typeType();
                 }
 
-
             // try to resolve formal types
             boolean fFormal1 = type1.containsFormalType(true);
             boolean fFormal2 = type2.containsFormalType(true);
