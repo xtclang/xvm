@@ -16,12 +16,6 @@ interface DBMap<Key, Value>
         return DBValue;
         }
 
-    @Override
-    @RO Boolean transactional.get()
-        {
-        return True;
-        }
-
 
     // ----- Map.Entry extensions ------------------------------------------------------------------
 

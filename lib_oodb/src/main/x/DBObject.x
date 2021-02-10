@@ -254,7 +254,10 @@ interface DBObject
      *   such as would be expected from an "error log" use case;
      * * A [DBSchema] is stateless, and thus it is non-transactional.
      */
-    @RO Boolean transactional;
+    @RO Boolean transactional.get()
+        {
+        return True;
+        }
 
     /**
      * Represents a change within a transactional database object.

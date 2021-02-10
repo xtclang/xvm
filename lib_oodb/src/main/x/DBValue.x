@@ -40,12 +40,6 @@ interface DBValue<Value extends immutable Const>
         return DBValue;
         }
 
-    @Override
-    @RO Boolean transactional.get()
-        {
-        return True;
-        }
-
 
     // ----- transactional information -------------------------------------------------------------
 

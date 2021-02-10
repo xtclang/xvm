@@ -16,12 +16,6 @@ interface DBList<Element>
         return DBList;
         }
 
-    @Override
-    @RO Boolean transactional.get()
-        {
-        return True;
-        }
-
 
     // ----- transactional information -------------------------------------------------------------
 

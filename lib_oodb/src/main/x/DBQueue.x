@@ -35,12 +35,6 @@ interface DBQueue<Element>
         return DBSchema;
         }
 
-    @Override
-    @RO Boolean transactional.get()
-        {
-        return True;
-        }
-
 
     // ----- transactional information -------------------------------------------------------------
 
