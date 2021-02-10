@@ -16,9 +16,7 @@ const String
      */
     construct(Char[] chars)
         {
-        this.chars = chars.is(immutable Char[]) ? chars
-                   : chars.is(Freezable)        ? chars.freeze()
-                   : chars.toArray(Constant).as(immutable Char[]);
+        this.chars = chars.is(immutable Char[]) ? chars : chars.freeze();
         }
 
 

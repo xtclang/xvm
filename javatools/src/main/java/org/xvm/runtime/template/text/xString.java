@@ -100,9 +100,14 @@ public class xString
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         CharArrayHandle hCharArray = (CharArrayHandle) ahVar[0];
-        hCharArray.makeImmutable();
+        char[]          achValue   = hCharArray.m_achValue;
 
-        return frame.assignValue(iReturn, makeHandle(hCharArray.m_achValue));
+        if (hCharArray.isMutable())
+            {
+            achValue = Arrays.copyOf(achValue, hCharArray.m_cSize);
+            }
+
+        return frame.assignValue(iReturn, makeHandle(achValue));
         }
 
     @Override
