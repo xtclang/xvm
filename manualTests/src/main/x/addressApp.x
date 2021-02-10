@@ -17,10 +17,13 @@ module AddressBookApp
         contacts.put(george.rolodexName, george);
         contacts.addContact(john);
 
+        dbc.requestCount.set(2);
+
         using (val tx = dbc.createTransaction())
             {
             tx.contacts.addPhone(george.rolodexName, new db.Phone(Work, "202-555-0000"));
             tx.contacts.addPhone(george.rolodexName, new db.Phone(Home, "202-555-0001"));
+            tx.requestCount.adjustBy(1);
             }
 
         console.println("Contacts:");
@@ -28,5 +31,6 @@ module AddressBookApp
             {
             console.println(contact);
             }
+        console.println($"Count: {dbc.requestCount.get()}");
         }
     }

@@ -8,7 +8,8 @@ module AddressBookDB
     interface AddressBookSchema
             extends db.RootSchema
         {
-        @RO Contacts contacts;
+        @RO Contacts     contacts;
+        @RO db.DBCounter requestCount;
         }
 
     /**

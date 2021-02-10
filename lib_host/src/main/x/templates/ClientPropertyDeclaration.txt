@@ -1,2 +1,1 @@
-    @Override
-    @Unassigned %propertyType% %propertyName%;
+    @Override @Unassigned %propertyType% %propertyName%;

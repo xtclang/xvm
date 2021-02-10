@@ -282,6 +282,7 @@ module host.xtclang.org
         Supplier getResource(Type type, String name)
             {
             import Container.Linker;
+            import ecstasy.text.RegExp;
 
             Boolean wrongName = False;
             switch (type)
@@ -365,6 +366,15 @@ module host.xtclang.org
                             @Inject(opts=opts) Random random;
                             return random;
                             };
+                        }
+                    wrongName = True;
+                    break;
+
+                case RegExp:
+                    if (name == "regExp")
+                        {
+                        @Inject RegExp regExp;
+                        return regExp;
                         }
                     wrongName = True;
                     break;

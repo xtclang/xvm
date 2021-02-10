@@ -12,10 +12,52 @@ static service ServerAddressBookSchema
         }
     finally
         {
-        contacts = new ServerContacts();
+        // schema property constructions
+        contacts = new ServerContacts("contacts");
+        requestCount = new ServerDBCounter("requestCount");
         }
 
+    // schema property declarations
     @Unassigned ServerContacts contacts;
+    @Unassigned ServerDBCounter requestCount;
+
+    /**
+     * This is the thing that will get injected as Connection. As a child, it's collocated with
+     * the IMDB RootSchema service.
+     */
+    class ClientAddressBookSchema
+            extends AddressBookDB_imdb.ClientAddressBookSchema
+        {
+        }
+
+    // server classes for DBObjects
+    class ServerContacts
+            extends imdb.ServerDBMap<String, AddressBookDB.Contact>
+            incorporates AddressBookDB.Contacts
+        {
+        construct(String name)
+            {
+            construct imdb.ServerDBMap(this.ServerAddressBookSchema, name);
+            }
+
+        @Override
+        Tuple dbInvoke(String | Function fn, Tuple args = Tuple:(), (Duration|DateTime)? when = Null)
+            {
+            TODO
+            }
+        }
+
+    class ServerDBCounter
+            extends imdb.ServerDBCounter
+        {
+        construct(String name)
+            {
+            construct imdb.ServerDBCounter(this.ServerAddressBookSchema, name);
+            }
+        }
+
+
+    // ----- internal API support ------------------------------------------------------------------
 
     @Inject Clock clock;
 
@@ -27,31 +69,6 @@ static service ServerAddressBookSchema
     db.DBTransaction createDBTransaction()
         {
         return new ServerTransaction();
-        }
-
-    /**
-     * This is the thing that will get injected as Connection. As a child, it's collocated with
-     * the IMDB RootSchema service.
-     */
-    class ClientAddressBookSchema
-            extends AddressBookDB_imdb.ClientAddressBookSchema
-        {
-        }
-
-    class ServerContacts
-            extends imdb.ServerDBMap<String, AddressBookDB.Contact>
-            incorporates AddressBookDB.Contacts
-        {
-        construct()
-            {
-            construct imdb.ServerDBMap(this.ServerAddressBookSchema, "contacts");
-            }
-
-        @Override
-        Tuple dbInvoke(String | Function fn, Tuple args = Tuple:(), (Duration|DateTime)? when = Null)
-            {
-            TODO
-            }
         }
 
     /**

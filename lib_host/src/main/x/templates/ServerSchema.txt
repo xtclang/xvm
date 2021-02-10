@@ -6,22 +6,41 @@ import %appName%.%appSchema%;
 static service Server%appSchema%
         extends imdb.ServerRootSchema
     {
-    // custom property type declarations
-    // example:
-    //     @Unassigned ServerContacts contacts;
-    %ServerPropertyDeclarations%
-
     construct()
         {
         construct imdb.ServerRootSchema();
         }
     finally
         {
-        // custom schema property construction
+        // schema property constructions
         // example:
-        //    contacts = new ServerContacts();
-        %ServerPropertyConstruction%
+        //    contacts = new ServerContacts("contacts");
+%ServerPropertyConstruction%
         }
+
+    // schema property declarations
+    // example:
+    //     @Unassigned ServerContacts contacts;
+%ServerPropertyDeclarations%
+
+    /**
+     * This is the virtual child of the imdb.ServerRootSchema service that will get injected as
+     * "Connection".
+     */
+    class Client%appSchema%
+            extends %appName%_imdb.Client%appSchema%
+        {
+        }
+
+    // server classes for DBObjects
+    // example:
+    //    class ServerContacts
+    //            extends imdb.ServerDBMap<String, AddressBookDB.Contact>
+    //            incorporates AddressBookDB.Contacts
+%ServerChildClasses%
+
+
+    // ----- internal API support ------------------------------------------------------------------
 
     @Inject Clock clock;
 
@@ -34,22 +53,6 @@ static service Server%appSchema%
         {
         return new ServerTransaction();
         }
-
-    /**
-     * This is the virtual child of the imdb.ServerRootSchema service that will get injected as
-     * "Connection".
-     */
-    class Client%appSchema%
-            extends %appName%_imdb.Client%appSchema%
-        {
-        }
-
-    // custom ServerDB* classes
-    // example:
-    //    class ServerContacts
-    //            extends imdb.ServerDBMap<String, AddressBookDB.Contact>
-    //            incorporates AddressBookDB.Contacts
-    %ServerChildrenClasses%
 
     /**
      * TODO how should this be exposed?

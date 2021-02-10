@@ -9,12 +9,18 @@ class Client%appSchema%
         }
     finally
         {
-        // custom schema property constructions
+        // schema property constructions
 %ClientPropertyConstructions%
         }
 
-    // custom custom schema property declarations
+    // schema property declarations
 %ClientPropertyDeclarations%
+
+    // ClientDB* classes
+%ClientChildrenClasses%
+
+
+    // ----- internal API support ------------------------------------------------------------------
 
     @Override
     @Unassigned db.DBUser dbUser;
@@ -45,10 +51,6 @@ class Client%appSchema%
         {
         return transaction == Null;
         }
-
-
-    // custom ClientDB* classes
-%ClientChildrenClasses%
 
     class ClientTransaction
             extends imdb.ClientTransaction<%appName%.%appSchema%>

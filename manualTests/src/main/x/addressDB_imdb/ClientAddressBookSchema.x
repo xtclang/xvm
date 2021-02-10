@@ -9,45 +9,16 @@ class ClientAddressBookSchema
         }
     finally
         {
-        // custom schema property constructions
+        // schema property constructions
         contacts = new ClientContacts(ServerAddressBookSchema.contacts);
+        requestCount = new ClientDBCounter(ServerAddressBookSchema.requestCount);
         }
 
-    // custom custom schema property declarations
-    @Override
-    @Unassigned AddressBookDB.Contacts contacts;
+    // schema property declarations
+    @Override @Unassigned AddressBookDB.Contacts contacts;
+    @Override @Unassigned db.DBCounter requestCount;
 
-    @Override
-    @Unassigned db.DBUser dbUser;
-
-    @Override
-    public/protected ClientTransaction? transaction;
-
-    @Override
-    ClientTransaction createTransaction(
-                Duration? timeout = Null, String? name = Null,
-                UInt? id = Null, db.DBTransaction.Priority priority = Normal,
-                Int retryCount = 0)
-        {
-        ClientTransaction tx = new ClientTransaction();
-        transaction = tx;
-        return tx;
-        }
-
-    protected (Boolean, db.Transaction) ensureTransaction()
-        {
-        ClientTransaction? tx = transaction;
-        return tx == Null
-                ? (True, createTransaction())
-                : (False, tx);
-        }
-
-    Boolean checkAutoCommit()
-        {
-        // TODO GG: this should've not compiled
-        // return this.ClientAddressBookSchema.transaction == Null;
-        return transaction == Null;
-        }
+    // ClientDB* classes
 
     class ClientContacts
             extends imdb.ClientDBMap<String, AddressBookDB.Contact>
@@ -117,6 +88,49 @@ class ClientAddressBookSchema
             }
         }
 
+    class ClientDBCounter
+            extends imdb.ClientDBCounter
+        {
+        construct(ServerAddressBookSchema.ServerDBCounter dbCounter)
+            {
+            construct imdb.ClientDBCounter(dbCounter,
+                                           this.ClientAddressBookSchema.checkAutoCommit);
+            }
+        }
+
+
+    // ----- internal API support ------------------------------------------------------------------
+
+    @Override
+    @Unassigned db.DBUser dbUser;
+
+    @Override
+    public/protected ClientTransaction? transaction;
+
+    @Override
+    ClientTransaction createTransaction(
+                Duration? timeout = Null, String? name = Null,
+                UInt? id = Null, db.DBTransaction.Priority priority = Normal,
+                Int retryCount = 0)
+        {
+        ClientTransaction tx = new ClientTransaction();
+        transaction = tx;
+        return tx;
+        }
+
+    protected (Boolean, db.Transaction) ensureTransaction()
+        {
+        ClientTransaction? tx = transaction;
+        return tx == Null
+                ? (True, createTransaction())
+                : (False, tx);
+        }
+
+    Boolean checkAutoCommit()
+        {
+        return transaction == Null;
+        }
+
     class ClientTransaction
             extends imdb.ClientTransaction<AddressBookDB.AddressBookSchema>
             implements AddressBookDB.AddressBookSchema
@@ -143,6 +157,12 @@ class ClientAddressBookSchema
         AddressBookDB.Contacts contacts.get()
             {
             return this.ClientAddressBookSchema.contacts;
+            }
+
+        @Override
+        db.DBCounter requestCount.get()
+            {
+            return this.ClientAddressBookSchema.requestCount;
             }
 
         @Override
