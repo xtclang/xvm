@@ -763,7 +763,6 @@ public class InvocationExpression
                     if (!fStatic)
                         {
                         // there is a read of the implicit "this" variable
-                        // TODO use TargetInfo to figure out how many "this" steps there are
                         Token tokName = exprName.getNameToken();
                         long  lPos    = tokName.getStartPosition();
                         Token tokThis = new Token(lPos, lPos, Id.THIS);

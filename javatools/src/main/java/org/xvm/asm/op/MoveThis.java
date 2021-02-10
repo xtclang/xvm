@@ -13,7 +13,6 @@ import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
-
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
@@ -24,7 +23,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * MOV_THIS #, lvalue-dest          ; # (an inline unsigned byte) specifies the count of this-to-outer-this
  *                                  ; steps (0=this, 1=ImmediatelyOuter.this, etc.)
- * +MOV_THISA  #, lvalue-dest, A_*  ; same as above with an additional access modifier
+ * MOV_THISA #, lvalue-dest, A_*    ; same as above with an additional access modifier
  *                                    (A_TARGET, A_PUBLIC, A_PROTECTED, A_PRIVATE, A_STRUCT)
  */
 public class MoveThis
