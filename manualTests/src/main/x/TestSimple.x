@@ -1,19 +1,35 @@
 module TestSimple.test.org
     {
     @Inject Console console;
-    void run()
-        {
-        Int[] ints = new Array<Int>(Mutable, [Int:1, Int:2]);
-        clear(ints);
 
-        Object[] objs = ["a", Int:1];
-        clear(objs);
+    void run( )
+        {
+        Parent p = new Parent();
+        Parent.Child c = p.new Child();
+
+        assert c.test();
         }
 
-    void clear(Object[] array)
+    class Parent
         {
-        console.println($"{array} {&array.actualType}");
-        array = array.clear();
-        console.println($"{array} {&array.actualType}");
+        function Boolean() isAutocommit = () -> False;
+
+        Boolean checkAutoCommit()
+            {
+            return True;
+            }
+
+        class Child
+            {
+            construct()
+                {
+                isAutocommit = checkAutoCommit;
+                }
+
+            Boolean test()
+                {
+                return isAutocommit();
+                }
+            }
         }
     }

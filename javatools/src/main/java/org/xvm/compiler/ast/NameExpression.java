@@ -609,7 +609,7 @@ public class NameExpression
 
         // validate the type parameters
         TypeConstant[] atypeParams = null;
-        ConstantPool pool = pool();
+        ConstantPool   pool        = pool();
         if (hasTrailingTypeParams())
             {
             int cParams = params.size();
@@ -1071,9 +1071,25 @@ public class NameExpression
                 case BindTarget:
                     {
                     MethodConstant idMethod  = (MethodConstant) argRaw;
-                    Argument       argTarget = left == null
-                            ? new Register(ctx.getThisType(), Op.A_THIS)
-                            : left.generateArgument(ctx, code, true, true, errs);
+                    Argument       argTarget;
+                    if (left == null)
+                        {
+                        int cSteps = m_targetInfo == null ? 0 : m_targetInfo.getStepsOut();
+                        if (cSteps > 0)
+                            {
+                            TypeConstant typeTarget = m_targetInfo.getTargetType();
+                            argTarget = createRegister(typeTarget, true);
+                            code.add(new MoveThis(cSteps, argTarget, typeTarget.getAccess()));
+                            }
+                        else
+                            {
+                            argTarget = new Register(ctx.getThisType(), Op.A_THIS);
+                            }
+                        }
+                    else
+                        {
+                        argTarget = left.generateArgument(ctx, code, true, true, errs);
+                        }
 
                     if (m_mapTypeParams == null)
                         {
@@ -1309,10 +1325,26 @@ public class NameExpression
 
             case BindTarget:
                 {
-                MethodConstant idMethod  = (MethodConstant) argRaw;
-                Argument       argTarget = left == null
-                        ? new Register(ctx.getThisType(), Op.A_THIS)
-                        : left.generateArgument(ctx, code, true, true, errs);
+                MethodConstant idMethod = (MethodConstant) argRaw;
+                Argument       argTarget;
+                if (left == null)
+                    {
+                    int cSteps = m_targetInfo == null ? 0 : m_targetInfo.getStepsOut();
+                    if (cSteps > 0)
+                        {
+                        TypeConstant typeTarget = m_targetInfo.getTargetType();
+                        argTarget = createRegister(typeTarget, true);
+                        code.add(new MoveThis(cSteps, argTarget, typeTarget.getAccess()));
+                        }
+                    else
+                        {
+                        argTarget = new Register(ctx.getThisType(), Op.A_THIS);
+                        }
+                    }
+                else
+                    {
+                    argTarget = left.generateArgument(ctx, code, true, true, errs);
+                    }
 
                 Register regFn = createRegister(idMethod.getType(), fUsedOnce);
                 if (m_mapTypeParams == null)

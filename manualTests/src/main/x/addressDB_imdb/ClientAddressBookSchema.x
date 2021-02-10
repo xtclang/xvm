@@ -55,9 +55,7 @@ class ClientAddressBookSchema
         {
         construct(ServerAddressBookSchema.ServerContacts contacts)
             {
-            // TODO GG: the following compiles incorrectly
-            // construct imdb.ClientDBMap(contacts, checkAutoCommit);
-            construct imdb.ClientDBMap(contacts, this.ClientAddressBookSchema.checkAutoCommit);
+            construct imdb.ClientDBMap(contacts, checkAutoCommit);
             }
 
         // ----- mixin methods ---------------------------------------------------------------------

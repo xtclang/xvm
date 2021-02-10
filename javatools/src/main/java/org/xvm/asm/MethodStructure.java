@@ -785,7 +785,7 @@ public class MethodStructure
         }
 
     /**
-     * Determine the number of steeps to get to the "outer this" from this method.
+     * Determine the number of steps to get to the "outer this" from this method.
      *
      * @return the number of steps
      */

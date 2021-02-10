@@ -1003,14 +1003,24 @@ public class InvocationExpression
                 TypeConstant typeFn;
                 if (argMethod instanceof PropertyConstant)
                     {
-                    if (m_typeTarget != null)
+                    PropertyConstant idProp = (PropertyConstant) argMethod;
+                    if (m_targetinfo != null)
+                        {
+                        typeLeft = m_targetinfo.getTargetType();
+                        }
+                    else if (m_typeTarget != null)
                         {
                         typeLeft = m_typeTarget;
                         }
                     TypeInfo     infoLeft = getTypeInfo(ctx, typeLeft, errs);
-                    PropertyInfo infoProp = infoLeft.findProperty((PropertyConstant) argMethod);
-
-                    typeFn = infoProp == null ? pool.typeObject() : infoProp.getType();
+                    PropertyInfo infoProp = infoLeft.findProperty(idProp);
+                    if (infoProp == null)
+                        {
+                        log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
+                                idProp.getValueString(), typeLeft.getValueString());
+                        return null;
+                        }
+                    typeFn = infoProp.getType();
                     }
                 else
                     {
