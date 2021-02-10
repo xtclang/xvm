@@ -326,6 +326,15 @@ public class CmpExpression
                 return pool.typeRef();
                 }
 
+            // equality check between Class and Type is allowed as a Type
+            if (fEqual &&
+                    (type1.isA(pool.typeType()) && type2.isA(pool.typeClass()) ||
+                     type2.isA(pool.typeType()) && type1.isA(pool.typeClass())))
+                {
+                return pool.typeType();
+                }
+
+
             // try to resolve formal types
             boolean fFormal1 = type1.containsFormalType(true);
             boolean fFormal2 = type2.containsFormalType(true);

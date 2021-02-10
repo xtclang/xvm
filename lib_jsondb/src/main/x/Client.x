@@ -34,7 +34,7 @@ service Client<Schema extends RootSchema>
     {
     construct(Catalog<Schema> catalog, Int id, DBUser dbUser, function void(Client)? notifyOnClose = Null)
         {
-//        assert Schema == RootSchema.PublicType || catalog.schemaMixin != Null; // TODO GG: this does not work: (Schema == RootSchema)
+        assert Schema == RootSchema || catalog.schemaMixin != Null;
 
         this.id            = id;
         this.dbUser        = dbUser;

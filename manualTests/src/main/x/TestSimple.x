@@ -2,34 +2,22 @@ module TestSimple.test.org
     {
     @Inject Console console;
 
-    void run( )
+    void run()
         {
-        Parent p = new Parent();
-        Parent.Child c = p.new Child();
-
-        assert c.test();
+        RootSchema         r = new RootSchema();
+        Client<RootSchema> c = new Client();
         }
 
-    class Parent
+    class RootSchema
         {
-        function Boolean() isAutocommit = () -> False;
+        Int base;
+        }
 
-        Boolean checkAutoCommit()
+    class Client<Schema extends RootSchema>
+        {
+        construct()
             {
-            return True;
-            }
-
-        class Child
-            {
-            construct()
-                {
-                isAutocommit = checkAutoCommit;
-                }
-
-            Boolean test()
-                {
-                return isAutocommit();
-                }
+            assert Schema != RootSchema;
             }
         }
     }
