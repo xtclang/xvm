@@ -425,7 +425,9 @@ public class LambdaExpression
                 {
                 for (int i = 0; i < cReqReturns; i++)
                     {
-                    if (!atypeReturns[i].isA(atypeReqReturns[i]))
+                    TypeConstant typeReturn = atypeReturns[i];
+
+                    if (typeReturn == null || !typeReturn.isA(atypeReqReturns[i]))
                         {
                         return TypeFit.NoFit;
                         }
