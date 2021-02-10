@@ -88,7 +88,8 @@ class Array<Element>
         }
 
     /**
-     * Construct a fixed size array with the specified size and initial value.
+     * Construct an array of the specified mutability, and optionally initialized with the specified
+     * contents.
      *
      * @param mutability  the mutability setting for the array
      * @param elements    the elements to use to initialize the contents of the array
