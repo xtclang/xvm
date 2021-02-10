@@ -57,6 +57,10 @@ interface Connection<Schema extends RootSchema>
         {
         if (Transaction tx ?= transaction)
             {
+            if (tx.pending)
+                {
+                tx.rollback();
+                }
             tx.close(e);
             }
         }
