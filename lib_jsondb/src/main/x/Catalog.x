@@ -1,5 +1,9 @@
 import model.Lock;
 import model.SysInfo;
+import oodb.DBUser;
+import oodb.Permission;
+import oodb.RootSchema;
+import storage.ObjectStore;
 
 /**
  * Metadata catalog for a database. A `Catalog` acts as the "gateway" to a JSON database, allowing a
@@ -11,36 +15,52 @@ import model.SysInfo;
  * so that a database on disk can be examined and (to a limited extent) manipulated/repaired without
  * explicit knowledge of its Ecstasy representation.
  *
- * The `Catalog` has a weak notion of mutual exclusion:
+ * The `Catalog` has a weak notion of mutual exclusion, designed to avoid database corruption that
+ * could occur if two instances attempted to open the same database in a read/write mode:
  *
- * * While the Catalog is [Configuring](Status.Configuring), [Running](Status.Running), or
- *   [Recovering](Status.Recovering), it
+ * * A file [statusFile] contains a status that indicates whether a Catalog instance may already be
+ *   [Configuring](Status.Configuring), [Running](Status.Running), or
+ *   [Recovering](Status.Recovering)
+ * * The absence of a status file, or a status file with the [Closed](Status.Closed) status
+ *   indicates that the Catalog is not in use.
+ * * If a crash occurs while the Catalog is in use, the status file may still indicate that the
+ *   Catalog is in use after the crash; this requires the Catalog to be recovered using the
+ *   [recover] method.
+ * * Transitions of the status file itself are guarded by using a second lock file (relying on the
+ *   atomicity of file creation), whose temporary existence indicates that a status file transition
+ *   is in progress.
  *
  * TODO version - should only be able to open the catalog with the correct TypeSystem version
  */
-service Catalog
+service Catalog<Schema extends RootSchema>
         implements Closeable
     {
+    typedef (Client.Connection + Schema) Connection;
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Open the catalog for the specified directory.
      *
-     * @param dir       the directory that contains (or may contain) the catalog
-     * @param dbModule  (optional) the Ecstasy module that represents the database schema
-     * @param readOnly  (optional) pass `True` to access the catalog in a read-only manner
+     * @param dir          the directory that contains (or may contain) the catalog
+     * @param dbModule     (optional) the Ecstasy module that represents the database schema
+     * @param schemaMixin  (optional) the class of the mixin for the root schema
+     * @param readOnly     (optional) pass `True` to access the catalog in a read-only manner
      */
-    construct(Directory dir, Module? dbModule = Null, Boolean readOnly = False)
+    construct(Directory dir, CatalogMetadata? metadata = Null, Boolean readOnly = False)
         {
+        // todo  Module? dbModule = Null, Class<Schema>? schemaMixin = Null,
+
         assert:arg dir.exists && dir.readable && (readOnly || dir.writable);
 
         @Inject Clock clock;
 
-        this.timestamp = clock.now;
-        this.dir       = dir;
-        this.readOnly  = readOnly;
-        this.dbModule  = dbModule;
-        this.status    = Closed;
+        this.timestamp   = clock.now;
+        this.dir         = dir;
+        this.readOnly    = readOnly;
+        this.dbModule    = dbModule;
+        this.schemaMixin = schemaMixin;
+        this.status      = Closed;
         }
 
 
@@ -68,6 +88,11 @@ service Catalog
     public/private Module? dbModule;
 
     /**
+     * The mixin for the root schema implementation.
+     */
+    public/private Class<Schema>? schemaMixin;
+
+    /**
      * The version of the database represented by this `Catalog` object. The version may not be
      * available before the database is opened.
      */
@@ -77,6 +102,37 @@ service Catalog
      * The status of this `Catalog` object.
      */
     @Atomic public/private Status status;
+
+    /**
+     * The ObjectStore for each DBObject in the `Catalog`. These provide the I/O for the database.
+     *
+     * This data is available from the catalog through various methods; the array itself is not
+     * exposed in order to avoid any concerns related to transmitting it through service boundaries.
+     */
+    protected/private ObjectStore[] stores;
+
+    /**
+     * The transaction manager for this `Catalog` object. The transaction manager provides a
+     * sequential ordered (non-concurrent) application of potentially concurrent transactions.
+     */
+    public/private TxManager txManager;
+
+    /**
+     * The existing client representations for this `Catalog` object. Each client may have a single
+     * Connection representation, and each Connection may have a single Transaction representation.
+     *
+     * This data is available from the catalog through various methods; the array itself is not
+     * exposed in order to avoid any concerns related to transmitting it through service boundaries.
+     *
+     * TODO use a Persistent map so the caller cannot modify it
+     * TODO need a weak ref to each Client
+     */
+    protected/private Map<Int, Client> clients = new HashMap();
+
+    /**
+     * The number of clients created by this Catalog. Used as the generator for client IDs.
+     */
+    protected Int clientCounter = 0;
 
 
     // ----- visibility ----------------------------------------------------------------------------
@@ -210,7 +266,7 @@ service Catalog
             file.delete();
             }
 
-        transition(status, Closed, snapshot -> snapshot.owned);
+        transition(status, Closed, snapshot -> snapshot.empty);
         }
 
     /**
@@ -262,7 +318,12 @@ service Catalog
                 // store the updated status
                 status = targetStatus;
 
-                statusFile.contents = toBytes(new SysInfo(this));
+                // store the updated status (unless we're closing an empty database, in which case,
+                // nothing gets stored)
+                if (!(targetStatus == Closed && glance.empty))
+                    {
+                    statusFile.contents = toBytes(new SysInfo(this));
+                    }
                 }
             }
         }
@@ -447,5 +508,53 @@ service Catalog
                 lockFile.delete();
                 }
             };
+        }
+
+
+    // ----- ObjectStore services for each DBObject ------------------------------------------------
+
+    // ----- Client (Connection) management --------------------------------------------------------
+
+    /**
+     *
+     */
+    Connection createConnection(DBUser? dbUser = Null)
+        {
+        // TODO move the "sys" user creation to a better place
+        dbUser ?:= new oodb.model.DBUser(0, "sys", permissions = [new Permission(AllTargets, AllActions)]);
+        Client<Schema> client = createClient(dbUser);
+        registerClient(client);
+        return client.conn ?: assert;
+        }
+
+    /**
+     * Instantiate a Client instance.
+     *
+     * @param dbUser  the database use that the client object will represent
+     */
+    protected Client<Schema> createClient(DBUser dbUser)
+        {
+        return new Client<Schema>(this, clientCounter++, dbUser, (client) -> unregisterClient(client));
+        }
+
+    /**
+     * Register a Client instance.
+     *
+     * @param client  the Client object to register
+     */
+    protected void registerClient(Client client)
+        {
+        assert clients.putIfAbsent(client.id, client);
+        }
+
+    /**
+     * Unregister a Client instance.
+     *
+     * @param client  the Client object to register
+     */
+    protected void unregisterClient(Client client)
+        {
+        assert client.catalog == this;
+        clients.remove(client.id, client);
         }
     }
