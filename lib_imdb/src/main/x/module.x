@@ -49,10 +49,10 @@ module imdb
     @Abstract
     class ClientDBObject
             implements db.DBObject
-            delegates db.DBObject(dbObject)
+            delegates  db.DBObject(dbObject)
         {
         construct(ServerDBObject dbObject,
-                 function Boolean() isAutoCommit = () -> False)
+                  function Boolean() isAutoCommit = () -> False)
             {
             this.dbObject     = dbObject;
             this.isAutoCommit = isAutoCommit;

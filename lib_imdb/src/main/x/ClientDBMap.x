@@ -26,6 +26,9 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
         return change;
         }
 
+
+    // ----- DBMap API -----------------------------------------------------------------------------
+
     @Override
     conditional Value get(Key key)
         {
