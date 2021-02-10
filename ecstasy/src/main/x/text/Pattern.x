@@ -1,9 +1,8 @@
 /**
- * TODO JK: explain please
+ * TODO JK: explain and doc API please
  */
 interface Pattern
         extends immutable Const
-        extends Stringable
     {
     @RO String pattern;
 
@@ -50,19 +49,5 @@ interface Pattern
             {
             return "\\Q" + s + "\\E";
             }
-        }
-
-    // ----- Stringable ----------------------------------------------------------------------------
-
-    @Override
-    Int estimateStringLength()
-        {
-        return pattern.size;
-        }
-
-    @Override
-    Appender<Char> appendTo(Appender<Char> buf)
-        {
-        return pattern.appendTo(buf) ;
         }
     }
