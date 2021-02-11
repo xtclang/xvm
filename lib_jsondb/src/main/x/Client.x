@@ -46,17 +46,14 @@ service Client<Schema extends RootSchema>
         {
         if (schemaMixin == Null)
             {
-            // TODO GG
-            // conn = new Connection<Schema>().as(Connection<Schema> + Schema);
-            conn = Null;
+            conn = new Connection().as(Connection + Schema);
             }
         else
             {
-            // TODO GG
-            // Class<Connection + Schema> clz = Connection<Schema>.annotate(new Annotation(schemaMixin?)).as(Class<Connection + Schema>) : assert;
-            // REVIEW or is this necessary?  Class<...> clz = Client<Schema>.Connection.annotate(new Annotation(schemaMixin)).as(Client<Schema>.Connection + Schema);
-            // conn = clz.instantiate(clz.allocate(), this);
-            conn = Null;
+            Class<Connection + Schema> clz = Connection.annotate(new Annotation(schemaMixin?)).
+                as(Class<Connection + Schema>) : assert;
+            assert val structConn := clz.allocate();
+            conn = clz.instantiate(structConn, this);
             }
         }
 
@@ -153,8 +150,7 @@ service Client<Schema extends RootSchema>
         @Override
         @RO (Transaction + Schema)? transaction.get()
             {
-            // TODO GG why is cast required?
-            return outer.tx?.as(Transaction + Schema) : Null;
+            return outer.tx? : Null;
             }
 
         @Override
@@ -197,9 +193,7 @@ service Client<Schema extends RootSchema>
             {
             // note: this is considered to be a valid request, regardless of whether this
             // transaction is a currently valid transaction or not
-// TODO GG why is cast required?
-//            return outer.conn ?: assert;
-            return outer.conn?.as(Connection + Schema) : assert;
+            return outer.conn ?: assert;
             }
 
         @Override
@@ -211,9 +205,7 @@ service Client<Schema extends RootSchema>
         @Override
         Boolean commit()
             {
-// TODO GG why is cast required?
-//            Transaction? that = outer.tx;
-            val that = outer.tx;
+            Transaction? that = outer.tx;
             if (that == Null)
                 {
                 throw new IllegalState(`|Attempt to commit a previously closed transaction;\
@@ -236,8 +228,7 @@ service Client<Schema extends RootSchema>
         @Override
         void rollback()
             {
-// TODO GG  Transaction? that = outer.tx;
-            val that = outer.tx;
+            Transaction? that = outer.tx;
             if (that == Null)
                 {
                 throw new IllegalState(`|Attempt to roll back a previously closed transaction;\

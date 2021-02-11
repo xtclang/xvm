@@ -1742,42 +1742,30 @@ public class ClassStructure
                                            List<TypeConstant> listLeft, Access accessLeft,
                                            List<TypeConstant> listRight)
         {
-        int cParamsLeft  = listLeft.size();
-        int cParamsRight = listRight.size();
-        boolean fTuple   = isTuple();
+        int     cParamsLeft  = listLeft.size();
+        int     cParamsRight = listRight.size();
+        int     cParamsMax   = Math.max(cParamsRight, cParamsLeft);
+        boolean fTuple       = isTuple();
+        boolean fWeak        = false;
 
-        List<Map.Entry<StringConstant, TypeConstant>> listFormalEntries = getTypeParamsAsList();
+        List<Map.Entry<StringConstant, TypeConstant>> listFormal          = getTypeParamsAsList();
+        List<TypeConstant>                            listRightNormalized = cParamsRight < cParamsLeft
+                ? normalizeParameters(pool, listRight)
+                : listRight;
 
-        if (!fTuple)
+        if (!fTuple && cParamsMax > listFormal.size())
             {
-            if (Math.max(cParamsRight, cParamsLeft) > listFormalEntries.size())
-                {
-                // soft assert
-                System.err.println("Invalid number of arguments for " + getName()
-                        + ": required=" + listFormalEntries.size()
-                        + ", provided " + Math.max(cParamsRight, cParamsLeft));
-                return Relation.INCOMPATIBLE;
-                }
+            // soft assert
+            System.err.println("Invalid number of arguments for " + getName()
+                    + ": required=" + listFormal.size()
+                    + ", provided " + cParamsMax);
+            return Relation.INCOMPATIBLE;
             }
 
-        boolean fWeak = false;
-        for (int i = 0; i < Math.max(cParamsLeft, cParamsRight); i++)
+        Iterator<Map.Entry<StringConstant, TypeConstant>> iterFormal = listFormal.iterator();
+        for (int i = 0; i < cParamsMax; i++)
             {
-            String       sName;
-            TypeConstant typeCanonical;
-
-            if (fTuple)
-                {
-                sName         = null;
-                typeCanonical = pool.typeObject();
-                }
-            else
-                {
-                Map.Entry<StringConstant, TypeConstant> entryFormal = listFormalEntries.get(i);
-
-                sName         = entryFormal.getKey().getValue();
-                typeCanonical = entryFormal.getValue();
-                }
+            String sName = fTuple ? null : iterFormal.next().getKey().getValue();
 
             if (i >= cParamsLeft)
                 {
@@ -1823,7 +1811,7 @@ public class ClassStructure
                     }
 
                 // Assignment  C<L1, L2> = C<R1> is not the same as
-                //             C<L1, L2> = C<R1, [canonical type for R2]>;
+                //             C<L1, L2> = C<R1, [normalized (resolved canonical) type for R2]>;
                 // the former is only allowed if class C produces L2
                 // and then all L2 consuming methods (if any) must be "wrapped".
                 //
@@ -1831,7 +1819,7 @@ public class ClassStructure
                 //    List<Object> <-- List
                 // However, the following is not allowed:
                 //    Logger<Object> <-- Logger
-                typeRight    = typeCanonical;
+                typeRight    = fTuple ? pool.typeObject() : listRightNormalized.get(i);;
                 fProduces    = fTuple || producesFormalType(pool, sName, accessLeft, listLeft);
                 fLeftIsRight = false;
                 }
