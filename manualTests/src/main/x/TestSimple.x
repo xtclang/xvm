@@ -8,16 +8,10 @@ module TestSimple.test.org
         Client<RootSchema> c = new Client();
         }
 
-    class RootSchema
-        {
-        Int base;
-        }
+    const Info(String name);
 
-    class Client<Schema extends RootSchema>
+    Info infoFor(Int i)
         {
-        construct()
-            {
-            assert Schema != RootSchema;
-            }
+        TODO
         }
     }

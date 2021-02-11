@@ -712,6 +712,13 @@ public class LambdaExpression
             return null;
             }
 
+        // prior to calling "blockTemp.validate()" below we need to prime the expected lambda type;
+        // note that only the return types portion is going to be used via "getReturnTypes()" method
+        if (atypeReturns != null)
+            {
+            m_typeRequired = pool().buildFunctionType(atypeParams, atypeReturns);
+            }
+
         // use a black-hole context (to avoid damaging the original)
         ctx       = ctx.enterBlackhole();
         ctx       = enterCapture(ctx, blockTemp, atypeParams, asParams);
@@ -736,7 +743,8 @@ public class LambdaExpression
             }
         finally
             {
-            m_collector = null;
+            m_collector    = null;
+            m_typeRequired = null;
 
             if (blockTemp != null)
                 {
