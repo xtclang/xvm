@@ -10,8 +10,6 @@ import oodb.DBObject.DBCategory as Category;
  * of these constraints; the constraint types for each type parameter name are specified in the
  * [typeParameters] property, and the possible types (any sub-classes that may occur) are required
  * to be enumerated in the [acceptableSubClasses] property.
- *
- * TODO lifecycle (e.g. "deprecated" and "retired")
  */
 const DBObjectInfo(
         String               name,
@@ -22,8 +20,12 @@ const DBObjectInfo(
         Int[]                childIds             = [],
         Boolean              transactional        = True,
         Map<String, Type>    typeParameters       = Map:[],
-        Map<String, Class[]> acceptableSubClasses = Map:[])
+        Map<String, Class[]> acceptableSubClasses = Map:[],
+        LifeCycle            lifeCycle            = Current,
+        )
     {
+    enum LifeCycle {Current, Deprecated, Removed}
+
     Boolean checkValid()
         {
         // system objects have IDs less than zero, but they are not checked
@@ -141,31 +143,24 @@ const DBObjectInfo(
                                           );
                 }
 
-            switch (paramName)
+            // if paramType is not a concrete class, then there must be acceptableSubClasses
+            // specified, otherwise they are optional; furthermore, all acceptableSubClasses must
+            // be concrete classes, and must be "isA" of the param type
+            Class[]? classes = acceptableSubClasses.getOrNull(paramName);
+            if (classes == Null || classes.empty)
                 {
-                case "Key":
-                    assert category == DBMap;
-                    break;
-
-                case "Value":
-                    assert category == DBMap || category == DBValue;
-                    break;
-
-                case "Element":
-                    assert category == DBLog || category == DBList || category == DBQueue;
-                    break;
-
-                case "ParamTypes":
-                case "ReturnTypes":
-                    assert category == DBFunction;
-                    break;
-
-                default:
-                    throw new IllegalState($"Unsupported type parameter {paramName.quoted()}");
+                assert Class clz := paramType.fromClass(), !clz.abstract;
+                }
+            else
+                {
+                for (Class clz : classes)
+                    {
+                    assert clz.toType().isA(paramType) && !clz.abstract;
+                    }
                 }
             }
 
-        // TODO acceptableSubClasses
+        assert typeParameters.keys.containsAll(acceptableSubClasses.keys);
 
         return True;
         }
@@ -201,7 +196,9 @@ const DBObjectInfo(
                 childIds             = childIds,
                 transactional        = transactional,
                 typeParameters       = typeParameters,
-                acceptableSubClasses = acceptableSubClasses);
+                acceptableSubClasses = acceptableSubClasses,
+                lifeCycle            = lifeCycle,
+                );
         }
 
     /**
@@ -227,7 +224,9 @@ const DBObjectInfo(
                 childIds             = childIds + child.id,
                 transactional        = transactional,
                 typeParameters       = typeParameters,
-                acceptableSubClasses = acceptableSubClasses);
+                acceptableSubClasses = acceptableSubClasses,
+                lifeCycle            = lifeCycle,
+                );
         }
 
     /**
@@ -270,6 +269,8 @@ const DBObjectInfo(
                 childIds             = mergeIds,
                 transactional        = transactional,
                 typeParameters       = typeParameters,
-                acceptableSubClasses = acceptableSubClasses);
+                acceptableSubClasses = acceptableSubClasses,
+                lifeCycle            = lifeCycle,
+                );
         }
     }
