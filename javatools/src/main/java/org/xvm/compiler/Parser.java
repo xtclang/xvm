@@ -716,7 +716,7 @@ public class Parser
                 stmts.add(new TypeCompositionStatement(annotations, name, typeParams, args, body,
                         doc, lStartPos, lEndPos));
                 }
-            while (match(Id.COMMA) != null);
+            while (match(Id.COMMA) != null && peek().getId() != Id.SEMICOLON && peek().getId() != Id.R_CURLY);
 
             if (peek().getId() != Id.R_CURLY)
                 {
