@@ -103,8 +103,7 @@ interface DBLog<Element>
          * The returned `List` does not allow mutation, but if the transaction is still processing,
          * any items subsequently logged within the transaction _may_ appear in the list.
          */
-        // TODO GG List<DBLog<Element>.Entry> added;
-        List<Entry> added;
+        List<DBLog<Element>.Entry> added;
 
         /**
          * The elements removed from the `Log`, if any log truncation occurred.
@@ -112,8 +111,7 @@ interface DBLog<Element>
          * The returned `List` does not allow mutation, but if the transaction is still processing,
          * any items subsequently logged within the transaction _may_ appear in the list.
          */
-        // TODO GG List<DBLog<Element>.Entry> removed;
-        List<Entry> removed;
+        List<DBLog<Element>.Entry> removed;
         }
 
     /**

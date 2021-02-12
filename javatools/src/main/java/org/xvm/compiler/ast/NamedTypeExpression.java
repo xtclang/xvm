@@ -1114,6 +1114,7 @@ public class NamedTypeExpression
 
             switch (m_constId.getFormat())
                 {
+                case ChildClass:
                 case Class:
                     if (names != null)
                         {
