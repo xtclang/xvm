@@ -14,6 +14,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -1218,8 +1219,7 @@ public class Frame
     // return a string value of the specified StringConstant
     public String getString(int iArg)
         {
-        StringConstant constText = (StringConstant) getConstant(iArg);
-        return constText.getValue();
+        return ((StringConstant) getConstant(iArg)).getValue();
         }
 
     /**
@@ -1237,8 +1237,21 @@ public class Frame
             ? getRegisterType(iArg)
             : iArg <= Op.CONSTANT_OFFSET
                 // "local property" type needs to be resolved
-                ? resolveType(getConstant(iArg).getType())
+                ? resolveType(getLocalConstantType(iArg))
                 : getPredefinedArgumentType(iArg, hArg);
+        }
+
+    private TypeConstant getLocalConstantType(int iArg)
+        {
+        Constant constant = getConstant(iArg);
+        switch (constant.getFormat())
+            {
+            case Class:
+                return ((ClassConstant) constant).getValueType(poolContext(), null);
+
+            default:
+                return constant.getType();
+            }
         }
 
     /**

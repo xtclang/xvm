@@ -176,7 +176,7 @@ service Catalog<Schema extends RootSchema>
         new DBObjectInfo("pending",      "sys/pending",      DBList,  BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParams=Map:["Element"=DBInvoke.PublicType]),
         new DBObjectInfo("transactions", "sys/transactions", DBLog,   BuiltIn.Transactions.id, BuiltIn.Sys.id, typeParams=Map:["Element"=DBTransaction.PublicType]),
         new DBObjectInfo("errors",       "sys/errors",       DBLog,   BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParams=Map:["Element"=String.PublicType]),
-        ]; // TODO GG do we need: .freeze(True) ??
+        ];
 
 
     // ----- properties ----------------------------------------------------------------------------
