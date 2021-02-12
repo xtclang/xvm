@@ -2,20 +2,30 @@ import ecstasy.reflect.Annotation;
 
 import json.Lexer.Token;
 
+import oodb.DBCounter;
+import oodb.DBFunction;
+import oodb.DBInfo;
+import oodb.DBInvoke;
+import oodb.DBList;
+import oodb.DBLog;
 import oodb.DBMap;
 import oodb.DBObject;
+import oodb.DBQueue;
 import oodb.DBSchema;
 import oodb.DBTransaction;
 import oodb.DBUser;
 import oodb.DBValue;
 import oodb.NoTx;
 import oodb.RootSchema;
+import oodb.SystemSchema;
 
 import model.DBObjectInfo;
 
 import storage.MapStore;
 import storage.ObjectStore;
 import storage.ValueStore;
+
+import Catalog.BuiltIn;
 
 
 /**
@@ -46,7 +56,7 @@ service Client<Schema extends RootSchema>
         {
         if (schemaMixin == Null)
             {
-            conn = new Connection().as(Connection + Schema);
+            conn = new Connection(infoFor(0)).as(Connection + Schema);
             }
         else
             {
@@ -98,9 +108,14 @@ service Client<Schema extends RootSchema>
     protected Class<Schema>? schemaMixin;
 
     /**
-     * The lazily created DBObjects within the schema. REVIEW
+     * The lazily created application DBObjects within the schema.
      */
-    protected DBObject?[] dbObjects;
+    protected/private DBObjectImpl?[] appObjects;
+
+    /**
+     * The lazily created system schema DBObjects.
+     */
+    protected/private DBObjectImpl?[] sysObjects;
 
     /**
      * The function to use to notify that the connection has closed.
@@ -121,14 +136,292 @@ service Client<Schema extends RootSchema>
         return True;
         }
 
+    /**
+     * Obtain the DBObjectInfo for the specified id.
+     *
+     * @param id  the internal object id
+     *
+     * @return the DBObjectInfo for the specified id
+     */
     DBObjectInfo infoFor(Int id)
         {
-        TODO
+        return catalog.infoFor(id);
         }
 
+    /**
+     * Obtain the DBObjectImpl for the specified id.
+     *
+     * @param id  the internal object id
+     *
+     * @return the DBObjectImpl for the specified id
+     */
     DBObjectImpl implFor(Int id)
         {
-        TODO
+        DBObjectImpl?[] impls = appObjects;
+        Int             index = id;
+        if (id < 0)
+            {
+            impls = sysObjects;
+            index = BuiltIn.byId(id).ordinal;
+            }
+
+        Int size = impls.size;
+        if (index < size)
+            {
+            return impls[index]?;
+            }
+
+        DBObjectImpl impl = createImpl(id);
+
+        // save off the ObjectStore (lazy cache)
+        if (index > impls.size)
+            {
+            impls.fill(Null, impls.size..index);
+            }
+        impls[index] = impl;
+
+        return impl;
+        }
+
+    /**
+     * Create an DBObjectImpl for the specified internal database object id.
+     *
+     * @param id  the internal object id
+     *
+     * @return the new DBObjectImpl
+     */
+    DBObjectImpl createImpl(Int id)
+        {
+        // TODO
+
+        DBObjectInfo info  = infoFor(id);
+        return switch (BuiltIn.byId(info.id))
+            {
+            case Root:         new RootSchemaImpl(info);
+            case Sys:          new SystemSchemaImpl(info);
+            case Info:         TODO new DBValue<DBInfo>();
+            case Users:        TODO new DBMap<String, DBUser>();
+            case Types:        TODO new DBMap<String, Type>();
+            case Objects:      TODO new DBMap<String, DBObject>();
+            case Schemas:      TODO new DBMap<String, DBSchema>();
+            case Maps:         TODO new DBMap<String, DBMap>();
+            case Queues:       TODO new DBMap<String, DBQueue>();
+            case Lists:        TODO new DBMap<String, DBList>();
+            case Logs:         TODO new DBMap<String, DBLog>();
+            case Counters:     TODO new DBMap<String, DBCounter>();
+            case Values:       TODO new DBMap<String, DBValue>();
+            case Functions:    TODO new DBMap<String, DBFunction>();
+            case Pending:      TODO new DBList<DBInvoke>();
+            case Transactions: TODO new DBLog<DBTransaction>();
+            case Errors:       TODO new DBLog<String>();
+            default: assert;
+            };
+        }
+
+    /**
+     * Obtain the DBObjectInfo for the specified id.
+     *
+     * @param id  the internal object id
+     *
+     * @return the DBObjectInfo for the specified id
+     */
+    ObjectStore storeFor(Int id)
+        {
+        return catalog.storeFor(id);
+        }
+
+
+    // ----- DBObject ------------------------------------------------------------------------------
+
+    /**
+     * The shared base implementation for all of the client DBObject representations.
+     */
+    @Abstract class DBObjectImpl(DBObjectInfo info_)
+            implements DBObject
+        {
+        protected DBObjectInfo info_;
+
+        @Override
+        @RO DBObject!? dbParent.get()
+            {
+            return implFor(info_.parentId);
+            }
+
+        @Override
+        @Lazy Map<String, DBObject> dbChildren.calc()
+            {
+            return new Map()
+                {
+                @Override
+                // TODO GG this doesn't work: conditional Value get(Key key)
+                conditional DBObject get(String key)
+                    {
+                    if (DBObjectInfo info := infos.get(key))
+                        {
+                        return True, implFor(info.id);
+                        }
+
+                    return False;
+                    }
+
+                @Override
+                @Lazy Set<String> keys.calc()
+                    {
+                    return infos.keys;
+                    }
+
+                protected @Lazy Map<String, DBObjectInfo> infos.calc()
+                    {
+                    Int[] childIds = info_.childIds;
+                    Int   size     = childIds.size;
+                    if (size == 0)
+                        {
+                        return Map:[];
+                        }
+
+                    ListMap<String, DBObjectInfo> infos = new ListMap(size);
+                    // TODO GG? - childIds.associate(i -> (infoFor(i).name, infoFor(i)))
+                    childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, infos);
+                    return infos.freeze();
+                    }
+                };
+            }
+
+        // some TODO items (the function thing) and optimizations
+        }
+
+
+    // ----- DBSchema ------------------------------------------------------------------------------
+
+    /**
+     * The DBSchema DBObject implementation.
+     */
+    class DBSchemaImpl(DBObjectInfo info_)
+            extends DBObjectImpl(info_)
+            incorporates NoTx
+            implements DBSchema
+        {
+        @Override
+        @RO DBSchema!? dbParent.get()
+            {
+            return info_.id == 0
+                    ? Null
+                    : super().as(DBSchema);
+            }
+        }
+
+
+    // ----- RootSchema ----------------------------------------------------------------------------
+
+    /**
+     * The RootSchema DBObject implementation.
+     */
+    class RootSchemaImpl(DBObjectInfo info_)
+            extends DBSchemaImpl(info_)
+            implements RootSchema
+        {
+        // TODO
+        }
+
+
+    // ----- SystemSchema --------------------------------------------------------------------------
+
+    /**
+     * The SystemSchema DBObject implementation.
+     */
+    class SystemSchemaImpl(DBObjectInfo info_)
+            extends DBSchemaImpl(info_)
+            implements SystemSchema
+        {
+        @Override
+        @RO DBValue<DBInfo> info.get()
+            {
+            return implFor(BuiltIn.Info.id).as(DBValue<DBInfo>);
+            }
+
+        @Override
+        @RO DBMap<String, DBUser> users.get()
+            {
+            return implFor(BuiltIn.Users.id).as(DBMap<String, DBUser>);
+            }
+
+        @Override
+        @RO DBMap<String, Type> types.get()
+            {
+            return implFor(BuiltIn.Types.id).as(DBMap<String, Type>);
+            }
+
+        @Override
+        @RO DBMap<String, DBObject> objects.get()
+            {
+            return implFor(BuiltIn.Objects.id).as(DBMap<String, DBObject>);
+            }
+
+        @Override
+        @RO DBMap<String, DBSchema> schemas.get()
+            {
+            return implFor(BuiltIn.Schemas.id).as(DBMap<String, DBSchema>);
+            }
+
+        @Override
+        @RO DBMap<String, DBMap> maps.get()
+            {
+            return implFor(BuiltIn.Maps.id).as(DBMap<String, DBMap>);
+            }
+
+        @Override
+        @RO DBMap<String, DBQueue> queues.get()
+            {
+            return implFor(BuiltIn.Queues.id).as(DBMap<String, DBQueue>);
+            }
+
+        @Override
+        @RO DBMap<String, DBList> lists.get()
+            {
+            return implFor(BuiltIn.Lists.id).as(DBMap<String, DBList>);
+            }
+
+        @Override
+        @RO DBMap<String, DBLog> logs.get()
+            {
+            return implFor(BuiltIn.Logs.id).as(DBMap<String, DBLog>);
+            }
+
+        @Override
+        @RO DBMap<String, DBCounter> counters.get()
+            {
+            return implFor(BuiltIn.Counters.id).as(DBMap<String, DBCounter>);
+            }
+
+        @Override
+        @RO DBMap<String, DBValue> values.get()
+            {
+            return implFor(BuiltIn.Values.id).as(DBMap<String, DBValue>);
+            }
+
+        @Override
+        @RO DBMap<String, DBFunction> functions.get()
+            {
+            return implFor(BuiltIn.Functions.id).as(DBMap<String, DBFunction>);
+            }
+
+        @Override
+        @RO DBList<DBInvoke> pending.get()
+            {
+            return implFor(BuiltIn.Pending.id).as(DBList<DBInvoke>);
+            }
+
+        @Override
+        @RO DBLog<DBTransaction> transactions.get()
+            {
+            return implFor(BuiltIn.Transactions.id).as(DBLog<DBTransaction>);
+            }
+
+        @Override
+        @RO DBLog<String> errors.get()
+            {
+            return implFor(BuiltIn.Errors.id).as(DBLog<String>);
+            }
         }
 
 
@@ -137,8 +430,8 @@ service Client<Schema extends RootSchema>
     /**
      * The Connection API, for providing to a database client.
      */
-    class Connection
-            implements Context
+    class Connection(DBObjectInfo info_)
+            extends RootSchemaImpl(info_)
             implements oodb.Connection<Schema>
         {
         @Override
@@ -179,8 +472,8 @@ service Client<Schema extends RootSchema>
     /**
      * The Transaction API, for providing to a database client.
      */
-    class Transaction(Int baseId_)
-            implements Context
+    class Transaction(DBObjectInfo info_)
+            extends RootSchemaImpl(info_)
             implements oodb.Transaction<Schema>
         {
         /**
@@ -256,85 +549,6 @@ service Client<Schema extends RootSchema>
                 // TODO discard any tx data as well (where is it stored?)
                 outer.tx = Null;
                 }
-            }
-        }
-
-
-    // ----- DBObject ------------------------------------------------------------------------------
-
-    /**
-     * The shared base implementation for all of the client DBObject representations.
-     */
-    @Abstract class DBObjectImpl(DBObjectInfo info_)
-            implements DBObject
-        {
-        protected DBObjectInfo info_;
-
-        @Override
-        @RO DBObject!? dbParent.get()
-            {
-            return implFor(info_.parentId);
-            }
-
-        @Override
-        @Lazy Map<String, DBObject> dbChildren.calc()
-            {
-            return new Map()
-                {
-                @Override
-                // TODO GG this doesn't work: conditional Value get(Key key)
-                conditional DBObject get(String key)
-                    {
-                    if (DBObjectInfo info := infos.get(key))
-                        {
-                        return True, implFor(info.id);
-                        }
-
-                    return False;
-                    }
-
-                @Override
-                @Lazy Set<String> keys.calc()
-                    {
-                    return infos.keys;
-                    }
-
-                protected @Lazy Map<String, DBObjectInfo> infos.calc()
-                    {
-                    Int[] childIds = info_.childIds;
-                    Int   size     = childIds.size;
-                    if (size == 0)
-                        {
-                        return Map:[];
-                        }
-
-                    ListMap<String, DBObjectInfo> infos = new ListMap(size);
-                    childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, infos);
-                    return infos.freeze();
-                    }
-                };
-            }
-
-        // some TODO items (the function thing) and optimizations
-        }
-
-
-    // ----- DBSchema ------------------------------------------------------------------------------
-
-    /**
-     * The DBSchema DBObject implementation.
-     */
-    class DBSchemaImpl(DBObjectInfo info_)
-            extends DBObjectImpl(info_)
-            incorporates NoTx
-            implements DBSchema
-        {
-        @Override
-        @RO DBSchema!? dbParent.get()
-            {
-            return info_.id == 0
-                    ? Null
-                    : super().as(DBSchema);
             }
         }
 

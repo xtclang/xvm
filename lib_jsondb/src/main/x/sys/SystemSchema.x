@@ -28,7 +28,7 @@ class SystemSchema
         {
         info         = new DBInfoSingleton(this:protected);
 //        users        = new DBMap<String, DBUser>() {};
-//        types        = new DBList<Type>() {};
+//        types        = new DBMap<String, Type>() {};
 //        objects      = new DBMap<String, DBObject>() {};
 //        schemas      = new DBMap<String, DBSchema>() {};
 //        maps         = new DBMap<String, DBMap>() {};
@@ -40,6 +40,7 @@ class SystemSchema
 //        functions    = new DBMap<String, DBFunction>() {};
 //        pending      = new DBList<DBInvoke>() {};
 //        transactions = new DBLog<DBTransaction>() {};
+//        errors       = new DBLog<String>() {};
 
         dbChildren   = Map:[
                 "info"         = info,
@@ -78,7 +79,7 @@ class SystemSchema
 
     @Override public/private DBMap<String, DBUser>      users;
 
-    @Override public/private DBList<Type>               types;
+    @Override public/private DBMap<String, Type>        types;
 
     @Override public/private DBMap<String, DBObject>    objects;
 
@@ -101,4 +102,6 @@ class SystemSchema
     @Override public/private DBList<DBInvoke>           pending;
 
     @Override public/private DBLog<DBTransaction>       transactions;
+
+    @Override public/private DBLog<String>              errors;
     }

@@ -42,9 +42,9 @@ module AddressBookDB_jsonDB
         {
         return
             [
-            // id, parentId, childIds, name, path, category, typeParameters, acceptableSubClasses
-            new jsonDB_.model.DBObjectInfo(0, Null, [-1,1], "", "", DBSchema, [], []),    // -1 is "sys" schema
-            new jsonDB_.model.DBObjectInfo(1, 0, [], "contacts", "contacts", DBMap, ["Key"="String", "Value"="AddressBookDB.test.org:Contact"], []),
+
+            new jsonDB_.model.DBObjectInfo("", "", DBSchema, 0, 0, [1]),
+            new jsonDB_.model.DBObjectInfo("contacts", "contacts", DBMap, 1, 0, typeParams=["Key"=String, "Value"=AddressBookDB:Contact]),
             ].freeze(True);
         }
 

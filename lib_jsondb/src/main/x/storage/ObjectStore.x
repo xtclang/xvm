@@ -47,6 +47,8 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      */
     @Atomic Status status = Closed;
 
+    public/protected Boolean writeable = False;
+
     /**
      * The `DBCategory` for this `DBObject`.
      */
@@ -150,6 +152,14 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     Int opCount = 0;
 
     /**
+     * TODO
+     */
+    protected Boolean calcWritable()
+        {
+        return !catalog.readOnly && info.id > 0 && info.lifeCycle == Current;
+        }
+
+    /**
      * For a closed ObjectStore, examine the contents of the persistent storage and recover from
      * that to a running state if at all possible.
      *
@@ -161,11 +171,13 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         status = Recovering;
         if (deepScan(True))
             {
-            status = Running;
+            status    = Running;
+            writeable = calcWritable();
             return True;
             }
 
-        status = Closed;
+        status    = Closed;
+        writeable = False;
         return False;
         }
 
@@ -180,11 +192,13 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         assert status == Closed;
         if (quickScan())
             {
-            status = Running;
+            status    = Running;
+            writeable = calcWritable();
             return True;
             }
 
-        status = Closed;
+        status    = Closed;
+        writeable = False;
         return False;
         }
 
@@ -212,7 +226,8 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
                 assert;
             }
 
-        status = Closed;
+        status    = Closed;
+        writeable = False;
         }
 
     /**

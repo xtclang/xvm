@@ -8,8 +8,8 @@ import oodb.DBObject.DBCategory as Category;
  * least" of these types. However, since the information must be stored persistently, it is
  * necessary for the database to know (in advance) what the actual possible types are for each
  * of these constraints; the constraint types for each type parameter name are specified in the
- * [typeParameters] property, and the possible types (any sub-classes that may occur) are required
- * to be enumerated in the [acceptableSubClasses] property.
+ * [typeParams] property, and any additional class types that may occur are required to be
+ * enumerated in the [concreteClasses] property.
  */
 const DBObjectInfo(
         String               name,
@@ -17,11 +17,11 @@ const DBObjectInfo(
         Category             category,
         Int                  id,
         Int                  parentId,
-        Int[]                childIds             = [],
-        Boolean              transactional        = True,
-        Map<String, Type>    typeParameters       = Map:[],
-        Map<String, Class[]> acceptableSubClasses = Map:[],
-        LifeCycle            lifeCycle            = Current,
+        Int[]                childIds        = [],
+        Boolean              transactional   = True,
+        Map<String, Type>    typeParams      = Map:[],
+        Map<String, Class[]> concreteClasses = Map:[],
+        LifeCycle            lifeCycle       = Current,
         )
     {
     enum LifeCycle {Current, Deprecated, Removed}
@@ -101,7 +101,7 @@ const DBObjectInfo(
             }
 
         // check type parameters
-        for ((String paramName, Type paramType) : typeParameters)
+        for ((String paramName, Type paramType) : typeParams)
             {
             switch (category)
                 {
@@ -143,10 +143,10 @@ const DBObjectInfo(
                                           );
                 }
 
-            // if paramType is not a concrete class, then there must be acceptableSubClasses
-            // specified, otherwise they are optional; furthermore, all acceptableSubClasses must
+            // if paramType is not a concrete class, then there must be concreteClasses
+            // specified, otherwise they are optional; furthermore, all concreteClasses must
             // be concrete classes, and must be "isA" of the param type
-            Class[]? classes = acceptableSubClasses.getOrNull(paramName);
+            Class[]? classes = concreteClasses.getOrNull(paramName);
             if (classes == Null || classes.empty)
                 {
                 assert Class clz := paramType.fromClass(), !clz.abstract;
@@ -160,7 +160,7 @@ const DBObjectInfo(
                 }
             }
 
-        assert typeParameters.keys.containsAll(acceptableSubClasses.keys);
+        assert typeParams.keys.containsAll(concreteClasses.keys);
 
         return True;
         }
@@ -188,16 +188,16 @@ const DBObjectInfo(
         {
         assert id != 0;
         return new DBObjectInfo(
-                name                 = name,
-                path                 = parent.id == 0 ? name : $"{parent.path}/{name}",
-                category             = category,
-                id                   = id,
-                parentId             = parent.id,
-                childIds             = childIds,
-                transactional        = transactional,
-                typeParameters       = typeParameters,
-                acceptableSubClasses = acceptableSubClasses,
-                lifeCycle            = lifeCycle,
+                name            = name,
+                path            = parent.id == 0 ? name : $"{parent.path}/{name}",
+                category        = category,
+                id              = id,
+                parentId        = parent.id,
+                childIds        = childIds,
+                transactional   = transactional,
+                typeParams      = typeParams,
+                concreteClasses = concreteClasses,
+                lifeCycle       = lifeCycle,
                 );
         }
 
@@ -216,16 +216,16 @@ const DBObjectInfo(
             }
 
         return new DBObjectInfo(
-                name                 = name,
-                path                 = path,
-                category             = category,
-                id                   = id,
-                parentId             = parentId,
-                childIds             = childIds + child.id,
-                transactional        = transactional,
-                typeParameters       = typeParameters,
-                acceptableSubClasses = acceptableSubClasses,
-                lifeCycle            = lifeCycle,
+                name            = name,
+                path            = path,
+                category        = category,
+                id              = id,
+                parentId        = parentId,
+                childIds        = childIds + child.id,
+                transactional   = transactional,
+                typeParams      = typeParams,
+                concreteClasses = concreteClasses,
+                lifeCycle       = lifeCycle,
                 );
         }
 
@@ -261,16 +261,16 @@ const DBObjectInfo(
             }
 
         return new DBObjectInfo(
-                name                 = name,
-                path                 = path,
-                category             = category,
-                id                   = id,
-                parentId             = parentId,
-                childIds             = mergeIds,
-                transactional        = transactional,
-                typeParameters       = typeParameters,
-                acceptableSubClasses = acceptableSubClasses,
-                lifeCycle            = lifeCycle,
+                name            = name,
+                path            = path,
+                category        = category,
+                id              = id,
+                parentId        = parentId,
+                childIds        = mergeIds,
+                transactional   = transactional,
+                typeParams      = typeParams,
+                concreteClasses = concreteClasses,
+                lifeCycle       = lifeCycle,
                 );
         }
     }

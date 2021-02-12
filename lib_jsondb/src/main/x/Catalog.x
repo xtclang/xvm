@@ -1,8 +1,23 @@
+import model.DBObjectInfo;
 import model.Lock;
 import model.SysInfo;
+
+import oodb.DBCounter;
+import oodb.DBFunction;
+import oodb.DBInfo;
+import oodb.DBInvoke;
+import oodb.DBList;
+import oodb.DBLog;
+import oodb.DBMap;
+import oodb.DBObject;
+import oodb.DBQueue;
+import oodb.DBSchema;
+import oodb.DBTransaction;
 import oodb.DBUser;
+import oodb.DBValue;
 import oodb.Permission;
 import oodb.RootSchema;
+
 import storage.ObjectStore;
 
 /**
@@ -64,6 +79,106 @@ service Catalog<Schema extends RootSchema>
         }
 
 
+    // ----- built-in system schema ----------------------------------------------------------------
+
+    /**
+     * An enumeration of built-in (system) database objects.
+     */
+    enum BuiltIn<ObjectType>
+        {
+        Root<DBSchema>,
+        Sys<DBSchema>,
+        Info<DBValue<DBInfo>>,
+        Users<DBMap<String, DBUser>>,
+        Types<DBMap<String, Type>>,
+        Objects<DBMap<String, DBObject>>,
+        Schemas<DBMap<String, DBSchema>>,
+        Maps<DBMap<String, DBMap>>,
+        Queues<DBMap<String, DBQueue>>,
+        Lists<DBMap<String, DBList>>,
+        Logs<DBMap<String, DBLog>>,
+        Counters<DBMap<String, DBCounter>>,
+        Values<DBMap<String, DBValue>>,
+        Functions<DBMap<String, DBFunction>>,
+        Pending<DBList<DBInvoke>>,
+        Transactions<DBLog<DBTransaction>>,
+        Errors<DBLog<String>>,
+        ;
+
+        /**
+         * The internal id of the built-in database object. The root schema is 0, while the rest of
+         * the built-in database objects use negative ids.
+         */
+        Int id.get()
+            {
+            return -ordinal;
+            }
+
+        /**
+         * The DBObjectInfo for the built-in database object.
+         */
+        DBObjectInfo info.get()
+            {
+            return SystemInfos[ordinal];
+            }
+
+        /**
+         * Obtain the BuiltIn enum value for the specified built-in database object id.
+         *
+         * @param the built-in id
+         *
+         * @return the BuiltIn value representing the built-in database object
+         */
+        static BuiltIn byId(Int id)
+            {
+            assert id <= 0 && id + BuiltIn.count > 0;
+            return BuiltIn.values[0-id];
+            }
+        }
+
+    static DBObjectInfo[] SystemInfos =
+        [
+        new DBObjectInfo("",    "",    DBSchema, BuiltIn.Root.id, BuiltIn.Root.id,
+            [
+            BuiltIn.Sys.id,
+            ]),
+        new DBObjectInfo("sys", "sys", DBSchema, BuiltIn.Sys.id,  BuiltIn.Root.id,
+            [
+            BuiltIn.Info.id,
+            BuiltIn.Users.id,
+            BuiltIn.Types.id,
+            BuiltIn.Objects.id,
+            BuiltIn.Schemas.id,
+            BuiltIn.Maps.id,
+            BuiltIn.Queues.id,
+            BuiltIn.Lists.id,
+            BuiltIn.Logs.id,
+            BuiltIn.Counters.id,
+            BuiltIn.Values.id,
+            BuiltIn.Functions.id,
+            BuiltIn.Pending.id,
+            BuiltIn.Transactions.id,
+            BuiltIn.Errors.id,
+            ]),
+// TODO GG: the use of ".PublicType" in the following lines should not be necessary
+        new DBObjectInfo("info",         "sys/info",         DBValue, BuiltIn.Info.id,         BuiltIn.Sys.id, typeParams=Map:["Value"=DBInfo.PublicType]),
+        new DBObjectInfo("users",        "sys/users",        DBMap,   BuiltIn.Users.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String.PublicType, "Value"=DBUser.PublicType]),
+        new DBObjectInfo("types",        "sys/types",        DBMap,   BuiltIn.Types.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String.PublicType, "Value"=Type.PublicType]),
+        new DBObjectInfo("objects",      "sys/objects",      DBMap,   BuiltIn.Objects.id,      BuiltIn.Sys.id, typeParams=Map:["Key"=String.PublicType, "Value"=DBObject.PublicType]),
+        new DBObjectInfo("schemas",      "sys/schemas",      DBMap,   BuiltIn.Schemas.id,      BuiltIn.Sys.id, typeParams=Map:["Key"=String.PublicType, "Value"=DBSchema.PublicType]),
+        new DBObjectInfo("maps",         "sys/maps",         DBMap,   BuiltIn.Maps.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String.PublicType, "Value"=DBMap.PublicType]),
+        new DBObjectInfo("queues",       "sys/queues",       DBMap,   BuiltIn.Queues.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String.PublicType, "Value"=DBQueue.PublicType]),
+        new DBObjectInfo("lists",        "sys/lists",        DBMap,   BuiltIn.Lists.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String.PublicType, "Value"=DBList.PublicType]),
+        new DBObjectInfo("logs",         "sys/logs",         DBMap,   BuiltIn.Logs.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String.PublicType, "Value"=DBLog.PublicType]),
+        new DBObjectInfo("counters",     "sys/counters",     DBMap,   BuiltIn.Counters.id,     BuiltIn.Sys.id, typeParams=Map:["Key"=String.PublicType, "Value"=DBCounter.PublicType]),
+        new DBObjectInfo("values",       "sys/values",       DBMap,   BuiltIn.Values.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String.PublicType, "Value"=DBValue.PublicType]),
+        new DBObjectInfo("functions",    "sys/functions",    DBMap,   BuiltIn.Functions.id,    BuiltIn.Sys.id, typeParams=Map:["Key"=String.PublicType, "Value"=DBFunction.PublicType]),
+        new DBObjectInfo("pending",      "sys/pending",      DBList,  BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParams=Map:["Element"=DBInvoke.PublicType]),
+        new DBObjectInfo("transactions", "sys/transactions", DBLog,   BuiltIn.Transactions.id, BuiltIn.Sys.id, typeParams=Map:["Element"=DBTransaction.PublicType]),
+        new DBObjectInfo("errors",       "sys/errors",       DBLog,   BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParams=Map:["Element"=String.PublicType]),
+        ]; // TODO GG do we need: .freeze(True) ??
+
+
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -109,7 +224,13 @@ service Catalog<Schema extends RootSchema>
      * This data is available from the catalog through various methods; the array itself is not
      * exposed in order to avoid any concerns related to transmitting it through service boundaries.
      */
-    protected/private ObjectStore[] stores;
+    protected/private ObjectStore?[] appStores = new ObjectStore[];
+
+    /**
+     * The ObjectStore for each DBObject in the system schema. These are read-only stores that
+     * provide a live view of the database metadata and status.
+     */
+    protected/private ObjectStore?[] sysStores = new ObjectStore[];
 
     /**
      * The transaction manager for this `Catalog` object. The transaction manager provides a
@@ -141,6 +262,93 @@ service Catalog<Schema extends RootSchema>
     String toString()
         {
         return $"{this:class.name}:\{dir={dir}, version={version}, status={status}, readOnly={readOnly}, unique-id={timestamp}}";
+        }
+
+
+    // ----- support ----------------------------------------------------------------------------
+
+    /**
+     * Obtain the DBObjectInfo for the specified id.
+     *
+     * @param id  the internal object id
+     *
+     * @return the DBObjectInfo for the specified id
+     */
+    DBObjectInfo infoFor(Int id)
+        {
+        assert id <= 0;
+        return BuiltIn.byId(id).info;
+        }
+
+    /**
+     * Obtain the DBObjectInfo for the specified id.
+     *
+     * @param id  the internal object id
+     *
+     * @return the DBObjectInfo for the specified id
+     */
+    ObjectStore storeFor(Int id)
+        {
+        ObjectStore?[] stores = appStores;
+        Int            index  = id;
+        if (id < 0)
+            {
+            stores = sysStores;
+            index  = BuiltIn.byId(id).ordinal;
+            }
+
+        Int size = stores.size;
+        if (index < size)
+            {
+            return stores[index]?;
+            }
+
+        ObjectStore store = createStore(id);
+
+        // save off the ObjectStore (lazy cache)
+        if (index > stores.size)
+            {
+            stores.fill(Null, stores.size..index);
+            }
+        stores[index] = store;
+
+        return store;
+        }
+
+    /**
+     * Create an ObjectStore for the specified internal database object id.
+     *
+     * @param id  the internal object id
+     *
+     * @return the new ObjectStore
+     */
+    ObjectStore createStore(Int id)
+        {
+        // TODO
+
+        DBObjectInfo info  = infoFor(id);
+TODO
+//        return switch (BuiltIn.byId(id))
+//            {
+//            case Root:         assert;
+//            case Sys:          assert;
+//            case Info:         assert;
+//            case Users:        TODO new DBMap<String, DBUser>();
+//            case Types:        TODO new DBMap<String, Type>();
+//            case Objects:      TODO new DBMap<String, DBObject>();
+//            case Schemas:      assert;
+//            case Maps:         assert;
+//            case Queues:       assert;
+//            case Lists:        assert;
+//            case Logs:         assert;
+//            case Counters:     assert;
+//            case Values:       assert;
+//            case Functions:    assert;
+//            case Pending:      TODO new DBList<DBInvoke>();
+//            case Transactions: TODO new DBLog<DBTransaction>();
+//            case Errors:       TODO new DBLog<String>();
+//            default:           assert;
+//            };
         }
 
 
