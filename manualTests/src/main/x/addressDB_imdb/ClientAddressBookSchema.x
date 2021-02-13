@@ -15,6 +15,7 @@ class ClientAddressBookSchema
         }
 
     // schema property declarations
+    // REVIEW GG - why are these Unassigned and set up in the constructor..finally? why not @Lazy?
     @Override @Unassigned AddressBookDB.Contacts contacts;
     @Override @Unassigned db.DBCounter requestCount;
 
