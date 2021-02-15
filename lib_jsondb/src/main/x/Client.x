@@ -280,7 +280,6 @@ service Client<Schema extends RootSchema>
                         }
 
                     ListMap<String, DBObjectInfo> infos = new ListMap(size);
-                    // TODO GG? - childIds.associate(i -> (infoFor(i).name, infoFor(i)))
                     childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, infos);
                     return infos.freeze();
                     }
