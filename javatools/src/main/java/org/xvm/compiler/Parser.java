@@ -2930,7 +2930,8 @@ public class Parser
                 Token.Id idCur = tokCmp.getId();
                 if (idPrev != null && idCur != idPrev && !fErr)
                     {
-                    expr.log(m_errorListener, Severity.ERROR, BAD_CHAINED_EQ);
+                    log(Severity.ERROR, BAD_CHAINED_EQ,
+                            tokCmp.getStartPosition(), tokCmp.getEndPosition());
                     fErr = true;
                     }
                 }
@@ -3020,7 +3021,8 @@ public class Parser
 
             if (fThisAscending != fFirstAscending && !fErr)
                 {
-                expr.log(m_errorListener, Severity.ERROR, BAD_CHAINED_CMP);
+                log(Severity.ERROR, BAD_CHAINED_CMP,
+                        expr.getStartPosition(), expr.getEndPosition());
                 fErr = true;
                 }
             }

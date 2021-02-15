@@ -16,7 +16,6 @@ class SystemObject
      */
     construct(Catalog catalog, DBObject? dbParent, String dbName)
         {
-        // TODO GG OR CP BUGBUG: assert dbParent == Null ^ dbName != "";  // NPE (note: should have been "^^")
         assert dbParent == Null ^^ dbName != "";
 
         this.catalog  = catalog;
