@@ -6,6 +6,9 @@ module jsondb.xtclang.org
     package oodb import oodb.xtclang.org;
     package json import json.xtclang.org;
 
+
+    // ----- temporary helpers ---------------------------------------------------------------------
+
     static <Serializable> immutable Byte[] toBytes(Serializable value)
         {
         import ecstasy.io.*;

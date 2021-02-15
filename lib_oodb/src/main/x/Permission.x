@@ -25,16 +25,7 @@ const Permission(String target, String action)
      */
     Boolean covers(Permission that)
         {
-        if (this.action != AllActions && this.action != that.action)
-            {
-            return False;
-            }
-
-        if (this.target != AllTargets && this.target != that.target)
-            {
-            return False;
-            }
-
-        return True;
+        return (this.action == AllActions || this.action == that.action)
+            && (this.target == AllTargets || this.target == that.target);
         }
     }

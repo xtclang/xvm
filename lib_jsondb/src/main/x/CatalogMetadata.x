@@ -1,5 +1,8 @@
 import model.DBObjectInfo;
 
+import oodb.DBUser;
+import oodb.RootSchema;
+
 
 /**
  * Metadata for the catalog for a specific database. This interface is implemented by the `jsonDB`
@@ -13,7 +16,7 @@ import model.DBObjectInfo;
  * `jsonDB` database implementation. Specifically, the resulting module provides an implementation
  * of both `Connection` and `DBTransaction`
  */
-mixin CatalogMetadata
+mixin CatalogMetadata<Schema extends RootSchema>
         into Module
     {
     /**
@@ -35,20 +38,44 @@ mixin CatalogMetadata
         }
 
     /**
-     * the class of the mixin for the root schema
-     */
-    @Abstract @RO Class schemaMixin;
-
-    /**
-     * the information about the schema
+     * The information about the objects that define the database schema.
      */
     @Abstract @RO DBObjectInfo[] dbObjectInfos;
 
 
-
+    /**
+     * The database schema version.
+     */
     @RO Version dbVersion.get()
         {
         // default database version is the module's version
         return schemaModule.version;
         }
+
+    /**
+     * The `Catalog` factory.
+     *
+     * @param dir       the database directory, either within which to create a database, or where
+     *                  the database described by this catalog metadata already exists
+     * @param readOnly  (optional) pass true to open the database in a read-only manner
+     *
+     * @return a new `Catalog` for accessing (or otherwise managing) the database located in the
+     *         specified directory
+     */
+    Catalog<Schema> createCatalog(Directory dir, Boolean readOnly = False);
+
+    /**
+     * The `Client` factory.
+     *
+     * @param catalog        the `Catalog` describing the database storage location and structure
+     * @param clientId       the unique client id
+     * @param dbUser         the `DBUser` that the `Client` will act on behalf of
+     * @param notifyOnClose  (optional) a notification function to call when the `Client` is closed
+     *
+     * @return a new `Client` of the database represented by the `Catalog`
+     */
+    Client<Schema> createClient(Catalog<Schema>        catalog,
+                                Int                    clientId,
+                                DBUser                 dbUser,
+                                function void(Client)? notifyOnClose = Null);
     }

@@ -7,6 +7,7 @@ module AddressBookDB_jsonDB
 
     import AddressBookDB_.AddressBookSchema as AddressBookSchema_;
 
+// TODO this should be a mixin into (or sub-class of) Client
     mixin AddressBookSchema_mixin
             // into jsonDB.Client<AddressBookSchema>.Context
             extends RootSchema_mixin
@@ -26,12 +27,6 @@ module AddressBookDB_jsonDB
         }
 
     @Override
-    @RO Class schemaMixin.get()
-        {
-        return AddressBookSchema_mixin;
-        }
-
-    @Override
     @RO Module schemaModule.get()
         {
         return AddressBookDB;
@@ -48,8 +43,21 @@ module AddressBookDB_jsonDB
             ].freeze(True);
         }
 
-    Catalog createCatalog(Directory dir, Boolean readOnly = False)
+    @Override
+    Catalog<Schema> createCatalog(Directory dir, Boolean readOnly = False)
         {
-        return new Catalog(dir, this, readOnly);
+        return new Catalog<Schema>(dir, this, readOnly);
+        }
+
+    @Override
+    Client<Schema> createClient(Catalog<Schema> catalog, Int id, DBUser dbUser, function void(Client)? notifyOnClose = Null)
+        {
+        return new AddressBookDBClient_<Schema>(catalog, id, dbUser, unregisterClient)
+        }
+
+    service AddressBookDBClient_<Schema extends RootSchema>
+            extends Client<Schema>
+        {
+        // TODO ...
         }
     }

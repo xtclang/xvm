@@ -42,29 +42,21 @@ import Catalog.BuiltIn;
  */
 service Client<Schema extends RootSchema>
     {
+    /**
+     *
+     */
     construct(Catalog<Schema> catalog, Int id, DBUser dbUser, function void(Client)? notifyOnClose = Null)
         {
-        assert Schema == RootSchema || catalog.schemaMixin != Null;
+        assert Schema == RootSchema || catalog.metadata != Null;
 
         this.id            = id;
         this.dbUser        = dbUser;
         this.catalog       = catalog;
-        this.schemaMixin   = catalog.schemaMixin;
         this.notifyOnClose = notifyOnClose;
         }
     finally
         {
-        if (schemaMixin == Null)
-            {
-            conn = new Connection(infoFor(0)).as(Connection + Schema);
-            }
-        else
-            {
-            Class<Connection + Schema> clz = Connection.annotate(new Annotation(schemaMixin?)).
-                as(Class<Connection + Schema>) : assert;
-            assert val structConn := clz.allocate();
-            conn = clz.instantiate(structConn, this);
-            }
+        conn = new Connection(infoFor(0)).as(Connection + Schema);
         }
 
     /**
@@ -103,11 +95,6 @@ service Client<Schema extends RootSchema>
         }
 
     /**
-     * The mixin for the root schema implementation.
-     */
-    protected Class<Schema>? schemaMixin;
-
-    /**
      * The lazily created application DBObjects within the schema.
      */
     protected/private DBObjectImpl?[] appObjects;
@@ -121,11 +108,6 @@ service Client<Schema extends RootSchema>
      * The function to use to notify that the connection has closed.
      */
     protected function void(Client)? notifyOnClose;
-
-    /**
-     * An interface representing a Client context, which is either a Connection or a Transaction.
-     */
-    interface Context {}
 
 
     // ----- support ----------------------------------------------------------------------------
@@ -319,7 +301,7 @@ service Client<Schema extends RootSchema>
             extends DBSchemaImpl(info_)
             implements RootSchema
         {
-        // TODO
+        // TODO sys property
         }
 
 

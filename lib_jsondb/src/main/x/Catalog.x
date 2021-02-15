@@ -18,6 +18,8 @@ import oodb.DBValue;
 import oodb.Permission;
 import oodb.RootSchema;
 
+import oodb.model.DBUser as DBUserImpl;
+
 import storage.ObjectStore;
 
 /**
@@ -58,23 +60,23 @@ service Catalog<Schema extends RootSchema>
      * Open the catalog for the specified directory.
      *
      * @param dir          the directory that contains (or may contain) the catalog
-     * @param dbModule     (optional) the Ecstasy module that represents the database schema
-     * @param schemaMixin  (optional) the class of the mixin for the root schema
-     * @param readOnly     (optional) pass `True` to access the catalog in a read-only manner
+     * @param metadata  (optional) the `CatalogMetadata` for this `Catalog`; if the metadata is not
+     *                  provided, then the `Catalog` can only operate on the database as a raw JSON
+     *                  data store
+     * @param readOnly  (optional) pass `True` to access the catalog in a read-only manner
      */
-    construct(Directory dir, CatalogMetadata? metadata = Null, Boolean readOnly = False)
+    construct(Directory dir, CatalogMetadata<Schema>? metadata = Null, Boolean readOnly = False)
         {
-        // todo  Module? dbModule = Null, Class<Schema>? schemaMixin = Null,
-
         assert:arg dir.exists && dir.readable && (readOnly || dir.writable);
+// TODO GG - causes issue below: assert metadata != Null || Schema == RootSchema;
 
         @Inject Clock clock;
 
         this.timestamp   = clock.now;
         this.dir         = dir;
+        this.metadata    = metadata;
+        this.version     = metadata?.version : Null;
         this.readOnly    = readOnly;
-        this.dbModule    = dbModule;
-        this.schemaMixin = schemaMixin;
         this.status      = Closed;
         }
 
@@ -178,6 +180,11 @@ service Catalog<Schema extends RootSchema>
         new DBObjectInfo("errors",       "sys/errors",       DBLog,   BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParams=Map:["Element"=String.PublicType]),
         ];
 
+    /**
+     * Default "system" user.
+     */
+    static protected DBUserImpl DefaultUser = new DBUserImpl(0, "sys", permissions = [new Permission(AllTargets, AllActions)]);
+
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -192,20 +199,17 @@ service Catalog<Schema extends RootSchema>
     public/private Directory dir;
 
     /**
+     * The optional catalog metadata for this catalog. This information is typically created by a
+     * code generation process that takes as its input an application's "@Database" module, and
+     * emits as output a new module that provides a custom binding of the application's "@Database"
+     * module to the `jsondb` implementation of the `oodb` database API.
+     */
+    public/private CatalogMetadata<Schema>? metadata;
+
+    /**
      * True iff the database was opened in read-only mode.
      */
     public/private Boolean readOnly;
-
-    /**
-     * The module representing the database. Used for serialization and deserialization of
-     * persistent data.
-     */
-    public/private Module? dbModule;
-
-    /**
-     * The mixin for the root schema implementation.
-     */
-    public/private Class<Schema>? schemaMixin;
 
     /**
      * The version of the database represented by this `Catalog` object. The version may not be
@@ -241,12 +245,6 @@ service Catalog<Schema extends RootSchema>
     /**
      * The existing client representations for this `Catalog` object. Each client may have a single
      * Connection representation, and each Connection may have a single Transaction representation.
-     *
-     * This data is available from the catalog through various methods; the array itself is not
-     * exposed in order to avoid any concerns related to transmitting it through service boundaries.
-     *
-     * TODO use a Persistent map so the caller cannot modify it
-     * TODO need a weak ref to each Client
      */
     protected/private Map<Int, Client> clients = new HashMap();
 
@@ -724,25 +722,45 @@ TODO
     // ----- Client (Connection) management --------------------------------------------------------
 
     /**
+     * Create a new database connection.
      *
+     * @param dbUser  (optional) the database user that the connection will be created on behalf of;
+     *                defaults to the database super-user
      */
     Connection createConnection(DBUser? dbUser = Null)
         {
-        // TODO move the "sys" user creation to a better place
-        dbUser ?:= new oodb.model.DBUser(0, "sys", permissions = [new Permission(AllTargets, AllActions)]);
-        Client<Schema> client = createClient(dbUser);
+        Client<Schema> client = createClient(dbUser ?: DefaultUser);
         registerClient(client);
         return client.conn ?: assert;
         }
 
     /**
-     * Instantiate a Client instance.
+     * Create a `Client` that will access the database represented by this `Catalog`  on behalf of
+     * the specified user. This method allows a custom (e.g. code-gen) `Client` implementation to
+     * be substituted for the default, whic allows custom schemas and other custom functionality to
+     * be provided in a type-safe manner.
      *
-     * @param dbUser  the database use that the client object will represent
+     * @param dbUser  the user that the `Client` will represent
+     *
+     * @return a ne `Client` instance
      */
     protected Client<Schema> createClient(DBUser dbUser)
         {
-        return new Client<Schema>(this, clientCounter++, dbUser, (client) -> unregisterClient(client));
+        Int clientId = genClientId();
+        val metadata = this.metadata;
+        return metadata == Null
+                ? new Client<Schema>(this, clientId, dbUser, unregisterClient)
+                : metadata.createClient(this, clientId, dbUser, unregisterClient);
+        }
+
+    /**
+     * Generate a unique client id. (Unique for the lifetime of this Catalog.)
+     *
+     * @return a new client id
+     */
+    protected Int genClientId()
+        {
+        return ++clientCounter;
         }
 
     /**
