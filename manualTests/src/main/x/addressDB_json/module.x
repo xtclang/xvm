@@ -1,3 +1,6 @@
+// TODO discuss how a developer writing the @Database module can provide user information (if at all)
+// TODO creation actions (to initially populate the database), upgrade actions, etc.
+
 module AddressBookDB_jsonDB
         incorporates jsonDB_.CatalogMetadata
     {
@@ -44,6 +47,19 @@ module AddressBookDB_jsonDB
         }
 
     @Override
+    Map<String, Type> dbTypes.get()
+        {
+        return Map:[]; // TODO
+        // also TODO CP allow [] to be used as a Map (etc.) constant without "Map:"
+        }
+
+    @Override
+    @Lazy json.Schema jsonSchema.calc()
+        {
+        // TODO use dbTypes?
+        }
+
+    @Override
     Catalog<Schema> createCatalog(Directory dir, Boolean readOnly = False)
         {
         return new Catalog<Schema>(dir, this, readOnly);
@@ -56,7 +72,7 @@ module AddressBookDB_jsonDB
         }
 
     service AddressBookDBClient_<Schema extends RootSchema>
-            extends Client<Schema>
+            extends Client<AddressBookSchema_>
         {
         // TODO ...
         }

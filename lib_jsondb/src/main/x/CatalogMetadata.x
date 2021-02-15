@@ -42,6 +42,15 @@ mixin CatalogMetadata<Schema extends RootSchema>
      */
     @Abstract @RO DBObjectInfo[] dbObjectInfos;
 
+    /**
+     * The information about the types used in the database schema.
+     */
+    @Abstract @RO Map<String, Type> dbTypes;
+
+    /**
+     * The information about the objects that define the database schema.
+     */
+    @Abstract @RO json.Schema jsonSchema;
 
     /**
      * The database schema version.
@@ -62,7 +71,10 @@ mixin CatalogMetadata<Schema extends RootSchema>
      * @return a new `Catalog` for accessing (or otherwise managing) the database located in the
      *         specified directory
      */
-    Catalog<Schema> createCatalog(Directory dir, Boolean readOnly = False);
+    Catalog<Schema> createCatalog(Directory dir, Boolean readOnly = False)
+        {
+        return new Catalog<Schema>(dir, this, readOnly);
+        }
 
     /**
      * The `Client` factory.

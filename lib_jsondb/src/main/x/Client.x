@@ -1,6 +1,8 @@
 import ecstasy.reflect.Annotation;
 
+import json.Doc;
 import json.Lexer.Token;
+import json.Mapping;
 
 import oodb.DBCounter;
 import oodb.DBFunction;
@@ -56,7 +58,8 @@ service Client<Schema extends RootSchema>
         }
     finally
         {
-        conn = new Connection(infoFor(0)).as(Connection + Schema);
+        // TODO GG: reentracy = Exclusive;
+        conn      = new Connection(infoFor(0)).as(Connection + Schema);
         }
 
     /**
@@ -210,6 +213,35 @@ service Client<Schema extends RootSchema>
     ObjectStore storeFor(Int id)
         {
         return catalog.storeFor(id);
+        }
+
+
+    // ----- Worker --------------------------------------------------------------------------------
+
+    /**
+     * The Worker virtual service child class exists to allow work to be delegated explicitly to
+     * this service in order to be executed. This allows CPU-intensive (expensive) work to be dumped
+     * back onto the Client instead of letting that work fall onto more critical services, such AS
+     * the various `ObjectStore` services.
+     *
+     * TODO figure out what methods are actually needed / used
+     */
+    class Worker
+        {
+        <Serializable> Serializable readUsing(Mapping<Serializable> mapping, String jsonText)
+            {
+            TODO
+            }
+
+        <Serializable> Serializable readUsing(Mapping<Serializable> mapping, Token[] jsonTokens)
+            {
+            TODO
+            }
+
+        <Serializable> String writeUsing(Mapping<Serializable> mapping, Serializable value)
+            {
+            TODO
+            }
         }
 
 

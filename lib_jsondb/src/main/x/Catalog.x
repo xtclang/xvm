@@ -22,6 +22,7 @@ import oodb.model.DBUser as DBUserImpl;
 
 import storage.ObjectStore;
 
+
 /**
  * Metadata catalog for a database. A `Catalog` acts as the "gateway" to a JSON database, allowing a
  * database to be created, opened, examined, recovered, upgraded, and/or deleted.
@@ -183,7 +184,8 @@ service Catalog<Schema extends RootSchema>
     /**
      * Default "system" user.
      */
-    static protected DBUserImpl DefaultUser = new DBUserImpl(0, "sys", permissions = [new Permission(AllTargets, AllActions)]);
+    static protected DBUserImpl DefaultUser = new DBUserImpl(0, "sys",
+            permissions = [new Permission(AllTargets, AllActions)]);
 
 
     // ----- properties ----------------------------------------------------------------------------
@@ -205,6 +207,14 @@ service Catalog<Schema extends RootSchema>
      * module to the `jsondb` implementation of the `oodb` database API.
      */
     public/private CatalogMetadata<Schema>? metadata;
+
+    /**
+     * The JSON Schema to use.
+     */
+    @Lazy json.Schema jsonSchema.calc()
+        {
+        return metadata?.jsonSchema : json.Schema.DEFAULT;
+        }
 
     /**
      * True iff the database was opened in read-only mode.
