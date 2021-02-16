@@ -572,7 +572,7 @@ service Client<Schema extends RootSchema>
      * The DBValue DBObject implementation.
      */
     class DBValueImpl<Value extends immutable Const>(DBObjectInfo info_, ValueStore<Value> store_)
-            extends DBObjectImpl(info_) // TODO GG try without "extends immutable Const" to see hard to understand errors
+            extends DBObjectImpl(info_)
             implements DBValue<Value>
         {
         protected ValueStore<Value> store_;
@@ -609,7 +609,7 @@ service Client<Schema extends RootSchema>
      * TODO how to make the client responsible for ser/deser work? yet how to make the same cacheable?
      */
     class DBMapImpl<Key, Value>(DBObjectInfo info_, MapStore<Key, Value> store_)
-            extends DBObjectImpl(info_) // TODO GG try without "extends immutable Const" to see hard to understand errors
+            extends DBObjectImpl(info_)
             implements DBMap<Key, Value>
         {
         protected MapStore<Key, Value> store_;
