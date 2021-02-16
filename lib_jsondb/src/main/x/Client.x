@@ -58,8 +58,8 @@ service Client<Schema extends RootSchema>
         }
     finally
         {
-        // TODO GG: reentracy = Exclusive;
-        conn      = new Connection(infoFor(0)).as(Connection + Schema);
+        reentrancy = Exclusive;
+        conn       = new Connection(infoFor(0)).as(Connection + Schema);
         }
 
     /**
