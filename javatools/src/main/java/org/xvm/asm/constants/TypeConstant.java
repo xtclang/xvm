@@ -3021,6 +3021,26 @@ public abstract class TypeConstant
                         }
                     }
                 }
+
+            if (fSelf && !fIncomplete && struct.isVirtualChild())
+                {
+                for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
+                    {
+                    MethodInfo infoOld = entry.getValue();
+                    if (infoOld.isVirtual() && !infoOld.isCapped())
+                        {
+                        MethodInfo infoNew = infoOld.adoptVirtual(this, struct, errs);
+                        if (infoNew != infoOld)
+                            {
+                            entry.setValue(infoNew);
+
+                            Object     nid       = entry.getKey().getNestedIdentity();
+                            MethodInfo infoCheck = mapVirtMethods.put(nid, infoNew);
+                            assert infoOld == infoCheck;
+                            }
+                        }
+                    }
+                }
             }
 
         return !fIncomplete;
