@@ -1,1 +1,4 @@
-    @Override @Unassigned %propertyType% %propertyName%;
+    @Override @Lazy %propertyType% %propertyName%.calc()
+        {
+        return new Client%propertyTypeName%(Server%appSchema%.%propertyName%);
+        }

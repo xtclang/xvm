@@ -7,17 +7,17 @@ class ClientAddressBookSchema
         {
         construct imdb.ClientRootSchema(ServerAddressBookSchema);
         }
-    finally
-        {
-        // schema property constructions
-        contacts = new ClientContacts(ServerAddressBookSchema.contacts);
-        requestCount = new ClientDBCounter(ServerAddressBookSchema.requestCount);
-        }
 
     // schema property declarations
-    // REVIEW GG - why are these Unassigned and set up in the constructor..finally? why not @Lazy?
-    @Override @Unassigned AddressBookDB.Contacts contacts;
-    @Override @Unassigned db.DBCounter requestCount;
+    @Override @Lazy AddressBookDB.Contacts contacts.calc()
+        {
+        return new ClientContacts(ServerAddressBookSchema.contacts);
+        }
+    @Override @Lazy AddressBookDB.db.DBCounter requestCount.calc()
+        {
+        return new ClientDBCounter(ServerAddressBookSchema.requestCount);
+        }
+
 
     // ClientDB* classes
 

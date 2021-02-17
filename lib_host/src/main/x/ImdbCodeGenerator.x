@@ -107,7 +107,6 @@ class ImdbCodeGenerator
         Tuple<PropertyTemplate, DBCategory>[] dbProps = collectDBProps(appSchemaTemplate);
 
         String propertyDeclarations  = "";
-        String propertyConstructions = "";
 
         for (Tuple<PropertyTemplate, DBCategory> propInfo : dbProps)
             {
@@ -115,7 +114,6 @@ class ImdbCodeGenerator
             DBCategory       category = propInfo[1];
 
             String declarationTemplate  = $./templates/ClientPropertyDeclaration.txt;
-            String constructionTemplate = $./templates/ClientPropertyConstruction.txt;
 
             assert Composition comp := property.type.fromClass();
             assert comp.is(ClassTemplate);
@@ -124,12 +122,15 @@ class ImdbCodeGenerator
             String propertyType     = appName + '.' + comp.displayName;
             String propertyTypeName = comp.displayName; // TODO handle composite type
 
+console.println($|p-name={property.name}
+                 |p-type={propertyType}
+                 |p-type-name={propertyTypeName}
+                 |
+                 );
             propertyDeclarations  += declarationTemplate
-                                    .replace("%propertyName%", propertyName)
-                                    .replace("%propertyType%", propertyType);
-            propertyConstructions += constructionTemplate
                                     .replace("%appSchema%"       , appSchema)
                                     .replace("%propertyName%"    , propertyName)
+                                    .replace("%propertyType%"    , propertyType)
                                     .replace("%propertyTypeName%", propertyTypeName);
             switch (category)
                 {
@@ -143,7 +144,7 @@ class ImdbCodeGenerator
 
         clientSource = clientSource
                         .replace("%ClientPropertyDeclarations%",  propertyDeclarations)
-                        .replace("%ClientPropertyConstructions%", propertyConstructions);
+                        ;
 
         clientFile.create();
         writeUtf(clientFile, clientSource);

@@ -7,11 +7,6 @@ class Client%appSchema%
         {
         construct imdb.ClientRootSchema(Server%appSchema%);
         }
-    finally
-        {
-        // schema property constructions
-%ClientPropertyConstructions%
-        }
 
     // schema property declarations
 %ClientPropertyDeclarations%
