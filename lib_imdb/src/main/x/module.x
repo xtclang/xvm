@@ -58,7 +58,7 @@ module imdb
             this.isAutoCommit = isAutoCommit;
             }
 
-        protected db.DBObject        dbObject;
+        protected ServerDBObject     dbObject;
         protected function Boolean() isAutoCommit;
 
         @Override
