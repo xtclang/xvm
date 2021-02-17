@@ -2141,7 +2141,11 @@ public class Context
             //
 
             Map<String, Argument> map = getNarrowingMap(false);
-            if (!map.isEmpty())
+            if (map.isEmpty())
+                {
+                getOuterContext().ensureNarrowingMap(false).clear();
+                }
+            else
                 {
                 getOuterContext().ensureNarrowingMap(false).keySet().retainAll(map.keySet());
                 }
@@ -2256,7 +2260,11 @@ public class Context
             // inversely to the AndContext, retain only our "true" entries in the parent's "true"
             // context
             Map<String, Argument> map = getNarrowingMap(true);
-            if (!map.isEmpty())
+            if (map.isEmpty())
+                {
+                getOuterContext().ensureNarrowingMap(true).clear();
+                }
+            else
                 {
                 getOuterContext().ensureNarrowingMap(true).keySet().retainAll(map.keySet());
                 }

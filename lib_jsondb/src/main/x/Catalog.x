@@ -69,7 +69,7 @@ service Catalog<Schema extends RootSchema>
     construct(Directory dir, CatalogMetadata<Schema>? metadata = Null, Boolean readOnly = False)
         {
         assert:arg dir.exists && dir.readable && (readOnly || dir.writable);
-// TODO GG - causes issue below: assert metadata != Null || Schema == RootSchema;
+        assert metadata != Null || Schema == RootSchema;
 
         @Inject Clock clock;
 

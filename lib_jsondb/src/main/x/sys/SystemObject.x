@@ -21,8 +21,7 @@ class SystemObject
         this.catalog  = catalog;
         this.dbParent = dbParent;
         this.dbName   = dbName;
-        // TODO GG this.dbPath   = dbParent?.dbPath + "/" + dbName : dbName;
-        this.dbPath   = dbParent == Null ? dbName : (dbParent.as(DBObject).dbPath + "/" + dbName);
+        this.dbPath   = dbParent?.dbPath + "/" + dbName : dbName;
         }
 
     /**

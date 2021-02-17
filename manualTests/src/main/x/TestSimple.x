@@ -4,86 +4,34 @@ module TestSimple.test.org
 
     void run()
         {
-        console.println("\n-> BP.C2");
-        new BaseParent().new Child2().foo();
+        String? s = Null;
+        Int     i = 0;
 
-        console.println("\n-> DP.C0");
-        new DerivedParent().new Child0().foo();
-
-        console.println("\n-> DP.C1");
-        new DerivedParent().new Child1().foo();
-
-        console.println("\n-> DP.C2");
-        new DerivedParent().new Child2().foo();
-        }
-
-    class BaseParent
-        {
-        class Child0
+        try
             {
-            void foo()
+            if ((s != Null) || (i == 0))
                 {
-                console.println("BP.C0");
+                i = s.size;
                 }
             }
-
-        class Child1
-                extends Child0
+        catch (Exception e)
             {
-            @Override
-            void foo()
-                {
-                console.println("BP.C1");
-                super();
-                }
+            console.println("Compiler failure 1");
             }
 
-        class Child2
-                extends Child1
+        try
             {
-            @Override
-            void foo()
+            if ((s == Null) && (i == 1))
                 {
-                console.println("BP.C2");
-                super();
+                }
+            else
+                {
+                i = s.size;
                 }
             }
-        }
-
-    class DerivedParent
-            extends BaseParent
-        {
-        @Override
-        class Child0
+        catch (Exception e)
             {
-            @Override
-            void foo()
-                {
-                console.println("DP.C0");
-                super();
-                }
-            }
-
-        @Override
-        class Child1
-            {
-            @Override
-            void foo()
-                {
-                console.println("DP.C1");
-                super();
-                }
-            }
-
-        @Override
-        class Child2
-            {
-//            @Override
-//            void foo()
-//                {
-//                console.println("DP.C2");
-//                super();
-//                }
+            console.println("Compiler failure 2");
             }
         }
     }

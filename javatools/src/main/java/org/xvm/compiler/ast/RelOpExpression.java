@@ -465,11 +465,16 @@ public class RelOpExpression
                 ? atypeRequired[0]
                 : null;
 
+        // for now, simply insert a new context to avoid propagation of incorrect inferences
+        // TODO: introduce a RelOpContext that infers some real knowledge from boolean ops
+        ctx = ctx.enter();
+
         if (typeRequired != null && typeRequired.isTypeOfType())
             {
             Expression exprType = validateAsType(ctx, typeRequired, errs);
             if (exprType != null)
                 {
+                ctx.exit();
                 return exprType;
                 }
             }
@@ -516,6 +521,8 @@ public class RelOpExpression
             expr2    = expr2New;
             type2Act = expr2New.getType();
             }
+
+        ctx = ctx.exit();
 
         if (!fit.isFit())
             {
