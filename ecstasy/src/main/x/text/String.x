@@ -409,7 +409,6 @@ const String
     String! replace(String! match, String! replace)
         {
         Int replaceSize = replace.size;
-        assert:arg replaceSize > 0;
 
         if (Int matchOffset := indexOf(match))
             {
@@ -420,8 +419,11 @@ const String
             StringBuffer buffer = new StringBuffer(thisSize - matchSize + replaceSize);
             do
                 {
-                buffer.addAll(chars[startOffset..matchOffset))
-                      .addAll(replace.chars);
+                buffer.addAll(chars[startOffset..matchOffset));
+                if (replaceSize > 0)
+                    {
+                    buffer.addAll(replace.chars);
+                    }
                 startOffset = matchOffset + matchSize;
                 }
             while (startOffset < thisSize, matchOffset := indexOf(match, startOffset));
