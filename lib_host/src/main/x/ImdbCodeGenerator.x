@@ -115,12 +115,12 @@ class ImdbCodeGenerator
 
             String declarationTemplate  = $./templates/ClientPropertyDeclaration.txt;
 
-            assert Composition comp := property.type.fromClass();
-            assert comp.is(ClassTemplate);
+            assert Composition typeTemplate := property.type.fromClass();
+            assert typeTemplate.is(ClassTemplate);
 
             String propertyName     = property.name;
-            String propertyType     = appName + '.' + comp.displayName;
-            String propertyTypeName = comp.displayName; // TODO handle composite type
+            String propertyType     = appName + '.' + typeTemplate.displayName;
+            String propertyTypeName = typeTemplate.name; // TODO handle composite type
 
 console.println($|p-name={property.name}
                  |p-type={propertyType}
@@ -135,6 +135,9 @@ console.println($|p-name={property.name}
             switch (category)
                 {
                 case DBMap:
+                    break;
+
+                case DBCounter:
                     break;
 
                 default:
