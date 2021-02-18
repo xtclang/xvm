@@ -8,12 +8,11 @@ class Client%appSchema%
         construct imdb.ClientRootSchema(Server%appSchema%);
         }
 
-    // schema property declarations
+    // schema properties
 %ClientPropertyDeclarations%
 
     // ClientDB* classes
 %ClientChildrenClasses%
-
 
     // ----- internal API support ------------------------------------------------------------------
 
@@ -57,6 +56,11 @@ class Client%appSchema%
                 Server%appSchema%, Server%appSchema%.createDBTransaction());
             }
 
+        // schema properties
+%ClientTxPropertyGetters%
+
+        // transaction API
+
         @Override
         db.SystemSchema sys.get()
             {
@@ -68,8 +72,6 @@ class Client%appSchema%
             {
             return this.Client%appSchema%;
             }
-
-%ClientTxPropertyGetters%
 
         @Override
         Boolean pending.get()
