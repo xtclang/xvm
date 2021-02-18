@@ -38,14 +38,22 @@ import Catalog.BuiltIn;
  * Transaction interfaces, the implementations are nested as virtual children of this service, with
  * no state other than the implicit [outer] property (which is already effectively a reserved name).
  *
- * This service is effectively abstract; it is expected that each database will involve the
- * production of a sub-class that adds an implementation of the root schema to the Connection and
- * Transaction virtual child classes.
+ * This service is effectively abstract; it is expected that each actual database (each custom
+ * root schema packaged as a module) will have a corresponding generated ("code gen") module that
+ * will contain a sub-class of this class. By sub-classing this Client class, the generated code is
+ * able to provide a custom, type-safe representation of each custom database, effectively merging
+ * together the OODB API with the API and type system defined by the custom database.
  */
 service Client<Schema extends RootSchema>
     {
     /**
+     * Construct a Client service, representing a connection to the database and any current
+     * transaction.
      *
+     * @param catalog        the JSON db catalog, representing the database on disk
+     * @param id             the id assigned to this Client service
+     * @param dbUser         the database user to create the client on behalf of
+     * @param notifyOnClose  the function to call when the client connection is closed
      */
     construct(Catalog<Schema> catalog, Int id, DBUser dbUser, function void(Client)? notifyOnClose = Null)
         {
@@ -62,13 +70,16 @@ service Client<Schema extends RootSchema>
         conn       = new Connection(infoFor(0)).as(Connection + Schema);
         }
 
+
+    // ----- properties ----------------------------------------------------------------------------
+
     /**
      * The DBUser represented by this Client service.
      */
     public/private Catalog<Schema> catalog;
 
     /**
-     * The id of this Client service.
+     * The id assigned to this Client service.
      */
     public/private Int id;
 
@@ -92,7 +103,7 @@ service Client<Schema extends RootSchema>
      * The base transaction ID used by this client, based on the current transaction (or based on
      * the transaction manager, if no transaction is existent).
      */
-    public Int baseTxId.get()
+    Int baseTxId.get()
         {
         return tx?.baseId_ : TxManager.USE_LAST_TX;
         }
@@ -115,6 +126,13 @@ service Client<Schema extends RootSchema>
 
     // ----- support ----------------------------------------------------------------------------
 
+    /**
+     * Verify that the client connection is open and can be used.
+     *
+     * @return True if the check passes
+     *
+     * @throws Exception if the check fails
+     */
     Boolean check()
         {
         // TODO
@@ -177,29 +195,43 @@ service Client<Schema extends RootSchema>
      */
     DBObjectImpl createImpl(Int id)
         {
-        // TODO
-
-        DBObjectInfo info  = infoFor(id);
-        return switch (BuiltIn.byId(info.id))
+        if (id <= 0)
             {
-            case Root:         new RootSchemaImpl(info);
-            case Sys:          new SystemSchemaImpl(info);
-            case Info:         TODO new DBValue<DBInfo>();
-            case Users:        TODO new DBMap<String, DBUser>();
-            case Types:        TODO new DBMap<String, Type>();
-            case Objects:      TODO new DBMap<String, DBObject>();
-            case Schemas:      TODO new DBMap<String, DBSchema>();
-            case Maps:         TODO new DBMap<String, DBMap>();
-            case Queues:       TODO new DBMap<String, DBQueue>();
-            case Lists:        TODO new DBMap<String, DBList>();
-            case Logs:         TODO new DBMap<String, DBLog>();
-            case Counters:     TODO new DBMap<String, DBCounter>();
-            case Values:       TODO new DBMap<String, DBValue>();
-            case Functions:    TODO new DBMap<String, DBFunction>();
-            case Pending:      TODO new DBList<DBInvoke>();
-            case Transactions: TODO new DBLog<DBTransaction>();
-            case Errors:       TODO new DBLog<String>();
-            default: assert;
+            DBObjectInfo info  = infoFor(id);
+            return switch (BuiltIn.byId(info.id))
+                {
+                case Root:         new RootSchemaImpl(info);
+                case Sys:          new SystemSchemaImpl(info);
+                case Info:         TODO new DBValue<DBInfo>();              // TODO ...
+                case Users:        TODO new DBMap<String, DBUser>();
+                case Types:        TODO new DBMap<String, Type>();
+                case Objects:      TODO new DBMap<String, DBObject>();
+                case Schemas:      TODO new DBMap<String, DBSchema>();
+                case Maps:         TODO new DBMap<String, DBMap>();
+                case Queues:       TODO new DBMap<String, DBQueue>();
+                case Lists:        TODO new DBMap<String, DBList>();
+                case Logs:         TODO new DBMap<String, DBLog>();
+                case Counters:     TODO new DBMap<String, DBCounter>();
+                case Values:       TODO new DBMap<String, DBValue>();
+                case Functions:    TODO new DBMap<String, DBFunction>();
+                case Pending:      TODO new DBList<DBInvoke>();
+                case Transactions: TODO new DBLog<DBTransaction>();
+                case Errors:       TODO new DBLog<String>();
+                default: assert;
+                };
+            }
+
+        DBObjectInfo info = infoFor(id);
+        return switch (info.category)
+            {
+            case DBSchema:   new DBSchemaImpl(info);
+            case DBMap:      new DBMapImpl(info, storeFor(id).as(MapStore));
+            case DBList:     TODO
+            case DBQueue:    TODO
+            case DBLog:      TODO
+            case DBCounter:  TODO
+            case DBValue:    new DBValueImpl(info, storeFor(id).as(ValueStore));
+            case DBFunction: TODO
             };
         }
 
@@ -333,7 +365,11 @@ service Client<Schema extends RootSchema>
             extends DBSchemaImpl(info_)
             implements RootSchema
         {
-        // TODO sys property
+        @Override
+        SystemSchema sys.get()
+            {
+            return this.Client.implFor(BuiltIn.Sys.id).as(SystemSchema);
+            }
         }
 
 

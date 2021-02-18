@@ -1,79 +1,91 @@
 // TODO discuss how a developer writing the @Database module can provide user information (if at all)
 // TODO creation actions (to initially populate the database), upgrade actions, etc.
 
-module AddressBookDB_jsonDB
-        incorporates jsonDB_.CatalogMetadata
+module AddressBookDB_jsondb
+        incorporates jsondb_.CatalogMetadata<AddressBookDB_.AddressBookSchema>
     {
-    package db_            import oodb.xtclang.org;
-    package jsonDB_        import jsonDB.xtclang.org;
+    package oodb_          import oodb.xtclang.org;
+    package json_          import json.xtclang.org;
+    package jsondb_        import jsondb.xtclang.org;
     package AddressBookDB_ import AddressBookDB;
 
+    import oodb_.DBUser as DBUser_;
+
+    import jsondb_.Catalog            as Catalog_;
+    import jsondb_.CatalogMetadata    as CatalogMetadata_;
+    import jsondb_.Client             as Client_;
+    import jsondb_.model.DBObjectInfo as DBObjectInfo_;
+
     import AddressBookDB_.AddressBookSchema as AddressBookSchema_;
-
-// TODO this should be a mixin into (or sub-class of) Client
-    mixin AddressBookSchema_mixin
-            // into jsonDB.Client<AddressBookSchema>.Context
-            extends RootSchema_mixin
-            implements AddressBookSchema
-        {
-        // is it cached here? or cached by the client? or both?
-        @Lazy Contacts contacts.calc()
-            {
-            return this.Client.ensure(1, create_contacts);
-            }
-        }
-
-    Contacts create_contacts()
-        {
-        // because "Contacts" is a mixin, we wrap that mixin around a jsonDB DBMapImpl
-        return new @Contacts DBMapImpl(..);
-        }
 
     @Override
     @RO Module schemaModule.get()
         {
-        return AddressBookDB;
+        return AddressBookDB_;
         }
 
     @Override
-    @Lazy immutable jsonDB_.model.DBObjectInfo[] dbObjectInfos.calc()
+    @Lazy immutable DBObjectInfo_[] dbObjectInfos.calc()
         {
         return
             [
-
-            new jsonDB_.model.DBObjectInfo("", "", DBSchema, 0, 0, [1]),
-            new jsonDB_.model.DBObjectInfo("contacts", "contacts", DBMap, 1, 0, typeParams=["Key"=String, "Value"=AddressBookDB:Contact]),
-            ].freeze(True);
+            new DBObjectInfo_("", "", DBSchema, 0, 0, [1]),
+            new DBObjectInfo_("contacts", "contacts", DBMap, 1, 0, typeParams=Map:["Key"=String, "Value"=AddressBookDB_:Contact]),
+            ];
         }
 
     @Override
     Map<String, Type> dbTypes.get()
         {
-        return Map:[]; // TODO
+        return Map:[
+            "String"=String,
+            "AddressBookDB_:Contact"=AddressBookDB_:Contact,
+            ];
         // also TODO CP allow [] to be used as a Map (etc.) constant without "Map:"
         }
 
     @Override
-    @Lazy json.Schema jsonSchema.calc()
+    @Lazy json_.Schema jsonSchema.calc()
         {
-        // TODO use dbTypes?
+        return new json_.Schema(
+                mappings         = [],              // TODO use dbTypes?
+                version          = dbVersion,
+                randomAccess     = True,
+                enableMetadata   = True,
+                enablePointers   = True,
+                enableReflection = True,
+                typeSystem       = AddressBookDB_jsondb.PublicType.typeSystem,
+                );
         }
 
     @Override
-    Catalog<Schema> createCatalog(Directory dir, Boolean readOnly = False)
+    Catalog_<AddressBookSchema_> createCatalog(Directory dir, Boolean readOnly = False)
         {
-        return new Catalog<Schema>(dir, this, readOnly);
+        return new Catalog_<AddressBookDB_.AddressBookSchema>(dir, this, readOnly);
         }
 
     @Override
-    Client<Schema> createClient(Catalog<Schema> catalog, Int id, DBUser dbUser, function void(Client)? notifyOnClose = Null)
+    Client_<AddressBookSchema_> createClient(
+            Catalog_<AddressBookSchema_> catalog,
+            Int                          id,
+            DBUser_                      dbUser,
+            function void(Client_)?      notifyOnClose = Null)
         {
-        return new AddressBookDBClient_<Schema>(catalog, id, dbUser, unregisterClient)
+        return new AddressBookDBClient_<AddressBookSchema_>(catalog, id, dbUser, unregisterClient);
         }
 
-    service AddressBookDBClient_<Schema extends RootSchema>
-            extends Client<AddressBookSchema_>
+    service AddressBookDBClient_
+            extends Client_<AddressBookSchema_>
         {
-        // TODO ...
+        @Override
+        class RootSchemaImpl
+                implements AddressBookSchema_
+            {
+            @Override
+            AddressBookDB_.Contacts contacts.get()
+                {
+                return this.Client.implFor(1).as(AddressBookDB_.Contacts);
+                }
+            }
         }
     }
