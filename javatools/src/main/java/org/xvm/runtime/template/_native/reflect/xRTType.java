@@ -61,6 +61,7 @@ import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template.reflect.xClass.ClassHandle;
 
@@ -106,18 +107,19 @@ public class xRTType
         markNativeProperty("typeSystem");
         markNativeProperty("underlyingTypes");
 
-        markNativeMethod("accessSpecified", null, null);
-        markNativeMethod("annotate"       , null, null);
-        markNativeMethod("annotated"      , null, null);
-        markNativeMethod("contained"      , null, null);
-        markNativeMethod("fromClass"      , null, null);
-        markNativeMethod("fromProperty"   , null, null);
-        markNativeMethod("modifying"      , null, null);
-        markNativeMethod("named"          , null, null);
-        markNativeMethod("parameterize"   , null, null);
-        markNativeMethod("parameterized"  , null, null);
-        markNativeMethod("purify"         , null, null);
-        markNativeMethod("relational"     , null, null);
+        markNativeMethod("accessSpecified"  , null, null);
+        markNativeMethod("annotate"         , null, null);
+        markNativeMethod("annotated"        , null, null);
+        markNativeMethod("contained"        , null, null);
+        markNativeMethod("fromClass"        , null, null);
+        markNativeMethod("fromProperty"     , null, null);
+        markNativeMethod("modifying"        , null, null);
+        markNativeMethod("relational"       , null, null);
+        markNativeMethod("named"            , null, null);
+        markNativeMethod("parameterize"     , null, null);
+        markNativeMethod("parameterized"    , null, null);
+        markNativeMethod("purify"           , null, null);
+        markNativeMethod("resolveFormalType", null, null);
 
         final String[] PARAM_TYPE    = new String[] {"reflect.Type!<>"};
         final String[] PARAM_METHODS = new String[] {"collections.Array<reflect.Method>"};
@@ -304,14 +306,17 @@ public class xRTType
             case "modifying":
                 return invokeModifying(frame, hType, aiReturn);
 
+            case "relational":
+                return invokeRelational(frame, hType, aiReturn);
+
             case "named":
                 return invokeNamed(frame, hType, aiReturn);
 
             case "parameterized":
                 return invokeParameterized(frame, hType, aiReturn);
 
-            case "relational":
-                return invokeRelational(frame, hType, aiReturn);
+            case "resolveFormalType":
+                return invokeResolveFormalType(frame, hType, (StringHandle) ahArg[0], aiReturn);
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -1326,6 +1331,20 @@ public class xRTType
         TypeConstant typeThat = hThat.getUnsafeType();
         return frame.assignValue(iReturn, xBoolean.makeHandle(typeThis.isA(typeThat)));
         }
+
+    /**
+     * Implementation for: {@code conditional Type resolveFormalType(String)}
+     */
+    public int invokeResolveFormalType(Frame frame, TypeHandle hType, StringHandle hName, int[] aiReturn)
+        {
+        TypeConstant type  = hType.getDataType();
+        TypeConstant typeR = type.resolveGenericType(hName.getStringValue());
+
+        return typeR == null
+            ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+            : frame.assignValues(aiReturn, xBoolean.TRUE, typeR.ensureTypeHandle(frame.poolContext()));
+        }
+
 
     // ----- helpers -------------------------------------------------------------------------------
 

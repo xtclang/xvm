@@ -308,6 +308,16 @@ interface Type<DataType, OuterType>
         }
 
     /**
+     * Resolve a formal type based on its name.
+     *
+     * @param typeName  the formal type name
+     *
+     * @return True iff the formal type name can be resolved
+     * @return (optional) the resolved type
+     */
+     conditional Type!<> resolveFormalType(String typeName);
+
+    /**
      * Determine if references of this type would be _assignable to_ references of the specified
      * type, using the rules of duck-typing.
      *

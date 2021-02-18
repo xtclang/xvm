@@ -264,6 +264,16 @@ interface TypeTemplate // TODO move
      */
     Boolean isA(TypeTemplate! that);
 
+    /**
+     * Resolve a formal type based on its name.
+     *
+     * @param typeName  the formal type name
+     *
+     * @return True iff the formal type name can be resolved
+     * @return (optional) the resolved type
+     */
+     conditional TypeTemplate resolveFormalType(String typeName);
+
 
     // ----- reification ---------------------------------------------------------------------------
 

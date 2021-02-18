@@ -4,34 +4,9 @@ module TestSimple.test.org
 
     void run()
         {
-        String? s = Null;
-        Int     i = 0;
+        Type t = Map<String, Int>;
 
-        try
-            {
-            if ((s != Null) || (i == 0))
-                {
-                i = s.size;
-                }
-            }
-        catch (Exception e)
-            {
-            console.println("Compiler failure 1");
-            }
-
-        try
-            {
-            if ((s == Null) && (i == 1))
-                {
-                }
-            else
-                {
-                i = s.size;
-                }
-            }
-        catch (Exception e)
-            {
-            console.println("Compiler failure 2");
-            }
+        assert Type k := t.resolveFormalType("Key");
+        console.println(k);
         }
     }

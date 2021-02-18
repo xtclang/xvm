@@ -31,6 +31,7 @@ import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**
@@ -61,16 +62,17 @@ public class xRTTypeTemplate
         markNativeProperty("recursive");
         markNativeProperty("underlyingTypes");
 
-        markNativeMethod("accessSpecified", null, null);
-        markNativeMethod("annotated",       null, null);
-        markNativeMethod("contained",       null, null);
-        markNativeMethod("fromClass",       null, null);
-        markNativeMethod("fromProperty",    null, null);
-        markNativeMethod("isA",             null, null);
-        markNativeMethod("modifying",       null, null);
-        markNativeMethod("parameterized",   null, null);
-        markNativeMethod("purify",          null, null);
-        markNativeMethod("relational",      null, null);
+        markNativeMethod("accessSpecified",   null, null);
+        markNativeMethod("annotated",         null, null);
+        markNativeMethod("contained",         null, null);
+        markNativeMethod("fromClass",         null, null);
+        markNativeMethod("fromProperty",      null, null);
+        markNativeMethod("isA",               null, null);
+        markNativeMethod("modifying",         null, null);
+        markNativeMethod("relational",        null, null);
+        markNativeMethod("parameterized",     null, null);
+        markNativeMethod("purify",            null, null);
+        markNativeMethod("resolveFormalType", null, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -145,11 +147,14 @@ public class xRTTypeTemplate
             case "modifying":
                 return invokeModifying(frame, hType, aiReturn);
 
+            case "relational":
+                return invokeRelational(frame, hType, aiReturn);
+
             case "parameterized":
                 return invokeParameterized(frame, hType, aiReturn);
 
-            case "relational":
-                return invokeRelational(frame, hType, aiReturn);
+            case "resolveFormalType":
+                return invokeResolveFormalType(frame, hType, (StringHandle) ahArg[0], aiReturn);
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -405,6 +410,19 @@ public class xRTTypeTemplate
         }
 
     /**
+     * Implementation for: {@code conditional (TypeTemplate, TypeTemplate) relational()}.
+     */
+    public int invokeRelational(Frame frame, TypeTemplateHandle hType, int[] aiReturn)
+        {
+        TypeConstant type = hType.getDataType();
+        return type.isRelationalType()
+            ? frame.assignValues(aiReturn, xBoolean.TRUE,
+            makeHandle(type.getUnderlyingType()),
+            makeHandle(type.getUnderlyingType2()))
+            : frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        }
+
+    /**
      * Implementation for: {@code conditional TypeTemplate[] parameterized()}.
      */
     public int invokeParameterized(Frame frame, TypeTemplateHandle hType, int[] aiReturn)
@@ -436,16 +454,16 @@ public class xRTTypeTemplate
         }
 
     /**
-     * Implementation for: {@code conditional (TypeTemplate, TypeTemplate) relational()}.
+     * Implementation for: {@code conditional TypeTemplate resolveFormalType(String)}
      */
-    public int invokeRelational(Frame frame, TypeTemplateHandle hType, int[] aiReturn)
+    public int invokeResolveFormalType(Frame frame, TypeTemplateHandle hType, StringHandle hName, int[] aiReturn)
         {
-        TypeConstant type = hType.getDataType();
-        return type.isRelationalType()
-                ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                        makeHandle(type.getUnderlyingType()),
-                        makeHandle(type.getUnderlyingType2()))
-                : frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        TypeConstant type  = hType.getDataType();
+        TypeConstant typeR = type.resolveGenericType(hName.getStringValue());
+
+        return typeR == null
+            ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+            : frame.assignValues(aiReturn, xBoolean.TRUE, makeHandle(typeR));
         }
 
 

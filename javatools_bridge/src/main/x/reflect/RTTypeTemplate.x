@@ -25,9 +25,10 @@ const RTTypeTemplate
     @Override conditional Composition fromProperty();
     @Override Boolean isA(TypeTemplate that);
     @Override conditional TypeTemplate modifying();
+    @Override conditional (TypeTemplate, TypeTemplate) relational();
     @Override conditional TypeTemplate[] parameterized();
     @Override TypeTemplate purify();
-    @Override conditional (TypeTemplate, TypeTemplate) relational();
+    @Override conditional TypeTemplate resolveFormalType(String typeName);
 
     // natural:
     //   toString()
