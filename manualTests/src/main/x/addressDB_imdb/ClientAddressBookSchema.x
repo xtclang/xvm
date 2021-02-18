@@ -8,7 +8,7 @@ class ClientAddressBookSchema
         construct imdb.ClientRootSchema(ServerAddressBookSchema);
         }
 
-    // schema property declarations
+    // schema properties
     @Override @Lazy AddressBookDB.Contacts contacts.calc()
         {
         return new ClientContacts(ServerAddressBookSchema.contacts);
@@ -20,14 +20,13 @@ class ClientAddressBookSchema
 
 
     // ClientDB* classes
-
     class ClientContacts
             extends imdb.ClientDBMap<String, AddressBookDB.Contact>
             incorporates AddressBookDB.Contacts
         {
-        construct(ServerAddressBookSchema.ServerContacts contacts)
+        construct(ServerAddressBookSchema.ServerContacts dbMap)
             {
-            construct imdb.ClientDBMap(contacts, checkAutoCommit);
+            construct imdb.ClientDBMap(dbMap, checkAutoCommit);
             }
 
         // ----- mixin methods ---------------------------------------------------------------------
@@ -84,18 +83,16 @@ class ClientAddressBookSchema
                 {
                 ClientTransaction? tx = this.ClientAddressBookSchema.transaction;
                 assert tx != Null;
-                tx.dbTransaction.contents.put("Contacts", this);
+                tx.dbTransaction.contents.put(dbObject.dbName, this);
                 }
             }
         }
-
     class ClientDBCounter
             extends imdb.ClientDBCounter
         {
         construct(ServerAddressBookSchema.ServerDBCounter dbCounter)
             {
-            construct imdb.ClientDBCounter(dbCounter,
-                                           this.ClientAddressBookSchema.checkAutoCommit);
+            construct imdb.ClientDBCounter(dbCounter, checkAutoCommit);
             }
         }
 
@@ -142,6 +139,21 @@ class ClientAddressBookSchema
                 ServerAddressBookSchema, ServerAddressBookSchema.createDBTransaction());
             }
 
+        // schema properties
+        @Override
+        AddressBookDB.Contacts contacts.get()
+            {
+            return this.ClientAddressBookSchema.contacts;
+            }
+        @Override
+        AddressBookDB.db.DBCounter requestCount.get()
+            {
+            return this.ClientAddressBookSchema.requestCount;
+            }
+
+
+        // transaction API
+
         @Override
         db.SystemSchema sys.get()
             {
@@ -152,18 +164,6 @@ class ClientAddressBookSchema
         (db.Connection<AddressBookDB.AddressBookSchema> + AddressBookDB.AddressBookSchema) connection.get()
             {
             return this.ClientAddressBookSchema;
-            }
-
-        @Override
-        AddressBookDB.Contacts contacts.get()
-            {
-            return this.ClientAddressBookSchema.contacts;
-            }
-
-        @Override
-        db.DBCounter requestCount.get()
-            {
-            return this.ClientAddressBookSchema.requestCount;
             }
 
         @Override

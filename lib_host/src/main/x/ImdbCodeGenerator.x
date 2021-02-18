@@ -6,6 +6,7 @@ import ecstasy.reflect.ClassTemplate.Contribution;
 import ecstasy.reflect.FileTemplate;
 import ecstasy.reflect.ModuleTemplate;
 import ecstasy.reflect.PropertyTemplate;
+import ecstasy.reflect.TypeParameter;
 import ecstasy.reflect.TypeTemplate;
 
 import oodb.DBObject;
@@ -102,11 +103,14 @@ class ImdbCodeGenerator
         String clientTemplate = $./templates/ClientSchema.txt;
         String clientSource   = clientTemplate
                                 .replace("%appName%",   appName)
-                                .replace("%appSchema%", appSchema);
+                                .replace("%appSchema%", appSchema)
+                                ;
 
         Tuple<PropertyTemplate, DBCategory>[] dbProps = collectDBProps(appSchemaTemplate);
 
-        String propertyDeclarations  = "";
+        String propertyDeclarations = "";
+        String childClasses         = "";
+        String txGetters            = "";
 
         for (Tuple<PropertyTemplate, DBCategory> propInfo : dbProps)
             {
@@ -119,25 +123,55 @@ class ImdbCodeGenerator
             assert typeTemplate.is(ClassTemplate);
 
             String propertyName     = property.name;
-            String propertyType     = appName + '.' + typeTemplate.displayName;
+            String propertyType     = displayName(typeTemplate, appName);
             String propertyTypeName = typeTemplate.name; // TODO handle composite type
 
-console.println($|p-name={property.name}
-                 |p-type={propertyType}
-                 |p-type-name={propertyTypeName}
-                 |
-                 );
             propertyDeclarations  += declarationTemplate
                                     .replace("%appSchema%"       , appSchema)
                                     .replace("%propertyName%"    , propertyName)
                                     .replace("%propertyType%"    , propertyType)
-                                    .replace("%propertyTypeName%", propertyTypeName);
+                                    .replace("%propertyTypeName%", propertyTypeName)
+                                    ;
+
+            String txGetterTemplate = $./templates/ClientTxPropertyGetter.txt;
+
+            txGetters += txGetterTemplate
+                                    .replace("%appSchema%"       , appSchema)
+                                    .replace("%propertyName%"    , propertyName)
+                                    .replace("%propertyType%"    , propertyType)
+                                    ;
+
             switch (category)
                 {
                 case DBMap:
+                    assert TypeTemplate keyType       := property.type.resolveFormalType("Key");
+                    assert TypeTemplate valueType     := property.type.resolveFormalType("Value");
+                    assert Composition  keyTemplate   := keyType.fromClass();
+                    assert Composition  valueTemplate := valueType.fromClass();
+                    assert keyTemplate.is(ClassTemplate);
+                    assert valueTemplate.is(ClassTemplate);
+
+                    String childClass = $./templates/ClientDBMap.txt;
+                    String methods     = "";
+                    String invocations = "";
+
+                    childClasses  += childClass
+                                    .replace("%appSchema%"             , appSchema)
+                                    .replace("%propertyType%"          , propertyType)
+                                    .replace("%propertyTypeName%"      , propertyTypeName)
+                                    .replace("%keyType%"               , displayName(keyTemplate, appName))
+                                    .replace("%valueType%"             , displayName(valueTemplate, appName))
+                                    .replace("%ClientDBMapMethods%"    , methods)
+                                    .replace("%ClientDBMapInvocations%", invocations)
+                                    ;
                     break;
 
                 case DBCounter:
+                    String childClass = $./templates/ClientDBCounter.txt;
+                    childClasses  += childClass
+                                    .replace("%appSchema%"       , appSchema)
+                                    .replace("%propertyType%"    , propertyType)
+                                    .replace("%propertyTypeName%", propertyTypeName);
                     break;
 
                 default:
@@ -147,6 +181,8 @@ console.println($|p-name={property.name}
 
         clientSource = clientSource
                         .replace("%ClientPropertyDeclarations%",  propertyDeclarations)
+                        .replace("%ClientChildrenClasses%",       childClasses)
+                        .replace("%ClientTxPropertyGetters%",     txGetters)
                         ;
 
         clientFile.create();
@@ -193,6 +229,14 @@ console.println($|p-name={property.name}
         writer.addAll(contents);
 
         file.contents = out.bytes.freeze(True);
+        }
+
+    /**
+     * Obtain a display name for the specified type for the specified application.
+     */
+    String displayName(ClassTemplate template, String appName)
+        {
+        return template.implicitName ?: (appName + '.' + template.displayName);
         }
 
 

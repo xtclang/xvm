@@ -2,9 +2,9 @@
             extends imdb.ClientDBMap<%keyType%, %valueType%>
             incorporates %propertyType%
         {
-        construct(Server%appSchema%.Server%propertyTypeName% %propertyName%)
+        construct(Server%appSchema%.Server%propertyTypeName% dbMap)
             {
-            construct imdb.ClientDBMap(%propertyName%, checkAutoCommit);
+            construct imdb.ClientDBMap(dbMap, checkAutoCommit);
             }
 
         // ----- mixin methods ---------------------------------------------------------------------
@@ -33,7 +33,7 @@
                 {
                 ClientTransaction? tx = this.Client%appSchema%.transaction;
                 assert tx != Null;
-                tx.dbTransaction.contents.put("%propertyTypeName%", this);
+                tx.dbTransaction.contents.put(dbObject.dbName, this);
                 }
             }
         }

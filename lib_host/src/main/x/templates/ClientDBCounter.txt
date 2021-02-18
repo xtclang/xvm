@@ -1,0 +1,8 @@
+    class Client%propertyTypeName%
+            extends imdb.ClientDBCounter
+        {
+        construct(Server%appSchema%.Server%propertyTypeName% dbCounter)
+            {
+            construct imdb.ClientDBCounter(dbCounter, checkAutoCommit);
+            }
+        }
