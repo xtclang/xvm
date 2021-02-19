@@ -23,6 +23,14 @@ public abstract class DelegatingExpression
         this.expr = expr;
         }
 
+    /**
+     * @return the underlying expression
+     */
+    public Expression getUnderlyingExpression()
+        {
+        return expr;
+        }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 

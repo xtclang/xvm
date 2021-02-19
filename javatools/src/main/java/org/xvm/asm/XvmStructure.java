@@ -349,6 +349,8 @@ public abstract class XvmStructure
      * Determine if this XVM Structure is resolved. An XVM Structure is considered resolved if it
      * not subject to variation from conditional inclusion.
      *
+     * TODO CP: this method is not currently used and the name is ambiguous and confusing
+     *
      * @return true iff the XVM Structure is not subject to conditional inclusion
      *
      * @see ConditionalConstant

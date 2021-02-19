@@ -2239,6 +2239,7 @@ public class ConstantPool
     public SingletonConstant valEqual()         {SingletonConstant c = m_valEqual;        if (c == null) {m_valEqual        = c = ensureSingletonConstConstant(clzEqual())                    ;} return c;}
     public SingletonConstant valGreater()       {SingletonConstant c = m_valGreater;      if (c == null) {m_valGreater      = c = ensureSingletonConstConstant(clzGreater())                  ;} return c;}
     public SingletonConstant valNull()          {SingletonConstant c = m_valNull;         if (c == null) {m_valNull         = c = ensureSingletonConstConstant(clzNull())                     ;} return c;}
+    public RegisterConstant  valDefault()       {RegisterConstant  c = m_valDefault;      if (c == null) {m_valDefault      = c = new RegisterConstant(this, Register.DEFAULT)                ;} return c;}
 
     public SignatureConstant sigToString()      {SignatureConstant c = m_sigToString;     if (c == null) {m_sigToString     = c = getSignature("Object",    "toString",  0)                   ;} return c;}
     public SignatureConstant sigEquals()        {SignatureConstant c = m_sigEquals;       if (c == null) {m_sigEquals       = c = getSignature("Object",    "equals",    3)                   ;} return c;}
@@ -3016,6 +3017,7 @@ public class ConstantPool
         m_valEqual        = null;
         m_valGreater      = null;
         m_valNull         = null;
+        m_valDefault      = null;
         m_sigToString     = null;
         m_sigEquals       = null;
         m_sigCompare      = null;
@@ -3881,6 +3883,7 @@ public class ConstantPool
     private transient SingletonConstant m_valEqual;
     private transient SingletonConstant m_valGreater;
     private transient SingletonConstant m_valNull;
+    private transient RegisterConstant  m_valDefault;
     private transient SignatureConstant m_sigToString;
     private transient SignatureConstant m_sigEquals;
     private transient SignatureConstant m_sigCompare;

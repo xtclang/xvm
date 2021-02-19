@@ -147,8 +147,15 @@ public class AnnotationExpression
                     aconstArgs[iArg] = exprArg.isConstant()
                             ? exprArg.toConstant()
                             : new ExpressionConstant(pool, exprArg);
+                    continue;
                     }
-                else if (exprArg instanceof LiteralExpression)
+
+                if (exprArg instanceof LabeledExpression)
+                    {
+                    exprArg = ((LabeledExpression) exprArg).getUnderlyingExpression();
+                    }
+
+                if (exprArg instanceof LiteralExpression)
                     {
                     LiteralExpression exprLit = (LiteralExpression) exprArg;
 
@@ -230,12 +237,15 @@ public class AnnotationExpression
                 {
                 // for Property annotation, calculate the real annotation type based on the property
                 // type; note that this logic doesn't calculate the actual annotated property ref
-                // type, which could have multiple annotations that we are disregarding here
-                PropertyDeclarationStatement stmtProp = (PropertyDeclarationStatement) parent;
-                PropertyStructure            prop     = (PropertyStructure) stmtProp.getComponent();
-                TypeConstant                 typeRef  = prop.getIdentityConstant().getRefType(null);
+                // type, which could have multiple annotations that we are disregarding here;
+                // also, it's critical not to put the original annotation into the pool until the
+                // parameters are resolved by "anno.resolveParams(aconstArgs)" call below
+                PropertyDeclarationStatement stmtProp  = (PropertyDeclarationStatement) parent;
+                PropertyStructure            prop      = (PropertyStructure) stmtProp.getComponent();
+                TypeConstant                 typeRef   = prop.getIdentityConstant().getRefType(null);
+                Annotation                   annoNaked = anno.getNakedAnnotation();
 
-                typeAnno = pool().ensureAnnotatedTypeConstant(typeRef, anno).getAnnotationType();
+                typeAnno = pool().ensureAnnotatedTypeConstant(typeRef, annoNaked).getAnnotationType();
                 infoAnno = typeAnno.ensureTypeInfo(errs);
                 }
             }
@@ -322,9 +332,7 @@ public class AnnotationExpression
                     {
                     if (aconstArgs[iParam] == null)
                         {
-                        Constant constDefault = constructor.getParam(iParam).getDefaultValue();
-                        assert constDefault != null;
-                        aconstArgs[iParam] = constDefault;
+                        aconstArgs[iParam] = pool().valDefault();
                         }
                     }
                 }

@@ -165,7 +165,23 @@ public class Annotation
      */
     public void resolveParams(Constant[] aParams)
         {
+        if (getPosition() >= 0)
+            {
+            // we must never change the hashCode/equality for already registered constants
+            throw new IllegalStateException("Annotation has already been registered: " + this);
+            }
+
         m_aParams = aParams;
+        }
+
+    /**
+     * @return an equivalent annotation without parameters
+     */
+    public Annotation getNakedAnnotation()
+        {
+        return m_aParams.length == 0
+            ? this
+            : new Annotation(getConstantPool(), m_constClass, null);
         }
 
 
@@ -367,8 +383,6 @@ public class Annotation
     @Override
     public int hashCode()
         {
-        assert isResolved();
-
         Constant[] aParams = m_aParams;
         int        cParams = aParams.length;
         int        n       = getAnnotationClass().hashCode() + cParams;
