@@ -1,27 +1,27 @@
 class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
         extends ClientDBObject
-        implements db.DBMap<Key, Value>
+        implements oodb.DBMap<Key, Value>
         delegates Map<Key, Value>(serverDBMap) // temporary; should be all overridden
     {
-    construct((ServerDBObject + db.DBMap) dbMap, function Boolean() isAutoCommit)
+    construct((ServerDBObject + oodb.DBMap) dbMap, function Boolean() isAutoCommit)
         {
         construct ClientDBObject(dbMap, isAutoCommit);
         }
 
-    protected db.DBMap<Key, Value> serverDBMap.get()
+    protected oodb.DBMap<Key, Value> serverDBMap.get()
         {
-        return dbObject.as(db.DBMap<Key, Value>);
+        return dbObject_.as(oodb.DBMap<Key, Value>);
         }
 
-    protected ClientChange? change;
+    protected ClientChange? change_;
 
     protected ClientChange ensureChange()
         {
-        ClientChange? change = this.change;
+        ClientChange? change = change_;
         if (change == Null)
             {
-            change      = new ClientChange();
-            this.change = change;
+            change  = new ClientChange();
+            change_ = change;
             }
         return change;
         }
@@ -32,7 +32,7 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
     @Override
     conditional Value get(Key key)
         {
-        ClientChange? change = this.change;
+        ClientChange? change = change_;
         if (change != Null)
             {
             if (Value value := change.internalAdded.get(key))
@@ -50,7 +50,7 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
     @Override
     ClientDBMap put(Key key, Value value)
         {
-        if (isAutoCommit())
+        if (isAutoCommit_())
             {
             serverDBMap.put(key, value);
             }
@@ -69,7 +69,7 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
         }
 
     class CursorEntry
-            implements db.DBMap<Key, Value>.Entry
+            implements oodb.DBMap<Key, Value>.Entry
 //            implements Duplicable
         {
 //        construct(Key key)
@@ -166,7 +166,7 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
         }
 
     class ClientChange
-            implements db.DBMap<Key, Value>.TxChange
+            implements oodb.DBMap<Key, Value>.TxChange
         {
         construct()
             {
@@ -216,13 +216,13 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
                 }
             map.putAll(internalAdded);
 
-            change = Null;
+            change_ = Null;
             return True;
             }
 
         void discard()
             {
-            change = Null;
+            change_ = Null;
             }
         }
     }

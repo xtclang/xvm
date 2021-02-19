@@ -1,20 +1,23 @@
 class ServerDBMap<Key extends immutable Const, Value extends immutable Const>
         extends ServerDBObject
-        implements db.DBMap<Key, Value>
-        delegates Map<Key, Value>(contents) // temporarily; need to override everything
+        implements oodb.DBMap<Key, Value>
+        delegates Map<Key, Value>(contents_) // temporarily; need to override everything
     {
-    construct(db.DBObject? parent, String name)
+    construct(oodb.DBObject? parent, String name)
         {
         construct ServerDBObject(parent, DBMap, name);
 
-        contents = new HashMap<Key, Value>();
-        dates    = new HashMap<Key, DateTime>();
+        contents_ = new HashMap<Key, Value>();
+        dates_    = new HashMap<Key, DateTime>();
         }
 
-    @Inject Clock clock;
+    @Inject("clock") Clock clock_;
+
+    protected Map<Key, Value>    contents_;
+    protected Map<Key, DateTime> dates_;
 
     class CursorEntry
-            implements db.DBMap<Key, Value>.Entry
+            implements oodb.DBMap<Key, Value>.Entry
         {
         construct(Key key)
             {
@@ -27,7 +30,7 @@ class ServerDBMap<Key extends immutable Const, Value extends immutable Const>
         @Override
         Boolean exists.get()
             {
-            return contents.contains(key);
+            return contents_.contains(key);
             }
 
         @Override
@@ -36,7 +39,7 @@ class ServerDBMap<Key extends immutable Const, Value extends immutable Const>
             @Override
             Value get()
                 {
-                if (Value value := contents.get(key))
+                if (Value value := contents_.get(key))
                     {
                     return value;
                     }
@@ -46,8 +49,8 @@ class ServerDBMap<Key extends immutable Const, Value extends immutable Const>
             @Override
             void set(Value value)
                 {
-                contents.put(key, value);
-                dates.put(key, clock.now);
+                contents_.put(key, value);
+                dates_.put(key, clock_.now);
                 }
             }
 
@@ -56,7 +59,7 @@ class ServerDBMap<Key extends immutable Const, Value extends immutable Const>
             {
             if (exists)
                 {
-                contents.remove(key);
+                contents_.remove(key);
                 }
             }
 
@@ -69,7 +72,7 @@ class ServerDBMap<Key extends immutable Const, Value extends immutable Const>
         @Override
         DateTime modified.get()
             {
-            if (DateTime date := dates.get(key))
+            if (DateTime date := dates_.get(key))
                 {
                 return date;
                 }
@@ -88,7 +91,4 @@ class ServerDBMap<Key extends immutable Const, Value extends immutable Const>
             return [this];
             }
         }
-
-    protected Map<Key, Value>    contents;
-    protected Map<Key, DateTime> dates;
     }

@@ -1,21 +1,21 @@
 @Abstract
-class ClientTransaction<Schema extends db.RootSchema>
+class ClientTransaction<Schema extends oodb.RootSchema>
         extends ClientDBObject
-        implements db.Transaction<Schema>
+        implements oodb.Transaction<Schema>
     {
-    construct(ServerRootSchema dbSchema, db.DBTransaction dbTransaction)
+    construct(ServerRootSchema dbSchema, oodb.DBTransaction dbTransaction)
         {
         construct ClientDBObject(dbSchema);
 
-        this.dbTransaction = dbTransaction;
+        dbTransaction_ = dbTransaction;
         }
 
-    protected db.DBTransaction dbTransaction;
+    protected oodb.DBTransaction dbTransaction_;
 
     @Override
     Boolean commit()
         {
-        for (db.DBObject.TxChange change : dbTransaction.contents.values)
+        for (oodb.DBObject.TxChange change : dbTransaction_.contents.values)
             {
             if (change.is(ClientDBMap.ClientChange) && !change.apply())
                 {
@@ -28,13 +28,13 @@ class ClientTransaction<Schema extends db.RootSchema>
     @Override
     void rollback()
         {
-        for (db.DBObject.TxChange change : dbTransaction.contents.values)
+        for (oodb.DBObject.TxChange change : dbTransaction_.contents.values)
             {
             if (change.is(ClientDBMap.ClientChange))
                 {
                 change.discard();
                 }
             }
-        dbTransaction.rollbackOnly = True;
+        dbTransaction_.rollbackOnly = True;
         }
     }

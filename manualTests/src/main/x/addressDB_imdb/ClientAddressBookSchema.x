@@ -83,7 +83,7 @@ class ClientAddressBookSchema
                 {
                 ClientTransaction? tx = this.ClientAddressBookSchema.transaction;
                 assert tx != Null;
-                tx.dbTransaction.contents.put(dbObject.dbName, this);
+                tx.dbTransaction_.contents.put(dbObject_.dbName, this);
                 }
             }
         }

@@ -1,29 +1,29 @@
 class ServerDBCounter
         extends ServerDBObject
-        implements db.DBCounter
+        implements oodb.DBCounter
     {
-    construct(db.DBObject? parent, String name)
+    construct(oodb.DBObject? parent, String name)
         {
         construct ServerDBObject(parent, DBCounter, name);
         }
 
+    protected Int value_ = 0;
+
     @Override
     Int get()
         {
-        return value;
+        return value_;
         }
 
     @Override
     void set(Int value)
         {
-        this.value = value;
+        value_ = value;
         }
 
     @Override
     void adjustBy(Int value)
         {
-        this.value += value;
+        value_ += value;
         }
-
-    protected Int value = 0;
     }

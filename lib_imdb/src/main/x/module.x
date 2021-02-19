@@ -1,13 +1,13 @@
 module imdb
     {
-    package db import oodb.xtclang.org;
+    package oodb import oodb.xtclang.org;
 
     // ---- server side ----------------------------------------------------------------------------
 
     class ServerDBObject
-            implements db.DBObject
+            implements oodb.DBObject
         {
-        construct(db.DBObject? parent, DBCategory category, String name)
+        construct(oodb.DBObject? parent, DBCategory category, String name)
             {
             dbParent   = parent;
             dbCategory = category;
@@ -16,7 +16,7 @@ module imdb
             }
 
         @Override
-        public/private db.DBObject? dbParent;
+        public/private oodb.DBObject? dbParent;
 
         @Override
         public/private String dbName;
@@ -25,13 +25,13 @@ module imdb
         public/private DBCategory dbCategory;
 
         @Override
-        public/protected Map<String, db.DBObject> dbChildren;
+        public/protected Map<String, oodb.DBObject> dbChildren;
         }
 
     @Abstract
     class ServerRootSchema
             extends ServerDBObject
-            implements db.RootSchema
+            implements oodb.RootSchema
         {
         construct()
             {
@@ -40,7 +40,7 @@ module imdb
 
         @Override
         @Unassigned
-        public/private db.SystemSchema sys; // TODO
+        public/private oodb.SystemSchema sys; // TODO
         }
 
 
@@ -48,30 +48,30 @@ module imdb
 
     @Abstract
     class ClientDBObject
-            implements db.DBObject
-            delegates  db.DBObject(dbObject)
+            implements oodb.DBObject
+            delegates  oodb.DBObject(dbObject_)
         {
         construct(ServerDBObject dbObject,
                   function Boolean() isAutoCommit = () -> False)
             {
-            this.dbObject     = dbObject;
-            this.isAutoCommit = isAutoCommit;
+            dbObject_     = dbObject;
+            isAutoCommit_ = isAutoCommit;
             }
 
-        protected ServerDBObject     dbObject;
-        protected function Boolean() isAutoCommit;
+        protected ServerDBObject     dbObject_;
+        protected function Boolean() isAutoCommit_;
 
         @Override
-        Map<String, db.DBObject> dbChildren.get()
+        Map<String, oodb.DBObject> dbChildren.get()
             {
-            TODO("snapshot of dbObject.dbChildren");
+            TODO("snapshot of dbObject_.dbChildren");
             }
         }
 
     @Abstract
     class ClientRootSchema
             extends ClientDBObject
-            implements db.RootSchema
+            implements oodb.RootSchema
         {
         construct(ServerRootSchema dbSchema)
             {
@@ -79,7 +79,7 @@ module imdb
             }
 
         @Override
-        db.SystemSchema sys.get()
+        oodb.SystemSchema sys.get()
             {
             TODO
             }

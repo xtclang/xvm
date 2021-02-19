@@ -1,27 +1,27 @@
 class ClientDBCounter
         extends ClientDBObject
-        implements db.DBCounter
+        implements oodb.DBCounter
     {
-    construct((ServerDBObject + db.DBCounter) dbCounter,
+    construct((ServerDBObject + oodb.DBCounter) dbCounter,
               function Boolean() isAutoCommit)
         {
         construct ClientDBObject(dbCounter, isAutoCommit);
         }
 
-    protected db.DBCounter serverDBCounter.get()
+    protected oodb.DBCounter serverDBCounter.get()
         {
-        return dbObject.as(db.DBCounter);
+        return dbObject_.as(oodb.DBCounter);
         }
 
-    protected ClientChange? change;
+    protected ClientChange? change_;
 
     protected ClientChange ensureChange()
         {
-        ClientChange? change = this.change;
+        ClientChange? change = change_;
         if (change == Null)
             {
-            change      = new ClientChange();
-            this.change = change;
+            change  = new ClientChange();
+            change_ = change;
             }
         return change;
         }
@@ -34,7 +34,7 @@ class ClientDBCounter
         {
         if (transactional)
             {
-            ClientChange? change = this.change;
+            ClientChange? change = change_;
             if (change != Null)
                 {
                 return change.get();
@@ -46,7 +46,7 @@ class ClientDBCounter
     @Override
     void set(Int value)
         {
-        if (transactional && !isAutoCommit())
+        if (transactional && !isAutoCommit_())
             {
             ensureChange().set(value);
             }
@@ -70,7 +70,7 @@ class ClientDBCounter
         }
 
     class ClientChange
-            implements db.DBCounter.TxChange
+            implements oodb.DBCounter.TxChange
         {
         @Override
         Boolean relativeOnly = True;
