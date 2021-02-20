@@ -1,46 +1,84 @@
 /**
- * The result of a call to Pattern.match().
+ * The results of successfully matching a String value with a RegEx regular expression.
  */
-interface Matcher
-        extends Const
+class Matcher
     {
-    @RO Boolean matched;
+    construct(RegEx regEx, Int groupCount)
+        {
+        this.regEx      = regEx;
+        this.groupCount = groupCount;
+        }
 
     /**
-     * Returns the number of capturing groups in this matcher's pattern.
+     * The number of capturing groups in this matcher's pattern.
      *
-     * Group zero denotes the entire pattern by convention. It is not
-     * included in this count.
+     * Group zero represents the entire pattern, and is not included in this count.
      *
-     * Any non-negative integer smaller than or equal to the value
-     * returned by this method is guaranteed to be a valid group index for
-     * this matcher.
-     *
-     * @return The number of capturing groups in this matcher's pattern
+     * Valid group indexes for this `Matcher` are any non-negative Int values less
+     * than or equal to the `groupCount`.
      */
-    @RO Int groupCount;
+    public/private Int groupCount;
 
     /**
-     * Return the Pattern used to create this Matcher.
+     * The regular expression used to create this Matcher.
      */
-    @RO Pattern pattern;
+    public/private RegEx regEx;
 
     /*
-     * Returns the input subsequence captured by the given group during the
-     * previous match operation.
+     * Returns the input subsequence captured by the given group during the previous
+     * match operation.
      *
-     * @param  group  the index of a capturing group in this matcher's pattern
+     * Valid values for the `index` parameter are non-negative Int values, less than
+     * or equal to this matcher's `groupCount`.
+     *
+     * Group zero is used to represent the entire matched pattern and will be the
+     * only group for patterns without capturing groups.
+     *
+     * @param  index  the index of a capturing group in this matcher's pattern
+     *
+     * @return True iff the group at the given index index matched part of the input String
+     * @return the substring of the input String matched by the group
+     */
+    conditional String group(Int index)
+        {
+        return False;
+        }
+
+    /*
+     * Returns the input subsequence captured by the given group during the previous
+     * match operation.
+     *
+     * Valid values for the `index` parameter are non-negative Int values, less than
+     * or equal to this matcher's `groupCount`.
+     *
+     * Group zero is used to represent the entire matched pattern and will be the
+     * only group for patterns without capturing groups.
+     *
+     * @param  index  the index of a capturing group in this matcher's pattern
+     *
+     * @return the (possibly empty) substring of the input String matched by the group
+     *         at the given index
      */
     @Op("[]")
-    String? group(Int index);
+    String? getGroupOrNull(Int index)
+        {
+        return Null;
+        }
 
     /**
-     * Attempts to find the next subsequence of the input sequence that matches
-     * the pattern.
+     * Find the next subsequence of the input sequence that matches the pattern.
      *
-     * @return  True iff a subsequence of the input sequence matches this matcher's pattern
+     * If this `Matcher` was created from `Pattern.match(String input)` there will be no
+     * subsequent matches and this method will return `False`. If this `Matcher` was created
+     * from `Pattern.matchPrefix(String input)` or `Pattern.find(String input)` there may be
+     * subsequent matches.
+     *
+     * @return  True iff the input sequence contains another match of this matcher's pattern
      */
-    Boolean find();
+    Boolean next()
+        {
+        return False;
+        }
 
     /**
      * Replaces every subsequence of the input sequence that matches the
@@ -68,17 +106,8 @@ interface Matcher
      *          by the replacement string, substituting captured subsequences
      *          as needed
      */
-    String replaceAll(String replacement);
-
-    /**
-     * Resets this matcher.
-     *
-     * Resetting a matcher discards all of its explicit state information
-     * and sets its append position to zero. The matcher's region is set to the
-     * default region, which is its entire character sequence. The anchoring
-     * and transparency of this matcher's region boundaries are unaffected.
-     *
-     * @return this matcher
-     */
-    Matcher reset();
+    String replaceAll(String replacement)
+        {
+        TODO
+        }
     }

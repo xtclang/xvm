@@ -38,8 +38,6 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle
 import org.xvm.runtime.template._native.temporal.xLocalClock;
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
 
-import org.xvm.runtime.template._native.text.xRTRegExp;
-
 
 /**
  * The core container (0).
@@ -145,10 +143,6 @@ public class CoreContainer
 
         addResourceSupplier(new InjectionKey("rnd"   , typeRandom), this::ensureDefaultRandom);
         addResourceSupplier(new InjectionKey("random", typeRandom), this::ensureDefaultRandom);
-
-        // +++ RegExp
-        TypeConstant typeRegExp = pool.ensureEcstasyTypeConstant("text.RegExp");
-        f_mapResources.put(new InjectionKey("regExp" , typeRegExp), this::ensureRegExp);
 
         // +++ WebServer
         TypeConstant typeWebServer = pool.ensureEcstasyTypeConstant("proxy.WebServerProxy");
@@ -284,24 +278,6 @@ public class CoreContainer
             }
 
         return hRnd;
-        }
-
-    protected ObjectHandle ensureRegExp(Frame frame, ObjectHandle hOpts)
-        {
-        ObjectHandle hRegExp = m_hRegExp;
-        if (hRegExp == null)
-            {
-            xRTRegExp template = (xRTRegExp) f_templates.getTemplate("_native.text.RTRegExp");
-            if (template != null)
-                {
-                TypeConstant typeRegExp = frame.poolContext().ensureEcstasyTypeConstant("text.RegExp");
-                m_hRegExp = hRegExp = template.createServiceHandle(
-                    createServiceContext("RegExp"),
-                    template.getCanonicalClass(), typeRegExp);
-                }
-            }
-
-        return hRegExp;
         }
 
     protected ObjectHandle ensureWebServerProxy(Frame frame, ObjectHandle hOpts)
@@ -560,7 +536,6 @@ public class CoreContainer
 
     private ObjectHandle m_hLocalClock;
     private ObjectHandle m_hRandom;
-    private ObjectHandle m_hRegExp;
     private ObjectHandle m_hWebServer;
     private ObjectHandle m_hOSStorage;
     private ObjectHandle m_hFileStore;

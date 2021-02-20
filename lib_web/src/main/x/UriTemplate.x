@@ -1,5 +1,5 @@
 import ecstasy.text.Matcher;
-import ecstasy.text.Pattern;
+import ecstasy.text.RegEx;
 
 /**
  * An implementation of the URI Template specification. See https://tools.ietf.org/html/rfc6570
@@ -16,7 +16,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
     private static String  STRING_PATTERN_USER_INFO = "([^@\\[/?#]*)";
     private static String  STRING_PATTERN_HOST_IPV4 = "[^\\[{/?#:]*";
     private static String  STRING_PATTERN_HOST_IPV6 = "\\[[\\p{XDigit}\\:\\.]*[%\\p{Alnum}]*\\]";
-    private static String  STRING_PATTERN_HOST      = "(" + STRING_PATTERN_HOST_IPV6 + "|" + STRING_PATTERN_HOST_IPV4 + ")";
+    private static String  STRING_PATTERN_HOST      = $"({STRING_PATTERN_HOST_IPV6}|{STRING_PATTERN_HOST_IPV4})";
     private static String  STRING_PATTERN_PORT      = "(\\d*(?:\\{[^/]+?\\})?)";
     private static String  STRING_PATTERN_PATH      = "([^#]*)";
     private static String  STRING_PATTERN_QUERY     = "([^#]*)";
@@ -24,6 +24,13 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
     private static Char    QUERY_OPERATOR           = '?';
     private static Char    SLASH_OPERATOR           = '/';
     private static Char    HASH_OPERATOR            = '#';
+    private static Int     GROUP_SCHEME             = 2;
+    private static Int     GROUP_USER_INFO          = 5;
+    private static Int     GROUP_HOST               = 6;
+    private static Int     GROUP_PORT               = 8;
+    private static Int     GROUP_PATH               = 9;
+    private static Int     GROUP_QUERY              = 11;
+    private static Int     GROUP_FRAGMENT           = 13;
     private static Char    EXPAND_MODIFIER          = '*';
     private static Char    OPERATOR_NONE            = '0';
     private static Char    VAR_START                = '{';
@@ -31,16 +38,14 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
     private static Char    AND_OPERATOR             = '&';
     private static String  SLASH_STRING             = "/";
     private static Char    DOT_OPERATOR             = '.';
-    private static Pattern PATTERN_PERCENT          = Pattern.compile("%");
-    private static Pattern PATTERN_SPACE            = Pattern.compile("\\s");
 
     // Regex patterns that match URIs. See RFC 3986, appendix B
-    private static Pattern PATTERN_SCHEME = Pattern.compile("^" + STRING_PATTERN_SCHEME + "//.*");
+    private static RegEx PATTERN_SCHEME = new RegEx($"^{STRING_PATTERN_SCHEME}//.*");
 
-    private static Pattern PATTERN_FULL_PATH = Pattern.compile("^([^#\\?]*)(\\?([^#]*))?(\\#(.*))?$");
+    private static RegEx PATTERN_FULL_PATH = new RegEx("^([^#\\?]*)(\\?([^#]*))?(\\#(.*))?$");
 
-    private static Pattern PATTERN_FULL_URI = Pattern.compile(
-            "^(" + STRING_PATTERN_SCHEME + ")?" + "(//(" + STRING_PATTERN_USER_INFO + "@)?"
+    private static RegEx PATTERN_FULL_URI = new RegEx(
+                "^(" + STRING_PATTERN_SCHEME + ")?" + "(//(" + STRING_PATTERN_USER_INFO + "@)?"
                  + STRING_PATTERN_HOST + "(:" + STRING_PATTERN_PORT +
                     ")?" + ")?" + STRING_PATTERN_PATH + "(\\?" + STRING_PATTERN_QUERY + ")?"
                  + "(#" + STRING_PATTERN_REMAINING + ")?");
@@ -119,48 +124,35 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                 {
                 if (template.size > 1)
                     {
-                    // REVIEW JK: this is a no op
-                    template = template[0..template.size - 1];
+                    template = template[0..template.size - 1);
                     }
                 }
 
             Array<PathSegment> segments = new Array();
 
-            if (PATTERN_SCHEME.match(template).matched)
+            if (PATTERN_SCHEME.match(template))
                 {
-                Matcher matcher = PATTERN_FULL_URI.match(template);
-
-                if (matcher.find())
+                if (Matcher matcher := PATTERN_FULL_URI.find(template))
                     {
-                    String? scheme = matcher.group(2);
-                    if (scheme.is(String))
+                    if (String scheme := matcher.group(GROUP_SCHEME))
                         {
                         segments.add(new RawPathSegment(False, scheme + "://"));
                         }
-
-                    // REVIEW JK: introduced name constants for the indexes?
-                    String? userInfo = matcher.group(5);
-                    String? host     = matcher.group(6);
-                    String? port     = matcher.group(8);
-                    String? path     = matcher.group(9);
-                    String? query    = matcher.group(11);
-                    String? fragment = matcher.group(13);
-
-                    if (userInfo != Null)
+                    if (String userInfo := matcher.group(GROUP_USER_INFO))
                         {
                         createSegmentParser(userInfo, arguments).parse(segments);
                         }
-                    if (host != Null)
+                    if (String host := matcher.group(GROUP_HOST))
                         {
                         createSegmentParser(host, arguments).parse(segments);
                         }
-                    if (port != Null)
+                    if (String port := matcher.group(GROUP_PORT))
                         {
                         createSegmentParser(':' + port, arguments).parse(segments);
                         }
-                    if (path != Null)
+                    if (String path := matcher.group(GROUP_PATH))
                         {
-                        if (fragment != Null)
+                        if (String fragment := matcher.group(GROUP_FRAGMENT))
                             {
                             createSegmentParser(path + HASH_OPERATOR + fragment, [])
                                     .parse(segments);
@@ -170,7 +162,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                             createSegmentParser(path, arguments).parse(segments);
                             }
                         }
-                    if (query != Null)
+                    if (String query := matcher.group(GROUP_QUERY))
                         {
                         createSegmentParser(query, arguments).parse(segments);
                         }
@@ -660,13 +652,23 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
 
         /**
          * Replace all instances of '%' in the specified String with "%25"
-         * and all instances of whitespace with "%20%".
+         * and all instances of whitespace with "%20".
          */
-        private String escape(String v)
+        private String escape(String s)
             {
-            String s = PATTERN_PERCENT.match(v).replaceAll("%25");
-            // REVIEW JK: s is not used
-            return PATTERN_SPACE.match(v).replaceAll("%20");
+            @Inject(opts = "%")
+            RegEx PATTERN_PERCENT;
+            @Inject(opts = "\\s")
+            RegEx PATTERN_SPACE;
+            if (Matcher m := PATTERN_PERCENT.find(s))
+                {
+                s = m.replaceAll("%25");
+                }
+            if (Matcher m := PATTERN_SPACE.find(s))
+                {
+                s = m.replaceAll("%20");
+                }
+            return s;
             }
 
         private String applyModifier(String modifierStr, Char modifierChar, String result, Int len)

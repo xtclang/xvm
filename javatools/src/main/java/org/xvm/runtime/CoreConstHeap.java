@@ -78,6 +78,7 @@ public class CoreConstHeap
             case Version:
             case Module:
             case Package:
+            case RegEx:
                 return constValue.getType();
 
             case FileStore:

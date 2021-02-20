@@ -1,4 +1,4 @@
-import ecstasy.text.Pattern;
+import ecstasy.text.RegEx;
 import ecstasy.text.Matcher;
 
 /**
@@ -9,7 +9,7 @@ const UriMatchTemplate(String             template,
                        List<PathSegment>  segments,
                        Int                variableCount,
                        Int                rawLength,
-                       Pattern            matchPattern,
+                       RegEx              matchRegEx,
                        UriMatchVariable[] variables)
         extends UriTemplate(template, segments, variableCount, rawLength)
         implements UriMatcher
@@ -58,8 +58,7 @@ const UriMatchTemplate(String             template,
             uri = uri.size > 1 ? uri[0..uri.size - 2] : "";
             }
 
-        Matcher matcher = matchPattern.match(uri);
-        if (matcher.matched)
+        if (Matcher matcher := matchRegEx.match(uri))
             {
             if (variables.empty)
                 {
@@ -116,12 +115,13 @@ const UriMatchTemplate(String             template,
 
             ParserResult result  = parse(template);
             StringBuffer pattern = this.pattern? : assert;
+            RegEx        regex   = new RegEx(pattern.toString());
 
             matchTemplate = new UriMatchTemplate(result.template,
                                                  result.segments,
                                                  result.variableCount,
                                                  result.rawLength,
-                                                 Pattern.compile(pattern.toString()),
+                                                 regex,
                                                  variables);
             this.matchTemplate = matchTemplate;
             return matchTemplate;
@@ -152,7 +152,7 @@ const UriMatchTemplate(String             template,
                                             Boolean                       isQuerySegment)
             {
             StringBuffer pattern = templateParser.pattern? : assert;
-            pattern.append(Pattern.createLiteralPattern(value));
+            pattern.append(RegEx.toLiteral(value));
             super(segments, value, isQuerySegment);
             }
 
@@ -176,7 +176,7 @@ const UriMatchTemplate(String             template,
             String  operatorPrefix     = "";
             String  operatorQuantifier = "";
             String  variableQuantifier = "+?)";
-            String  variablePattern    = getVariablePattern(variable, operator);
+            String  variableRegEx      = getVariableRegEx(variable, operator);
 
             if (hasModifier)
                 {
@@ -198,12 +198,12 @@ const UriMatchTemplate(String             template,
                         }
                     if (operator == '/' || operator == '.')
                         {
-                        variablePattern = "(" + ((firstChar == '^') ? modifierStr.substring(1) : modifierStr) + ")";
+                        variableRegEx = "(" + ((firstChar == '^') ? modifierStr.substring(1) : modifierStr) + ")";
                         }
                     else
                         {
                         operatorPrefix = "(";
-                        variablePattern = ((firstChar == '^') ? modifierStr.substring(1) : modifierStr) + ")";
+                        variableRegEx = ((firstChar == '^') ? modifierStr.substring(1) : modifierStr) + ")";
                         }
                     variableQuantifier = "";
                     }
@@ -229,7 +229,7 @@ const UriMatchTemplate(String             template,
                         {
                         pattern.append("(").append(operatorPrefix);
                         }
-                    pattern.append(variablePattern)
+                    pattern.append(variableRegEx)
                            .append(variableQuantifier)
                            .append(")");
                     break;
@@ -253,7 +253,7 @@ const UriMatchTemplate(String             template,
          * @param operator The operator
          * @return The variable match pattern
          */
-        String getVariablePattern(String variable, Char operator) {
+        String getVariableRegEx(String variable, Char operator) {
             if (operator == '+')
                 {
                 // Allow reserved characters. See https://tools.ietf.org/html/rfc6570#section-3.2.3

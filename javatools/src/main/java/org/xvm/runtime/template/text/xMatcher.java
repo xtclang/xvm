@@ -1,31 +1,40 @@
-package org.xvm.runtime.template._native.text;
+package org.xvm.runtime.template.text;
+
 
 import java.util.regex.Matcher;
+
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+
+import org.xvm.asm.constants.StringConstant;
+
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
-import org.xvm.runtime.template.numbers.xInt64;
-import org.xvm.runtime.template.text.xString;
+
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xNullable;
 
-public class xRTMatcher
-    extends xConst
-    {
-    public static xRTMatcher INSTANCE;
+import org.xvm.runtime.template.numbers.xInt64;
 
-    public xRTMatcher(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+
+/**
+ * Native implementation of Matcher.
+ */
+public class xMatcher
+    extends ClassTemplate
+    {
+    public static xMatcher INSTANCE;
+
+    public xMatcher(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(templates, structure);
 
         if (fInstance)
             {
@@ -38,40 +47,38 @@ public class xRTMatcher
         {
         super.initNative();
 
-        markNativeProperty("matched");
         markNativeProperty("groupCount");
-        markNativeProperty("pattern");
-        markNativeMethod("group", new String[]{"numbers.Int64"}, null);
-        markNativeMethod("find", null, new String[] {"Boolean"});
+        markNativeProperty("regEx");
+        markNativeMethod("group", INT, null);
+        markNativeMethod("getGroupOrNull", INT, null);
+        markNativeMethod("next", null, BOOLEAN);
+        markNativeMethod("replaceAll", STRING, STRING);
 
         getCanonicalType().invalidateTypeInfo();
 
         ClassTemplate   template = f_templates.getTemplate("text.Matcher");
         TypeComposition clz      = ensureClass(template.getCanonicalType());
+        ConstantPool    pool     = pool();
 
-        s_clzMatcherStruct = clz.ensureAccess(Constants.Access.STRUCT);
-        s_constructorMatcher = getStructure().findConstructor();
+        s_clzMatcherStruct   = clz.ensureAccess(Constants.Access.STRUCT);
+        s_constructorMatcher = getStructure().findConstructor(pool.typeRegEx(), pool.typeInt());
         }
 
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        MatcherHandle hResult = (MatcherHandle) hTarget;
+        MatcherHandle hMatcher = (MatcherHandle) hTarget;
         switch (sPropName)
             {
-            case "matched":
-                {
-                Matcher result = hResult.getMatcher();
-                return frame.assignValue(iReturn, xBoolean.makeHandle(result.matches()));
-                }
             case "groupCount":
                 {
-                Matcher result = hResult.getMatcher();
-                return frame.assignValue(iReturn, xInt64.makeHandle(result.groupCount()));
+                Matcher matcher = hMatcher.getMatcher();
+
+                return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(matcher.groupCount()));
                 }
-            case "pattern":
+            case "regEx":
                 {
-                return frame.assignValue(iReturn, hResult.getPattern());
+                return frame.assignValue(iReturn, hMatcher.getRegExHandle());
                 }
             }
 
@@ -82,10 +89,10 @@ public class xRTMatcher
     public int invokeNative1(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        xRTMatcher.MatcherHandle hMatcher = (xRTMatcher.MatcherHandle) hTarget;
+        xMatcher.MatcherHandle hMatcher = (xMatcher.MatcherHandle) hTarget;
         switch (method.getName())
             {
-            case "group":
+            case "getGroupOrNull":
                 {
                 long    index   = ((ObjectHandle.JavaLong) hArg).getValue();
                 Matcher matcher = hMatcher.getMatcher();
@@ -106,23 +113,39 @@ public class xRTMatcher
     public int invokeNativeN(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
         {
-        xRTMatcher.MatcherHandle hMatcher = (xRTMatcher.MatcherHandle) hTarget;
-        switch (method.getName())
+        xMatcher.MatcherHandle hMatcher = (xMatcher.MatcherHandle) hTarget;
+        if ("next".equals(method.getName()))
             {
-            case "find":
-                {
-                Matcher matcher = hMatcher.getMatcher();
-                boolean result  = matcher.find();
-                return frame.assignValue(iReturn, xBoolean.makeHandle(result));
-                }
-            case "reset":
-                {
-                Matcher matcher = hMatcher.getMatcher();
-                matcher.reset();
-                return frame.assignValue(iReturn, hMatcher);
-                }
+            Matcher matcher = hMatcher.getMatcher();
+            boolean result  = matcher.find();
+            return frame.assignValue(iReturn, xBoolean.makeHandle(result));
             }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        xMatcher.MatcherHandle hMatcher = (xMatcher.MatcherHandle) hTarget;
+        switch (method.getName())
+            {
+            case "group":
+                {
+                long    index   = ((ObjectHandle.JavaLong) ahArg[0]).getValue();
+                Matcher matcher = hMatcher.getMatcher();
+                String  value   = matcher.group((int) index);
+                if (value != null)
+                    {
+                    return Utils.assignConditionalResult(
+                        frame,
+                        xString.INSTANCE.createConstHandle(frame, new StringConstant(pool(), value)),
+                        aiReturn);
+                    }
+                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                }
+            }
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
     private ObjectHandle makePossiblyNullHandle(String s)
@@ -139,47 +162,51 @@ public class xRTMatcher
      *
      * @param frame    the current frame
      * @param matcher  the compiled {@link Matcher}
-     * @param hPattern the handle of the pattern used to create the result
+     * @param hRegEx the handle of the pattern used to create the result
      * @param iReturn  the register id to place the created handle into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    public int createHandle(Frame frame, Matcher matcher, xRTPattern.PatternHandle hPattern, int iReturn)
+    public int createHandle(Frame frame, Matcher matcher, xRegEx.RegExHandle hRegEx, int iReturn)
         {
         TypeComposition clzStruct   = s_clzMatcherStruct;
-        MethodStructure  constructor = s_constructorMatcher;
+        MethodStructure constructor = s_constructorMatcher;
 
-        MatcherHandle hStruct = new MatcherHandle(clzStruct, matcher, hPattern);
-        ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, constructor.getMaxVars());
+        MatcherHandle         hStruct = new MatcherHandle(clzStruct, matcher, hRegEx);
+        ObjectHandle.JavaLong anCount = xInt64.makeHandle(matcher.groupCount());
+        ObjectHandle[]        ahVar   = Utils.ensureSize(new ObjectHandle[]{hRegEx, anCount}, constructor.getMaxVars());
 
         return proceedConstruction(frame, constructor, true, hStruct, ahVar, iReturn);
         }
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
+    /**
+     * The handle for a Matcher.
+     */
     public static class MatcherHandle
             extends ObjectHandle.GenericHandle
         {
-        protected final Matcher f_result;
-
-        protected final xRTPattern.PatternHandle f_hPattern;
-
-        protected MatcherHandle(TypeComposition clazz, Matcher result, xRTPattern.PatternHandle hPattern)
+        protected MatcherHandle(TypeComposition clazz, Matcher matcher, xRegEx.RegExHandle hRegEx)
             {
             super(clazz);
-            f_result   = result;
-            f_hPattern = hPattern;
+            m_matcher = matcher;
+            m_hRegEx  = hRegEx;
             }
 
         public Matcher getMatcher()
             {
-            return f_result;
+            return m_matcher;
             }
 
-        public xRTPattern.PatternHandle getPattern()
+        public xRegEx.RegExHandle getRegExHandle()
             {
-            return f_hPattern;
+            return m_hRegEx;
             }
+
+        private final Matcher m_matcher;
+
+        private final xRegEx.RegExHandle m_hRegEx;
         }
 
     // ----- constants -----------------------------------------------------------------------------

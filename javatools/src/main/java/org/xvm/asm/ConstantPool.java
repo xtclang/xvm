@@ -302,6 +302,25 @@ public class ConstantPool
         }
 
     /**
+     * Given the specified regular expression value, obtain a {@link RegExConstant}
+     * that represents it.
+     *
+     * @param expression  the regular expression value
+     *
+     * @return a {@link RegExConstant} for the passed regular expression value
+     */
+    public RegExConstant ensureRegExConstant(String expression)
+        {
+        // check the pre-existing constants first
+        RegExConstant constant = (RegExConstant) ensureLocatorLookup(Format.RegEx).get(expression);
+        if (constant == null)
+            {
+            constant = (RegExConstant) register(new RegExConstant(this, expression));
+            }
+        return constant;
+        }
+
+    /**
      * Given the specified String value, obtain a CharStringConstant that represents it.
      *
      * @param s  the String value
@@ -335,6 +354,7 @@ public class ConstantPool
             case DateTime:
             case Duration:
             case Path:
+            case RegEx:
                 {
                 LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(format).get(s);
                 if (constant == null)
@@ -2186,6 +2206,7 @@ public class ConstantPool
     public TypeConstant      typeChar()         {TypeConstant      c = m_typeChar;        if (c == null) {m_typeChar        = c = ensureTerminalTypeConstant(clzChar()                       );} return c;}
     public TypeConstant      typeIntLiteral()   {TypeConstant      c = m_typeIntLiteral;  if (c == null) {m_typeIntLiteral  = c = ensureTerminalTypeConstant(clzIntLiteral()                 );} return c;}
     public TypeConstant      typeFPLiteral()    {TypeConstant      c = m_typeFPLiteral;   if (c == null) {m_typeFPLiteral   = c = ensureTerminalTypeConstant(clzFPLiteral()                  );} return c;}
+    public TypeConstant      typeRegEx()        {TypeConstant      c = m_typeRegEx;       if (c == null) {m_typeRegEx       = c = ensureTerminalTypeConstant(clzRegEx()                      );} return c;}
     public TypeConstant      typeString()       {TypeConstant      c = m_typeString;      if (c == null) {m_typeString      = c = ensureTerminalTypeConstant(clzString()                     );} return c;}
     public TypeConstant      typeStringable()   {TypeConstant      c = m_typeStringable;  if (c == null) {m_typeStringable  = c = ensureTerminalTypeConstant(clzStringable()                 );} return c;}
     public TypeConstant      typeStringBuffer() {TypeConstant      c = m_typeStringBuffer;if (c == null) {m_typeStringBuffer= c = ensureTerminalTypeConstant(clzStringBuffer()               );} return c;}
@@ -2260,6 +2281,7 @@ public class ConstantPool
     protected ClassConstant  clzGreater()      {return (ClassConstant) getImplicitlyImportedIdentity("Greater"       );}
     protected ClassConstant  clzNull()         {return (ClassConstant) getImplicitlyImportedIdentity("Null"          );}
     protected ClassConstant  clzChar()         {return (ClassConstant) getImplicitlyImportedIdentity("Char"          );}
+    protected ClassConstant  clzRegEx()        {return (ClassConstant) ensureEcstasyClassConstant   ("text.RegEx"    );}
     protected ClassConstant  clzString()       {return (ClassConstant) getImplicitlyImportedIdentity("String"        );}
     protected ClassConstant  clzStringable()   {return (ClassConstant) getImplicitlyImportedIdentity("Stringable"    );}
     protected ClassConstant  clzStringBuffer() {return (ClassConstant) getImplicitlyImportedIdentity("StringBuffer"  );}
@@ -2519,6 +2541,10 @@ public class ConstantPool
 
                 case Char:
                     constant = new CharConstant(this, format, in);
+                    break;
+
+                case RegEx:
+                    constant = new RegExConstant(this, format, in);
                     break;
 
                 case String:
@@ -2968,6 +2994,7 @@ public class ConstantPool
         m_typeChar        = null;
         m_typeIntLiteral  = null;
         m_typeFPLiteral   = null;
+        m_typeRegEx       = null;
         m_typeString      = null;
         m_typeStringable  = null;
         m_typeStringBuffer= null;
@@ -3834,6 +3861,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeChar;
     private transient TypeConstant      m_typeIntLiteral;
     private transient TypeConstant      m_typeFPLiteral;
+    private transient TypeConstant      m_typeRegEx;
     private transient TypeConstant      m_typeString;
     private transient TypeConstant      m_typeStringable;
     private transient TypeConstant      m_typeStringBuffer;

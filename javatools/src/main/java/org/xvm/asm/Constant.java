@@ -801,6 +801,7 @@ public abstract class Constant
         DecN      ("numbers"),
         Char      ("text"),
         String    ("text"),
+        RegEx     ("text"),
         Date,               // ISO8601 YYYY-MM-DD date format
         Time,               // ISO8601 HH:MM[:SS[.sssssssss]]['Z' | ('+'|'-')hh[:mm]] format
         TimeZone,           // ISO8601 ['Z' | ('+'|'-')hh[:mm]] format
