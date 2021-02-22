@@ -226,14 +226,19 @@ public class AnnotationExpression
         List<Expression>  listArgs = args;
         int               cArgs    = listArgs == null ? 0 : listArgs.size();
         ValidatingContext ctx      = new ValidatingContext(getComponent().getContainingClass());
+        ErrorListener     errsTemp = errs.branch();
 
         // find a matching constructor on the annotation class
         MethodConstant idConstruct = findMethod(ctx, typeAnno, infoAnno,
-                    "construct", listArgs, MethodKind.Constructor, true, false, TypeConstant.NO_TYPES, errs);
+                    "construct", listArgs, MethodKind.Constructor, true, false, TypeConstant.NO_TYPES, errsTemp);
 
+        errsTemp.merge();
         if (idConstruct == null)
             {
-            log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getValueString());
+            if (!errsTemp.hasSeriousErrors())
+                {
+                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getValueString());
+                }
             return;
             }
 

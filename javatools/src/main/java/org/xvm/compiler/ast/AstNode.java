@@ -1347,7 +1347,7 @@ public abstract class AstNode
                         }
                     atypeArgs[i] = typeArg;
                     }
-                else if (typeParam != null)
+                else if (typeParam != null && !errsTemp.hasSeriousErrors())
                     {
                     log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
                             sigMethod.getName(),
