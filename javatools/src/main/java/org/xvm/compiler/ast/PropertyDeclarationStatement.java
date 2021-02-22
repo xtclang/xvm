@@ -215,6 +215,14 @@ public class PropertyDeclarationStatement
         }
 
     @Override
+    protected AstNode getCodeContainer()
+        {
+        return isInMethod()
+                ? super.getCodeContainer()
+                : null;
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;

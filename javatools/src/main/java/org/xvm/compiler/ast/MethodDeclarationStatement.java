@@ -262,6 +262,7 @@ public class MethodDeclarationStatement
         return null;
         }
 
+
     // ----- code container methods ----------------------------------------------------------------
 
     @Override
@@ -281,6 +282,13 @@ public class MethodDeclarationStatement
         {
         // it's a no-op for a method declaration statement
         }
+
+    @Override
+    protected AstNode getCodeContainer()
+        {
+        return null;
+        }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 

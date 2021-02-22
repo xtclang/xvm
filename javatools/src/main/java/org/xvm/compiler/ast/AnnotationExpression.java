@@ -16,7 +16,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -222,32 +221,6 @@ public class AnnotationExpression
         if (getCodeContainer() != null)
             {
             return;
-            }
-
-        if (typeAnno.isIntoVariableType())
-            {
-            AstNode parent = this;
-            do
-                {
-                parent = parent.getParent();
-                }
-            while (parent != null && !parent.isComponentNode());
-
-            if (parent instanceof PropertyDeclarationStatement)
-                {
-                // for Property annotation, calculate the real annotation type based on the property
-                // type; note that this logic doesn't calculate the actual annotated property ref
-                // type, which could have multiple annotations that we are disregarding here;
-                // also, it's critical not to put the original annotation into the pool until the
-                // parameters are resolved by "anno.resolveParams(aconstArgs)" call below
-                PropertyDeclarationStatement stmtProp  = (PropertyDeclarationStatement) parent;
-                PropertyStructure            prop      = (PropertyStructure) stmtProp.getComponent();
-                TypeConstant                 typeRef   = prop.getIdentityConstant().getRefType(null);
-                Annotation                   annoNaked = anno.getNakedAnnotation();
-
-                typeAnno = pool().ensureAnnotatedTypeConstant(typeRef, annoNaked).getAnnotationType();
-                infoAnno = typeAnno.ensureTypeInfo(errs);
-                }
             }
 
         List<Expression>  listArgs = args;
