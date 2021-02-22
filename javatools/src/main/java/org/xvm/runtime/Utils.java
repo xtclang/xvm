@@ -22,6 +22,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -1399,8 +1400,15 @@ public abstract class Utils
 
                         Constant[] aconstArg = aAnno[iAnno].getParams();
                         Constant   constArg  = iArg < aconstArg.length
-                            ? aconstArg[iArg]
-                            : constructMixin.getParam(iArg).getDefaultValue();
+                                ? aconstArg[iArg]
+                                : null;
+
+                        if (constArg == null ||
+                                constArg instanceof RegisterConstant &&
+                                ((RegisterConstant) constArg).getRegisterIndex() == Op.A_DEFAULT)
+                            {
+                            constArg = constructMixin.getParam(iArg).getDefaultValue();
+                            }
 
                         hValue    = frameCaller.getConstHandle(constArg);
                         stageNext = Stage.Argument;
