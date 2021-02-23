@@ -191,8 +191,8 @@ module TestReflection
         {
         console.println("\n** testMethods");
 
-        report(Inner.foo.as(Method));
-        report(Outer.foo.as(Method));
+        report(Inner.foo);
+        report(Outer.foo);
 
         class Inner
             {
@@ -206,10 +206,8 @@ module TestReflection
         {
         void foo(Element el)
             {
-            /// TestReflection.report(foo.as(Method)); // TODO GG doesn't compile
-            TestReflection module_ = TestReflection;
-            module_.report(foo.as(Method));
-            module_.report(Child.bar.as(Method));
+            TestReflection.report(foo);
+            TestReflection.report(Child.bar);
             }
 
         class Child

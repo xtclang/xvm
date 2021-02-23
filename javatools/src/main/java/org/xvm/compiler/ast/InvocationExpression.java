@@ -2303,17 +2303,19 @@ public class InvocationExpression
                             }
                         else
                             {
-                            // this is either a function call (e.g. Duration.ofSeconds(1)) or
-                            // a call on the Class itself (Point.instantiate(struct)), in which
-                            // case the first "findCallable" will fail and therefore typeLeft must
-                            // not be changed
+                            // this is either:
+                            // - a function call (e.g. Duration.ofSeconds(1)) or
+                            // - a call on the Class itself (Point.instantiate(struct)), in which
+                            //   case the first "findCallable" will fail and therefore typeLeft must
+                            //   not be changed
+                            // - a method call for a singleton (e.g. TestReflection.report(...))
                             infoLeft = idLeft.ensureTypeInfo(access, errs);
                             }
                         }
-
-                    MethodKind kind = fConstruct          ? MethodKind.Constructor :
-                                      fNoFBind && fNoCall ? MethodKind.Any :
-                                                            MethodKind.Function;
+                    boolean    fSingleton = infoLeft.isSingleton();
+                    MethodKind kind       = fConstruct                        ? MethodKind.Constructor :
+                                            fNoFBind && fNoCall || fSingleton ? MethodKind.Any :
+                                                                                MethodKind.Function;
 
                     ErrorListener errsTemp = errs.branch();
                     Argument      arg      = findCallable(ctx, infoLeft.getType(), infoLeft, sName,
@@ -2342,8 +2344,9 @@ public class InvocationExpression
                             return null;
                             }
 
-                        m_argMethod = idMethod;
-                        m_method    = infoMethod.getTopmostMethodStructure(infoLeft);
+                        m_argMethod   = idMethod;
+                        m_method      = infoMethod.getTopmostMethodStructure(infoLeft);
+                        m_fBindTarget = fSingleton && !m_method.isFunction();
                         return idMethod;
                         }
                     else if (arg instanceof PropertyConstant)
