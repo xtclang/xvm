@@ -12,6 +12,7 @@ module TestReflection
         testMaskReveal();
         testForm();
         testProps();
+        testMethods();
         testInvoke();
         testInvoke2();
         testInvokeAsync();
@@ -67,17 +68,6 @@ module TestReflection
         Object o = new HashMap<Int, String>();
         assert &o.instanceOf(Map<Int, String>);
         assert !&o.instanceOf(Map<String, String>);
-
-//        Point p = new Point(1, 1);
-//        assert &p.implements_(Stringable);
-//
-//        const Point3(Int x, Int y, Int z) extends Point(x, y);
-//
-//        Point3 p3 = new Point3(1, 1, 1);
-//        assert &p3.extends_(Point);
-//
-//        Range<Int> interval = 0..5;
-//        assert &interval.incorporates_(Interval);
         }
 
     void testMaskReveal()
@@ -195,6 +185,42 @@ module TestReflection
                 console.println("error!");
                 }
             }
+        }
+
+    void testMethods()
+        {
+        console.println("\n** testMethods");
+
+        report(Inner.foo.as(Method));
+        report(Outer.foo.as(Method));
+
+        class Inner
+            {
+            void foo(Int i) {}
+            }
+
+        new Outer<String>().foo("");
+        }
+
+    class Outer<Element>
+        {
+        void foo(Element el)
+            {
+            /// TestReflection.report(foo.as(Method)); // TODO GG doesn't compile
+            TestReflection module_ = TestReflection;
+            module_.report(foo.as(Method));
+            module_.report(Child.bar.as(Method));
+            }
+
+        class Child
+            {
+            void bar(Int i) {}
+            }
+        }
+
+    void report(Method m)
+        {
+        console.println($"method={m}; target={m.Target}");
         }
 
     void testInvoke()

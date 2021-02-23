@@ -476,6 +476,13 @@ public class MethodConstant
         }
 
     @Override
+    public boolean isValueCacheable()
+        {
+        // a Method handle type is context specific (see xRTMethod.createConstHandle)
+        return isFunction();
+        }
+
+    @Override
     public boolean containsUnresolved()
         {
         // the constant is considered to be unresolved until the signature is resolved; however, a

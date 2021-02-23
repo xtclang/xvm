@@ -11,6 +11,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -27,6 +28,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -108,8 +110,36 @@ public class xRTMethod
         {
         if (constant instanceof MethodConstant)
             {
-            ObjectHandle hMethod = makeHandle(frame,
-                frame.getThis().getType(), (MethodConstant) constant);
+            MethodConstant   idMethod = (MethodConstant) constant;
+            IdentityConstant idTarget = idMethod.getNamespace();
+            TypeConstant     typeThis = frame.getThis().getType();
+            TypeConstant     typeTarget;
+
+            if (typeThis.isParameterizedDeep())
+                {
+                if (typeThis.isNestMateOf(idTarget))
+                    {
+                    if (idTarget.equals(typeThis.getDefiningConstant()))
+                        {
+                        typeTarget = typeThis;
+                        }
+                    else
+                        {
+                        typeTarget = ((ClassStructure) idTarget.getComponent()).
+                                getFormalType().resolveGenerics(frame.poolContext(), typeThis);
+                        }
+                    }
+                else
+                    {
+                    typeTarget = idTarget.getType();
+                    }
+                }
+            else
+                {
+                typeTarget = idTarget.getType();
+                }
+
+            ObjectHandle hMethod = makeHandle(frame, typeTarget, idMethod);
 
             return Op.isDeferred(hMethod)
                 ? hMethod.proceed(frame, Utils.NEXT)
@@ -283,7 +313,23 @@ public class xRTMethod
         ConstantPool    pool   = frame.poolContext();
         TypeConstant    type   = idMethod.getSignature().asMethodType(pool, typeTarget);
         MethodStructure method = (MethodStructure) idMethod.getComponent();
-        Annotation[]    aAnno  = method.getAnnotations();
+
+        if (method == null)
+            {
+            TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
+            MethodInfo infoMethod = infoTarget.getMethodById(idMethod);
+
+            method = infoMethod == null
+                ? null
+                : infoMethod.getTopmostMethodStructure(infoTarget);
+            if (method == null)
+                {
+                return new DeferredCallHandle(
+                    xException.makeHandle(frame, "Invalid method: " + idMethod.getValueString()));
+                }
+            }
+
+        Annotation[] aAnno  = method.getAnnotations();
 
         if (aAnno != null && aAnno.length > 0)
             {
@@ -323,6 +369,8 @@ public class xRTMethod
             super(INSTANCE.ensureClass(type), method.getIdentityConstant(), method, type);
 
             m_fMutable = false;
+
+            assert getMethodInfo() != null;
             }
 
         public TypeConstant getTargetType()
