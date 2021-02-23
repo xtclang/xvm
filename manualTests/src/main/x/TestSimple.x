@@ -3,7 +3,7 @@ module TestSimple
     @Inject Console console;
 
     @Tagged(weight=0, tag="a")
-    void run(   )
+    void run()
         {
         report(run.as(Method));
         report(Inner.foo.as(Method));
@@ -22,9 +22,8 @@ module TestSimple
             }
         }
 
-    @Lazy
     @Tagged(weight=2)
-    Int value.calc()
+    @Lazy Int value.calc()
         {
         return 42;
         }

@@ -487,7 +487,7 @@ public class MethodDeclarationStatement
                     List<AnnotationExpression> annotations =
                         ((PropertyDeclarationStatement) getParent().getParent()).annotations; // TODO: replace
 
-                    MethodStructure methodSuper = findRefMethod(property, annotations, sName, params, errs);
+                    MethodStructure methodSuper = findRefMethod(property, annotations, sName, params);
                     if (methodSuper == null)
                         {
                         if (annotations != null)
@@ -874,15 +874,14 @@ public class MethodDeclarationStatement
      * @param annotations  the annotations on the property
      * @param sMethName    the method name
      * @param params       the parameters
-     * @param errs         the error listener
      *
      * @return the matching methods structure of null if none is found
      */
-    protected MethodStructure findRefMethod(PropertyStructure property, List<AnnotationExpression> annotations,
-            String sMethName, List<Parameter> params, ErrorListener errs)
+    protected MethodStructure findRefMethod(PropertyStructure property,
+                                            List<AnnotationExpression> annotations,
+                                            String sMethName, List<Parameter> params)
         {
-        ConstantPool pool = property.getConstantPool();
-
+        ConstantPool   pool   = property.getConstantPool();
         ClassStructure clzRef = (ClassStructure) pool.clzRef().getComponent();
         if (clzRef == null)
             {
@@ -917,15 +916,14 @@ public class MethodDeclarationStatement
                 ClassConstant constClass  = (ClassConstant) pool.getImplicitlyImportedIdentity(sAnnotation);
                 if (constClass == null)
                     {
-                    log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, '@' + sAnnotation);
-                    iter.remove();
+                    // not well-known annotation; continue with others
                     continue;
                     }
 
                 ClassStructure clzMixin = (ClassStructure) constClass.getComponent();
                 if (clzMixin == null)
                     {
-                    // no class for the annotation yet; come back later
+                    // no class for the annotation yet; try others or come back later
                     continue;
                     }
 
