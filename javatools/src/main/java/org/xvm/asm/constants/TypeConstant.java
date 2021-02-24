@@ -1767,9 +1767,10 @@ public abstract class TypeConstant
                 {
                 case Annotation:
                     {
-                    Annotation anno = contrib.getAnnotation();
-
-                    if (!anno.getAnnotationType().getExplicitClassInto().isIntoClassType())
+                    Annotation   anno     = contrib.getAnnotation();
+                    TypeConstant typeInto = anno.getAnnotationType().getExplicitClassInto().
+                                                resolveGenerics(getConstantPool(), this);
+                    if (this.isA(typeInto))
                         {
                         if (listAnnos == null)
                             {
@@ -2659,61 +2660,7 @@ public abstract class TypeConstant
                         infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, compContrib);
                         }
 
-                    // collect type parameters
-                    for (ParamInfo paramContrib : infoContrib.getTypeParams().values())
-                        {
-                        Object    nid       = paramContrib.getNestedIdentity();
-                        ParamInfo paramCurr = mapTypeParams.get(nid);
-                        if (paramCurr == null)
-                            {
-                            mapTypeParams.put(nid, paramContrib);
-                            }
-                        else
-                            {
-                            // check that everything matches between the current and contributed parameter
-                            if (paramContrib.isActualTypeSpecified() != paramCurr.isActualTypeSpecified())
-                                {
-                                if (paramContrib.isFormalType() &&
-                                    paramContrib.getFormalTypeName().equals(paramCurr.getName()))
-                                    {
-                                    // TODO both the current and contributed parameters have a constraint type;
-                                    //      if those types are different, then keep the narrower of the two; if
-                                    //      there is no "narrower of the two", then keep the union of the two;
-                                    //      if there is no union of the two (e.g. 2 class types), then it's an error
-                                    continue;
-                                    }
-
-                                if (paramCurr.isActualTypeSpecified())
-                                    {
-                                    log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_NO_SPEC,
-                                            this.getValueString(), nid,
-                                            paramCurr.getActualType().getValueString(),
-                                            typeContrib.getValueString());
-                                    }
-                                else
-                                    {
-                                    log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_HAS_SPEC,
-                                            this.getValueString(), nid,
-                                            typeContrib.getValueString(),
-                                            paramContrib.getActualType().getValueString());
-                                    }
-                                }
-                            else if (!paramCurr.getActualType().isA(paramContrib.getActualType()))
-                                {
-                                if (isVirtualChild())
-                                    {
-                                    // TODO: how to validate that we can safely override?
-                                    mapTypeParams.put(nid, paramContrib);
-                                    continue;
-                                    }
-                                log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
-                                        this.getValueString(), nid,
-                                        paramCurr.getActualType().getValueString(),
-                                        typeContrib.getValueString(),
-                                        paramContrib.getActualType().getValueString());
-                                }
-                            }
-                        }
+                    layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(), errs);
                     break;
                     }
 
@@ -3222,6 +3169,77 @@ public abstract class TypeConstant
                 }
             layerOnMethods(constId, false, false, null, mapMethods, mapVirtMethods, typeContrib,
                     mapContribMethods, errs);
+            }
+        }
+
+    /**
+     * Layer on the passed type parameter contributions onto the type parameter information already
+     * collected.
+     *
+     * @param mapTypeParams     the type parameters of this type
+     * @param typeContrib       the type whose type parameters are being contributed
+     * @param mapContribParams  the type parameter information to add
+     * @param errs              the error list to log any errors to
+     */
+    protected void layerOnTypeParams(
+            Map<Object, ParamInfo> mapTypeParams,
+            TypeConstant           typeContrib,
+            Map<Object, ParamInfo> mapContribParams,
+            ErrorListener          errs)
+        {
+        for (ParamInfo paramContrib : mapContribParams.values())
+            {
+            Object    nid       = paramContrib.getNestedIdentity();
+            ParamInfo paramCurr = mapTypeParams.get(nid);
+            if (paramCurr == null)
+                {
+                mapTypeParams.put(nid, paramContrib);
+                }
+            else
+                {
+                // check that everything matches between the current and contributed parameter
+                if (paramContrib.isActualTypeSpecified() != paramCurr.isActualTypeSpecified())
+                    {
+                    if (paramContrib.isFormalType() &&
+                        paramContrib.getFormalTypeName().equals(paramCurr.getName()))
+                        {
+                        // TODO both the current and contributed parameters have a constraint type;
+                        //      if those types are different, then keep the narrower of the two; if
+                        //      there is no "narrower of the two", then keep the union of the two;
+                        //      if there is no union of the two (e.g. 2 class types), then it's an error
+                        continue;
+                        }
+
+                    if (paramCurr.isActualTypeSpecified())
+                        {
+                        log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_NO_SPEC,
+                                this.getValueString(), nid,
+                                paramCurr.getActualType().getValueString(),
+                                typeContrib.getValueString());
+                        }
+                    else
+                        {
+                        log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_HAS_SPEC,
+                                this.getValueString(), nid,
+                                typeContrib.getValueString(),
+                                paramContrib.getActualType().getValueString());
+                        }
+                    }
+                else if (!paramCurr.getActualType().isA(paramContrib.getActualType()))
+                    {
+                    if (isVirtualChild())
+                        {
+                        // TODO: how to validate that we can safely override?
+                        mapTypeParams.put(nid, paramContrib);
+                        continue;
+                        }
+                    log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
+                            this.getValueString(), nid,
+                            paramCurr.getActualType().getValueString(),
+                            typeContrib.getValueString(),
+                            paramContrib.getActualType().getValueString());
+                    }
+                }
             }
         }
 
@@ -4806,16 +4824,19 @@ public abstract class TypeConstant
         ConstantPool pool = getConstantPool();
 
         // merge the private view of the annotation on top if the specified view of the underlying type
+        Map<Object          , ParamInfo>    mapMixinParams  = infoMixin.getTypeParams();
         Map<PropertyConstant, PropertyInfo> mapMixinProps   = infoMixin.getProperties();
         Map<MethodConstant  , MethodInfo>   mapMixinMethods = infoMixin.getMethods();
-        Map<Object          , ParamInfo>    mapMixinParams  = infoMixin.getTypeParams();
         TypeConstant                        typeMixin       = infoMixin.getType();
 
+        Map<Object          , ParamInfo   > mapTypeParams  = new HashMap<>(infoSource.getTypeParams());
         Map<PropertyConstant, PropertyInfo> mapProps       = new HashMap<>(infoSource.getProperties());
         Map<MethodConstant  , MethodInfo  > mapMethods     = new HashMap<>(infoSource.getMethods());
         Map<Object          , PropertyInfo> mapVirtProps   = new HashMap<>(infoSource.getVirtProperties());
         Map<Object          , MethodInfo  > mapVirtMethods = new HashMap<>(infoSource.getVirtMethods());
         ListMap<String      , ChildInfo   > mapChildren    = new ListMap<>(infoSource.getChildInfosByName());
+
+        typeTarget.layerOnTypeParams(mapTypeParams, typeMixin, mapMixinParams, errs);
 
         // TODO GG: replace with a call to layerOnProps
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapMixinProps.entrySet())
@@ -4841,7 +4862,7 @@ public abstract class TypeConstant
         Annotation[] aAnnoMixin = collectMixinAnnotations(listProcess);
 
         // TODO handle mapChildren
-        return new TypeInfo(typeTarget, cInvalidations, structBase, 0, false, mapMixinParams,
+        return new TypeInfo(typeTarget, cInvalidations, structBase, 0, false, mapTypeParams,
                 aAnnoClass, aAnnoMixin,
                 infoSource.getExtends(), infoSource.getRebases(), infoSource.getInto(),
                 listProcess, infoSource.getClassChain(), infoSource.getDefaultChain(),

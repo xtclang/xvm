@@ -492,21 +492,22 @@ public class AnnotatedTypeConstant
                     // the annotation could be a mixin "into Class", which means that it's a
                     // non-virtual, compile-time mixin (like @Abstract)
                     TypeConstant typeInto = typeMixin.getExplicitClassInto();
-                    if (typeInto.isIntoClassType())
+
+                    // the mixin has to be able to apply to the remainder of the type constant chain
+                    if (getUnderlyingType().isA(typeInto))
+                        {
+                        listMixinAnnos.add(annotation);
+                        }
+                    else if (typeInto.isIntoClassType())
                         {
                         listClassAnnos.add(annotation);
                         }
                     else
                         {
-                        // the mixin has to be able to apply to the remainder of the type constant chain
-                        if (!getUnderlyingType().isA(typeInto))
-                            {
-                            log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
-                                typeCurr.getUnderlyingType().getValueString(),
-                                typeMixin.getValueString(),
-                                typeInto.getValueString());
-                            }
-                        listMixinAnnos.add(annotation);
+                        log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
+                            typeCurr.getUnderlyingType().getValueString(),
+                            typeMixin.getValueString(),
+                            typeInto.getValueString());
                         }
 
                     listAnnoClz.add(typeAnno.getAnnotation().getAnnotationClass());
