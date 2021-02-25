@@ -1,14 +1,25 @@
 import storage.ObjectStore;
 
+import Catalog.BuiltIn;
+
+
 /**
  *
  */
-service TxManager(ObjectStore[] stores)
+service TxManager(Catalog catalog)
     {
+    // ----- properties ----------------------------------------------------------------------------
+
     /**
-     * Exposes the last completed transaction ID so that connections can
+     * The ObjectStore for each user defined DBObject in the `Catalog`. These provide the I/O for
+     * the database.
      */
-    protected ObjectStore[] stores;
+    protected/private ObjectStore?[] appStores = new ObjectStore[];
+
+    /**
+     * The ObjectStore for each DBObject in the system schema.
+     */
+    protected/private ObjectStore?[] sysStores = new ObjectStore[];
 
     /**
      * Exposes the last completed transaction ID so that connections can
@@ -20,6 +31,47 @@ service TxManager(ObjectStore[] stores)
      * A fake transaction ID that is used to indicate that the [lastCompletedTx] should be used.
      */
     static Int USE_LAST_TX = -1;
+
+
+    // ----- support ----------------------------------------------------------------------------
+
+    /**
+     * Obtain the DBObjectInfo for the specified id.
+     *
+     * @param id  the internal object id
+     *
+     * @return the DBObjectInfo for the specified id
+     */
+    ObjectStore storeFor(Int id)
+        {
+        ObjectStore?[] stores = appStores;
+        Int            index  = id;
+        if (id < 0)
+            {
+            stores = sysStores;
+            index  = BuiltIn.byId(id).ordinal;
+            }
+
+        Int size = stores.size;
+        if (index < size)
+            {
+            return stores[index]?;
+            }
+
+        ObjectStore store = catalog.storeFor(id);
+
+        // save off the ObjectStore (lazy cache)
+        if (index > stores.size)
+            {
+            stores.fill(Null, stores.size..index);
+            }
+        stores[index] = store;
+
+        return store;
+        }
+
+
+    // ----- transactional API ---------------------------------------------------------------------
 
     /**
      * Attempt to commit a transaction.
@@ -33,5 +85,4 @@ service TxManager(ObjectStore[] stores)
         return TODO
         }
 
-    // ----- TODO ----------------------------------------------------------------------------
     }

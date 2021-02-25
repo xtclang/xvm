@@ -62,6 +62,7 @@ service Client<Schema extends RootSchema>
         this.id            = id;
         this.dbUser        = dbUser;
         this.catalog       = catalog;
+        this.jsonSchema    = catalog.jsonSchema;
         this.notifyOnClose = notifyOnClose;
         }
     finally
@@ -77,6 +78,11 @@ service Client<Schema extends RootSchema>
      * The DBUser represented by this Client service.
      */
     public/private Catalog<Schema> catalog;
+
+    /**
+     * A cached reference to the JSON schema.
+     */
+    public/private json.Schema jsonSchema;
 
     /**
      * The id assigned to this Client service.
@@ -255,24 +261,30 @@ service Client<Schema extends RootSchema>
      * this service in order to be executed. This allows CPU-intensive (expensive) work to be dumped
      * back onto the Client instead of letting that work fall onto more critical services, such AS
      * the various `ObjectStore` services.
-     *
-     * TODO figure out what methods are actually needed / used
      */
     class Worker
         {
+        import ecstasy.io.CharArrayReader;
+        import json.ObjectInputStream;
+        import json.ObjectOutputStream;
+
         <Serializable> Serializable readUsing(Mapping<Serializable> mapping, String jsonText)
             {
-            TODO
+            return mapping.read(new ObjectInputStream(jsonSchema, new CharArrayReader(jsonText)).ensureElementInput());
             }
 
-        <Serializable> Serializable readUsing(Mapping<Serializable> mapping, Token[] jsonTokens)
+        <Serializable> Serializable readUsing(Mapping<Serializable> mapping, immutable Token[] jsonTokens)
             {
-            TODO
+            return mapping.read(new ObjectInputStream(jsonSchema, jsonTokens.iterator()).ensureElementInput());
             }
 
-        <Serializable> String writeUsing(Mapping<Serializable> mapping, Serializable value)
+        <Serializable> String writeUsing(Mapping<Serializable> mapping, immutable Serializable value)
             {
-            TODO
+            val buf    = new StringBuffer();
+            val stream = new ObjectOutputStream(jsonSchema, buf);
+            mapping.write(stream.createElementOutput(), value);
+            stream.close();
+            return buf.toString();
             }
         }
 

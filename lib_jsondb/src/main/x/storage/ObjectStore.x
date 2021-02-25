@@ -27,6 +27,8 @@ import oodb.DBObject.DBCategory as Category;
 service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         implements Closeable
     {
+    // ----- properties ----------------------------------------------------------------------------
+
     /**
      * The Catalog that this ObjectStore belongs to.
      */
@@ -38,24 +40,36 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     public/protected DBObjectInfo info;
 
     /**
-     * An error log for detailed error information encountered in the course of operation.
+     * The id of the database object for which this storage exists.
+     */
+    Int id.get()
+        {
+        return info.id;
+        }
+
+    /**
+     * The `DBCategory` of the `DBObject`.
+     */
+    Category category.get()
+        {
+        return info.category;
+        }
+
+    /**
+     * An error log that was provided to this storage when it was created, for the purpose of
+     * logging detailed error information encountered in the course of operation.
      */
     public/protected Appender<String> errs;
 
     /**
      * The current status of this ObjectStore.
      */
-    @Atomic Status status = Closed;
-
-    public/protected Boolean writeable = False;
+    public/protected Status status = Closed;
 
     /**
-     * The `DBCategory` for this `DBObject`.
+     * True iff the ObjectStore is permitted to write to persistent storage.
      */
-    Category category.get()
-        {
-        return info.category;
-        }
+    public/protected Boolean writeable = False;
 
     /**
      * The path that specifies this `DBObject`, and that indicates the storage location for the
@@ -152,12 +166,16 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     Int opCount = 0;
 
     /**
-     * TODO
+     * Determine if this ObjectStore for a DBObject is allowed to write to disk. True iff the
+     * catalog is not read only and the DBObject has not been deprecated or removed.
      */
-    protected Boolean calcWritable()
+    protected Boolean defaultWriteable.get()
         {
         return !catalog.readOnly && info.id > 0 && info.lifeCycle == Current;
         }
+
+
+    // ----- life cycle ----------------------------------------------------------------------------
 
     /**
      * For a closed ObjectStore, examine the contents of the persistent storage and recover from
@@ -172,7 +190,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         if (deepScan(True))
             {
             status    = Running;
-            writeable = calcWritable();
+            writeable = defaultWriteable;
             return True;
             }
 
@@ -193,7 +211,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         if (quickScan())
             {
             status    = Running;
-            writeable = calcWritable();
+            writeable = defaultWriteable;
             return True;
             }
 
@@ -246,29 +264,39 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         Directory dir = dataDir;
         if (dir.exists)
             {
-            // TODO if it's a directory, delete all .json contents, and if it's empty, delete the dir
-//            for (File file : dir.filesRecursively())
-//                {
-//                ++filesUsed;
-//                bytesUsed   += file.size;
-//                lastAccessed = lastAccessed?.maxOf(file.accessed) : file.accessed;
-//                lastModified = lastModified?.maxOf(file.modified) : file.modified;
-//                }
-//
-//            // knowledge of model categorization is owned by the ObjectStore sub-classes; this is
-//            // just an initial guess at this level
-//            model = switch (filesUsed)
-//                {
-//                case 0: Empty;
-//                case 1: Small;
-//                default: Medium;
-//                };
+            // if it's a directory, delete all .json contents, and if it's empty, delete the dir
+            // REVIEW
+            for (File file : findFiles())
+                {
+                file.delete();
+                }
+
+            if (!dir.filesRecursively().next())
+                {
+                dir.deleteRecursively();
+                }
             }
+        }
+
+
+    // ----- IO handling ---------------------------------------------------------------------------
+
+    /**
+     * Determine the files owned by this storage.
+     *
+     * @return an iterator over all of the files that are presumed to be owned by this storage
+     */
+    Iterator<File> findFiles()
+        {
+        // TODO GG shouldn't type inference support this construct: return [].iterator();
+        return dataDir.files().filter(f -> f.name.endsWith(".json")).toArray().iterator();
         }
 
     /**
      * Initialize the state of the ObjectStore by scanning the persistent image of the ObjectStore's
      * data.
+     *
+     * @return True if the scan is clean; false if fixes are required
      */
     Boolean quickScan()
         {
@@ -281,7 +309,10 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         Directory dir = dataDir;
         if (dir.exists)
             {
-            for (File file : dir.filesRecursively())
+            lastAccessed = dir.accessed;
+            lastModified = dir.modified;
+
+            for (File file : findFiles())
                 {
                 ++filesUsed;
                 bytesUsed   += file.size;
@@ -308,6 +339,9 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      *
      * @param fix  (optional) specify True to fix the persistent data if necessary, and False to
      *             deep scan without modifying the persistent data even if an error is detected
+     *
+     * @return True if the scan is clean (which, if `fix` is True, indicates that the scan corrected
+     *         any errors that it encountered)
      */
     Boolean deepScan(Boolean fix = True)
         {

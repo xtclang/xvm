@@ -250,7 +250,10 @@ service Catalog<Schema extends RootSchema>
      * The transaction manager for this `Catalog` object. The transaction manager provides a
      * sequential ordered (non-concurrent) application of potentially concurrent transactions.
      */
-    public/private TxManager txManager;
+    @Lazy public/private TxManager txManager.calc()
+        {
+        return new TxManager(this);
+        }
 
     /**
      * The existing client representations for this `Catalog` object. Each client may have a single
