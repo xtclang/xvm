@@ -324,6 +324,12 @@ public class TypeCompositionStatement
             }
         }
 
+    @Override
+    protected AstNode getCodeContainer()
+        {
+        return null;
+        }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 

@@ -2,22 +2,26 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run(  )
         {
-        report(report.as(Method));
-        report(Inner.foo.as(Method));
-        report(value.as(Property));
-        report(Inner.size.as(Property));
+//        report(report.as(Method));
+//        report(Inner.foo.as(Method));
+//        report(value.as(Property));
+//        report(Inner.price.as(Property));
+        report(new Inner());
 
+        @Tagged(weight=5)
         class Inner
+                implements Tag
             {
             @Tagged(weight=1)
             void foo()
                 {
                 }
 
+            @Override
             @Tagged(weight=3)
-            Int size;
+            Int price;
             }
         }
 
@@ -27,13 +31,18 @@ module TestSimple
         return 42;
         }
 
+    interface Tag
+        {
+        Int price;
+        }
+
     mixin Tagged(String tag="none", Int weight=-1)
-            into Method | Property | Class
+            into Method | Property | Tag
         {
         }
 
     @Tagged(weight=0, tag="a")
-    void report(Method|Property|Class m)
+    void report(Method|Property|Tag m)
         {
         console.println(m);
 
