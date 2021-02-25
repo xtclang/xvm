@@ -133,6 +133,14 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public boolean isIntoClassType()
+        {
+        return isTypeResolved()
+                ? getResolvedType().isIntoClassType()
+                : m_constId.getName().equals("Class");
+        }
+
+    @Override
     public TypeConstant getUnderlyingType()
         {
         if (isTypeResolved())
@@ -145,7 +153,20 @@ public class UnresolvedTypeConstant
     @Override
     public boolean isComposedOfAny(Set<IdentityConstant> setIds)
         {
-        return isTypeResolved() && getResolvedType().isComposedOfAny(setIds);
+        if (isTypeResolved())
+            {
+            return getResolvedType().isComposedOfAny(setIds);
+            }
+
+        String sName = m_constId.getName();
+        for (IdentityConstant id : setIds)
+            {
+            if (id.getName().equals(sName))
+                {
+                return true;
+                }
+            }
+        return false;
         }
 
     @Override

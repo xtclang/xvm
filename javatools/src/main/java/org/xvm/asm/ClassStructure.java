@@ -1140,9 +1140,7 @@ public class ClassStructure
 
         TypeConstant typeInto = typeMixin.getExplicitClassInto();
 
-        // if "typeInto" is still unresolved we cannot possibly answer the question;
-        // let's assume that the caller will compensate for our random answer at this time
-        return !typeInto.containsUnresolved() && typeInto.isIntoClassType() &&
+        return typeInto.isIntoClassType() &&
                !typeInto.isComposedOfAny(Collections.singleton(getIdentityConstant()));
         }
 
