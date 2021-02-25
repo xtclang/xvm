@@ -125,6 +125,14 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public TypeConstant getExplicitClassInto()
+        {
+        return isTypeResolved()
+                ? getResolvedType().getExplicitClassInto()
+                : super.getExplicitClassInto();
+        }
+
+    @Override
     public TypeConstant getUnderlyingType()
         {
         if (isTypeResolved())

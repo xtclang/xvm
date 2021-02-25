@@ -582,32 +582,38 @@ public class ClassStructure
                 continue;
                 }
 
+            boolean fCheck;
             switch (contrib.getComposition())
                 {
-                case Into:
-                    if (!fAllowInto)
-                        {
-                        break;
-                        }
-                    // fall through
                 case Annotation:
+                    fCheck = !isIntoClassMixin(typeContrib);
+                    break;
+
+                case Into:
+                    fCheck = fAllowInto;
+                    break;
+
                 case Implements:
                 case Incorporates:
                 case Extends:
-                    {
-                    ClassStructure clzContrib = (ClassStructure)
-                            typeContrib.getSingleUnderlyingClass(true).getComponent();
-                    child = clzContrib.findChildDeep(sName, false);
-                    if (child != null)
-                        {
-                        return child;
-                        }
+                    fCheck = true;
                     break;
-                    }
 
                 default:
                     // ignore any other contributions
+                    fCheck = false;
                     break;
+                }
+
+            if (fCheck)
+                {
+                ClassStructure clzContrib = (ClassStructure)
+                        typeContrib.getSingleUnderlyingClass(true).getComponent();
+                child = clzContrib.findChildDeep(sName, false);
+                if (child != null)
+                    {
+                    return child;
+                    }
                 }
             }
         return null;
@@ -1111,6 +1117,36 @@ public class ClassStructure
         }
 
     /**
+     * Check if the specified annotation mixin type is "into Class", meaning that the mixin applies
+     * to the meta-data of the class and is not actually mixed into the class functionality itself.
+     *
+     * A slight complication comes from a scenario when the mixin applies to an intersection of
+     * types, for example:
+     * <code>
+     *   <pre>
+     *     mixin Override
+     *         into Class | Property | Method
+     *   </pre>
+     * </code>
+     * In such a case it may be a "real" mixin, if it applies to the class itself.
+     *
+     * @param typeMixin  the annotation mixin type
+     *
+     * @return true iff the annotation mixin applies to the class meta-data
+     */
+    public boolean isIntoClassMixin(TypeConstant typeMixin)
+        {
+        assert typeMixin.isExplicitClassIdentity(true);
+
+        TypeConstant typeInto = typeMixin.getExplicitClassInto();
+
+        // if "typeInto" is still unresolved we cannot possibly answer the question;
+        // let's assume that the caller will compensate for our random answer at this time
+        return !typeInto.containsUnresolved() && typeInto.isIntoClassType() &&
+               !typeInto.isComposedOfAny(Collections.singleton(getIdentityConstant()));
+        }
+
+    /**
      * Check if this class has the specified class as any of its contributions (recursively).
      *
      * @param idClass  the class to test if this class has a contribution of
@@ -1171,27 +1207,34 @@ public class ClassStructure
 
             if (typeContrib.isExplicitClassIdentity(true))
                 {
+                boolean fCheck;
                 switch (contrib.getComposition())
                     {
-                    case Into:
-                        if (!fAllowInto)
-                            {
-                            break;
-                            }
-                        // fall through
                     case Annotation:
+                        {
+                        fCheck = !isIntoClassMixin(typeContrib);
+                        break;
+                        }
+                    case Into:
+                        fCheck = fAllowInto;
+                        break;
+
                     case Implements:
                     case Incorporates:
                     case Extends:
                     case Delegates:
-                        {
-                        contribMatch = checkContribution(contrib, typeContrib, idContrib);
+                        fCheck = true;
                         break;
-                        }
 
                     default:
                         // ignore any other contributions
+                        fCheck = false;
                         break;
+                    }
+
+                if (fCheck)
+                    {
+                    contribMatch = checkContribution(contrib, typeContrib, idContrib);
                     }
                 }
             else if (typeContrib instanceof UnionTypeConstant)
@@ -1453,13 +1496,18 @@ public class ClassStructure
 
         for (Contribution contrib : getContributionsAsList())
             {
+            TypeConstant type = contrib.getTypeConstant();
             switch (contrib.getComposition())
                 {
+                case Annotation:
+                    if (isIntoClassMixin(type))
+                        {
+                        break;
+                        }
+                    // break through
                 case Extends:
                 case Incorporates:
-                case Annotation:
                 case Implements:
-                    TypeConstant type = contrib.getTypeConstant();
                     if (type.containsUnresolved())
                         {
                         return null;
@@ -1473,6 +1521,7 @@ public class ClassStructure
 
                         list.add(type.getSingleUnderlyingClass(true));
                         }
+                    break;
                 }
             }
 
@@ -1572,28 +1621,36 @@ public class ClassStructure
                 continue;
                 }
 
+            boolean fCheck;
             switch (contrib.getComposition())
                 {
-                case Into:
-                    if (!fAllowInto)
-                        {
-                        break;
-                        }
                 case Annotation:
+                    fCheck = !isIntoClassMixin(typeContrib);
+                    break;
+
+                case Into:
+                    fCheck = fAllowInto;
+                    break;
+
                 case Delegates:
                 case Implements:
                 case Incorporates:
                 case Extends:
-                    ClassStructure clzContrib = (ClassStructure)
-                            typeContrib.getSingleUnderlyingClass(true).getComponent();
-                    if (clzContrib.containsGenericParamTypeImpl(sName, false))
-                        {
-                        return true;
-                        }
+                    fCheck = true;
                     break;
 
                 default:
                     throw new IllegalStateException();
+                }
+
+            if (fCheck)
+                {
+                ClassStructure clzContrib = (ClassStructure)
+                        typeContrib.getSingleUnderlyingClass(true).getComponent();
+                if (clzContrib.containsGenericParamTypeImpl(sName, false))
+                    {
+                    return true;
+                    }
                 }
             }
 
@@ -1650,42 +1707,48 @@ public class ClassStructure
                 continue;
                 }
 
+            boolean fCheck;
             switch (contrib.getComposition())
                 {
-                case Into:
-                    if (!fAllowInto)
-                        {
-                        break;
-                        }
                 case Annotation:
+                    fCheck = !isIntoClassMixin(typeContrib);
+                    break;
+
+                case Into:
+                    fCheck = fAllowInto;
+                    break;
+
                 case Delegates:
                 case Implements:
                 case Incorporates:
                 case Extends:
+                    fCheck = true;
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+
+            if (fCheck)
+                {
+                ClassStructure clzContrib = (ClassStructure)
+                        typeContrib.getSingleUnderlyingClass(true).getComponent();
+                TypeConstant type = clzContrib.getGenericParamTypeImpl(
+                                        pool, sName, typeResolved.getParamTypes(), false);
+                if (type != null)
                     {
-                    ClassStructure clzContrib = (ClassStructure)
-                            typeContrib.getSingleUnderlyingClass(true).getComponent();
-                    TypeConstant type = clzContrib.getGenericParamTypeImpl(
-                                            pool, sName, typeResolved.getParamTypes(), false);
+                    return type;
+                    }
+
+                if (clzContrib.isVirtualChild() && typeResolved.isVirtualChild())
+                    {
+                    type = clzContrib.getVirtualParent().getGenericParamTypeImpl(pool, sName,
+                                typeResolved.getParentType().getParamTypes(), true);
                     if (type != null)
                         {
                         return type;
                         }
-
-                    if (clzContrib.isVirtualChild() && typeResolved.isVirtualChild())
-                        {
-                        type = clzContrib.getVirtualParent().getGenericParamTypeImpl(pool, sName,
-                                    typeResolved.getParentType().getParamTypes(), true);
-                        if (type != null)
-                            {
-                            return type;
-                            }
-                        }
-                    break;
                     }
-
-                default:
-                    throw new IllegalStateException();
                 }
             }
 
@@ -1952,6 +2015,11 @@ public class ClassStructure
                         break;
 
                     case Annotation:
+                        if (isIntoClassMixin(typeContrib))
+                            {
+                            break;
+                            }
+                        // break through
                     case Incorporates:
                     case Extends:
                     case Implements:
@@ -2210,6 +2278,11 @@ public class ClassStructure
                     break;
 
                 case Annotation:
+                    if (isIntoClassMixin(typeContrib))
+                        {
+                        break;
+                        }
+                    // break through
                 case Incorporates:
                 case Extends:
                     {
@@ -2394,6 +2467,11 @@ public class ClassStructure
                     break;
 
                 case Annotation:
+                    if (isIntoClassMixin(typeContrib))
+                        {
+                        continue nextContribution;
+                        }
+                    // break through;
                 case Incorporates:
                 case Extends:
                     // the identity constant for those contribution is always a class
@@ -2540,6 +2618,11 @@ public class ClassStructure
                     break;
 
                 case Annotation:
+                    if (isIntoClassMixin(typeContrib))
+                        {
+                        continue nextContribution;
+                        }
+                    // break through
                 case Incorporates:
                 case Extends:
                     // the identity constant for those contribution is always a class
@@ -2819,6 +2902,11 @@ public class ClassStructure
                     break;
 
                 case Annotation:
+                    if (isIntoClassMixin(typeContrib))
+                        {
+                        continue nextContribution;
+                        }
+                    // break through
                 case Incorporates:
                 case Extends:
                     // the identity constant for those contribution is always a class

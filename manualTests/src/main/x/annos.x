@@ -8,6 +8,7 @@ module TestAnnotations
         testMixin();
         testMixin2();
         testMethodMixin();
+        testClassMixin();
         }
 
     function void (Int) logger = (Int v) ->
@@ -176,8 +177,19 @@ module TestAnnotations
         assert m.tag == "none" && m.weight == 1;
         }
 
+    void testClassMixin()
+        {
+        Inner inner = new Inner();
+        assert !inner.is(Tagged);
+
+        @Tagged(weight=2)
+        class Inner
+            {
+            }
+        }
+
     mixin Tagged(String tag="none", Int weight=-1)
-            into Method
+            into Method | Class
         {
         }
     }
