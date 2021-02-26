@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import java.util.List;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -690,9 +691,11 @@ public abstract class IdentityConstant
             // if a class name is specified in code, and it resolves to a class constant, then the type
             // of the expression that yields this constant is the Class type:
             //  Class<PublicType, ProtectedType, PrivateType, StructType>
-            TypeConstant type = getType().removeAccess().normalizeParameters();
+            TypeConstant type      = getType().removeAccess().normalizeParameters();
+            Component    component = getComponent();
+            Annotation[] aAnnos;
 
-            switch (getComponent().getFormat())
+            switch (component.getFormat())
                 {
                 case ENUM:
                     return pool.ensureParameterizedTypeConstant(pool.typeEnumeration(), type);
@@ -700,12 +703,24 @@ public abstract class IdentityConstant
                 case ENUMVALUE:
                     return pool.ensureParameterizedTypeConstant(pool.typeEnumValue(), type);
 
+                case PROPERTY:
+                    // this is a DecoratedClassConstant
+                    aAnnos = Annotation.NO_ANNOTATIONS;
+                    break;
+
                 default:
-                    return pool.ensureParameterizedTypeConstant(pool.typeClass(), type,
-                        pool.ensureAccessTypeConstant(type, Access.PROTECTED),
-                        pool.ensureAccessTypeConstant(type, Access.PRIVATE),
-                        pool.ensureAccessTypeConstant(type, Access.STRUCT));
+                    aAnnos = ((ClassStructure) component).collectAnnotations(true);
+                    break;
                 }
+
+            TypeConstant typeClz = pool.ensureParameterizedTypeConstant(pool.typeClass(), type,
+                pool.ensureAccessTypeConstant(type, Access.PROTECTED),
+                pool.ensureAccessTypeConstant(type, Access.PRIVATE),
+                pool.ensureAccessTypeConstant(type, Access.STRUCT));
+
+            return aAnnos.length == 0
+                    ? typeClz
+                    : pool.ensureAnnotatedTypeConstant(typeClz, aAnnos);
             }
 
         throw new UnsupportedOperationException("constant-class=" + getClass().getSimpleName());

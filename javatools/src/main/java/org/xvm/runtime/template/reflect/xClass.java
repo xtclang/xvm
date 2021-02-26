@@ -3,6 +3,7 @@ package org.xvm.runtime.template.reflect;
 
 import java.util.Iterator;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -81,7 +82,7 @@ public class xClass
     @Override
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
-        return typeActual.equals(getCanonicalType())
+        return typeActual.equals(getCanonicalType()) || !isCanonicalStructure(typeActual)
             ? super.ensureClass(typeActual)
             : getCanonicalClass().ensureCanonicalizedComposition(typeActual);
         }
@@ -425,6 +426,29 @@ public class xClass
         return hTarget.getComposition().getType().getParamType(0);
         }
 
+    /**
+     * @return if the structure for the specified type is the same as the structure for the
+     *         canonical Class type
+     */
+    private boolean isCanonicalStructure(TypeConstant type)
+        {
+        if (type.isAnnotated())
+            {
+            ConstantPool pool  = type.getConstantPool();
+            Annotation[] aAnno = type.getAnnotations();
+            for (Annotation anno : aAnno)
+                {
+                ClassConstant idAnno = (ClassConstant) anno.getAnnotationClass();
+                if (idAnno.equals(pool.clzAbstract()) ||
+                    idAnno.equals(pool.clzOverride()))
+                    {
+                    continue;
+                    }
+                return false;
+                }
+            }
+        return true;
+        }
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
