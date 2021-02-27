@@ -785,7 +785,7 @@ interface Type<DataType, OuterType>
                 assert (Type!<> t1, Type!<> t2) := relational();
                 if (t1 == Nullable && !insideIntersection)
                     {
-                    if (t2.relational())
+                    if (t2.relational() || t2.annotated())
                         {
                         buf.add('(');
                         t2  .appendTo(buf);

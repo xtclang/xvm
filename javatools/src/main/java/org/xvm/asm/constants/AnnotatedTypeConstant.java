@@ -535,7 +535,7 @@ public class AnnotatedTypeConstant
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
         // this logic is identical to the union of the annotation type and the underlying type
-        if (typeLeft instanceof UnionTypeConstant || typeLeft.isAnnotated())
+        if (typeLeft.isRelationalType() || typeLeft.isAnnotated())
             {
             return super.calculateRelationToLeft(typeLeft);
             }

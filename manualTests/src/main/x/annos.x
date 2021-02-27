@@ -7,7 +7,7 @@ module TestAnnotations
         testWatch();
         testMixin();
         testMixin2();
-        testMethodMixin(Int:0.toUnchecked());
+        testMethodMixin();
         testClassMixin();
         }
 
@@ -169,7 +169,7 @@ module TestAnnotations
         }
 
     @Tagged(weight=1)
-    void testMethodMixin(@Tagged(weight=2) @Unchecked Int i)
+    void testMethodMixin(@Tagged(weight=2) (@Unchecked Int)? i = Null)
         {
         Method m = testMethodMixin;
         console.println(m);
