@@ -132,6 +132,29 @@ public class Parameter
         }
 
     /**
+     * Add an annotation to this parameter.
+     *
+     * @param anno  the annotation to add
+     */
+    public void addAnnotation(Annotation anno)
+        {
+        assert isParameter();
+
+        int cAnnos = m_aAnnotations.length;
+        if (cAnnos == 0)
+            {
+            m_aAnnotations = new Annotation[] {anno};
+            }
+        else
+            {
+            Annotation[] aAnnos = new Annotation[cAnnos + 1];
+            System.arraycopy(m_aAnnotations, 0, aAnnos, 0, cAnnos);
+            aAnnos[cAnnos] = anno;
+            m_aAnnotations = aAnnos;
+            }
+        }
+
+    /**
      * Check if all annotations are resolved; extract those that apply to the Parameter itself.
      *
      * @return true if the annotations have been resolved; false if this method has to be called

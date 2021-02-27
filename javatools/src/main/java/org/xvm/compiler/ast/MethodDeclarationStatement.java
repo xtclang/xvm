@@ -567,6 +567,27 @@ public class MethodDeclarationStatement
             // validateContent() stage
             mgr.processChildrenExcept((child) -> child == body);
 
+            List<Parameter> listParams = params;
+            if (listParams != null)
+                {
+                for (int i = 0, c = listParams.size(); i < c; i++)
+                    {
+                    Parameter param = listParams.get(i);
+
+                    TypeExpression exprType = param.getType();
+                    while (exprType instanceof AnnotatedTypeExpression)
+                        {
+                        AnnotatedTypeExpression exprAnno = (AnnotatedTypeExpression) exprType;
+                        if (exprAnno.isDisassociated())
+                            {
+                            method.getParam(i).addAnnotation(
+                                exprAnno.getAnnotation().ensureAnnotation(pool()));
+                            }
+                        exprType = exprAnno.type;
+                        }
+                    }
+                }
+
             // sort out which annotations go on the method or its parameters, and which belong to
             // the return type
             if (!method.resolveAnnotations() || !method.resolveTypedefs())
@@ -620,25 +641,6 @@ public class MethodDeclarationStatement
             if (poolId != poolStmt)
                 {
                 poolId.invalidateTypeInfos(idClz);
-                }
-            }
-
-        // check for "disassociated" parameters
-        List<Parameter> listParams = params;
-        if (listParams != null && listParams.size() > 0)
-            {
-            for (int i = 0, c = listParams.size(); i < c; i++)
-                {
-                Parameter param = listParams.get(i);
-
-                TypeExpression exprType = param.getType();
-                if (exprType instanceof AnnotatedTypeExpression &&
-                        ((AnnotatedTypeExpression) exprType).isDisassociated())
-                    {
-                    log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
-                            ((AnnotatedTypeExpression) exprType).getAnnotation());
-                    return;
-                    }
                 }
             }
 

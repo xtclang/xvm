@@ -7,7 +7,7 @@ module TestAnnotations
         testWatch();
         testMixin();
         testMixin2();
-        testMethodMixin();
+        testMethodMixin(Int:0.toUnchecked());
         testClassMixin();
         }
 
@@ -169,12 +169,13 @@ module TestAnnotations
         }
 
     @Tagged(weight=1)
-    void testMethodMixin()
+    void testMethodMixin(@Tagged(weight=2) @Unchecked Int i)
         {
         Method m = testMethodMixin;
+        console.println(m);
 
         assert m.is(Tagged);
-        assert m.tag == "none" && m.weight == 1;
+        assert m.tag == "method" && m.weight == 1;
         }
 
     void testClassMixin()
@@ -188,9 +189,30 @@ module TestAnnotations
             }
         }
 
-    mixin Tagged(String tag="none", Int weight=-1)
-            into Method | Class
+    mixin Tagged(String tag="", Int weight=-1)
+            into Parameter | Method | Class
         {
+        String tag.get()
+            {
+            String tag = super();
+            return tag.size > 0    ? tag      :
+                this.is(Parameter) ? "param"  :
+                this.is(Method)    ? "method" :
+                                     "class";
+            }
+
+        @Override
+        Int estimateStringLength()
+            {
+            return super() + tag.size + "weight=".size + 2;
+            }
+
+        @Override
+        Appender<Char> appendTo(Appender<Char> buf)
+            {
+            $"@Tagged({tag} {weight}) ".appendTo(buf);
+            return super(buf);
+            }
         }
     }
 

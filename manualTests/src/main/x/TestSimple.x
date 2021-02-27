@@ -4,46 +4,49 @@ module TestSimple
 
     void run()
         {
-//        report(report.as(Method));
-//        report(Inner.foo.as(Method));
-//        report(value.as(Property));
-//        report(Inner.price.as(Property));
-        report(Inner.as(Class));
+        report(Inner.foo);
+        report(Inner.bar);
 
-        @Tagged(weight=5)
         class Inner
             {
             @Tagged(weight=1)
-            void foo()
+            void foo(@Unchecked @Tagged(weight=2) Int i)
                 {
                 }
 
-            @Tagged(weight=3)
-            Int price;
+            @Tagged(weight=3, tag="m-tag")
+            void bar(@Tagged(weight=4, tag="p-tag") @Unchecked Int i)
+                {
+                }
             }
         }
 
-    @Tagged(weight=2)
-    @Lazy Int value.calc()
-        {
-        return 42;
-        }
-
     mixin Tagged(String tag="none", Int weight=-1)
-            into Method | Property | Class
+            into Method | Parameter
         {
+        @Override
+        Int estimateStringLength()
+            {
+            return super() + tag.size + "weight=".size + 2;
+            }
+
+        @Override
+        Appender<Char> appendTo(Appender<Char> buf)
+            {
+            $"@Tagged({tag} {weight}) ".appendTo(buf);
+            return super(buf);
+            }
         }
 
-    @Tagged(weight=0, tag="a")
-    void report(Method|Property|Class m)
+    void report(Method m)
         {
         console.println(m);
+        console.println();
 
         if (m.is(Tagged))
             {
             assert m.tag.size > 0;
             assert m.weight >= 0;
-            console.println($"tag={m.tag} weight={m.weight}\n");
             }
         }
     }

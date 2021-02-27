@@ -353,7 +353,8 @@ public class AnnotatedTypeExpression
                 }
             else
                 {
-                m_fDisassociate = typeInto.isIntoVariableType();
+                m_fDisassociate = typeInto.isIntoVariableType() ||
+                        isMethodParameter() && typeInto.isIntoMethodParameterType();;
                 }
             }
 
@@ -376,6 +377,19 @@ public class AnnotatedTypeExpression
             }
 
         return type;
+        }
+
+    /**
+     * @return true iff this expression is a child of {@link Parameter} node.
+     */
+    private boolean isMethodParameter()
+        {
+        AstNode parent = getParent();
+        while (parent instanceof AnnotatedTypeExpression)
+            {
+            parent = parent.getParent();
+            }
+        return parent instanceof Parameter;
         }
 
 
