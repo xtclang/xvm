@@ -177,6 +177,10 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
             }
 
         /**
+         * Verify that the directory can be written to.
+         *
+         * @return True if the check passes
+         *
          * @throws AccessDenied if the DirectoryFileStore is ReadOnly
          */
         protected Boolean checkWritable()
