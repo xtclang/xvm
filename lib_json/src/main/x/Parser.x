@@ -186,8 +186,11 @@ class Parser
      * value, an array of JSON values, or a JSON object, which is a sequence of name/value pairs.
      *
      * @param skipped  the optional array to accrue skipped tokens into
+     *
+     * @return the first token of the JSON document skipped
+     * @return the last token of the JSON document skipped
      */
-    void skipDoc(Token[]? skipped)
+    (Token first, Token last) skipDoc(Token[]? skipped)
         {
         switch (token?.id)
             {
@@ -198,7 +201,7 @@ class Parser
             case StrVal:
                 Token value = takeToken();
                 skipped?.add(value);
-                return;
+                return value, value;
 
             case ArrayEnter:
                 return skipArray(skipped);
@@ -207,9 +210,8 @@ class Parser
                 return skipObject(skipped);
             }
 
-        throw eof
-                ? new EndOfFile()
-                : new IllegalJSON($"unexpected token: {token}");
+        throw eof ? new EndOfFile()
+                  : new IllegalJSON($"unexpected token: {token}");
         }
 
     /**
@@ -237,19 +239,29 @@ class Parser
      * Skip an array of JSON values.
      *
      * @param skipped  the optional array to accrue skipped tokens into
+     *
+     * @return the first token of the JSON array skipped
+     * @return the last token of the JSON array skipped
      */
-    void skipArray(Token[]? skipped)
+    (Token first, Token last) skipArray(Token[]? skipped)
         {
-        expect(ArrayEnter, skipped);
-        if (!match(ArrayExit, skipped))
+        Token first = expect(ArrayEnter, skipped);
+        Token last;
+
+        if (last := match(ArrayExit, skipped))
+            {
+            }
+        else
             {
             do
                 {
                 skipDoc(skipped);
                 }
             while (match(Comma, skipped));
-            expect(ArrayExit, skipped);
+            last = expect(ArrayExit, skipped);
             }
+
+        return first, last;
         }
 
     /**
@@ -308,11 +320,19 @@ class Parser
      * Skip a JSON object, which is a sequence of name/value pairs.
      *
      * @param skipped  the optional array to accrue skipped tokens into
+     *
+     * @return the first token of the JSON object skipped
+     * @return the last token of the JSON object skipped
      */
-    void skipObject(Token[]? skipped)
+    (Token first, Token last) skipObject(Token[]? skipped)
         {
-        expect(ObjectEnter, skipped);
-        if (!match(ObjectExit, skipped))
+        Token first = expect(ObjectEnter, skipped);
+        Token last;
+
+        if (last := match(ObjectExit, skipped))
+            {
+            }
+        else
             {
             do
                 {
@@ -321,8 +341,10 @@ class Parser
                 skipDoc(skipped);
                 }
             while (match(Comma, skipped));
-            expect(ObjectExit, skipped);
+            last = expect(ObjectExit, skipped);
             }
+
+        return first, last;
         }
 
     /**
@@ -345,8 +367,7 @@ class Parser
         {
         Token? token = this.token;
         advance();
-        return token?;
-        throw new IllegalJSON("Unexpected EOF");
+        return token ?: throw new IllegalJSON("Unexpected EOF");
         }
 
     /**
