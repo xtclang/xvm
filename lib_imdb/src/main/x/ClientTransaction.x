@@ -3,14 +3,20 @@ class ClientTransaction<Schema extends oodb.RootSchema>
         extends ClientDBObject
         implements oodb.Transaction<Schema>
     {
-    construct(ServerRootSchema dbSchema, oodb.DBTransaction dbTransaction)
+    construct(ServerRootSchema        dbSchema,
+              oodb.DBTransaction      dbTransaction,
+              oodb.Transaction.TxInfo txInfo)
         {
         construct ClientDBObject(dbSchema);
 
         dbTransaction_ = dbTransaction;
+        this.txInfo    = txInfo;
         }
 
     protected oodb.DBTransaction dbTransaction_;
+
+    @Override
+    public/protected oodb.Transaction.TxInfo txInfo;
 
     @Override
     Boolean commit()

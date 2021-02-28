@@ -111,7 +111,10 @@ class ClientAddressBookSchema
                 UInt? id = Null, db.DBTransaction.Priority priority = Normal,
                 Int retryCount = 0)
         {
-        ClientTransaction tx = new ClientTransaction();
+        import db.Transaction.TxInfo;
+        TxInfo txInfo = new TxInfo(timeout, name, id, priority, retryCount);
+
+        ClientTransaction tx = new ClientTransaction(txInfo);
         transaction = tx;
         return tx;
         }
@@ -133,10 +136,12 @@ class ClientAddressBookSchema
             extends imdb.ClientTransaction<AddressBookDB.AddressBookSchema>
             implements AddressBookDB.AddressBookSchema
         {
-        construct()
+        construct(db.Transaction.TxInfo txInfo)
             {
             construct imdb.ClientTransaction(
-                ServerAddressBookSchema, ServerAddressBookSchema.createDBTransaction());
+                ServerAddressBookSchema,
+                ServerAddressBookSchema.createDBTransaction(),
+                txInfo);
             }
 
         // schema properties
