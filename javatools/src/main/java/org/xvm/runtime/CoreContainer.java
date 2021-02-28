@@ -1,6 +1,10 @@
 package org.xvm.runtime;
 
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
@@ -14,12 +18,18 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
-import org.xvm.runtime.template.xService.ServiceHandle;
+import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
+
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
+
+import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template._native.xTerminalConsole;
 
@@ -171,6 +181,11 @@ public class CoreContainer
         // +++ Compiler
         TypeConstant typeCompiler = pool.ensureEcstasyTypeConstant("lang.src.Compiler");
         addResourceSupplier(new InjectionKey("compiler" , typeCompiler), this::ensureCompiler);
+
+        // ++ xvmProperties
+        TypeConstant typeProps = pool.ensureParameterizedTypeConstant(pool.typeMap(),
+                                    pool.typeString(), pool.typeString());
+        addResourceSupplier(new InjectionKey("properties" , typeProps), this::ensureProperties);
         }
 
     protected ObjectHandle ensureDefaultClock(Frame frame, ObjectHandle hOpts)
@@ -451,6 +466,64 @@ public class CoreContainer
         return hCompiler;
         }
 
+    protected ObjectHandle ensureProperties(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hProps = m_hProperties;
+        if (hProps == null)
+            {
+            List<StringHandle> listKeys = new ArrayList<>();
+            List<StringHandle> listVals = new ArrayList<>();
+            for (String sKey : (Set<String>) (Set) System.getProperties().keySet())
+                {
+                if (sKey.startsWith("xvm."))
+                    {
+                    String sVal = System.getProperty(sKey);
+                    if (sVal != null)
+                        {
+                        listKeys.add(xString.makeHandle(sKey.substring(4)));
+                        listVals.add(xString.makeHandle(sVal));
+                        }
+                    }
+                }
+            ArrayHandle haKeys   = xArray.makeStringArrayHandle(listKeys.toArray(Utils.STRINGS_NONE));
+            ArrayHandle haValues = xArray.makeStringArrayHandle(listVals.toArray(Utils.STRINGS_NONE));
+
+            ConstantPool pool    = frame.poolContext();
+            TypeConstant typeMap = pool.ensureParameterizedTypeConstant(
+                                    pool.ensureEcstasyTypeConstant("collections.ListMap"),
+                                    pool.typeString(),
+                                    pool.typeString());
+
+            switch (Utils.constructListMap(frame,
+                            f_templates.resolveClass(typeMap), haKeys, haValues, Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    hProps = frame.popStack();
+                    break;
+
+                case Op.R_EXCEPTION:
+                    break;
+
+                case Op.R_CALL:
+                    {
+                    Frame frameNext = frame.m_frameNext;
+                    frameNext.addContinuation(frameCaller ->
+                        {
+                        m_hProperties = frameCaller.peekStack();
+                        return Op.R_NEXT;
+                        });
+                    return new DeferredCallHandle(frameNext);
+                    }
+
+                default:
+                    throw new IllegalStateException();
+                }
+            m_hProperties = hProps;
+            }
+
+        return hProps;
+        }
+
     /**
      * Helper method to get a property on the specified target.
      */
@@ -546,4 +619,5 @@ public class CoreContainer
     private ObjectHandle m_hLinker;
     private ObjectHandle m_hRepository;
     private ObjectHandle m_hCompiler;
+    private ObjectHandle m_hProperties;
     }

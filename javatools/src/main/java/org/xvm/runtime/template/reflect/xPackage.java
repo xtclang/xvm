@@ -156,7 +156,7 @@ public class xPackage
                 }
             }
 
-        StringHandle[] ahNames   = listNames  .toArray(new StringHandle[0]);
+        StringHandle[] ahNames   = listNames  .toArray(Utils.STRINGS_NONE);
         ObjectHandle[] ahClasses = listClasses.toArray(Utils.OBJECTS_NONE);
 
         ArrayHandle hNames = xArray.makeStringArrayHandle(ahNames);

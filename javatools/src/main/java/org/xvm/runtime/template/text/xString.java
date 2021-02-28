@@ -553,7 +553,7 @@ public class xString
         {
         if (ARRAY_EMPTY == null)
             {
-            ARRAY_EMPTY = xArray.makeStringArrayHandle(new StringHandle[0]);
+            ARRAY_EMPTY = xArray.makeStringArrayHandle(Utils.STRINGS_NONE);
             }
         return ARRAY_EMPTY;
         }
