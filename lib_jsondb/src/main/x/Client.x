@@ -146,6 +146,29 @@ service Client<Schema extends RootSchema>
         }
 
     /**
+     * Obtain the current transaction, creating one if necessary.
+     *
+     * @return the Transaction
+     * @return True if the caller is responsible for committing the returned transaction after using
+     *         it
+     */
+    (Transaction + Schema tx, Boolean autocommit) ensureTransaction()
+        {
+        check();
+
+        var     tx         = this.tx;
+        Boolean autocommit = False;
+
+        if (tx == Null)
+            {
+            tx         = (conn?: assert).createTransaction(name="autocommit");
+            autocommit = True;
+            }
+
+        return tx, autocommit;
+        }
+
+    /**
      * Obtain the DBObjectInfo for the specified id.
      *
      * @param id  the internal object id
@@ -268,16 +291,40 @@ service Client<Schema extends RootSchema>
         import json.ObjectInputStream;
         import json.ObjectOutputStream;
 
+        /**
+         * Deserialize a value from a JSON string.
+         *
+         * @param mapping   the JSON mapping to use for deserialization
+         * @param jsonText  the String containing the JSON formatted value
+         *
+         * @return the deserialized value
+         */
         <Serializable> Serializable readUsing(Mapping<Serializable> mapping, String jsonText)
             {
             return mapping.read(new ObjectInputStream(jsonSchema, new CharArrayReader(jsonText)).ensureElementInput());
             }
 
+        /**
+         * Deserialize a value from JSON tokens.
+         *
+         * @param mapping     the JSON mapping to use for deserialization
+         * @param jsonTokens  the previously lexed JSON tokens
+         *
+         * @return the deserialized value
+         */
         <Serializable> Serializable readUsing(Mapping<Serializable> mapping, immutable Token[] jsonTokens)
             {
             return mapping.read(new ObjectInputStream(jsonSchema, jsonTokens.iterator()).ensureElementInput());
             }
 
+        /**
+         * Deserialize a value from a JSON string.
+         *
+         * @param mapping  the JSON mapping to use for serialization
+         * @param value    the value to serialize
+         *
+         * @return a String containing the JSON formatted value
+         */
         <Serializable> String writeUsing(Mapping<Serializable> mapping, immutable Serializable value)
             {
             val buf    = new StringBuffer();
@@ -514,7 +561,15 @@ service Client<Schema extends RootSchema>
                                                  DBTransaction.Priority priority    = Normal,
                                                  Int                    retryCount  = 0)
             {
-            TODO impl
+            assert outer.tx == Null;
+
+            import Transaction.TxInfo;
+            TxInfo txInfo = new TxInfo(timeout, name, id, priority, retryCount);
+
+            (Transaction + Schema) newTx = new Transaction(info_, txInfo).as(Transaction + Schema);
+
+            outer.tx = newTx;
+            return newTx;
             }
 
         @Override
@@ -533,14 +588,24 @@ service Client<Schema extends RootSchema>
     /**
      * The Transaction API, for providing to a database client.
      */
-    class Transaction(DBObjectInfo info_)
+    class Transaction(DBObjectInfo info_, TxInfo txInfo)
             extends RootSchemaImpl(info_)
             implements oodb.Transaction<Schema>
         {
         /**
          * The transaction ID that this transaction is based from.
          */
-        public/protected Int baseId_;
+        public/protected Int baseId_ = TxManager.USE_LAST_TX;
+
+        /**
+         * The changes within the transaction. Key is the DBObject id, and the value is the
+         * corresponding TxChange object. (This differs from DBTransaction, which uses the path as
+         * the key of the map.)
+         */
+        protected Map<Int, DBObject.TxChange> contents_ = Map:[];
+
+        @Override
+        public/protected TxInfo txInfo;
 
         @Override
         @RO (Connection + Schema) connection.get()
@@ -628,12 +693,12 @@ service Client<Schema extends RootSchema>
         @Override
         Value get()
             {
-            if ((Token[] tokens, val val) := store_.load(baseTxId))    // TODO why doesn't Value? work?
-                {
-                return val? : assert; // TODO deser tokens
-                }
-
-            return store_.initial;
+//            if ((Token[] tokens, val val) := store_.load(baseTxId))    // TODO why doesn't Value? work?
+//                {
+//                return val? : assert; // TODO deser tokens
+//                }
+//             return store_.initial;
+TODO
             }
 
         @Override

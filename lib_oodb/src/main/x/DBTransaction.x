@@ -103,7 +103,8 @@ interface DBTransaction<Schema extends RootSchema>
 
     /**
      * The contents of the transaction, which define the total net change represented by the
-     * transaction.
+     * transaction. The key of the map is the path of the database object, and the corresponding
+     * value is the
      */
     @RO Map<String, DBObject.TxChange> contents;
 

@@ -26,6 +26,13 @@ const DBObjectInfo(
     {
     enum LifeCycle {Current, Deprecated, Removed}
 
+    /**
+     * Verify that the DBObjectInfo is valid.
+     *
+     * @return True if the check passes
+     *
+     * @throws Exception if the check fails
+     */
     Boolean checkValid()
         {
         // system objects have IDs less than zero, but they are not checked

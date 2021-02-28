@@ -21,7 +21,8 @@ module AddressBookDB_jsondb
     @Override
     @RO Module schemaModule.get()
         {
-        return AddressBookDB_;
+        assert Module m := AddressBookDB_.isModuleImport();
+        return m;
         }
 
     @Override
@@ -30,8 +31,8 @@ module AddressBookDB_jsondb
         return
             [
             new DBObjectInfo_("", "", DBSchema, 0, 0, [1]),
-            new DBObjectInfo_("contacts", "contacts", DBMap, 1, 0, typeParams=Map:["Key"=String, "Value"=AddressBookDB_:Contact]),
-            ];
+            new DBObjectInfo_("contacts", "contacts", DBMap, 1, 0, typeParams=Map<String, Type>:["Key"=String, "Value"=AddressBookDB_.Contact]),
+            ].freeze(True); // TODO GG this (or something) is required for this to compile
         }
 
     @Override
@@ -39,7 +40,7 @@ module AddressBookDB_jsondb
         {
         return Map:[
             "String"=String,
-            "AddressBookDB_:Contact"=AddressBookDB_:Contact,
+            "AddressBookDB_:Contact"=AddressBookDB_.Contact,
             ];
         // also TODO CP allow [] to be used as a Map (etc.) constant without "Map:"
         }
@@ -54,7 +55,7 @@ module AddressBookDB_jsondb
                 enableMetadata   = True,
                 enablePointers   = True,
                 enableReflection = True,
-                typeSystem       = AddressBookDB_jsondb.PublicType.typeSystem,
+                typeSystem       = &this.actualType.typeSystem,
                 );
         }
 
@@ -71,20 +72,23 @@ module AddressBookDB_jsondb
             DBUser_                      dbUser,
             function void(Client_)?      notifyOnClose = Null)
         {
-        return new AddressBookDBClient_<AddressBookSchema_>(catalog, id, dbUser, unregisterClient);
+        return new AddressBookDBClient_(catalog, id, dbUser, notifyOnClose);
         }
 
-    service AddressBookDBClient_
-            extends Client_<AddressBookSchema_>
+    service AddressBookDBClient_(Catalog_<AddressBookSchema_> catalog,
+                                 Int                          id,
+                                 DBUser_                      dbUser,
+                                 function void(Client_)?      notifyOnClose = Null)
+            extends Client_<AddressBookSchema_>(catalog, id, dbUser, notifyOnClose)
         {
         @Override
-        class RootSchemaImpl
+        class RootSchemaImpl(DBObjectInfo_ info_) // TODO GG does this call the super constructor? how?
                 implements AddressBookSchema_
             {
             @Override
             AddressBookDB_.Contacts contacts.get()
                 {
-                return this.Client.implFor(1).as(AddressBookDB_.Contacts);
+                return this.AddressBookDBClient_.implFor(1).as(AddressBookDB_.Contacts);
                 }
             }
         }

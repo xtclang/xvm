@@ -134,6 +134,11 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     enum StorageModel {Empty, Small, Medium, Large}
 
     /**
+     * TODO
+     */
+    enum Indicator {Missing}
+
+    /**
      * Statistics: The current storage model for this ObjectStore.
      */
     public/protected StorageModel model = Empty;
@@ -280,6 +285,34 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
 
 
     // ----- IO handling ---------------------------------------------------------------------------
+
+    /**
+     * Verify that the storage is open and can read.
+     *
+     * @return True if the check passes
+     *
+     * @throws Exception if the check fails
+     */
+    Boolean checkRead()
+        {
+        return status == Recovering || status == Running
+            || throw new IllegalState($"Read is not permitted for {info.name.quoted()} storage when status is {status}");
+        }
+
+    /**
+     * Verify that the storage is open and can write.
+     *
+     * @return True if the check passes
+     *
+     * @throws Exception if the check fails
+     */
+    Boolean checkWrite()
+        {
+        return (writeable
+                || throw new IllegalState($"Write is not enabled for the {info.name.quoted()} storage"))
+            && (status == Recovering || status == Running
+                || throw new IllegalState($"Write is not permitted for {info.name.quoted()} storage when status is {status}"));
+        }
 
     /**
      * Determine the files owned by this storage.
