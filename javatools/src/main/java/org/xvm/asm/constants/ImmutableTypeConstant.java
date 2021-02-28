@@ -143,7 +143,18 @@ public class ImmutableTypeConstant
         // (it can happen if the underlying type was resolved before its contribution were
         //  resolved, changing its answer to "isImmutable()" question)
         TypeConstant constResolved = constOriginal.resolveTypedefs();
-        return constResolved.isImmutable()
+        boolean fImmutable;
+        try
+            {
+            fImmutable = constResolved.isImmutable();
+            }
+        catch (RuntimeException e)
+            {
+            // TODO GG explain or fix
+            fImmutable = false;
+            }
+
+        return fImmutable
                 ? constResolved
                 : constResolved == constOriginal
                     ? this

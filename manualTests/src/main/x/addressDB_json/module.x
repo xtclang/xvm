@@ -92,4 +92,20 @@ module AddressBookDB_jsondb
                 }
             }
         }
+
+    typedef (oodb_.Connection<AddressBookSchema_> + AddressBookSchema_) Connection_;
+
+    // !!! TEMPORARY !!!
+    Connection_ simulateInjection()
+        {
+        @Inject Directory curDir;
+
+        Catalog_<AddressBookSchema_> catalog = createCatalog(curDir, False);
+
+        DBUser_ user = new oodb_.model.DBUser(42, "test");
+
+        Client_<AddressBookSchema_> connection = createClient(catalog, 0, user, Null);
+
+        return &connection.maskAs<Connection_>();
+        }
     }

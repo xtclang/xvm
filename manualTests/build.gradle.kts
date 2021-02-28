@@ -102,6 +102,8 @@ tasks.register<JavaExec>("runOne") {
 
     jvmArgs("-showversion", "-Xms1024m", "-Xmx1024m", "-ea")
 
+    systemProperties.put("xvm.db.impl", System.getProperty("xvm.db.impl"))
+
     classpath(
         "${javatools.buildDir}/classes/java/main",
         "${javatools.buildDir}/resources/main",
@@ -118,6 +120,8 @@ tasks.register<JavaExec>("hostOne") {
     dependsOn(xdk.tasks["build"])
 
     val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
+
+    systemProperties.put("xvm.db.impl", System.getProperty("xvm.db.impl"))
 
     classpath(javatoolsJar)
 
@@ -174,4 +178,3 @@ tasks.register<JavaExec>("hostAll") {
     args(opts + names)
     main = "org.xvm.tool.Runner"
 }
-

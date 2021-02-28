@@ -199,8 +199,19 @@ module host.xtclang.org
      */
     ModuleTemplate generateStubs(ModuleRepository repository, String dbModuleName, Directory buildDir)
         {
-        // TODO: pick which generator to use
-        return new ImdbCodeGenerator().generateStubs(repository, dbModuleName, buildDir);
+        @Inject Map<String, String> properties;
+
+        switch (String impl = properties.getOrDefault("db.impl", "imdb"))
+            {
+            case "imdb":
+                return new ImdbCodeGenerator().generateStubs(repository, dbModuleName, buildDir);
+
+            case "json":
+                return new JsondbCodeGenerator().generateStubs(repository, dbModuleName, buildDir);
+
+            default:
+                throw new Exception($"Unknown db implementation: {impl}");
+            }
         }
 
     service Injector
