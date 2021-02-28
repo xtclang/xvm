@@ -1,10 +1,14 @@
+import oodb.Transaction.TxInfo;
+
 import storage.ObjectStore;
 
 import Catalog.BuiltIn;
 
 
 /**
- *
+ * The transaction manager is the clearinghouse for transactions that want to begin reading, and for
+ * transactions that are committing; its purpose is to order these things into a deliberate
+ * sequence.
  */
 service TxManager(Catalog catalog)
     {
@@ -24,8 +28,7 @@ service TxManager(Catalog catalog)
     /**
      * Exposes the last completed transaction ID so that connections can
      */
-    @Atomic Int lastCompletedTx;
-    // TODO @Atomic public/protected Int lastCompletedTx;
+     protected/private Int lastCompletedTx = USE_LAST_TX;  // REVIEW
 
     /**
      * A fake transaction ID that is used to indicate that the [lastCompletedTx] should be used.
@@ -33,7 +36,40 @@ service TxManager(Catalog catalog)
     static Int USE_LAST_TX = -1;
 
 
-    // ----- support ----------------------------------------------------------------------------
+    // ----- transactional API ---------------------------------------------------------------------
+
+    /**
+     * When a transaction is performing its first read operation, it requires a base transaction id
+     * to use to read from the database. All reads for the transaction will be satisfied by the
+     * database using the version of the data specified by the base transaction id.
+     *
+     * By having the client (either the Connection or the Transaction, operating within the Client
+     * service) call this transaction manager to obtain the base transaction id, the transaction
+     * manager acts as a clearing house for the creation of transactions, and could theoretically
+     * choose to delay the creation of a transaction based on other in-flight transactions, or based
+     * on lifecycle events occurring within the database.
+     *
+     * @return the transaction ID to use to read from the database
+     */
+    Int selectBaseTxId(TxInfo info)
+        {
+        return lastCompletedTx;
+        }
+
+    /**
+     * Attempt to commit a transaction.
+     */
+    Boolean commit(Int clientId, Int txBase) // TODO changesByDBOid)
+        {
+        // validate the transaction
+        TODO
+
+        // issue updates to the various ObjectStore instances
+        return TODO
+        }
+
+
+    // ----- internal ------------------------------------------------------------------------------
 
     /**
      * Obtain the DBObjectInfo for the specified id.
@@ -42,7 +78,7 @@ service TxManager(Catalog catalog)
      *
      * @return the DBObjectInfo for the specified id
      */
-    ObjectStore storeFor(Int id)
+    protected ObjectStore storeFor(Int id)
         {
         ObjectStore?[] stores = appStores;
         Int            index  = id;
@@ -69,20 +105,4 @@ service TxManager(Catalog catalog)
 
         return store;
         }
-
-
-    // ----- transactional API ---------------------------------------------------------------------
-
-    /**
-     * Attempt to commit a transaction.
-     */
-    Boolean commit(Int clientId, Int txBase) // TODO changesByDBOid)
-        {
-        // validate the transaction
-        TODO
-
-        // issue updates to the various ObjectStore instances
-        return TODO
-        }
-
     }
