@@ -4655,8 +4655,9 @@ public abstract class TypeConstant
                     }
 
                 // we assume a field if @Inject is not specified, @RO is not specified,
-                // @Override is not specified, and get() doesn't block going to its super
-                fField = !fHasInject & !fHasRO & !fHasAbstract & !fHasOverride & !fGetBlocksSuper;
+                // it's not explicitly abstract and get() doesn't block going to its super
+                // (see PropertyBody.impliesField())
+                fField = !fHasInject & !fHasRO & !fHasAbstract & !fGetBlocksSuper;
 
                 // we assume Ref-not-Var if @RO is specified, or if there is a get() with no
                 // super and no set() (or Var-implying annotations)

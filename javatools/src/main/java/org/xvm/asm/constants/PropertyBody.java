@@ -269,7 +269,6 @@ public class PropertyBody
     public boolean impliesField()
         {
         // this needs to stay in sync with TypeConstant#createPropertyInfo()
-        // note that it does NOT check isExplicitOverride()
         return m_fField ||
                 (getExistence() == Existence.Class
                 && !isInjected()
