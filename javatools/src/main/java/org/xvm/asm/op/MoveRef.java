@@ -82,23 +82,27 @@ public class MoveRef
             }
         else
             {
+            ObjectHandle hReferent;
             switch (m_nFromValue)
                 {
                 case A_THIS:
                 case A_TARGET:
                 case A_STRUCT:
-                    {
-                    ConstantPool pool      = frame.poolContext();
-                    ObjectHandle hReferent = frame.getThis();
-
-                    typeReg = pool.ensureParameterizedTypeConstant(pool.typeRef(), hReferent.getType());
-                    hRef    = new RefHandle(frame.ensureClass(typeReg), null, hReferent);
+                    hReferent = frame.getThis();
                     break;
-                    }
+
+                case A_STACK:
+                    hReferent = frame.popStack();
+                    break;
 
                 default:
                     throw new IllegalStateException();
                 }
+
+            ConstantPool pool = frame.poolContext();
+
+            typeReg = pool.ensureParameterizedTypeConstant(pool.typeRef(), hReferent.getType());
+            hRef    = new RefHandle(frame.ensureClass(typeReg), null, hReferent);
             }
 
         if (fNextReg)
