@@ -524,6 +524,37 @@ public abstract class TypeConstant
         }
 
     /**
+     * Replace this VirtualChild's parent with the specified parent type.
+     *
+     * @param typeParent  the new parent type
+     *
+     * @return a new VirtualChild type that has the specified parent type
+     */
+    public TypeConstant ensureVirtualParent(TypeConstant typeParent)
+        {
+        assert isVirtualChild() && typeParent.isA(getParentType());
+
+        if (typeParent.equals(getParentType()))
+            {
+            return this;
+            }
+
+        ConstantPool pool = typeParent.getConstantPool();
+
+        Function<TypeConstant, TypeConstant> transformer = new Function<>()
+            {
+            public TypeConstant apply(TypeConstant type)
+                {
+                return type instanceof VirtualChildTypeConstant
+                    ? pool.ensureVirtualChildTypeConstant(typeParent,
+                            ((VirtualChildTypeConstant) type).getChildName())
+                    : type.replaceUnderlying(pool, this);
+                }
+            };
+        return transformer.apply(this);
+        }
+
+    /**
      * @return true iff there is a single defining constant, which means that the type does not
      *         contain any relational type constants
      */
@@ -5170,7 +5201,7 @@ public abstract class TypeConstant
                     ((IdentityConstant) constIdRight).getComponent();
 
                 // continue recursively with the right side analysis
-                return clzRight.calculateRelation(typeLeft, typeRight, true);
+                return clzRight.calculateRelation(typeLeft, typeRight);
                 }
 
             case Property:
@@ -5272,7 +5303,7 @@ public abstract class TypeConstant
 
                 ClassStructure clzRight = (ClassStructure)
                         idRight.getDeclarationLevelClass().getComponent();
-                return clzRight.calculateRelation(typeLeft, typeRight, true);
+                return clzRight.calculateRelation(typeLeft, typeRight);
                 }
 
             case UnresolvedName:

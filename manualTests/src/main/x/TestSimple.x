@@ -1,52 +1,59 @@
-module TestSimple
+module TestSimple.test.org
     {
     @Inject Console console;
 
     void run()
         {
-        report(Inner.foo);
-        report(Inner.bar);
+        DerivedParent.Child0 c = new DerivedParent().new Child1();
+        // TODO GG: c.foo();
+        assert c.is(Tagged);
+        console.println(c.tag);
+        }
 
-        class Inner
+    interface Tagged
+        {
+        String tag();
+        }
+
+    class BaseParent
+        {
+        class Child0
             {
-            @Tagged(weight=1)
-            void foo(@Unchecked @Tagged(weight=2) Int i)
-                {
-                }
+            }
 
-            @Tagged(weight=3, tag="m-tag")
-            void bar(@Tagged(weight=4, tag="p-tag") @Unchecked Int i)
-                {
-                }
+        class Child1
+                extends Child0
+            {
             }
         }
 
-    mixin Tagged(String tag="none", Int weight=-1)
-            into Method | Parameter
+    class DerivedParent
+            extends BaseParent
         {
         @Override
-        Int estimateStringLength()
+        class Child0
+                implements Tagged
             {
-            return super() + tag.size + "weight=".size + 2;
+            void foo()
+                {
+                console.println("DP.C0");
+                }
+
+            @Override String tag()
+                {
+                return "Amazing";
+                }
             }
 
         @Override
-        Appender<Char> appendTo(Appender<Char> buf)
+        class Child1
             {
-            $"@Tagged({tag} {weight}) ".appendTo(buf);
-            return super(buf);
-            }
-        }
-
-    void report(Method m)
-        {
-        console.println(m);
-        console.println();
-
-        if (m.is(Tagged))
-            {
-            assert m.tag.size > 0;
-            assert m.weight >= 0;
+//            @Override  // TODO GG this should override DP.C0
+//            void foo()
+//                {
+//                console.println("DP.C1");
+//                super();
+//                }
             }
         }
     }

@@ -2155,12 +2155,25 @@ public class ClassStructure
      *
      * @param typeLeft    the L-Value type
      * @param typeRight   the R-Value type that this ClassStructure is for
-     * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
      *
      * @return the best "isA" relation
      */
-    public Relation calculateRelation(TypeConstant typeLeft,
-                                      TypeConstant typeRight, boolean fAllowInto)
+    public Relation calculateRelation(TypeConstant typeLeft, TypeConstant typeRight)
+        {
+        TypeConstant typeParent = typeRight.isVirtualChild()
+                ? typeRight.getParentType()
+                : null;
+        return calculateRelationImpl(typeLeft, typeRight, typeParent, true);
+        }
+
+    /**
+     * The implementation of the {@link #calculateRelation} method above.
+     *
+     * @param typeParent  the topmost parent type
+     * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
+     */
+    protected Relation calculateRelationImpl(TypeConstant typeLeft, TypeConstant typeRight,
+                                             TypeConstant typeParent, boolean fAllowInto)
         {
         assert typeLeft.isSingleDefiningConstant();
 
@@ -2221,7 +2234,8 @@ public class ClassStructure
             case ParentClass:
             case ChildClass:
                 assert typeLeft.isAutoNarrowing(false);
-                return calculateRelation(typeLeft.resolveAutoNarrowing(pool, false, null), typeRight, fAllowInto);
+                return calculateRelationImpl(typeLeft.resolveAutoNarrowing(pool, false, null),
+                        typeRight, typeParent, fAllowInto);
 
             case UnresolvedName:
                 return Relation.INCOMPATIBLE;
@@ -2237,7 +2251,8 @@ public class ClassStructure
                 typeRebase.getSingleUnderlyingClass(true).getComponent();
 
             // rebase types are never parameterized and therefor cannot be "weak"
-            if (clzRebase.calculateRelation(typeLeft, clzRebase.getCanonicalType(), fAllowInto) == Relation.IS_A)
+            if (clzRebase.calculateRelationImpl(typeLeft,
+                    clzRebase.getCanonicalType(), typeParent, fAllowInto) == Relation.IS_A)
                 {
                 return Relation.IS_A;
                 }
@@ -2293,8 +2308,23 @@ public class ClassStructure
                     TypeConstant typeResolved = contrib.resolveType(pool, this, typeRight.getParamTypes());
                     if (typeResolved != null)
                         {
-                        relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
-                            calculateRelation(typeLeft, typeResolved, false));
+                        ClassStructure clzBase = (ClassStructure) constContrib.getComponent();
+                        if (typeParent != null && clzBase.isVirtualChild())
+                            {
+                            assert this.isVirtualChild() && typeResolved.isVirtualChild();
+
+                            if (!getName().equals(clzBase.getName()))
+                                {
+                                // this virtual child extends another virtual child with a different
+                                // name; make sure we don't ignore the corresponding virtual child
+                                // at the parent type level (analogous to MethodInfo.adoptVirtual)
+                                typeResolved = typeResolved.ensureVirtualParent(typeParent);
+                                clzBase      = (ClassStructure) typeResolved.
+                                                    getSingleUnderlyingClass(true).getComponent();
+                                }
+                            }
+                        relation = relation.bestOf(
+                            clzBase.calculateRelationImpl(typeLeft, typeResolved, typeParent, false));
                         if (relation == Relation.IS_A)
                             {
                             return Relation.IS_A;
