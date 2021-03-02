@@ -117,12 +117,12 @@ service Client<Schema extends RootSchema>
     /**
      * The lazily created application DBObjects within the schema.
      */
-    protected/private DBObjectImpl?[] appObjects;
+    protected/private DBObjectImpl?[] appObjects = new DBObjectImpl[];
 
     /**
      * The lazily created system schema DBObjects.
      */
-    protected/private DBObjectImpl?[] sysObjects;
+    protected/private DBObjectImpl?[] sysObjects = new DBObjectImpl[];
 
     /**
      * The function to use to notify that the connection has closed.
@@ -350,6 +350,24 @@ service Client<Schema extends RootSchema>
         @RO DBObject!? dbParent.get()
             {
             return implFor(info_.parentId);
+            }
+
+        @Override
+        @RO DBCategory dbCategory.get()
+            {
+            return info_.category;
+            }
+
+        @Override
+        @RO String dbName.get()
+            {
+            return info_.name;
+            }
+
+        @Override
+        @RO String dbPath.get()
+            {
+            return info_.path;
             }
 
         @Override
