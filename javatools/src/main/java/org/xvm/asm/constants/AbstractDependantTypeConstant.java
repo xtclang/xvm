@@ -275,6 +275,11 @@ public abstract class AbstractDependantTypeConstant
     @Override
     protected int compareDetails(Constant obj)
         {
+        if (!(obj instanceof AbstractDependantTypeConstant))
+            {
+            return -1;
+            }
+
         AbstractDependantTypeConstant that = (AbstractDependantTypeConstant) obj;
         return this.m_typeParent.compareTo(that.m_typeParent);
         }

@@ -4,21 +4,32 @@ module TestSimple.test.org
 
     void run()
         {
-        DerivedParent.Child0 c = new DerivedParent().new Child1();
-        // TODO GG: c.foo();
+        BaseParent.Child0 c = new DerivedParent().new Child1();
+
+        console.println("*** foo");
+        c.foo();
+
+        assert c.is(DerivedParent.Child0);
+        console.println("\n*** bar");
+        c.bar();
+
         assert c.is(Tagged);
-        console.println(c.tag);
+        console.println($"\n*** this is {c.tag}");
         }
 
     interface Tagged
         {
-        String tag();
+        @RO String tag;
         }
 
     class BaseParent
         {
         class Child0
             {
+            void foo()
+                {
+                console.println("BP.C0");
+                }
             }
 
         class Child1
@@ -34,26 +45,40 @@ module TestSimple.test.org
         class Child0
                 implements Tagged
             {
+            @Override
             void foo()
+                {
+                console.println("DP.C0");
+                super();
+                }
+
+            void bar()
                 {
                 console.println("DP.C0");
                 }
 
-            @Override String tag()
+            @Override String tag.get()
                 {
-                return "Amazing";
+                return "so cool";
                 }
             }
 
         @Override
         class Child1
             {
-//            @Override  // TODO GG this should override DP.C0
-//            void foo()
-//                {
-//                console.println("DP.C1");
-//                super();
-//                }
+            @Override
+            void foo()
+                {
+                console.println("DP.C1");
+                super();
+                }
+
+            @Override
+            void bar()
+                {
+                console.println("DP.C1");
+                super();
+                }
             }
         }
     }

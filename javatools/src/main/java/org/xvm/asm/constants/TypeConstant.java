@@ -524,13 +524,38 @@ public abstract class TypeConstant
         }
 
     /**
+     * A VirtualChildType may have its parent type being different frome its origin parent type.
+     *
+     * @return return the origin parent type for this virtual child type
+     */
+    public TypeConstant getOriginParentType()
+        {
+        assert isVirtualChild();
+        return getUnderlyingType().getOriginParentType();
+        }
+
+    /**
      * Replace this VirtualChild's parent with the specified parent type.
+     * <p/>
+     * Consider the following class inheritance diagram:
+     * <pre>
+     *    B.C0 <- D.C0
+     *     ^
+     *    B.C1 <- D.C1
+     * </pre>
+     * When a super type for D.C1 is calculated by isA() and createContributionList() logic, the
+     * resulting type need to "retain" the origin parent type. That retained parent type is then
+     * used by the same logic to calculate the super type of B.C1 <b>not as </b> B.C0,  but as D.C0
+     * instead!
      *
      * @param typeParent  the new parent type
+     * @param fPromote    if true, the new VirtualTypeConstant should have its parent to be
+     *                    the specified parent type; otherwise the parent type should be
+     *                    simply retained by the new VirtualTypeConstant
      *
      * @return a new VirtualChild type that has the specified parent type
      */
-    public TypeConstant ensureVirtualParent(TypeConstant typeParent)
+    public TypeConstant ensureVirtualParent(TypeConstant typeParent, boolean fPromote)
         {
         assert isVirtualChild() && typeParent.isA(getParentType());
 
@@ -546,8 +571,16 @@ public abstract class TypeConstant
             public TypeConstant apply(TypeConstant type)
                 {
                 return type instanceof VirtualChildTypeConstant
-                    ? pool.ensureVirtualChildTypeConstant(typeParent,
-                            ((VirtualChildTypeConstant) type).getChildName())
+                    ? fPromote
+                        ? pool.ensureVirtualChildTypeConstant(typeParent,
+                                ((VirtualChildTypeConstant) type).getChildName())
+                        // a virtual child that retains the origin parent type is only used as a
+                        // transient type by the isA() and TypeInfo calculations and therefore
+                        // doesn't need to be registered with a pool
+                        : new VirtualChildTypeConstant(pool,
+                                type.getParentType(),
+                                ((VirtualChildTypeConstant) type).getChildName(),
+                                typeParent)
                     : type.replaceUnderlying(pool, this);
                 }
             };
@@ -2201,6 +2234,13 @@ public abstract class TypeConstant
                             constExtends.getPathString(), structExtends.getFormat());
                     break;
                     }
+
+                if (typeExtends.isVirtualChild())
+                    {
+                    assert this.isVirtualChild();
+                    typeExtends = typeExtends.ensureVirtualParent(this.getOriginParentType(),
+                                        !struct.getName().equals(structExtends.getName()));
+                    }
                 }
                 break;
 
@@ -2992,26 +3032,6 @@ public abstract class TypeConstant
                         if (infoNew.isVirtual())
                             {
                             assert infoOld.isVirtual();
-                            Object     nid       = entry.getKey().getNestedIdentity();
-                            MethodInfo infoCheck = mapVirtMethods.put(nid, infoNew);
-                            assert infoOld == infoCheck;
-                            }
-                        }
-                    }
-                }
-
-            if (fSelf && !fIncomplete && struct.isVirtualChild())
-                {
-                for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
-                    {
-                    MethodInfo infoOld = entry.getValue();
-                    if (infoOld.isVirtual() && !infoOld.isCapped())
-                        {
-                        MethodInfo infoNew = infoOld.adoptVirtual(this, struct, errs);
-                        if (infoNew != infoOld)
-                            {
-                            entry.setValue(infoNew);
-
                             Object     nid       = entry.getKey().getNestedIdentity();
                             MethodInfo infoCheck = mapVirtMethods.put(nid, infoNew);
                             assert infoOld == infoCheck;

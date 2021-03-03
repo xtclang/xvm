@@ -357,6 +357,10 @@ public class AnonymousClassTypeConstant
         int n = super.compareDetails(obj);
         if (n == 0)
             {
+            if (!(obj instanceof AnonymousClassTypeConstant))
+                {
+                return -1;
+                }
             AnonymousClassTypeConstant that = (AnonymousClassTypeConstant) obj;
 
             n = this.m_idAnon.compareTo(that.m_idAnon);

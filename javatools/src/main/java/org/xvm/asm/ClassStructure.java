@@ -2160,20 +2160,16 @@ public class ClassStructure
      */
     public Relation calculateRelation(TypeConstant typeLeft, TypeConstant typeRight)
         {
-        TypeConstant typeParent = typeRight.isVirtualChild()
-                ? typeRight.getParentType()
-                : null;
-        return calculateRelationImpl(typeLeft, typeRight, typeParent, true);
+        return calculateRelationImpl(typeLeft, typeRight, true);
         }
 
     /**
      * The implementation of the {@link #calculateRelation} method above.
      *
-     * @param typeParent  the topmost parent type
      * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
      */
     protected Relation calculateRelationImpl(TypeConstant typeLeft, TypeConstant typeRight,
-                                             TypeConstant typeParent, boolean fAllowInto)
+                                             boolean fAllowInto)
         {
         assert typeLeft.isSingleDefiningConstant();
 
@@ -2235,7 +2231,7 @@ public class ClassStructure
             case ChildClass:
                 assert typeLeft.isAutoNarrowing(false);
                 return calculateRelationImpl(typeLeft.resolveAutoNarrowing(pool, false, null),
-                        typeRight, typeParent, fAllowInto);
+                        typeRight, fAllowInto);
 
             case UnresolvedName:
                 return Relation.INCOMPATIBLE;
@@ -2252,7 +2248,7 @@ public class ClassStructure
 
             // rebase types are never parameterized and therefor cannot be "weak"
             if (clzRebase.calculateRelationImpl(typeLeft,
-                    clzRebase.getCanonicalType(), typeParent, fAllowInto) == Relation.IS_A)
+                    clzRebase.getCanonicalType(), fAllowInto) == Relation.IS_A)
                 {
                 return Relation.IS_A;
                 }
@@ -2280,13 +2276,10 @@ public class ClassStructure
                         }
 
                     typeContrib = typeContrib.resolveGenerics(pool, typeRight.normalizeParameters());
-                    if (typeContrib != null)
+                    relation    = relation.bestOf(typeContrib.calculateRelation(typeLeft));
+                    if (relation == Relation.IS_A)
                         {
-                        relation = relation.bestOf(typeContrib.calculateRelation(typeLeft));
-                        if (relation == Relation.IS_A)
-                            {
-                            return Relation.IS_A;
-                            }
+                        return Relation.IS_A;
                         }
                     break;
 
@@ -2302,29 +2295,23 @@ public class ClassStructure
                     // the identity constant for those contribution is always a class
                     assert typeContrib.isExplicitClassIdentity(true);
 
-                    ClassConstant constContrib = (ClassConstant)
-                        typeContrib.getSingleUnderlyingClass(true);
-
-                    TypeConstant typeResolved = contrib.resolveType(pool, this, typeRight.getParamTypes());
-                    if (typeResolved != null)
+                    // instead of "typeContrib.resolveGenerics()" we have to use "resolveType"
+                    // which is almost identical, but accounts for conditional incorporates
+                    typeContrib = contrib.resolveType(pool, this, typeRight.getParamTypes());
+                    if (typeContrib != null)
                         {
-                        ClassStructure clzBase = (ClassStructure) constContrib.getComponent();
-                        if (typeParent != null && clzBase.isVirtualChild())
+                        ClassConstant  idContrib = (ClassConstant) typeContrib.getSingleUnderlyingClass(true);
+                        ClassStructure clzBase   = (ClassStructure) idContrib.getComponent();
+                        if (typeContrib.isVirtualChild())
                             {
-                            assert this.isVirtualChild() && typeResolved.isVirtualChild();
-
-                            if (!getName().equals(clzBase.getName()))
-                                {
-                                // this virtual child extends another virtual child with a different
-                                // name; make sure we don't ignore the corresponding virtual child
-                                // at the parent type level (analogous to MethodInfo.adoptVirtual)
-                                typeResolved = typeResolved.ensureVirtualParent(typeParent);
-                                clzBase      = (ClassStructure) typeResolved.
-                                                    getSingleUnderlyingClass(true).getComponent();
-                                }
+                            // see the doc for "ensureVirtualParent" for the explanation
+                            typeContrib = typeContrib.ensureVirtualParent(typeRight.getOriginParentType(),
+                                                !getName().equals(clzBase.getName()));
+                            clzBase = (ClassStructure) typeContrib.getSingleUnderlyingClass(true).
+                                                getComponent();
                             }
                         relation = relation.bestOf(
-                            clzBase.calculateRelationImpl(typeLeft, typeResolved, typeParent, false));
+                                        clzBase.calculateRelationImpl(typeLeft, typeContrib, false));
                         if (relation == Relation.IS_A)
                             {
                             return Relation.IS_A;

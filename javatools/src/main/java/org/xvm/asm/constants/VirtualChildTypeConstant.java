@@ -70,18 +70,52 @@ public class VirtualChildTypeConstant
         {
         super(pool, typeParent);
 
-        // TODO GG REVIEW GG - to discuss
-        // if (typeParent.isAccessSpecified() ||
-        //     typeParent.isAnnotated())
-        //     {
-        //     throw new IllegalArgumentException("parent's immutability, access or annotations cannot be specified");
-        //     }
+         if (typeParent.isAccessSpecified() || typeParent.isAnnotated())
+             {
+             throw new IllegalArgumentException(
+                    "parent's immutability, access or annotations cannot be specified");
+             }
         if (sName == null)
             {
             throw new IllegalArgumentException("name is required");
             }
-        m_constName  = pool.ensureStringConstant(sName);
-        m_fThisClass = fThisClass;
+        m_constName        = pool.ensureStringConstant(sName);
+        m_fThisClass       = fThisClass;
+        m_typeOriginParent = m_typeParent;
+        }
+
+    /**
+     * Construct a constant whose value is a virtual child type.
+     *
+     * Note: this constructor is only used for transient virtual child types that are used only by
+     *       the isA() and TypeInfo calculations.
+     *
+     * @param pool              the ConstantPool that will contain this Constant
+     * @param typeParent        the parent's type (representing the actual type)
+     * @param sName             the child's name
+     * @param typeOriginParent  the virtual origin parent's type
+     */
+    public VirtualChildTypeConstant(ConstantPool pool, TypeConstant typeParent, String sName,
+                                    TypeConstant typeOriginParent)
+        {
+        super(pool, typeParent);
+
+         if (typeParent.isAccessSpecified() || typeParent.isAnnotated())
+             {
+             throw new IllegalArgumentException(
+                 "parent's immutability, access or annotations cannot be specified");
+             }
+        if (sName == null)
+            {
+            throw new IllegalArgumentException("name is required");
+            }
+        if (!typeOriginParent.isA(typeParent))
+            {
+            throw new IllegalArgumentException("origin parent must extend the parent");
+            }
+        m_constName        = pool.ensureStringConstant(sName);
+        m_fThisClass       = false;
+        m_typeOriginParent = typeOriginParent;
         }
 
     /**
@@ -107,7 +141,8 @@ public class VirtualChildTypeConstant
         {
         super.resolveConstants();
 
-        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
+        m_constName        = (StringConstant) getConstantPool().getConstant(m_iName);
+        m_typeOriginParent = m_typeParent;
         }
 
     /**
@@ -168,6 +203,12 @@ public class VirtualChildTypeConstant
     public boolean isVirtualChild()
         {
         return true;
+        }
+
+    @Override
+    public TypeConstant getOriginParentType()
+        {
+        return m_typeOriginParent;
         }
 
     @Override
@@ -489,15 +530,33 @@ public class VirtualChildTypeConstant
     protected int compareDetails(Constant obj)
         {
         int n = super.compareDetails(obj);
+
+        CompareNext:
         if (n == 0)
             {
+            if (!(obj instanceof VirtualChildTypeConstant))
+                {
+                return -1;
+                }
+
             VirtualChildTypeConstant that = (VirtualChildTypeConstant) obj;
 
             n = this.m_constName.compareTo(that.m_constName);
-            if (n == 0)
+            if (n != 0)
                 {
-                return Boolean.compare(this.m_fThisClass, that.m_fThisClass);
+                break CompareNext;
                 }
+
+            if (this.m_typeParent != this.m_typeOriginParent ||
+                that.m_typeParent != that.m_typeOriginParent)
+                {
+                n = this.m_typeOriginParent.compareDetails(that.m_typeOriginParent);
+                if (n != 0)
+                    {
+                    break CompareNext;
+                    }
+                }
+            n = Boolean.compare(this.m_fThisClass, that.m_fThisClass);
             }
         return n;
         }
@@ -506,7 +565,8 @@ public class VirtualChildTypeConstant
     public String getValueString()
         {
         return (m_fThisClass ? "this:" : "") +
-                m_typeParent.getValueString() + '.' + m_constName.getValue();
+                (m_typeParent == m_typeOriginParent ? "" : "virtual ") +
+                m_typeOriginParent.getValueString() + '.' + m_constName.getValue();
         }
 
 
@@ -517,13 +577,16 @@ public class VirtualChildTypeConstant
         {
         super.registerConstants(pool);
 
-        m_constName = (StringConstant) pool.register(m_constName);
+        m_constName        = (StringConstant) pool.register(m_constName);
+        m_typeOriginParent = (TypeConstant)   pool.register(m_typeOriginParent);
         }
 
     @Override
     protected void assemble(DataOutput out)
             throws IOException
         {
+        assert m_typeOriginParent == m_typeParent;
+
         super.assemble(out);
 
         writePackedLong(out, m_constName.getPosition());
@@ -557,4 +620,10 @@ public class VirtualChildTypeConstant
      * that is analogous to a TerminalTypeConstant around ThisClassConstant.
      */
     protected boolean m_fThisClass;
+
+    /**
+     * The origin parent's type. It can only be different from the parent type during isA() and
+     * TypeInfo calculations.
+     */
+    protected transient TypeConstant m_typeOriginParent;
     }
