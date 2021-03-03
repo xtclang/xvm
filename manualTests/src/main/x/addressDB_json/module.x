@@ -104,7 +104,9 @@ module AddressBookDB_jsondb
 
         DBUser_ user = new oodb_.model.DBUser(42, "test");
 
-        Client_<AddressBookSchema_> connection = createClient(catalog, 0, user, Null);
+        Client_<AddressBookSchema_> client = createClient(catalog, 0, user, Null);
+
+        Connection_ connection = client.conn ?: assert;
 
         return &connection.maskAs<Connection_>();
         }
