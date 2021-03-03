@@ -2296,7 +2296,8 @@ public class ClassStructure
                     assert typeContrib.isExplicitClassIdentity(true);
 
                     // instead of "typeContrib.resolveGenerics()" we have to use "resolveType"
-                    // which is almost identical, but accounts for conditional incorporates
+                    // which accounts for conditional incorporates, but does not deal with
+                    // virtual parent's formal types parameters
                     typeContrib = contrib.resolveType(pool, this, typeRight.getParamTypes());
                     if (typeContrib != null)
                         {
@@ -2304,6 +2305,9 @@ public class ClassStructure
                         ClassStructure clzBase   = (ClassStructure) idContrib.getComponent();
                         if (typeContrib.isVirtualChild())
                             {
+                            // resolve the parent's formal type parameters
+                            typeContrib = typeContrib.resolveGenerics(pool, typeRight);
+
                             // see the doc for "ensureVirtualParent" for the explanation
                             typeContrib = typeContrib.ensureVirtualParent(typeRight.getOriginParentType(),
                                                 !getName().equals(clzBase.getName()));
