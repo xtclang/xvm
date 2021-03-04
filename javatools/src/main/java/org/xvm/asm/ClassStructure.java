@@ -2296,31 +2296,32 @@ public class ClassStructure
                     // the identity constant for those contribution is always a class
                     assert typeContrib.isExplicitClassIdentity(true);
 
-                    // instead of "typeContrib.resolveGenerics()" we have to use "resolveType"
-                    // which accounts for conditional incorporates, but does not deal with
-                    // virtual parent's formal types parameters
-                    typeContrib = contrib.resolveType(pool, this, typeRight.getParamTypes());
-                    if (typeContrib != null)
+                    // the "resolveType()" method, which accounts for conditional incorporates,
+                    // does not deal with virtual parent's formal types parameters, so we use it
+                    // only to filter out inapplicable conditional incorporates
+                    if (composition == Composition.Incorporates &&
+                            contrib.resolveType(pool, this, typeRight.getParamTypes()) == null)
                         {
-                        ClassConstant  idContrib = (ClassConstant) typeContrib.getSingleUnderlyingClass(true);
-                        ClassStructure clzBase   = (ClassStructure) idContrib.getComponent();
-                        if (typeContrib.isVirtualChild())
-                            {
-                            // resolve the parent's formal type parameters TODO GG: this breaks annotations
-                            // typeContrib = typeContrib.resolveGenerics(pool, typeRight);
+                        break;
+                        }
 
-                            // see the doc for "ensureVirtualParent" for the explanation
-                            typeContrib = typeContrib.ensureVirtualParent(typeRight.getOriginParentType(),
-                                                !getName().equals(clzBase.getName()));
-                            clzBase = (ClassStructure) typeContrib.getSingleUnderlyingClass(true).
-                                                getComponent();
-                            }
-                        relation = relation.bestOf(
-                                        clzBase.calculateRelationImpl(typeLeft, typeContrib, false));
-                        if (relation == Relation.IS_A)
-                            {
-                            return Relation.IS_A;
-                            }
+                    typeContrib = typeContrib.resolveGenerics(pool, typeRight.normalizeParameters());
+
+                    ClassConstant  idContrib = (ClassConstant) typeContrib.getSingleUnderlyingClass(true);
+                    ClassStructure clzBase   = (ClassStructure) idContrib.getComponent();
+                    if (typeContrib.isVirtualChild())
+                        {
+                        // see the doc for "ensureVirtualParent" for the explanation
+                        typeContrib = typeContrib.ensureVirtualParent(typeRight.getOriginParentType(),
+                                            !getName().equals(clzBase.getName()));
+                        clzBase = (ClassStructure) typeContrib.getSingleUnderlyingClass(true).
+                                            getComponent();
+                        }
+                    relation = relation.bestOf(
+                                    clzBase.calculateRelationImpl(typeLeft, typeContrib, false));
+                    if (relation == Relation.IS_A)
+                        {
+                        return Relation.IS_A;
                         }
                     break;
                     }
