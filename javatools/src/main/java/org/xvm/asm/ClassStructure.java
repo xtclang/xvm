@@ -2259,7 +2259,8 @@ public class ClassStructure
         for (Contribution contrib : getContributionsAsList())
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
-            switch (contrib.getComposition())
+            Composition  composition = contrib.getComposition();
+            switch (composition)
                 {
                 case Into:
                     if (!fAllowInto)
@@ -2305,8 +2306,8 @@ public class ClassStructure
                         ClassStructure clzBase   = (ClassStructure) idContrib.getComponent();
                         if (typeContrib.isVirtualChild())
                             {
-                            // resolve the parent's formal type parameters
-                            typeContrib = typeContrib.resolveGenerics(pool, typeRight);
+                            // resolve the parent's formal type parameters TODO GG: this breaks annotations
+                            // typeContrib = typeContrib.resolveGenerics(pool, typeRight);
 
                             // see the doc for "ensureVirtualParent" for the explanation
                             typeContrib = typeContrib.ensureVirtualParent(typeRight.getOriginParentType(),
