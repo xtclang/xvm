@@ -19,18 +19,23 @@ interface Transaction<Schema extends RootSchema>
      * Represents the parameters used to create a Transaction.
      *
      * @param timeout     (optional) the requested time-out, which allows the database to roll back
-     *                    and discard the transaction after that period of time has elapsed
+     *                    and discard the transaction after that period of time has elapsed; `Null`
+     *                    indicates that the database's default time-out should be used, and even if
+     *                    a time-out is specified, the database may use a shorter or longer value
      * @param name        (optional) a descriptive name to associate with the transaction
      * @param id          (optional) an integer identifier to associate with the transaction
      * @param priority    (optional) the transactional priority
      * @param retryCount  (optional) the number of times that this same transaction has already been
      *                    attempted
+     * @param readOnly    (optional) pass True to indicate that transaction is not going to modify
+     *                    any data
      */
     static const TxInfo(Duration?              timeout     = Null,
                         String?                name        = Null,
                         UInt?                  id          = Null,
                         DBTransaction.Priority priority    = Normal,
-                        Int                    retryCount  = 0);
+                        Int                    retryCount  = 0,
+                        Boolean                readOnly    = False);
 
     /**
      * The transaction parameters used to create this Transaction object.

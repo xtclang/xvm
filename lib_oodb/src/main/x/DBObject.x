@@ -69,14 +69,52 @@ interface DBObject
      */
     DBObject!? dbObjectFor(String path)
         {
+        // REVIEW GG why aren't we using Path here?
+
+        if (path == "")
+            {
+            return this;
+            }
+
         if (DBObject dbo := dbChildren.get(path))
             {
             return dbo;
             }
 
-        if (Int slash := path.indexOf('/', 1), DBObject dbo := dbChildren.get(path[0..slash)))
+        if (Int slash := path.indexOf('/', 1))
             {
-            return dbo.dbObjectFor(path.substring(slash+1));
+            String part = path[0..slash);
+            switch (part)
+                {
+                case "":
+                    DBObject  root   = this;
+                    DBObject? parent = dbParent;
+                    while (parent != Null)
+                        {
+                        root   = parent;
+                        parent = parent.dbParent;
+                        }
+                    return path.size == 1
+                            ? root
+                            : root.dbObjectFor(path.substring(1));
+
+                case ".":
+                    return path.size == 2
+                            ? this
+                            : this.dbObjectFor(path.substring(2));
+
+                case "..":
+                    return path.size == 3
+                            ? dbParent
+                            : dbParent?.dbObjectFor(path.substring(3)) : Null;
+
+                default:
+                    if (DBObject child := dbChildren.get(part))
+                        {
+                        return child.dbObjectFor(path.substring(slash+1));
+                        }
+                    return Null;
+                }
             }
 
         return Null;
