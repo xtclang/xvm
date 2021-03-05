@@ -71,32 +71,43 @@ public class FiberQueue
         return m_cSize;
         }
 
-    // get the first of the waiting fibers that is either "ready" or timed-out
-    public Frame getWaitingReady()
-        {
-        return getNext(2);
-        }
-
-    // get the first with a priority no less than "associated or yielded"
+    /**
+     * Retrieve the first frame that is ready, giving priority to "associated or yielded".
+     */
     public Frame getAssociatedOrYielded()
         {
-        return getNext(1);
+        if (m_cSize == 0)
+            {
+            return null;
+            }
+
+        int cFrames = m_aFrame.length;
+        int ixHead  = m_ixHead;
+        int ixInit  = -1;
+        for (int i = 0; i < cFrames; i++)
+            {
+            int ix = (i + ixHead) % cFrames;
+
+            int iPriority = checkPriority(ix);
+            if (iPriority >= 1)
+                {
+                return remove(ix);
+                }
+            if (iPriority == 0 && ixInit == -1)
+                {
+                ixInit = ix;
+                }
+            }
+
+        return ixInit >= 0
+            ? remove(ixInit)
+            : null;
         }
 
-    // get the first that is ready (any priority)
+    /**
+     * Retrieve the first frame that is ready (any priority).
+     */
     public Frame getAnyReady()
-        {
-        return getNext(0);
-        }
-
-    // get the first frame (any priority)
-    public Frame getAny()
-        {
-        return getNext(-1);
-        }
-
-    // get the next fiber with a priority no less than the specified one
-    private Frame getNext(int nPriority)
         {
         if (m_cSize == 0)
             {
@@ -110,7 +121,7 @@ public class FiberQueue
             int ix = (i + ixHead) % cFrames;
 
             int iPriority = checkPriority(ix);
-            if (iPriority >= nPriority)
+            if (iPriority >= 0)
                 {
                 return remove(ix);
                 }
@@ -118,12 +129,41 @@ public class FiberQueue
         return null;
         }
 
-    // return the priority of the fiber at the specified index:
-    // [2]  a waiting fiber that is marked as "ready"
-    // [1]  initial associated or yielded
-    // [0]  initial new
-    // [-1] not ready
-    // [-2] empty
+    /**
+     * Retrieve any available frame (any priority, ready or not).
+     */
+    public Frame getAny()
+        {
+        if (m_cSize == 0)
+            {
+            return null;
+            }
+
+        int cFrames = m_aFrame.length;
+        int ixHead  = m_ixHead;
+        for (int i = 0; i < cFrames; i++)
+            {
+            int ix = (i + ixHead) % cFrames;
+
+            if (m_aFrame[ix] != null)
+                {
+                return remove(ix);
+                }
+            }
+        return null;
+        }
+
+    /**
+     * Calculate the priority of the fiber at the specified index.
+     * The return values are:
+     * <ul>
+     *   <li/>[2]  a waiting fiber that is marked as "ready"
+     *   <li/>[1]  initial associated or yielded
+     *   <li/>[0]  initial new
+     *   <li/>[-1] not ready
+     *   <li/>[-2] empty
+     * </ul>
+     */
     private int checkPriority(int ix)
         {
         Frame frame = m_aFrame[ix];
@@ -138,14 +178,7 @@ public class FiberQueue
                 throw new IllegalStateException();
 
             case Waiting:
-                if (frame.f_fiber.isReady())
-                    {
-                    return 2;
-                    }
-                else
-                    {
-                    return -1;
-                    }
+                return frame.f_fiber.isReady() ? 2 : -1;
 
             case InitialAssociated:
             case Yielded:
@@ -157,8 +190,7 @@ public class FiberQueue
                 //  - in Exclusive mode - only if there are no waiting fibers;
                 //  - in Prioritized mode - only if there are no waiting fibers
                 //     associated with that same context
-
-                switch (frame.f_context.m_reentrancy)
+                switch (frame.f_context.getReentrancy())
                     {
                     default:
                     case Forbidden:
@@ -166,10 +198,13 @@ public class FiberQueue
                         return m_cSize == 1 ? 0 : -1;
 
                     case Exclusive:
+                        // don't allow a new fiber unless it belongs to already existing thread of
+                        // execution or the only one
                         return isAssociatedWaiting(null) ? -1 : 0;
 
                     case Prioritized:
                         {
+                        // give priority to already existing thread of execution
                         Fiber fiberCaller = frame.f_fiber.f_fiberCaller;
                         if (fiberCaller != null)
                             {

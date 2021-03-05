@@ -137,6 +137,22 @@ public class ServiceContext
         return s_tloContext.get()[0];
         }
 
+    /**
+     * @return the reentrancy policy
+     */
+    public Reentrancy getReentrancy()
+        {
+        return m_reentrancy;
+        }
+
+    /**
+     * Set the reentrancy policy.
+     */
+    public void setReentrancy(Reentrancy reentrancy)
+        {
+        m_reentrancy = reentrancy;
+        }
+
 
     // ----- Op support ----------------------------------------------------------------------------
 
@@ -410,17 +426,8 @@ public class ServiceContext
                 throw new IllegalStateException(); // assert
 
             case Exclusive:
-                // don't allow a new fiber unless it belongs to already existing thread of execution
-                return qSuspended.getAssociatedOrYielded();
-
             case Prioritized:
-                // give priority to already existing thread of execution
-                Frame frameNext = qSuspended.getAssociatedOrYielded();
-                if (frameNext != null)
-                    {
-                    return frameNext;
-                    }
-                // fall through
+                return qSuspended.getAssociatedOrYielded();
 
             case Open:
                 return qSuspended.getAnyReady();
@@ -1380,7 +1387,23 @@ public class ServiceContext
     @Override
     public String toString()
         {
-        return "Service \"" + f_sName + "\" (id=" + f_nId + ')';
+        StringBuilder sb = new StringBuilder();
+        sb.append("Service \"")
+          .append(f_sName)
+          .append("\" (id=")
+          .append(f_nId)
+          .append(')');
+
+        if (isContended())
+            {
+            sb.append(" contended");
+            }
+        if (m_frameCurrent != null)
+            {
+            sb.append(" @")
+              .append(m_frameCurrent);
+            }
+        return sb.toString();
         }
 
 
@@ -1616,7 +1639,7 @@ public class ServiceContext
     /**
      * The service id.
      */
-    private final int f_nId;
+    public final int f_nId;
 
     /**
      * The service name.
@@ -1682,7 +1705,8 @@ public class ServiceContext
      * The reentrancy policy. Must be the same names as in natural Service.Reentrancy.
      */
     public enum Reentrancy {Open, Prioritized, Exclusive, Forbidden}
-    public Reentrancy m_reentrancy = Reentrancy.Prioritized;
+
+    private Reentrancy m_reentrancy = Reentrancy.Prioritized;
 
     /**
      * The context scheduling "lock", atomic operations are performed via {@link #SCHEDULING_LOCK_HANDLE}.

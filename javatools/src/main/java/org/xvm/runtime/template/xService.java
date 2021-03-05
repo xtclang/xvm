@@ -261,7 +261,7 @@ public class xService
             case "reentrancy":
                 {
                 EnumHandle hReentrancy = REENTRANCY.getEnumByName(
-                        hService.f_context.m_reentrancy.name());
+                        hService.f_context.getReentrancy().name());
                 return Utils.assignInitializedEnum(frame, hReentrancy, iReturn);
                 }
 
@@ -282,7 +282,7 @@ public class xService
                 {
                 EnumHandle hReentrancy = (EnumHandle) hValue;
 
-                hService.f_context.m_reentrancy = Reentrancy.valueOf(hReentrancy.getName());
+                hService.f_context.setReentrancy(Reentrancy.valueOf(hReentrancy.getName()));
                 return Op.R_NEXT;
                 }
             }
@@ -423,8 +423,11 @@ public class xService
     @Override
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        ServiceHandle hService = (ServiceHandle) hTarget;
-        return frame.assignValue(iReturn, xString.makeHandle(hService.f_context.toString()));
+        ServiceHandle  hService = (ServiceHandle) hTarget;
+        ServiceContext ctx      = hService.f_context;
+
+        return frame.assignValue(iReturn,
+            xString.makeHandle(ctx.f_sName + " (id=" + ctx.f_nId + ')'));
         }
 
 
