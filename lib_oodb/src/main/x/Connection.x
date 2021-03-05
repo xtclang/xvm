@@ -41,6 +41,8 @@ interface Connection<Schema extends RootSchema>
      * @param priority    (optional) the transactional priority
      * @param retryCount  (optional) the number of times that this same transaction has already been
      *                    attempted
+     * @param readOnly    (optional) pass True to indicate that transaction is not going to modify
+     *                    any data
      *
      * @return the [Transaction] object
      *
@@ -50,7 +52,8 @@ interface Connection<Schema extends RootSchema>
                                                      String?                name        = Null,
                                                      UInt?                  id          = Null,
                                                      DBTransaction.Priority priority    = Normal,
-                                                     Int                    retryCount  = 0);
+                                                     Int                    retryCount  = 0,
+                                                     Boolean                readOnly    = False);
 
     @Override
     void close(Exception? e = Null)

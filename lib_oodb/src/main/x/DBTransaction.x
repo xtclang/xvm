@@ -90,6 +90,15 @@ interface DBTransaction<Schema extends RootSchema>
     @RO Int retryCount;
 
     /**
+     * True indicates that the transaction is not permitted to modify the database. This is useful
+     * information for a database when a process is executing long running queries, such as for
+     * reports, and may need to hold database resources far longer than the database would normally
+     * permit. It further allows a database to optimize its resource management specifically for
+     * the read-only usage.
+     */
+    @RO Boolean readOnly;
+
+    /**
      * If this transaction was created as a side-effect of another transaction, then this property
      * provides that transaction.
      */
