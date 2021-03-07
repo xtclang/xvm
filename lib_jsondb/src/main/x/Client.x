@@ -577,7 +577,8 @@ service Client<Schema extends RootSchema>
                                                  String?                name        = Null,
                                                  UInt?                  id          = Null,
                                                  DBTransaction.Priority priority    = Normal,
-                                                 Int                    retryCount  = 0)
+                                                 Int                    retryCount  = 0,
+                                                 Boolean                readOnly    = False)
             {
             assert outer.tx == Null;
 
