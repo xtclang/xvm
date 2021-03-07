@@ -124,10 +124,16 @@ public class CharConstant
                 assert Character.isValidCodePoint(((CharConstant) that).m_chVal);
                 char chThis = (char) this.m_chVal;
                 char chThat = (char) ((CharConstant) that).m_chVal;
-                StringBuilder sb = new StringBuilder()
-                        .append((char) this.m_chVal)
-                        .append(((CharConstant) that).m_chVal);
-                return getConstantPool().ensureStringConstant(sb.toString());
+                return getConstantPool().ensureStringConstant(String.valueOf(chThis) + chThat);
+                }
+
+            case "-Char":
+                {
+                assert Character.isValidCodePoint(this.m_chVal);
+                assert Character.isValidCodePoint(((CharConstant) that).m_chVal);
+                char chThis = (char) this.m_chVal;
+                char chThat = (char) ((CharConstant) that).m_chVal;
+                return getConstantPool().ensureIntConstant(chThis - chThat);
                 }
 
             case "*IntLiteral":

@@ -105,9 +105,9 @@ public class EnumValueConstant
     @Override
     public Constant apply(Token.Id op, Constant that)
         {
+        ConstantPool pool = getConstantPool();
         if (that instanceof EnumValueConstant)
             {
-            ConstantPool pool = getConstantPool();
             switch (op)
                 {
                 case DOTDOT:
@@ -145,6 +145,18 @@ public class EnumValueConstant
                     break;
                 }
             }
+        else if (that == null && op == Token.Id.NOT)
+            {
+            if (getClassConstant().equals(pool.valTrue().getClassConstant()))
+                {
+                return pool.valFalse();
+                }
+            if (getClassConstant().equals(pool.valFalse().getClassConstant()))
+                {
+                return pool.valTrue();
+                }
+            }
+
 
         return super.apply(op, that);
         }

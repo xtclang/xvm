@@ -120,6 +120,26 @@ public class UInt8Constant
         return getConstantPool().ensureUInt8Constant(n);
         }
 
+    /**
+     * Create a new UInt8Constant with the specified nibble value, but only if it is in the legal
+     * range.
+     *
+     * @param n  an integer value
+     *
+     * @return the corresponding UInt8Constant
+     *
+     * @throws ArithmeticException  if the value is out of range
+     */
+    public UInt8Constant validateNibble(int n)
+        {
+        if (n < 0 || n > 15)
+            {
+            throw new ArithmeticException("overflow");
+            }
+
+        return getConstantPool().ensureNibbleConstant(n);
+        }
+
     static int nonzero(int n)
         {
         if (n == 0)
@@ -214,10 +234,10 @@ public class UInt8Constant
             case "UInt8^UInt8":
                 return validate(this.m_nVal ^ ((UInt8Constant) that).m_nVal);
             case "UInt8..UInt8":
+            case "Nibble..Nibble":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, that);
             case "UInt8..<UInt8":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, false, that, true);
-
 
             case "UInt8<<Int64":
                 return validate(this.m_nVal << ((IntConstant) that).getValue().and(new PackedInteger(7)).getInt());
@@ -226,20 +246,35 @@ public class UInt8Constant
                 return validate(this.m_nVal >>> ((IntConstant) that).getValue().and(new PackedInteger(7)).getInt());
 
             case "UInt8==UInt8":
+            case "Nibble==Nibble":
                 return getConstantPool().valOf(this.m_nVal == ((UInt8Constant) that).m_nVal);
             case "UInt8!=UInt8":
+            case "Nibble!=Nibble":
                 return getConstantPool().valOf(this.m_nVal != ((UInt8Constant) that).m_nVal);
             case "UInt8<UInt8":
+            case "Nibble<Nibble":
                 return getConstantPool().valOf(this.m_nVal < ((UInt8Constant) that).m_nVal);
             case "UInt8<=UInt8":
+            case "Nibble<=Nibble":
                 return getConstantPool().valOf(this.m_nVal <= ((UInt8Constant) that).m_nVal);
             case "UInt8>UInt8":
+            case "Nibble>Nibble":
                 return getConstantPool().valOf(this.m_nVal > ((UInt8Constant) that).m_nVal);
             case "UInt8>=UInt8":
+            case "Nibble>=Nibble":
                 return getConstantPool().valOf(this.m_nVal >= ((UInt8Constant) that).m_nVal);
-
             case "UInt8<=>UInt8":
+            case "Nibble<==>Nibble":
                 return getConstantPool().valOrd(this.m_nVal - ((UInt8Constant) that).m_nVal);
+
+            case "Nibble+Nibble":
+                return validateNibble(this.m_nVal + ((UInt8Constant) that).m_nVal);
+            case "Nibble-Nibble":
+                return validateNibble(this.m_nVal - ((UInt8Constant) that).m_nVal);
+            case "Nibble*Nibble":
+                return validateNibble(this.m_nVal * ((UInt8Constant) that).m_nVal);
+            case "Nibble/Nibble":
+                return validateNibble(this.m_nVal / nonzero(((UInt8Constant) that).m_nVal));
 
             // these are "fake" i.e. compile-time only in order to support calculations resulting
             // from the use of Range in ForEachStatement

@@ -95,6 +95,15 @@ public class StringConstant
                 return pool.ensureStringConstant(
                         this.m_sVal + (char) (int) ((CharConstant) that).getValue());
 
+            case "+IntLiteral":
+            case "+FPLiteral":
+                return pool.ensureStringConstant(
+                        this.m_sVal + ((LiteralConstant) that).getValue());
+
+            case "+EnumValueConst":
+                return pool.ensureStringConstant(
+                        this.m_sVal + ((EnumValueConstant) that).getClassConstant().getName());
+
             case "*IntLiteral":
             case "*Int64":
                 {

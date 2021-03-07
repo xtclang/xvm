@@ -9,6 +9,8 @@ import java.math.BigDecimal;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.compiler.Token;
+
 import org.xvm.type.Decimal;
 import org.xvm.type.Decimal128;
 import org.xvm.type.Decimal32;
@@ -131,6 +133,92 @@ public class DecimalConstant
 
 
     // ----- Constant methods ----------------------------------------------------------------------
+
+    @Override
+    public Constant apply(Token.Id op, Constant that)
+        {
+        switch (that == null
+                    ? op.TEXT + this.getFormat().name()
+                    : this.getFormat().name() + op.TEXT + that.getFormat().name())
+            {
+            case "+Dec32":
+            case "+Dec64":
+            case "+Dec128":
+                return this;
+
+            case "-Dec32":
+            case "-Dec64":
+            case "-Dec128":
+                return getConstantPool().ensureDecConstant(this.getValue().neg());
+
+            case "Dec32+Dec32":
+            case "Dec64+Dec64":
+            case "Dec128+Dec128":
+                return getConstantPool().ensureDecConstant(
+                    this.getValue().add(((DecimalConstant) that).getValue()));
+
+            case "Dec32-Dec32":
+            case "Dec64-Dec64":
+            case "Dec128-Dec128":
+                return getConstantPool().ensureDecConstant(
+                    this.getValue().subtract(((DecimalConstant) that).getValue()));
+
+            case "Dec32*Dec32":
+            case "Dec64*Dec64":
+            case "Dec128*Dec128":
+                return getConstantPool().ensureDecConstant(
+                    this.getValue().multiply(((DecimalConstant) that).getValue()));
+
+            case "Dec32/Dec32":
+            case "Dec64/Dec64":
+            case "Dec128/Dec128":
+                return getConstantPool().ensureDecConstant(
+                    this.getValue().divide(((DecimalConstant) that).getValue()));
+
+            case "Dec32%Dec32":
+            case "Dec64%Dec64":
+            case "Dec128%Dec128":
+                return getConstantPool().ensureDecConstant(
+                    this.getValue().mod(((DecimalConstant) that).getValue()));
+
+            case "Dec32^Dec32":
+            case "Dec64^Dec64":
+            case "Dec128^Dec128":
+                return getConstantPool().ensureDecConstant(
+                    this.getValue().pow(((DecimalConstant) that).getValue()));
+
+            case "Dec32..Dec32":
+            case "Dec64..Dec64":
+            case "Dec128..Dec128":
+                return getConstantPool().ensureRangeConstant(this, that);
+
+            case "Dec32==Dec32":
+            case "Dec64==Dec64":
+            case "Dec128==Dec128":
+            case "Dec32!=Dec32":
+            case "Dec64!=Dec64":
+            case "Dec128!=Dec128":
+            case "Dec32<Dec32":
+            case "Dec64<Dec64":
+            case "Dec128<Dec128":
+            case "Dec32<=Dec32":
+            case "Dec64<=Dec64":
+            case "Dec128<=Dec128":
+            case "Dec32>Dec32":
+            case "Dec64>Dec64":
+            case "Dec128>Dec128":
+            case "Dec32>=Dec32":
+            case "Dec64>=Dec64":
+            case "Dec128>=Dec128":
+            case "Dec32<==>Dec32":
+            case "Dec64<==>Dec64":
+            case "Dec128<==>Dec128":
+                return translateOrder(
+                    this.getValue().compareForObjectOrder(((DecimalConstant) that).getValue()), op);
+            }
+
+        return super.apply(op, that);
+        }
 
     @Override
     public Format getFormat()
