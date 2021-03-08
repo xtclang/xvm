@@ -51,8 +51,8 @@ public class Frame
     {
     public final Fiber              f_fiber;
     public final ServiceContext     f_context;      // same as f_fiber.f_context
+    public final MethodStructure    f_function;
 
-    protected final MethodStructure f_function;
     protected final Op[]            f_aOp;          // the op-codes
     protected final ObjectHandle    f_hTarget;      // the passed in target
     protected final ObjectHandle    f_hThis;        // the "inception" view of the target

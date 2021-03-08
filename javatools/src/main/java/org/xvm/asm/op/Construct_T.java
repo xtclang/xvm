@@ -96,7 +96,7 @@ public class Construct_T
 
     protected int complete(Frame frame, ObjectHandle[] ahArg)
         {
-        MethodStructure constructor = getMethodStructure(frame);
+        MethodStructure constructor = getConstructor(frame);
         if (constructor == null)
             {
             return R_EXCEPTION;

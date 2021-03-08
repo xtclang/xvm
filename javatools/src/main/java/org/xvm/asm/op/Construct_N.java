@@ -76,7 +76,7 @@ public class Construct_N
         {
         try
             {
-            MethodStructure constructor = getMethodStructure(frame);
+            MethodStructure constructor = getConstructor(frame);
             if (constructor == null)
                 {
                 return R_EXCEPTION;

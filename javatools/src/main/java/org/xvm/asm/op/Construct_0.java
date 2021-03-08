@@ -52,7 +52,7 @@ public class Construct_0
     @Override
     public int process(Frame frame, int iPC)
         {
-        MethodStructure constructor = getMethodStructure(frame);
+        MethodStructure constructor = getConstructor(frame);
         if (constructor == null)
             {
             return R_EXCEPTION;

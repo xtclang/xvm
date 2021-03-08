@@ -81,7 +81,7 @@ public class Construct_1
             {
             ObjectHandle hArg = frame.getArgument(m_nArgValue);
 
-            MethodStructure constructor = getMethodStructure(frame);
+            MethodStructure constructor = getConstructor(frame);
             if (constructor == null)
                 {
                 return R_EXCEPTION;

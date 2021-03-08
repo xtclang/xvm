@@ -141,7 +141,7 @@ public abstract class OpCallable extends Op
         MethodStructure constructor = (MethodStructure) context.getOpInfo(this, Category.Constructor);
         if (constructor != null)
             {
-            ClassConstant idParent = (ClassConstant) context.getOpInfo(this, Category.ParentClass);
+            ClassConstant idParent = (ClassConstant) context.getOpInfo(this, Category.TargetClass);
             if (idParent.equals(idParentR))
                 {
                 // cached constructor fits the parent's class
@@ -174,7 +174,7 @@ public abstract class OpCallable extends Op
             constructor = info.getTopmostMethodStructure(infoTarget);
             }
 
-        context.setOpInfo(this, Category.ParentClass, idParentR);
+        context.setOpInfo(this, Category.TargetClass, idParentR);
         context.setOpInfo(this, Category.Constructor, constructor);
         return constructor;
         }
@@ -194,7 +194,7 @@ public abstract class OpCallable extends Op
         MethodStructure constructor = (MethodStructure) context.getOpInfo(this, Category.Constructor);
         if (constructor != null)
             {
-            ClassConstant idTarget = (ClassConstant) context.getOpInfo(this, Category.ParentClass);
+            ClassConstant idTarget = (ClassConstant) context.getOpInfo(this, Category.TargetClass);
             if (idTarget.equals(idTargetR))
                 {
                 // cached constructor fits the parent's class
@@ -224,7 +224,7 @@ public abstract class OpCallable extends Op
             constructor = info.getTopmostMethodStructure(infoTarget);
             }
 
-        context.setOpInfo(this, Category.ParentClass, idTargetR);
+        context.setOpInfo(this, Category.TargetClass, idTargetR);
         context.setOpInfo(this, Category.Constructor, constructor);
         return constructor;
         }
@@ -303,6 +303,79 @@ public abstract class OpCallable extends Op
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
+     * Retrieve the constructor to be used by this Construct_* op code.
+     *
+     * @return the method structure or null if cannot be found, in which case an exception
+     *         has been raised on the frame
+     */
+    protected MethodStructure getConstructor(Frame frame)
+        {
+        assert frame.f_function.isConstructor();
+
+        ServiceContext   context     = frame.f_context;
+        MethodStructure  constructor = (MethodStructure) context.getOpInfo(this, Category.Function);
+        IdentityConstant idPrev      = (IdentityConstant) context.getOpInfo(this, Category.TargetClass);
+        IdentityConstant idThis      = frame.getThis().getTemplate().getClassConstant();
+
+        if (constructor != null && idPrev.equals(idThis))
+            {
+            return constructor;
+            }
+
+        ConstantPool        pool       = frame.poolContext();
+        GenericTypeResolver resolver   = frame.getGenericsResolver();
+        MethodConstant      idCtor     = (MethodConstant) frame.getConstant(m_nFunctionId);
+        IdentityConstant    idTarget   = idCtor.getNamespace();
+        TypeConstant        typeTarget = idTarget.getFormalType().resolveGenerics(pool, resolver);
+
+        Virtual:
+        if (typeTarget.isVirtualChild())
+            {
+            TypeConstant typeThis = frame.getThis().getType();
+            assert typeThis.isVirtualChild();
+
+            String sNameCurrent = frame.f_function.getIdentityConstant().getNamespace().getName();
+            String sNameTarget  = idTarget.getName();
+            if (sNameCurrent.equals(sNameTarget))
+                {
+                break Virtual;
+                }
+
+            TypeConstant typeVirtTarget =
+                    typeTarget.ensureVirtualParent(typeThis.getParentType(), true);
+            if (typeVirtTarget == typeTarget)
+                {
+                break Virtual;
+                }
+
+            constructor = pool.ensureAccessTypeConstant(typeVirtTarget, Access.PROTECTED).
+                    findCallable(idCtor.getSignature().resolveGenericTypes(pool, resolver));
+            }
+
+        if (constructor == null)
+            {
+            constructor = (MethodStructure) idCtor.getComponent();
+            if (constructor == null)
+                {
+                constructor = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE).
+                    findCallable(idCtor.getSignature().resolveGenericTypes(pool, resolver));
+                }
+
+            if (constructor == null)
+                {
+                frame.raiseException("Unresolvable or constructor \"" +
+                    idCtor.getValueString() + "\" for " + typeTarget.getValueString());
+                return null;
+                }
+            }
+
+        context.setOpInfo(this, Category.Function, constructor);
+        context.setOpInfo(this, Category.TargetClass, idThis);
+
+        return constructor;
+        }
+
+    /**
      * Retrieve the method structure for this op-code and cache the parent's template
      * to be used by {@link #getNativeTemplate}.
      *
@@ -314,9 +387,9 @@ public abstract class OpCallable extends Op
         ServiceContext   context    = frame.f_context;
         MethodConstant   idFunction = (MethodConstant) frame.getConstant(m_nFunctionId);
         MethodStructure  function   = (MethodStructure) context.getOpInfo(this, Category.Function);
-        IdentityConstant idParent   = idFunction.getNamespace();
+        IdentityConstant idTarget   = idFunction.getNamespace();
 
-        switch (idParent.getFormat())
+        switch (idTarget.getFormat())
             {
             case Module:
             case Package:
@@ -327,25 +400,25 @@ public abstract class OpCallable extends Op
                     ConstantPool        pool     = frame.poolContext();
                     GenericTypeResolver resolver = frame.getGenericsResolver();
 
-                    TypeConstant typeParent = idParent.getFormalType().resolveGenerics(pool, resolver);
+                    TypeConstant typeTarget = idTarget.getFormalType().resolveGenerics(pool, resolver);
 
                     function = (MethodStructure) idFunction.getComponent();
                     if (function == null)
                         {
-                        function = pool.ensureAccessTypeConstant(typeParent, Access.PRIVATE).
+                        function = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE).
                             findCallable(idFunction.getSignature().resolveGenericTypes(pool, resolver));
                         }
 
                     if (function == null)
                         {
                         frame.raiseException("Unresolvable or ambiguous function \"" +
-                            idFunction.getValueString() + "\" for " + typeParent.getValueString());
+                            idFunction.getValueString() + "\" for " + typeTarget.getValueString());
                         return null;
                         }
 
                     context.setOpInfo(this, Category.Function, function);
                     context.setOpInfo(this, Category.Template,
-                            context.f_templates.getTemplate(typeParent));
+                            context.f_templates.getTemplate(typeTarget));
                     }
                 break;
                 }
@@ -355,22 +428,22 @@ public abstract class OpCallable extends Op
             case TypeParameter:
                 {
                 GenericTypeResolver resolver   = frame.getGenericsResolver();
-                TypeConstant        typeParent = ((FormalConstant) idParent).resolve(resolver);
-                TypeConstant        typePrev   = (TypeConstant) context.getOpInfo(this, Category.ParentType);
-                if (function == null || !typeParent.equals(typePrev))
+                TypeConstant        typeTarget = ((FormalConstant) idTarget).resolve(resolver);
+                TypeConstant        typePrev   = (TypeConstant) context.getOpInfo(this, Category.TargetType);
+                if (function == null || !typeTarget.equals(typePrev))
                     {
-                    function = typeParent.findCallable(idFunction.getSignature());
+                    function = typeTarget.findCallable(idFunction.getSignature());
                     if (function == null)
                         {
                         frame.raiseException("Unresolvable or ambiguous function \"" +
-                            idFunction.getValueString() + "\" for " + typeParent.getValueString());
+                            idFunction.getValueString() + "\" for " + typeTarget.getValueString());
                         return null;
                         }
 
                     context.setOpInfo(this, Category.Function, function);
-                    context.setOpInfo(this, Category.ParentType, typeParent);
+                    context.setOpInfo(this, Category.TargetType, typeTarget);
                     context.setOpInfo(this, Category.Template,
-                            context.f_templates.getTemplate(typeParent));
+                            context.f_templates.getTemplate(typeTarget));
                     }
                 break;
                 }
@@ -473,5 +546,5 @@ public abstract class OpCallable extends Op
     protected Argument[] m_aArgReturn; // optional
 
     // categories for cached info
-    enum Category {Function, Template, ParentClass, ParentType, Constructor};
+    enum Category {Function, Template, TargetClass, TargetType, Constructor};
     }
