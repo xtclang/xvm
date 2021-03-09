@@ -10,7 +10,7 @@ interface PropertyTemplate
      @RO TypeTemplate type;
 
     /**
-     * TODO GG
+     * @return True iff the property represents a named constant value
      */
     @RO Boolean isConstant;
 
@@ -20,7 +20,10 @@ interface PropertyTemplate
     conditional Const hasInitialValue();
 
     /**
-     * TODO GG
+     * Check if the property is initialized using an initializer function.
+     *
+     * @return True iff the property is initialized using an initializer function
+     * @return (optional) the MethodTemplate representing the initializer of the property
      */
-    conditional (function Const ()) hasInitializer();
+    conditional MethodTemplate hasInitializer();
     }

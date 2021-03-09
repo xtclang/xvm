@@ -1,3 +1,4 @@
+import ecstasy.reflect.MethodTemplate;
 import ecstasy.reflect.PropertyTemplate;
 import ecstasy.reflect.TypeTemplate;
 
@@ -13,5 +14,5 @@ class RTPropertyTemplate
     @Override @RO Boolean      isConstant;
 
     @Override conditional Const hasInitialValue();
-    @Override conditional (function Const ()) hasInitializer();
+    @Override conditional MethodTemplate hasInitializer();
     }
