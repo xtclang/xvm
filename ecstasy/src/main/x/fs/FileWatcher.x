@@ -8,10 +8,7 @@ interface FileWatcher
 
     enum Event {Created, Modified, Deleted}
 
-    static Set<Event> ALL_EVENTS = new collections.ListSet<Event>(
-            [Created, Modified, Deleted]).freeze(True);
-    // TODO CP the ideal way to present it would be a "set" literal
-    // static Set<Event> ALL_EVENTS = Set<Event>:[Created, Modified, Deleted];
+    static Set<Event> ALL_EVENTS = Set:[Created, Modified, Deleted];
 
     /**
      * If the mechanism that is detecting and reporting the changes to this FileWatcher is capable

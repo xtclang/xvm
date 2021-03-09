@@ -26,11 +26,26 @@ public class RecursiveTypeConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
+    /**
+     * Construct a constant whose value is a recursive data type.
+     *
+     * @param pool     the ConstantPool that will contain this Constant
+     * @param constId  a TypedefConstant this recursive constant is based on
+     */
     public RecursiveTypeConstant(ConstantPool pool, TypedefConstant constId)
         {
         super(pool, constId);
         }
 
+    /**
+     * Constructor used for deserialization.
+     *
+     * @param pool   the ConstantPool that will contain this Constant
+     * @param format the format of the Constant in the stream
+     * @param in     the DataInput stream to read the Constant value from
+     *
+     * @throws IOException if an issue occurs reading the Constant value
+     */
     public RecursiveTypeConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
@@ -63,6 +78,12 @@ public class RecursiveTypeConstant
     public boolean isComposedOfAny(Set<IdentityConstant> setIds)
         {
         return false;
+        }
+
+    @Override
+    public boolean isImmutable()
+        {
+        return getReferredToType().isImmutable();
         }
 
     @Override

@@ -41,7 +41,7 @@ public class ArrayConstant
             throw new IllegalArgumentException("value required");
             }
 
-        m_fmt       = fmt;
+        f_fmt       = fmt;
         m_constType = constType;
         m_aconstVal = aconstVal;
         }
@@ -68,7 +68,7 @@ public class ArrayConstant
             aiVal[i] = readMagnitude(in);
             }
 
-        m_fmt   = format;
+        f_fmt   = format;
         m_iType = iType;
         m_aiVal = aiVal;
         }
@@ -179,7 +179,7 @@ public class ArrayConstant
     @Override
     public Format getFormat()
         {
-        return m_fmt;
+        return f_fmt;
         }
 
     @Override
@@ -239,7 +239,7 @@ public class ArrayConstant
         return typeNew == typeOld && aconstNew == null
                 ? this
                 : (ArrayConstant) getConstantPool().register(
-                        new ArrayConstant(getConstantPool(), m_fmt, typeNew, aconstNew));
+                        new ArrayConstant(getConstantPool(), f_fmt, typeNew, aconstNew));
         }
 
     @Override
@@ -278,11 +278,11 @@ public class ArrayConstant
 
         String sStart;
         String sEnd;
-        switch (m_fmt)
+        switch (f_fmt)
             {
             case Array:
-                sStart = "{";
-                sEnd   = "}";
+                sStart = "[";
+                sEnd   = "]";
                 break;
             case Tuple:
                 sStart = cConsts < 2 ? "Tuple:(" : "(";
@@ -294,7 +294,7 @@ public class ArrayConstant
                 break;
 
             default:
-                throw new IllegalArgumentException("illegal format: " + m_fmt);
+                throw new IllegalArgumentException("illegal format: " + f_fmt);
             }
 
         StringBuilder sb = new StringBuilder();
@@ -381,7 +381,7 @@ public class ArrayConstant
     /**
      * The constant format.
      */
-    private Format m_fmt;
+    private final Format f_fmt;
 
     /**
      * The type represented by this constant. Note that this is not the element type, but rather is

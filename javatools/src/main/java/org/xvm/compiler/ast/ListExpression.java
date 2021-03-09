@@ -228,6 +228,11 @@ public class ListExpression
             }
 
         typeActual = pool.ensureParameterizedTypeConstant(typeActual, typeElement);
+        if (typeElement.isImmutable())
+            {
+            typeActual = pool.ensureImmutableTypeConstant(typeActual);
+            }
+
         if (cExprs > 0)
             {
             ctx = ctx.enterList();

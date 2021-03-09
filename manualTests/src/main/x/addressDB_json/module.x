@@ -32,7 +32,7 @@ module AddressBookDB_jsondb
             [
             new DBObjectInfo_("", "", DBSchema, 0, 0, [1]),
             new DBObjectInfo_("contacts", "contacts", DBMap, 1, 0, typeParams=Map<String, Type>:["Key"=String, "Value"=AddressBookDB_.Contact]),
-            ].freeze(True); // TODO GG this (or something) is required for this to compile
+            ];
         }
 
     @Override
