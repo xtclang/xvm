@@ -321,7 +321,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      */
     Iterator<File> findFiles()
         {
-        // TODO GG shouldn't type inference support this construct: return [].iterator();
         return dataDir.files().filter(f -> f.name.endsWith(".json")).toArray().iterator();
         }
 
