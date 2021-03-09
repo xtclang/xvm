@@ -1,6 +1,7 @@
 module host.xtclang.org
     {
-    package oodb import oodb.xtclang.org;
+    package oodb   import oodb.xtclang.org;
+    package jsondb import jsondb.xtclang.org;
 
     import ecstasy.io.IOException;
 
@@ -116,7 +117,8 @@ module host.xtclang.org
             Path?     buildPath = fileXtc.path.parent;
             Directory buildDir  = fileXtc.store.dirFor(buildPath?) : curDir;
 
-            ModuleTemplate dbModuleTemplate = generateStubs(repository, dbModuleName, buildDir);
+            DbHost         dbHost           = createDBHost();
+            ModuleTemplate dbModuleTemplate = dbHost.generateStubs(repository, dbModuleName, buildDir);
 
             // give the db container the real console
             Injector dbInjector = new Injector()
@@ -132,10 +134,7 @@ module host.xtclang.org
                     }
                 };
 
-            Container dbContainer = new Container(dbModuleTemplate, Lightweight, repository, dbInjector);
-
-            Tuple connTuple = dbContainer.invoke("simulateInjection", Tuple:());
-            oodb.Connection connection = connTuple[0].as(oodb.Connection);
+            dbHost.dbContainer = new Container(dbModuleTemplate, Lightweight, repository, dbInjector);
 
             injector = new Injector()
                 {
@@ -144,7 +143,7 @@ module host.xtclang.org
                     {
                     if (type.isA(oodb.Connection))
                         {
-                        return connection;
+                        return dbHost.ensureConnection();
                         }
                     return super(type, name);
                     }
@@ -195,19 +194,19 @@ module host.xtclang.org
         }
 
     /**
-     * Generate all the necessary classes.
+     * Create a DbHost.
      */
-    ModuleTemplate generateStubs(ModuleRepository repository, String dbModuleName, Directory buildDir)
+    DbHost createDBHost()
         {
         @Inject Map<String, String> properties;
 
         switch (String impl = properties.getOrDefault("db.impl", "imdb"))
             {
             case "imdb":
-                return new ImdbCodeGenerator().generateStubs(repository, dbModuleName, buildDir);
+                return new ImdbHost();
 
             case "json":
-                return new JsondbCodeGenerator().generateStubs(repository, dbModuleName, buildDir);
+                return new JsondbHost();
 
             default:
                 throw new Exception($"Unknown db implementation: {impl}");

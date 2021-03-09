@@ -93,17 +93,13 @@ module AddressBookDB_jsondb
             }
         }
 
+
+    // ----- Injection support ---------------------------------------------------------------------
+
     typedef (oodb_.Connection<AddressBookSchema_> + AddressBookSchema_) Connection_;
 
-    // !!! TEMPORARY !!!
-    Connection_ simulateInjection()
+    Connection_ createConnection(Catalog_<AddressBookSchema_> catalog, DBUser_ user)
         {
-        @Inject Directory curDir;
-
-        Catalog_<AddressBookSchema_> catalog = createCatalog(curDir, False);
-
-        DBUser_ user = new oodb_.model.DBUser(42, "test");
-
         Client_<AddressBookSchema_> client = createClient(catalog, 0, user, Null);
 
         Connection_ connection = client.conn ?: assert;

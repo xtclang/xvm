@@ -6,10 +6,12 @@ module AddressBookDB_imdb
 
     import AddressBookDB.AddressBookSchema;
 
+
+    // ----- Injection support ---------------------------------------------------------------------
+
     typedef (db.Connection<AddressBookSchema> + AddressBookSchema) Connection;
 
-    // !!! TEMPORARY !!!
-    Connection simulateInjection()
+    Connection createConnection()
         {
         Connection connection = ServerAddressBookSchema.createConnection();
         return &connection.maskAs<Connection>();

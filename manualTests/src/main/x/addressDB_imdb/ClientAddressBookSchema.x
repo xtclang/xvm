@@ -109,10 +109,10 @@ class ClientAddressBookSchema
     ClientTransaction createTransaction(
                 Duration? timeout = Null, String? name = Null,
                 UInt? id = Null, db.DBTransaction.Priority priority = Normal,
-                Int retryCount = 0)
+                Int retryCount = 0, Boolean readOnly = False)
         {
         import db.Transaction.TxInfo;
-        TxInfo txInfo = new TxInfo(timeout, name, id, priority, retryCount);
+        TxInfo txInfo = new TxInfo(timeout, name, id, priority, retryCount, readOnly);
 
         ClientTransaction tx = new ClientTransaction(txInfo);
         transaction = tx;

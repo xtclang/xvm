@@ -13,15 +13,14 @@ import oodb.DBObject;
 import oodb.DBObject.DBCategory;
 
 /**
- * Code generator for imdb connection.
+ * Host for imdb-based db module.
  */
-class ImdbCodeGenerator
+class ImdbHost
+        extends DbHost
     {
     @Inject Console console;
 
-    /**
-     * Generate all the necessary classes to use imdb.
-     */
+    @Override
     ModuleTemplate generateStubs(ModuleRepository repository, String dbModuleName, Directory buildDir)
         {
         ModuleTemplate dbModule = repository.getResolvedModule(dbModuleName);
@@ -237,6 +236,17 @@ class ImdbCodeGenerator
     String displayName(ClassTemplate template, String appName)
         {
         return template.implicitName ?: (appName + '.' + template.displayName);
+        }
+
+    @Override
+    oodb.Connection ensureConnection()
+        {
+        private @Lazy oodb.Connection connection.calc()
+            {
+            return dbContainer.invoke("createConnection", Tuple:())[0].as(oodb.Connection);
+            }
+
+        return connection;
         }
 
 
