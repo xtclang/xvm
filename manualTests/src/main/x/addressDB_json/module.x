@@ -82,7 +82,7 @@ module AddressBookDB_jsondb
             extends Client_<AddressBookSchema_>(catalog, id, dbUser, notifyOnClose)
         {
         @Override
-        class RootSchemaImpl(DBObjectInfo_ info_) // TODO GG does this call the super constructor? how?
+        class RootSchemaImpl(DBObjectInfo_ info_)
                 implements AddressBookSchema_
             {
             @Override

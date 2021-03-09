@@ -102,8 +102,7 @@ service ValueStore<Value extends immutable Const>
     Iterator<File> findFiles()
         {
         File file = dataFile;
-        return (file.exists ? [file] : Array<File>:[]).iterator();
-        // TODO GG: return (file.exists ? [file] : []).iterator();
+        return (file.exists ? [file] : []).iterator();
         }
 
     @Override

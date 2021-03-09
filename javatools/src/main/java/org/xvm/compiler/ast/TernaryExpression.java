@@ -132,7 +132,7 @@ public class TernaryExpression
             }
 
         TypeConstant[] atypeThen, atypeElse;
-        Usage          use   = Usage.Any;
+        Usage          use   = null;
         Plan           plan;
         switch (plan = generatePlan(ctx))
             {
@@ -151,6 +151,7 @@ public class TernaryExpression
                 {
                 if (atypeRequired != null && atypeRequired.length > 0)
                     {
+                    use       = Usage.Then;
                     atypeThen = atypeElse = atypeRequired;
                     break;
                     }
@@ -171,9 +172,7 @@ public class TernaryExpression
                         {
                         if (exprThen.testFitMulti(ctxThen, atypeElse, null).isFit())
                             {
-                            atypeThen = atypeElse;
-                            use       = Usage.Else;
-                            break;
+                            use = Usage.Else;
                             }
                         }
 
@@ -181,10 +180,13 @@ public class TernaryExpression
                         {
                         if (exprElse.testFitMulti(ctxElse, atypeThen, null).isFit())
                             {
-                            atypeElse = atypeThen;
-                            use       = Usage.Then;
-                            break;
+                            use = use == null ? Usage.Then : Usage.Any;
                             }
+                        }
+
+                    if (use != null)
+                        {
+                        break;
                         }
 
                     // try to resolve formal types
@@ -194,9 +196,8 @@ public class TernaryExpression
                         {
                         if (exprThen.testFitMulti(ctxThen, atypeElseR, null).isFit())
                             {
-                            atypeThen = atypeElse = atypeElseR;
+                            atypeElse = atypeElseR;
                             use       = Usage.Else;
-                            break;
                             }
                         }
 
@@ -204,10 +205,14 @@ public class TernaryExpression
                         {
                         if (exprElse.testFitMulti(ctxElse, atypeThenR, null).isFit())
                             {
-                            atypeElse = atypeThen = atypeThenR;
-                            use       = Usage.Then;
-                            break;
+                            atypeThen = atypeThenR;
+                            use       = use == null ? Usage.Then : Usage.Any;
                             }
+                        }
+
+                    if (use != null)
+                        {
+                        break;
                         }
 
                     // nothing worked; try an intersection of the resolved types
@@ -317,6 +322,8 @@ public class TernaryExpression
                     switch (use)
                         {
                         case Any:
+                            atypeResult = selectNarrowerTypes(atypeThen, atypeElse);
+                            break;
                         case Then:
                             atypeResult = atypeThen;
                             break;
@@ -457,23 +464,60 @@ public class TernaryExpression
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
+     * A helper method to create an array of narrower types for two arrays.
+     *
+     * @param atypeThen  the first type array
+     * @param atypeElse  the second type array
+     * @return           an array of narrower types
+     */
+    private TypeConstant[] selectNarrowerTypes(TypeConstant[] atypeThen, TypeConstant[] atypeElse)
+        {
+        int cThen = atypeThen.length;
+        int cElse = atypeElse.length;
+
+        if (cThen > cElse)
+            {
+            return atypeThen;
+            }
+        if (cElse > cThen)
+            {
+            return atypeElse;
+            }
+        for (int i = 0; i < cThen; i++)
+            {
+            TypeConstant typeThen = atypeThen[i];
+            TypeConstant typeElse = atypeElse[i];
+
+            if (!typeThen.isA(typeElse))
+                {
+                return atypeElse;
+                }
+            if (!typeElse.isA(typeThen))
+                {
+                return atypeThen;
+                }
+            }
+        return atypeThen;
+        }
+
+    /**
      * A helper method to create an array of common types for two arrays.
      *
-     * @param atype1  the first type array
-     * @param atype2  the second type array
-     * @return        an array of common types (of the minimum of the two array sizes)
+     * @param atypeThen  the first type array
+     * @param atypeElse  the second type array
+     * @return           an array of common types (of the minimum of the two array sizes)
      */
-    private TypeConstant[] selectCommonTypes(TypeConstant[] atype1, TypeConstant[] atype2)
+    private TypeConstant[] selectCommonTypes(TypeConstant[] atypeThen, TypeConstant[] atypeElse)
         {
-        int            cTypes      = Math.min(atype1.length, atype2.length);
+        int            cTypes      = Math.min(atypeThen.length, atypeElse.length);
         TypeConstant[] atypeCommon = new TypeConstant[cTypes];
         for (int i = 0; i < cTypes; i++)
             {
-            TypeConstant typeThen = atype1[i];
-            TypeConstant typeElse = atype2[i];
+            TypeConstant typeThen = atypeThen[i];
+            TypeConstant typeElse = atypeElse[i];
 
             TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, ErrorListener.BLACKHOLE);
-            atypeCommon[i] = typeCommon == null && atype1 != null && typeElse != null
+            atypeCommon[i] = typeCommon == null && atypeThen != null && typeElse != null
                     ? pool().ensureIntersectionTypeConstant(typeThen, typeElse)
                     : typeCommon;
             }
