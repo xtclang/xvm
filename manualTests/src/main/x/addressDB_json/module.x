@@ -92,18 +92,4 @@ module AddressBookDB_jsondb
                 }
             }
         }
-
-
-    // ----- Injection support ---------------------------------------------------------------------
-
-    typedef (oodb_.Connection<AddressBookSchema_> + AddressBookSchema_) Connection_;
-
-    Connection_ createConnection(Catalog_<AddressBookSchema_> catalog, DBUser_ user)
-        {
-        Client_<AddressBookSchema_> client = createClient(catalog, 0, user, Null);
-
-        Connection_ connection = client.conn ?: assert;
-
-        return &connection.maskAs<Connection_>();
-        }
     }
