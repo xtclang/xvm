@@ -3,11 +3,10 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Iterator;
 import java.util.List;
-
 import java.util.Objects;
 
-import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -47,11 +46,6 @@ public class ImportStatement
         this.keyword       = keyword;
         this.alias         = alias;
         this.qualifiedName = qualifiedName;
-
-        // the qualified name will have to be resolved
-        this.resolver = new NameResolver(this, qualifiedName.stream()
-                            .map(t -> (String) t.getValue())
-                            .iterator());
         }
 
     /**
@@ -70,12 +64,6 @@ public class ImportStatement
         this.keyword       = keyword;
         this.qualifiedName = qualifiedName;
         this.star          = star;
-
-        // the qualified name will have to be resolved
-        this.resolver = new NameResolver(this, qualifiedName.stream()
-                            .map(t -> (String) t.getValue())
-                            .filter(Objects::nonNull)
-                            .iterator());
         }
 
 
@@ -175,6 +163,19 @@ public class ImportStatement
     @Override
     public NameResolver getNameResolver()
         {
+        NameResolver resolver = m_resolver;
+        if (resolver == null || resolver.getNode() != this)
+            {
+            Iterator<String> iter = star == null
+                    ? qualifiedName.stream()
+                                   .map(t -> (String) t.getValue())
+                                   .iterator()
+                    : qualifiedName.stream()
+                                   .map(t -> (String) t.getValue())
+                                   .filter(Objects::nonNull)
+                                   .iterator();
+            m_resolver = resolver = new NameResolver(this, iter);
+            }
         return resolver;
         }
 
@@ -243,11 +244,14 @@ public class ImportStatement
                 {
                 // resolve what the qualified name is in reference to
                 NameResolver resolver = getNameResolver();
-                assert resolver.getResult() == Result.RESOLVED;
-                Constant constant = resolver.getConstant();
+                if (resolver.getResult() != Result.RESOLVED &&
+                        resolver.resolve(errs) != Result.RESOLVED)
+                    {
+                    return null;
+                    }
 
                 // register the import into the context
-                ctx.ensureNameMap().put(sName, constant);
+                ctx.ensureNameMap().put(sName, resolver.getConstant());
                 }
             }
 
@@ -322,9 +326,8 @@ public class ImportStatement
     protected List<Token> qualifiedName;
     protected Token       star;
 
-    private NameResolver  resolver;
-
-    private transient boolean m_fImportRegistered;
+    private transient NameResolver m_resolver;
+    private transient boolean      m_fImportRegistered;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ImportStatement.class, "cond");
     }
