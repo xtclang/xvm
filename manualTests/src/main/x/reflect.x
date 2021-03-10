@@ -104,7 +104,7 @@ module TestReflection
         console.println($"cannot be revealed: {&tmpDir.actualType}");
 
         Point      p   = new Point(1, 1);
-        Stringable str = &p.maskAs<Stringable>();
+        Stringable str = &p.maskAs<Stringable>(Stringable);
 
         assert !&str.instanceOf(Point);
         try

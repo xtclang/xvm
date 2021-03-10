@@ -127,8 +127,12 @@ interface Ref<Referent>
      *
      * This method will result in a reference that only contains the members in the specified type,
      * stripping the runtime reference of any members that are not present in the specified type.
+     *
+     * @param maskType  the type to mask the contents of this reference as
+     *
+     * @return a reference of the desired type
      */
-    <Masked> Masked maskAs<Masked>();
+    <Masked> Masked maskAs<Masked>(Type<Masked> maskType);
 
     /**
      * Obtain a new reference to the referent such that the reference contains the methods and

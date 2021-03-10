@@ -189,10 +189,6 @@ public class xRef
                 return actOnReferent(frame, hRef,
                     h -> frame.assignValue(iReturn,
                         xBoolean.makeHandle(instanceOf(h, (TypeHandle) hArg))));
-
-            case "maskAs":
-                return actOnReferent(frame, hRef,
-                    h -> maskAs(frame, h, (TypeHandle) hArg, iReturn));
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -202,10 +198,12 @@ public class xRef
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
+        RefHandle hRef = (RefHandle) hTarget;
+
         switch (method.getName())
             {
             case "get":
-                return getReferentImpl(frame, (RefHandle) hTarget, true, iReturn);
+                return getReferentImpl(frame, hRef, true, iReturn);
 
             case "equals":
                 {
@@ -213,6 +211,10 @@ public class xRef
                 RefHandle hRef2 = (RefHandle) ahArg[2];
                 return new CompareReferents(hRef1, hRef2, this, iReturn).doNext(frame);
                 }
+
+            case "maskAs":
+                return actOnReferent(frame, hRef,
+                    h -> maskAs(frame, h, (TypeHandle) ahArg[1], iReturn));
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
