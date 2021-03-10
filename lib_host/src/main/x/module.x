@@ -58,11 +58,8 @@ module host.xtclang.org
                 {
                 resultTuple[0].whenComplete((_, e) ->
                     {
-                    if (e == Null)
-                        {
-                        console.println(resultTuple[1].flush());
-                        }
-                    else
+                    console.println(resultTuple[1].flush());
+                    if (e != Null)
                         {
                         console.println(e);
                         }
