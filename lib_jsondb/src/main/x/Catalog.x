@@ -757,7 +757,7 @@ TODO
      *
      * @return a ne `Client` instance
      */
-    protected Client<Schema> createClient(DBUser dbUser)
+    Client<Schema> createClient(DBUser dbUser)
         {
         Int clientId = genClientId();
         val metadata = this.metadata;

@@ -1,7 +1,9 @@
 import model.DBObjectInfo;
 
+import oodb.Connection;
 import oodb.DBUser;
 import oodb.RootSchema;
+import oodb.Transaction;
 
 
 /**
@@ -62,7 +64,8 @@ mixin CatalogMetadata<Schema extends RootSchema>
         }
 
     /**
-     * The `Catalog` factory.
+     * The `Catalog` factory. This is called by the host and the returned catalog is retained for
+     * later use to create connections.
      *
      * @param dir       the database directory, either within which to create a database, or where
      *                  the database described by this catalog metadata already exists
@@ -76,8 +79,25 @@ mixin CatalogMetadata<Schema extends RootSchema>
         return new Catalog<Schema>(dir, this, readOnly);
         }
 
+    typedef (Connection<Schema> + Schema) ClientConnection;
+    typedef (Transaction<Schema> + Schema) ClientTransaction;
+
     /**
-     * The `Client` factory.
+     * The `ClientConnection` factory. This is called by the host when a connection is injected.
+     *
+     * @param catalog        the `Catalog` describing the database storage location and structure
+     * @param dbUser         the `DBUser` that the `Client` will act on behalf of
+     *
+     * @return a new `Client` of the database represented by the `Catalog`
+     */
+    ClientConnection createConnection(Catalog<Schema> catalog, DBUser user)
+        {
+        return catalog.createClient(user).conn ?: assert;
+        // TODO GG should this &conn?.maskAs<ClientConnection>();
+        }
+
+    /**
+     * The `Client` factory. This is called by the Catalog when it creates a client.
      *
      * @param catalog        the `Catalog` describing the database storage location and structure
      * @param clientId       the unique client id
