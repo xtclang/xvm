@@ -150,7 +150,8 @@ val compileHost = tasks.register<JavaExec>("compileHost") {
     group       = "Build"
     description = "Build host.xtc module"
 
-    shouldRunAfter(compileOODB)
+    shouldRunAfter(compileIMDB)
+    shouldRunAfter(compileJsonDB)
 
     classpath(javatoolsJar)
     args("-verbose",
