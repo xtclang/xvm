@@ -13,9 +13,13 @@ import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xBoolean;
 
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
+
 
 /**
  * IS_NTYPE  rvalue, rvalue-type, lvalue-return ; !(T instanceof Type) -> Boolean
+ *
+ * NOTE: not currently used
  */
 public class IsNType
         extends OpTest
@@ -68,9 +72,33 @@ public class IsNType
     @Override
     protected int completeUnaryOp(Frame frame, ObjectHandle hValue)
         {
-        TypeConstant type     = hValue.getType();
-        TypeConstant typeTest = frame.resolveType(m_nValue2);
+        TypeConstant typeValue = hValue instanceof TypeHandle
+                ? ((TypeHandle) hValue).getUnsafeType()
+                : hValue.getType();
 
-        return frame.assignValue(m_nRetValue, xBoolean.makeHandle(!type.isA(typeTest)));
+        TypeConstant typeTest;
+        if (m_nValue2 <= CONSTANT_OFFSET)
+            {
+            typeTest = frame.resolveType(m_nValue2);
+            }
+        else
+            {
+            try
+                {
+                TypeHandle hType = (TypeHandle) frame.getArgument(m_nValue2);
+                typeTest = hType.getUnsafeDataType();
+                }
+            catch (ClassCastException e)
+                {
+                // should not happen
+                return frame.assignValue(m_nRetValue, xBoolean.FALSE);
+                }
+            catch (ObjectHandle.ExceptionHandle.WrapperException e)
+                {
+                return frame.raiseException(e);
+                }
+            }
+
+        return frame.assignValue(m_nRetValue, xBoolean.makeHandle(!typeValue.isA(typeTest)));
         }
     }

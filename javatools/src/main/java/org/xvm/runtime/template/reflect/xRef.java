@@ -637,11 +637,12 @@ public class xRef
         {
         if (hTarget instanceof GenericHandle)
             {
-            ObjectHandle hMasked =
-                ((GenericHandle) hTarget).maskAs(frame.f_context.f_container, hType.getDataType());
+            TypeConstant typeMasked = hType.getUnsafeDataType();
+            ObjectHandle hMasked    = ((GenericHandle) hTarget).
+                                        maskAs(frame.f_context.f_container, typeMasked);
 
             return hMasked == null
-                ? frame.raiseException(xException.illegalCast(frame, hType.getDataType().getValueString()))
+                ? frame.raiseException(xException.illegalCast(frame, typeMasked.getValueString()))
                 : frame.assignValue(iReturn, hMasked);
             }
         else
@@ -689,7 +690,7 @@ public class xRef
      */
     protected boolean instanceOf(ObjectHandle hTarget, TypeHandle hType)
         {
-        return hTarget.getType().isA(hType.getDataType());
+        return hTarget.getType().isA(hType.getUnsafeDataType());
         }
 
 

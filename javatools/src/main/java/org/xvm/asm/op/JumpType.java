@@ -81,7 +81,7 @@ public class JumpType
             try
                 {
                 TypeHandle hType = (TypeHandle) frame.getArgument(m_nArg2);
-                typeTest = hType.getDataType();
+                typeTest = hType.getUnsafeDataType();
                 }
             catch (ClassCastException e)
                 {
@@ -94,6 +94,10 @@ public class JumpType
                 }
             }
 
-        return hValue.getType().isA(typeTest) ? jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1;
+        TypeConstant typeValue = hValue instanceof TypeHandle
+                ? ((TypeHandle) hValue).getUnsafeType()
+                : hValue.getType();
+
+        return typeValue.isA(typeTest) ? jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1;
         }
     }

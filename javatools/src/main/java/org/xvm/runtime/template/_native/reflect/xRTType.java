@@ -1705,11 +1705,25 @@ public class xRTType
             }
 
         /**
+         * As a general rule, the returned TypeConstant could be used *only* for an "isA()"
+         * evaluation.
+         *
          * @return a TypeConstant that *may* belong to a "foreign" type system
          */
         public TypeConstant getUnsafeType()
             {
             return f_typeForeign == null ? super.getType() : f_typeForeign;
+            }
+
+        /**
+         * As a general rule, the returned TypeConstant could be used *only* for an "isA()"
+         * evaluation.
+         *
+         * @return a TypeConstant that *may* belong to a "foreign" type system
+         */
+        public TypeConstant getUnsafeDataType()
+            {
+            return getUnsafeType().getParamType(0);
             }
 
         @Override

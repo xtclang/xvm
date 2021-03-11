@@ -17,6 +17,8 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.xException;
 
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -94,20 +96,22 @@ public class MoveCast
 
     protected int complete(Frame frame, ObjectHandle hValue)
         {
-        TypeConstant typeFrom = hValue.getType();
+        TypeConstant typeFrom = hValue instanceof TypeHandle
+                ? ((TypeHandle) hValue).getUnsafeType()
+                : hValue.getType();
         TypeConstant typeTo   = frame.resolveType(m_nToType);
 
-        if (typeFrom.isA(typeTo))
+        if (!typeFrom.isA(typeTo))
             {
-            if (frame.isNextRegister(m_nToValue))
-                {
-                frame.introduceResolvedVar(m_nToValue, typeTo);
-                }
-
-            return frame.assignValue(m_nToValue, hValue);
+            return frame.raiseException(xException.illegalCast(frame, typeFrom.getValueString()));
             }
 
-        return frame.raiseException(xException.illegalCast(frame, typeFrom.getValueString()));
+        if (frame.isNextRegister(m_nToValue))
+            {
+            frame.introduceResolvedVar(m_nToValue, typeTo);
+            }
+
+        return frame.assignValue(m_nToValue, hValue);
         }
 
     @Override
