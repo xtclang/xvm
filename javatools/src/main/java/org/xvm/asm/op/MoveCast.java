@@ -96,9 +96,7 @@ public class MoveCast
 
     protected int complete(Frame frame, ObjectHandle hValue)
         {
-        TypeConstant typeFrom = hValue instanceof TypeHandle
-                ? ((TypeHandle) hValue).getUnsafeType()
-                : hValue.getType();
+        TypeConstant typeFrom = hValue.getUnsafeType();
         TypeConstant typeTo   = frame.resolveType(m_nToType);
 
         if (!typeFrom.isA(typeTo))

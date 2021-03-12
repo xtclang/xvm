@@ -94,10 +94,8 @@ public class JumpNType
                 }
             }
 
-        TypeConstant typeValue = hValue instanceof TypeHandle
-                ? ((TypeHandle) hValue).getUnsafeType()
-                : hValue.getType();
-
-        return typeValue.isA(typeTest) ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
+        return hValue.getUnsafeType().isA(typeTest)
+                ? iPC + 1
+                : jump(frame, iPC + m_ofJmp, m_cExits);
         }
     }

@@ -72,10 +72,6 @@ public class IsNType
     @Override
     protected int completeUnaryOp(Frame frame, ObjectHandle hValue)
         {
-        TypeConstant typeValue = hValue instanceof TypeHandle
-                ? ((TypeHandle) hValue).getUnsafeType()
-                : hValue.getType();
-
         TypeConstant typeTest;
         if (m_nValue2 <= CONSTANT_OFFSET)
             {
@@ -99,6 +95,7 @@ public class IsNType
                 }
             }
 
-        return frame.assignValue(m_nRetValue, xBoolean.makeHandle(!typeValue.isA(typeTest)));
+        return frame.assignValue(m_nRetValue,
+                xBoolean.makeHandle(!hValue.getUnsafeType().isA(typeTest)));
         }
     }

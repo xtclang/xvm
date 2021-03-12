@@ -84,7 +84,7 @@ public class xCPFileStore
             case "loadFile":
                 {
                 ConstantHandle hNode     = (ConstantHandle) hArg;
-                FSNodeConstant constNode = (FSNodeConstant) hNode.get();
+                FSNodeConstant constNode = (FSNodeConstant) hNode.getConstant();
                 ObjectHandle   hBinary   = xByteArray.makeHandle(
                         constNode.getFileBytes(), xArray.Mutability.Constant);
                 return frame.assignValue(iReturn, hBinary);
@@ -104,7 +104,7 @@ public class xCPFileStore
             case "loadNode":
                 {
                 ConstantHandle hNode     = (ConstantHandle) ahArg[0];
-                FSNodeConstant constNode = (FSNodeConstant) hNode.get();
+                FSNodeConstant constNode = (FSNodeConstant) hNode.getConstant();
 
                 ObjectHandle[] ahValue = new ObjectHandle[5];
                 ahValue[0] = xBoolean.makeHandle(constNode.getFormat() == Format.FSDir);
@@ -119,7 +119,7 @@ public class xCPFileStore
             case "loadDirectory":
                 {
                 ConstantHandle hNode     = (ConstantHandle) ahArg[0];
-                FSNodeConstant constNode = (FSNodeConstant) hNode.get();
+                FSNodeConstant constNode = (FSNodeConstant) hNode.getConstant();
 
                 FSNodeConstant[] aNodes    = constNode.getDirectoryContents();
                 int              cNodes    = aNodes.length;

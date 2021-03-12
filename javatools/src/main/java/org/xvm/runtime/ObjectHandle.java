@@ -129,6 +129,17 @@ public abstract class ObjectHandle
                 : type.freeze();
         }
 
+    /**
+     * Some handles may carry a type that belongs to a "foreign" type system. As a general rule,
+     * that type could be used *only* for an "isA()" evaluation.
+     *
+     * @return a TypeConstant that *may* belong to a "foreign" type system
+     */
+    public TypeConstant getUnsafeType()
+        {
+        return getType();
+        }
+
     public ObjectHandle ensureAccess(Constants.Access access)
         {
         return m_clazz.ensureAccess(this, access);
@@ -332,6 +343,17 @@ public abstract class ObjectHandle
             m_clazz.setFieldInStructure(m_aFields, sProp, hValue);
             }
 
+        public Container getOwner()
+            {
+            return m_owner;
+            }
+
+        public void setOwner(Container owner)
+            {
+            assert m_owner == null || m_owner == owner;
+            m_owner = owner;
+            }
+
         public boolean containsMutableFields()
             {
             for (ObjectHandle field : m_aFields)
@@ -440,7 +462,7 @@ public abstract class ObjectHandle
                     }
 
                 GenericHandle hClone = (GenericHandle) cloneAs(clzAs);
-                hClone.m_owner = owner;
+                hClone.setOwner(owner);
                 return hClone;
                 }
             return null;
@@ -510,10 +532,15 @@ public abstract class ObjectHandle
             return true;
             }
 
-        // keyed by the property name or a NestedIdentity
+        /**
+         * The array of field values indexed according to the ClassComposition's field layout.
+         */
         private final ObjectHandle[] m_aFields;
 
-        // not null only if this object was injected or explicitly "masked as"
+        /**
+         * The owner field is most commonly not set, unless this object is a service, a module,
+         * was injected or explicitly "masked as".
+         */
         protected Container m_owner;
 
         /**
@@ -569,7 +596,9 @@ public abstract class ObjectHandle
             }
         }
 
-    // anything that fits in a long
+    /**
+     * A handle for any object that fits in a long.
+     */
     public static class JavaLong
             extends ObjectHandle
         {
@@ -618,7 +647,9 @@ public abstract class ObjectHandle
             }
         }
 
-    // abstract array handle
+    /**
+     * Abstract array handle.
+     */
     public abstract static class ArrayHandle
             extends ObjectHandle
         {
@@ -654,7 +685,9 @@ public abstract class ObjectHandle
             }
         }
 
-    // native handle that holds a reference to a Constant from the ConstantPool
+    /**
+     * Native handle that holds a reference to a Constant from the ConstantPool.
+     */
     public static class ConstantHandle
             extends ObjectHandle
         {
@@ -663,21 +696,21 @@ public abstract class ObjectHandle
             super(xObject.CLASS);
 
             assert constant != null;
-            m_const = constant;
+            f_constant = constant;
             }
 
-        public Constant get()
+        public Constant getConstant()
             {
-            return m_const;
+            return f_constant;
             }
 
         @Override
         public String toString()
             {
-            return m_const.toString();
+            return f_constant.toString();
             }
 
-        private Constant m_const;
+        private final Constant f_constant;
         }
 
     /**

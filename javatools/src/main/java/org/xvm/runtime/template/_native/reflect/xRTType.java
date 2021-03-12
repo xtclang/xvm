@@ -1704,12 +1704,7 @@ public class xRTType
             return f_typeForeign != null;
             }
 
-        /**
-         * As a general rule, the returned TypeConstant could be used *only* for an "isA()"
-         * evaluation.
-         *
-         * @return a TypeConstant that *may* belong to a "foreign" type system
-         */
+        @Override
         public TypeConstant getUnsafeType()
             {
             return f_typeForeign == null ? super.getType() : f_typeForeign;
