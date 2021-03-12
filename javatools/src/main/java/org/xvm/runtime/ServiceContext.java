@@ -1151,8 +1151,8 @@ public class ServiceContext
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendProperty01Request(Frame frameCaller, PropertyConstant idProp, int iReturn,
-                                     PropertyOperation01 op)
+    public int sendProperty01Request(Frame frameCaller, ObjectHandle hTarget,
+                                     PropertyConstant idProp, int iReturn, PropertyOperation01 op)
         {
         if (getStatus() == ServiceStatus.Terminated)
             {
@@ -1163,8 +1163,7 @@ public class ServiceContext
             {
             public int process(Frame frame, int iPC)
                 {
-                // the property target is the service itself
-                int iResult = op.invoke(frame, frame.f_context.m_hService, idProp, 0);
+                int iResult = op.invoke(frame, hTarget, idProp, 0);
 
                 // don't return a FutureHandle, but wait till it's done
                 return idProp.isFutureVar() && iResult == Op.R_NEXT
@@ -1187,8 +1186,8 @@ public class ServiceContext
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendProperty10Request(Frame frameCaller,
-                                      PropertyConstant idProp, ObjectHandle hValue, PropertyOperation10 op)
+    public int sendProperty10Request(Frame frameCaller, ObjectHandle hTarget,
+                                     PropertyConstant idProp, ObjectHandle hValue, PropertyOperation10 op)
         {
         if (getStatus() == ServiceStatus.Terminated)
             {
@@ -1199,8 +1198,7 @@ public class ServiceContext
             {
             public int process(Frame frame, int iPC)
                 {
-                // the property target is the service itself
-                return op.invoke(frame, frame.f_context.m_hService, idProp, hValue);
+                return op.invoke(frame, hTarget, idProp, hValue);
                 }
 
             public String toString()

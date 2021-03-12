@@ -9,7 +9,6 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xService.ServiceHandle;
@@ -49,88 +48,84 @@ public class Child
         }
 
     @Override
-    public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+    public int invoke1(Frame frame, CallChain chain, ObjectHandle hChild, ObjectHandle[] ahVar, int iReturn)
         {
-        ServiceHandle hService = hTarget.getService();
+        ServiceHandle hService = hChild.getService();
         return hService == null || hService.f_context == frame.f_context || chain.isAtomic()
-            ? super.invoke1(frame, chain, hTarget, ahVar, iReturn)
-            : makeAsyncHandle(hTarget, chain).call1(frame, hService, ahVar, iReturn);
+            ? super.invoke1(frame, chain, hChild, ahVar, iReturn)
+            : makeAsyncHandle(hChild, chain).call1(frame, hService, ahVar, iReturn);
         }
 
     @Override
-    public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
+    public int invokeN(Frame frame, CallChain chain, ObjectHandle hChild, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        ServiceHandle hService = hTarget.getService();
+        ServiceHandle hService = hChild.getService();
         return hService == null || hService.f_context == frame.f_context || chain.isAtomic()
-            ? super.invokeN(frame, chain, hTarget, ahVar, aiReturn)
-            : makeAsyncHandle(hTarget, chain).callN(frame, hService, ahVar, aiReturn);
+            ? super.invokeN(frame, chain, hChild, ahVar, aiReturn)
+            : makeAsyncHandle(hChild, chain).callN(frame, hService, ahVar, aiReturn);
         }
 
     @Override
-    public int invokeT(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+    public int invokeT(Frame frame, CallChain chain, ObjectHandle hChild, ObjectHandle[] ahVar, int iReturn)
         {
-        ServiceHandle hService = hTarget.getService();
+        ServiceHandle hService = hChild.getService();
         return hService == null || hService.f_context == frame.f_context || chain.isAtomic()
-            ? super.invokeT(frame, chain, hTarget, ahVar, iReturn)
-            : makeAsyncHandle(hTarget, chain).callT(frame, hService, ahVar, iReturn);
+            ? super.invokeT(frame, chain, hChild, ahVar, iReturn)
+            : makeAsyncHandle(hChild, chain).callT(frame, hService, ahVar, iReturn);
         }
 
     @Override
-    public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
+    public int getPropertyValue(Frame frame, ObjectHandle hChild, PropertyConstant idProp, int iReturn)
         {
-        ServiceHandle hService = hTarget.getService();
-        return hService == null || hService.f_context == frame.f_context || hTarget.isAtomic(idProp)
-            ? super.getPropertyValue(frame, hTarget, idProp, iReturn)
-            : hService.f_context.sendProperty01Request(frame, idProp, iReturn,
-                    (frameCaller, hSvc, id, hVal) ->
-                        super.getPropertyValue(frameCaller, hTarget, id, hVal));
+        ServiceHandle hService = hChild.getService();
+        return hService == null || hService.f_context == frame.f_context || hChild.isAtomic(idProp)
+            ? super.getPropertyValue(frame, hChild, idProp, iReturn)
+            : hService.f_context.sendProperty01Request(frame, hChild, idProp, iReturn, super::getPropertyValue);
         }
 
     @Override
-    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
+    public int getFieldValue(Frame frame, ObjectHandle hChild, PropertyConstant idProp, int iReturn)
         {
-        ServiceHandle hService = hTarget.getService();
-        if (hService == null || hService.f_context == frame.f_context || hTarget.isAtomic(idProp))
+        ServiceHandle hService = hChild.getService();
+        if (hService == null || hService.f_context == frame.f_context || hChild.isAtomic(idProp))
             {
-            return super.getFieldValue(frame, hTarget, idProp, iReturn);
+            return super.getFieldValue(frame, hChild, idProp, iReturn);
             }
         throw new IllegalStateException("Invalid context");
         }
 
     @Override
-    public int setPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp,
+    public int setPropertyValue(Frame frame, ObjectHandle hChild, PropertyConstant idProp,
                                 ObjectHandle hValue)
         {
-        ServiceHandle hService = hTarget.getService();
-        return hService == null || hService.f_context == frame.f_context || hTarget.isAtomic(idProp)
-            ? super.setPropertyValue(frame, hTarget, idProp, hValue)
-            : hService.f_context.sendProperty10Request(frame, idProp, hValue,
-                    (frameCaller, hSvc, id, hVal) ->
-                        super.setPropertyValue(frameCaller, hTarget, id, hVal));
+        ServiceHandle hService = hChild.getService();
+        return hService == null || hService.f_context == frame.f_context || hChild.isAtomic(idProp)
+            ? super.setPropertyValue(frame, hChild, idProp, hValue)
+            : hService.f_context.sendProperty10Request(frame, hChild, idProp, hValue, super::setPropertyValue);
         }
 
     @Override
-    public int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp,
+    public int setFieldValue(Frame frame, ObjectHandle hChild, PropertyConstant idProp,
                              ObjectHandle hValue)
         {
-        ServiceHandle hService = hTarget.getService();
+        ServiceHandle hService = hChild.getService();
 
-        if (hService == null || hService.f_context == frame.f_context || hTarget.isAtomic(idProp))
+        if (hService == null || hService.f_context == frame.f_context || hChild.isAtomic(idProp))
             {
-            return super.setFieldValue(frame, hTarget, idProp, hValue);
+            return super.setFieldValue(frame, hChild, idProp, hValue);
             }
 
         throw new IllegalStateException("Invalid context");
         }
 
-    private FunctionHandle makeAsyncHandle(ObjectHandle hTarget, CallChain chain)
+    private FunctionHandle makeAsyncHandle(ObjectHandle hChild, CallChain chain)
         {
         return new xRTFunction.AsyncHandle(chain)
             {
             @Override
             protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
                 {
-                return hTarget;
+                return hChild;
                 }
             };
         }

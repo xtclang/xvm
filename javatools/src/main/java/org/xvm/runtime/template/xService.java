@@ -299,7 +299,7 @@ public class xService
             return super.invokePreInc(frame, hTarget, idProp, iReturn);
             }
 
-        return hService.f_context.sendProperty01Request(frame, idProp, iReturn, this::invokePreInc);
+        return hService.f_context.sendProperty01Request(frame, hService, idProp, iReturn, this::invokePreInc);
         }
 
     @Override
@@ -312,7 +312,7 @@ public class xService
             return super.invokePostInc(frame, hTarget, idProp, iReturn);
             }
 
-        return hService.f_context.sendProperty01Request(frame, idProp, iReturn, this::invokePostInc);
+        return hService.f_context.sendProperty01Request(frame, hService, idProp, iReturn, this::invokePostInc);
         }
 
     @Override
@@ -325,7 +325,7 @@ public class xService
             return super.invokePreDec(frame, hTarget, idProp, iReturn);
             }
 
-        return hService.f_context.sendProperty01Request(frame, idProp, iReturn, this::invokePreDec);
+        return hService.f_context.sendProperty01Request(frame, hService, idProp, iReturn, this::invokePreDec);
         }
 
     @Override
@@ -338,7 +338,7 @@ public class xService
             return super.invokePostDec(frame, hTarget, idProp, iReturn);
             }
 
-        return hService.f_context.sendProperty01Request(frame, idProp, iReturn, this::invokePostDec);
+        return hService.f_context.sendProperty01Request(frame, hService, idProp, iReturn, this::invokePostDec);
         }
 
     @Override
@@ -351,7 +351,7 @@ public class xService
             return super.invokePropertyAdd(frame, hTarget, idProp, hArg);
             }
 
-        return hService.f_context.sendProperty10Request(frame, idProp, hArg, this::invokePropertyAdd);
+        return hService.f_context.sendProperty10Request(frame, hService, idProp, hArg, this::invokePropertyAdd);
         }
 
     @Override
@@ -364,7 +364,7 @@ public class xService
             return super.invokePropertySub(frame, hTarget, idProp, hArg);
             }
 
-        return hService.f_context.sendProperty10Request(frame, idProp, hArg, this::invokePropertySub);
+        return hService.f_context.sendProperty10Request(frame, hService, idProp, hArg, this::invokePropertySub);
         }
 
     @Override
@@ -377,7 +377,7 @@ public class xService
             return super.getPropertyValue(frame, hTarget, idProp, iReturn);
             }
 
-        return hService.f_context.sendProperty01Request(frame, idProp, iReturn, this::getPropertyValue);
+        return hService.f_context.sendProperty01Request(frame, hService, idProp, iReturn, this::getPropertyValue);
         }
 
     @Override
@@ -403,7 +403,7 @@ public class xService
             return super.setPropertyValue(frame, hTarget, idProp, hValue);
             }
 
-        return hService.f_context.sendProperty10Request(frame, idProp, hValue, this::setPropertyValue);
+        return hService.f_context.sendProperty10Request(frame, hService, idProp, hValue, this::setPropertyValue);
         }
 
     @Override

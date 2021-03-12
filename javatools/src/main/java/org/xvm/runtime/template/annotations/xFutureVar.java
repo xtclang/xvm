@@ -373,9 +373,9 @@ public class xFutureVar
                 ServiceHandle hService = hHolder.getService();
                 if (frame.f_context != hService.f_context)
                     {
-                    return hService.f_context.sendProperty01Request(frame, null, iReturn,
-                        (frameCaller, hTarget_, idProp_, iRet) ->
-                            getReferentImpl(frameCaller, hRef, true, iRet));
+                    return hService.f_context.sendProperty01Request(frame, hRef, null, iReturn,
+                        (frameCaller, hTarget, idProp_, iRet) ->
+                            getReferentImpl(frameCaller, (RefHandle) hTarget, true, iRet));
                     }
                 }
             }
@@ -414,9 +414,9 @@ public class xFutureVar
                 ServiceHandle hService = hHolder.getService();
                 if (frame.f_context != hService.f_context)
                     {
-                    return hService.f_context.sendProperty10Request(frame, null, hValue,
-                        (frameCaller, hTarget_, idProp_, hVal) ->
-                            setReferentImpl(frameCaller, hRef, true, hVal));
+                    return hService.f_context.sendProperty10Request(frame, hRef, null, hValue,
+                        (frameCaller, hTarget, idProp_, hVal) ->
+                            setReferentImpl(frameCaller, (RefHandle) hTarget, true, hVal));
                     }
                 }
             }
