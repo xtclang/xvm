@@ -4,53 +4,29 @@ module TestSimple.test.org
 
     void run()
         {
-        BaseParent.Child0 c = new DerivedParent().new Child1(2);
+        TestSvc svc = new TestSvc();
+
+        Map<Int, String> m = new HashMap();
+
+        svc.map = m;
+
+        svc.foo();
+
+        console.println(m);
         }
 
-    class BaseParent
+    service TestSvc
         {
-        class Child0(Int value)
+        construct()
             {
-            construct(Int value)
-                {
-                console.println("construct BP.C0");
-                this.value = value;
-                }
+            map = new HashMap();
             }
 
-        class Child1(Int value)
-                extends Child0(value)
+        void foo()
             {
-            construct(Int value)
-                {
-                console.println("construct BP.C1");
-                construct Child0(value);  // could be "super(value)"?
-                }
-            }
-        }
-
-    class DerivedParent
-            extends BaseParent
-        {
-        @Override
-        class Child0(Int value)
-            {
-            construct(Int value)
-                {
-                console.println("construct DP.C0");
-                construct BaseParent.Child0(value); // could be "super(value)"
-                }
-
+            map.put(1, "hello");
             }
 
-        @Override
-        class Child1(Int value)
-            {
-//            construct(Int value)
-//                {
-//                console.println("construct DP.C1");
-//                construct BaseParent.Child1(value);
-//                }
-            }
+        Map<Int, String> map;
         }
     }

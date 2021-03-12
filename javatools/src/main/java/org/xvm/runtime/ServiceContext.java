@@ -1194,11 +1194,25 @@ public class ServiceContext
             return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
             }
 
+        ObjectHandle hPassValue;
+        if (hValue.isPassThrough())
+            {
+            hPassValue = hValue;
+            }
+        else
+            {
+            hPassValue = hValue.getTemplate().createProxyHandle(this, hValue, idProp.getType());
+            if (hPassValue == null)
+                {
+                return frameCaller.raiseException(xException.mutableObject(frameCaller));
+                }
+            }
+
         Op opSet = new Op()
             {
             public int process(Frame frame, int iPC)
                 {
-                return op.invoke(frame, hTarget, idProp, hValue);
+                return op.invoke(frame, hTarget, idProp, hPassValue);
                 }
 
             public String toString()
