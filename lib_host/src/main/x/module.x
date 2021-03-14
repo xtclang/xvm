@@ -138,9 +138,12 @@ module host.xtclang.org
                 @Override
                 Supplier getResource(Type type, String name)
                     {
-                    if (type.isA(oodb.Connection))
+                    import oodb.Connection;
+
+                    if (type.is(Type<Connection>))
                         {
-                        return dbHost.ensureConnection();
+                        Connection conn = dbHost.ensureConnection();
+                        return &conn.maskAs<Connection>(type);
                         }
                     return super(type, name);
                     }
@@ -296,7 +299,7 @@ module host.xtclang.org
                 case Console:
                     if (name == "console")
                         {
-                        return consoleBuffer;
+                        return &consoleBuffer.maskAs(Console);
                         }
                     wrongName = True;
                     break;
