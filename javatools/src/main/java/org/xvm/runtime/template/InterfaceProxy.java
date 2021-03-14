@@ -15,7 +15,8 @@ import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.AsyncHandle;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 
 /**
@@ -68,70 +69,71 @@ public class InterfaceProxy
                              ObjectHandle[] ahArg, int iReturn)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
-        if (frame.f_context == hProxy.f_context)
-            {
-            hTarget = hProxy.f_hTarget;
-            return hTarget.getTemplate().invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-            }
-        return xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
+
+        hTarget = hProxy.f_hTarget;
+
+        return frame.f_context == hProxy.f_context
+            ? hTarget.getTemplate().invokeNativeN(frame, method, hTarget, ahArg, iReturn)
+            : makeAsyncNativeHandle(hTarget, method).call1(frame, hProxy, ahArg, iReturn);
         }
 
     @Override
     public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
-        if (frame.f_context == hProxy.f_context)
-            {
-            hTarget = hProxy.f_hTarget;
-            return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, iReturn);
-            }
-        return xRTFunction.makeAsyncHandle(chain).call1(frame, hTarget, ahVar, iReturn);
+
+        hTarget = hProxy.f_hTarget;
+
+        return frame.f_context == hProxy.f_context
+            ? hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, iReturn)
+            : makeAsyncHandle(hTarget, chain).call1(frame, hProxy, ahVar, iReturn);
         }
 
     @Override
     public int invokeT(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
-        if (frame.f_context == hProxy.f_context)
-            {
-            hTarget = hProxy.f_hTarget;
-            return hTarget.getTemplate().invokeT(frame, chain, hTarget, ahVar, iReturn);
-            }
-        return xRTFunction.makeAsyncHandle(chain).callT(frame, hTarget, ahVar, iReturn);
+
+        hTarget = hProxy.f_hTarget;
+
+        return frame.f_context == hProxy.f_context
+            ? hTarget.getTemplate().invokeT(frame, chain, hTarget, ahVar, iReturn)
+            : makeAsyncHandle(hTarget, chain).callT(frame, hProxy, ahVar, iReturn);
         }
 
     @Override
     public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
-        if (frame.f_context == hProxy.f_context)
-            {
-            hTarget = hProxy.f_hTarget;
-            return hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, aiReturn);
-            }
-        return xRTFunction.makeAsyncHandle(chain).callN(frame, hTarget, ahVar, aiReturn);
+
+        hTarget = hProxy.f_hTarget;
+
+        return frame.f_context == hProxy.f_context
+            ? hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, aiReturn)
+            : makeAsyncHandle(hTarget, chain).callN(frame, hProxy, ahVar, aiReturn);
         }
 
     @Override
     public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
-        if (frame.f_context == hProxy.f_context)
-            {
-            hTarget = hProxy.f_hTarget;
-            return hTarget.getTemplate().getPropertyValue(frame, hTarget, idProp, iReturn);
-            }
 
-        return hProxy.f_context.sendProperty01Request(frame, hTarget, idProp, iReturn, this::getPropertyValue);
+        hTarget = hProxy.f_hTarget;
+
+        return frame.f_context == hProxy.f_context
+            ? hTarget.getTemplate().getPropertyValue(frame, hTarget, idProp, iReturn)
+            : hProxy.f_context.sendProperty01Request(frame, hTarget, idProp, iReturn, this::getPropertyValue);
         }
 
     @Override
     public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+
+        hTarget = hProxy.f_hTarget;
+
         if (frame.f_context == hProxy.f_context)
             {
-            hTarget = hProxy.f_hTarget;
             return hTarget.getTemplate().getFieldValue(frame, hTarget, idProp, iReturn);
             }
 
@@ -143,13 +145,12 @@ public class InterfaceProxy
                                 ObjectHandle hValue)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
-        if (frame.f_context == hProxy.f_context)
-            {
-            hTarget = hProxy.f_hTarget;
-            return hTarget.getTemplate().setPropertyValue(frame, hTarget, idProp, hValue);
-            }
 
-        return hProxy.f_context.sendProperty10Request(frame, hTarget, idProp, hValue, this::setPropertyValue);
+        hTarget = hProxy.f_hTarget;
+
+        return frame.f_context == hProxy.f_context
+            ? hTarget.getTemplate().setPropertyValue(frame, hTarget, idProp, hValue)
+            : hProxy.f_context.sendProperty10Request(frame, hTarget, idProp, hValue, this::setPropertyValue);
         }
 
     @Override
@@ -157,9 +158,11 @@ public class InterfaceProxy
                              ObjectHandle hValue)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+
+        hTarget = hProxy.f_hTarget;
+
         if (frame.f_context == hProxy.f_context)
             {
-            hTarget = hProxy.f_hTarget;
             return hTarget.getTemplate().setFieldValue(frame, hTarget, idProp, hValue);
             }
 
@@ -170,9 +173,11 @@ public class InterfaceProxy
     public int createPropertyRef(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, boolean fRO, int iReturn)
         {
         InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+
+        hTarget = hProxy.f_hTarget;
+
         if (frame.f_context == hProxy.f_context)
             {
-            hTarget = hProxy.f_hTarget;
             return hTarget.getTemplate().createPropertyRef(frame, hTarget, idProp, fRO, iReturn);
             }
 
@@ -185,15 +190,39 @@ public class InterfaceProxy
         return new InterfaceProxyHandle(clzProxy, ctx, hTarget);
         }
 
+    private FunctionHandle makeAsyncNativeHandle(ObjectHandle hTarget, MethodStructure method)
+        {
+        return new AsyncHandle(method)
+            {
+            @Override
+            protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
+                {
+                return hTarget;
+                }
+            };
+        }
 
-    // ----- ObjectHandle -----
+    private FunctionHandle makeAsyncHandle(ObjectHandle hTarget, CallChain chain)
+        {
+        return new AsyncHandle(chain)
+            {
+            @Override
+            protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
+                {
+                return hTarget;
+                }
+            };
+        }
+
+
+    // ----- ObjectHandle --------------------------------------------------------------------------
 
     public static class InterfaceProxyHandle
             extends ServiceHandle
         {
         protected final ObjectHandle f_hTarget;
 
-        public InterfaceProxyHandle(TypeComposition clazz, ServiceContext context, ObjectHandle hTarget)
+        protected InterfaceProxyHandle(TypeComposition clazz, ServiceContext context, ObjectHandle hTarget)
             {
             super(clazz, context);
 
@@ -221,6 +250,12 @@ public class InterfaceProxy
 
             return obj instanceof InterfaceProxyHandle &&
                 ((InterfaceProxyHandle) obj).f_hTarget == f_hTarget;
+            }
+
+        @Override
+        public String toString()
+            {
+            return "Proxy: " + f_hTarget.toString() + " as " + getType().getValueString();
             }
         }
     }
