@@ -13,20 +13,20 @@ import org.xvm.runtime.TemplateRegistry;
 /**
  * Abstract super class for all unchecked constrained integers (Int8, UInt16, @Unchecked Int32, ...)
  */
-public abstract class xUncheckedConstrainedInt
+public abstract class xUncheckedSignedInt
         extends xConstrainedInteger
     {
-    public xUncheckedConstrainedInt(TemplateRegistry templates, ClassStructure structure,
-                               long cMinValue, long cMaxValue, int cNumBits, boolean fUnsigned)
+    public xUncheckedSignedInt(TemplateRegistry templates, ClassStructure structure,
+                               long cMinValue, long cMaxValue, int cNumBits)
         {
-        super(templates, structure, cMinValue, cMaxValue, cNumBits, fUnsigned, false);
+        super(templates, structure, cMinValue, cMaxValue, cNumBits, false, false);
 
         f_nMask = cMaxValue - cMinValue;
         f_nSign = cMaxValue + 1; // used only for signed
         }
 
     @Override
-    protected xUncheckedConstrainedInt getUncheckedTemplate()
+    protected xConstrainedInteger getUncheckedTemplate()
         {
         return this;
         }

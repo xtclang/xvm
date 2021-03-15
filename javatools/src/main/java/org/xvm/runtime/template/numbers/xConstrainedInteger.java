@@ -29,7 +29,6 @@ import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
 import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
 
 import org.xvm.runtime.template.text.xChar;
-import org.xvm.runtime.template.text.xString;
 
 import org.xvm.util.PackedInteger;
 
@@ -141,7 +140,7 @@ public abstract class xConstrainedInteger
     /**
      * @return an unchecked template for this type
      */
-    abstract protected xUncheckedConstrainedInt getUncheckedTemplate();
+    abstract protected xConstrainedInteger getUncheckedTemplate();
 
     @Override
     public boolean isGenericHandle()
@@ -736,14 +735,6 @@ public abstract class xConstrainedInteger
             }
 
         return frame.assignValue(iReturn, makeJavaLong(lValue));
-        }
-
-    @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        long l = ((JavaLong) hTarget).getValue();
-
-        return frame.assignValue(iReturn, xString.makeHandle(String.valueOf(l)));
         }
 
     /**

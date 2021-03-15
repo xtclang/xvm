@@ -1,0 +1,111 @@
+package org.xvm.runtime.template.numbers;
+
+
+import org.xvm.asm.ClassStructure;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.TemplateRegistry;
+
+/**
+ * Abstract super class for all unchecked constrained integers (Int8, UInt16, @Unchecked Int32, ...)
+ */
+public abstract class xUncheckedUnsignedInt
+        extends xUnsignedConstrainedInt
+    {
+    public xUncheckedUnsignedInt(TemplateRegistry templates, ClassStructure structure,
+                                 long cMinValue, long cMaxValue, int cNumBits)
+        {
+        super(templates, structure, cMinValue, cMaxValue, cNumBits, false);
+
+        f_nMask = cMaxValue - cMinValue;
+        }
+
+    @Override
+    protected xConstrainedInteger getUncheckedTemplate()
+        {
+        return this;
+        }
+
+    @Override
+    public TypeConstant getCanonicalType()
+        {
+        return pool().ensureAnnotatedTypeConstant(
+            pool().clzUnchecked(), null, getStructure().getCanonicalType());
+        }
+
+    @Override
+    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+        long lr = l1 + l2;
+
+        return frame.assignValue(iReturn, makeJavaLong(lr));
+        }
+
+    @Override
+    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+        long lr = l1 - l2;
+
+        return frame.assignValue(iReturn, makeJavaLong(lr));
+        }
+
+    @Override
+    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+        long lr = l1 * l2;
+
+        return frame.assignValue(iReturn, makeJavaLong(lr));
+        }
+
+    @Override
+    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        long l = ((JavaLong) hTarget).getValue();
+
+        return frame.assignValue(iReturn, makeJavaLong(-l));
+        }
+
+    @Override
+    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        long l = ((JavaLong) hTarget).getValue();
+
+        return frame.assignValue(iReturn, makeJavaLong(l - 1));
+        }
+
+    @Override
+    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        long l = ((JavaLong) hTarget).getValue();
+
+        return frame.assignValue(iReturn, makeJavaLong(l + 1));
+        }
+
+    @Override
+    public int convertLong(Frame frame, long lValue, int iReturn, boolean fCheck)
+        {
+        return frame.assignValue(iReturn, makeJavaLong(lValue));
+        }
+
+    @Override
+    public JavaLong makeJavaLong(long lValue)
+        {
+        if (f_cNumBits < 64)
+            {
+            lValue &= f_nMask;
+            }
+        return super.makeJavaLong(lValue);
+        }
+
+    private final long f_nMask;
+    }

@@ -4,7 +4,6 @@ package org.xvm.runtime.template.numbers;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.UInt8Constant;
 
@@ -61,7 +60,7 @@ public class xUInt8
         }
 
     @Override
-    protected xUncheckedConstrainedInt getUncheckedTemplate()
+    protected xConstrainedInteger getUncheckedTemplate()
         {
         return xUncheckedUInt8.INSTANCE;
         }

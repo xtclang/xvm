@@ -10,13 +10,13 @@ import org.xvm.runtime.TemplateRegistry;
  * Native unchecked UInt32 support.
  */
 public class xUncheckedUInt32
-        extends xUncheckedConstrainedInt
+        extends xUncheckedUnsignedInt
     {
     public static xUncheckedUInt32 INSTANCE;
 
     public xUncheckedUInt32(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 0L, 0xFFFF_FFFFL, 32, true);
+        super(templates, structure, 0L, 0xFFFF_FFFFL, 32);
 
         if (fInstance)
             {

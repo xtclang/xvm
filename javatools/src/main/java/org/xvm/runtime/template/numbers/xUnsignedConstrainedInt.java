@@ -65,4 +65,105 @@ public abstract class xUnsignedConstrainedInt
         return frame.assignValue(iReturn, xOrdered.makeHandle(
             Long.compareUnsigned(h1.getValue(), h2.getValue())));
         }
+
+
+    // ----- Uint64 helpers ------------------------------------------------------------------------
+
+    public long mulUnassigned(Frame frame, long l1, long l2)
+        {
+        if (l1 <= 0)
+            {
+            // the first factor is bigger or equal than 2^63, so the answer is either 0 or l1
+            if (l2 == 0 || l1 == 0)
+                {
+                return 0;
+                }
+            if (l2 == 1)
+                {
+                return l1;
+                }
+            return overflow(frame);
+            }
+
+        if (l2 <= 0)
+            {
+            // the first factor is bigger or equal than 2^63, so the answer is either 0 or l1
+            if (l1 == 0 || l2 == 0)
+                {
+                return 0;
+                }
+            if (l1 == 1)
+                {
+                return l2;
+                }
+            return overflow(frame);
+            }
+
+        long lr = l1 * l2;
+
+        if (f_fChecked &&
+                (l1 | l2) >>> 31 != 0 && divUnassigned(lr, l2) != l1)
+            {
+            return overflow(frame);
+            }
+        return lr;
+        }
+
+    public long divUnassigned(long l1, long l2)
+        {
+        if (l2 < 0)
+            {
+            // the divisor is bigger or equal than 2^63, so the answer is either 0 or 1
+            return l1 < 0 && l1 < l2 ? 1 : 0;
+            }
+
+        if (l1 < 0)
+            {
+            if (l2 == 1)
+                {
+                return l1;
+                }
+
+            // the dividend is bigger or equal then 2^63
+            long l1L = l1 & 0x7FFF_FFFF_FFFF_FFFFL;
+
+            // l1 = l1L + 2^63; r = (l1L + 2^63)/l2 =
+            // l1L/l2 + 2^63/l2 + (l1L % l2 + 2^63 % l2)/l2
+            //
+            // Note: Long.MIN_VALUE/l2 and Long.MIN_VALUE % l2 are negative values
+
+            return l1L/l2 - Long.MIN_VALUE/l2 + (l1L % l2 - Long.MIN_VALUE % l2)/l2;
+            }
+
+        return l1/l2;
+        }
+
+    public long modUnassigned(long l1, long l2)
+        {
+        if (l2 < 0)
+            {
+            // the divisor is bigger or equal than 2^63, so the answer is trivial
+            return l1 < 0 && l1 < l2 ? l1 - l2 : l1;
+            }
+
+        if (l1 < 0)
+            {
+            if (l2 == 1)
+                {
+                return 0;
+                }
+
+            // the dividend is bigger or equal then 2^63
+            long l1L = l1 & 0x7FFF_FFFF_FFFF_FFFFL;
+
+            // l1 = l1L + 2^63; r = (l1L + 2^63) % l2 =
+            // (l1L % l2 + 2^63 % l2)/l2
+            //
+            // Note: Long.MIN_VALUE/l2 and Long.MIN_VALUE % l2 are negative values
+
+            return (l1L % l2 - Long.MIN_VALUE % l2) % l2;
+            }
+
+        return l1 % l2;
+        }
     }

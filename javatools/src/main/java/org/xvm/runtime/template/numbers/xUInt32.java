@@ -38,7 +38,7 @@ public class xUInt32
         }
 
     @Override
-    protected xUncheckedConstrainedInt getUncheckedTemplate()
+    protected xConstrainedInteger getUncheckedTemplate()
         {
         return xUncheckedUInt32.INSTANCE;
         }

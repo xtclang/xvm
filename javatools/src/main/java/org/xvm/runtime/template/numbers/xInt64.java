@@ -58,7 +58,7 @@ public class xInt64
         }
 
     @Override
-    protected xUncheckedConstrainedInt getUncheckedTemplate()
+    protected xConstrainedInteger getUncheckedTemplate()
         {
         return xUncheckedInt64.INSTANCE;
         }

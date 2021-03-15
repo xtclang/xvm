@@ -10,13 +10,13 @@ import org.xvm.runtime.TemplateRegistry;
  * Native unchecked UInt8 support.
  */
 public class xUncheckedUInt8
-        extends xUncheckedConstrainedInt
+        extends xUncheckedUnsignedInt
     {
     public static xUncheckedUInt8 INSTANCE;
 
     public xUncheckedUInt8(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 0L, 0xFFL, 8, true);
+        super(templates, structure, 0L, 0xFFL, 8);
 
         if (fInstance)
             {
