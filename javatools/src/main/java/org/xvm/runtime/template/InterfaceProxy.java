@@ -66,6 +66,26 @@ public class InterfaceProxy
         }
 
     @Override
+    public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget,
+                                          TypeConstant typeProxy)
+        {
+        InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+        if (ctx != hProxy.f_context)
+            {
+            return null;
+            }
+
+        if (hProxy.getType().equals(typeProxy))
+            {
+            return hProxy;
+            }
+
+        ProxyComposition clzProxy = new ProxyComposition(
+                hProxy.getComposition().getOrigin(), typeProxy);
+        return InterfaceProxy.makeHandle(clzProxy, ctx, hProxy.getTarget());
+        }
+
+    @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
@@ -225,7 +245,8 @@ public class InterfaceProxy
         {
         protected final ObjectHandle f_hTarget;
 
-        protected InterfaceProxyHandle(TypeComposition clazz, ServiceContext context, ObjectHandle hTarget)
+        protected InterfaceProxyHandle(ProxyComposition clazz, ServiceContext context,
+                                       ObjectHandle hTarget)
             {
             super(clazz, context);
 
@@ -235,6 +256,12 @@ public class InterfaceProxy
         public ObjectHandle getTarget()
             {
             return f_hTarget;
+            }
+
+        @Override
+        public ProxyComposition getComposition()
+            {
+            return (ProxyComposition) super.getComposition();
             }
 
         @Override

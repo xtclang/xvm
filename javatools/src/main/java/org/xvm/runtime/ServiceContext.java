@@ -1195,7 +1195,7 @@ public class ServiceContext
             }
 
         ObjectHandle hPassValue;
-        if (hValue.isPassThrough())
+        if (hValue.isPassThrough(f_container))
             {
             hPassValue = hValue;
             }
@@ -1303,10 +1303,11 @@ public class ServiceContext
                 {
                 ObjectHandle    hReturn    = frame.f_ahVar[0];
                 ExceptionHandle hException = frame.m_hException;
+                ServiceContext  ctx        = frame.f_context;
 
-                if (hException == null && !hReturn.isPassThrough())
+                if (hException == null && !hReturn.isPassThrough(ctx.f_container))
                     {
-                    hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
+                    hReturn = hReturn.getTemplate().createProxyHandle(ctx, hReturn, null);
                     if (hReturn == null)
                         {
                         hException = xException.mutableObject(frame);
@@ -1321,6 +1322,7 @@ public class ServiceContext
                 {
                 ObjectHandle[]  ahReturn   = frame.f_ahVar;
                 ExceptionHandle hException = frame.m_hException;
+                ServiceContext  ctx        = frame.f_context;
                 TupleHandle     hTuple     = null;
                 if (hException == null)
                     {
@@ -1336,10 +1338,10 @@ public class ServiceContext
                         for (int i = 0, c = ahReturn.length; i < c; i++)
                             {
                             ObjectHandle hReturn = ahReturn[i];
-                            if (!hReturn.isPassThrough())
+                            if (!hReturn.isPassThrough(ctx.f_container))
                                 {
                                 hReturn = hReturn.getTemplate().
-                                        createProxyHandle(frame.f_context, hReturn, null);
+                                        createProxyHandle(ctx, hReturn, null);
                                 if (hReturn == null)
                                     {
                                     hException = xException.mutableObject(frame);
@@ -1361,6 +1363,7 @@ public class ServiceContext
                 assert cReturns > 1;
                 ObjectHandle[]  ahReturn   = frame.f_ahVar;
                 ExceptionHandle hException = frame.m_hException;
+                ServiceContext  ctx        = frame.f_context;
                 if (hException == null)
                     {
                     for (int i = 0, c = ahReturn.length; i < c; i++)
@@ -1375,9 +1378,9 @@ public class ServiceContext
                             // the DEFAULT value (see Utils.GET_AND_RETURN)
                             ahReturn[i] = ObjectHandle.DEFAULT;
                             }
-                        else if (!hReturn.isPassThrough())
+                        else if (!hReturn.isPassThrough(ctx.f_container))
                             {
-                            hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
+                            hReturn = hReturn.getTemplate().createProxyHandle(ctx, hReturn, null);
                             if (hReturn == null)
                                 {
                                 hException = xException.mutableObject(frame);

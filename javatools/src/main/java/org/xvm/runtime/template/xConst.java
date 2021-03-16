@@ -244,7 +244,7 @@ public class xConst
                     for (int i = 0; i < cFields; i++)
                         {
                         ObjectHandle hField = ahFields[i];
-                        if (hField.isPassThrough())
+                        if (hField.isPassThrough(null))
                             {
                             continue;
                             }

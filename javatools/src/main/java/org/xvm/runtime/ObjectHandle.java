@@ -184,12 +184,40 @@ public abstract class ObjectHandle
         }
 
     /**
-     * @return true iff the handle is an object that is allowed to be passed across service
+     * Check if this handle could be passed "as is" to a service context of the specified container.
+     *
+     * @param container  (optional) the "receiving" container
+     *
+     * @return true iff the handle is an object that is allowed to be passed across service/container
      *         boundaries (an immutable, a service or an object that has all pass-through fields)
      */
-    public boolean isPassThrough()
+    public boolean isPassThrough(Container container)
         {
-        return !isMutable() || isService();
+        if (isService())
+            {
+            return true;
+            }
+
+        if (isMutable())
+            {
+            return false;
+            }
+
+        if (container == null)
+            {
+            return true;
+            }
+
+        // immutable objects need to belong to the same type system
+        // TODO GG - may need to traverse that check
+        if (!getType().isShared(container.getModule().getConstantPool()))
+            {
+            // temporary
+            System.err.println("not a pass though " + getType() + " to " + container);
+            return false;
+            }
+
+        return true;
         }
 
     /**
@@ -350,7 +378,6 @@ public abstract class ObjectHandle
 
         public void setOwner(Container owner)
             {
-            assert m_owner == null || m_owner == owner;
             m_owner = owner;
             }
 

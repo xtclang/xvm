@@ -13,6 +13,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
@@ -641,9 +642,9 @@ public class xRTFunction
             }
 
         @Override
-        public boolean isPassThrough()
+        public boolean isPassThrough(Container container)
             {
-            return m_hDelegate == null || m_hDelegate.isPassThrough();
+            return m_hDelegate == null || m_hDelegate.isPassThrough(container);
             }
 
         @Override
@@ -781,9 +782,9 @@ public class xRTFunction
             }
 
         @Override
-        public boolean isPassThrough()
+        public boolean isPassThrough(Container container)
             {
-            return m_hDelegate.isPassThrough() && m_hArg.isPassThrough();
+            return m_hDelegate.isPassThrough(container) && m_hArg.isPassThrough(container);
             }
 
         @Override
@@ -918,16 +919,16 @@ public class xRTFunction
             }
 
         @Override
-        public boolean isPassThrough()
+        public boolean isPassThrough(Container container)
             {
             for (ObjectHandle hArg : f_ahArg)
                 {
-                if (!hArg.isPassThrough())
+                if (!hArg.isPassThrough(container))
                     {
                     return false;
                     }
                 }
-            return super.isPassThrough();
+            return super.isPassThrough(container);
             }
 
         @Override
@@ -1283,7 +1284,10 @@ public class xRTFunction
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * @return true iff all the arguments are pass-through or proxyable
+     * Check if all the arguments are pass-through; replace the proxyable ones with the
+     * corresponding proxy handles.
+     *
+     * @return true iff all the arguments are pass-through or have been successfully proxied
      */
     private static boolean validatePassThrough(ServiceContext ctx, MethodStructure method,
                                                ObjectHandle[] ahArg)
@@ -1298,7 +1302,7 @@ public class xRTFunction
                 break;
                 }
 
-            if (!hArg.isPassThrough())
+            if (!hArg.isPassThrough(ctx.f_container))
                 {
                 hArg = hArg.getTemplate().createProxyHandle(ctx, hArg, method.getParamTypes()[i]);
                 if (hArg == null)

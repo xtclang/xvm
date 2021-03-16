@@ -316,17 +316,17 @@ public abstract class Container
      * Add a natural resource supplier for an injection.
      *
      * @param key        the injection key
-     * @param hProvider  the resource provider handle (service)
+     * @param hService   the resource provider's service
      * @param hSupplier  the resource supplier handle (the resource itself or a function)
      */
-    public void addResourceSupplier(InjectionKey key, ServiceHandle hProvider, ObjectHandle hSupplier)
+    public void addResourceSupplier(InjectionKey key, ServiceHandle hService, ObjectHandle hSupplier)
         {
         TypeConstant typeResource = key.f_type;
         if (hSupplier instanceof FunctionHandle)
             {
-            Container      container = hProvider.f_context.f_container;
+            Container      container = hService.f_context.f_container;
             FunctionHandle hProxy    = xRTFunction.makeAsyncDelegatingHandle(
-                                            hProvider, (FunctionHandle) hSupplier);
+                                            hService, (FunctionHandle) hSupplier);
             f_mapResources.put(key, (frame, hOpts) ->
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[hProxy.getParamCount()];
@@ -357,7 +357,7 @@ public abstract class Container
                     }
                 });
             }
-        else if (hSupplier.isPassThrough())
+        else if (hSupplier.isPassThrough(this))
             {
             f_mapResources.put(key, (frame, hOpts) -> hSupplier);
             }
