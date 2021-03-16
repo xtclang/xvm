@@ -8,6 +8,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ProxyComposition;
@@ -120,9 +121,10 @@ public class InterfaceProxy
 
         hTarget = hProxy.f_hTarget;
 
+        ClassTemplate template = hTarget.getTemplate();
         return frame.f_context == hProxy.f_context
-            ? hTarget.getTemplate().getPropertyValue(frame, hTarget, idProp, iReturn)
-            : hProxy.f_context.sendProperty01Request(frame, hTarget, idProp, iReturn, this::getPropertyValue);
+            ? template.getPropertyValue(frame, hTarget, idProp, iReturn)
+            : hProxy.f_context.sendProperty01Request(frame, hTarget, idProp, iReturn, template::getPropertyValue);
         }
 
     @Override
@@ -148,9 +150,10 @@ public class InterfaceProxy
 
         hTarget = hProxy.f_hTarget;
 
+        ClassTemplate template = hTarget.getTemplate();
         return frame.f_context == hProxy.f_context
-            ? hTarget.getTemplate().setPropertyValue(frame, hTarget, idProp, hValue)
-            : hProxy.f_context.sendProperty10Request(frame, hTarget, idProp, hValue, this::setPropertyValue);
+            ? template.setPropertyValue(frame, hTarget, idProp, hValue)
+            : hProxy.f_context.sendProperty10Request(frame, hTarget, idProp, hValue, template::setPropertyValue);
         }
 
     @Override

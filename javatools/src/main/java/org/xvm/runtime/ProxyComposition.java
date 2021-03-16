@@ -16,15 +16,21 @@ public class ProxyComposition
         extends DelegatingComposition
     {
     /**
-     * Construct the ProxyComposition for a given "inception" type and a "proxy" type.
+     * Construct the ProxyComposition for a given "inception" composition and a "proxy" type.
      */
     public ProxyComposition(ClassComposition clzOrigin, TypeConstant typeProxy)
         {
         super(clzOrigin);
 
-        assert typeProxy.isInterfaceType();
-
         f_typeProxy = typeProxy;
+        }
+
+    /**
+     * @return the original ("inception") composition
+     */
+    public ClassComposition getOrigin()
+        {
+        return (ClassComposition) f_clzOrigin;
         }
 
     /**
@@ -116,7 +122,7 @@ public class ProxyComposition
     @Override
     public String toString()
         {
-        return "Proxy: " + f_clzOrigin.toString();
+        return "Proxy: " + f_clzOrigin.toString() + " as " + f_typeProxy.getValueString();
         }
 
 

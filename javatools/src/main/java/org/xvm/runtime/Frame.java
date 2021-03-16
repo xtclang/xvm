@@ -31,9 +31,6 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction;
-import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
-
 import org.xvm.runtime.template.annotations.xFutureVar;
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
@@ -41,6 +38,9 @@ import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 
 /**
@@ -703,7 +703,7 @@ public class Frame
      */
     private void checkType(ObjectHandle hValueFrom, VarInfo infoTo)
         {
-        TypeConstant typeFrom = hValueFrom.getType();
+        TypeConstant typeFrom = hValueFrom.getUnsafeType();
         if (typeFrom.getPosition() != infoTo.m_nTypeId) // quick check
             {
             // TODO: how to minimize the probability of getting here?
