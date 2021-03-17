@@ -3,6 +3,9 @@ package org.xvm.runtime.template.collections;
 
 import java.util.Arrays;
 
+import java.util.IdentityHashMap;
+import java.util.Map;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -34,8 +37,6 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
 
 import org.xvm.runtime.template.numbers.xInt64;
-
-import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
@@ -826,6 +827,18 @@ public class xTuple
             super.makeImmutable();
 
             m_mutability = Mutability.Constant;
+            }
+
+        @Override
+        protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+            {
+            if (mapVisited == null)
+                {
+                mapVisited = new IdentityHashMap<>();
+                }
+
+            return mapVisited.put(this, Boolean.TRUE) != null ||
+                   areShared(m_ahValue, poolThat, mapVisited);
             }
 
         @Override

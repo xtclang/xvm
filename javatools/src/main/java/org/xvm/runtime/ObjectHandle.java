@@ -3,10 +3,13 @@ package org.xvm.runtime;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.Op;
 
@@ -208,15 +211,43 @@ public abstract class ObjectHandle
             return true;
             }
 
-        // immutable objects need to belong to the same type system
-        // TODO GG - may need to traverse that check
-        if (!getType().isShared(container.getModule().getConstantPool()))
-            {
-            // temporary
-            System.err.println("not a pass though " + getType() + " to " + container);
-            return false;
-            }
+        return isShared(container.getModule().getConstantPool(), null);
+        }
 
+    /**
+     * Check if this handle belongs to the same type system as the one represented by the
+     * specified ConstantPool.
+     *
+     * @param poolThat    the pool representing the "receiving" container
+     * @param mapVisited  the identity hash map of visited objects
+     *
+     * @return true iff this object's type is shared with that pool
+     */
+    protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+        {
+        return true;
+        }
+
+    /**
+     * Helper method to check if all the specified handles belongs to the same type system as the
+     * one represented by the specified ConstantPool.
+     *
+     * @param ahValue     an array of handles to check
+     * @param poolThat    the pool representing the "receiving" container
+     * @param mapVisited  the identity hash map of visited objects
+     *
+     * @return true iff this object's type is shared with that pool
+     */
+    protected static boolean areShared(ObjectHandle[] ahValue, ConstantPool poolThat,
+                                       Map<ObjectHandle, Boolean> mapVisited)
+        {
+        for (ObjectHandle field : ahValue)
+            {
+            if (field != null && !field.isShared(poolThat, mapVisited))
+                {
+                return false;
+                }
+            }
         return true;
         }
 
@@ -513,6 +544,27 @@ public abstract class ObjectHandle
             return null;
             }
 
+        @Override
+        protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+            {
+            if (!getType().isShared(poolThat))
+                {
+                return false;
+                }
+
+            // TODO GG: we could make this check less expensive by pre-emptively calculating
+            //          whether all the fields belong to the same pool, which would be a wast
+            //          majority of the objects; in that case, no object tree traversing would be
+            //          necessary
+            if (mapVisited == null)
+                {
+                mapVisited = new IdentityHashMap<>();
+                }
+
+            return mapVisited.put(this, Boolean.TRUE) != null ||
+                   areShared(m_aFields, poolThat, mapVisited);
+            }
+
         public static boolean compareIdentity(GenericHandle h1, GenericHandle h2)
             {
             if (h1 == h2)
@@ -791,6 +843,12 @@ public abstract class ObjectHandle
             }
 
         @Override
+        public boolean isPassThrough(Container container)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
         public String toString()
             {
             return f_hException == null
@@ -1002,6 +1060,12 @@ public abstract class ObjectHandle
         public TypeConstant getType()
             {
             return null;
+            }
+
+        @Override
+        protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+            {
+            return true; // TODO GG: figure out why we're getting here
             }
 
         @Override

@@ -60,7 +60,7 @@ public class xService
     @Override
     public void registerNativeTemplates()
         {
-        new InterfaceProxy(f_templates); // this initializes the InterfaceProxy.INSTANCE reference
+        new Proxy(f_templates); // this initializes the Proxy.INSTANCE reference
         }
 
     @Override

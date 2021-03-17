@@ -44,14 +44,12 @@ import org.xvm.runtime.Utils.InPlacePropertyBinary;
 import org.xvm.runtime.Utils.InPlacePropertyUnary;
 import org.xvm.runtime.Utils.UnaryAction;
 
-import org.xvm.runtime.template.InterfaceProxy;
+import org.xvm.runtime.template.Proxy;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xOrdered;
-
-import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
@@ -59,9 +57,10 @@ import org.xvm.runtime.template.collections.xTuple;
 
 import org.xvm.runtime.template.reflect.xRef;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
-import org.xvm.runtime.template.reflect.xVar;
 
 import org.xvm.runtime.template.text.xString;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 import org.xvm.util.Handy;
 
@@ -512,18 +511,29 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Create a proxy handle that could be sent over the service boundaries.
+     * Create a proxy handle that could be sent over the service/container boundaries.
      *
      * @param ctx        the service context that the mutable object "belongs" to
-     * @param hTarget    the mutable object handle that needs to be proxied
-     * @param typeProxy  the [revealed] type of the proxy handle
+     * @param hTarget    the object handle that needs to be proxied
+     * @param typeProxy  (optional) the [revealed] type of the proxy handle
      *
-     * @return a new ObjectHandle to replace the mutable object with or null
+     * @return a new ObjectHandle to replace a "non-pass-through" object with or null if a proxy
+     *         cannot be created
      */
     public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget,
                                           TypeConstant typeProxy)
         {
-        if (typeProxy != null && typeProxy.isInterfaceType())
+        if (typeProxy == null)
+            {
+            if (!hTarget.isMutable())
+                {
+                ProxyComposition clzProxy = new ProxyComposition(
+                        (ClassComposition) hTarget.getComposition(), hTarget.getType());
+
+                return Proxy.makeHandle(clzProxy, ctx, hTarget);
+                }
+            }
+        else if (typeProxy.isInterfaceType())
             {
             assert hTarget.getType().isA(typeProxy);
 
@@ -565,7 +575,7 @@ public abstract class ClassTemplate
             ClassComposition clzTarget = (ClassComposition) hTarget.getComposition();
             ProxyComposition clzProxy  = clzTarget.ensureProxyComposition(typeProxy);
 
-            return InterfaceProxy.makeHandle(clzProxy, ctx, hTarget);
+            return Proxy.makeHandle(clzProxy, ctx, hTarget);
             }
         return null;
         }

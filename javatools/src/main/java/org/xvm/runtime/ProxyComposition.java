@@ -6,11 +6,11 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.template.InterfaceProxy;
+import org.xvm.runtime.template.Proxy;
 
 
 /**
- * ProxyComposition represents a proxy interface.
+ * ProxyComposition represents a Proxy object.
  */
 public class ProxyComposition
         extends DelegatingComposition
@@ -44,13 +44,13 @@ public class ProxyComposition
     @Override
     public OpSupport getSupport()
         {
-        return InterfaceProxy.INSTANCE;
+        return Proxy.INSTANCE;
         }
 
     @Override
     public ClassTemplate getTemplate()
         {
-        return InterfaceProxy.INSTANCE;
+        return Proxy.INSTANCE;
         }
 
     @Override

@@ -1,6 +1,9 @@
 package org.xvm.runtime.template;
 
 
+import java.util.Map;
+
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.PropertyConstant;
@@ -21,14 +24,14 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 
 /**
- * Template for proxy-able interfaces.
+ * Template for proxied objects.
  */
-public class InterfaceProxy
+public class Proxy
         extends xService
     {
-    public static InterfaceProxy INSTANCE;
+    public static Proxy INSTANCE;
 
-    public InterfaceProxy(TemplateRegistry templates)
+    public Proxy(TemplateRegistry templates)
         {
         super(templates, xObject.INSTANCE.getStructure(), false);
 
@@ -69,7 +72,7 @@ public class InterfaceProxy
     public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget,
                                           TypeConstant typeProxy)
         {
-        InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+        ProxyHandle hProxy = (ProxyHandle) hTarget;
         if (ctx != hProxy.f_context)
             {
             return null;
@@ -82,14 +85,14 @@ public class InterfaceProxy
 
         ProxyComposition clzProxy = new ProxyComposition(
                 hProxy.getComposition().getOrigin(), typeProxy);
-        return InterfaceProxy.makeHandle(clzProxy, ctx, hProxy.getTarget());
+        return Proxy.makeHandle(clzProxy, ctx, hProxy.getTarget());
         }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+        ProxyHandle hProxy = (ProxyHandle) hTarget;
 
         hTarget = hProxy.f_hTarget;
 
@@ -101,7 +104,7 @@ public class InterfaceProxy
     @Override
     public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+        ProxyHandle hProxy = (ProxyHandle) hTarget;
 
         hTarget = hProxy.f_hTarget;
 
@@ -113,7 +116,7 @@ public class InterfaceProxy
     @Override
     public int invokeT(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+        ProxyHandle hProxy = (ProxyHandle) hTarget;
 
         hTarget = hProxy.f_hTarget;
 
@@ -125,7 +128,7 @@ public class InterfaceProxy
     @Override
     public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+        ProxyHandle hProxy = (ProxyHandle) hTarget;
 
         hTarget = hProxy.f_hTarget;
 
@@ -137,7 +140,7 @@ public class InterfaceProxy
     @Override
     public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+        ProxyHandle hProxy = (ProxyHandle) hTarget;
 
         hTarget = hProxy.f_hTarget;
 
@@ -150,7 +153,7 @@ public class InterfaceProxy
     @Override
     public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+        ProxyHandle hProxy = (ProxyHandle) hTarget;
 
         hTarget = hProxy.f_hTarget;
 
@@ -166,7 +169,7 @@ public class InterfaceProxy
     public int setPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp,
                                 ObjectHandle hValue)
         {
-        InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+        ProxyHandle hProxy = (ProxyHandle) hTarget;
 
         hTarget = hProxy.f_hTarget;
 
@@ -180,7 +183,7 @@ public class InterfaceProxy
     public int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp,
                              ObjectHandle hValue)
         {
-        InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+        ProxyHandle hProxy = (ProxyHandle) hTarget;
 
         hTarget = hProxy.f_hTarget;
 
@@ -195,7 +198,7 @@ public class InterfaceProxy
     @Override
     public int createPropertyRef(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, boolean fRO, int iReturn)
         {
-        InterfaceProxyHandle hProxy = (InterfaceProxyHandle) hTarget;
+        ProxyHandle hProxy = (ProxyHandle) hTarget;
 
         hTarget = hProxy.f_hTarget;
 
@@ -210,7 +213,7 @@ public class InterfaceProxy
     public static ObjectHandle makeHandle(ProxyComposition clzProxy, ServiceContext ctx,
                                           ObjectHandle hTarget)
         {
-        return new InterfaceProxyHandle(clzProxy, ctx, hTarget);
+        return new ProxyHandle(clzProxy, ctx, hTarget);
         }
 
     private FunctionHandle makeAsyncNativeHandle(ObjectHandle hTarget, MethodStructure method)
@@ -240,13 +243,13 @@ public class InterfaceProxy
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    public static class InterfaceProxyHandle
+    public static class ProxyHandle
             extends ServiceHandle
         {
         protected final ObjectHandle f_hTarget;
 
-        protected InterfaceProxyHandle(ProxyComposition clazz, ServiceContext context,
-                                       ObjectHandle hTarget)
+        protected ProxyHandle(ProxyComposition clazz, ServiceContext context,
+                              ObjectHandle hTarget)
             {
             super(clazz, context);
 
@@ -265,6 +268,12 @@ public class InterfaceProxy
             }
 
         @Override
+        protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+            {
+            return false;
+            }
+
+        @Override
         public int hashCode()
             {
             return System.identityHashCode(this);
@@ -278,8 +287,7 @@ public class InterfaceProxy
                 return true;
                 }
 
-            return obj instanceof InterfaceProxyHandle &&
-                ((InterfaceProxyHandle) obj).f_hTarget == f_hTarget;
+            return obj instanceof ProxyHandle && ((ProxyHandle) obj).f_hTarget == f_hTarget;
             }
 
         @Override

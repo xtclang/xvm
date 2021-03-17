@@ -3,6 +3,7 @@ package org.xvm.runtime.template.collections;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
@@ -1291,6 +1292,20 @@ public class xArray
             {
             m_ahValue = Utils.OBJECTS_NONE;
             m_cSize   = 0;
+            }
+
+        @Override
+        protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+            {
+            // despite the shared array type, the individual elements could be narrower
+            // and need to be checked
+            if (mapVisited == null)
+                {
+                mapVisited = new IdentityHashMap<>();
+                }
+
+            return mapVisited.put(this, Boolean.TRUE) != null ||
+                   areShared(m_ahValue, poolThat, mapVisited);
             }
 
         @Override
