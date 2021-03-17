@@ -2,7 +2,7 @@
  * An OrderedMap is an extension to the Map interface that exposes capabilities that are dependent
  * on an ordering of the keys (the entries) in the Map.
  */
-interface OrderedMap<Key, Value>
+interface OrderedMap<Key extends Orderable, Value>
         extends Map<Key, Value>
         extends Sliceable<Key>
     {
