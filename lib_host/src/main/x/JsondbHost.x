@@ -35,18 +35,29 @@ class JsondbHost
         return repository.getModule(dbModuleName + "_jsondb");
         }
 
+    /**
+     * Cached CatalogMetadata instance.
+     */
+    @Lazy CatalogMetadata meta.calc()
+        {
+        return dbContainer.innerTypeSystem.primaryModule.as(CatalogMetadata);
+        }
+
+    /**
+     * Cached Catalog instance.
+     */
+    @Lazy Catalog catalog.calc()
+        {
+        @Inject Directory curDir;
+
+        return meta.createCatalog(curDir, False);
+        }
+
     @Override
     Connection ensureConnection()
         {
         DBUser user = new oodb.model.DBUser(1, "test"); // TODO CP
 
-        return dbContainer.invoke("createConnection", Tuple:(catalog, user))[0].as(Connection);
-        }
-
-    @Lazy Catalog catalog.calc()
-        {
-        @Inject Directory curDir;
-
-        return dbContainer.invoke("createCatalog", Tuple:(curDir, False))[0].as(Catalog);
+        return meta.createConnection(catalog, user);
         }
     }
