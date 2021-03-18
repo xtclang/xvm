@@ -3207,9 +3207,21 @@ public class ClassStructure
                 aregParam[i] = new Register(aParams[i].getType(), i);
                 }
 
-            Register regProp = new Register(typeDelegate);
+            Register regProp;
+            if (infoDelegate.isConstant())
+                {
+                Constant constValue = infoDelegate.getInitialValue();
 
-            code.add(new L_Get(infoDelegate.getIdentity(), regProp));
+                code.add(new Var_I(typeDelegate, constValue == null
+                        ? pool.ensureSingletonConstConstant(infoDelegate.getIdentity())
+                        : constValue));
+                regProp = code.lastRegister();
+                }
+            else
+                {
+                regProp = new Register(typeDelegate);
+                code.add(new L_Get(infoDelegate.getIdentity(), regProp));
+                }
 
             switch (cReturns)
                 {
