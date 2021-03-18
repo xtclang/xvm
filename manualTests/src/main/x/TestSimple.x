@@ -1,32 +1,19 @@
 module TestSimple.test.org
+            delegates Stringable(NAME)
     {
     @Inject Console console;
 
     void run()
         {
-        TestSvc svc = new TestSvc();
-
-        Map<Int, String> m = new HashMap();
-
-        svc.map = m;
-
-        svc.foo();
-
-        console.println(m);
+        String name = NAME;
+        console.println(name);
+        console.println(this);
         }
 
-    service TestSvc
+    static String NAME = foo();
+
+    static String foo()
         {
-        construct()
-            {
-            map = new HashMap();
-            }
-
-        void foo()
-            {
-            map.put(1, "hello");
-            }
-
-        Map<Int, String> map;
+        return "Simple";
         }
     }
