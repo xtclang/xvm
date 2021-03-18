@@ -44,14 +44,14 @@ service ValueStore<Value extends immutable Const>
         }
 
     /**
-     * The oldest transaction ID to keep.
+     * The oldest transaction ID to keep. TODO move up, add "retain set"
      */
-    protected/private Int cutoff = TxManager.USE_LAST_TX;
+    protected/private Int cutoff = Int.minvalue;
 
     /**
      * A linked list node for transaction/value pairs.
      */
-    static class TxRecord<Value extends immutable Const>(Int txId, Indicator|Value value, TxRecord? prev=Null);
+    static class TxRecord<Value extends immutable Const>(Int txId, Indicator|Value value);
 
     /**
      * The

@@ -102,6 +102,8 @@ mixin CatalogMetadata<Schema extends RootSchema>
      * @param catalog        the `Catalog` describing the database storage location and structure
      * @param clientId       the unique client id
      * @param dbUser         the `DBUser` that the `Client` will act on behalf of
+     * @param readOnly       (optional) pass True to indicate that client is not permitted to modify
+     *                       any data
      * @param notifyOnClose  (optional) a notification function to call when the `Client` is closed
      *
      * @return a new `Client` of the database represented by the `Catalog`
@@ -109,5 +111,6 @@ mixin CatalogMetadata<Schema extends RootSchema>
     Client<Schema> createClient(Catalog<Schema>        catalog,
                                 Int                    clientId,
                                 DBUser                 dbUser,
+                                Boolean                readOnly      = False,
                                 function void(Client)? notifyOnClose = Null);
     }

@@ -753,17 +753,19 @@ TODO
      * be substituted for the default, whic allows custom schemas and other custom functionality to
      * be provided in a type-safe manner.
      *
-     * @param dbUser  the user that the `Client` will represent
+     * @param dbUser    the user that the `Client` will represent
+     * @param readOnly  (optional) pass True to indicate that client is not permitted to modify
+     *                  any data
      *
      * @return a ne `Client` instance
      */
-    Client<Schema> createClient(DBUser dbUser)
+    Client<Schema> createClient(DBUser dbUser, Boolean readOnly = False)
         {
         Int clientId = genClientId();
         val metadata = this.metadata;
         return metadata == Null
-                ? new Client<Schema>(this, clientId, dbUser, unregisterClient)
-                : metadata.createClient(this, clientId, dbUser, unregisterClient);
+                ? new Client<Schema>(this, clientId, dbUser, readOnly, unregisterClient)
+                : metadata.createClient(this, clientId, dbUser, readOnly, unregisterClient);
         }
 
     /**

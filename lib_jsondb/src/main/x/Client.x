@@ -53,9 +53,11 @@ service Client<Schema extends RootSchema>
      * @param catalog        the JSON db catalog, representing the database on disk
      * @param id             the id assigned to this Client service
      * @param dbUser         the database user to create the client on behalf of
+     * @param readOnly       (optional) pass True to indicate that client is not permitted to modify
+     *                       any data
      * @param notifyOnClose  the function to call when the client connection is closed
      */
-    construct(Catalog<Schema> catalog, Int id, DBUser dbUser, function void(Client)? notifyOnClose = Null)
+    construct(Catalog<Schema> catalog, Int id, DBUser dbUser, Boolean readOnly = False, function void(Client)? notifyOnClose = Null)
         {
         assert Schema == RootSchema || catalog.metadata != Null;
 
@@ -63,6 +65,7 @@ service Client<Schema extends RootSchema>
         this.dbUser        = dbUser;
         this.catalog       = catalog;
         this.jsonSchema    = catalog.jsonSchema;
+        this.readOnly      = readOnly || catalog.readOnly;
         this.notifyOnClose = notifyOnClose;
         }
     finally
@@ -83,6 +86,11 @@ service Client<Schema extends RootSchema>
      * A cached reference to the JSON schema.
      */
     public/private json.Schema jsonSchema;
+
+    /**
+     * True iff this client was created in read-only mode.
+     */
+    public/private Boolean readOnly;
 
     /**
      * The id assigned to this Client service.
@@ -133,16 +141,29 @@ service Client<Schema extends RootSchema>
     // ----- support ----------------------------------------------------------------------------
 
     /**
-     * Verify that the client connection is open and can be used.
+     * Verify that the client connection is open and can be used for reading data.
      *
      * @return True if the check passes
      *
      * @throws Exception if the check fails
      */
-    Boolean check()
+    Boolean checkRead()
         {
-        // TODO
+        assert conn != Null;
         return True;
+        }
+
+    /**
+     * Verify that the client connection is open and can be used for changing data.
+     *
+     * @return True if the check passes
+     *
+     * @throws Exception if the check fails
+     */
+    Boolean checkWrite()
+        {
+        assert !readOnly && !tx?.txInfo.readOnly;
+        return checkRead();
         }
 
     /**
@@ -154,7 +175,7 @@ service Client<Schema extends RootSchema>
      */
     (Transaction + Schema tx, Boolean autocommit) ensureTransaction()
         {
-        check();
+        checkRead();
 
         var     tx         = this.tx;
         Boolean autocommit = False;
@@ -166,6 +187,17 @@ service Client<Schema extends RootSchema>
             }
 
         return tx, autocommit;
+        }
+
+    /**
+     * For the transaction manager's reserved "singleton" transaction that it uses to represent the
+     * original state of a transaction when executing trigger logic, set the "read level" (the base
+     * transaction id).
+     *
+     * @param readId  the transaction id to use as a read level
+     */
+    void adjustBaseTransaction(Int readId)
+        {
         }
 
     /**
@@ -409,7 +441,11 @@ service Client<Schema extends RootSchema>
                 };
             }
 
-        // some TODO items (the function thing) and optimizations
+        // ----- transaction management ------------------------------------------------------------
+
+//        Boolean txPrepare_()
+//        txCommit_()
+//        txReset_()
         }
 
 
@@ -617,11 +653,11 @@ service Client<Schema extends RootSchema>
         public/protected Int baseId_ = TxManager.USE_LAST_TX;
 
         /**
-         * The changes within the transaction. Key is the DBObject id, and the value is the
+         * The IDs changes within the transaction. Key is the DBObject id, and the value is the
          * corresponding TxChange object. (This differs from DBTransaction, which uses the path as
          * the key of the map.)
          */
-        protected Map<Int, DBObject.TxChange> contents_ = Map:[];
+        protected Set<Int> pending_ = Set:[];
 
         @Override
         public/protected TxInfo txInfo;

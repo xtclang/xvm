@@ -284,6 +284,88 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         }
 
 
+    // ----- transaction handling ------------------------------------------------------------------
+
+    /**
+     * Prepare a transaction by evaluating the changes specified by the `writeId`, ensuring that no
+     * incompatible changes have occurred between the `readId` and the `prepareId`, and move those
+     * changes from the writeId to the prepareId.
+     *
+     * @param readId     the transaction id that was used as the base transaction for the
+     *                   transactional phase, which may be badly out-of-date by this point
+     * @param writeId    the transaction id that was used to collect the pending work during the
+     *                   transactional phase
+     * @param prepareId  the transaction id that will be used as the commit transaction id if the
+     *                   transaction prepares and commits successfully
+     *
+     * @return success           True iff the prepare succeeded; False indicates a failure and
+     *                           indicates that a rollback has already occurred
+     * @return containsMutation  true iff there are any changes to this ObjectStore within this
+     *                           transaction
+     */
+    (Boolean success, Boolean containsMutation) prepare(Int readId, Int writeId, Int prepareId)
+        {
+        TODO
+        }
+
+    /**
+     * Move changes from one transaction id to another, merging the changes into the destination
+     * transaction and leaving the source transaction empty.
+     *
+     * @param fromTxId  the source (uncommitted) transaction id to move the changes from
+     * @param toTxId    the destination (uncommitted) transaction id to move the changes to
+     *
+     * @return containsMutation  true iff there are any changes to this ObjectStore within this
+     *                           transaction
+     */
+    Boolean mergeTx(Int fromTxId, Int toTxId)
+        {
+        TODO
+        }
+
+    /**
+     * Commit a previously prepared transaction. When this method returns, the transaction has been
+     * successfully committed to disk.
+     *
+     * @param prepareId  the previously prepared transaction
+     * @param oldestId   the oldest transaction id that is still being used for read purposes at the
+     *                   point that this commit occurs, just in case the storage wants to discard
+     *                   older unused data as part of the commit
+     *
+     * @return True on success
+     *
+     * @throws Exception on failure
+     */
+    (Boolean success) commit(Int prepareId, Int oldestId)
+        {
+        TODO
+        }
+
+    /**
+     * Roll back any transactional data associated with the specified transaction id.
+     *
+     * @param uncommittedId  a write-TxId or prepare-TxId
+     */
+    void rollback(Int uncommittedId)
+        {
+        TODO
+        }
+
+    /**
+     * Clean up the persistent storage, releasing any data older than the specified transaction.
+     * This operation can be asynchronous; it simply indicates that the storage is allowed to forget
+     * older data.
+     *
+     * @param tx     the oldest transaction whose information needs to be retained
+     * @param force  (optional) specify True to force the ObjectStore to immediately clean out all
+     *               older transactions in order to synchronously compress the storage
+     */
+    void forgetOlderThan(Int tx, Boolean force = False)
+        {
+        TODO
+        }
+
+
     // ----- IO handling ---------------------------------------------------------------------------
 
     /**
@@ -379,19 +461,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         {
         // knowledge of how to perform a deep scan is owned by the ObjectStore sub-classes
         return quickScan();
-        }
-
-    /**
-     * Clean up the persistent storage, releasing any data older than the specified transaction.
-     * This operation can be asynchronous; it simply indicates that the storage is allowed to forget
-     * older data.
-     *
-     * @param tx     the oldest transaction whose information needs to be retained
-     * @param force  (optional) specify True to force the ObjectStore to immediately clean out all
-     *               older transactions in order to synchronously compress the storage
-     */
-    void forgetOlderThan(Int tx, Boolean force = False)
-        {
         }
 
     /**
