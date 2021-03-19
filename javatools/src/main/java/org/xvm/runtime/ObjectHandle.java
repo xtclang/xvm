@@ -71,7 +71,7 @@ public abstract class ObjectHandle
      */
     public ObjectHandle revealOrigin()
         {
-        return m_clazz.ensureOrigin(this);
+        return getComposition().ensureOrigin(this);
         }
 
     public boolean isMutable()
@@ -110,7 +110,7 @@ public abstract class ObjectHandle
      */
     public ClassTemplate getTemplate()
         {
-        return m_clazz.getTemplate();
+        return getComposition().getTemplate();
         }
 
     /**
@@ -118,7 +118,7 @@ public abstract class ObjectHandle
      */
     public OpSupport getOpSupport()
         {
-        return m_clazz.getSupport();
+        return getComposition().getSupport();
         }
 
     /**
@@ -126,7 +126,7 @@ public abstract class ObjectHandle
      */
     public TypeConstant getType()
         {
-        TypeConstant type = m_clazz.getType();
+        TypeConstant type = getComposition().getType();
         return isMutable()
                 ? type
                 : type.freeze();
@@ -145,7 +145,7 @@ public abstract class ObjectHandle
 
     public ObjectHandle ensureAccess(Constants.Access access)
         {
-        return m_clazz.ensureAccess(this, access);
+        return getComposition().ensureAccess(this, access);
         }
 
     /**
@@ -158,7 +158,7 @@ public abstract class ObjectHandle
      */
     public boolean isInflated(PropertyConstant idProp)
         {
-        return m_clazz.isInflated(idProp.getNestedIdentity());
+        return getComposition().isInflated(idProp.getNestedIdentity());
         }
 
     /**
@@ -170,7 +170,7 @@ public abstract class ObjectHandle
      */
     public boolean isInjected(PropertyConstant idProp)
         {
-        return m_clazz.isInjected(idProp);
+        return getComposition().isInjected(idProp);
         }
 
     /**
@@ -183,7 +183,7 @@ public abstract class ObjectHandle
      */
     public boolean isAtomic(PropertyConstant idProp)
         {
-        return m_clazz.isAtomic(idProp);
+        return getComposition().isAtomic(idProp);
         }
 
     /**
@@ -276,7 +276,7 @@ public abstract class ObjectHandle
      */
     public boolean isStruct()
         {
-        return m_clazz.isStruct();
+        return getComposition().isStruct();
         }
 
     /**
@@ -357,7 +357,7 @@ public abstract class ObjectHandle
     @Override
     public String toString()
         {
-        return "(" + m_clazz + ") ";
+        return "(" + getComposition() + ") ";
         }
 
     public static class GenericHandle
@@ -379,27 +379,27 @@ public abstract class ObjectHandle
 
         public boolean containsField(PropertyConstant idProp)
             {
-            return m_clazz.containsField(idProp);
+            return getComposition().containsField(idProp);
             }
 
         public ObjectHandle getField(PropertyConstant idProp)
             {
-            return m_clazz.getFieldFromStructure(m_aFields, idProp.getNestedIdentity());
+            return getComposition().getFieldFromStructure(m_aFields, idProp.getNestedIdentity());
             }
 
         public ObjectHandle getField(String sProp)
             {
-            return m_clazz.getFieldFromStructure(m_aFields, sProp);
+            return getComposition().getFieldFromStructure(m_aFields, sProp);
             }
 
         public void setField(PropertyConstant idProp, ObjectHandle hValue)
             {
-            m_clazz.setFieldInStructure(m_aFields, idProp.getNestedIdentity(), hValue);
+            getComposition().setFieldInStructure(m_aFields, idProp.getNestedIdentity(), hValue);
             }
 
         public void setField(String sProp, ObjectHandle hValue)
             {
-            m_clazz.setFieldInStructure(m_aFields, sProp, hValue);
+            getComposition().setFieldInStructure(m_aFields, sProp, hValue);
             }
 
         public Container getOwner()
@@ -427,7 +427,7 @@ public abstract class ObjectHandle
         @Override
         public boolean isService()
             {
-            if (m_clazz.getFieldNids().contains(OUTER))
+            if (getComposition().getFieldNids().contains(OUTER))
                 {
                 ObjectHandle hParent = getField(OUTER);
                 return hParent != null && hParent.isService();
@@ -481,7 +481,7 @@ public abstract class ObjectHandle
             ObjectHandle[] aFields = m_aFields;
             if (aFields != null)
                 {
-                TypeComposition clazz = m_clazz;
+                TypeComposition clazz = getComposition();
                 for (Object idProp : clazz.getFieldNids())
                     {
                     ObjectHandle hValue = clazz.getFieldFromStructure(aFields, idProp);
@@ -1034,6 +1034,142 @@ public abstract class ObjectHandle
         }
 
     /**
+     * A handle that is used during circular singleton initialization process.
+     */
+    public static class InitializingHandle
+            extends ObjectHandle
+        {
+        private final SingletonConstant f_constSingleton;
+
+        public InitializingHandle(SingletonConstant constSingleton)
+            {
+            super(null);
+
+            f_constSingleton = constSingleton;
+            }
+
+        /**
+         * @return the underlying initialized object or null
+         */
+        public ObjectHandle getInitialized()
+            {
+            ObjectHandle hConst = f_constSingleton.getHandle();
+            return hConst == this ? null : hConst;
+            }
+
+        /**
+         * @return the underlying initialized object
+         * @throws IllegalStateException if the underlying object is not yet initialized
+         */
+        protected ObjectHandle assertInitialized()
+            {
+            ObjectHandle hConst = f_constSingleton.getHandle();
+            if (hConst instanceof InitializingHandle)
+                {
+                throw new IllegalStateException("Circular initialization");
+                }
+            return hConst;
+            }
+
+        @Override
+        public ObjectHandle cloneAs(TypeComposition clazz)
+            {
+            return assertInitialized().cloneAs(clazz);
+            }
+
+        @Override
+        public ObjectHandle revealOrigin()
+            {
+            return assertInitialized().revealOrigin();
+            }
+
+        @Override
+        public List<String> validateFields()
+            {
+            return assertInitialized().validateFields();
+            }
+
+        @Override
+        public boolean isSelfContained()
+            {
+            return assertInitialized().isSelfContained();
+            }
+
+        @Override
+        public TypeComposition getComposition()
+            {
+            return assertInitialized().getComposition();
+            }
+
+        @Override
+        public boolean isPassThrough(Container container)
+            {
+            return assertInitialized().isPassThrough(container);
+            }
+
+        @Override
+        public boolean isService()
+            {
+            return assertInitialized().isService();
+            }
+
+        @Override
+        public ServiceHandle getService()
+            {
+            return assertInitialized().getService();
+            }
+
+        @Override
+        public boolean isNativeEqual()
+            {
+            return assertInitialized().isNativeEqual();
+            }
+
+        @Override
+        public ObjectHandle maskAs(Container owner, TypeConstant typeAs)
+            {
+            return assertInitialized().maskAs(owner, typeAs);
+            }
+
+        @Override
+        public ObjectHandle revealAs(Frame frame, TypeConstant typeAs)
+            {
+            return assertInitialized().revealAs(frame, typeAs);
+            }
+
+        @Override
+        protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+            {
+            return assertInitialized().isShared(poolThat, mapVisited);
+            }
+
+        @Override
+        public int compareTo(ObjectHandle that)
+            {
+            return assertInitialized().compareTo(that);
+            }
+
+        @Override
+        public int hashCode()
+            {
+            return assertInitialized().hashCode();
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            return assertInitialized().equals(obj);
+            }
+
+        @Override
+        public String toString()
+            {
+            ObjectHandle hConst = getInitialized();
+            return hConst == null ? "<initializing>" : hConst.toString();
+            }
+        };
+
+    /**
      * A handle that is used as an indicator for a default method argument value.
      */
     public static final ObjectHandle DEFAULT = new ObjectHandle(null)
@@ -1048,30 +1184,6 @@ public abstract class ObjectHandle
         public String toString()
             {
             return "<default>";
-            }
-        };
-
-    /**
-     * A handle that is used an indicator of an in-progress singleton initialization.
-     */
-    public static final ObjectHandle INITIALIZING = new ObjectHandle(null)
-        {
-        @Override
-        public TypeConstant getType()
-            {
-            return null;
-            }
-
-        @Override
-        protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
-            {
-            return true; // TODO GG: figure out why we're getting here
-            }
-
-        @Override
-        public String toString()
-            {
-            return "<initializing>";
             }
         };
 

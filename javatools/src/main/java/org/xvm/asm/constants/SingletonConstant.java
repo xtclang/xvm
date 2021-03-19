@@ -10,8 +10,8 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.InitializingHandle;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -142,7 +142,7 @@ public class SingletonConstant
         {
         if (m_fInitializing)
             {
-            m_handle = ObjectHandle.INITIALIZING;
+            m_handle = new InitializingHandle(this);
             return false;
             }
         return m_fInitializing = true;

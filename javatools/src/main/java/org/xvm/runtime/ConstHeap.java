@@ -15,6 +15,7 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.DeferredPropertyHandle;
 import org.xvm.runtime.ObjectHandle.DeferredSingletonHandle;
+import org.xvm.runtime.ObjectHandle.InitializingHandle;
 
 
 /**
@@ -112,9 +113,14 @@ public abstract class ConstHeap
      */
     protected ObjectHandle saveConstHandle(Constant constValue, ObjectHandle hValue)
         {
-        if (hValue == ObjectHandle.INITIALIZING)
+        if (hValue instanceof InitializingHandle)
             {
-            return hValue;
+            ObjectHandle hConst = ((InitializingHandle) hValue).getInitialized();
+            if (hConst == null)
+                {
+                return hValue;
+                }
+            hValue = hConst;
             }
 
         ObjectHandle hValue0 = f_mapConstants.putIfAbsent(constValue, hValue);
