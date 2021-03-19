@@ -70,16 +70,18 @@ module AddressBookDB_jsondb
             Catalog_<AddressBookSchema_> catalog,
             Int                          id,
             DBUser_                      dbUser,
+            Boolean                      readOnly = False,
             function void(Client_)?      notifyOnClose = Null)
         {
-        return new AddressBookDBClient_(catalog, id, dbUser, notifyOnClose);
+        return new AddressBookDBClient_(catalog, id, dbUser, readOnly, notifyOnClose);
         }
 
     service AddressBookDBClient_(Catalog_<AddressBookSchema_> catalog,
                                  Int                          id,
                                  DBUser_                      dbUser,
+                                 Boolean                      readOnly = False,
                                  function void(Client_)?      notifyOnClose = Null)
-            extends Client_<AddressBookSchema_>(catalog, id, dbUser, notifyOnClose)
+            extends Client_<AddressBookSchema_>(catalog, id, dbUser, readOnly, notifyOnClose)
         {
         @Override
         class RootSchemaImpl(DBObjectInfo_ info_)
