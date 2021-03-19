@@ -32,6 +32,7 @@ module AddressBookDB_jsondb
             [
             new DBObjectInfo_("", "", DBSchema, 0, 0, [1]),
             new DBObjectInfo_("contacts", "contacts", DBMap, 1, 0, typeParams=Map<String, Type>:["Key"=String, "Value"=AddressBookDB_.Contact]),
+            new DBObjectInfo_("requestCount", "requestCount", DBCounter, 2, 0),
             ];
         }
 
@@ -91,6 +92,12 @@ module AddressBookDB_jsondb
             AddressBookDB_.Contacts contacts.get()
                 {
                 return this.AddressBookDBClient_.implFor(1).as(AddressBookDB_.Contacts);
+                }
+
+            @Override
+            oodb_.DBCounter requestCount.get()
+                {
+                return this.AddressBookDBClient_.implFor(2).as(oodb_.DBCounter);
                 }
             }
         }
