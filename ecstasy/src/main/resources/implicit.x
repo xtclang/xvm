@@ -84,8 +84,10 @@ import ecstasy.io.BinaryOutput;
 import ecstasy.io.DataInput;
 import ecstasy.io.DataOutput;
 import ecstasy.io.InputStream;
+import ecstasy.io.Log;
 import ecstasy.io.OutputStream;
 import ecstasy.io.Reader;
+import ecstasy.io.Writer;
 
 import ecstasy.net.URI;
 

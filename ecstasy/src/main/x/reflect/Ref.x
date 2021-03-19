@@ -207,6 +207,7 @@ interface Ref<Referent>
      */
     @RO Boolean isService.get()
         {
+        // TODO GG shouldn't this also return true for a non-const virtual child of a service?
         return actualType.is(Type<Service>);
         }
 
