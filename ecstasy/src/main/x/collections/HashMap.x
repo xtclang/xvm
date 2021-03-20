@@ -357,6 +357,12 @@ class HashMap<Key, Value>
             implements Collection<Entry>
         {
         @Override
+        Int size.get()
+            {
+            return this.HashMap.size;
+            }
+
+        @Override
         Iterator<Entry> iterator()
             {
             return new Iterator()
