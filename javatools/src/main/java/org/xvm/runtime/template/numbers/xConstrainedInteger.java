@@ -246,25 +246,25 @@ public abstract class xConstrainedInteger
             case "leftmostBit":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, makeJavaLong(Long.highestOneBit(l)));
+                return frame.assignValue(iReturn, xInt64.makeHandle(Long.highestOneBit(l)));
                 }
 
             case "rightmostBit":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, makeJavaLong(Long.lowestOneBit(l)));
+                return frame.assignValue(iReturn, xInt64.makeHandle((Long.lowestOneBit(l))));
                 }
 
             case "leadingZeroCount":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, makeJavaLong(Long.numberOfLeadingZeros(l)));
+                return frame.assignValue(iReturn, xInt64.makeHandle((Long.numberOfLeadingZeros(l))));
                 }
 
             case "trailingZeroCount":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, makeJavaLong(Long.numberOfTrailingZeros(l)));
+                return frame.assignValue(iReturn, xInt64.makeHandle((Long.numberOfTrailingZeros(l))));
                 }
             }
 
