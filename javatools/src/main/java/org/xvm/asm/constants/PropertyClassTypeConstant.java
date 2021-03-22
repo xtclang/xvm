@@ -70,9 +70,9 @@ public class PropertyClassTypeConstant
         super(pool, typeParent);
 
         // unlike VirtualChildConstant, it's never unresolved
-        if (typeParent.containsUnresolved() || !typeParent.isExplicitClassIdentity(true))
+        if (typeParent.containsUnresolved())
             {
-            throw new IllegalArgumentException("parent's must be a resolved single class type");
+            throw new IllegalArgumentException("parent must be a resolved type");
             }
         if (idProp == null)
             {

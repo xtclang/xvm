@@ -494,7 +494,7 @@ public class ClassComposition
             Object       nid    = entry.getKey();
             ObjectHandle hValue = ahField[entry.getValue().getIndex()];
 
-            if (hValue != null && hValue.isMutable() && !isLazy(nid))
+            if (hValue != null && !hValue.isService() && hValue.isMutable() && !isLazy(nid))
                 {
                 switch (hValue.getTemplate().makeImmutable(frame, hValue))
                     {

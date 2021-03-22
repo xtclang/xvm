@@ -482,29 +482,9 @@ public abstract class ClassTemplate
             hTarget.makeImmutable();
             if (hTarget instanceof GenericHandle)
                 {
-                GenericHandle   hGeneric = (GenericHandle) hTarget;
-                TypeComposition clz      = hGeneric.getComposition();
-                ObjectHandle[]  ahFields = hGeneric.getFields();
-                for (Object nid : clz.getFieldNids())
-                    {
-                    ObjectHandle hValue = clz.getFieldFromStructure(ahFields, nid);
-                    if (hValue != null && hValue.isMutable() && !clz.isLazy(nid))
-                        {
-                        switch (hValue.getTemplate().makeImmutable(frame, hValue))
-                            {
-                            case Op.R_NEXT:
-                                continue;
+                GenericHandle hGeneric = (GenericHandle) hTarget;
 
-                            case Op.R_EXCEPTION:
-                                return Op.R_EXCEPTION;
-
-                            default:
-                                throw new IllegalStateException();
-                            }
-                        }
-                    }
-
-                return clz.makeStructureImmutable(frame, hGeneric.getFields());
+                return hGeneric.getComposition().makeStructureImmutable(frame, hGeneric.getFields());
                 }
             }
         return Op.R_NEXT;

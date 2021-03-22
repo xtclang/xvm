@@ -101,6 +101,7 @@ public class xRef
         {
         s_sigGet = getStructure().findMethod("get", 0).getIdentityConstant().getSignature();
 
+        markNativeProperty("isService");
         markNativeMethod("equals", null, BOOLEAN);
 
         getCanonicalType().invalidateTypeInfo();
@@ -157,15 +158,17 @@ public class xRef
                 return actOnReferent(frame, hRef,
                     h -> frame.assignValue(iReturn, Identity.ensureIdentity(h)));
 
+            case "isService":
+                return actOnReferent(frame, hRef,
+                    h -> frame.assignValue(iReturn, xBoolean.makeHandle(h.isService())));
+
             case "isConst":
                 return actOnReferent(frame, hRef,
-                    h -> frame.assignValue(iReturn,
-                        xBoolean.makeHandle(h.getComposition().isConst())));
+                    h -> frame.assignValue(iReturn, xBoolean.makeHandle(h.getComposition().isConst())));
 
             case "isImmutable":
                 return actOnReferent(frame, hRef,
-                    h -> frame.assignValue(iReturn,
-                        xBoolean.makeHandle(!h.isMutable())));
+                    h -> frame.assignValue(iReturn, xBoolean.makeHandle(!h.isMutable())));
 
             case "byteLength":
                 return frame.assignValue(iReturn, xInt64.makeHandle(8)); // TODO
