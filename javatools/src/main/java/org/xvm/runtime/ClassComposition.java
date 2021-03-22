@@ -593,20 +593,6 @@ public class ClassComposition
             mapFields.put(sField, new FieldInfo(nIndex++, null, true));
             }
 
-        // create storage for injections
-        for (Map.Entry<PropertyConstant, PropertyInfo> entry :
-                f_typeInception.ensureTypeInfo().getProperties().entrySet())
-            {
-            if (entry.getValue().isInjected())
-                {
-                Object nid = entry.getKey().getNestedIdentity();
-
-                assert !mapFields.containsKey(nid);
-
-                mapFields.put(nid, new FieldInfo(nIndex++, null, true));
-                }
-            }
-
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : aEntry)
             {
             PropertyConstant idProp   = entry.getKey();
@@ -634,7 +620,7 @@ public class ClassComposition
                 }
 
             TypeComposition clzRef = null;
-            if (infoProp.isRefAnnotated())
+            if (infoProp.isRefAnnotated()) // this doesn't include injected properties
                 {
                 if (infoProp.isCustomLogic())
                     {
@@ -679,7 +665,7 @@ public class ClassComposition
                 assert infoStruct.findPropertyByNid(nid) != null;
                 assert !mapFields.containsKey(nid);
 
-                mapFields.put(nid, new FieldInfo(nIndex++, clzRef, false));
+                mapFields.put(nid, new FieldInfo(nIndex++, clzRef, infoProp.isInjected()));
                 }
             }
 

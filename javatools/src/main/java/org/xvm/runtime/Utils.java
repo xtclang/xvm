@@ -776,6 +776,32 @@ public abstract class Utils
 
         assert prop.isStatic();
 
+        if (prop.isInjected())
+            {
+            TypeConstant typeRef = frame.poolContext().ensureAnnotatedTypeConstant(
+                    idProp.getRefType(null), prop.getRefAnnotations());
+
+            TypeComposition clzRef  = frame.ensureClass(typeRef);
+            VarSupport      support = (VarSupport) clzRef.getSupport();
+
+            switch (support.introduceRef(frame, clzRef, idProp.getName(), Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    return support.getReferent(frame, (RefHandle) frame.popStack(), Op.A_STACK);
+
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        support.getReferent(frameCaller, (RefHandle) frameCaller.popStack(), Op.A_STACK));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
         Constant constVal = prop.getInitialValue();
         if (constVal == null)
             {

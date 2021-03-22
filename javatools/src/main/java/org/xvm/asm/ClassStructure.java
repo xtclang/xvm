@@ -3002,7 +3002,7 @@ public class ClassStructure
             TypeComposition clzRef   = entry.getValue().getTypeComposition();
             PropertyInfo    infoProp = infoType.findPropertyByNid(nid);
 
-            if (infoProp == null)
+            if (infoProp == null || infoProp.isInjected())
                 {
                 // synthetic field; skip
                 continue;

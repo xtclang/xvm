@@ -229,6 +229,14 @@ public class PropertyStructure
         }
 
     /**
+     * @return true iff the property has an Injected annotation
+     */
+    public boolean isInjected()
+        {
+        return containsRefAnnotation(getConstantPool().clzInject());
+        }
+
+    /**
      * @return true iff this property contains the specified annotation
      */
     public boolean containsRefAnnotation(IdentityConstant idAnno)

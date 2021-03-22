@@ -4560,7 +4560,8 @@ public abstract class TypeConstant
             impl = Implementation.Native;
 
             // static properties of a type are language-level constant values, e.g. "Int KB = 1024;"
-            if (!prop.hasInitialValue() && (prop.getInitialValue() == null) == (methodInit == null))
+            if (!fHasInject && !prop.hasInitialValue() &&
+                    (prop.getInitialValue() == null) == (methodInit == null))
                 {
                 if (methodInit == null)
                     {
@@ -4705,10 +4706,9 @@ public abstract class TypeConstant
                             getValueString(), sName);
                     }
 
-                // we assume a field if @Inject is not specified, @RO is not specified,
-                // it's not explicitly abstract and get() doesn't block going to its super
-                // (see PropertyBody.impliesField())
-                fField = !fHasInject & !fHasRO & !fHasAbstract & !fGetBlocksSuper;
+                // we assume a field if @RO is not specified, it's not explicitly abstract and get()
+                // doesn't block going to its super (see PropertyBody.impliesField())
+                fField = !fHasRO & !fHasAbstract & !fGetBlocksSuper;
 
                 // we assume Ref-not-Var if @RO is specified, or if there is a get() with no
                 // super and no set() (or Var-implying annotations)

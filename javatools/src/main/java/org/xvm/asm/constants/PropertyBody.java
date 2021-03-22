@@ -72,7 +72,7 @@ public class PropertyBody
             // in that case we simply disregard the initializer
             constInitFunc = null;
             }
-        else if (fConstant && constInitVal == null && constInitFunc == null)
+        else if (fConstant && constInitVal == null && constInitFunc == null && !struct.isInjected())
             {
             // this can only happen when we're building the TypeInfo for a partially compiled class,
             // so we will need to invalidate the TypeInfo afterwards;
@@ -271,7 +271,6 @@ public class PropertyBody
         // this needs to stay in sync with TypeConstant#createPropertyInfo()
         return m_fField ||
                 (getExistence() == Existence.Class
-                && !isInjected()
                 && !isRO()
                 && !isExplicitAbstract()
                 && !isGetterBlockingSuper());
@@ -390,7 +389,8 @@ public class PropertyBody
      */
     public boolean isSynthetic()
         {
-        return m_structProp != null && m_structProp.isSynthetic();
+        PropertyStructure prop = m_structProp;
+        return prop != null && prop.isSynthetic();
         }
 
     /**
@@ -398,8 +398,9 @@ public class PropertyBody
      */
     public boolean isExplicitAbstract()
         {
-        return m_structProp != null && m_impl != Implementation.Implicit
-                && TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "Abstract");
+        PropertyStructure prop = m_structProp;
+        return prop != null && m_impl != Implementation.Implicit
+                && TypeInfo.containsAnnotation(prop.getPropertyAnnotations(), "Abstract");
         }
 
     /**
@@ -407,8 +408,8 @@ public class PropertyBody
      */
     public boolean isExplicitOverride()
         {
-        return m_structProp != null && m_impl != Implementation.Implicit
-                && TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "Override");
+        PropertyStructure prop = m_structProp;
+        return prop != null && m_impl != Implementation.Implicit && prop.isExplicitOverride();
         }
 
     /**
@@ -416,8 +417,8 @@ public class PropertyBody
      */
     public boolean isExplicitReadOnly()
         {
-        return m_structProp != null && m_impl != Implementation.Implicit
-                && TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "RO");
+        PropertyStructure prop = m_structProp;
+        return prop != null && m_impl != Implementation.Implicit && prop.isExplicitReadOnly();
         }
 
     /**
@@ -425,8 +426,8 @@ public class PropertyBody
      */
     public boolean isInjected()
         {
-        return m_structProp != null && m_impl != Implementation.Implicit
-                && TypeInfo.containsAnnotation(m_structProp.getRefAnnotations(), "Inject");
+        PropertyStructure prop = m_structProp;
+        return prop != null && m_impl != Implementation.Implicit && prop.isInjected();
         }
 
 

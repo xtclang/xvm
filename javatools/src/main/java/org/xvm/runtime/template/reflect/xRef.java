@@ -295,17 +295,39 @@ public class xRef
             {
             case Op.R_NEXT:
                 {
-                frame.introduceResolvedVar(iReturn, typeRef, sName, Frame.VAR_DYNAMIC_REF, hRef);
+                if (iReturn == Op.A_STACK)
+                    {
+                    if (!fStack)
+                        {
+                        frame.pushStack(hRef);
+                        }
+                    }
+                else
+                    {
+                    frame.introduceResolvedVar(iReturn, typeRef, sName,
+                        Frame.VAR_DYNAMIC_REF, fStack ? frame.popStack() : hRef);
+                    }
                 return Op.R_NEXT;
                 }
 
             case Op.R_CALL:
-                frame.m_frameNext.addContinuation(frameCaller ->
+                if (iReturn == Op.A_STACK)
+                    {
+                    if (!fStack)
                         {
-                        frameCaller.introduceResolvedVar(iReturn, typeRef, sName,
-                            Frame.VAR_DYNAMIC_REF, fStack ? frameCaller.popStack() : hRef);
-                        return Op.R_NEXT;
-                        });
+                        frame.m_frameNext.addContinuation(
+                            frameCaller -> frameCaller.pushStack(hRef));
+                        }
+                    }
+                else
+                    {
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                            {
+                            frameCaller.introduceResolvedVar(iReturn, typeRef, sName,
+                                Frame.VAR_DYNAMIC_REF, fStack ? frameCaller.popStack() : hRef);
+                            return Op.R_NEXT;
+                            });
+                    }
                 return Op.R_CALL;
 
             case Op.R_EXCEPTION:
