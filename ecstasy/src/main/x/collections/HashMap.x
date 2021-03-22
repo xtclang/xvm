@@ -365,41 +365,81 @@ class HashMap<Key, Value>
         @Override
         Iterator<Entry> iterator()
             {
-            return new Iterator()
+            return new EntryIterator();
+            }
+
+        /**
+         * TODO GG move this class to inside the iterator() method
+         */
+        private class EntryIterator
+                implements Iterator<Entry>
+            {
+            private construct()
                 {
-                HashEntry?[] buckets     = this.HashMap.buckets;
-                Int          nextBucket  = 0;
-                HashEntry?   nextEntry   = Null;
-                Int          addSnapshot = this.HashMap.addCount;
-                CursorEntry  entry       = new CursorEntry();
+                buckets     = this.HashMap.buckets;
+                nextBucket  = 0;
+                nextEntry   = Null;
+                addSnapshot = this.HashMap.addCount;
+                }
 
-                @Override
-                conditional Entry next()
+            private construct(EntryIterator that)
+                {
+                this.buckets     = that.buckets;
+                this.nextBucket  = that.nextBucket;
+                this.nextEntry   = that.nextEntry;
+                this.addSnapshot = that.addSnapshot;
+                }
+
+            private HashEntry?[] buckets;
+            private Int          nextBucket;
+            private HashEntry?   nextEntry;
+            private Int          addSnapshot;
+            private CursorEntry  entry       = new CursorEntry();
+
+            @Override
+            conditional Entry next()
+                {
+                if (addSnapshot != this.HashMap.addCount)
                     {
-                    if (addSnapshot != this.HashMap.addCount)
-                        {
-                        throw new ConcurrentModification();
-                        }
-
-                    Int bucketCount = buckets.size;
-                    while (nextEntry == Null && nextBucket < bucketCount)
-                        {
-                        nextEntry = buckets[nextBucket++];
-                        }
-
-                    HashEntry? currEntry = nextEntry;
-                    if (currEntry != Null)
-                        {
-                        // this is the entry to return;
-                        // always load next one in the chain to avoid losing the position if/when
-                        // the current entry is removed
-                        nextEntry = currEntry.next;
-                        return True, entry.advance(currEntry);
-                        }
-
-                    return False;
+                    throw new ConcurrentModification();
                     }
-                };
+
+                Int bucketCount = buckets.size;
+                while (nextEntry == Null && nextBucket < bucketCount)
+                    {
+                    nextEntry = buckets[nextBucket++];
+                    }
+
+                HashEntry? currEntry = nextEntry;
+                if (currEntry != Null)
+                    {
+                    // this is the entry to return;
+                    // always load next one in the chain to avoid losing the position if/when
+                    // the current entry is removed
+                    nextEntry = currEntry.next;
+                    return True, entry.advance(currEntry);
+                    }
+
+                return False;
+                }
+
+            @Override
+            Boolean knownDistinct()
+                {
+                return True;
+                }
+
+            @Override
+            conditional Int knownSize()
+                {
+                return True, this.HashMap.size;
+                }
+
+            @Override
+            (Iterator<Entry>, Iterator<Entry>) duplicate()
+                {
+                return new EntryIterator(this), new EntryIterator(this);
+                }
             }
 
         @Override

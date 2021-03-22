@@ -20,23 +20,48 @@ class KeyValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
         }
 
     @Override
+    conditional Int knownSize()
+        {
+        return contents.keys.knownSize();
+        }
+
+    @Override
     Iterator<MapValue> iterator()
         {
-        return new Iterator()
+        return new ValueIterator(contents.keys.iterator());
+        }
+
+    /**
+     * Iterator that relies on an iterator of keys to produce a corresponding sequence of values.
+     * TODO GG if this class is inside the iterator() method, compiler emits errors like:
+     *      COMPILER-145: Unresolvable type parameter(s): MapValue.
+     */
+    protected class ValueIterator(Iterator<MapKey> keyIterator)
+            implements Iterator<MapValue>
+        {
+        @Override
+        conditional MapValue next()
             {
-            Iterator<MapKey> keyIterator = this.KeyValues.contents.keys.iterator();
-
-            @Override
-            conditional MapValue next()
+            if (MapKey key := keyIterator.next())
                 {
-                if (MapKey key := keyIterator.next())
-                    {
-                    return this.KeyValues.contents.get(key);
-                    }
-
-                return False;
+                return this.KeyValues.contents.get(key);
                 }
-            };
+
+            return False;
+            }
+
+        @Override
+        conditional Int knownSize()
+            {
+            return keyIterator.knownSize();
+            }
+
+        @Override
+        (Iterator<MapValue>, Iterator<MapValue>) duplicate()
+            {
+            (Iterator<MapKey> iter1, Iterator<MapKey> iter2) = keyIterator.duplicate();
+            return new ValueIterator(iter1), new ValueIterator(iter2);
+            }
         }
 
     @Override

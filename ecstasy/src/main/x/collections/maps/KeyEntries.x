@@ -20,24 +20,56 @@ class KeyEntries<MapKey, MapValue>(Map<MapKey, MapValue> contents)
         }
 
     @Override
-    Iterator<Map<MapKey, MapValue>.Entry> iterator()
+    conditional Int knownSize()
         {
-        return new Iterator()
+        return contents.keys.knownSize();
+        }
+
+    typedef Map<MapKey, MapValue>.Entry MapEntry;
+
+    @Override
+    Iterator<MapEntry> iterator()
+        {
+        return new EntryIterator(contents.keys.iterator());
+        }
+
+    /**
+     * Iterator that relies on an iterator of keys to produce a corresponding sequence of entries.
+     * TODO GG if this class is inside the iterator() method, compiler emits error about type param
+     */
+    protected class EntryIterator(Iterator<MapKey> keyIterator)
+            implements Iterator<MapEntry>
+        {
+        @Override
+        conditional MapEntry next()
             {
-            Iterator<MapKey> keyIterator = this.KeyEntries.contents.keys.iterator();
-
-            @Override
-            conditional Map<MapKey, MapValue>.Entry next()
+            if (MapKey key := keyIterator.next())
                 {
-                if (MapKey key := keyIterator.next())
-                    {
-                    private CursorEntry<MapKey, MapValue> entry = new CursorEntry(this.KeyEntries.contents);
-                    return True, entry.advance(key);
-                    }
-
-                return False;
+                private CursorEntry<MapKey, MapValue> entry = new CursorEntry(this.KeyEntries.contents);
+                return True, entry.advance(key);
                 }
-            };
+
+            return False;
+            }
+
+        @Override
+        Boolean knownDistinct()
+            {
+            return True;
+            }
+
+        @Override
+        conditional Int knownSize()
+            {
+            return keyIterator.knownSize();
+            }
+
+        @Override
+        (Iterator<MapEntry>, Iterator<MapEntry>) duplicate()
+            {
+            (Iterator<MapKey> iter1, Iterator<MapKey> iter2) = keyIterator.duplicate();
+            return new EntryIterator(iter1), new EntryIterator(iter2);
+            }
         }
 
     @Override
