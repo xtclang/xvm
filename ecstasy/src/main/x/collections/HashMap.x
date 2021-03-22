@@ -374,6 +374,18 @@ class HashMap<Key, Value>
                 CursorEntry  entry       = new CursorEntry();
 
                 @Override
+                Boolean knownDistinct()
+                    {
+                    return True;
+                    }
+
+                @Override
+                conditional Int knownSize()
+                    {
+                    return True, this.HashMap.size;
+                    }
+
+                @Override
                 conditional Entry next()
                     {
                     if (addSnapshot != this.HashMap.addCount)

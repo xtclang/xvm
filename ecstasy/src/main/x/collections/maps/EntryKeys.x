@@ -20,23 +20,55 @@ class EntryKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
         }
 
     @Override
+    conditional Int knownSize()
+        {
+        return contents.entries.knownSize();
+        }
+
+    @Override
     Iterator<MapKey> iterator()
         {
-        return new Iterator()
+        return new KeyIterator(contents.entries.iterator());
+        }
+
+    protected typedef Iterator<Map<MapKey, MapValue>.Entry> EntryIterator;
+
+    /**
+     * Iterator that relies on an iterator of entries to produce a corresponding sequence of keys.
+     * TODO GG if this class is inside the iterator() method, compiler emits error about type param
+     */
+    protected class KeyIterator(EntryIterator entryIterator)
+            implements Iterator<MapKey>
+        {
+        @Override
+        conditional MapKey next()
             {
-            Iterator<Map<MapKey, MapValue>.Entry> entryIterator = contents.entries.iterator();
-
-            @Override
-            conditional MapKey next()
+            if (Map<MapKey, MapValue>.Entry entry := entryIterator.next())
                 {
-                if (Map<MapKey, MapValue>.Entry entry := entryIterator.next())
-                    {
-                    return True, entry.key;
-                    }
-
-                return False;
+                return True, entry.key;
                 }
-            };
+
+            return False;
+            }
+
+        @Override
+        Boolean knownDistinct()
+            {
+            return True;
+            }
+
+        @Override
+        conditional Int knownSize()
+            {
+            return entryIterator.knownSize();
+            }
+
+        @Override
+        (Iterator<MapKey>, Iterator<MapKey>) duplicate()
+            {
+            (EntryIterator iter1, EntryIterator iter2) = entryIterator.duplicate();
+            return new KeyIterator(iter1), new KeyIterator(iter2);
+            }
         }
 
     @Override
