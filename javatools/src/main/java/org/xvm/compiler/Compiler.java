@@ -1265,6 +1265,10 @@ public class Compiler
      */
     public static final String ASYNC_NOT_ALLOWED                   = "COMPILER-167";
     /**
+     * Switch expression return types are not uniform.
+     */
+    public static final String SWITCH_TYPES_NONUNIFORM             = "COMPILER-168";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

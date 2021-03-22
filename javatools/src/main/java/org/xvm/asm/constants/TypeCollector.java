@@ -291,7 +291,24 @@ public class TypeCollector
 
         TypeConstant typeCommon = inferFrom(listTypes.toArray(new TypeConstant[cTypes]), f_pool);
 
-        return Op.selectCommonType(typeCommon, typeRequired, ErrorListener.BLACKHOLE);
+        typeCommon = Op.selectCommonType(typeCommon, typeRequired, ErrorListener.BLACKHOLE);
+
+        if (typeRequired != null &&
+                (typeCommon == null || !typeCommon.isAssignableTo(typeRequired)))
+            {
+            // approach above didn't quite work; try to match with individual types one-by-one
+            TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.get(0), ErrorListener.BLACKHOLE);
+            for (int i = 1; i < cTypes; i++)
+                {
+                typeAlt = Op.selectCommonType(typeAlt, listTypes.get(i), ErrorListener.BLACKHOLE);
+                }
+
+            if (typeAlt != null)
+                {
+                typeCommon = typeAlt;
+                }
+            }
+        return typeCommon;
         }
 
     /**

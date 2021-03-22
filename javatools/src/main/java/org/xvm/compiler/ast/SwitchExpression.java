@@ -222,19 +222,29 @@ public class SwitchExpression
 
         ctx = ctx.exit(); // enterIf()
 
-        // determine the result type of the switch expression
-        TypeConstant[] atypeActual = collector.inferMulti(atypeRequired);
-
-        // determine the constant value of the switch expression
-        Constant[] aconstVal = null;
-        if (mgr.isSwitchConstant())
+        TypeConstant[] atypeActual = TypeConstant.NO_TYPES;
+        Constant[]     aconstVal   = null;
+        if (fValid)
             {
-            Expression exprResult = mgr.getCookie(mgr.getSwitchConstantLabel());
-            aconstVal = exprResult.toConstants();
+            // determine the result type of the switch expression
+            atypeActual = collector.inferMulti(atypeRequired);
+            if (atypeActual.length == 0)
+                {
+                log(errs, Severity.ERROR, Compiler.SWITCH_TYPES_NONUNIFORM);
+                fValid = false;
+                }
+
+            // determine the constant value of the switch expression
+            if (mgr.isSwitchConstant())
+                {
+                Expression exprResult = mgr.getCookie(mgr.getSwitchConstantLabel());
+                aconstVal = exprResult.toConstants();
+                }
             }
 
-        return finishValidations(ctx, atypeRequired, atypeActual,
-                fValid ? TypeFit.Fit : TypeFit.NoFit, aconstVal, errs);
+        return fValid
+                ? finishValidations(ctx, atypeRequired, atypeActual, TypeFit.Fit, aconstVal, errs)
+                : null;
         }
 
     @Override
