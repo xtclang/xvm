@@ -1268,7 +1268,8 @@ public class PropertyInfo
             }
         else if (hasField() && !isNative())
             {
-            if (chain[0].isNative())
+            MethodBody bodyHead = chain[0];
+            if (bodyHead.isNative())
                 {
                 // if a Ref or Var mixin overrides "get" or "set" (e.g. FutureVar), but the
                 // implementation is native, we need to replace it with the field access
@@ -1283,7 +1284,14 @@ public class PropertyInfo
                 Implementation implTail = chain[ixTail].getImplementation();
                 if (implTail != Implementation.Field)
                     {
-                    if (implTail == Implementation.Native)
+                    if (bodyHead.getImplementation() == Implementation.Default)
+                        {
+                        // replace the default (interface) implementation with a field access
+                        // (e.g. default RO property getter is overwritten by a field declaration)
+                        chain  = new MethodBody[1];
+                        ixTail = 0;
+                        }
+                    else if (implTail == Implementation.Native)
                         {
                         // replace the "native" method with a field access
                         chain = chain.clone();
