@@ -494,7 +494,9 @@ public class PropertyStructure
             if (contrib.getComposition() == Composition.Annotation)
                 {
                 Annotation annotation = contrib.getAnnotation();
-                if (annotation.containsUnresolved())
+                // annotations parameters don't need to be resolved for the compilation to move
+                // forward; they will be checked later as a part of the property type resolution
+                if (annotation.getAnnotationClass().containsUnresolved())
                     {
                     return false;
                     }

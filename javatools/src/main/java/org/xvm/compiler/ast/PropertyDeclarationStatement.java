@@ -357,6 +357,16 @@ public class PropertyDeclarationStatement
         }
 
     @Override
+    public void resolveNames(StageMgr mgr, ErrorListener errs)
+        {
+        PropertyStructure prop = (PropertyStructure) getComponent();
+        if (!prop.resolveAnnotations())
+            {
+            mgr.requestRevisit();
+            }
+        }
+
+    @Override
     public void validateContent(StageMgr mgr, ErrorListener errs)
         {
         if (!alreadyReached(Stage.Validated))
@@ -364,13 +374,7 @@ public class PropertyDeclarationStatement
             setStage(Stage.Validating);
 
             PropertyStructure prop = (PropertyStructure) getComponent();
-            if (!prop.resolveAnnotations())
-                {
-                mgr.requestRevisit();
-                return;
-                }
-
-            TypeConstant type = prop.getType();
+            TypeConstant      type = prop.getType();
             if (type.containsUnresolved())
                 {
                 mgr.requestRevisit();
