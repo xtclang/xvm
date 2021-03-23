@@ -88,12 +88,11 @@ mixin CatalogMetadata<Schema extends RootSchema>
      * @param catalog        the `Catalog` describing the database storage location and structure
      * @param dbUser         the `DBUser` that the `Client` will act on behalf of
      *
-     * @return a new `Client` of the database represented by the `Catalog`
+     * @return a new `ClientConnection` of the database represented by the `Catalog`
      */
     ClientConnection createConnection(Catalog<Schema> catalog, DBUser user)
         {
         return catalog.createClient(user).conn ?: assert;
-        // TODO GG should this &conn?.maskAs<ClientConnection>();
         }
 
     /**
