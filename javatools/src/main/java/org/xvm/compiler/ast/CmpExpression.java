@@ -229,6 +229,8 @@ public class CmpExpression
 
         TypeConstant typeResult = getImplicitType(ctx);
         Constant     constVal   = null;
+
+        CheckInference:
         if (fValid)
             {
             if (expr1New.isConstant() && expr2New.isConstant())
@@ -238,16 +240,37 @@ public class CmpExpression
                     constVal = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
                     }
                 catch (RuntimeException e) {}
+                break CheckInference;
                 }
-            else if (expr1New instanceof NameExpression && type2.equals(pool().typeNull()))
+
+            if (expr1New instanceof NameExpression)
                 {
-                m_fArg2Null = true;
-                fValid      = checkNullComparison(ctx, (NameExpression) expr1New, errs);
+                if (type2.equals(pool().typeNull()))
+                    {
+                    m_fArg2Null = true;
+                    fValid      = checkNullComparison(ctx, (NameExpression) expr1New, errs);
+                    break CheckInference;
+                    }
+                if (type2.isTypeOfType())
+                    {
+                    checkFormalType(ctx, (NameExpression) expr1New, type2);
+                    break CheckInference;
+                    }
                 }
-            else if (expr2New instanceof NameExpression && type1.equals(pool().typeNull()))
+
+            if (expr2New instanceof NameExpression)
                 {
-                m_fArg1Null = true;
-                fValid      = checkNullComparison(ctx, (NameExpression) expr2New, errs);
+                if (type1.equals(pool().typeNull()))
+                    {
+                    m_fArg1Null = true;
+                    fValid      = checkNullComparison(ctx, (NameExpression) expr2New, errs);
+                    break CheckInference;
+                    }
+                if (type1.isTypeOfType())
+                    {
+                    checkFormalType(ctx, (NameExpression) expr2New, type1);
+                    break CheckInference;
+                    }
                 }
             }
 
@@ -384,6 +407,24 @@ public class CmpExpression
         exprTarget.narrowType(ctx, Branch.WhenTrue,  typeTrue);
         exprTarget.narrowType(ctx, Branch.WhenFalse, typeFalse);
         return true;
+        }
+
+    private void checkFormalType(Context ctx, NameExpression exprTarget, TypeConstant typeType)
+        {
+        TypeConstant typeTarget = exprTarget.getType();
+        if (typeTarget.isTypeOfType() && typeTarget.getParamType(0).isFormalType())
+            {
+            switch (operator.getId())
+                {
+                case COMP_EQ:
+                    exprTarget.narrowType(ctx, Branch.WhenTrue, typeType);
+                    break;
+
+                case COMP_NEQ:
+                    exprTarget.narrowType(ctx, Branch.WhenFalse, typeType);
+                    break;
+                }
+            }
         }
 
     @Override
