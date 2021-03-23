@@ -14,6 +14,6 @@ module AddressBookDB_imdb
     Connection createConnection()
         {
         Connection connection = ServerAddressBookSchema.createConnection();
-        return &connection.maskAs<Connection>();
+        return &connection.maskAs<Connection>(Connection);
         }
     }
