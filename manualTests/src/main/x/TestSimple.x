@@ -48,10 +48,18 @@ class SkipListMap<Key extends Orderable, Value>
     {
     // ----- constructors ---------------
 
-    construct(Orderer? orderer = Null)
+    /**
+     * Construct a SkipListMap, with an optional initial capacity and an optional non-natural
+     * ordering.
+     *
+     * @param initialCapacity  the initial capacity, in terms of the number of expected entries
+     * @param orderer          the Orderer for this Map, or `Null` to use natural order
+     */
+    construct(Int initialCapacity = 0, Orderer? orderer = Null)
         {
-        this.orderer     = orderer;
-        this.compareKeys = orderer ?: (k1, k2) -> k1 <=> k2;
+        this.orderer      = orderer;
+        this.compareKeys  = orderer ?: (k1, k2) -> k1 <=> k2;
+        this.initCapacity = initialCapacity;
         }
     finally
         {
@@ -97,10 +105,31 @@ class SkipListMap<Key extends Orderable, Value>
     private ElementStore<Value>? actualValues;
 
     /**
+     * The initial capacity to allocate, in terms of entries.
+     */
+    protected/private Int initCapacity;
+
+    /**
      * Structural modification count. Does not include non-structural modifications, such as an
      * entry value being replaced with another value.
      */
     protected/private Int modCount;
+
+    /**
+     * The value of [modCount] when the cache result was set.
+     */
+    private Int cacheModCount = -1;
+
+    /**
+     * The cached result (the nodes in the work list) relate to a search for this key.
+     */
+    private @Unassigned Key cacheKey;
+
+    /**
+     * True iff the cached result represents a miss instead of a hit.
+     */
+    private Boolean cacheMiss;
+
 
 
     // ----- Map interface ---------------
@@ -193,7 +222,7 @@ class SkipListMap<Key extends Orderable, Value>
     @Override
     SkipListMap remove(Key key)
         {
-        if (!empty, (Int removeNode, Int removeHeight) := findNode(key))    // TODO find fully
+        if (!empty, (Int removeNode, Int removeHeight) := findNode(key, True))
             {
             // unlink the node
             unlinkWork(removeNode, removeHeight);
@@ -319,7 +348,7 @@ class SkipListMap<Key extends Orderable, Value>
             return False;
             }
 
-        findNode(key, True);    // TODO find fully
+        findNode(key, True);
 
         // the work list contains the nodes that precedes the key, or that the key would be inserted
         // key was not already in the map
@@ -381,10 +410,28 @@ class SkipListMap<Key extends Orderable, Value>
     // ----- Sliceable ---------------
 
     @Override
-    @Op("[..]") SkipListMap slice(Range<Key> indexes)
+    @Op("[..]") OrderedMap<Key, Value> slice(Range<Key> indexes)
         {
         // TODO
         TODO need some sort of SliceableMap helper
+        }
+
+    @Override
+    @Op("[[..]]") OrderedMap<Key, Value> sliceInclusive(Range<Index> indexes)
+        {
+        return slice(indexes.ensureInclusive());
+        }
+
+    @Override
+    @Op("[[..)]") OrderedMap<Key, Value> sliceExclusive(Range<Index> indexes)
+        {
+        return slice(indexes.ensureExclusive());
+        }
+
+    @Override
+    OrderedMap<Key, Value> reify()
+        {
+        return this;
         }
 
 
@@ -451,8 +498,8 @@ class SkipListMap<Key extends Orderable, Value>
                     return False;
                     }
 
-                IndexStore<> nodes = this.SkipListMap.nodes; // TODO GG try removing the "<>"
-                Int          nil   = nodes.nil;
+                IndexStore nodes = this.SkipListMap.nodes;
+                Int        nil   = nodes.nil;
 
                 // make sure that the skip list map's structure has not changed
                 if (modCount != expectedCount)
@@ -609,8 +656,8 @@ class SkipListMap<Key extends Orderable, Value>
                     return False;
                     }
 
-                IndexStore<> nodes = this.SkipListMap.nodes; // TODO GG try removing the "<>"
-                Int          nil   = nodes.nil;
+                IndexStore nodes = this.SkipListMap.nodes;
+                Int        nil   = nodes.nil;
 
                 // make sure that the skip list map's structure has not changed
                 if (modCount != expectedCount)
@@ -785,43 +832,6 @@ class SkipListMap<Key extends Orderable, Value>
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Create an IndexStore that can be used to store the skiplist data, and configure the
-     * key and value ElementStore objects to use the new IndexStore.
-     *
-     * @param indexType    the type for the Index stored in the IndexStore
-     * @param keyStore     the storage for the keys of the SkipListMap
-     * @param valueStore   the storage for the values of the SkipListMap
-     *
-     * @return the new storage for the nodes of the skiplist
-     */
-    IndexStore createIndexStore(
-            Type<IntNumber>     indexType,
-            ElementStore<Key>   keyStore,
-            ElementStore<Value> valueStore,
-            )
-        {
-        // calculate the total value height (in terms of number of "Index" values)
-        Int valueHeight = keyStore.height + valueStore.height;
-
-        // allocate the Index store
-        IndexStore nodes = switch (indexType.DataType)
-            {
-            // TODO CP "case Int8:" makes it think that it's a literal
-            case Int8  : new IndexStore8 (valueHeight);
-            case Int16 : new IndexStore16(valueHeight);
-            case Int32 : new IndexStore32(valueHeight);
-            case Int64 : new IndexStore64(valueHeight);
-            default: assert;
-            };
-
-        // bind the key and value stores to the new IndexStore
-        keyStore.configure(nodes, 0);
-        valueStore.configure(nodes, keyStore.height);
-
-        return nodes;
-        }
-
-    /**
      * Find the node containing the specified key, and leave the work list pointing to the
      * node (or to where the node _would_ be, if it does not exist).
      *
@@ -835,71 +845,197 @@ class SkipListMap<Key extends Orderable, Value>
      */
     protected conditional (Int node, Int height) findNode(Key key, Boolean findFully = False)
         {
-        // TODO implement find fully vs. find fast option
-
+        Boolean    found      = False;
         IndexStore nodes      = this.nodes;
         Int        fromNode   = nodes.headNode;
         Int        fromHeight = nodes.maxHeight;
-        Int        nil        = nodes.nil.toInt64();
+        Int        nil        = nodes.nil;
         Int        node       = nil;
         Int        height     = nil;
         Int        level      = fromHeight-1;
-        do
+
+        // check if the cached result is valid
+        CheckCache: if (modCount == cacheModCount)
             {
-            node = nodes.getIndex(fromNode, fromHeight, level);
-            if (node == nil)
+            switch (key <=> cacheKey)
                 {
-                // the "from node" is at the end of its linked list for this level; to find the
-                // node we're looking for, drop to the next lower level and follow its linked
-                // list
-                nodes.setWork(level, fromNode);
-                --level;
-                }
-            else
-                {
-                // compare the key from the node with the key being searched for
-                height = nodes.heightOf(node);
-                switch (compareKeys(keyStore.load(node, height), key))
-                    {
-                    case Lesser:
-                        // the node's key comes before the desired key, so advance to the next
-                        // node in this list
-                        fromNode   = node;
-                        fromHeight = height;
-                        break;
+                case Lesser:
+                    // the cache location is past where we are searching, so we have to start
+                    // searching from the very beginning of the skip list
+                    break;
 
-                    case Equal:
-                        // set the remainder of the work pointers to the node(s) that point to
-                        // the node that we found
-                        do
+                case Equal:
+                    // same exact key that we searched for the previous call to this method
+                    if (cacheMiss)
+                        {
+                        // the previous findNode call resulted in a miss on this same key
+                        return False;
+                        }
+
+                    // we have found the key, and the lowest level index that points to non-nil is
+                    // pointing at the node with the key
+                    found = True;
+                    for (level : [0..fromHeight))
+                        {
+                        fromNode = nodes.getWork(level);
+                        if (fromNode != nil)
                             {
-                            Int nextNode = nodes.getIndex(fromNode, fromHeight, level);
-                            while (nextNode != node)
+                            fromHeight = nodes.heightOf(fromNode);
+                            node       = nodes.getIndex(fromNode, fromHeight, level);
+                            height     = nodes.heightOf(node);
+                            assert keyStore.load(node, height) == key;
+                            if (level == 0 || !findFully)
                                 {
-                                fromNode = nextNode;
+                                // it was already found fully, or we don't need to find fully
+                                return True, node, height;
                                 }
-                            nodes.setWork(level, fromNode);
-                            }
-                        while (--level >= 0);
-                        return True, node, height;
 
-                    case Greater:
-                        // the node's key comes after the key we're looking for, so we can't
-                        // follow the current level's linked list any further; drop to the next
-                        // level
-                        nodes.setWork(level, fromNode);
-                        --level;
-                        break;
-                    }
+                            // we found the node with the key, but we still need to make sure that
+                            // every work list index from this level down is set (aka "find fully")
+                            break CheckCache;
+                            }
+                        }
+                    assert;
+
+                case Greater:
+                    // we can start searching from the cache location instead of from the beginning,
+                    // but we need to determine which level; the answer is whichever level has a
+                    // next pointer that points to a node that isn't past the key that we're finding
+                    Int prevNode = -1;
+                    for (level : fromHeight-1..0)
+                        {
+                        fromNode = nodes.getWork(level);
+                        assert fromNode != nil;
+                        if (fromNode == prevNode)
+                            {
+                            // already checked this node; drop to the next level
+                            continue;
+                            }
+                        fromHeight = nodes.heightOf(fromNode);
+
+                        node = nodes.getIndex(fromNode, fromHeight, level);
+                        if (node == nil)
+                            {
+                            // nothing beyond this in the list at this level; drop to the next level
+                            continue;
+                            }
+                        height   = nodes.heightOf(node);
+                        prevNode = fromNode;
+
+                        switch (key <=> keyStore.load(node, height))
+                            {
+                            case Lesser:
+                                // the key that we're looking for comes before the next key in the
+                                // linked list at this level, so drop down another level
+                                break;
+
+                            case Equal:
+                                // this is unusual, but we accidentally found the key that we were
+                                // looking for in the cache of information that was used to find a
+                                // lesser key (obviously which was subsequently found at a lower
+                                // level); the rest of the work
+                                found = True;
+                                break CheckCache;
+
+                            case Greater:
+                                // we can follow this level's list to get closer to the key that
+                                // we're looking for
+                                fromNode   = node;
+                                fromHeight = height;
+                                break CheckCache;
+                            }
+                        }
+                    assert;
                 }
             }
-        while (level >= 0);
 
-        return False;
+        // this is the main "find" algorithm, which is always used, unless it gets short-circuited
+        // by finding the key using the cache information (above)
+        if (!found)
+            {
+            Loop: do
+                {
+                node = nodes.getIndex(fromNode, fromHeight, level);
+                if (node == nil)
+                    {
+                    // the "from node" is at the end of its linked list for this level; to find the
+                    // node we're looking for, drop to the next lower level and follow its linked
+                    // list
+                    nodes.setWork(level, fromNode);
+                    --level;
+                    }
+                else
+                    {
+                    // compare the key from the node with the key being searched for
+                    height = nodes.heightOf(node);
+                    switch (compareKeys(keyStore.load(node, height), key))
+                        {
+                        case Lesser:
+                            // the node's key comes before the desired key, so advance to the next
+                            // node in this list
+                            fromNode   = node;
+                            fromHeight = height;
+                            break;
+
+                        case Equal:
+                            // set the remainder of the work pointers to the node(s) that point to
+                            // the node that we found
+                            nodes.setWork(level, fromNode);
+                            found = True;
+                            break Loop;
+
+                        case Greater:
+                            // the node's key comes after the key we're looking for, so we can't
+                            // follow the current level's linked list any further; drop to the next
+                            // level
+                            nodes.setWork(level, fromNode);
+                            --level;
+                            break;
+                        }
+                    }
+                }
+            while (level >= 0);
+            }
+
+        // update the cache
+        cacheModCount = modCount;
+        cacheKey      = key;
+        cacheMiss     = !found;
+
+        if (!found)
+            {
+            return False;
+            }
+
+        // the key was found, but the remainder of the work indexes still need to be set up
+        // correctly; if we're finding fully, then we have to find the node at each remaining level
+        // that points to the found node; otherwise, those remaining levels are just nil'd out
+        if (findFully)
+            {
+            while (--level >= 0)
+                {
+                Int nextNode = nodes.getIndex(fromNode, fromHeight, level);
+                while (nextNode != node)
+                    {
+                    assert nextNode != nil;
+                    fromNode = nextNode;
+                    }
+                nodes.setWork(level, fromNode);
+                }
+            }
+        else
+            {
+            while (--level >= 0)
+                {
+                nodes.setWork(level, nil);
+                }
+            }
+
+        return True, node, height;
         }
 
     /**
-     * TODO doc
+     * Whatever nodes are specified in the "work" area, link in the specified node after those nodes.
      *
      * @param node    the node index (its identity)
      * @param height  the height of the node, which is the number of indexes it holds
@@ -907,8 +1043,7 @@ class SkipListMap<Key extends Orderable, Value>
     protected void linkWorkTo(Int node, Int height)
         {
         IndexStore nodes = this.nodes;
-// TODO GG: for (Int level : [0..height))
-        for (Int level : [0..height.toInt64()))
+        for (Int level : [0..height))
             {
             Int fromNode   = nodes.getWork(level);
             Int fromHeight = nodes.heightOf(fromNode);
@@ -919,7 +1054,8 @@ class SkipListMap<Key extends Orderable, Value>
         }
 
     /**
-     * TODO doc
+     * Whatever nodes are specified in the "work" area, unlink from the specified node, and relink
+     * to whatever nodes follow it.
      *
      * @param removeNode    the node index to remove
      * @param removeHeight  the height of the node being removed
@@ -946,20 +1082,50 @@ class SkipListMap<Key extends Orderable, Value>
         IndexStore? nodes = this.actualNodes;
         if (nodes == Null)
             {
-            ElementStore<Key>   keyStore   = createElementStore(Int8, Key);
-            ElementStore<Value> valueStore = createElementStore(Int8, Value);
+            // assume that we'll start with the smallest possible structure
+            Type<IntNumber> indexType = Int8;
 
-            nodes = createIndexStore(Int8, keyStore, valueStore);
+            Int initCapacity = this.initCapacity;
+            if (initCapacity > 0)
+                {
+                // make a guess at what structure is required for the specified number of entries;
+                // overhead is 3x max height, and the average node has a key, a value, and 2 indexes
+                indexType = IndexStore.selectType(initCapacity, 2);
+                }
 
+            // create the key and value stores
+            ElementStore<Key>   keyStore;
+            ElementStore<Value> valueStore;
+            while (True)
+                {
+                keyStore   = createElementStore(indexType, initCapacity, Key);
+                valueStore = createElementStore(indexType, initCapacity, Value);
+
+                // double check that the index type supports a large enough capacity
+                if (initCapacity <= 0 || IndexStore.estimateElements(indexType, initCapacity,
+                        keyStore.height + valueStore.height) < IndexStore.indexLimit(indexType))
+                    {
+                    break;
+                    }
+
+                indexType = IndexStore.nextBigger(indexType);
+                }
+
+            // create the storage for the skip list nodes
+            nodes = createIndexStore(indexType, initCapacity, keyStore, valueStore);
+
+            // store off all of the new structures
             this.actualNodes  = nodes;
             this.actualKeys   = keyStore;
             this.actualValues = valueStore;
+            this.initCapacity = 0;
             }
+
         return nodes;
         }
 
     /**
-     * TODO
+     * Grow the storage for the skip list nodes.
      */
     protected void upgradeNodes()
         {
@@ -967,21 +1133,15 @@ class SkipListMap<Key extends Orderable, Value>
         ElementStore<Key>   oldKeys   = keyStore;
         ElementStore<Value> oldValues = valueStore;
         IndexStore          oldNodes  = nodes;
-        Int                 oldNil    = oldNodes.nil.toInt64();
-        Type<IntNumber>     newType   = switch (oldNodes.indexWidth)
-            {
-            case 8:  Int16;
-            case 16: Int32;
-            case 32: Int64;
-            case 64: // nothing bigger than this supported as a skiplist index type
-            default: assert;
-            }; // TODO GG now it won't allow this redundant type assertion: .as(Type<IntNumber>);
+        Int                 oldNil    = oldNodes.nil;
 
         // create the new storage
-        ElementStore<Key>   newKeys   = createElementStore(newType, Key);
-        ElementStore<Value> newValues = createElementStore(newType, Value);
-        IndexStore          newNodes  = createIndexStore(newType, newKeys, newValues);
-        Int                 newNil    = newNodes.nil.toInt64();
+        Type<IntNumber>     newType   = IndexStore.nextBigger(oldNodes.Index);
+        Int                 capacity  = size + (size >>> 2);                // 25% larger
+        ElementStore<Key>   newKeys   = createElementStore(newType, capacity, Key);
+        ElementStore<Value> newValues = createElementStore(newType, capacity, Value);
+        IndexStore          newNodes  = createIndexStore(newType, capacity, newKeys, newValues);
+        Int                 newNil    = newNodes.nil;
 
         // we'll track the node that we're linking new nodes from, one at each level of height
         Int   maxHeight  = newNodes.maxHeight;
@@ -1032,26 +1192,67 @@ class SkipListMap<Key extends Orderable, Value>
         // double-check that we copied the right number of nodes
         assert (count == size);
 
-        this.actualNodes  = newNodes;
-        this.actualKeys   = newKeys;
-        this.actualValues = newValues;
+        this.actualNodes   = newNodes;
+        this.actualKeys    = newKeys;
+        this.actualValues  = newValues;
+        this.cacheModCount = -1;            // cache is obviously destroyed by a resize
+        }
+
+    /**
+     * Create an IndexStore that can be used to store the skiplist data, and configure the
+     * key and value ElementStore objects to use the new IndexStore.
+     *
+     * @param indexType     the type for the Index stored in the IndexStore
+     * @param initCapacity  the expected number of entries
+     * @param keyStore      the storage for the keys of the SkipListMap
+     * @param valueStore    the storage for the values of the SkipListMap
+     *
+     * @return the new storage for the nodes of the skiplist
+     */
+    protected IndexStore createIndexStore(
+            Type<IntNumber>     indexType,
+            Int                 initCapacity,
+            ElementStore<Key>   keyStore,
+            ElementStore<Value> valueStore,
+            )
+        {
+        // calculate the total value height (in terms of number of "Index" values)
+        Int valueHeight = keyStore.height + valueStore.height;
+
+        // allocate the Index store
+        IndexStore nodes = switch (indexType.DataType)
+            {
+            case Int8:  new IndexStore8 (initCapacity, valueHeight);
+            case Int16: new IndexStore16(initCapacity, valueHeight);
+            case Int32: new IndexStore32(initCapacity, valueHeight);
+            case Int64: new IndexStore64(initCapacity, valueHeight);
+            default: assert;
+            };
+
+        // bind the key and value stores to the new IndexStore
+        keyStore.configure(nodes, 0);
+        valueStore.configure(nodes, keyStore.height);
+
+        return nodes;
         }
 
     /**
      * Create an ElementStore that can be used to store the specified type of element.
      *
-     * @param indexType    the type of the index that will be used in the IndexStore (probably
-     *                     not yet instantiated)
-     * @param objectType   the type of the element that will be stored in the ElementStore
+     * @param indexType     the type of the index that will be used in the IndexStore (probably
+     *                      not yet instantiated)
+     * @param initCapacity  the expected number of entries
+     * @param objectType    the type of the element that will be stored in the ElementStore
      *
      * @return the new storage for the specified element type
      */
-    <Element> ElementStore<Element> createElementStore(
+    protected <Element> ElementStore<Element> createElementStore(
             Type<IntNumber> indexType,
+            Int             initCapacity,
             Type<Element>   elementType,
             )
         {
-        if (Element.is(Type<Nullable>)) // TODO GG: if (Element == Nullable)
+        if (Element == Nullable)
             {
             return NullStore.INSTANCE;
             }
@@ -1096,16 +1297,22 @@ class SkipListMap<Key extends Orderable, Value>
      * Any fixed number of values (the [valueHeight]) can be is stored in each node, each as one
      * additional `Index` elements. They are accessed via [getValue] and [setValue].
      *
-     * TODO some of the asserts should probably be changed to assert:test
+     * REVIEW evaluate which of the asserts should be replaced with assert:test
      */
-    static class IndexStore<Index extends IntNumber>
+    protected static class IndexStore<Index extends IntNumber>
         {
         assert()
             {
             assert Index == Int8 || Index == Int16 || Index == Int32 || Index == Int64;
             }
 
-        construct(Int valueHeight = 1)
+        /**
+         * Construct the IndexStore.
+         *
+         * @param capacity     the expected number of nodes, or 0 to start empty
+         * @param valueHeight  the number of elements necessary to hold the key plus the value
+         */
+        construct(Int capacity, Int valueHeight)
             {
             assert valueHeight >= 1;
 
@@ -1121,6 +1328,9 @@ class SkipListMap<Key extends Orderable, Value>
             // (except that it has no "values")
             elements[2*maxHeight-1] = toIndex(-nil);
             }
+
+
+        // ----- properties ------------------------------------------------------------------------
 
         /**
          * The underlying storage.
@@ -1154,13 +1364,8 @@ class SkipListMap<Key extends Orderable, Value>
          */
         @RO Int maxHeight.get()
             {
-            return indexWidth - 1;
+            return sizeOf(Index) - 1;
             }
-
-        /**
-         * The number of bits in an index.
-         */
-        @Abstract @RO Int indexWidth;
 
         /**
          * The number of array elements used to hold a `Value`.
@@ -1176,6 +1381,9 @@ class SkipListMap<Key extends Orderable, Value>
          * The `nil` value used in this IndexStore.
          */
         @Abstract @RO Int nil;
+
+
+        // ----- node management -------------------------------------------------------------------
 
         /**
          * Allocate a node with the specified "height" (number of indexes). The node will contain
@@ -1198,10 +1406,10 @@ class SkipListMap<Key extends Orderable, Value>
             // check the free list first
             Int freeList = this.freeList + height - 1;
             Int node     = elements[freeList].toInt64();
-            if (node == nil.toInt64())
+            if (node == nil)
                 {
                 node = elements.size;
-                if (node + size >= nil.toInt64())
+                if (node + size >= nil)
                     {
                     return False;
                     }
@@ -1227,7 +1435,7 @@ class SkipListMap<Key extends Orderable, Value>
                 {
                 height = heightOf(node);
                 }
-            assert height > 0 && height <= maxHeight; // TODO assert:test ?
+            assert height > 0 && height <= maxHeight;
 
             // use the node to store the next free list item, then add it to the free list
             Int freeList       = this.freeList + height - 1;
@@ -1244,7 +1452,7 @@ class SkipListMap<Key extends Orderable, Value>
          */
         Int heightOf(Int node)
             {
-            assert node != nil; // TODO assert:test ?
+            assert node != nil;
 
             if (node == headNode)
                 {
@@ -1257,18 +1465,12 @@ class SkipListMap<Key extends Orderable, Value>
                 }
 
             Int height = i - node;
-            assert height <= maxHeight;  // TODO assert:test ?
+            assert height <= maxHeight;
             return height;
             }
 
-        /**
-         * Convert the specified `Int` value to an `Index`.
-         *
-         * @param n  an `Int` value
-         *
-         * @return the corresponding `Index` value
-         */
-        Index toIndex(Int n);
+
+        // ----- node contents ---------------------------------------------------------------------
 
         /**
          * Get the specified index (ie skiplist pointer) from the specified node.
@@ -1281,9 +1483,9 @@ class SkipListMap<Key extends Orderable, Value>
          */
         Int getIndex(Int node, Int height, Int i)
             {
-            assert node > 0 && height > 0 && i >= 0 && i < height;  // TODO assert:test ?
-            Index index = elements[node+i];
-            return (i < height-1 ? index : -index).toInt64();
+            assert node > 0 && height > 0 && i >= 0 && i < height;
+            Int index = elements[node+i].toInt64();
+            return (i < height-1 ? index : -index);
             }
 
         /**
@@ -1296,7 +1498,7 @@ class SkipListMap<Key extends Orderable, Value>
          */
         void setIndex(Int node, Int height, Int i, Int index)
             {
-            assert node > 0 && height > 0 && i >= 0 && i < height && index.toInt64() > 1;  // TODO assert:test ?
+            assert node > 0 && height > 0 && i >= 0 && i < height && index > 0;
             elements[node+i] = toIndex(i < height-1 ? index : -index);
             }
 
@@ -1311,7 +1513,7 @@ class SkipListMap<Key extends Orderable, Value>
          */
         Int getValue(Int node, Int height, Int i)
             {
-            assert node > 0 && height > 0 && i >= 0 && i < valueHeight; // TODO assert:test ?
+            assert node > 0 && height > 0 && i >= 0 && i < valueHeight;
             return elements[node+height+i].toInt64();
             }
 
@@ -1325,7 +1527,7 @@ class SkipListMap<Key extends Orderable, Value>
          */
         void setValue(Int node, Int height, Int i, Int value)
             {
-            assert node > 0 && height > 0 && i >= 0 && i < valueHeight; // TODO assert:test ?
+            assert node > 0 && height > 0 && i >= 0 && i < valueHeight;
             elements[node+height+i] = toIndex(value);
             }
 
@@ -1340,7 +1542,7 @@ class SkipListMap<Key extends Orderable, Value>
          */
         Int getWork(Int i)
             {
-            assert i >= 0 && i < maxHeight;  // TODO assert:test ?
+            assert i >= 0 && i < maxHeight;
             return elements[i].toInt64();
             }
 
@@ -1354,9 +1556,8 @@ class SkipListMap<Key extends Orderable, Value>
          */
         void setWork(Int i, Int n)
             {
-            assert i >= 0 && i < maxHeight && (n == nil || n >= 0 && n <= elements.size);  // TODO assert:test ?
-            Index index = toIndex(n);
-            elements[i] = index;
+            assert i >= 0 && i < maxHeight && (n == nil || n >= 0 && n <= elements.size);
+            elements[i] = toIndex(n);
             }
 
         /**
@@ -1370,7 +1571,7 @@ class SkipListMap<Key extends Orderable, Value>
          */
         Int getFree(Int i)
             {
-            assert i >= 0 && i < maxHeight;  // TODO assert:test ?
+            assert i >= 0 && i < maxHeight;
             return elements[2*maxHeight+i].toInt64();
             }
 
@@ -1384,9 +1585,133 @@ class SkipListMap<Key extends Orderable, Value>
          */
         void setFree(Int i, Int n)
             {
-            assert i >= 0 && i < maxHeight && (n == nil || n >= 0 && n <= elements.size);  // TODO assert:test ?
-            Index index = toIndex(n);
-            elements[2*maxHeight+i] = index;
+            assert i >= 0 && i < maxHeight && (n == nil || n >= 0 && n <= elements.size);
+            elements[2*maxHeight+i] = toIndex(n);
+            }
+
+
+        // ----- helpers ----------------------------------------------------------------------
+
+        /**
+         * Convert the specified `Int` value to an `Index`.
+         *
+         * @param n  an `Int` value
+         *
+         * @return the corresponding `Index` value
+         */
+        Index toIndex(Int n);
+
+        /**
+         * Select the appropriate index type for the specified number of nodes.
+         *
+         * @param capacity     the desired number of nodes
+         * @param valueHeight  the number of indexes that will be used to store the key and value
+         *
+         * @return an IntNumber type, one of Int8, Int16, Int32, or Int64
+         */
+        static Type<IntNumber> selectType(Int capacity, Int valueHeight)
+            {
+            Type<IntNumber> indexType = Int8;
+            while (estimateElements(indexType, capacity, valueHeight) > indexLimit(indexType))
+                {
+                indexType = nextBigger(indexType);
+                }
+
+            return indexType;
+            }
+
+        /**
+         * For upgrading index size, choose thte next bigger IntNumber type.
+         *
+         * @param indexType  an IntNumber type, one of Int8, Int16, Int32, or Int64
+         *
+         * @return an IntNumber type, one of Int8, Int16, Int32, or Int64
+         */
+        static Type<IntNumber> nextBigger(Type<IntNumber> indexType)
+            {
+            return switch (indexType)
+                {
+                case Int8:  Int16;
+                case Int16: Int32;
+                case Int32: Int64;
+                case Int64: assert; // nothing bigger
+                default:    assert;
+                };
+            }
+
+        /**
+         * For downgrading an index size, choose thte next smaller IntNumber type.
+         *
+         * @param indexType  an IntNumber type, one of Int8, Int16, Int32, or Int64
+         *
+         * @return an IntNumber type, one of Int8, Int16, Int32, or Int64
+         */
+        static Type<IntNumber> nextSmaller(Type<IntNumber> indexType)
+            {
+            return switch (indexType)
+                {
+                case Int8:  assert; // nothing bigger
+                case Int16: Int8;
+                case Int32: Int16;
+                case Int64: Int32;
+                default:    assert;
+                };
+            }
+
+        /**
+         * For an index size, obtain its size in bits.
+         *
+         * @param indexType  an IntNumber type, one of Int8, Int16, Int32, or Int64
+         *
+         * @return an IntNumber type, one of Int8, Int16, Int32, or Int64
+         */
+        static Int sizeOf(Type<IntNumber> indexType)
+            {
+            return switch (indexType)
+                {
+                case Int8:  8;
+                case Int16: 16;
+                case Int32: 32;
+                case Int64: 64;
+                default:    assert;
+                };
+            }
+
+        /**
+         * For a given number of nodes, estimate the number of indexes required in the underlying
+         * array.
+         *
+         * @param indexType    an IntNumber type, one of Int8, Int16, Int32, or Int64
+         * @param capacity     the number of nodes
+         * @param valueHeight  the number of elements used to store the key and value
+         *
+         * @return the number of array storage elements required
+         */
+        static Int estimateElements(Type<IntNumber> indexType, Int capacity, Int valueHeight)
+            {
+            // overhead is 3 groups of indexes of max height (work, head, free)
+            // assumption is an average of 2 indexes per node, because the random distribution
+            // should cause 1/2 to use 1 index, 1/4 to use 2, 1/8 to use 3, ...
+            return sizeOf(indexType) * 3 + capacity * (2 + valueHeight);
+            }
+
+        /**
+         * For a given index type, determine the largest storage array possible.
+         *
+         * @param indexType  an IntNumber type, one of Int8, Int16, Int32, or Int64
+         *
+         * @return the maximum number of array elements
+         */
+        static Int indexLimit(Type<IntNumber> indexType)
+            {
+            return switch (indexType)
+                {
+                case Int8:  Int8 .maxvalue;
+                case Int16: Int16.maxvalue;
+                case Int32: Int32.maxvalue;
+                case Int64: Int64.maxvalue;
+                default:    assert;
+                };
             }
 
         /**
@@ -1398,11 +1723,10 @@ class SkipListMap<Key extends Orderable, Value>
             {
             log.add(
                     $|IndexStore maxHeight={maxHeight}, headNode={headNode}, freeList={freeList},\
-                     | indexWidth={indexWidth}, valueHeight={valueHeight}, nil={nil},\
-                     | elements.size={elements.size}
+                     | valueHeight={valueHeight}, nil={nil}, elements.size={elements.size}
                     );
 
-            function String(Int) toStr = n -> n == nil.toInt64() ? "nil" : n.toString();
+            function String(Int) toStr = n -> n == nil ? "nil" : n.toString();
 
             log.add("     work head free");
             log.add("     ==== ==== ====");
@@ -1461,45 +1785,41 @@ class SkipListMap<Key extends Orderable, Value>
     /**
      * A concrete implementation of IndexStore using 8-bit elements.
      */
-    static class IndexStore8(Int valueHeight)
-            extends IndexStore<Int8>(valueHeight)
+    protected static class IndexStore8(Int capacity, Int valueHeight)
+            extends IndexStore<Int8>(capacity, valueHeight)
         {
-        @Override Int  indexWidth.get() {return 8;}
-        @Override Int  nil       .get() {return Int8.maxvalue;}
-        @Override Int8 toIndex(Int n)   {return n.toInt8();}
+        @Override Int  nil.get()      {return Int8.maxvalue;}
+        @Override Int8 toIndex(Int n) {return n.toInt8();}
         }
 
     /**
      * A concrete implementation of IndexStore using 16-bit elements.
      */
-    static class IndexStore16(Int valueHeight)
-            extends IndexStore<Int16>(valueHeight)
+    protected static class IndexStore16(Int capacity, Int valueHeight)
+            extends IndexStore<Int16>(capacity, valueHeight)
         {
-        @Override Int   indexWidth.get() {return 16;}
-        @Override Int   nil       .get() {return Int16.maxvalue;}
-        @Override Int16 toIndex(Int n)   {return n.toInt16();}
+        @Override Int   nil.get()      {return Int16.maxvalue;}
+        @Override Int16 toIndex(Int n) {return n.toInt16();}
         }
 
     /**
      * A concrete implementation of IndexStore using 32-bit elements.
      */
-    static class IndexStore32(Int valueHeight)
-            extends IndexStore<Int32>(valueHeight)
+    protected static class IndexStore32(Int capacity, Int valueHeight)
+            extends IndexStore<Int32>(capacity, valueHeight)
         {
-        @Override Int   indexWidth.get() {return 32;}
-        @Override Int   nil       .get() {return Int32.maxvalue;}
-        @Override Int32 toIndex(Int n)   {return n.toInt32();}
+        @Override Int   nil.get()      {return Int32.maxvalue;}
+        @Override Int32 toIndex(Int n) {return n.toInt32();}
         }
 
     /**
      * A concrete implementation of IndexStore using 64-bit elements.
      */
-    static class IndexStore64(Int valueHeight)
-            extends IndexStore<Int64>(valueHeight)
+    protected static class IndexStore64(Int capacity, Int valueHeight)
+            extends IndexStore<Int64>(capacity, valueHeight)
         {
-        @Override Int   indexWidth.get() {return 64;}
-        @Override Int   nil       .get() {return Int64.maxvalue;}
-        @Override Int64 toIndex(Int n)   {return n;}
+        @Override Int   nil.get()      {return Int64.maxvalue;}
+        @Override Int64 toIndex(Int n) {return n;}
         }
 
 
@@ -1508,7 +1828,7 @@ class SkipListMap<Key extends Orderable, Value>
     /**
      * Represents a means of storing elements associated with nodes.
      */
-    static interface ElementStore<Element>
+    protected static interface ElementStore<Element>
         {
         /**
          * The number of indexes used by the values stored by this ElementStore.
@@ -1574,7 +1894,7 @@ class SkipListMap<Key extends Orderable, Value>
     /**
      * An implementation that stores the value `Null` very efficiently.
      */
-    static const NullStore
+    protected static const NullStore
             implements ElementStore<Nullable>
         {
         static NullStore INSTANCE = new NullStore();
@@ -1593,7 +1913,7 @@ class SkipListMap<Key extends Orderable, Value>
      * Converts `Element` references to `Index` values that can be stored in an `IndexStore`,
      * storing the `Element` references external to the `IndexStore` in a separate array.
      */
-    static class ExternalStore<Element>
+    protected static class ExternalStore<Element>
             implements ElementStore<Element>
         {
         // ----- properties --------
@@ -1685,7 +2005,7 @@ class SkipListMap<Key extends Orderable, Value>
                 {
                 case (False, False):
                     // just replace the old value with the new
-                    contents[i] = e /* TODO GG this is wrong */ .as(Element);
+                    contents[i] = e;
                     break;
 
                 case (False, True):
@@ -1693,7 +2013,7 @@ class SkipListMap<Key extends Orderable, Value>
                     break;
 
                 case (True, False):
-                    add(node, height, e /* TODO GG this is wrong */ .as(Element));
+                    add(node, height, e);
                     break;
 
                 case (True, True):
