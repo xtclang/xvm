@@ -684,7 +684,7 @@ public class Lexer
 
                             Token.Id idNum  = null;
                             boolean  fFloat = false;
-                            if (Id.valueByText(suffix) == null)
+                            if (Id.valueByText(suffix) == null && !isWhitespace(peekChar()))
                                 {
                                 switch (name)
                                     {
@@ -2475,6 +2475,16 @@ public class Lexer
         setPosition(lPos);
         char ch = nextChar();
         setPosition(lPrev);
+        return ch;
+        }
+
+    /**
+     * Get the next character of source code, but do not move the current location.
+     */
+    protected char peekChar()
+        {
+        final char ch = m_source.next();
+        m_source.rewind();
         return ch;
         }
 
