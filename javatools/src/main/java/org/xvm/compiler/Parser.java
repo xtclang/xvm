@@ -1760,7 +1760,7 @@ public class Parser
 
                     if (LVal == null)
                         {
-                        Expression expr = parseExpression();
+                        Expression expr = parseTernaryExpression();
                         if (peek().getId() == Id.IDENTIFIER)
                             {
                             LVal = new VariableDeclarationStatement(expr.toTypeExpression(), expect(Id.IDENTIFIER), false);
