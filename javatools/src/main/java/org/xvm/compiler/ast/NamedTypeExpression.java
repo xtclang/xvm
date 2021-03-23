@@ -1054,11 +1054,11 @@ public class NamedTypeExpression
                                 clzBase, clzTarget, fFormalParent, fFormalChild, fThisClass);
                         assert typeTarget != null;
                         }
-                    else if (idTarget.equals(idClass) || clzClass.isVirtualChild())
+                    else if (clzClass.isVirtualDescendant(idTarget))
                         {
                         // the target is the context class itself (e.g. Interval type referred to
                         // by a method in Interval mixin), or
-                        // the context class is a virtual child referring to an outside mate
+                        // the context class is a virtual child referring to its ascendant
                         // (e.g. List.Cursor property referring to the containing List type);
                         // default to the formal type unless the type parameters are explicitly
                         // specified by this expression or the context is static (e.g. function)

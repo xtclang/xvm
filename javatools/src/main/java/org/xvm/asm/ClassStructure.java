@@ -326,12 +326,13 @@ public class ClassStructure
         }
 
     /**
-     * @return true iff this class is a virtual child of the specified class (or is that class)
+     * @return true iff this class is the specified parent class itself, or a virtual child of that
+     *         class or any of its virtual children (recursively)
      */
-    public boolean isVirtualChildOf(ClassConstant idParent)
+    public boolean isVirtualDescendant(ClassConstant idParent)
         {
         return getIdentityConstant().equals(idParent) ||
-                isVirtualChild() && getVirtualParent().isVirtualChildOf(idParent);
+                isVirtualChild() && getVirtualParent().isVirtualDescendant(idParent);
         }
 
     /**
