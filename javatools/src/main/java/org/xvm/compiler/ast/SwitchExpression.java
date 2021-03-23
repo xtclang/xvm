@@ -124,9 +124,9 @@ public class SwitchExpression
         CaseManager<Expression> mgr = new CaseManager<>(this);
         m_casemgr = mgr;
 
-        // create an IfContext in case there are short-circuiting conditions that result in
+        // create a new context in case there are short-circuiting conditions that result in
         // narrowing inferences (see comments in SwitchStatement.validateImpl)
-        ctx = ctx.enterIf();
+        ctx = ctx.enter();
 
         // validate the switch condition
         boolean fValid = mgr.validateCondition(ctx, cond, errs);
@@ -137,8 +137,6 @@ public class SwitchExpression
             {
             ctxCase = ctx;
             }
-
-        ctxCase = ctxCase.enterFork(true);
 
         ctxCase = ctxCase.enterIf();
 
@@ -212,7 +210,7 @@ public class SwitchExpression
                 }
             }
 
-        for (int i = 0; i < 2*cExprs; ++i)
+        for (int i = 0, c = 2*cExprs - 1; i < c; ++i)
             {
             ctxCase = ctxCase.exit();
             }
@@ -220,7 +218,7 @@ public class SwitchExpression
         // notify the case manager that we're finished collecting everything
         fValid &= mgr.validateEnd(ctxCase, errs);
 
-        ctx = ctx.exit(); // enterIf()
+        ctx = ctx.exit();
 
         TypeConstant[] atypeActual = TypeConstant.NO_TYPES;
         Constant[]     aconstVal   = null;

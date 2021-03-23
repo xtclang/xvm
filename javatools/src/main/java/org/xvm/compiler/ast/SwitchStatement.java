@@ -100,7 +100,7 @@ public class SwitchStatement
         m_listGroups = new ArrayList<>();
         m_casemgr    = new CaseManager<CaseGroup>(this);
 
-        // create an IfContext in case there are short-circuiting conditions that result in
+        // create an new context in case there are short-circuiting conditions that result in
         // narrowing inferences; for example:
         //   Int[]? args = ...;
         //   switch (args?.size > 0)
@@ -108,7 +108,7 @@ public class SwitchStatement
         //       case 1: // "args" is know to be an array of one Int value
         //       }
 
-        ctx = ctx.enterIf();
+        ctx = ctx.enter();
 
         fValid &= m_casemgr.validateCondition(ctx, conds, errs);
 
@@ -118,8 +118,6 @@ public class SwitchStatement
             {
             ctx = ctxCond;
             }
-
-        ctx = ctx.enterFork(true);
 
         // TODO this is probably all wrong now; needs REVIEW CP
         if (m_casemgr.usesIfLadder())
@@ -242,12 +240,10 @@ public class SwitchStatement
             ctx = ctx.exit();
             }
 
-        ctx = ctx.exit(); // enterFork()
-
         // notify the case manager that we're finished collecting everything
         fValid &= m_casemgr.validateEnd(ctx, errs);
 
-        ctx = ctx.exit(); // enterIf()
+        ctx = ctx.exit();
 
         // if a switch statement covers all of the possible values, or has a default label, then the
         // switch statement does not complete normally
