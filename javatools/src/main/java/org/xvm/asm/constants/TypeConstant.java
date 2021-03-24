@@ -1954,6 +1954,8 @@ public abstract class TypeConstant
             return infoPri;
             }
 
+        ClassStructure struct = infoPri.getClassStructure();
+
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoPri.getProperties().entrySet())
             {
             // the properties that show up in structure types are those that have a field; however,
@@ -1976,6 +1978,12 @@ public abstract class TypeConstant
                     mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
                     }
                 mapProps.put(id, prop);
+                }
+            else if (prop.getName().equals("outer") && struct.isVirtualChild())
+                {
+                // the "outer" property should be available in the virtual child structure at
+                // compile time and the outer reference will be supplied by the run-time
+                mapProps.put(entry.getKey(), prop);
                 }
             }
 
@@ -2032,7 +2040,7 @@ public abstract class TypeConstant
                 getMethodBySignature(pool.sigToString());
         mapMethods.putIfAbsent(infoToString.getIdentity(), infoToString);
 
-        return new TypeInfo(this, cInvals, infoPri.getClassStructure(), 0,
+        return new TypeInfo(this, cInvals, struct, 0,
                 false, infoPri.getTypeParams(), infoPri.getClassAnnotations(), infoPri.getMixinAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
