@@ -399,15 +399,11 @@ public class VirtualChildTypeConstant
         {
         ConstantPool pool = getConstantPool();
         TypeConstant type = getChildStructure().getGenericParamType(pool, sName, listParams);
-        if (type != null)
-            {
-            return type.isGenericType()
-                    ? type.resolveGenerics(pool, m_typeParent)
-                    : type;
-            }
 
-        // the passed in list represents the "child" and should not be used by the parent
-        return m_typeParent.getGenericParamType(sName, Collections.EMPTY_LIST);
+        // the passed in list applies only to the child and should not be used by the parent
+        return type == null
+                ? m_typeParent.getGenericParamType(sName, Collections.EMPTY_LIST)
+                : type.resolveGenerics(pool, m_typeParent);
         }
 
 
