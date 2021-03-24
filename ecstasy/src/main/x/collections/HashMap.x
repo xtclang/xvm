@@ -119,6 +119,12 @@ class HashMap<Key, Value>
         }
 
     @Override
+    Boolean empty.get()
+        {
+        return addCount == removeCount;
+        }
+
+    @Override
     Boolean contains(Key key)
         {
         return find(key);
