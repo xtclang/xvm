@@ -59,7 +59,7 @@ interface Random
     Int int(Int max)
         {
         assert max > 0;
-        return max == maxvalue ? int() & maxvalue : int() % (max + 1);
+        return max == maxvalue ? int() & maxvalue : int() % max;
         }
 
     /**
@@ -86,7 +86,7 @@ interface Random
     UInt uint(UInt max)
         {
         assert max > 0;
-        return max == maxvalue ? uint() : uint() % (max + 1);
+        return max == maxvalue ? uint() : uint() % max;
         }
 
     /**
