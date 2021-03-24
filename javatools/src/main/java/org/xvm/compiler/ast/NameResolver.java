@@ -144,6 +144,7 @@ public class NameResolver
                 // fall through
 
             case RESOLVE_FIRST_NAME:
+                {
                 // resolve the first name if possible; otherwise defer (to come back to this point).
                 // remember to check the import statement if it exists (but only use it when we make
                 // our way up to the node that the import was registered with). if no one knows what
@@ -155,39 +156,19 @@ public class NameResolver
                 AstNode          node            = m_node;
                 Access           access          = Access.PRIVATE;
                 IdentityConstant idOuter         = null;
+                String           sName           = m_sName;
                 WalkUpToTheRoot: while (node != null)
                     {
                     // if the first name refers to an import, then ask that import to figure out
                     // what the corresponding qualified name refers to (i.e. delegate!)
                     if (node == m_blockImport)
                         {
-                        NameResolver resolver = m_stmtImport.getNameResolver();
-                        switch (resolver.resolve(errs))
+                        Result result = resolveImport(m_stmtImport, errs);
+                        if (result == Result.RESOLVED)
                             {
-                            case RESOLVED:
-                                if (m_stmtImport.isWildcard())
-                                    {
-                                    m_component = ((IdentityConstant) resolver.getConstant()).getComponent().getChild(m_sName);
-                                    assert m_component instanceof ClassStructure;
-                                    m_constant  = m_component.getIdentityConstant();
-                                    }
-                                else
-                                    {
-                                    m_constant  = resolver.m_constant;
-                                    m_component = resolver.m_component;
-                                    }
-                                break WalkUpToTheRoot;
-
-                            case DEFERRED:
-                                // dependent on a node that is deferred, so this is deferred
-                                return Result.DEFERRED;
-
-                            default:
-                            case ERROR:
-                                // no need to log an error; the import already should have
-                                m_stage = Stage.ERROR;
-                                return Result.ERROR;
+                            break;
                             }
+                        return result;
                         }
 
                     // otherwise, if the node has a component associated with it that is
@@ -222,13 +203,25 @@ public class NameResolver
                             }
 
                         // ask the component to resolve the name
-                        switch (componentResolver.resolveName(m_sName, access, this))
+                        switch (componentResolver.resolveName(sName, access, this))
                             {
                             case POSSIBLE:
                                 // formal types could not be resolved; keep walking up
                                 fPossibleFormal = true;
                                 // fall-through
                             case UNKNOWN:
+                                if (node.getParent() == null)
+                                    {
+                                    // we've reached the top and it's possible we've never checked
+                                    // the topmost statement block's imports on the way up
+                                    // (this can happen for module contribution clauses)
+                                    StatementBlock  body = ((TypeCompositionStatement) node).ensureBody();
+                                    ImportStatement stmt = body.resolveImportBySingleName(sName, errs);
+                                    if (stmt != null)
+                                        {
+                                        resolveImport(stmt, errs);
+                                        }
+                                    }
                                 break;
 
                             case RESOLVED:
@@ -260,14 +253,14 @@ public class NameResolver
                 // last chance: check the implicitly imported names
                 if (m_constant == null)
                     {
-                    Component component = getPool().getImplicitlyImportedComponent(m_sName);
+                    Component component = getPool().getImplicitlyImportedComponent(sName);
                     if (component == null)
                         {
                         if (fPossibleFormal)
                             {
                             return Result.DEFERRED;
                             }
-                        m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
+                        m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
                         m_stage = Stage.ERROR;
                         return Result.ERROR;
                         }
@@ -286,6 +279,7 @@ public class NameResolver
                 m_stage = Stage.RESOLVE_DOT_NAME;
                 m_sName = m_iter.hasNext() ? m_iter.next() : null;
                 // fall through
+                }
 
             case RESOLVE_DOT_NAME:
                 // at this point, we have a component (or other identity) to work from, so the next
@@ -533,6 +527,40 @@ public class NameResolver
                 {
                 throw new IllegalStateException("not a single defining constant: " + typeParam);
                 }
+            }
+        }
+
+    /**
+     * @return the resolution result using the specified import statement
+     */
+    protected Result resolveImport(ImportStatement stmtImport, ErrorListener errs)
+        {
+        NameResolver resolver = stmtImport.getNameResolver();
+        switch (resolver.resolve(errs))
+            {
+            case RESOLVED:
+                if (stmtImport.isWildcard())
+                    {
+                    m_component = ((IdentityConstant) resolver.getConstant()).getComponent().getChild(m_sName);
+                    assert m_component instanceof ClassStructure;
+                    m_constant  = m_component.getIdentityConstant();
+                    }
+                else
+                    {
+                    m_constant  = resolver.m_constant;
+                    m_component = resolver.m_component;
+                    }
+                return Result.RESOLVED;
+
+            case DEFERRED:
+                // dependent on a node that is deferred, so this is deferred
+                return Result.DEFERRED;
+
+            default:
+            case ERROR:
+                // no need to log an error; the import already should have
+                m_stage = Stage.ERROR;
+                return Result.ERROR;
             }
         }
 

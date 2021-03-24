@@ -1424,6 +1424,12 @@ public class TypeCompositionStatement
                 return;
                 }
 
+            if (clz instanceof PackageStructure && ((PackageStructure) clz).isModuleImport())
+                {
+                // the containing class may depend on this package import, but a module import
+                // itself does not depend on anything else
+                break;
+                }
             clz = clz.getContainingClass();
             }
         while (clz != null);

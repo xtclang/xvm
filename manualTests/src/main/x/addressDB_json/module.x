@@ -2,7 +2,7 @@
 // TODO creation actions (to initially populate the database), upgrade actions, etc.
 
 module AddressBookDB_jsondb
-        incorporates jsondb_.CatalogMetadata<AddressBookDB_.AddressBookSchema>
+        incorporates CatalogMetadata_<AddressBookSchema_>
     {
     package oodb_          import oodb.xtclang.org;
     package json_          import json.xtclang.org;
