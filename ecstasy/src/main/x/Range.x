@@ -138,7 +138,7 @@ const Range<Element extends Orderable>
     /**
      * This range contains that range iff every value within that range is also in this range.
      */
-    Boolean contains(Range that)
+    Boolean contains(Range that)  // REVIEW this name should be changed to avoid potential collisions
         {
         return switch (that.lowerBound <=> this.lowerBound, that.upperBound <=> this.upperBound)
             {
