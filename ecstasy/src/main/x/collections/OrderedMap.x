@@ -76,4 +76,71 @@ interface OrderedMap<Key extends Orderable, Value>
      *         [prev] key
      */
     conditional Key floor(Key key);
+
+
+    // ----- equality ------------------------------------------------------------------------------
+
+    /**
+     * Two ordered maps are equal iff they are they contain the same keys in the same order, and the
+     * value associated with each key in the first map is equal to the value associated with the
+     * same key in the second map.
+     */
+    static <CompileType extends OrderedMap> Boolean equals(CompileType map1, CompileType map2)
+        {
+        // some simple optimizations: two empty maps are equal, and two maps of different sizes are
+        // not equal
+        if (Int size1 := map1.keys.knownSize(), Int size2 := map2.keys.knownSize())
+            {
+            if (size1 != size2)
+                {
+                return False;
+                }
+            else if (size1 == 0)
+                {
+                return True;
+                }
+            }
+        else
+            {
+            switch (map1.empty, map2.empty)
+                {
+                case (False, False):
+                    break;
+
+                case (False, True ):
+                case (True , False):
+                    return False;
+
+                case (True , True ):
+                    return True;
+                }
+            }
+
+        // compare all of the entries in the two ordered maps, in the order that they appear
+// TODO GG
+//        using (Iterator<CompileType.Entry> iter1 = map1.entries.iterator(),
+//               Iterator<CompileType.Entry> iter2 = map2.entries.iterator())
+        using (Iterator<Map<CompileType.Key, CompileType.Value>.Entry> iter1 = map1.entries.iterator(),
+               Iterator<Map<CompileType.Key, CompileType.Value>.Entry> iter2 = map2.entries.iterator())
+            {
+//            while (CompileType.Entry entry1 := iter1.next())
+            while (Map<CompileType.Key, CompileType.Value>.Entry entry1 := iter1.next())
+                {
+//                if (CompileType.Entry entry2 := iter2.next())
+                if (Map<CompileType.Key, CompileType.Value>.Entry entry2 := iter2.next())
+                    {
+                    if (entry1 != entry2)
+                        {
+                        return False;
+                        }
+                    }
+                else
+                    {
+                    return False;
+                    }
+                }
+
+            return !iter2.next();
+            }
+        }
     }
