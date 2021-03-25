@@ -24,10 +24,11 @@ public class FunctionTypeExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public FunctionTypeExpression(Token function, List<Parameter> returnValues,
+    public FunctionTypeExpression(Token function, Token conditional, List<Parameter> returnValues,
             List<TypeExpression> params, long lEndPos)
         {
         this.function     = function;
+        this.conditional  = conditional;
         this.returnValues = returnValues;
         this.paramTypes   = params;
         this.lEndPos      = lEndPos;
@@ -35,6 +36,11 @@ public class FunctionTypeExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    public boolean isConditional()
+        {
+        return conditional != null;
+        }
 
     public List<Parameter> getReturnValues()
         {
@@ -73,7 +79,9 @@ public class FunctionTypeExpression
         ConstantPool pool = pool();
         return pool.ensureClassTypeConstant(pool.clzFunction(), null,
                 toTupleType(toTypeConstantArray(paramTypes)),
-                toTupleType(toParamTypeConstantArray(returnValues)));
+                isConditional()
+                        ? toConditionalTupleType(toParamTypeConstantArray(returnValues))
+                        : toTupleType(toParamTypeConstantArray(returnValues)));
         }
 
     @Override
@@ -115,6 +123,17 @@ public class FunctionTypeExpression
         return pool.ensureClassTypeConstant(pool.clzTuple(), null, aconstTypes);
         }
 
+    private TypeConstant toConditionalTupleType(TypeConstant[] aconstTypes)
+        {
+        ConstantPool pool = pool();
+
+        int cTypes = aconstTypes.length;
+        TypeConstant[] aconstCond = new TypeConstant[cTypes+1];
+        aconstCond[0] = pool.typeBoolean();
+        System.arraycopy(aconstTypes, 0, aconstCond, 1, cTypes);
+        return pool.ensureClassTypeConstant(pool.clzCondTuple(), null, aconstTypes);
+        }
+
     static TypeConstant[] toTypeConstantArray(List<TypeExpression> list)
         {
         int            c      = list.size();
@@ -146,6 +165,11 @@ public class FunctionTypeExpression
         StringBuilder sb = new StringBuilder();
 
         sb.append("function ");
+
+        if (isConditional())
+            {
+            sb.append("conditional ");
+            }
 
         if (returnValues.isEmpty())
             {
@@ -203,6 +227,7 @@ public class FunctionTypeExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token                function;
+    protected Token                conditional;
     protected List<Parameter>      returnValues;
     protected List<TypeExpression> paramTypes;
     protected long                 lEndPos;

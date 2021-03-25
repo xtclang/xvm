@@ -4654,7 +4654,8 @@ public class Parser
         Token function = expect(Id.FUNCTION);
 
         // return values
-        List<Parameter> listReturn = parseReturnList();
+        Token           conditional = match(Id.CONDITIONAL);
+        List<Parameter> listReturn  = parseReturnList();
 
         // see if the parameters precede the name
         List<TypeExpression> listParam = parseParameterTypeList(false);
@@ -4669,7 +4670,7 @@ public class Parser
             putBack(name);
             }
 
-        return new FunctionTypeExpression(function, listReturn, listParam, prev().getEndPosition());
+        return new FunctionTypeExpression(function, conditional, listReturn, listParam, prev().getEndPosition());
         }
 
     /**
