@@ -1569,10 +1569,29 @@ public abstract class AstNode
                                          TypeConstant[] atypeReturn, TypeConstant typeCtx,
                                          ErrorListener errs)
         {
-        TypeConstant[] atypeMethodReturn = sigMethod.getRawReturns();
-        int            cMethodReturns    = atypeMethodReturn.length;
-        int            cReturns          = atypeReturn.length;
-        TypeFit        fit               = TypeFit.Fit;
+        return calculateReturnFit(sigMethod.getRawReturns(), sigMethod.getName(), fCall,
+                                    atypeReturn, typeCtx, errs);
+        }
+
+    /**
+     * Calculate the fit for a method or function return values.
+     *
+     * @param atypeMethodReturn  the method return types
+     * @param sName              a method or function name (used for error reporting only)
+     * @param fCall              if true, the method will be called; otherwise it will be bound
+     * @param atypeReturn        the array of required return types
+     * @param typeCtx            the type within which context the covariance is to be determined
+     * @param errs               listener to log any errors to
+     *
+     * @return a TypeFit value
+     */
+    protected TypeFit calculateReturnFit(TypeConstant[] atypeMethodReturn, String sName,
+                                         boolean fCall, TypeConstant[] atypeReturn,
+                                         TypeConstant typeCtx, ErrorListener errs)
+        {
+        int      cMethodReturns = atypeMethodReturn.length;
+        int      cReturns       = atypeReturn.length;
+        TypeFit  fit            = TypeFit.Fit;
 
         if (cMethodReturns < cReturns)
             {
@@ -1589,7 +1608,7 @@ public abstract class AstNode
             else
                 {
                 log(errs, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_COUNT,
-                        sigMethod.getName(), String.valueOf(cReturns), String.valueOf(cMethodReturns));
+                       sName, String.valueOf(cReturns), String.valueOf(cMethodReturns));
                 return TypeFit.NoFit;
                 }
             }
@@ -1632,7 +1651,7 @@ public abstract class AstNode
                         }
 
                     log(errs, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_TYPE,
-                            sigMethod.getName(), typeReturn.getValueString(), typeMethodReturn.getValueString());
+                            sName, typeReturn.getValueString(), typeMethodReturn.getValueString());
                     return TypeFit.NoFit;
                     }
                 }

@@ -2717,27 +2717,10 @@ public class InvocationExpression
                 return null;
                 }
 
-            int cFnReturns = atypeFnRet.length;
-            int cReturns   = atypeReturn.length;
-
-            if (cFnReturns < cReturns)
-                {
-                // missing the required return types; TODO: does it deserve a dedicated message?
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, "Function", typeFn.getValueString());
-                return null;
-                }
-
-            for (int i = 0; i < cReturns; ++i)
-                {
-                TypeConstant typeFnRet = atypeFnRet[i];
-                TypeConstant typeReq   = atypeReturn[i];
-                if (!isA(ctx, typeFnRet, typeReq))
-                    {
-                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                            typeReq.getValueString(), typeFnRet.getValueString());
-                    fValid = false;
-                    }
-                }
+            TypeFit fit = calculateReturnFit(atypeFnRet, expr.toString(), m_fCall,
+                                atypeReturn, ctx.getThisType(), errs);
+            m_fPack = fit.isPacking();
+            fValid  = fit.isFit();
             }
 
         if (fValid)
@@ -2798,7 +2781,9 @@ public class InvocationExpression
 
         if (m_fCall)
             {
-            return pool.extractFunctionReturns(typeFn);
+            return m_fPack
+                ? new TypeConstant[] {typeFn.getParamType(1)}
+                : pool.extractFunctionReturns(typeFn);
             }
 
         if (m_fBindParams)
@@ -2836,7 +2821,9 @@ public class InvocationExpression
         if (m_fCall)
             {
             atypeReturn = pool().extractFunctionReturns(typeFn);
-            return atypeReturn == null ? TypeConstant.NO_TYPES : atypeReturn;
+            return atypeReturn == null ? TypeConstant.NO_TYPES :
+                   m_fPack             ? new TypeConstant[] {pool().ensureTupleType(atypeReturn)}
+                                       : atypeReturn;
             }
 
         if (m_fBindParams)
