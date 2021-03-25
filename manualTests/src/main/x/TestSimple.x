@@ -5,7 +5,7 @@ module TestSimple.test.org
     void run()
         {
         C c = new C();
-        function (Boolean, String) (Boolean) f = c.foo;
+        function conditional String (Boolean) f = c.foo;
 
         Tuple<Boolean, String> t1 = f(True);
         console.println($"f[1]={t1[1]}");

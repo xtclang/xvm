@@ -577,7 +577,7 @@ public class TernaryExpression
             case 1:
                 {
                 TypeConstant typeTuple = atypeCond[0];
-                if (!typeTuple.isA(pool.typeTuple()) || typeTuple.getParamsCount() == 0)
+                if (!typeTuple.isTuple() || typeTuple.getParamsCount() == 0)
                     {
                     return TypeConstant.NO_TYPES;
                     }

@@ -3518,7 +3518,7 @@ public class ConstantPool
                 if (typeFunction.getParamsCount() > 0)
                     {
                     TypeConstant typeParams = typeFunction.getParamType(0);
-                    if (typeParams.isA(typeTuple()))
+                    if (typeParams.isTuple())
                         {
                         return typeParams.getParamTypesArray();
                         }
@@ -3531,7 +3531,7 @@ public class ConstantPool
                 if (typeFunction.getParamsCount() > 1)
                     {
                     TypeConstant typeParams = typeFunction.getParamType(1);
-                    if (typeParams.isA(typeTuple()))
+                    if (typeParams.isTuple())
                         {
                         return typeParams.getParamTypesArray();
                         }
@@ -3560,7 +3560,7 @@ public class ConstantPool
                 if (typeFunction.getParamsCount() > 1)
                     {
                     TypeConstant typeParams = typeFunction.getParamType(1);
-                    if (typeParams.isA(typeTuple()))
+                    if (typeParams.isTuple())
                         {
                         return typeParams.getParamTypesArray();
                         }
@@ -3573,7 +3573,7 @@ public class ConstantPool
                 if (typeFunction.getParamsCount() > 2)
                     {
                     TypeConstant typeParams = typeFunction.getParamType(2);
-                    if (typeParams.isA(typeTuple()))
+                    if (typeParams.isTuple())
                         {
                         return typeParams.getParamTypesArray();
                         }

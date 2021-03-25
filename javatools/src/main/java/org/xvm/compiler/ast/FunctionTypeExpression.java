@@ -117,21 +117,21 @@ public class FunctionTypeExpression
                 : null;
         }
 
-    private TypeConstant toTupleType(TypeConstant[] aconstTypes)
+    private TypeConstant toTupleType(TypeConstant[] atypes)
         {
-        ConstantPool pool = pool();
-        return pool.ensureClassTypeConstant(pool.clzTuple(), null, aconstTypes);
+        return pool().ensureTupleType(atypes);
         }
 
-    private TypeConstant toConditionalTupleType(TypeConstant[] aconstTypes)
+    private TypeConstant toConditionalTupleType(TypeConstant[] atypes)
         {
-        ConstantPool pool = pool();
-
-        int cTypes = aconstTypes.length;
+        ConstantPool   pool       = pool();
+        int            cTypes     = atypes.length;
         TypeConstant[] aconstCond = new TypeConstant[cTypes+1];
+
         aconstCond[0] = pool.typeBoolean();
-        System.arraycopy(aconstTypes, 0, aconstCond, 1, cTypes);
-        return pool.ensureClassTypeConstant(pool.clzCondTuple(), null, aconstTypes);
+        System.arraycopy(atypes, 0, aconstCond, 1, cTypes);
+
+        return pool.ensureParameterizedTypeConstant(pool.typeCondTuple(), aconstCond);
         }
 
     static TypeConstant[] toTypeConstantArray(List<TypeExpression> list)

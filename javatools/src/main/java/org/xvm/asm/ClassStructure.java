@@ -974,7 +974,8 @@ public class ClassStructure
                     IdentityConstant idContrib  = typeContrib.getSingleUnderlyingClass(true);
                     ClassStructure   clzContrib = (ClassStructure) idContrib.getComponent();
 
-                    return clzContrib.findTupleContribution(tupleLeft, typeContrib.getParamTypes());
+                    return clzContrib.findTupleContribution(typeContrib, listRight).worseOf(
+                           clzContrib.findTupleContribution(tupleLeft, listRight));
                     }
                 }
             }
