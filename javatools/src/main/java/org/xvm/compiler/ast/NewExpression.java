@@ -733,8 +733,7 @@ public class NewExpression
                     // otherwise, check the tuple based invoke (see Expression.findMethod)
                     if (listArgs.size() == 1)
                         {
-                        typeTuple = pool.ensureParameterizedTypeConstant(
-                                pool.typeTuple(), atypeArgs);
+                        typeTuple = pool.ensureTupleType(atypeArgs);
                         if (!listArgs.get(0).testFit(ctx, typeTuple, null).isFit())
                             {
                             // the regular "validateExpressions" call will report an error

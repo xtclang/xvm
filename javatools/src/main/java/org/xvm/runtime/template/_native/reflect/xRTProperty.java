@@ -413,7 +413,7 @@ public class xRTProperty
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeProperty());
+            TypeConstant typePropertyArray = pool.ensureArrayType(pool.typeProperty());
             ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typePropertyArray);
             assert clz != null;
             }
@@ -441,7 +441,7 @@ public class xRTProperty
         assert typeTarget != null;
 
         ConstantPool pool              = INSTANCE.pool();
-        TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+        TypeConstant typePropertyArray = pool.ensureArrayType(
                 pool.ensureParameterizedTypeConstant(pool.typeProperty(), typeTarget));
         return INSTANCE.f_templates.resolveClass(typePropertyArray);
         }

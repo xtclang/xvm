@@ -359,7 +359,7 @@ public class CaseManager<CookieType>
         m_listCond = listCond;
         m_typeCase = pool.ensureImmutableTypeConstant(m_atypeCond.length == 1
                 ? m_atypeCond[0]
-                : pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_atypeCond));
+                : pool.ensureTupleType(m_atypeCond));
 
         return fValid;
         }
@@ -434,8 +434,7 @@ public class CaseManager<CookieType>
                         }
                     else if (!exprField.testFit(ctx, m_atypeCond[i], null).isFit())
                         {
-                        TypeConstant typeRange = pool.ensureParameterizedTypeConstant(
-                                pool.typeRange(), m_atypeCond[i]);
+                        TypeConstant typeRange = pool.ensureRangeType(m_atypeCond[i]);
                         if (exprField.testFit(ctx, typeRange, null).isFit())
                             {
                             lRange |= 1 << i;
@@ -457,8 +456,7 @@ public class CaseManager<CookieType>
                     }
                 else if (!exprCase.testFit(ctx, m_typeCase, null).isFit())
                     {
-                    TypeConstant typeRange = pool.ensureParameterizedTypeConstant(
-                            pool.typeRange(), m_typeCase);
+                    TypeConstant typeRange = pool.ensureRangeType(m_typeCase);
                     if (exprCase.testFit(ctx, typeRange, null).isFit())
                         {
                         lRange    = 1;
@@ -493,8 +491,7 @@ public class CaseManager<CookieType>
             // this particular case expression
             if (atypeAlt != null)
                 {
-                typeMatch = pool.ensureImmutableTypeConstant(
-                        pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeAlt));
+                typeMatch = pool.ensureImmutableTypeConstant(pool.ensureTupleType(atypeAlt));
                 }
 
             // validate the expression (that contains all of the values for a possible match with

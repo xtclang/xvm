@@ -98,7 +98,7 @@ public class CharConstant
                 return pool.typeString();
 
             case "..Char":
-                return pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeChar());
+                return pool.ensureRangeType(pool.typeChar());
             }
 
         return super.resultType(op, that);

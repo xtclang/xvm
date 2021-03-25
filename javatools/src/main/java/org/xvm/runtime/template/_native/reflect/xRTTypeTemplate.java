@@ -494,7 +494,7 @@ public class xRTTypeTemplate
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+            TypeConstant type = pool.ensureArrayType(
                     pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
             TYPE_TEMPLATE_ARRAY = clz = INSTANCE.f_templates.resolveClass(type);
             assert clz != null;

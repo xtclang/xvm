@@ -347,8 +347,7 @@ public class xTuple
             atypeNew[cTypes] = hType.getDataType();
             }
 
-        ConstantPool    pool = pool();
-        TypeConstant    typeTupleNew = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
+        TypeConstant    typeTupleNew = pool().ensureTupleType(atypeNew);
         TypeComposition clzTupleNew  = ensureClass(typeTupleNew);
         TupleHandle     hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hThis.m_mutability);
 
@@ -399,8 +398,7 @@ public class xTuple
             System.arraycopy(atypeAdd, 0, atypeNew, cTypes, cTypesAdd);
             }
 
-        ConstantPool    pool = pool();
-        TypeConstant    typeTupleNew = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
+        TypeConstant    typeTupleNew = pool().ensureTupleType(atypeNew);
         TypeComposition clzTupleNew  = ensureClass(typeTupleNew);
         TupleHandle     hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hThis.m_mutability);
 
@@ -567,8 +565,7 @@ public class xTuple
                 atypeNew = Arrays.copyOfRange(atype,   (int) ixLower, (int) ixUpper);
                 }
 
-            ConstantPool    pool         = pool();
-            TypeConstant    typeTupleNew = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
+            TypeConstant    typeTupleNew = pool().ensureTupleType(atypeNew);
             TypeComposition clzTupleNew  = ensureClass(typeTupleNew);
             TupleHandle     hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hTuple.m_mutability);
 

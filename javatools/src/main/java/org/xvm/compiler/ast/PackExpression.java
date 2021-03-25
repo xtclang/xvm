@@ -25,7 +25,7 @@ public class PackExpression
         super(expr);
 
         ConstantPool pool = pool();
-        TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeTuple(), expr.getTypes());
+        TypeConstant type = pool.ensureTupleType(expr.getTypes());
         Constant     val  = null;
         if (expr.isConstant())
             {

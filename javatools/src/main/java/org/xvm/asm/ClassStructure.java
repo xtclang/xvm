@@ -782,7 +782,7 @@ public class ClassStructure
             if (constClz.equals(pool.clzTuple()))
                 {
                 // canonical Tuple
-                return m_typeCanonical = pool.ensureParameterizedTypeConstant(pool.typeTuple());
+                return m_typeCanonical = pool.typeTuple0();
                 }
 
             if (isVirtualChild())
@@ -804,7 +804,7 @@ public class ClassStructure
                 for (TypeConstant typeParam : mapParams.values())
                     {
                     atypeParam[ix++] = typeParam.isFormalTypeSequence()
-                            ? pool.ensureParameterizedTypeConstant(pool.typeTuple())
+                            ? pool.typeTuple0()
                             : typeParam.resolveGenerics(pool, resolver);
                     }
                 typeCanonical = pool.ensureParameterizedTypeConstant(typeCanonical, atypeParam);
@@ -1785,8 +1785,7 @@ public class ClassStructure
         {
         if (isTuple())
             {
-            return pool.ensureParameterizedTypeConstant(pool.typeTuple(),
-                list.toArray(TypeConstant.NO_TYPES));
+            return pool.ensureTupleType(list.toArray(TypeConstant.NO_TYPES));
             }
 
         return ix < list.size() ? list.get(ix) : null;

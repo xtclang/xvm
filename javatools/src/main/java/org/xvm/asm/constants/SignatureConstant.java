@@ -425,10 +425,7 @@ public class SignatureConstant
      */
     public TypeConstant asFunctionType()
         {
-        ConstantPool pool = getConstantPool();
-        return pool.ensureParameterizedTypeConstant(pool.typeFunction(),
-                pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstParams),
-                pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstReturns));
+        return getConstantPool().buildFunctionType(m_aconstParams, m_aconstReturns);
         }
 
     /**
@@ -438,8 +435,8 @@ public class SignatureConstant
     public TypeConstant asMethodType(ConstantPool pool, TypeConstant typeTarget)
         {
         return pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget,
-                pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstParams),
-                pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstReturns));
+                pool.ensureTupleType(m_aconstParams),
+                pool.ensureTupleType(m_aconstReturns));
         }
 
     /**

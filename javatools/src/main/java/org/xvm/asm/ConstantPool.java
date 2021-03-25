@@ -1613,6 +1613,42 @@ public class ConstantPool
         }
 
     /**
+     * Obtain a TypeConstant for a parameterized Array.
+     *
+     * @param typeElement  the element type of the Array
+     *
+     * @return the Array type
+     */
+    public TypeConstant ensureArrayType(TypeConstant typeElement)
+        {
+        return ensureParameterizedTypeConstant(typeArray(), typeElement);
+        }
+
+    /**
+     * Obtain a TypeConstant for a Range.
+     *
+     * @param typeElement  the element type of the Range
+     *
+     * @return the Range type
+     */
+    public TypeConstant ensureRangeType(TypeConstant typeElement)
+        {
+        return ensureParameterizedTypeConstant(typeRange(), typeElement);
+        }
+
+    /**
+     * Obtain a TypeConstant for a parameterized Tuple.
+     *
+     * @param atypeParams   the parameter types of the Tuple
+     *
+     * @return the Tuple type
+     */
+    public TypeConstant ensureTupleType(TypeConstant... atypeParams)
+        {
+        return ensureParameterizedTypeConstant(typeTuple(), atypeParams);
+        }
+
+    /**
      * Given the specified type, obtain a TypeConstant that represents the explicitly immutable form
      * of that type.
      *
@@ -3446,9 +3482,7 @@ public class ConstantPool
     public TypeConstant buildFunctionType(TypeConstant[] atypeParams, TypeConstant... atypeReturns)
         {
         return ensureParameterizedTypeConstant(
-                typeFunction(),
-                ensureParameterizedTypeConstant(typeTuple(), atypeParams),
-                ensureParameterizedTypeConstant(typeTuple(), atypeReturns));
+                typeFunction(), ensureTupleType(atypeParams), ensureTupleType(atypeReturns));
         }
 
     /**
@@ -3462,9 +3496,8 @@ public class ConstantPool
     public TypeConstant buildConditionalFunctionType(TypeConstant[] atypeParams, TypeConstant... atypeReturns)
         {
         assert atypeReturns.length > 1 && atypeReturns[0].equals(typeBoolean());
-        return ensureParameterizedTypeConstant(
-                typeFunction(),
-                ensureParameterizedTypeConstant(typeTuple(), atypeParams),
+        return ensureParameterizedTypeConstant(typeFunction(),
+                ensureTupleType(atypeParams),
                 ensureParameterizedTypeConstant(typeCondTuple(), atypeReturns));
         }
 
@@ -3592,7 +3625,7 @@ public class ConstantPool
         if (cParamsNew == 0)
             {
             // canonical Tuple represents Void
-            typeP = ensureParameterizedTypeConstant(typeTuple());
+            typeP = typeTuple0();
             }
         else
             {
@@ -3605,7 +3638,7 @@ public class ConstantPool
                 {
                 System.arraycopy(atypeParams, iParam + 1, atypeNew, iParam, cParamsNew - iParam);
                 }
-            typeP = ensureParameterizedTypeConstant(typeTuple(), atypeNew);
+            typeP = ensureTupleType(atypeNew);
             }
 
         TypeConstant typeNew = ensureParameterizedTypeConstant(typeFunction(), typeP, typeR);

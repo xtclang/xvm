@@ -538,8 +538,7 @@ public class xString
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeStringArray = pool.ensureParameterizedTypeConstant(
-                    pool.typeArray(), pool.typeString());
+            TypeConstant typeStringArray = pool.ensureArrayType(pool.typeString());
             ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeStringArray);
             assert clz != null;
             }

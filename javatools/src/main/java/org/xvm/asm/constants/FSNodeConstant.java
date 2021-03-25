@@ -56,8 +56,7 @@ public class FSNodeConstant
         m_constName     = pool.ensureStringConstant(sName);
         m_constCreated  = pool.ensureDateTimeConstant(ftCreated);
         m_constModified = pool.ensureDateTimeConstant(ftModified);
-        m_constData     = pool.ensureArrayConstant(pool.ensureParameterizedTypeConstant(
-                pool.typeArray(), pool.typeFileNode()), aFSNodes);
+        m_constData     = pool.ensureArrayConstant(pool.ensureArrayType(pool.typeFileNode()), aFSNodes);
         }
 
     /**

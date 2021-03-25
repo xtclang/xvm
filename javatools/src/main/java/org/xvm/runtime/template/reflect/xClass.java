@@ -509,8 +509,7 @@ public class xClass
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeClassArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                    pool.typeClass());
+            TypeConstant typeClassArray = pool.ensureArrayType(pool.typeClass());
             ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeClassArray);
             assert clz != null;
             }

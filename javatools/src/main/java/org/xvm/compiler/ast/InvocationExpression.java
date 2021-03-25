@@ -842,7 +842,7 @@ public class InvocationExpression
                     // otherwise, check the tuple based invoke (see AstNode.findMethod)
                     if (cArgs == 1)
                         {
-                        typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeParams);
+                        typeTuple = pool.ensureTupleType(atypeParams);
                         if (!listArgs.get(0).testFit(ctx, typeTuple, null).isFit())
                             {
                             // the regular "validateExpressions" call will report an error
@@ -953,9 +953,7 @@ public class InvocationExpression
                             if (calculateReturnFit(sigMethod, fCall, atypeReturn, ctx.getThisType(),
                                     ErrorListener.BLACKHOLE).isPacking())
                                 {
-                                TypeConstant typePacked = pool.ensureParameterizedTypeConstant(
-                                        pool.typeTuple(), atypeResult);
-                                atypeResult = new TypeConstant[]{typePacked};
+                                atypeResult = new TypeConstant[]{pool.ensureTupleType(atypeResult)};
                                 m_fPack     = true;
                                 }
                             }

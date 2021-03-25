@@ -52,7 +52,7 @@ public class xCharArray
     public TypeConstant getCanonicalType()
         {
         ConstantPool pool = pool();
-        return pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeChar());
+        return pool.ensureArrayType(pool.typeChar());
         }
 
     @Override

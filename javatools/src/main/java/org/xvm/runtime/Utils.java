@@ -1521,8 +1521,8 @@ public abstract class Utils
         {
         if (ANNOTATION_ARRAY_CLZ == null)
             {
-            TypeConstant typeArray = pool.ensureParameterizedTypeConstant(
-                pool.typeArray(), pool.ensureEcstasyTypeConstant("reflect.Annotation"));
+            TypeConstant typeArray = pool.ensureArrayType(
+                                        pool.ensureEcstasyTypeConstant("reflect.Annotation"));
             ANNOTATION_ARRAY_CLZ = REGISTRY.resolveClass(typeArray);
             }
 
@@ -1536,8 +1536,8 @@ public abstract class Utils
         {
         if (ARGUMENT_ARRAY_CLZ == null)
             {
-            TypeConstant typeArray = pool.ensureParameterizedTypeConstant(
-                pool.typeArray(), pool.ensureEcstasyTypeConstant("reflect.Argument"));
+            TypeConstant typeArray = pool.ensureArrayType(
+                                        pool.ensureEcstasyTypeConstant("reflect.Argument"));
             ARGUMENT_ARRAY_CLZ = REGISTRY.resolveClass(typeArray);
             }
 

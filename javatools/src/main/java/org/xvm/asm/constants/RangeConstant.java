@@ -261,8 +261,7 @@ public class RangeConstant
     @Override
     public TypeConstant getType()
         {
-        ConstantPool pool = getConstantPool();
-        return pool.ensureParameterizedTypeConstant(pool.typeRange(), m_const1.getType());
+        return getConstantPool().ensureRangeType(m_const1.getType());
         }
 
     /**

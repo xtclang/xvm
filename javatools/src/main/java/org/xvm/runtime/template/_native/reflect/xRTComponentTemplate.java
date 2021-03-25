@@ -270,8 +270,8 @@ public class xRTComponentTemplate
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                    pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
+            TypeConstant typeTypeArray = pool.ensureArrayType(
+                                            pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
             COMPONENT_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeTypeArray);
             assert clz != null;
             }

@@ -122,7 +122,7 @@ public class xLocalClock
 
             ClassStructure  structRule     = (ClassStructure) structTimeZone.getChild("Rule");
             TypeConstant    typeRule       = structRule.getCanonicalType();
-            TypeConstant    typeRuleArray  = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeRule);
+            TypeConstant    typeRuleArray  = pool.ensureArrayType(typeRule);
             TypeComposition clzRuleArray   = f_templates.resolveClass(typeRuleArray);
 
             m_hTimeZone = hTimeZone = new GenericHandle(clzTimeZone);

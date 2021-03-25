@@ -51,7 +51,7 @@ public class xIntArray
     public TypeConstant getCanonicalType()
         {
         ConstantPool pool = pool();
-        return pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeInt());
+        return pool.ensureArrayType(pool.typeInt());
         }
 
     @Override

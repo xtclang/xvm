@@ -100,8 +100,7 @@ public class xConst
                 findMethod("construct", 4);
 
             // Nibble support
-            TypeConstant typeBitArray = pool.ensureParameterizedTypeConstant(
-                pool.typeArray(), pool.typeBit());
+            TypeConstant typeBitArray = pool.ensureArrayType(pool.typeBit());
             NIBBLE_CONSTRUCT = f_templates.getClassStructure("numbers.Nibble").
                 findMethod("construct", 1, typeBitArray);
 

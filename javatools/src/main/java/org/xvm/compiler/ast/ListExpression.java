@@ -102,7 +102,7 @@ public class ListExpression
         TypeConstant typeElement = getImplicitElementType(ctx);
         if (typeElement != null)
             {
-            typeArray = pool().ensureParameterizedTypeConstant(typeArray, typeElement);
+            typeArray = pool().ensureArrayType(typeElement);
             }
         return typeArray;
         }

@@ -127,9 +127,7 @@ public class xRTHttpRequestProxy
         Headers                            headers   = hNode.f_exchange.getRequestHeaders();
         ConstantPool                       poolCtx   = frame.poolContext();
         Map<StringConstant, ArrayConstant> mapResult = new ListMap<>();
-        TypeConstant                       typeArray = poolCtx.ensureParameterizedTypeConstant(
-                                                            poolCtx.typeArray(),
-                                                            poolCtx.typeString());
+        TypeConstant                       typeArray = poolCtx.ensureArrayType(poolCtx.typeString());
 
         for (Map.Entry<String, List<String>> entry : headers.entrySet())
             {

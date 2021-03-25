@@ -40,7 +40,7 @@ public class xBooleanArray
     public TypeConstant getCanonicalType()
         {
         ConstantPool pool = pool();
-        return pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeBoolean());
+        return pool.ensureArrayType(pool.typeBoolean());
         }
 
     @Override

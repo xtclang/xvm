@@ -333,8 +333,7 @@ public class xRTSignature
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeReturnArray =
-                    pool.ensureParameterizedTypeConstant(pool.typeArray(), ensureReturnType());
+            TypeConstant typeReturnArray = pool.ensureArrayType(ensureReturnType());
             RETURN_ARRAY = clz = INSTANCE.f_templates.resolveClass(typeReturnArray);
             assert clz != null;
             }
@@ -350,8 +349,7 @@ public class xRTSignature
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeParamArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                    ensureParamType());
+            TypeConstant typeParamArray = pool.ensureArrayType(ensureParamType());
             PARAM_ARRAY = clz = INSTANCE.f_templates.resolveClass(typeParamArray);
             assert clz != null;
             }

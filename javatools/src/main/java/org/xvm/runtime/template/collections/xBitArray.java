@@ -53,7 +53,7 @@ public class xBitArray
     public TypeConstant getCanonicalType()
         {
         ConstantPool pool = pool();
-        return pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeBit());
+        return pool.ensureArrayType(pool.typeBit());
         }
 
     @Override

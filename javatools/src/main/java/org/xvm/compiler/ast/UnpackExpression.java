@@ -57,8 +57,7 @@ public class UnpackExpression
     @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
-        TypeConstant typeTuple = pool().ensureParameterizedTypeConstant(
-                pool().typeTuple(), atypeRequired);
+        TypeConstant typeTuple = pool().ensureTupleType(atypeRequired);
 
         Expression exprOld = expr;
         Expression exprNew = exprOld.validate(ctx, typeTuple, errs);

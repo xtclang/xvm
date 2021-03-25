@@ -234,7 +234,7 @@ public class TypeSequenceTypeConstant
         // for now, let's pretend it's an Array<Type>
         ConstantPool pool = getConstantPool();
 
-        TypeConstant typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
+        TypeConstant typeArray = pool.ensureArrayType(pool.typeType());
         return typeArray.ensureTypeInfoInternal(errs);
         }
 

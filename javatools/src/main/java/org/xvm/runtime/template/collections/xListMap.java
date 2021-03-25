@@ -97,8 +97,8 @@ public class xListMap
         ConstantPool pool         = frame.poolContext();
         TypeConstant typeKey      = typeMap.resolveGenericType("Key");
         TypeConstant typeVal      = typeMap.resolveGenericType("Value");
-        TypeConstant typeKeyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeKey);
-        TypeConstant typeValArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeVal);
+        TypeConstant typeKeyArray = pool.ensureArrayType(typeKey);
+        TypeConstant typeValArray = pool.ensureArrayType(typeVal);
 
         TypeComposition clzKeyArray = f_templates.resolveClass(typeKeyArray);
         TypeComposition clzValArray = f_templates.resolveClass(typeValArray);

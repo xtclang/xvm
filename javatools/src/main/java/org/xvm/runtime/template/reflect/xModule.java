@@ -350,7 +350,7 @@ public class xModule
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeModuleArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeModule());
+            TypeConstant typeModuleArray = pool.ensureArrayType(pool.typeModule());
             ARRAY_CLZ = clz = INSTANCE.f_templates.resolveClass(typeModuleArray);
             assert clz != null;
             }

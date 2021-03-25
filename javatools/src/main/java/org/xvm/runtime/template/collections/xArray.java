@@ -263,7 +263,7 @@ public class xArray
     private int createListSet(Frame frame, TypeConstant typeEl, ObjectHandle[] ahValue)
         {
         ConstantPool    pool      = frame.poolContext();
-        TypeConstant    typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeEl);
+        TypeConstant    typeArray = pool.ensureArrayType(typeEl);
         TypeComposition clzArray  = f_templates.resolveClass(typeArray);
 
         ObjectHandle[] ahVar = new ObjectHandle[CREATE_LIST_SET.getMaxVars()];
@@ -1196,8 +1196,7 @@ public class xArray
         if (s_clzStringArray == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeArray = pool.ensureParameterizedTypeConstant(
-                pool.typeArray(), pool.typeString());
+            TypeConstant typeArray = pool.ensureArrayType(pool.typeString());
             s_clzStringArray = INSTANCE.f_templates.resolveClass(typeArray);
             }
 
@@ -1212,8 +1211,7 @@ public class xArray
         if (s_clzObjectArray == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeArray = pool.ensureParameterizedTypeConstant(
-                pool.typeArray(), pool.typeObject());
+            TypeConstant typeArray = pool.ensureArrayType(pool.typeObject());
             s_clzObjectArray = INSTANCE.f_templates.resolveClass(typeArray);
             }
 

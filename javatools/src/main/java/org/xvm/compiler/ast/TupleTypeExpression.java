@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -57,9 +56,7 @@ public class TupleTypeExpression
     @Override
     protected TypeConstant instantiateTypeConstant(Context ctx)
         {
-        ConstantPool pool = pool();
-        return pool.ensureParameterizedTypeConstant(pool.typeTuple(),
-                FunctionTypeExpression.toTypeConstantArray(paramTypes));
+        return pool().ensureTupleType(FunctionTypeExpression.toTypeConstantArray(paramTypes));
         }
 
     @Override

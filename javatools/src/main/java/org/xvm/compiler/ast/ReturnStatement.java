@@ -239,7 +239,7 @@ public class ReturnStatement
                 else
                     {
                     // 3) it could be a tuple return
-                    TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aRetTypes);
+                    TypeConstant typeTuple = pool.ensureTupleType(aRetTypes);
                     if (exprOld.testFit(ctx, typeTuple, null).isFit())
                         {
                         exprNew = exprOld.validate(ctx, typeTuple, errs);

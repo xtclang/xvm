@@ -2249,8 +2249,7 @@ public class Frame
 
             return frame.resolveType(iAuxId >= 0
                 ? idMethod.getRawReturns()[iAuxId]
-                : pool.ensureParameterizedTypeConstant(
-                    pool.typeTuple(), idMethod.getSignature().getRawReturns()));
+                : pool.ensureTupleType(idMethod.getSignature().getRawReturns()));
             }
         };
 

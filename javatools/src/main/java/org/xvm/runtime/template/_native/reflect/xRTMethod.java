@@ -77,7 +77,7 @@ public class xRTMethod
         assert typeActual.isA(pool.typeMethod());
 
         TypeConstant typeTarget = typeActual.getParamType(0);
-        TypeConstant typeP      = pool.ensureParameterizedTypeConstant(pool.typeTuple());
+        TypeConstant typeP      = pool.typeTuple0();
         TypeConstant typeR      = typeActual.getParamType(2);
         TypeConstant typeMethod = pool.ensureParameterizedTypeConstant(
                                         pool.typeMethod(), typeTarget, typeP, typeR);
@@ -448,7 +448,7 @@ public class xRTMethod
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeMethodArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeMethod());
+            TypeConstant typeMethodArray = pool.ensureArrayType(pool.typeMethod());
             ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeMethodArray);
             assert clz != null;
             }
@@ -476,7 +476,7 @@ public class xRTMethod
         assert typeTarget != null;
 
         ConstantPool pool            = INSTANCE.pool();
-        TypeConstant typeMethodArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+        TypeConstant typeMethodArray = pool.ensureArrayType(
             pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget));
         return INSTANCE.f_templates.resolveClass(typeMethodArray);
         }

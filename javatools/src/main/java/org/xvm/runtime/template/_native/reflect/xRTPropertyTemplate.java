@@ -96,8 +96,7 @@ public class xRTPropertyTemplate
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typePropertyTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
-            TypeConstant typePropertyArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                typePropertyTemplate);
+            TypeConstant typePropertyArray = pool.ensureArrayType(typePropertyTemplate);
             ARRAY_PROP_COMP = clz = INSTANCE.f_templates.resolveClass(typePropertyArray);
             assert clz != null;
             }

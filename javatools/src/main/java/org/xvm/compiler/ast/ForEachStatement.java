@@ -694,7 +694,7 @@ public class ForEachStatement
 
         ConstantPool pool         = pool();
         TypeConstant typeElement  = getElementType();
-        TypeConstant typeRange    = pool.ensureParameterizedTypeConstant(pool.typeRange(), typeElement);
+        TypeConstant typeRange    = pool.ensureRangeType(typeElement);
         TypeConstant typeIter     = pool.ensureVirtualChildTypeConstant(typeRange, "IntervalIterator");
 
         code.add(new Var(typeIter));

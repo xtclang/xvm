@@ -81,7 +81,7 @@ public class xRTFunction
 
         assert typeActual.isA(pool.typeFunction());
 
-        TypeConstant typeP   = pool.ensureParameterizedTypeConstant(pool.typeTuple());
+        TypeConstant typeP   = pool.typeTuple0();
         TypeConstant typeR   = typeActual.getParamType(1);
         TypeConstant typeClz = pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeP, typeR);
 
@@ -1383,7 +1383,7 @@ public class xRTFunction
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeFunctionArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeFunction());
+            TypeConstant typeFunctionArray = pool.ensureArrayType(pool.typeFunction());
             ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeFunctionArray);
             assert clz != null;
             }
@@ -1431,9 +1431,9 @@ public class xRTFunction
 
         ConstantPool pool        = INSTANCE.pool();
         TypeConstant typeParams  = typeParent == null
-                ? pool.ensureParameterizedTypeConstant(pool.typeTuple(), TypeConstant.NO_TYPES)
-                : pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeParent);
-        TypeConstant typeReturns = pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeTarget);
+                ? pool.typeTuple0()
+                : pool.ensureTupleType(typeParent);
+        TypeConstant typeReturns = pool.ensureTupleType(typeTarget);
         return pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeParams, typeReturns);
         }
 
@@ -1445,8 +1445,7 @@ public class xRTFunction
         assert typeTarget != null;
 
         ConstantPool pool      = INSTANCE.pool();
-        TypeConstant typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                ensureConstructorType(typeTarget, typeParent));
+        TypeConstant typeArray = pool.ensureArrayType(ensureConstructorType(typeTarget, typeParent));
         return INSTANCE.f_templates.resolveClass(typeArray);
         }
 

@@ -271,8 +271,7 @@ public class ArrayAccessExpression
                     // array[index..index] or array[index..index)
                     // REVIEW what if it is a Range<IntLiteral> or Range<UInt> ???
                     if (exprTarget.testFit(ctx, typeRequired, errs) == TypeFit.Fit
-                            && exprIndex.testFit(ctx, pool.ensureParameterizedTypeConstant(
-                            pool.typeRange(), pool.typeInt()), null).isFit())
+                            && exprIndex.testFit(ctx, pool.ensureRangeType(pool.typeInt()), null).isFit())
                         {
                         return TypeFit.Fit;
                         }
@@ -347,7 +346,7 @@ public class ArrayAccessExpression
                         }
 
                     // matrix[index..index,index..index]
-                    TypeConstant typeInterval = pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt());
+                    TypeConstant typeInterval = pool.ensureRangeType(pool.typeInt());
                     if (typeRequired.isA(pool.typeMatrix()) && exprCol.testFit(ctx, typeInterval, null).isFit()
                         && exprRow.testFit(ctx, typeInterval, null).isFit())
                         {
@@ -356,7 +355,7 @@ public class ArrayAccessExpression
                         return typeElement == null
                             ? TypeFit.Fit
                             : expr.testFit(ctx, pool.ensureParameterizedTypeConstant(
-                            pool.typeMatrix(), typeElement), errs);
+                                pool.typeMatrix(), typeElement), errs);
                         }
 
                     // test for Matrix[_,?] or Matrix[?,_]
@@ -400,7 +399,7 @@ public class ArrayAccessExpression
                     }
                 // array[index..index] or array[index..index)
                 else if (typeRequired.isA(pool.typeList()) && aexprIndexes[0].testFit(ctx,
-                        pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt()), null).isFit())
+                        pool.ensureRangeType(pool.typeInt()), null).isFit())
                     {
                     // REVIEW keep this in sync with testFit()
                     typeElement = typeRequired.resolveGenericType("Element");
@@ -478,7 +477,7 @@ public class ArrayAccessExpression
                 // array[index..index]
                 else if (typeRequired.isA(pool.typeInterval()))
                     {
-                    TypeConstant typeIntInterval = pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt());
+                    TypeConstant typeIntInterval = pool.ensureRangeType(pool.typeInt());
                     if (exprCol.testFit(ctx, typeIntInterval, null).isFit() &&
                         exprRow.testFit(ctx, typeIntInterval, null).isFit())
                         {
@@ -1123,7 +1122,7 @@ public class ArrayAccessExpression
             {
             atypeSlice[iDest] = listFields.get(iSrc);
             }
-        return pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeSlice);
+        return pool.ensureTupleType(atypeSlice);
         }
 
     /**
@@ -1222,7 +1221,7 @@ public class ArrayAccessExpression
             atypeFields[nLo] = typeRequired;
             }
 
-        return pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeFields);
+        return pool.ensureTupleType(atypeFields);
         }
 
     /**
@@ -1240,8 +1239,7 @@ public class ArrayAccessExpression
             Constant     constRaw   = exprIndex.toConstant();
             Constant     constIndex = convertConstant(constRaw, pool.typeInt());
             return constIndex == null
-                    ? convertConstant(constRaw, pool.ensureParameterizedTypeConstant(
-                                      pool.typeRange(), pool.typeInt()))
+                    ? convertConstant(constRaw, pool.ensureRangeType(pool.typeInt()))
                     : constIndex;
             }
         else if (exprIndex instanceof LiteralExpression)

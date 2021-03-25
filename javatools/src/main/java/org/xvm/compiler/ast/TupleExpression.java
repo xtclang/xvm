@@ -341,7 +341,7 @@ public class TupleExpression
             {
             aReqTypes     = atypeRequired;
             cReqTypes     = aReqTypes.length;
-            typeRequired  = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aReqTypes);
+            typeRequired  = pool.ensureTupleType(aReqTypes);
             fMultiplexing = false;
             }
 

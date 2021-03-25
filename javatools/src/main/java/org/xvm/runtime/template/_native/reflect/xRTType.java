@@ -725,8 +725,7 @@ public class xRTType
             ClassTemplate    template    = clzTarget.getTemplate();
             MethodStructure  constructor = f_constructor;
             ConstantPool     pool        = frame.poolContext();
-            TypeConstant     typeTuple   = pool.ensureParameterizedTypeConstant(
-                                            pool.typeTuple(), clzTarget.getType());
+            TypeConstant     typeTuple   = pool.ensureTupleType(clzTarget.getType());
             TypeComposition clzTuple     = xTuple.INSTANCE.ensureClass(typeTuple);
 
             int iResult = constructor == null
@@ -1571,8 +1570,8 @@ public class xRTType
         TypeComposition clz = TYPE_ARRAY_CLZCOMP;
         if (clz == null)
             {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
+            ConstantPool pool          = INSTANCE.pool();
+            TypeConstant typeTypeArray = pool.ensureArrayType(pool.typeType());
             TYPE_ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeTypeArray);
             assert clz != null;
             }
@@ -1587,9 +1586,9 @@ public class xRTType
         TypeComposition clz = ARGUMENT_ARRAY_CLZCOMP;
         if (clz == null)
             {
-            ConstantPool pool = INSTANCE.pool();
+            ConstantPool pool         = INSTANCE.pool();
             TypeConstant typeArg      = pool.ensureEcstasyTypeConstant("reflect.Argument");
-            TypeConstant typeArgArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeArg);
+            TypeConstant typeArgArray = pool.ensureArrayType(typeArg);
             ARGUMENT_ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeArgArray);
             assert clz != null;
             }

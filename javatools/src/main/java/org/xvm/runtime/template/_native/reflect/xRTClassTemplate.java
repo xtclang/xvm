@@ -475,8 +475,7 @@ public class xRTClassTemplate
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeContribArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                CONTRIBUTION_COMP.getType());
+            TypeConstant typeContribArray = pool.ensureArrayType(CONTRIBUTION_COMP.getType());
             CONTRIBUTION_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeContribArray);
             assert clz != null;
             }
@@ -492,8 +491,7 @@ public class xRTClassTemplate
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeClassTemplateArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                CLASS_TEMPLATE_COMP.getType());
+            TypeConstant typeClassTemplateArray = pool.ensureArrayType(CLASS_TEMPLATE_COMP.getType());
             CLASS_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeClassTemplateArray);
             assert clz != null;
             }
@@ -508,8 +506,8 @@ public class xRTClassTemplate
         if (TYPE_PARAMETER_ARRAY_EMPTY == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeParamArray = pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                pool.ensureEcstasyTypeConstant("reflect.TypeParameter"));
+            TypeConstant typeTypeParamArray = pool.ensureArrayType(
+                                                pool.ensureEcstasyTypeConstant("reflect.TypeParameter"));
             TypeComposition clz = INSTANCE.f_templates.resolveClass(typeTypeParamArray);
 
             TYPE_PARAMETER_ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(clz, Utils.OBJECTS_NONE);
