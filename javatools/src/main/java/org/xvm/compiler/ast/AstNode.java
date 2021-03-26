@@ -1235,11 +1235,11 @@ public abstract class AstNode
             SignatureConstant sigMethod  = idMethod.getSignature();
 
             int cTypeParams = method.getTypeParamCount();
-            int cParams     = method.getVisibleParamCount();
+            int cVisible    = method.getVisibleParamCount();
             int cDefaults   = method.getDefaultParamCount();
-            int cRequired   = cParams - cDefaults;
+            int cRequired   = cVisible - cDefaults;
 
-            if (cArgs > cParams || fCall && cArgs < cRequired)
+            if (cArgs > cVisible || fCall && cArgs < cRequired)
                 {
                 log(errsTemp, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cArgs);
                 errsKeep = errsTemp;

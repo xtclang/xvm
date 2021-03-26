@@ -960,13 +960,6 @@ public class InvocationExpression
                         }
                     else
                         {
-                        if (fCondReturn)
-                            {
-                            log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
-                                    method.getIdentityConstant().getValueString());
-                            return null;
-                            }
-
                         TypeConstant typeFn = m_fBindTarget
                                 ? idMethod.getSignature().asFunctionType()
                                 : idMethod.getValueType(pool, typeLeft);
@@ -2679,7 +2672,7 @@ public class InvocationExpression
 
         List<Expression> listArgs = args;
         int              cArgs    = listArgs.size();
-        if (cArgs < cRequired)
+        if (cArgs > cVisible || cArgs < cRequired)
             {
             log(errs, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cArgs);
             fValid = false;
@@ -2763,7 +2756,7 @@ public class InvocationExpression
         int            cRequired   = cVisible - cDefaults;
         int            cArgs       = args.size();
 
-        if (cArgs < cRequired)
+        if (cArgs > cVisible || cArgs < cRequired)
             {
             log(errs, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cArgs);
             return null;
