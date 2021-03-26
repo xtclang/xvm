@@ -64,9 +64,9 @@ class EntryKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
             }
 
         @Override
-        (Iterator<MapKey>, Iterator<MapKey>) duplicate()
+        (Iterator<MapKey>, Iterator<MapKey>) bifurcate()
             {
-            (EntryIterator iter1, EntryIterator iter2) = entryIterator.duplicate();
+            (EntryIterator iter1, EntryIterator iter2) = entryIterator.bifurcate();
             return new KeyIterator(iter1), new KeyIterator(iter2);
             }
         }

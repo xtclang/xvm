@@ -251,7 +251,7 @@ module TestArray
 
                 case 4:
                     console.println("\n   --> duplicate test");
-                    (Iterator<String> iter1, Iterator<String> iter2) = iter.duplicate();
+                    (Iterator<String> iter1, Iterator<String> iter2) = iter.bifurcate();
                     iter = iter1.concat(iter2);
                     break;
 
@@ -282,7 +282,7 @@ module TestArray
 
                 case 10:
                     console.println("\n   --> dedup test");
-                    (Iterator<String> iter1, Iterator<String> iter2) = iter.duplicate();
+                    (Iterator<String> iter1, Iterator<String> iter2) = iter.bifurcate();
                     iter = iter1.concat(iter2);
                     iter = iter.dedup();
                     break;

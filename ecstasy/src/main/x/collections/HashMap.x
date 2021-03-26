@@ -9,8 +9,7 @@ import maps.ReifiedEntry;
  *   implement Hashable.
  */
 class HashMap<Key, Value>
-        implements Map<Key, Value>
-        // TODO conditional incorporation of ... HashMap<Key extends immutable Hashable, Value>
+        implements CopyableMap<Key, Value>
         incorporates conditional MapFreezer<Key extends immutable Object, Value extends ImmutableAble>
         incorporates conditional MapStringer<Key extends Stringable, Value extends Stringable>
     {
@@ -43,6 +42,29 @@ class HashMap<Key, Value>
         buckets = new HashEntry?[bucketCount];
         }
 
+    /**
+     * Copy constructor.
+     *
+     * @param that  another map to copy the contents from when constructing this HashMap
+     */
+    construct(Map<Key, Value> that)
+        {
+        if (that.is(HashMap))
+            {
+            this.hasher      = that.hasher;
+            this.buckets     = that.buckets.duplicate(hashEntry -> hashEntry?.duplicate() : Null);
+            this.growAt      = that.growAt;
+            this.shrinkAt    = that.shrinkAt;
+            this.addCount    = that.addCount;
+            this.removeCount = that.removeCount;
+            }
+        else
+            {
+            construct HashMap(that.size);
+            putAll(that);
+            }
+        }
+
 
     // ----- internal state ------------------------------------------------------------------------
 
@@ -55,7 +77,17 @@ class HashMap<Key, Value>
     /**
      * This is the Entry implementation used to store the HashMap's keys and values.
      */
-    protected static class HashEntry(Key key, Int keyhash, Value value, HashEntry? next = Null);
+    protected static class HashEntry(Key key, Int keyhash, Value value, HashEntry? next = Null)
+            implements Duplicable
+        {
+        construct(HashEntry that)
+            {
+            this.key     = that.key;
+            this.keyhash = that.keyhash;
+            this.value   = that.value;
+            this.next    = that.next?.duplicate() : Null;
+            }
+        }
 
     /**
      * An array of hash buckets.
@@ -372,79 +404,76 @@ class HashMap<Key, Value>
         Iterator<Entry> iterator()
             {
             return new EntryIterator();
-            }
 
-        /**
-         * TODO GG move this class to inside the iterator() method
-         */
-        private class EntryIterator
-                implements Iterator<Entry>
-            {
-            private construct()
+            private class EntryIterator
+                    implements Iterator<Entry>
                 {
-                buckets     = this.HashMap.buckets;
-                nextBucket  = 0;
-                nextEntry   = Null;
-                addSnapshot = this.HashMap.addCount;
-                }
-
-            private construct(EntryIterator that)
-                {
-                this.buckets     = that.buckets;
-                this.nextBucket  = that.nextBucket;
-                this.nextEntry   = that.nextEntry;
-                this.addSnapshot = that.addSnapshot;
-                }
-
-            private HashEntry?[] buckets;
-            private Int          nextBucket;
-            private HashEntry?   nextEntry;
-            private Int          addSnapshot;
-            private CursorEntry  entry       = new CursorEntry();
-
-            @Override
-            conditional Entry next()
-                {
-                if (addSnapshot != this.HashMap.addCount)
+                private construct()
                     {
-                    throw new ConcurrentModification();
+                    buckets     = this.HashMap.buckets;
+                    nextBucket  = 0;
+                    nextEntry   = Null;
+                    addSnapshot = this.HashMap.addCount;
                     }
 
-                Int bucketCount = buckets.size;
-                while (nextEntry == Null && nextBucket < bucketCount)
+                private construct(EntryIterator that)
                     {
-                    nextEntry = buckets[nextBucket++];
+                    this.buckets     = that.buckets;
+                    this.nextBucket  = that.nextBucket;
+                    this.nextEntry   = that.nextEntry;
+                    this.addSnapshot = that.addSnapshot;
                     }
 
-                HashEntry? currEntry = nextEntry;
-                if (currEntry != Null)
+                private HashEntry?[] buckets;
+                private Int          nextBucket;
+                private HashEntry?   nextEntry;
+                private Int          addSnapshot;
+                private CursorEntry  entry       = new CursorEntry();
+
+                @Override
+                conditional Entry next()
                     {
-                    // this is the entry to return;
-                    // always load next one in the chain to avoid losing the position if/when
-                    // the current entry is removed
-                    nextEntry = currEntry.next;
-                    return True, entry.advance(currEntry);
+                    if (addSnapshot != this.HashMap.addCount)
+                        {
+                        throw new ConcurrentModification();
+                        }
+
+                    Int bucketCount = buckets.size;
+                    while (nextEntry == Null && nextBucket < bucketCount)
+                        {
+                        nextEntry = buckets[nextBucket++];
+                        }
+
+                    HashEntry? currEntry = nextEntry;
+                    if (currEntry != Null)
+                        {
+                        // this is the entry to return;
+                        // always load next one in the chain to avoid losing the position if/when
+                        // the current entry is removed
+                        nextEntry = currEntry.next;
+                        return True, entry.advance(currEntry);
+                        }
+
+                    return False;
                     }
 
-                return False;
-                }
+                @Override
+                Boolean knownDistinct()
+                    {
+                    return True;
+                    }
 
-            @Override
-            Boolean knownDistinct()
-                {
-                return True;
-                }
+                @Override
+                conditional Int knownSize()
+                    {
+                    return True, this.HashMap.size;
+                    }
 
-            @Override
-            conditional Int knownSize()
-                {
-                return True, this.HashMap.size;
-                }
-
-            @Override
-            (Iterator<Entry>, Iterator<Entry>) duplicate()
-                {
-                return new EntryIterator(this), new EntryIterator(this);
+                @Override
+                (Iterator<Entry>, Iterator<Entry>) bifurcate()
+                    {
+                    return new EntryIterator(this), new EntryIterator(this);
+                    }
                 }
             }
 

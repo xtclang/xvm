@@ -17,6 +17,12 @@ module TestMaps
         testListMap();
 
         testMapIteration();
+
+//        for (UInt seed : 1..5)
+//            {
+//            log.add($"iteration #{seed}");
+//            testRandomOps(new SkiplistMap(), seed);
+//            }
         }
 
     void testBasic()

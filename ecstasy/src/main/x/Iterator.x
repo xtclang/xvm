@@ -619,7 +619,7 @@ interface Iterator<Element>
      * @return a first clone of this iterator
      * @return a second clone of this iterator
      */
-    (Iterator!, Iterator!) duplicate()
+    (Iterator!, Iterator!) bifurcate()
         {
         if (knownEmpty())
             {

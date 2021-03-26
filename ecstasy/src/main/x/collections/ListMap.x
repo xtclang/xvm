@@ -15,7 +15,7 @@ import maps.ReifiedEntry;
  * hashing lookup data structure when the first such search occurs.
  */
 class ListMap<Key, Value>
-        implements Map<Key, Value>
+        implements CopyableMap<Key, Value>
         incorporates conditional ListMapIndex<Key extends immutable Hashable, Value>
         incorporates conditional MapFreezer<Key extends immutable Object, Value extends ImmutableAble>
         incorporates conditional MapStringer<Key extends Stringable, Value extends Stringable>
@@ -57,6 +57,11 @@ class ListMap<Key, Value>
             {
             makeImmutable();
             }
+        }
+
+    construct(ListMap that)
+        {
+        TODO
         }
 
 

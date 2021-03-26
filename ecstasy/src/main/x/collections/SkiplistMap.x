@@ -1,6 +1,6 @@
 import maps.EntryValues;
+import maps.OrderedMapSlice;
 import maps.ReifiedEntry;
-
 
 /**
  * The SkiplistMap is an OrderedMap implementation using a "Skip List" data structure.
@@ -11,6 +11,8 @@ import maps.ReifiedEntry;
  */
 class SkiplistMap<Key extends Orderable, Value>
         implements OrderedMap<Key, Value>
+        implements CopyableMap<Key, Value>
+        incorporates conditional MapFreezer<Key extends immutable Object, Value extends ImmutableAble>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -30,6 +32,14 @@ class SkiplistMap<Key extends Orderable, Value>
     finally
         {
         clear();
+        }
+
+    /**
+     * Copy constructor.
+     */
+    construct(SkiplistMap<Key, Value> that)
+        {
+        TODO
         }
 
 
@@ -377,7 +387,7 @@ class SkiplistMap<Key extends Orderable, Value>
     @Override
     @Op("[..]") OrderedMap<Key, Value> slice(Range<Key> indexes)
         {
-        return new maps.OrderedMapSlice(this, indexes);
+        return new OrderedMapSlice(this, indexes);
         }
 
     @Override
@@ -584,7 +594,7 @@ class SkiplistMap<Key extends Orderable, Value>
                 }
 
             @Override
-            (IteratorImpl, IteratorImpl) duplicate()
+            (IteratorImpl, IteratorImpl) bifurcate()
                 {
                 return finished
                         ? (this, this)

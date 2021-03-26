@@ -574,7 +574,7 @@ class OrderedMapSlice<Key extends Orderable, Value>
                 }
 
             @Override
-            (KeyIterator, KeyIterator) duplicate()
+            (KeyIterator, KeyIterator) bifurcate()
                 {
                 return finished
                         ? (this, this)
