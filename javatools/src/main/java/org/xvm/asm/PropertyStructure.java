@@ -237,6 +237,14 @@ public class PropertyStructure
         }
 
     /**
+     * @return true iff the property doesn't expand into a "class-like" structure
+     */
+    public boolean isSimple()
+        {
+        return !isRefAnnotated() && !hasChildren();
+        }
+
+    /**
      * @return true iff this property contains the specified annotation
      */
     public boolean containsRefAnnotation(IdentityConstant idAnno)

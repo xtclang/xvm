@@ -203,7 +203,7 @@ public class TypeInfo
             PropertyConstant id       = entry.getKey();
             PropertyInfo     prop     = entry.getValue();
             boolean          fVirtual = prop.isVirtual();
-            if (id.isTopLevel() || isIdentityReachable(prop.getIdentity(), fVirtual, access))
+            if (id.isTopLevel())
                 {
                 // now ask the Property itself to reduce its capabilities based on the new access level
                 prop = prop.limitAccess(access);
@@ -225,8 +225,7 @@ public class TypeInfo
             {
             MethodConstant id = entry.getKey();
             MethodInfo method = entry.getValue();
-            if (method.getAccess().isAsAccessibleAs(access) &&
-                    isIdentityReachable(method.getIdentity(), method.isVirtual(), access))
+            if (method.getAccess().isAsAccessibleAs(access))
                 {
                 mapMethods.put(id, method);
 
@@ -387,78 +386,6 @@ public class TypeInfo
                 }
             }
         return info;
-        }
-
-    /**
-     * Given a specified level of access, would the specified identity still be reachable?
-     *
-     * @param id        a property or method identity
-     * @param fVirtual  true if the identity represents a virtual member of the type
-     * @param access    the access level being proposed
-     *
-     * @return true iff all of the properties and methods between the specified identity and the
-     *         containing type would still be reachable given the proposed access level
-     */
-    private boolean isIdentityReachable(IdentityConstant id, boolean fVirtual, Access access)
-        {
-        ConstantPool     pool     = pool();
-        IdentityConstant idParent = id.getNamespace();
-        while (idParent.isNested())
-            {
-            if (fVirtual)
-                {
-                // substitute a sub-class property or method if one is available
-                if (idParent instanceof PropertyConstant)
-                    {
-                    Object       idResolved = idParent.resolveNestedIdentity(pool, f_type);
-                    PropertyInfo info       = f_mapVirtProps.get(idResolved);
-                    if (info == null)
-                        {
-                        // the parent property is not visible, therefore the child is not reachable
-                        return false;
-                        }
-                    idParent = info.getIdentity();
-                    }
-                else if (idParent instanceof MethodConstant)
-                    {
-                    Object     idResolved = idParent.resolveNestedIdentity(pool, f_type);
-                    MethodInfo info       = f_mapVirtMethods.get(idResolved);
-
-                    idParent = info.getIdentity();
-                    }
-                }
-
-            Component component = idParent.getComponent();
-            if (component == null)
-                {
-                // a method cap will not have a real component because it is a fake identity
-                if (idParent instanceof MethodConstant)
-                    {
-                    Object     idResolved = idParent.resolveNestedIdentity(pool, f_type);
-                    MethodInfo method     = f_mapVirtMethods.get(idResolved);
-                    assert method != null;
-                    assert method.getHead().getImplementation() == Implementation.Capped;
-
-                    // look under the cap
-                    idParent  = method.getChain()[1].getIdentity();
-                    component = idParent.getComponent();
-                    assert component != null;
-                    }
-                else
-                    {
-                    throw new IllegalStateException("missing component for id: " + idParent);
-                    }
-                }
-
-            if (component.getAccess().isLessAccessibleThan(access))
-                {
-                return false;
-                }
-
-            idParent = idParent.getNamespace();
-            }
-
-        return true;
         }
 
     /**

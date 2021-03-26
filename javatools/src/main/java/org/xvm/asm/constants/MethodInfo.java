@@ -711,8 +711,10 @@ public class MethodInfo
                 PropertyStructure prop = (PropertyStructure) id.getComponent();
 
                 // absence of the component indicates that the property was created as "synthetic"
-                // via "PropertyConstant.appendNestedIdentity", which means it's not private
-                if (prop != null && prop.getAccess() == Access.PRIVATE)
+                // via "PropertyConstant.appendNestedIdentity", which means it's not private;
+                // a non-simple property may expend into a class-like structure, which may require
+                // virtuality
+                if (prop != null && prop.getAccess() == Access.PRIVATE && prop.isSimple())
                     {
                     return false;
                     }

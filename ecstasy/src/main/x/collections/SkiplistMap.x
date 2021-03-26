@@ -424,9 +424,8 @@ class SkiplistMap<Key extends Orderable, Value>
         /**
          * A cached iterator instance that has already been exhausted and thus contains nothing.
          */
-        // TODO GG allow this to be private
         // TODO GG move this inside the iterator() method
-        @Lazy IteratorImpl emptyIterator.calc()
+        private @Lazy IteratorImpl emptyIterator.calc()
             {
             assert empty;
             return new IteratorImpl();
