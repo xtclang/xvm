@@ -377,7 +377,7 @@ class SkiplistMap<Key extends Orderable, Value>
     @Override
     @Op("[..]") OrderedMap<Key, Value> slice(Range<Key> indexes)
         {
-        TODO return new OrderedMapSlice(this, indexes);
+        return new maps.OrderedMapSlice(this, indexes);
         }
 
     @Override

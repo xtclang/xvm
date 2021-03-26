@@ -28,7 +28,10 @@ module ecstasy.xtclang.org
      * The Ordered enumeration describes the result of comparing two items for the purpose of
      * ordering.
      */
-    enum Ordered(String symbol) { Lesser("<"), Equal("="), Greater(">") }
+    enum Ordered(String symbol, Ordered reversed)
+        {
+        Lesser("<", Greater), Equal("=", Equal), Greater(">", Lesser);
+        }
 
     /**
      * A Deadlock exception is raised by the runtime in response to a situation in which re-entrancy

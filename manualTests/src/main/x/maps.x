@@ -4,6 +4,7 @@ module TestMaps
 
     @Inject Console console;
     @Inject Timer   timer;
+    Log log = new ecstasy.io.ConsoleLog(console);
 
     void run()
         {
@@ -166,6 +167,125 @@ module TestMaps
         for ((_, Int i) : map)
             {
             console.println($"? = {i}");
+            }
+        }
+
+    static void testBasicOps(Map<String, String> map)
+        {
+        for (Int i : 0..14)
+            {
+            map.put($"key_{i}", $"val_{i}");
+            }
+
+        Int count = 0;
+        for (String s : map)
+            {
+            ++count;
+            }
+        assert count == 15;
+
+        for (Int i = 1; i < 14; i += 2)
+            {
+            map.remove($"key_{i}");
+            }
+
+        Int count2 = 0;
+        for ((String k, String v) : map)
+            {
+            ++count2;
+            }
+        assert count2 == 8;
+        }
+
+    static void testRandomOps(Map<Int, Int> map, UInt seed)
+        {
+        Random rnd = new ecstasy.numbers.PseudoRandom(seed);
+
+        Map<Int, Int> check = new HashMap();
+
+        Int steps = rnd.int(1000) + 1;
+        for (Int step : 0..steps)
+            {
+            switch (rnd.int(100)+1)
+                {
+                case 1..49:
+                    for (Int i : 0..rnd.int(rnd.int(10)+1)+1)
+                        {
+                        Int k = rnd.int(1000);
+                        Int v = rnd.int(1000);
+                        map.put(k, v);
+                        check.put(k, v);
+                        }
+                    break;
+
+                case 50..59:
+                    if (!check.empty)
+                        {
+                        Int[] keys = check.keys.toArray();
+                        for (Int i : 0..rnd.int(rnd.int(20)+1)+1)
+                            {
+                            Int k = keys[rnd.int(keys.size)];
+                            Int v = map.getOrDefault(k, -1);
+                            assert v == check.getOrDefault(k, -1);
+                            ++v;
+                            map.put(k, v);
+                            check.put(k, v);
+                            }
+                        }
+                    break;
+
+                case 60..69:
+                    for (Int i : 0..rnd.int(rnd.int(100)+1)+1)
+                        {
+                        Int k = rnd.int(1000);
+                        assert map.contains(k) == check.contains(k);
+                        }
+                    break;
+
+                case 70..79:
+                    if (!check.empty)
+                        {
+                        Int[] keys = check.keys.toArray();
+                        for (Int i : 0..rnd.int(rnd.int(100)+1)+1)
+                            {
+                            Int k = keys[rnd.int(keys.size)];
+                            assert map.getOrNull(k) == check.getOrNull(k);
+                            }
+                        }
+                    break;
+
+                case 80..89:
+                    if (!check.empty)
+                        {
+                        Int[] keys = check.keys.toArray();
+                        for (Int i : 0..rnd.int(rnd.int(40)+1)+1)
+                            {
+                            Int k = keys[rnd.int(keys.size)];
+                            map.remove(k);
+                            check.remove(k);
+                            }
+                        }
+                    break;
+
+                case 90..99:
+                    for (Int i : 0..rnd.int(25)+1)
+                        {
+                        Int k = rnd.int(1000);
+                        map.remove(k);
+                        check.remove(k);
+                        }
+                    break;
+
+                case 100:
+                    map.clear();
+                    check.clear();
+                    break;
+
+                default:
+                    assert;
+                }
+
+            assert map == check;
             }
         }
     }
