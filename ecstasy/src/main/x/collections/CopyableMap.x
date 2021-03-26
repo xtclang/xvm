@@ -27,7 +27,7 @@ interface CopyableMap<Key, Value>
         for ((Key key, Value value) : this)
             {
             (key, value) = transform(key, value); // TODO GG: inline
-            that.put(key, value);
+            that = that.put(key, value);
             }
         return that;
         }

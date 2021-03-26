@@ -5,7 +5,7 @@
  */
 mixin MapFreezer<Key   extends immutable Object,
                  Value extends ImmutableAble>
-        into Map<Key, Value>
+        into CopyableMap<Key, Value>
         implements Freezable
     {
     @Override
@@ -34,15 +34,19 @@ mixin MapFreezer<Key   extends immutable Object,
             return makeImmutable();
             }
 
-        // TODO CP this is wrong and requires some logic similar to ListFreezer's
-        MapFreezer result = this;
-        for ((Key k, Value v) : this)
+        if (inPlace && this.inPlace)
             {
-            if (!(v.is(immutable Object)))
+            for (Entry entry : this)
                 {
-                result = result.put(k, v.freeze());
+                Value v = entry.value;
+                if (!v.is(immutable Object))
+                    {
+                    entry.value = v.freeze();
+                    }
                 }
+            return makeImmutable();
             }
-        return makeImmutable();
+
+        return duplicate((k, v) -> (k, v.is(immutable Value) ? v : v.freeze())).makeImmutable();
         }
     }

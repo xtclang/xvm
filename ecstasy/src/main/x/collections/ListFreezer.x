@@ -2,9 +2,6 @@
  * Simple List implementations that need to implement Freezable can use this mix-in to do so:
  *
  *     incorporates conditional ListFreezer<Element extends immutable Object | Freezable>
- *
- * This implementation requires that the List have a copy constructor, i.e. a constructor that
- * requires only a "this" as its argument.
  */
 mixin ListFreezer<Element extends ImmutableAble>
         into List<Element> + CopyableCollection<Element>
