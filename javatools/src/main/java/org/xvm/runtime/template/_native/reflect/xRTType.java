@@ -2,6 +2,7 @@ package org.xvm.runtime.template._native.reflect;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -902,9 +903,16 @@ public class xRTType
         TypeConstant                        typeTarget = hType.getDataType();
         TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
         Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
-        ArrayList<ObjectHandle>             listProps  = new ArrayList<>(mapProps.size());
 
-        for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
+        Map.Entry<PropertyConstant, PropertyInfo>[] aEntry =
+                mapProps.entrySet().toArray(new Map.Entry[0]);
+        if (aEntry.length > 1)
+            {
+            Arrays.sort(aEntry, PropertyInfo.RANKER);
+            }
+
+        ArrayList<ObjectHandle> listProps = new ArrayList<>(mapProps.size());
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : aEntry)
             {
             PropertyConstant idProp   = entry.getKey();
             PropertyInfo     infoProp = entry.getValue();

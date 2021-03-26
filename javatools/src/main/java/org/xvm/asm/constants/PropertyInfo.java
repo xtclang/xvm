@@ -4,7 +4,9 @@ package org.xvm.asm.constants;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
@@ -1413,7 +1415,13 @@ public class PropertyInfo
         }
 
 
-    // ----- fields --------------------------------------------------------------------------------
+    // ----- constants and fields ------------------------------------------------------------------
+
+    /**
+     * Rank comparator for Map.Entry<PropertyConstant, PropertyInfo> objects.
+     */
+    public static final Comparator<Map.Entry<PropertyConstant, PropertyInfo>> RANKER =
+        Comparator.comparingInt(e -> e.getValue().getRank());
 
     /**
      * The PropertyBody objects that provide the data represented by this PropertyInfo.

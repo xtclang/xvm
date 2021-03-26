@@ -582,7 +582,7 @@ public class ClassComposition
 
         if (aEntry.length > 1)
             {
-            Arrays.sort(aEntry, RANKER);
+            Arrays.sort(aEntry, PropertyInfo.RANKER);
             }
 
         int nIndex = 0;
@@ -858,10 +858,4 @@ public class ClassComposition
 
     // cached auto-generated structure initializer
     private MethodStructure m_methodInit;
-
-    /**
-     * Rank comparator for new Map.Entry<PropertyConstant, PropertyInfo> objects.
-     */
-    public static final Comparator<Map.Entry<PropertyConstant, PropertyInfo>> RANKER =
-        Comparator.comparingInt(e -> e.getValue().getRank());
     }
