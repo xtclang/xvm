@@ -1084,5 +1084,5 @@ NoAutoNarrowModifier
 #       stream is re-ordered such that the name is deposited into the stream
 #       after the ParameterTypeList, and is not consumed by this construction
 FunctionTypeExpression
-    "function" ReturnList Name-opt "(" TypeExpressionList-opt ")"
+    "function" "conditional"-opt ReturnList Name-opt "(" TypeExpressionList-opt ")"
 

@@ -4,12 +4,14 @@
  *
  * For example:
  *
- *     class Base implements Replicator { ... }
- *     class Derived extends Base { ... }
+ *     class BaseClass implements Replicable { ... }
+ *     class DerivedClass extends BaseClass { ... }
  *
- *     Base b1 = new Derived();
- *     // ...
- *     Base b2 = b1.new(); // creates a "new Derived()"
+ *     BaseClass b1 = new DerivedClass();
+ *
+ *     // even though the compile-time type of both b1 and b2 is BaseClass, this will instantiate a
+ *     // new DerivedClass, because that is the runtime type of b1
+ *     BaseClass b2 = b1.new();
  */
 interface Replicable
     {

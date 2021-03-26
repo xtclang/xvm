@@ -424,29 +424,10 @@ class SkiplistMap<Key extends Orderable, Value>
         /**
          * A cached iterator instance that has already been exhausted and thus contains nothing.
          */
-        // TODO GG move this inside of iterator() method
-        private @Lazy IteratorImpl emptyIterator.calc()
+        // TODO GG allow this to be private
+        // TODO GG move this inside the iterator() method
+        @Lazy IteratorImpl emptyIterator.calc()
             {
-            // TODO GG
-            // 2021-03-24 09:39:17.968 Service "TestSimple.test.org" (id=0) contended @at <TestSimple.test.org>, fiber 5553: Unhandled exception: Exception Unknown property: TestSimple:SkiplistMap.empty
-            //	at SkiplistMap.EntrySet.emptyIterator.calc() (line=732, op=P_Get)
-            //	at annotations.LazyVar.get() (line=43, op=Invoke_01)
-            //	at SkiplistMap.EntrySet.iterator() (line=739, op=L_Get)
-            //	at collections.Map.equals(Type<this:class(Map)>, equals(?)#CompileType, equals(?)#CompileType) (line=635, op=Invoke_01)
-            //	at run() (line=100, op=IsEq)
-            //	at <TestSimple.test.org> (iPC=0, op=)
-            //                assert this.SkiplistMap.empty;
-
-            // TODO GG
-            // 2021-03-24 09:41:20.264 Service "TestSimple.test.org" (id=0) contended @at <TestSimple.test.org>, fiber 5553: Unhandled exception: Exception Unknown property: Collection.empty
-            //	at SkiplistMap.EntrySet.emptyIterator.calc() (line=741, op=P_Get)
-            //	at annotations.LazyVar.get() (line=43, op=Invoke_01)
-            //	at SkiplistMap.EntrySet.iterator() (line=748, op=L_Get)
-            //	at collections.Map.equals(Type<this:class(Map)>, equals(?)#CompileType, equals(?)#CompileType) (line=635, op=Invoke_01)
-            //	at run() (line=100, op=IsEq)
-            //	at <TestSimple.test.org> (iPC=0, op=)
-            //                assert this.EntrySet.empty;
-
             assert empty;
             return new IteratorImpl();
             }
