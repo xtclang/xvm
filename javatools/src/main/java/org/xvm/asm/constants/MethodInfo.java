@@ -113,8 +113,10 @@ public class MethodInfo
     public MethodInfo layerOn(MethodInfo that, boolean fSelf, ErrorListener errs)
         {
         assert this.getIdentity().getName().equals(that.getIdentity().getName());
-        assert !this.isFunction() && !this.isConstructor() && !that.isFunction() && !that.isConstructor();
-        assert this.getAccess().isAsAccessibleAs(Access.PROTECTED) && that.getAccess().isAsAccessibleAs(Access.PROTECTED);
+        assert !this.isFunction() && (!this.isConstructor() || this.isVirtualConstructor());
+        assert !that.isFunction() && (!that.isConstructor() || that.isVirtualConstructor());
+        assert this.getAccess().isAsAccessibleAs(Access.PROTECTED) &&
+               that.getAccess().isAsAccessibleAs(Access.PROTECTED);
 
         if (this.equals(that))
             {
