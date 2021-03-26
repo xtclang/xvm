@@ -22,7 +22,7 @@ interface Duplicable
     /**
      * Produce a duplicate copy of this object. The new, duplicated copy is assumed to be a _shallow
      * copy_; a shallow copy will likely share references (to other objects) with the original
-     * `Duplicator` object that the copy was duplicated from.
+     * `Duplicable` object that the copy was duplicated from.
      *
      * An immutable object is allowed to return itself as its duplicate; there is generally no
      * benefit from duplicating immutable objects.
