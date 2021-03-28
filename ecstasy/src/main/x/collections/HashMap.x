@@ -43,26 +43,42 @@ class HashMap<Key, Value>
         }
 
     /**
-     * Copy constructor.
+     * Duplicable constructor.
      *
      * @param that  another map to copy the contents from when constructing this HashMap
      */
     construct(HashMap<Key, Value> that)
         {
-//        if (that.is(HashMap))
+        this.hasher      = that.hasher;
+        this.buckets     = that.buckets; // TODO GG: .duplicate(hashEntry -> hashEntry?.duplicate() : Null);
+        this.growAt      = that.growAt;
+        this.shrinkAt    = that.shrinkAt;
+        this.addCount    = that.addCount;
+        this.removeCount = that.removeCount;
+        }
+
+    /**
+     * Copy constructor.
+     *
+     * @param that  another map to copy the contents from when constructing this HashMap
+     */
+    construct(Map<Key, Value> that)
+        {
+        if (that.is(HashMap))
             {
-            this.hasher      = that.hasher;
-            this.buckets     = that.buckets; // TODO GG: .duplicate(hashEntry -> hashEntry?.duplicate() : Null);
-            this.growAt      = that.growAt;
-            this.shrinkAt    = that.shrinkAt;
-            this.addCount    = that.addCount;
-            this.removeCount = that.removeCount;
+            construct HashMap(that);
             }
-//        else
-//            {
-//            construct HashMap(that.size);
-//            putAll(that);
-//            }
+        else
+            {
+            construct HashMap(that.size);
+            }
+        }
+    finally
+        {
+        if (!that.is(HashMap))
+            {
+            putAll(that);
+            }
         }
 
 
