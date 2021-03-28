@@ -65,7 +65,8 @@ public class MethodInfo
         {
         // both method chains must be virtual, and neither can already be capped
         assert this.isOverridable();
-        assert that.isOverridable() || that.isPotentialPropertyOverlay();
+        assert that.isOverridable() || that.isPotentialPropertyOverlay()
+                                    || that.containsVirtualConstructor();
 
         // create a MethodConstant for the cap that will sit next to the method body that caused the
         // narrowing to occur
@@ -113,7 +114,7 @@ public class MethodInfo
     public MethodInfo layerOn(MethodInfo that, boolean fSelf, ErrorListener errs)
         {
         assert this.getIdentity().getName().equals(that.getIdentity().getName());
-        assert !this.isFunction() && (!this.isConstructor() || this.isVirtualConstructor());
+        assert !this.isFunction() && (!this.isConstructor() || this.containsVirtualConstructor());
         assert !that.isFunction() && (!that.isConstructor() || that.isVirtualConstructor());
         assert this.getAccess().isAsAccessibleAs(Access.PROTECTED) &&
                that.getAccess().isAsAccessibleAs(Access.PROTECTED);
@@ -730,6 +731,14 @@ public class MethodInfo
      */
     public boolean isVirtualConstructor()
         {
+        return getHead().isVirtualConstructor();
+        }
+
+    /**
+     * @return true iff the method covers a virtual contructor
+     */
+    public boolean containsVirtualConstructor()
+        {
         for (MethodBody body : getChain())
             {
             if (body.isVirtualConstructor())
@@ -753,18 +762,6 @@ public class MethodInfo
                 }
             }
         return null;
-        }
-
-    /**
-     * @return true iff the virtual constructor represented by this info is explicitly implemented
-     *         by the specified type
-     */
-    public boolean isVirtualConstructorImplemented(TypeInfo infoTarget)
-        {
-        assert isVirtualConstructor();
-
-        MethodStructure constructor = getTopmostMethodStructure(infoTarget);
-        return constructor.getParent().getParent() != infoTarget.getClassStructure();
         }
 
     /**

@@ -3491,9 +3491,15 @@ public abstract class TypeConstant
                 // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides with a function in the other)
                 // TODO we'll also have to check similar conditions below
 
-                boolean fKeep = true;
+                boolean fKeep      = true;
+                Object  nidContrib = idContrib.resolveNestedIdentity(pool, this);
                 if (methodContrib.isConstructor())
                     {
+                    if (!idContrib.isTopLevel())
+                        {
+                        continue;
+                        }
+
                     idContrib = (MethodConstant) constId.appendNestedIdentity(
                                                     pool, idContrib.getSignature());
                     // for all other purposes validators are treated as constructors, except we need
@@ -3535,9 +3541,8 @@ public abstract class TypeConstant
 
                                 if (!idBase.equals(idContrib))
                                     {
-                                    // TODO: removing the base constructor is a bit ham-handed;
-                                    //       consider capping it, similarly to regular methods
-                                    mapMethods.remove(idBase);
+                                    Object nidBase  = idBase.resolveNestedIdentity(pool, this);
+                                    mapNarrowedNids = addNarrowingNid(mapNarrowedNids, nidBase, nidContrib);
                                     }
                                 break;
                                 }
@@ -3568,10 +3573,17 @@ public abstract class TypeConstant
 
                 if (fKeep)
                     {
-                    // unlike the virtual methods, we don't re-resolve nested identity
-                    // (via constId.appendNestedIdentity(pool, nidContrib)
-                    // and instead keep all functions keyed by their "original" id
-                    mapMethods.put(idContrib, methodContrib);
+                    if (methodContrib.containsVirtualConstructor())
+                        {
+                        mapVirtMods.put(nidContrib, methodContrib);
+                        }
+                    else
+                        {
+                        // unlike the virtual methods, we don't re-resolve nested identity
+                        // (via constId.appendNestedIdentity(pool, nidContrib)
+                        // and instead keep all functions keyed by their "original" id
+                        mapMethods.put(idContrib, methodContrib);
+                        }
                     }
                 continue;
                 }
@@ -3735,13 +3747,7 @@ public abstract class TypeConstant
                             // there exists a method that this method will narrow that did *not*
                             // receive a contribution of its own, so add this method to the set of
                             // methods that are narrowing the super method
-                            if (mapNarrowedNids == null)
-                                {
-                                mapNarrowedNids = new HashMap<>();
-                                }
-                            Set<Object> setNarrowing = mapNarrowedNids.computeIfAbsent(
-                                nidBase, key_ -> new HashSet<>());
-                            setNarrowing.add(nidContrib);
+                            mapNarrowedNids = addNarrowingNid(mapNarrowedNids, nidBase, nidContrib);
                             }
                         }
                     }
@@ -3871,6 +3877,22 @@ public abstract class TypeConstant
         }
 
     /**
+     * Helper method to add a narrowing nid.
+     */
+    private Map<Object, Set<Object>> addNarrowingNid(Map<Object, Set<Object>> mapNarrowedNids,
+                                                     Object nidBase, Object nidContrib)
+        {
+        if (mapNarrowedNids == null)
+            {
+            mapNarrowedNids = new HashMap<>();
+            }
+
+        Set<Object> setNarrowing = mapNarrowedNids.computeIfAbsent(nidBase, key_ -> new HashSet<>());
+        setNarrowing.add(nidContrib);
+        return mapNarrowedNids;
+        }
+
+    /**
      * Collect all functions from the base that would be "hidden" by the specified function.
      *
      * @param sigSub   the signature of the function that can "hide" base functions
@@ -3985,7 +4007,7 @@ public abstract class TypeConstant
                 Map<MethodConstant, MethodInfo> mapMethods)
         {
         MethodStructure      method    = infoConstruct.getHead().getMethodStructure();
-        SignatureConstant    sigSub    = infoConstruct.getIdentity().getSignature();
+        SignatureConstant    sigSub    = infoConstruct.getSignature();
         List<MethodConstant> listMatch = null;
         boolean              fExact    = true;
 

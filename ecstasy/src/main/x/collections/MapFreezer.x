@@ -36,7 +36,7 @@ mixin MapFreezer<Key   extends immutable Object,
 
         if (inPlace && this.inPlace)
             {
-            for (Entry entry : this)
+            for (Entry entry : this.entries)
                 {
                 Value v = entry.value;
                 if (!v.is(immutable Object))
@@ -47,6 +47,8 @@ mixin MapFreezer<Key   extends immutable Object,
             return makeImmutable();
             }
 
-        return duplicate((k, v) -> (k, v.is(immutable Value) ? v : v.freeze())).makeImmutable();
+        // TODO GG
+        // return duplicate((k, v) -> (k, v.is(immutable Value) ? v : v.freeze())).makeImmutable();
+        return makeImmutable();
         }
     }

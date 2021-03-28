@@ -2179,15 +2179,10 @@ public class TypeInfo
 
                 info.populateCache(entry.getKey(), cacheById, cacheByNid);
 
-                if (info.isVirtualConstructor())
+                if (info.isAbstract())
                     {
-                    // constructors must come from "this" structure; otherwise they are un-implemented
-                    // virtual constructors
-                    fImplicitAbstract |= info.isVirtualConstructorImplemented(this);
-                    }
-                else
-                    {
-                    fImplicitAbstract |= info.isAbstract();
+                    fImplicitAbstract = true;
+                    break;
                     }
                 }
 
