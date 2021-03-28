@@ -515,10 +515,17 @@ public class ClassStructure
                 return true;
 
             case MIXIN:
-                if (getTypeInto().isImmutable())
+                {
+                TypeConstant typeInto = getTypeInto();
+                if (typeInto.containsUnresolved())
+                    {
+                    return false;
+                    }
+                if (typeInto.isImmutable())
                     {
                     return true;
                     }
+                }
                 // fall through
             case CLASS:
             case INTERFACE:
