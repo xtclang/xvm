@@ -1269,6 +1269,34 @@ public class Compiler
      */
     public static final String SWITCH_TYPES_NONUNIFORM             = "COMPILER-168";
     /**
+     * {0} is not an instantiable abstract type.
+     */
+    public static final String NEW_ABSTRACT_TYPE                   = "COMPILER-169";
+    /**
+     * {0} is not an instantiable abstract type.
+     */
+    public static final String NEW_SINGLETON_TYPE                  = "COMPILER-170";
+    /**
+     * {0} is not an instantiable type because it contains an abstract property {1}.
+     */
+    public static final String NEW_ABSTRACT_PROPERTY               = "COMPILER-171";
+    /**
+     * {0} is not an instantiable type because it contains an abstract method {1}.
+     */
+    public static final String NEW_ABSTRACT_METHOD                 = "COMPILER-172";
+    /**
+     * {0} is not an instantiable type because its child {1} contains an abstract property {2}.
+     */
+    public static final String NEW_ABSTRACT_CHILD_PROPERTY         = "COMPILER-173";
+    /**
+     * {0} is not an instantiable type because its child {1} contains an abstract method {2}.
+     */
+    public static final String NEW_ABSTRACT_CHILD_METHOD           = "COMPILER-174";
+    /**
+     * {0} is not a virtual child to the provided parent type {1}.
+     */
+    public static final String NEW_UNRELATED_PARENT                = "COMPILER-175";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

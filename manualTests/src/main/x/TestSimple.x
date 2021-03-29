@@ -2,21 +2,41 @@ module TestSimple.test.org
     {
     @Inject Console console;
 
-    void run(  )
+    void run()
         {
-        Point p1 = new Point(1, 1);
-
-        Point p2 = p1.duplicate((x, y) -> (x+1, y+1));
-
-        console.println(p2);
+        new BP().test(); // compiler error
+        new DP().test();
         }
 
-    const Point(Int x, Int y)
+    class BP
         {
-        Point duplicate(function (Int, Int)(Int, Int)? transform)
+        void test()
             {
-            (Int x1, Int y1) = transform?(x, y) : assert;
-            return new Point(x1, y1);
+            new C1().foo();
+            }
+
+        interface Iface
+            {
+            void bar();
+            }
+
+        class C1
+            {
+            @Abstract void foo();
             }
         }
-}
+
+    class DP
+            extends BP
+        {
+        @Override
+        class C1
+            {
+            @Override
+            void foo()
+                {
+                console.println("in foo");
+                }
+            }
+        }
+    }

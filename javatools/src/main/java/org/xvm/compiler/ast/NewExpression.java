@@ -24,6 +24,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
+import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -110,7 +111,7 @@ public class NewExpression
         }
 
     /**
-     * @return true iff the new expression is for a "virtual new"
+     * @return true iff the new expression is for a "virtual new" (this.new(...))
      */
     public boolean isVirtualNew()
         {
@@ -425,7 +426,7 @@ public class NewExpression
                             !typeTarget.getParentType().getDefiningConstant().equals(
                                 typeLeft.getDefiningConstant()))
                             {
-                            log(errs, Severity.ERROR, Constants.VE_NEW_UNRELATED_PARENT,
+                            log(errs, Severity.ERROR, Compiler.NEW_UNRELATED_PARENT,
                                     typeTarget.getValueString(), typeLeft.getValueString());
                             fValid = false;
                             }
@@ -594,55 +595,8 @@ public class NewExpression
             // unless it's a virtual new, the target type must be new-able
             if (!fVirt && !infoTarget.isNewable())
                 {
-                String sType = typeResult.getValueString();
-                if (infoTarget.isExplicitlyAbstract())
-                    {
-                    log(errs, Severity.ERROR, Constants.VE_NEW_ABSTRACT_TYPE, sType);
-                    }
-                else if (infoTarget.isSingleton())
-                    {
-                    log(errs, Severity.ERROR, Constants.VE_NEW_SINGLETON_TYPE, sType);
-                    }
-                else
-                    {
-                    final int[] aiCount = new int[] {1}; // limit reporting to a small number of errors
-
-                    infoTarget.getProperties().values().stream()
-                            .filter(PropertyInfo::isExplicitlyAbstract)
-                            .forEach(info ->
-                                {
-                                if (--aiCount[0] >= 0)
-                                    {
-                                    log(errs, Severity.ERROR, Constants.VE_NEW_ABSTRACT_PROPERTY,
-                                            sType, info.getName());
-                                    }
-                                });
-
-                    infoTarget.getMethods().entrySet().stream()
-                            .filter(entry -> entry.getValue().isAbstract())
-                            .forEach(entry ->
-                                {
-                                if (--aiCount[0] >= 0)
-                                    {
-                                    log(errs, Severity.ERROR, Constants.VE_NEW_ABSTRACT_METHOD,
-                                            sType, entry.getKey().getNestedIdentity());
-                                    }
-                                });
-
-                    Set<MethodConstant> setConstruct = infoTarget.
-                        findMethods("construct", -1, MethodKind.Constructor);
-                    for (MethodConstant id : setConstruct)
-                        {
-                        MethodInfo infoMethod = infoTarget.getMethodById(id);
-                        if (infoMethod.isVirtualConstructor())
-                            {
-                            log(errs, Severity.ERROR, Constants.VE_NEW_VIRTUAL_CONSTRUCT,
-                                    sType, infoMethod.getIdentity().getValueString());
-                            }
-                        }
-                    assert errs.isSilent() || errs.hasSeriousErrors();
-                    }
-
+                String sTarget = infoTarget.getType().removeAccess().getValueString();
+                reportNotNewable(sTarget, infoTarget, null, errs);
                 fValid = false;
                 }
             }
@@ -887,6 +841,103 @@ public class NewExpression
 
 
     // ----- compilation helpers -------------------------------------------------------------------
+
+    /**
+     * Report one or more reasons why the specified type is "not newable".
+     *
+     * @param sType       the name of the type that is being new'ed
+     * @param infoTarget  the target type info
+     * @param sChild      (optional) a child name
+     * @param errs        the error listener
+     */
+    private void reportNotNewable(String sType, TypeInfo infoTarget, String sChild, ErrorListener errs)
+        {
+        if (infoTarget.isExplicitlyAbstract())
+            {
+            log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_TYPE, infoTarget.getType().getValueString());
+            }
+        else if (infoTarget.isSingleton())
+            {
+            log(errs, Severity.ERROR, Compiler.NEW_SINGLETON_TYPE, infoTarget.getType().getValueString());
+            }
+
+        final int[] aiCount = new int[] {1}; // limit reporting to a small number of errors
+
+        infoTarget.getProperties().values().stream()
+                .filter(PropertyInfo::isExplicitlyAbstract)
+                .forEach(info ->
+                    {
+                    if (--aiCount[0] >= 0)
+                        {
+                        if (sChild == null)
+                            {
+                            log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_PROPERTY,
+                                sType, info.getName());
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_CHILD_PROPERTY,
+                                sType, sChild, info.getName());
+                            }
+                        }
+                    });
+        if (aiCount[0] <= 0)
+            {
+            return;
+            }
+
+        infoTarget.getMethods().entrySet().stream()
+                .filter(entry -> entry.getValue().isAbstract())
+                .forEach(entry ->
+                    {
+                    if (--aiCount[0] >= 0)
+                        {
+                        if (sChild == null)
+                            {
+                            log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_METHOD,
+                                sType, entry.getKey().getSignature().getValueString());
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_CHILD_METHOD,
+                                sType, sChild, entry.getKey().getSignature().getValueString());
+                            }
+                        }
+                    });
+        if (aiCount[0] <= 0)
+            {
+            return;
+            }
+
+        Set<MethodConstant> setConstruct = infoTarget.
+            findMethods("construct", -1, MethodKind.Constructor);
+        for (MethodConstant id : setConstruct)
+            {
+            MethodInfo infoMethod = infoTarget.getMethodById(id);
+            if (infoMethod.isVirtualConstructor())
+                {
+                log(errs, Severity.ERROR, Constants.VE_NEW_VIRTUAL_CONSTRUCT,
+                    sType, infoMethod.getIdentity().getValueString());
+                return;
+                }
+            }
+
+        for (Map.Entry<String, ChildInfo> entry : infoTarget.getChildInfosByName().entrySet())
+            {
+            ChildInfo infoChild = entry.getValue();
+            if (infoChild.isVirtualClass())
+                {
+                TypeConstant typeChild = infoChild.getIdentity().getType();
+                TypeInfo     info      = typeChild.ensureTypeInfo();
+                if (info.isAbstract())
+                    {
+                    reportNotNewable(sType, info, entry.getKey(), errs);
+                    }
+                }
+            }
+
+        assert errs.isSilent() || errs.hasSeriousErrors();
+        }
 
     /**
      * Generate the NEW_* op-code

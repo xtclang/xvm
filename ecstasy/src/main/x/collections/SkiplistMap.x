@@ -614,10 +614,7 @@ class SkiplistMap<Key extends Orderable, Value>
              *
              * @return the corresponding element
              */
-            protected Element toElement(Key key, Int node, Int height) /* TODO GG remove this: */ { TODO(""); }
-// TODO GG anything that says "new IteratorImpl()" will fail to compile if it is abstract:
-// VERIFY-85: "TestSimple:SkiplistMap<TestSimple:SkiplistMap.Key, TestSimple:SkiplistMap.Value>.CollectionImpl<TestSimple:SkiplistMap.CollectionImpl.Element>.IteratorImpl" is not an instantiable type because it contains an abstract method "Signature{name=toElement, params=(TestSimple:SkiplistMap.Key, Int, Int), returns=(TestSimple:SkiplistMap.CollectionImpl.Element)}". ("new IteratorImpl()")
-// but for virtual child, this is not necessarily correct
+            protected Element toElement(Key key, Int node, Int height);
 
             /**
              * Copy constructor.

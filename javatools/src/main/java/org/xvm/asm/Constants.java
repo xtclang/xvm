@@ -526,54 +526,26 @@ public interface Constants
      */
     public static final String VE_METHOD_OVERRIDE_REQUIRED            = "VERIFY-81";
     /**
-     * "{0}" is not an instantiable abstract type.
-     */
-    public static final String VE_NEW_ABSTRACT_TYPE                   = "VERIFY-82";
-    /**
-     * "{0}" is not an instantiable abstract type.
-     */
-    public static final String VE_NEW_SINGLETON_TYPE                  = "VERIFY-83";
-    /**
-     * "{0}" is not an instantiable type because it contains an abstract property "{1}".
-     */
-    public static final String VE_NEW_ABSTRACT_PROPERTY               = "VERIFY-84";
-    /**
-     * "{0}" is not an instantiable type because it contains an abstract method "{1}".
-     */
-    public static final String VE_NEW_ABSTRACT_METHOD                 = "VERIFY-85";
-    /**
-     * "{0}" requires a parent instance in order to be instantiated.
-     */
-    public static final String VE_NEW_REQUIRES_PARENT                 = "VERIFY-90";
-    /**
-     * "{0}" cannot be instantiated using a parent instance.
-     */
-    public static final String VE_NEW_DISALLOWS_PARENT                = "VERIFY-91";
-    /**
-     * "{0}" is not a virtual child to the provided parent type "{1}".
-     */
-    public static final String VE_NEW_UNRELATED_PARENT                = "VERIFY-92";
-    /**
      * Unexpected auto-narrowing contribution "{0}" for type "{1}".
      */
-    public static final String VE_UNEXPECTED_AUTO_NARROW              = "VERIFY-93";
+    public static final String VE_UNEXPECTED_AUTO_NARROW              = "VERIFY-82";
     /**
      * A virtual child {0} cannot be found on {1}.
      */
-    public static final String VE_VIRTUAL_CHILD_MISSING               = "VERIFY-94";
+    public static final String VE_VIRTUAL_CHILD_MISSING               = "VERIFY-83";
     /**
      * {0} contains more than one component with the name {1}.
      */
-    public static final String VE_NAME_COLLISION                      = "VERIFY-95";
+    public static final String VE_NAME_COLLISION                      = "VERIFY-84";
     /**
      * While resolving {0}, a child with the name {1} from the contribution {2} collided with an
      * existing child {3}.
      */
-    public static final String VE_CHILD_COLLISION                     = "VERIFY-96";
+    public static final String VE_CHILD_COLLISION                     = "VERIFY-85";
     /**
-     * "{0}" is not an instantiable type because it doesn't implement a virtual constructor "{1}".
+     * {0} is not an instantiable type because it doesn't implement a virtual constructor {1}.
      */
-    public static final String VE_NEW_VIRTUAL_CONSTRUCT               = "VERIFY-97";
+    public static final String VE_NEW_VIRTUAL_CONSTRUCT               = "VERIFY-86";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

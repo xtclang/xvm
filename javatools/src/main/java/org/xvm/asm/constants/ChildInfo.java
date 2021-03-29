@@ -89,6 +89,24 @@ public class ChildInfo
         }
 
     /**
+     * @return true iff the child info represents a virtual child that is not an interface
+     */
+    public boolean isVirtualClass()
+        {
+        if (f_child instanceof ClassStructure)
+            {
+            ClassStructure clz = (ClassStructure) f_child;
+            return clz.isVirtualChild() &&
+                   clz.getFormat() != Component.Format.INTERFACE;
+            }
+
+        return false;
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
      * Determine if this ChildInfo and another ChildInfo are referring to the same component.
      *
      * @param that  another ChildInfo by the same name

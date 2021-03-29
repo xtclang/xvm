@@ -584,11 +584,40 @@ public class TypeInfo
         }
 
     /**
+     * Check if this type can be instantiated.
+     * <p/>
+     * Note, that a virtual child is always assumed to be instantiatable, since any abstract aspects
+     * of the class could be implemented by its virtual sub-classes at the parent's sub level.
+     * The actual check is always done at the parent's level, so for a parent class to be "newable",
+     * all the virtual children have to be non-abstract.
+     *
      * @return true iff this is a type that can be instantiated
      */
     public boolean isNewable()
         {
-        return !isAbstract() && !isSingleton() && isClass();
+        if (isVirtualChild())
+            {
+            return true;
+            }
+
+        if (isAbstract() || isSingleton() || !isClass())
+            {
+            return false;
+            }
+
+        for (ChildInfo infoChild : f_mapChildren.values())
+            {
+            if (infoChild.isVirtualClass())
+                {
+                TypeConstant typeChild = infoChild.getIdentity().getType();
+
+                if (typeChild.ensureTypeInfo().isAbstract())
+                    {
+                    return false;
+                    }
+                }
+            }
+        return true;
         }
 
     /**
