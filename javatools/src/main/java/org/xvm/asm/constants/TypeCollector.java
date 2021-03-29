@@ -325,11 +325,38 @@ public class TypeCollector
         {
         if (!isMulti())
             {
-            TypeConstant type = inferSingle(
-                    atypeRequired == null || atypeRequired.length == 0 ? null : atypeRequired[0]);
+            TypeConstant typeRequired = null;
+            int          cRequired    = atypeRequired == null ? 0 : atypeRequired.length;
+            boolean fPacked = false;
+            switch (cRequired)
+                {
+                case 0:
+                    break;
+
+                case 1:
+                    typeRequired = atypeRequired[0];
+                    break;
+
+                default:
+                    List<TypeConstant> listTypes = getSingle();
+                    if (listTypes.size() == 1 && listTypes.get(0).isTuple())
+                        {
+                        fPacked      = true;
+                        typeRequired = f_pool.ensureTupleType(atypeRequired);
+                        }
+                    else
+                        {
+                        typeRequired = atypeRequired[0];
+                        }
+                    break;
+                }
+
+            TypeConstant type = inferSingle(typeRequired);
             return type == null
                     ? TypeConstant.NO_TYPES
-                    : new TypeConstant[] {type};
+                    : fPacked
+                        ? type.getParamTypesArray()
+                        : new TypeConstant[] {type};
             }
 
         // assume that it's not a @Conditional until we prove otherwise

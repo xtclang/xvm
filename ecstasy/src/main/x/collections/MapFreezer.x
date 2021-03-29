@@ -47,8 +47,6 @@ mixin MapFreezer<Key   extends immutable Object,
             return makeImmutable();
             }
 
-        // TODO GG
-        // return duplicate((k, v) -> (k, v.is(immutable Value) ? v : v.freeze())).makeImmutable();
-        return makeImmutable();
+        return duplicate((k, v) -> (k, v.is(immutable Value) ? v : v.freeze())).makeImmutable();
         }
     }

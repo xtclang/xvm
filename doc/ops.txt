@@ -96,7 +96,7 @@
  NEWCG_T    CONSTRUCT, rvalue-parent, TYPE, rvalue-tparams, lvalue
 +NEWV_0     CONSTRUCT, rvalue-type, lvalue                          ; virtual "new"
 +NEWV_1     CONSTRUCT, rvalue-type, rvalue-param, lvalue            ;  - CONSTRUCT may be on an interface (implies compile-time type)
- NEWV_N     CONSTRUCT, rvalue-type, #:(rvalue), lvalue              ;  - rvalue-type is the virtual type
++NEWV_N     CONSTRUCT, rvalue-type, #:(rvalue), lvalue              ;  - rvalue-type is the virtual type
  NEWV_T     CONSTRUCT, rvalue-type, rvalue-tparams, lvalue
 
 // returns

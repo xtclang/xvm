@@ -954,7 +954,26 @@ public class NewExpression
                     }
                 }
 
-            if (isTypeRequired(typeTarget))
+            if (isVirtualNew())
+                {
+                Register regType = createRegister(argOuter.getType().getType(), true);
+                code.add(new MoveType(argOuter, regType));
+                switch (cParams)
+                    {
+                    case 0:
+                        code.add(new NewV_0(idConstruct, regType, argResult));
+                        break;
+
+                    case 1:
+                        code.add(new NewV_1(idConstruct, regType, aArgs[0], argResult));
+                        break;
+
+                    default:
+                        code.add(new NewV_N(idConstruct, regType, aArgs, argResult));
+                        break;
+                    }
+                }
+            else if (isTypeRequired(typeTarget))
                 {
                 if (argOuter == null)
                     {
@@ -1000,25 +1019,6 @@ public class NewExpression
                             code.add(new NewCG_N(idConstruct, argOuter, typeTarget, aArgs, argResult));
                             break;
                         }
-                    }
-                }
-            else if (isVirtualNew())
-                {
-                Register regType = createRegister(argOuter.getType().getType(), true);
-                code.add(new MoveType(argOuter, regType));
-                switch (cParams)
-                    {
-                    case 0:
-                        code.add(new NewV_0(idConstruct, regType, argResult));
-                        break;
-
-                    case 1:
-                        code.add(new NewV_1(idConstruct, regType, aArgs[0], argResult));
-                        break;
-
-                    default:
-                        code.add(new NewV_N(idConstruct, regType, aArgs, argResult));
-                        break;
                     }
                 }
             else
