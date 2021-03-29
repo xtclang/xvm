@@ -232,7 +232,7 @@ module TestArray
         for (Int i : 1..10)
             {
             Iterator<String> iter = strs.iterator();
-            switch(i)
+            switch (i)
                 {
                 case 1:
                     console.println("\n   --> peeking test");
