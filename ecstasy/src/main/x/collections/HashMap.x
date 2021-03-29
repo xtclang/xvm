@@ -50,7 +50,8 @@ class HashMap<Key, Value>
     construct(HashMap<Key, Value> that)
         {
         this.hasher      = that.hasher;
-        this.buckets     = that.buckets; // TODO CP add array support: .duplicate(hashEntry -> hashEntry?.duplicate() : Null);
+// TODO GG: this.buckets     = new HashEntry?[that.buckets.size](i -> that.buckets[i]?.duplicate() : Null);
+        this.buckets     = new Array<HashEntry?>(that.buckets.size, i -> (that.buckets[i]?.duplicate() : Null).as(HashEntry?));
         this.growAt      = that.growAt;
         this.shrinkAt    = that.shrinkAt;
         this.addCount    = that.addCount;
