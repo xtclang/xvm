@@ -186,7 +186,7 @@ const Printer(Boolean showNulls = False, Boolean pretty = False)
         {
         if (doc.is(Enum))
             {
-            (switch(doc)
+            (switch (doc)
                 {
                 case Null: "null";
                 case True: "true";

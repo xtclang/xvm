@@ -175,7 +175,7 @@ interface IntConvertible
         Int    max   = 2;
         Int    len   = bytes.size;
         Int    fill  = max - len;
-        return new Int16(switch(fill.sign)
+        return new Int16(switch (fill.sign)
             {
             case Negative: bytes[len-max..len);
             case Zero    : bytes;
@@ -194,7 +194,7 @@ interface IntConvertible
         Int    max   = 4;
         Int    len   = bytes.size;
         Int    fill  = max - len;
-        return new Int32(switch(fill.sign)
+        return new Int32(switch (fill.sign)
             {
             case Negative: bytes[len-max..len);
             case Zero    : bytes;
@@ -213,7 +213,7 @@ interface IntConvertible
         Int    max   = 8;
         Int    len   = bytes.size;
         Int    fill  = max - len;
-        return new Int64(switch(fill.sign)
+        return new Int64(switch (fill.sign)
             {
             case Negative: bytes[len-max..len);
             case Zero    : bytes;
@@ -232,7 +232,7 @@ interface IntConvertible
         Int    max   = 16;
         Int    len   = bytes.size;
         Int    fill  = max - len;
-        return new Int128(switch(fill.sign)
+        return new Int128(switch (fill.sign)
             {
             case Negative: bytes[len-max..len);
             case Zero    : bytes;
@@ -262,7 +262,7 @@ interface IntConvertible
         Int    max   = 2;
         Int    len   = bytes.size;
         Int    fill  = max - len;
-        return new UInt16(switch(fill.sign)
+        return new UInt16(switch (fill.sign)
             {
             case Negative: bytes[len-max..len);
             case Zero    : bytes;
@@ -281,7 +281,7 @@ interface IntConvertible
         Int    max   = 4;
         Int    len   = bytes.size;
         Int    fill  = max - len;
-        return new UInt32(switch(fill.sign)
+        return new UInt32(switch (fill.sign)
             {
             case Negative: bytes[len-max..len);
             case Zero    : bytes;
@@ -300,7 +300,7 @@ interface IntConvertible
         Int    max   = 8;
         Int    len   = bytes.size;
         Int    fill  = max - len;
-        return new UInt64(switch(fill.sign)
+        return new UInt64(switch (fill.sign)
             {
             case Negative: bytes[len-max..len);
             case Zero    : bytes;
@@ -319,7 +319,7 @@ interface IntConvertible
         Int    max   = 16;
         Int    len   = bytes.size;
         Int    fill  = max - len;
-        return new UInt128(switch(fill.sign)
+        return new UInt128(switch (fill.sign)
             {
             case Negative: bytes[len-max..len);
             case Zero    : bytes;

@@ -888,7 +888,7 @@ interface Collection<Element>
         Appender<Char> buf = bufN ?: new StringBuffer();
         pre.appendTo(buf);
 
-        function Appender<Char>(Element) appendElement = switch()
+        function Appender<Char>(Element) appendElement = switch ()
             {
             case render != Null              : (e -> render(e).appendTo(buf));
             case Element.is(Type<Stringable>): (e -> e.appendTo(buf));

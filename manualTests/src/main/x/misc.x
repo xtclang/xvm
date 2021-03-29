@@ -293,7 +293,7 @@ module TestMisc
         Int i = 0;
         while (i++ < 10)
             {
-            console.println("result for " + i + "=" + switch(i)
+            console.println("result for " + i + "=" + switch (i)
                 {
                 // default: "other";
                 case 2, 3:
@@ -314,7 +314,7 @@ module TestMisc
         Int i = 0;
         while (i++ < 10)
             {
-            console.println("result for " + i + "=" + switch()
+            console.println("result for " + i + "=" + switch ()
                 {
                 case i >= 2 && i <= 4: "between 2 and 4";
 
@@ -332,7 +332,7 @@ module TestMisc
         Int i = 0;
         while (++i < 6)
             {
-            console.println("result for (" + i + "<=>3)=" + switch(i <=> 3)
+            console.println("result for (" + i + "<=>3)=" + switch (i <=> 3)
                 {
                 case Lesser:  "less";
                 case Equal:   "same";
@@ -348,7 +348,7 @@ module TestMisc
         Int i = 0;
         while (++i < 8)
             {
-            console.println("result for (" + i + "<=>3)=" + switch(i <=> 3, i)
+            console.println("result for (" + i + "<=>3)=" + switch (i <=> 3, i)
                 {
                 case (Lesser, 2):       "less #2";
                 case (Lesser, _):       "less";

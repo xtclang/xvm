@@ -67,7 +67,7 @@ class OrderedMapSlice<Key extends Orderable, Value>
             this.compareKeys = orderer;
             }
 
-        findFirst = switch(descending, range.firstExclusive)
+        findFirst = switch (descending, range.firstExclusive)
             {
             case (False, False): map.&ceiling(range.first);
             case (False, True ): map.&next(range.first);
@@ -75,7 +75,7 @@ class OrderedMapSlice<Key extends Orderable, Value>
             case (True , True ): map.&prev(range.first);
             };
 
-        findLast = switch(descending, range.lastExclusive)
+        findLast = switch (descending, range.lastExclusive)
             {
             case (False, False): map.&floor(range.last);
             case (False, True ): map.&prev(range.last);

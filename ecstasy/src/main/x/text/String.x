@@ -80,7 +80,7 @@ const String
      */
     String! substring(Int startAt)
         {
-        return switch()
+        return switch ()
             {
             case startAt <= 0:   this;
             case startAt < size: this[startAt..size);

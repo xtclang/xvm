@@ -229,7 +229,7 @@ class HttpHeaders
         for (Char char : name)
             {
             Int value = char.toInt64();
-            switch(value)
+            switch (value)
                 {
                 case 0:    // 0x00
                 case 9:    // '\t'

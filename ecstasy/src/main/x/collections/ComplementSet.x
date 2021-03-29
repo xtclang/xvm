@@ -31,7 +31,7 @@ class ComplementSet<Element>(Set<Element> complementSet, immutable Set<Element> 
     @Override
     Set<Element> reify()
         {
-        return switch()
+        return switch ()
             {
             case size < complementSet.size.maxOf(0x100) : new ListSet(this);
             case complementSet.is(immutable Set)        : this;

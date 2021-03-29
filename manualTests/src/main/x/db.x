@@ -120,7 +120,7 @@ module db
     static void dump(String desc, Object o)
         {
         @Inject Console console;
-        String s = switch()
+        String s = switch ()
             {
             case o.is(Byte[]): o.all(b -> b >= 32 && b <= 127 || new Char(b).isWhitespace())
                     ? new String(new Char[o.size](i -> new Char(o[i])))

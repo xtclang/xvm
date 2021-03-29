@@ -165,7 +165,7 @@ class Lexer
             return 5
                  + start.lineNumber.estimateStringLength()
                  + start.lineOffset.estimateStringLength()
-                 + switch(id)
+                 + switch (id)
                     {
                     case NoVal..FPVal: value.estimateStringLength();
                     case StrVal:       value.estimateStringLength() + 2;
@@ -181,7 +181,7 @@ class Lexer
             buf.add(':');
             start.lineOffset.appendTo(buf);
             "): ".appendTo(buf);
-            switch(id)
+            switch (id)
                 {
                 case NoVal..FPVal:
                     value.appendTo(buf);
