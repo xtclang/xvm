@@ -500,30 +500,6 @@ public class TernaryExpression
         return atypeThen;
         }
 
-    /**
-     * A helper method to create an array of common types for two arrays.
-     *
-     * @param atypeThen  the first type array
-     * @param atypeElse  the second type array
-     * @return           an array of common types (of the minimum of the two array sizes)
-     */
-    private TypeConstant[] selectCommonTypes(TypeConstant[] atypeThen, TypeConstant[] atypeElse)
-        {
-        int            cTypes      = Math.min(atypeThen.length, atypeElse.length);
-        TypeConstant[] atypeCommon = new TypeConstant[cTypes];
-        for (int i = 0; i < cTypes; i++)
-            {
-            TypeConstant typeThen = atypeThen[i];
-            TypeConstant typeElse = atypeElse[i];
-
-            TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, ErrorListener.BLACKHOLE);
-            atypeCommon[i] = typeCommon == null && atypeThen != null && typeElse != null
-                    ? pool().ensureIntersectionTypeConstant(typeThen, typeElse)
-                    : typeCommon;
-            }
-        return atypeCommon;
-        }
-
     private TypeConstant[] resolveConstraints(TypeConstant[] atype)
         {
         int            cTypes = atype.length;

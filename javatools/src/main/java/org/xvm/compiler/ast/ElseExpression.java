@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -41,80 +40,81 @@ public class ElseExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType(Context ctx)
+    protected boolean hasSingleValueImpl()
         {
-        TypeConstant type1 = expr1.getImplicitType(ctx);
-        if (!expr2.isCompletable())
-            {
-            // a non-completable expression (e.g. "parent? : assert") doesn't contribute to the type
-            return type1;
-            }
-
-        TypeConstant type2 = expr2.getImplicitType(ctx);
-        if (type1 == null || type2 == null)
-            {
-            return null;
-            }
-
-        TypeConstant typeResult = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
-        return typeResult == null
-                ? pool().ensureIntersectionTypeConstant(type1, type2)
-                : typeResult;
+        return false;
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected boolean hasMultiValueImpl()
         {
-        TypeFit fit = expr1.testFit(ctx, typeRequired, errs);
+        return true;
+        }
+
+    @Override
+    public TypeConstant[] getImplicitTypes(Context ctx)
+        {
+        TypeConstant[] atype1 = expr1.getImplicitTypes(ctx);
+        if (!expr2.isCompletable())
+            {
+            // a non-completable expression (e.g. "parent? : assert") doesn't contribute to the type
+            return atype1;
+            }
+
+        TypeConstant[] atype2 = expr2.getImplicitTypes(ctx);
+        if (atype1 == null || atype1.length == 0 || atype2 == null || atype2.length == 0)
+            {
+            return TypeConstant.NO_TYPES;
+            }
+
+        return selectCommonTypes(atype1, atype2);
+        }
+
+    @Override
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+        {
+        TypeFit fit = expr1.testFitMulti(ctx, atypeRequired, errs);
         if (fit.isFit() && expr2.isCompletable())
             {
-            fit.combineWith(expr2.testFit(ctx, typeRequired, errs));
+            fit.combineWith(expr2.testFitMulti(ctx, atypeRequired, errs));
             }
         return fit;
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
-        // TODO CP: we need to fork the context and collect "short-circuit" branches
-        //          during the ensureShortCircuitLabel() call
-        TypeFit      fit      = TypeFit.Fit;
-        Expression   expr1New = expr1.validate(ctx, typeRequired, errs);
-        TypeConstant type1    = null;
+        Expression expr1New = expr1.validateMulti(ctx, atypeRequired, errs);
+
         if (expr1New == null)
             {
-            fit = TypeFit.NoFit;
-            }
-        else
-            {
-            expr1 = expr1New;
-            type1 = expr1New.getType();
+            return null;
             }
 
-        TypeConstant type2Req = type1 == null ? null : Op.selectCommonType(type1, null, errs);
-        if (typeRequired != null && (type2Req == null || !expr2.testFit(ctx, type2Req, null).isFit()))
+        expr1 = expr1New;
+
+        TypeConstant[] atype1 = expr1New.getTypes();
+        TypeConstant[] atype2Req = atype1 == null
+                ? null
+                : selectCommonTypes(atype1, new TypeConstant[atype1.length]);
+
+        if (atypeRequired != null && atypeRequired.length > 0 &&
+                (atype2Req == null || !expr2.testFitMulti(ctx, atype2Req, null).isFit()))
             {
-            type2Req = typeRequired;
+            atype2Req = atypeRequired;
             }
 
         // TODO CP: this is a temporary solution; simply ignore the impact of the "else"
-        Context ctx2 = ctx.enter();
-        Expression expr2New = expr2.validate(ctx2, type2Req, errs);
-        if (expr2New == null)
-            {
-            fit = TypeFit.NoFit;
-            }
-        else
-            {
-            expr2 = expr2New;
-            }
+        Context    ctx2     = ctx.enter();
+        Expression expr2New = expr2.validateMulti(ctx2, atype2Req, errs);
 
         ctx2.discard();
 
-        if (!fit.isFit())
+        if (expr2New == null)
             {
-            return finishValidation(ctx, typeRequired, null, fit, null, errs);
+            return null;
             }
+        expr2 = expr2New;
 
         if (!expr1New.isShortCircuiting())
             {
@@ -122,17 +122,13 @@ public class ElseExpression
             return replaceThisWith(expr1New);
             }
 
-        TypeConstant type2      = expr2New.getType();
-        TypeConstant typeResult = Op.selectCommonType(type1, type2, errs);
-        if (typeResult == null)
-            {
-            typeResult = pool().ensureIntersectionTypeConstant(type1, type2);
-            }
+        TypeConstant[] atype2      = expr2New.getTypes();
+        TypeConstant[] atypeResult = selectCommonTypes(atype1, atype2);
 
-        Constant constVal = null;
+        Constant[] aconstVal = null;
         if (expr1New.isConstant())
             {
-            constVal = expr1New.toConstant();
+            aconstVal = expr1New.toConstants();
             }
 
         if (m_labelElse != null)
@@ -140,7 +136,7 @@ public class ElseExpression
             m_labelElse.restoreNarrowed(ctx);
             }
 
-        return finishValidation(ctx, typeRequired, typeResult, fit, constVal, errs);
+        return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, aconstVal, errs);
         }
 
     @Override
@@ -185,22 +181,22 @@ public class ElseExpression
         }
 
     @Override
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         if (isConstant())
             {
-            super.generateAssignment(ctx, code, LVal, errs);
+            super.generateAssignments(ctx, code, aLVal, errs);
             return;
             }
 
-        expr1.generateAssignment(ctx, code, LVal, errs);
+        expr1.generateAssignments(ctx, code, aLVal, errs);
 
         if (m_labelElse != null)
             {
             Label labelEnd = new Label("end_:_" + m_nLabel);
             code.add(new Jump(labelEnd));
             code.add(m_labelElse);
-            expr2.generateAssignment(ctx, code, LVal, errs);
+            expr2.generateAssignments(ctx, code, aLVal, errs);
             code.add(labelEnd);
             }
         }
