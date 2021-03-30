@@ -4,38 +4,18 @@ module TestSimple.test.org
 
     void run()
         {
-        new BP().test(); // compiler error
-        new DP().test();
+        console.println($"{new Tests().foo()}");
         }
 
-    class BP
+    class Tests
         {
-        void test()
+        String foo()
             {
-            new C1().foo();
-            }
+            return value;
 
-        interface Iface
-            {
-            void bar();
-            }
-
-        class C1
-            {
-            @Abstract void foo();
-            }
-        }
-
-    class DP
-            extends BP
-        {
-        @Override
-        class C1
-            {
-            @Override
-            void foo()
+            private @Lazy String value.calc()
                 {
-                console.println("in foo");
+                return "hello";
                 }
             }
         }

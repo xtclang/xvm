@@ -464,30 +464,27 @@ public class StatementBlock
                 code.add(new Enter());
                 }
 
+            boolean fLoggedUnreachable = false;
             for (Statement stmt : stmts)
                 {
-                if (fReachable && !fCompletable)
+                if (!fReachable && !fLoggedUnreachable && !(stmt instanceof ComponentStatement))
                     {
-                    // this statement is the first statement that cannot be reached;
-                    // the only thing that is allowed is an inner class definition
-                    fReachable = false;
-
-                    if (!(stmt instanceof TypeCompositionStatement ||
-                          stmt instanceof MethodDeclarationStatement))
-                        {
-                        stmt.log(errs, Severity.ERROR, Compiler.NOT_REACHABLE);
-                        break;
-                        }
+                    stmt.log(errs, Severity.ERROR, Compiler.NOT_REACHABLE);
+                    fLoggedUnreachable = true;
                     }
 
                 fCompletable &= stmt.completes(ctx, fReachable, code, errs);
 
-                if (fReachable && !fCompletable
-                        && stmt instanceof ExpressionStatement
-                        && ((ExpressionStatement) stmt).expr instanceof TodoExpression)
+                if (fReachable && !fCompletable)
                     {
-                    // T0D0 expression is allowed to have stuff that follows it that is unreachable
-                    break;
+                    if (stmt instanceof ExpressionStatement
+                            && ((ExpressionStatement) stmt).expr instanceof TodoExpression)
+                        {
+                        // T0D0 expression is allowed to have stuff that follows it that is unreachable
+                        break;
+                        }
+
+                    fReachable = false;
                     }
                 }
 
