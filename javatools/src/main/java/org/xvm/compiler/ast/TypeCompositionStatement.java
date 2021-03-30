@@ -1998,7 +1998,12 @@ public class TypeCompositionStatement
                     continue;
                 }
 
-            TypeConstant   typeContrib  = contrib.getTypeConstant();
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            if (typeContrib.isParamsSpecified())
+                {
+                continue;
+                }
+
             TypeConstant[] atypeGeneric = typeContrib.collectGenericParameters();
             if (atypeGeneric == null || atypeGeneric.length == 0)
                 {
