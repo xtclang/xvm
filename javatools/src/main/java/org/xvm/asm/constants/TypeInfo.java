@@ -608,24 +608,23 @@ public class TypeInfo
 
         if (!m_fChildrenChecked && !f_mapChildren.isEmpty())
             {
+            ConstantPool pool = pool();
+
             for (ChildInfo infoChild : f_mapChildren.values())
                 {
                 if (infoChild.isVirtualClass())
                     {
                     // the parent's type parameters are known (may or may not be formal), but the
-                    // child's could be any; TODO GG: use the formal child type if any
-                    //
-                    //  ConstantPool pool = pool();
-                    //  TypeConstant type = pool.ensureVirtualChildTypeConstant(f_type, clz.getName());
-                    //
-                    //  if (clz.isParameterized())
-                    //      {
-                    //      type = pool.ensureParameterizedTypeConstant(type,
-                    //          clz.getFormalType().getParamTypesArray());
-                    //      }
-
+                    // child's could have any
                     ClassStructure clz  = (ClassStructure) infoChild.getComponent();
-                    TypeInfo       info = clz.getFormalType().ensureTypeInfo();
+                    TypeConstant   type = pool.ensureVirtualChildTypeConstant(f_type, clz.getName());
+                    if (clz.isParameterized())
+                        {
+                        type = pool.ensureParameterizedTypeConstant(type,
+                            clz.getFormalType().getParamTypesArray());
+                        }
+
+                    TypeInfo info = type.ensureTypeInfo();
                     if (!info.isExplicitlyAbstract() && info.isAbstract())
                         {
                         return false;

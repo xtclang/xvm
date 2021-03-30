@@ -5399,9 +5399,12 @@ public abstract class TypeConstant
 
         if (typeCtx != null && typeBase.containsGenericType(true))
             {
-            // check if generic types could be resolved in the specified context
-            TypeConstant typeBaseR = typeBase.resolveGenerics(getConstantPool(), typeCtx);
-            if (typeBaseR != typeBase)
+            // check if generic types could be resolved in the specified context without
+            // producing self referring cycles, e.g. List<Element> -> List<List<Element>>
+            // (TODO need to make this algorithm more precise)
+            TypeConstant typeBaseR = typeBase.resolveGenerics(ConstantPool.getCurrentPool(), typeCtx);
+            if (typeBaseR != typeBase &&
+                        typeBaseR.getParameterDepth() == typeBase.getParameterDepth())
                 {
                 return isCovariantReturn(typeBaseR, typeCtx);
                 }
@@ -5449,9 +5452,11 @@ public abstract class TypeConstant
 
         if (typeCtx != null && typeBase.containsGenericType(true))
             {
-            // check if generic types could be resolved in the specified context
-            TypeConstant typeBaseR = typeBase.resolveGenerics(getConstantPool(), typeCtx);
-            if (typeBaseR != typeBase)
+            // check if generic types could be resolved in the specified context without
+            // producing self referring cycles (see above)
+            TypeConstant typeBaseR = typeBase.resolveGenerics(ConstantPool.getCurrentPool(), typeCtx);
+            if (typeBaseR != typeBase &&
+                    typeBaseR.getParameterDepth() == typeBase.getParameterDepth())
                 {
                 return isContravariantParameter(typeBaseR, typeCtx);
                 }
