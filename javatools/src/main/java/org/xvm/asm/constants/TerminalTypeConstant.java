@@ -531,7 +531,7 @@ public class TerminalTypeConstant
             {
             FormalConstant constFormal  = (FormalConstant) constId;
             TypeConstant   typeResolved = constFormal.resolve(resolver);
-            if (typeResolved != null && !typeResolved.equals(this))
+            if (typeResolved != null && typeResolved != this)
                 {
                 return typeResolved;
                 }

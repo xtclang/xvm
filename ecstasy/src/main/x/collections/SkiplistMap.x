@@ -429,16 +429,12 @@ class SkiplistMap<Key extends Orderable, Value>
             return empty
                     ? emptyIterator
                     : new IteratorImpl();
-            }
 
-        /**
-         * A cached iterator instance that has already been exhausted and thus contains nothing.
-         */
-        // TODO GG move this inside the iterator() method
-        private @Lazy IteratorImpl emptyIterator.calc()
-            {
-            assert empty;
-            return new IteratorImpl();
+            private @Lazy IteratorImpl emptyIterator.calc()
+                {
+                assert empty;
+                return new IteratorImpl();
+                }
             }
 
         /**

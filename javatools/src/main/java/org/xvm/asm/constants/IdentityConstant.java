@@ -457,14 +457,21 @@ public abstract class IdentityConstant
         @Override
         public int hashCode()
             {
-            int n = 0;
-            IdentityConstant id = IdentityConstant.this;
+            int              iHash = 0;
+            IdentityConstant id    = IdentityConstant.this;
+            boolean          fTop  = true;
             while (id.isNested())
                 {
-                n ^= resolve(id.getPathElement()).hashCode();
-                id = id.getNamespace();
+                Object oPath = id.getPathElement();
+                if (fTop)
+                    {
+                    oPath = resolve(oPath);
+                    fTop  = false;
+                    }
+                iHash ^= oPath.hashCode();
+                id     = id.getNamespace();
                 }
-            return n;
+            return iHash;
             }
 
         @Override
@@ -483,10 +490,17 @@ public abstract class IdentityConstant
             NestedIdentity   that   = (NestedIdentity) obj;
             IdentityConstant idThis = this.getIdentityConstant();
             IdentityConstant idThat = that.getIdentityConstant();
+            boolean          fTop   = true;
             while (idThis.isNested() && idThat.isNested())
                 {
-                Object oThis = this.resolve(idThis.getPathElement());
-                Object oThat = that.resolve(idThat.getPathElement());
+                Object oThis = idThis.getPathElement();
+                Object oThat = idThat.getPathElement();
+                if (fTop)
+                    {
+                    oThis = this.resolve(oThis);
+                    oThat = that.resolve(oThat);
+                    fTop  = false;
+                    }
                 if (!oThis.equals(oThat))
                     {
                     return false;
