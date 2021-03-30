@@ -593,7 +593,7 @@ public class xRTType
         // each of the generated constructor functions (not the "construct" functions) for a virtual
         // child will require a parent reference to be passed as the first argument
         TypeConstant typeParent = null;
-        if (infoTarget.isVirtualChild())
+        if (infoTarget.isVirtualChildClass())
             {
             typeParent = hType.getOuterType();
             assert typeParent != null;

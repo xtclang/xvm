@@ -929,9 +929,10 @@ public class NewExpression
                 {
                 TypeConstant typeChild = infoChild.getIdentity().getType();
                 TypeInfo     info      = typeChild.ensureTypeInfo();
-                if (info.isAbstract())
+                if (!info.isExplicitlyAbstract() && info.isAbstract())
                     {
                     reportNotNewable(sType, info, entry.getKey(), errs);
+                    break;
                     }
                 }
             }

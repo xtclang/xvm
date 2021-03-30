@@ -240,9 +240,7 @@ public class ClassStructure
         }
 
     /**
-     * Note: A virtual child class is a child class that is instantiated using the "NEWC_*" op codes.
-     *
-     * @return true iff this class is a virtual child class
+     * @return true iff this class is a virtual child of its parent
      */
     public boolean isVirtualChild()
         {
@@ -281,6 +279,26 @@ public class ClassStructure
             default:
                 throw new IllegalStateException();
             }
+        }
+
+    /**
+     * Note: A virtual child class is a child class that is instantiated using the "NEWC_*" op codes.
+     *
+     * @return true iff this class is a virtual child class
+     */
+    public boolean isVirtualChildClass()
+        {
+        if (isVirtualChild())
+            {
+            switch (getFormat())
+                {
+                case CLASS:
+                case CONST:
+                case SERVICE:
+                    return true;
+                }
+            }
+        return false;
         }
 
     /**
@@ -2319,11 +2337,15 @@ public class ClassStructure
                     ClassStructure clzBase   = (ClassStructure) idContrib.getComponent();
                     if (typeContrib.isVirtualChild())
                         {
-                        // see the doc for "ensureVirtualParent" for the explanation
-                        typeContrib = typeContrib.ensureVirtualParent(typeRight.getOriginParentType(),
-                                            !getName().equals(clzBase.getName()));
-                        clzBase = (ClassStructure) typeContrib.getSingleUnderlyingClass(true).
-                                            getComponent();
+                        TypeConstant typeParent = typeRight.getOriginParentType();
+                        if (typeParent.isA(typeContrib.getParentType()))
+                            {
+                            // see the doc for "ensureVirtualParent" for the explanation
+                            typeContrib = typeContrib.ensureVirtualParent(typeParent,
+                                                !getName().equals(clzBase.getName()));
+                            clzBase = (ClassStructure) typeContrib.getSingleUnderlyingClass(true).
+                                                getComponent();
+                            }
                         }
                     relation = relation.bestOf(
                                     clzBase.calculateRelationImpl(typeLeft, typeContrib, false));

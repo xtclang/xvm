@@ -27,7 +27,6 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
-import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.TypeConstant.Origin;
 
 import org.xvm.util.ListMap;
@@ -586,8 +585,10 @@ public class TypeInfo
     /**
      * Check if this type can be instantiated.
      * <p/>
-     * Note, that a virtual child is always assumed to be instantiatable, since any abstract aspects
-     * of the class could be implemented by its virtual sub-classes at the parent's sub level.
+     * Note, that a virtual child that is not explicitly marked as @Abstract is always assumed to be
+     * instantiatable, since any abstract aspects of the class could be implemented by its virtual
+     * sub-classes at the parent's sub level.
+     * <p/>
      * The actual check is always done at the parent's level, so for a parent class to be "newable",
      * all the virtual children have to be non-abstract.
      *
@@ -595,9 +596,9 @@ public class TypeInfo
      */
     public boolean isNewable()
         {
-        if (isVirtualChild())
+        if (isVirtualChildClass())
             {
-            return true;
+            return !isExplicitlyAbstract();
             }
 
         if (isAbstract() || isSingleton() || !isClass())
@@ -605,18 +606,34 @@ public class TypeInfo
             return false;
             }
 
-        for (ChildInfo infoChild : f_mapChildren.values())
+        if (!m_fChildrenChecked && !f_mapChildren.isEmpty())
             {
-            if (infoChild.isVirtualClass())
+            for (ChildInfo infoChild : f_mapChildren.values())
                 {
-                TypeConstant typeChild = infoChild.getIdentity().getType();
-
-                if (typeChild.ensureTypeInfo().isAbstract())
+                if (infoChild.isVirtualClass())
                     {
-                    return false;
+                    // the parent's type parameters are known (may or may not be formal), but the
+                    // child's could be any; TODO GG: use the formal child type if any
+                    //
+                    //  ConstantPool pool = pool();
+                    //  TypeConstant type = pool.ensureVirtualChildTypeConstant(f_type, clz.getName());
+                    //
+                    //  if (clz.isParameterized())
+                    //      {
+                    //      type = pool.ensureParameterizedTypeConstant(type,
+                    //          clz.getFormalType().getParamTypesArray());
+                    //      }
+
+                    ClassStructure clz  = (ClassStructure) infoChild.getComponent();
+                    TypeInfo       info = clz.getFormalType().ensureTypeInfo();
+                    if (!info.isExplicitlyAbstract() && info.isAbstract())
+                        {
+                        return false;
+                        }
                     }
                 }
             }
+        m_fChildrenChecked = true;
         return true;
         }
 
@@ -641,9 +658,9 @@ public class TypeInfo
      * @return true iff this class is scoped within another class, such that it requires a parent
      *         reference in order to be instantiated
      */
-    public boolean isVirtualChild()
+    public boolean isVirtualChildClass()
         {
-        return f_struct != null && f_struct.isVirtualChild();
+        return f_struct != null && f_struct.isVirtualChildClass();
         }
 
     /**
@@ -2060,10 +2077,6 @@ public class TypeInfo
             {
             sb.append(", singleton");
             }
-        if (isNewable())
-            {
-            sb.append(", newable");
-            }
 
         sb.append(")");
 
@@ -2518,6 +2531,7 @@ public class TypeInfo
 
     // REVIEW is this a reasonable way to cache these?
     private boolean                               m_fCacheReady;
+    private boolean                               m_fChildrenChecked;
     private final Map<MethodConstant, MethodInfo> f_cacheById;
     private final Map<Object, MethodInfo>         f_cacheByNid;
 

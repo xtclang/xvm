@@ -93,14 +93,8 @@ public class ChildInfo
      */
     public boolean isVirtualClass()
         {
-        if (f_child instanceof ClassStructure)
-            {
-            ClassStructure clz = (ClassStructure) f_child;
-            return clz.isVirtualChild() &&
-                   clz.getFormat() != Component.Format.INTERFACE;
-            }
-
-        return false;
+        return f_child instanceof ClassStructure &&
+                ((ClassStructure) f_child).isVirtualChildClass();
         }
 
 
