@@ -3,7 +3,6 @@ module AddressBookDB
     {
     package db import oodb.xtclang.org;
 
-    // @DBSchemaDDL
     interface AddressBookSchema
             extends db.RootSchema
         {
@@ -24,7 +23,6 @@ module AddressBookDB
     mixin Contacts
             into db.DBMap<String, Contact>
         {
-        // TODO @DBOp tag?
         void addContact(Contact contact)
             {
             String name = contact.rolodexName;
@@ -54,12 +52,12 @@ module AddressBookDB
         // @db.PKey
         String rolodexName.get()
             {
-            return lastName + ", " + firstName;
+            return $"{lastName}, {firstName}";
             }
 
         String fullName.get()
             {
-            return firstName + ' ' + lastName;
+            return $"{firstName} {lastName}";
             }
 
         Contact withPhone(Phone phone)
