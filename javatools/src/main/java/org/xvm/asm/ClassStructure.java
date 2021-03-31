@@ -971,43 +971,6 @@ public class ClassStructure
         }
 
     /**
-     * When this class represents an R-Value Tuple or a Tuple mixin, find a contribution that is
-     * assignable to the specified L-Value Tuple type.
-     *
-     * @param tupleLeft  the L-Value Tuple type
-     * @param listRight  the list of actual generic parameters for this class
-     *
-     * @return the relation
-     */
-    public Relation findTupleContribution(TypeConstant tupleLeft, List<TypeConstant> listRight)
-        {
-        ConstantPool pool = tupleLeft.getConstantPool();
-        if (getIdentityConstant().equals(tupleLeft.getSingleUnderlyingClass(true)))
-            {
-            return calculateAssignability(pool, tupleLeft.getParamTypes(), Access.PUBLIC, listRight);
-            }
-
-        for (Contribution contrib : getContributionsAsList())
-            {
-            if (contrib.getComposition() == Composition.Into)
-                {
-                TypeConstant typeContrib = contrib.resolveGenerics(pool,
-                                                new SimpleTypeResolver(pool, listRight));
-
-                if (typeContrib != null && typeContrib.isTuple())
-                    {
-                    IdentityConstant idContrib  = typeContrib.getSingleUnderlyingClass(true);
-                    ClassStructure   clzContrib = (ClassStructure) idContrib.getComponent();
-
-                    return clzContrib.findTupleContribution(tupleLeft, typeContrib.getParamTypes()).bestOf(
-                           clzContrib.findTupleContribution(tupleLeft, listRight));
-                    }
-                }
-            }
-        return Relation.INCOMPATIBLE;
-        }
-
-    /**
      * When this class represents a Tuple or a Tuple mixin, get the resulting Tuple type parameters
      *
      * @param pool        the ConstantPool to use

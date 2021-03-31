@@ -89,6 +89,14 @@ public class xTuple
         }
 
     @Override
+    public TypeComposition ensureClass(TypeConstant typeActual)
+        {
+        return typeActual.getParamsCount() == 0
+            ? super.ensureClass(typeActual)
+            : getCanonicalClass().ensureCanonicalizedComposition(typeActual);
+        }
+
+    @Override
     public boolean isGenericHandle()
         {
         return false;

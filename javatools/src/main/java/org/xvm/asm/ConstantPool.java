@@ -3290,6 +3290,63 @@ public class ConstantPool
     // ----- TypeConstant helpers  -----------------------------------------------------------------
 
     /**
+     * While it's known that both the left and the right types are tuples:
+     * <pre>
+     *    {@code typeLeft.isTuple() && typeRight.isTuple()}
+     * </pre>
+     * calculate whether the {@code typeRight} is assignable to {@code typeLeft}.
+     *
+     * @return one of {@link Relation} constants
+     */
+    public Relation checkTupleCompatibility(TypeConstant tupleLeft, TypeConstant tupleRight)
+        {
+        IdentityConstant idLeft  = tupleLeft.getSingleUnderlyingClass(true);
+        IdentityConstant idRight = tupleRight.getSingleUnderlyingClass(true);
+
+        if (idLeft.getFormat() == Format.NativeClass)
+            {
+            idLeft = ((NativeRebaseConstant) idLeft).getClassConstant();
+            }
+
+        if (idRight.getFormat() == Format.NativeClass)
+            {
+            idRight = ((NativeRebaseConstant) idRight).getClassConstant();
+            }
+
+        ClassStructure clzTuple = (ClassStructure) idLeft.getComponent();
+
+        if (idLeft.equals(idRight))
+            {
+            // compare the type parameters
+            return clzTuple.calculateAssignability(this, tupleLeft.getParamTypes(), Access.PUBLIC,
+                    tupleRight.getParamTypes());
+            }
+
+        if (idLeft.equals(clzCondTuple()))
+            {
+            // right is not conditional - never compatible
+            return Relation.INCOMPATIBLE;
+            }
+
+        if (idRight.equals(clzCondTuple()))
+            {
+            // left is not conditional - we do allow an assignment from a naked
+            // ConditionalTuple to Tuple<Boolean>
+            List<TypeConstant> listRight = tupleRight.isParamsSpecified()
+                    ? tupleRight.getParamTypes()
+                    : Collections.singletonList(typeBoolean());
+
+            return clzTuple.calculateAssignability(this, tupleLeft.getParamTypes(), Access.PUBLIC,
+                    listRight);
+            }
+
+
+        // should never happen; soft assert
+        System.err.println("Unsupported tuple type: " + idLeft.getValueString());
+        return Relation.INCOMPATIBLE;
+        }
+
+    /**
      * While it's known that the left type is a function:
      * <pre>
      *    {@code typeLeft.getSingleUnderlyingClass(true).equals(clzFunction())}

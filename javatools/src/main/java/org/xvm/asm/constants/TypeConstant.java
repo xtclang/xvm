@@ -5530,29 +5530,12 @@ public abstract class TypeConstant
             return null;
             }
 
-        IdentityConstant idLeft  = typeLeft.getSingleUnderlyingClass(true);
-        IdentityConstant idRight = typeRight.getSingleUnderlyingClass(true);
+        ConstantPool      pool  = typeLeft.getConstantPool();
+        IdentityConstant idLeft = typeLeft.getSingleUnderlyingClass(true);
 
         if (idLeft.getFormat() == Format.NativeClass)
             {
             idLeft = ((NativeRebaseConstant) idLeft).getClassConstant();
-            }
-
-        if (idRight.getFormat() == Format.NativeClass)
-            {
-            idRight = ((NativeRebaseConstant) idRight).getClassConstant();
-            }
-
-        ConstantPool pool = idLeft.getConstantPool();
-        if (idLeft.equals(pool.clzTuple()))
-            {
-            if (!typeRight.isTuple())
-                {
-                // nothing is assignable to a Tuple except another Tuple
-                return Relation.INCOMPATIBLE;
-                }
-            ClassStructure clzTuple = (ClassStructure) idRight.getComponent();
-            return clzTuple.findTupleContribution(typeLeft, typeRight.getParamTypes());
             }
 
         if (idLeft.equals(pool.clzFunction()))
@@ -5565,9 +5548,16 @@ public abstract class TypeConstant
             return pool.checkMethodCompatibility(typeLeft, typeRight);
             }
 
+        if (typeLeft.isTuple())
+            {
+            // nothing is assignable to a Tuple except another Tuple
+            return typeRight.isTuple()
+                ? pool.checkTupleCompatibility(typeLeft, typeRight)
+                : Relation.INCOMPATIBLE;
+            }
+
         return null;
         }
-
     /**
      * Check if this TypeConstant (L-value), which is know to be an interface, represents a type
      * that is assignable to values of the type represented by the specified TypeConstant (R-Value).
