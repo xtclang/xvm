@@ -5558,6 +5558,7 @@ public abstract class TypeConstant
 
         return null;
         }
+
     /**
      * Check if this TypeConstant (L-value), which is know to be an interface, represents a type
      * that is assignable to values of the type represented by the specified TypeConstant (R-Value).
@@ -6604,7 +6605,7 @@ public abstract class TypeConstant
                     + '}';
             }
 
-        private boolean m_fAnchored;
+        private final boolean m_fAnchored;
         }
 
 

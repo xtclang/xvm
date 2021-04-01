@@ -76,7 +76,7 @@ public class ErrorList
     @Override
     public boolean hasError(String sCode)
         {
-        return m_list.stream().anyMatch(info -> info.getCode().equals(Compiler.MISSING_METHOD));
+        return m_list.stream().anyMatch(info -> info.getCode().equals(sCode));
         }
 
     @Override

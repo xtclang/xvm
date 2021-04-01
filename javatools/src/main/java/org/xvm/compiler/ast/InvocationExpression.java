@@ -2004,26 +2004,55 @@ public class InvocationExpression
             {
             Argument arg = ctx.resolveName(tokName, ErrorListener.BLACKHOLE);
 
-            // try to use the type info (e.g. when the target is of a relational type)
-            if (arg == null && ctx.isMethod())
+            if (arg == null)
                 {
                 typeLeft = ctx.getVar("this").getType();
 
-                TypeInfo infoLeft = getTypeInfo(ctx, typeLeft, errs);
-
-                arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any,
-                    true, atypeReturn, ErrorListener.BLACKHOLE);
-                if (arg instanceof MethodConstant)
+                if (ctx.isMethod())
                     {
-                    MethodStructure method = getMethod(infoLeft, arg);
-                    assert method != null;
+                    // try to use the type info
+                    TypeInfo infoLeft = getTypeInfo(ctx, typeLeft, errs);
 
-                    m_argMethod   = arg;
-                    m_method      = method;
-                    m_fBindTarget = !method.isFunction();
-                    m_targetinfo  = new TargetInfo(sName, method, typeLeft, 0);
-                    return arg;
+                    arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any,
+                                true, atypeReturn, ErrorListener.BLACKHOLE);
+                    if (arg instanceof MethodConstant)
+                        {
+                        MethodStructure method = getMethod(infoLeft, arg);
+                        assert method != null;
+
+                        m_argMethod   = arg;
+                        m_method      = method;
+                        m_fBindTarget = !method.isFunction();
+                        m_targetinfo  = new TargetInfo(sName, method, typeLeft, 0);
+                        return arg;
+                        }
                     }
+
+                // report the error
+                if (sName.equals("construct"))
+                    {
+                    log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR,
+                            ctx.getThisType().getValueString());
+                    }
+                else
+                    {
+                    TypeConstant typeTarget = ctx.getThisType();
+                    TypeInfo     infoTarget = getTypeInfo(ctx, null, ErrorListener.BLACKHOLE);
+
+                    // check if the method would be callable outside of the constructor
+                    if (ctx.isConstructor() &&
+                            findCallable(ctx, typeTarget, infoTarget, sName, MethodKind.Any,
+                                true, atypeReturn, ErrorListener.BLACKHOLE) != null)
+                        {
+                        log(errs, Severity.ERROR, Compiler.INVALID_CALL_FROM_CONSTRUCT, sName);
+                        }
+                    else
+                        {
+                        log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName,
+                                typeTarget.getValueString());
+                        }
+                    }
+                return null;
                 }
 
             if (arg instanceof Register)
@@ -2173,340 +2202,328 @@ public class InvocationExpression
                 TypeInfo         info       = getTypeInfo(ctx, typeTarget, errs);
                 IdentityConstant idCallable = findMethod(ctx, typeTarget, info, sName,
                         args, MethodKind.Any, !fNoCall, false, atypeReturn, errs);
-                if (idCallable != null)
+                if (idCallable == null)
                     {
-                    MethodStructure method = getMethod(info, idCallable);
-                    if (!method.isFunction())
-                        {
-                        exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY,
-                                sName, idCallable.getParentConstant().getValueString());
-                        return null;
-                        }
-                    m_method      = method;
-                    m_argMethod   = idCallable;
-                    m_fBindTarget = false;
-                    return idCallable;
+                    return null;
                     }
+
+                MethodStructure method = getMethod(info, idCallable);
+                if (!method.isFunction())
+                    {
+                    exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY,
+                            sName, idCallable.getParentConstant().getValueString());
+                    return null;
+                    }
+                m_method      = method;
+                m_argMethod   = idCallable;
+                m_fBindTarget = false;
+                return idCallable;
                 }
-            else if (arg instanceof PropertyConstant)
+
+            if (arg instanceof PropertyConstant)
                 {
                 // an import name can specify a static PropertyConstant
                 return testStaticProperty(ctx, (PropertyConstant) arg, atypeReturn, errs);
                 }
+            throw new IllegalStateException("unsupported argument: " + arg);
+            }
 
-            if (sName.equals("construct"))
-                {
-                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, ctx.getThisType().getValueString());
-                }
-            else
-                {
-                TypeConstant typeTarget = ctx.getThisType();
-                if (ctx.isConstructor())
-                    {
-                    typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.STRUCT);
-                    }
-                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName, typeTarget.getValueString());
-                }
+        // there is a "left" expression for the name
+        if (tokName.isSpecial())
+            {
+            tokName.log(errs, getSource(), Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, tokName.getValueText());
             return null;
             }
-        else // there is a "left" expression for the name
+
+        // the left expression provides the scope to search for a matching method/function;
+        // if the left expression is itself a NameExpression, and it's in identity mode (i.e. a
+        // possible identity), then check the identity first
+        if (exprLeft instanceof NameExpression)
             {
-            if (tokName.isSpecial())
+            NameExpression nameLeft = (NameExpression) exprLeft;
+            if (nameLeft.getName().equals("super"))
                 {
-                tokName.log(errs, getSource(), Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, tokName.getValueText());
+                log(errs, Severity.ERROR, Compiler.INVALID_SUPER_REFERENCE);
                 return null;
                 }
 
-            // the left expression provides the scope to search for a matching method/function;
-            // if the left expression is itself a NameExpression, and it's in identity mode (i.e. a
-            // possible identity), then check the identity first
-            if (exprLeft instanceof NameExpression)
+            if (nameLeft.isIdentityMode(ctx, true))
                 {
-                NameExpression nameLeft = (NameExpression) exprLeft;
-                if (nameLeft.getName().equals("super"))
+                // the left identity
+                // - methods are included because there is a left, but since it is to obtain a
+                //   method reference, there must not be any arg binding or actual invocation
+                // - functions are included because the left is identity-mode
+                IdentityConstant idLeft = nameLeft.getIdentity(ctx);
+                Access           access = fConstruct ? Access.PROTECTED : Access.PUBLIC;
+                // TODO: if left is a super class or other contribution, use PROTECTED access as well
+                if (ctx.getThisClass().getIdentityConstant().isNestMateOf(idLeft))
                     {
-                    log(errs, Severity.ERROR, Compiler.INVALID_SUPER_REFERENCE);
-                    return null;
+                    access = Access.PRIVATE;
                     }
 
-                if (nameLeft.isIdentityMode(ctx, true))
+                TypeInfo infoLeft;
+                if (nameLeft.getMeaning() == NameExpression.Meaning.Type)
                     {
-                    // the left identity
-                    // - methods are included because there is a left, but since it is to obtain a
-                    //   method reference, there must not be any arg binding or actual invocation
-                    // - functions are included because the left is identity-mode
-                    IdentityConstant idLeft = nameLeft.getIdentity(ctx);
-                    Access           access = fConstruct ? Access.PROTECTED : Access.PUBLIC;
-                    // TODO: if left is a super class or other contribution, use PROTECTED access as well
-                    if (ctx.getThisClass().getIdentityConstant().isNestMateOf(idLeft))
+                    // "Class" meaning in IdentityMode can only indicate a "type-of-class" scenario
+                    assert typeLeft.isTypeOfType();
+
+                    typeLeft = typeLeft.getParamType(0);
+                    if (access != typeLeft.getAccess())
                         {
-                        access = Access.PRIVATE;
+                        typeLeft = pool.ensureAccessTypeConstant(typeLeft, access);
                         }
-
-                    TypeInfo infoLeft;
-                    if (nameLeft.getMeaning() == NameExpression.Meaning.Type)
+                    infoLeft = typeLeft.ensureTypeInfo(errs);
+                    }
+                else
+                    {
+                    if (fConstruct)
                         {
-                        // "Class" meaning in IdentityMode can only indicate a "type-of-class" scenario
-                        assert typeLeft.isTypeOfType();
-
-                        typeLeft = typeLeft.getParamType(0);
-                        if (access != typeLeft.getAccess())
+                        // this can only be a "construct X(..)" call coming from "this:struct"
+                        // context
+                        ClassStructure clzThis = ctx.getThisClass();
+                        Contribution   contrib = clzThis.findContribution(idLeft);
+                        if (contrib == null)
                             {
-                            typeLeft = pool.ensureAccessTypeConstant(typeLeft, access);
+                            log(errs, Severity.ERROR, Compiler.INVALID_CONSTRUCT_CALL,
+                                    idLeft.getValueString());
+                            return null;
+                            }
+
+                        TypeConstant typeContrib = contrib.getTypeConstant();
+                        switch (contrib.getComposition())
+                            {
+                            case Equal:
+                                assert typeContrib.equals(ctx.getThisType());
+
+                                typeLeft = pool.ensureAccessTypeConstant(typeContrib, Access.PRIVATE);
+                                break;
+
+                            case Extends:
+                                if (!clzThis.getSuper().getIdentityConstant().equals(idLeft))
+                                    {
+                                    log(errs, Severity.WARNING, Compiler.SUPER_CONSTRUCTOR_SKIPPED);
+                                    }
+                                // fall through
+                            default:
+                                typeLeft = pool.ensureAccessTypeConstant(typeContrib, access);
+                                break;
                             }
                         infoLeft = typeLeft.ensureTypeInfo(errs);
                         }
                     else
                         {
-                        if (fConstruct)
-                            {
-                            // this can only be a "construct X(..)" call coming from "this:struct"
-                            // context
-                            ClassStructure clzThis = ctx.getThisClass();
-                            Contribution   contrib = clzThis.findContribution(idLeft);
-                            if (contrib == null)
-                                {
-                                log(errs, Severity.ERROR, Compiler.INVALID_CONSTRUCT_CALL,
-                                        idLeft.getValueString());
-                                return null;
-                                }
-
-                            TypeConstant typeContrib = contrib.getTypeConstant();
-                            switch (contrib.getComposition())
-                                {
-                                case Equal:
-                                    assert typeContrib.equals(ctx.getThisType());
-
-                                    typeLeft = pool.ensureAccessTypeConstant(typeContrib, Access.PRIVATE);
-                                    break;
-
-                                case Extends:
-                                    if (!clzThis.getSuper().getIdentityConstant().equals(idLeft))
-                                        {
-                                        log(errs, Severity.WARNING, Compiler.SUPER_CONSTRUCTOR_SKIPPED);
-                                        }
-                                    // fall through
-                                default:
-                                    typeLeft = pool.ensureAccessTypeConstant(typeContrib, access);
-                                    break;
-                                }
-                            infoLeft = typeLeft.ensureTypeInfo(errs);
-                            }
-                        else
-                            {
-                            // this is either:
-                            // - a function call (e.g. Duration.ofSeconds(1)) or
-                            // - a call on the Class itself (Point.instantiate(struct)), in which
-                            //   case the first "findCallable" will fail and therefore typeLeft must
-                            //   not be changed
-                            // - a method call for a singleton (e.g. TestReflection.report(...))
-                            infoLeft = idLeft.ensureTypeInfo(access, errs);
-                            }
-                        }
-                    boolean    fSingleton = infoLeft.isSingleton();
-                    MethodKind kind       = fConstruct                        ? MethodKind.Constructor :
-                                            fNoFBind && fNoCall || fSingleton ? MethodKind.Any :
-                                                                                MethodKind.Function;
-
-                    ErrorListener errsTemp = errs.branch();
-                    Argument      arg      = findCallable(ctx, infoLeft.getType(), infoLeft, sName,
-                            kind, false, atypeReturn, errsTemp);
-
-                    if (arg == null && kind == MethodKind.Function &&
-                            findCallable(ctx, infoLeft.getType(), infoLeft, sName,
-                                MethodKind.Any, false, atypeReturn, ErrorListener.BLACKHOLE) != null)
-                        {
-                        exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
-                                sName, infoLeft.getType().getValueString());
-                        return null;
-                        }
-                    if (arg instanceof MethodConstant)
-                        {
-                        errsTemp.merge();
-
-                        MethodConstant idMethod   = (MethodConstant) arg;
-                        MethodInfo     infoMethod = infoLeft.getMethodById(idMethod);
-                        assert infoMethod != null;
-
-                        if (infoMethod.isAbstractFunction())
-                            {
-                            log(errs, Severity.ERROR, Compiler.ILLEGAL_FUNKY_CALL,
-                                    idMethod.getValueString());
-                            return null;
-                            }
-
-                        m_argMethod   = idMethod;
-                        m_method      = infoMethod.getTopmostMethodStructure(infoLeft);
-                        m_fBindTarget = fSingleton && !m_method.isFunction();
-                        return idMethod;
-                        }
-                    else if (arg instanceof PropertyConstant)
-                        {
-                        errsTemp.merge();
-                        return testStaticProperty(ctx, (PropertyConstant) arg, atypeReturn, errs);
+                        // this is either:
+                        // - a function call (e.g. Duration.ofSeconds(1)) or
+                        // - a call on the Class itself (Point.instantiate(struct)), in which
+                        //   case the first "findCallable" will fail and therefore typeLeft must
+                        //   not be changed
+                        // - a method call for a singleton (e.g. TestReflection.report(...))
+                        infoLeft = idLeft.ensureTypeInfo(access, errs);
                         }
                     }
+                boolean    fSingleton = infoLeft.isSingleton();
+                MethodKind kind       = fConstruct                        ? MethodKind.Constructor :
+                                        fNoFBind && fNoCall || fSingleton ? MethodKind.Any :
+                                                                            MethodKind.Function;
 
-                switch (nameLeft.getMeaning())
+                ErrorListener errsTemp = errs.branch();
+                Argument      arg      = findCallable(ctx, infoLeft.getType(), infoLeft, sName,
+                        kind, false, atypeReturn, errsTemp);
+
+                if (arg == null && kind == MethodKind.Function &&
+                        findCallable(ctx, infoLeft.getType(), infoLeft, sName,
+                            MethodKind.Any, false, atypeReturn, ErrorListener.BLACKHOLE) != null)
                     {
-                    case Property:
+                    exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
+                            sName, infoLeft.getType().getValueString());
+                    return null;
+                    }
+                if (arg instanceof MethodConstant)
+                    {
+                    errsTemp.merge();
+
+                    MethodConstant idMethod   = (MethodConstant) arg;
+                    MethodInfo     infoMethod = infoLeft.getMethodById(idMethod);
+                    assert infoMethod != null;
+
+                    if (infoMethod.isAbstractFunction())
                         {
-                        PropertyConstant idProp = (PropertyConstant) nameLeft.resolveRawArgument(ctx, false, errs);
-                        if (idProp.isFormalType())
-                            {
-                            // Example (NaturalHasher.x):
-                            //   Int hashOf(Value value)
-                            //     {
-                            //     return Value.hashCode(value);
-                            //     }
-                            //
-                            // "this" is "Value.hashCode(value)"
-                            // idProp.getFormalType() is NaturalHasher.Value
-
-                            TypeConstant type     = nameLeft.getImplicitType(ctx).getParamType(0);
-                            TypeInfo     infoType = getTypeInfo(ctx, type, errs);
-
-                            ErrorListener errsTemp = errs.branch();
-
-                            Argument arg = findCallable(ctx, type, infoType, sName, MethodKind.Function,
-                                false, atypeReturn, errsTemp);
-                            if (arg instanceof MethodConstant)
-                                {
-                                m_argMethod   = arg;
-                                m_method      = getMethod(infoType, arg);
-                                m_fBindTarget = false;
-                                m_idFormal    = idProp;
-                                errsTemp.merge();
-                                return arg;
-                                }
-                            }
-                        break;
+                        log(errs, Severity.ERROR, Compiler.ILLEGAL_FUNKY_CALL,
+                                idMethod.getValueString());
+                        return null;
                         }
 
-                    case FormalChildType:
-                        {
-                        // Example:
-                        //   static <CompileType extends Hasher> Int hashCode(CompileType array)
-                        //      {
-                        //      Int hash = 0;
-                        //      for (CompileType.Element el : array)
-                        //          {
-                        //          hash += CompileType.Element.hashCode(el);
-                        //          }
-                        //      return hash;
-                        //      }
-                        // "this" is "CompileType.Element.hashCode(el)"
-                        //  typeLeft is a type of "CompileType.Element" formal type child
+                    m_argMethod   = idMethod;
+                    m_method      = infoMethod.getTopmostMethodStructure(infoLeft);
+                    m_fBindTarget = fSingleton && !m_method.isFunction();
+                    return idMethod;
+                    }
+                else if (arg instanceof PropertyConstant)
+                    {
+                    errsTemp.merge();
+                    return testStaticProperty(ctx, (PropertyConstant) arg, atypeReturn, errs);
+                    }
+                }
 
-                        assert typeLeft.isTypeOfType();
-                        TypeInfo      infoLeft = typeLeft.getParamType(0).ensureTypeInfo(errs);
+            switch (nameLeft.getMeaning())
+                {
+                case Property:
+                    {
+                    PropertyConstant idProp = (PropertyConstant) nameLeft.resolveRawArgument(ctx, false, errs);
+                    if (idProp.isFormalType())
+                        {
+                        // Example (NaturalHasher.x):
+                        //   Int hashOf(Value value)
+                        //     {
+                        //     return Value.hashCode(value);
+                        //     }
+                        //
+                        // "this" is "Value.hashCode(value)"
+                        // idProp.getFormalType() is NaturalHasher.Value
+
+                        TypeConstant type     = nameLeft.getImplicitType(ctx).getParamType(0);
+                        TypeInfo     infoType = getTypeInfo(ctx, type, errs);
+
                         ErrorListener errsTemp = errs.branch();
 
-                        Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Function,
+                        Argument arg = findCallable(ctx, type, infoType, sName, MethodKind.Function,
                             false, atypeReturn, errsTemp);
                         if (arg instanceof MethodConstant)
                             {
                             m_argMethod   = arg;
-                            m_method      = getMethod(infoLeft, arg);
+                            m_method      = getMethod(infoType, arg);
                             m_fBindTarget = false;
-                            m_idFormal    = (FormalTypeChildConstant) nameLeft.getIdentity(ctx);
+                            m_idFormal    = idProp;
                             errsTemp.merge();
                             return arg;
                             }
-                        break;
                         }
+                    break;
+                    }
+
+                case FormalChildType:
+                    {
+                    // Example:
+                    //   static <CompileType extends Hasher> Int hashCode(CompileType array)
+                    //      {
+                    //      Int hash = 0;
+                    //      for (CompileType.Element el : array)
+                    //          {
+                    //          hash += CompileType.Element.hashCode(el);
+                    //          }
+                    //      return hash;
+                    //      }
+                    // "this" is "CompileType.Element.hashCode(el)"
+                    //  typeLeft is a type of "CompileType.Element" formal type child
+
+                    assert typeLeft.isTypeOfType();
+                    TypeInfo      infoLeft = typeLeft.getParamType(0).ensureTypeInfo(errs);
+                    ErrorListener errsTemp = errs.branch();
+
+                    Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Function,
+                        false, atypeReturn, errsTemp);
+                    if (arg instanceof MethodConstant)
+                        {
+                        m_argMethod   = arg;
+                        m_method      = getMethod(infoLeft, arg);
+                        m_fBindTarget = false;
+                        m_idFormal    = (FormalTypeChildConstant) nameLeft.getIdentity(ctx);
+                        errsTemp.merge();
+                        return arg;
+                        }
+                    break;
                     }
                 }
+            }
 
-            // use the type of the left expression to get the TypeInfo that must contain the
-            // method/function to call
-            // - methods are included because there is a left and it is NOT identity-mode
-            // - functions are NOT included because the left is NOT identity-mode
-            TypeInfo      infoLeft = getTypeInfo(ctx, typeLeft, errs);
-            ErrorListener errsMain = errs.branch();
+        // use the type of the left expression to get the TypeInfo that must contain the
+        // method/function to call
+        // - methods are included because there is a left and it is NOT identity-mode
+        // - functions are NOT included because the left is NOT identity-mode
+        TypeInfo      infoLeft = getTypeInfo(ctx, typeLeft, errs);
+        ErrorListener errsMain = errs.branch();
 
-            Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Method, false,
-                                atypeReturn, errsMain);
+        Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Method, false,
+                            atypeReturn, errsMain);
+        if (arg != null)
+            {
+            if (arg instanceof MethodConstant)
+                {
+                m_argMethod   = arg;
+                m_method      = getMethod(infoLeft, arg);
+                m_fBindTarget = m_method != null;
+                }
+            else
+                {
+                // just return the property; the rest will be handled by the caller
+                assert arg instanceof PropertyConstant;
+                }
+            errsMain.merge();
+            return arg;
+            }
+
+        // allow for a function on the "left type" to be called (Bjarne'd):
+        //    x.f(y, z) -> X.f(x, y, z), where X is the class of x
+        if (typeLeft.isSingleUnderlyingClass(true) && !isSuppressCall() && !isAnyArgUnbound())
+            {
+            List<Expression> listArgs = new ArrayList<>(args);
+            listArgs.add(0, exprLeft);
+
+            ErrorListener errsAlt = errs.branch();
+
+            arg = findMethod(ctx, typeLeft, infoLeft, sName, listArgs, MethodKind.Function,
+                        !fNoCall, false, atypeReturn, errsAlt);
             if (arg != null)
                 {
-                if (arg instanceof MethodConstant)
+                m_argMethod   = arg;
+                m_method      = getMethod(infoLeft, arg);
+                m_fBindTarget = false;
+                m_fBjarne     = true;
+                errsAlt.merge();
+                return arg;
+                }
+            }
+
+        if (exprLeft instanceof NameExpression && typeLeft.isA(pool.typeFunction()))
+            {
+            // it appears that they try to use a variable or property, but have a function instead
+            if (errsMain.hasError(Compiler.MISSING_METHOD) &&
+                    infoLeft.findMethods(sName, -1, MethodKind.Any).isEmpty())
+                {
+                NameExpression   exprFn = (NameExpression) exprLeft;
+                IdentityConstant idParent;
+                if (exprFn.isIdentityMode(ctx, false))
                     {
-                    m_argMethod   = arg;
-                    m_method      = getMethod(infoLeft, arg);
-                    m_fBindTarget = m_method != null;
+                    idParent = exprFn.getIdentity(ctx).getNamespace();
                     }
                 else
                     {
-                    // just return the property; the rest will be handled by the caller
-                    assert arg instanceof PropertyConstant;
+                    NameExpression nameLeft = (NameExpression) exprLeft;
+                    switch (nameLeft.getMeaning())
+                        {
+                        case Property:
+                            idParent = ((PropertyConstant) nameLeft.
+                                resolveRawArgument(ctx, false, errs)).getNamespace();
+                            break;
+
+                        case Variable:
+                            idParent = ctx.getMethod().getIdentityConstant();
+                            break;
+
+                        default:
+                            idParent = null;
+                        }
                     }
-                errsMain.merge();
-                return arg;
-                }
 
-            // allow for a function on the "left type" to be called (Bjarne'd):
-            //    x.f(y, z) -> X.f(x, y, z), where X is the class of x
-            if (typeLeft.isSingleUnderlyingClass(true) && !isSuppressCall() && !isAnyArgUnbound())
-                {
-                List<Expression> listArgs = new ArrayList<>(args);
-                listArgs.add(0, exprLeft);
-
-                ErrorListener errsAlt = errs.branch();
-
-                arg = findMethod(ctx, typeLeft, infoLeft, sName, listArgs, MethodKind.Function,
-                            !fNoCall, false, atypeReturn, errsAlt);
-                if (arg != null)
+                if (idParent != null)
                     {
-                    m_argMethod   = arg;
-                    m_method      = getMethod(infoLeft, arg);
-                    m_fBindTarget = false;
-                    m_fBjarne     = true;
-                    errsAlt.merge();
-                    return arg;
+                    log(errsMain, Severity.ERROR, Compiler.SUSPICIOUS_FUNCTION_USE,
+                            exprFn.getName(), idParent.getValueString());
                     }
                 }
-
-            if (exprLeft instanceof NameExpression && typeLeft.isA(pool.typeFunction()))
-                {
-                // it appears that they try to use a variable or property, but have a function instead
-                if (errsMain.hasError(Compiler.MISSING_METHOD) &&
-                        infoLeft.findMethods(sName, -1, MethodKind.Any).isEmpty())
-                    {
-                    NameExpression   exprFn = (NameExpression) exprLeft;
-                    IdentityConstant idParent;
-                    if (exprFn.isIdentityMode(ctx, false))
-                        {
-                        idParent = exprFn.getIdentity(ctx).getNamespace();
-                        }
-                    else
-                        {
-                        NameExpression nameLeft = (NameExpression) exprLeft;
-                        switch (nameLeft.getMeaning())
-                            {
-                            case Property:
-                                idParent = ((PropertyConstant) nameLeft.
-                                    resolveRawArgument(ctx, false, errs)).getNamespace();
-                                break;
-
-                            case Variable:
-                                idParent = ctx.getMethod().getIdentityConstant();
-                                break;
-
-                            default:
-                                idParent = null;
-                            }
-                        }
-
-                    if (idParent != null)
-                        {
-                        log(errsMain, Severity.ERROR, Compiler.SUSPICIOUS_FUNCTION_USE,
-                                exprFn.getName(), idParent.getValueString());
-                        }
-                    }
-                }
-            errsMain.merge();
             }
 
+        errsMain.merge();
         return null;
         }
 

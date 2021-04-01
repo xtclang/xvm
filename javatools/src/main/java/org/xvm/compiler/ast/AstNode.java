@@ -1070,6 +1070,19 @@ public abstract class AstNode
 
         if (setMethods.isEmpty())
             {
+            if (typeTarget.isSingleDefiningConstant() && typeTarget.getAccess() != Access.PRIVATE)
+                {
+                // check if there are any potentially matching private methods
+                TypeConstant typePrivate =
+                    pool().ensureAccessTypeConstant(typeTarget.removeAccess(), Access.PRIVATE);
+                if (!typePrivate.ensureTypeInfo(ErrorListener.BLACKHOLE).
+                        findMethods(sMethodName, cArgs, kind).isEmpty())
+                    {
+                    log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                            sMethodName, typeTarget.getValueString());
+                    return null;
+                    }
+                }
             if (kind == MethodKind.Constructor)
                 {
                 log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());

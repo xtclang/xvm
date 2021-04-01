@@ -1297,6 +1297,14 @@ public class Compiler
      */
     public static final String NEW_UNRELATED_PARENT                = "COMPILER-175";
     /**
+     * The method {0} cannot be called from within construct() because "this" is a reference to the struct, and not to the object.
+     */
+    public static final String INVALID_CALL_FROM_CONSTRUCT         = "COMPILER-176";
+    /**
+     * Method {0} on the {1} type is not accessible.
+     */
+    public static final String METHOD_INACCESSIBLE                 = "COMPILER-177";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
