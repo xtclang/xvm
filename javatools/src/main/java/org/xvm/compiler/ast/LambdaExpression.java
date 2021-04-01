@@ -455,7 +455,8 @@ public class LambdaExpression
         assert m_typeRequired == null && m_collector == null && m_lambda == null;
 
         // extract the required types for the parameters and return values
-        ConstantPool pool = pool();
+        ConstantPool   pool            = pool();
+        TypeConstant   typeReqFn       = null;
         TypeConstant[] atypeReqParams  = null;
         TypeConstant[] atypeReqReturns = null;
 
@@ -467,19 +468,23 @@ public class LambdaExpression
                         collectMatching(pool.typeFunction(), null);
                 for (TypeConstant typeFunction : setFunctions)
                     {
-                    atypeReqParams  = pool.extractFunctionParams(typeFunction);
-                    atypeReqReturns = pool.extractFunctionReturns(typeFunction);
+                    TypeConstant[] atypeTestP = pool.extractFunctionParams(typeFunction);
+                    TypeConstant[] atypeTestR = pool.extractFunctionReturns(typeFunction);
 
-                    if (calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns).isFit())
+                    if (calculateTypeFitImpl(ctx, atypeTestP, atypeTestR).isFit())
                         {
+                        atypeReqParams  = atypeTestP;
+                        atypeReqReturns = atypeTestR;
+                        typeReqFn = pool.buildFunctionType(atypeReqParams, atypeReqReturns);
                         break;
                         }
                     }
                 }
             else
                 {
-                atypeReqParams  = pool.extractFunctionParams(typeRequired);
-                atypeReqReturns = pool.extractFunctionReturns(typeRequired);
+                typeReqFn       = typeRequired;
+                atypeReqParams  = pool.extractFunctionParams(typeReqFn);
+                atypeReqReturns = pool.extractFunctionReturns(typeReqFn);
                 }
             }
 
@@ -507,7 +512,7 @@ public class LambdaExpression
             return finishValidation(ctx, typeRequired, null, TypeFit.NoFit, null, errs);
             }
 
-        m_typeRequired = typeRequired;
+        m_typeRequired = typeReqFn;
         m_lambda       = instantiateLambda(errs);
 
         // the logic below is basically a copy of the "extractReturnTypes" method,
