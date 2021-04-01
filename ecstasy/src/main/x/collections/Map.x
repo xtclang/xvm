@@ -556,10 +556,10 @@ interface Map<Key, Value>
          * If the entry does not [exist](exists), then the value is not readable; an attempt to get
          * the value of an will raise an `OutOfBounds`
          *
-         * @throws OutOfBounds if an attempt is made to read the value of the entry when {@link
-         *                     exists} is False
-         * @throws ReadOnly    if an attempt is made to write the value of the entry and the map
-         *                     is not `inPlace`, or does not support mutation
+         * @throws OutOfBounds  if an attempt is made to read the value of the entry when {@link
+         *                      exists} is False
+         * @throws ReadOnly     if an attempt is made to write the value of the entry and the map
+         *                      is not `inPlace`, or does not support mutation
          */
         Value value;
 
@@ -568,8 +568,8 @@ interface Map<Key, Value>
          *
          * The entry is not removable if the containing map is not `inPlace`.
          *
-         * @throws ReadOnly    if an attempt is made to write the value of the entry and the map
-         *                     is not `inPlace`, or does not support mutation
+         * @throws ReadOnly  if an attempt is made to write the value of the entry and the map
+         *                   is not `inPlace`, or does not support mutation
          */
         void delete()
             {
@@ -689,6 +689,7 @@ interface Map<Key, Value>
 
         return buf.add(']');
         }
+
 
     // ----- equality ------------------------------------------------------------------------------
 
