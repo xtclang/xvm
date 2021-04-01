@@ -475,7 +475,7 @@ public class LambdaExpression
                         {
                         atypeReqParams  = atypeTestP;
                         atypeReqReturns = atypeTestR;
-                        typeReqFn = pool.buildFunctionType(atypeReqParams, atypeReqReturns);
+                        typeReqFn       = pool.buildFunctionType(atypeReqParams, atypeReqReturns);
                         break;
                         }
                     }
