@@ -205,7 +205,12 @@ module TestMisc
         Int? c = a;
         console.println("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
 
-        c = Null;
+        static Int? trustMeItMightNotBeNull()
+            {
+            return Null;
+            }
+
+        c = trustMeItMightNotBeNull();
         console.println("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
         }
 

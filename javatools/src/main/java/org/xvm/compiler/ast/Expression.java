@@ -2039,10 +2039,13 @@ public abstract class Expression
             TypeConstant typeThen = atypeThen[i];
             TypeConstant typeElse = atypeElse[i];
 
+            ConstantPool pool       = pool();
             TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, ErrorListener.BLACKHOLE);
-            atypeCommon[i] = typeCommon == null && atypeThen != null && typeElse != null
-                    ? pool().ensureIntersectionTypeConstant(typeThen, typeElse)
-                    : typeCommon;
+            atypeCommon[i] = typeCommon == null && typeThen != null && typeElse != null
+                    ? typeThen.isOnlyNullable() ? pool.ensureNullableTypeConstant(typeElse)
+                    : typeElse.isOnlyNullable() ? pool.ensureNullableTypeConstant(typeThen)
+                        : pool.ensureIntersectionTypeConstant(typeThen, typeElse)
+                        : typeCommon;
             }
         return atypeCommon;
         }

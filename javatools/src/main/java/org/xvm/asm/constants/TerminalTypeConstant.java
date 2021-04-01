@@ -901,7 +901,8 @@ public class TerminalTypeConstant
         {
         TypeConstant typeResolved = resolveTypedefs();
         return this == typeResolved
-                ? ensureResolvedConstant().equals(getConstantPool().clzNullable())
+                ? this.equals(getConstantPool().typeNullable()) ||
+                  this.equals(getConstantPool().typeNull())
                 : typeResolved.isOnlyNullable();
         }
 
