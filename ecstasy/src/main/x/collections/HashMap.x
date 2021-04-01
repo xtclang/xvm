@@ -11,7 +11,6 @@ import maps.ReifiedEntry;
 class HashMap<Key, Value>
         implements CopyableMap<Key, Value>
         incorporates conditional MapFreezer<Key extends immutable Object, Value extends ImmutableAble>
-        incorporates conditional MapStringer<Key extends Stringable, Value extends Stringable>
     {
     // ----- constructors --------------------------------------------------------------------------
 

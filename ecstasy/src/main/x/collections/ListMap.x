@@ -18,7 +18,6 @@ class ListMap<Key, Value>
         implements CopyableMap<Key, Value>
         incorporates conditional ListMapIndex<Key extends immutable Hashable, Value>
         incorporates conditional MapFreezer<Key extends immutable Object, Value extends ImmutableAble>
-        incorporates conditional MapStringer<Key extends Stringable, Value extends Stringable>
     {
     // ----- constructors --------------------------------------------------------------------------
 

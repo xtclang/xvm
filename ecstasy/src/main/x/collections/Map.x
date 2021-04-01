@@ -13,6 +13,7 @@
  * the [put] and [remove] methods.
  */
 interface Map<Key, Value>
+        extends Stringable
     {
     // ----- metadata ------------------------------------------------------------------------------
 
@@ -617,6 +618,77 @@ interface Map<Key, Value>
             }
         }
 
+
+    // ----- Stringable ----------------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        if (Key.is(Type<Stringable>) && Value.is(Type<Stringable>))
+            {
+            Int total = 3 * size;
+            for ((Key key, Value value) : this)
+                {
+                total += key.estimateStringLength() + value.estimateStringLength();
+                }
+            return total;
+            }
+
+        // no inexpensive way to guess
+        return 0;
+        }
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf)
+        {
+        buf.add('[');
+
+        if (Key.is(Type<Stringable>) && Value.is(Type<Stringable>))
+            {
+            Loop: for ((Key key, Value value) : this)
+                {
+                if (!Loop.first)
+                    {
+                    ", ".appendTo(buf);
+                    }
+                key.appendTo(buf);
+                buf.add('=');
+                value.appendTo(buf);
+                }
+            }
+        else
+            {
+            Loop: for ((Key key, Value value) : this)
+                {
+                if (!Loop.first)
+                    {
+                    ", ".appendTo(buf);
+                    }
+
+                if (key.is(Stringable))
+                    {
+                    key.appendTo(buf);
+                    }
+                else
+                    {
+                    key.toString().appendTo(buf);
+                    }
+
+                buf.add('=');
+
+                if (value.is(Stringable))
+                    {
+                    value.appendTo(buf);
+                    }
+                else
+                    {
+                    value.toString().appendTo(buf);
+                    }
+                }
+            }
+
+        return buf.add(']');
+        }
 
     // ----- equality ------------------------------------------------------------------------------
 

@@ -4,20 +4,23 @@ module TestSimple.test.org
 
     void run()
         {
-        C c = new C(0);
-        c.validate(5);
+        Map<Int, String> m1 = new HashMap();
+        m1.put(1, "a");
+        m1.put(2, "b");
+        console.println(m1);
+
+        Map<Int, Test> m2 = new HashMap();
+        m2.put(1, new Test("a"));
+        m2.put(2, new Test("b"));
+        console.println(m2);
         }
 
-    class C(Int i)
+    class Test(String s)
         {
-        construct(Int i)
+        @Override
+        String toString()
             {
-            this.i = validate(i);
+            return $"Test:{s}";
             }
-
-        private Int validate(Int i)
-            {
-            return 2*i;
-            }
-       }
+        }
     }

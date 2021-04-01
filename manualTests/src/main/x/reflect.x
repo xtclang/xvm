@@ -637,10 +637,10 @@ module TestReflection
 
         {
         Type t1 = Map;
-        Type t2 = Stringable;
+        Type t2 = Hashable;
         Type t3 = t1 + t2;
         console.println($"{t1} + {t2} = {t3}");
-        assert t3 == Map + Stringable;
+        assert t3 == Map + Hashable;
         }
 
         {
@@ -652,11 +652,11 @@ module TestReflection
         }
 
         {
-        Type t1 = ecstasy.collections.HashMap;
+        Type t1 = HashMap;
         Type t2 = Map;
         Type t3 = t1 - t2;
         console.println($"{t1} - {t2} = {t3}");
-        assert t3 == ecstasy.collections.HashMap - Map;
+        assert t3 == HashMap - Map;
         }
 
         {
