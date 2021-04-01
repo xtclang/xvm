@@ -61,7 +61,7 @@ package reflect
          * @return True iff this package imports a module
          * @return (conditional) the [Module] that this package imports
          */
-        conditional immutable Module isModuleImport();
+        conditional Module isModuleImport();
 
         /**
          * The classes contained immediately within this package.

@@ -1659,8 +1659,7 @@ public class ConstantPool
     public TypeConstant ensureImmutableTypeConstant(TypeConstant constType)
         {
         TypeConstant constant;
-        if (constType.isImmutabilitySpecified() ||
-                (!constType.containsUnresolved() && constType.isImmutable()))
+        if (constType.isImmutabilitySpecified())
             {
             constant = constType;
             }

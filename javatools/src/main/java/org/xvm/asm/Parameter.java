@@ -61,12 +61,14 @@ public class Parameter
         m_constType    = (TypeConstant)   pool.getConstant(iType   );
         m_constName    = (StringConstant) pool.getConstant(iName   );
         m_constDefault =                  pool.getConstant(iDefault);
-        m_iParam       = fReturn ? -1 - index : index;
-        m_fOrdinary    = !fSpecial;
+
+        f_iParam       = fReturn ? -1 - index : index;
+        f_fOrdinary    = !fSpecial;
         }
 
     /**
      * Construct a Parameter definition structure.
+     *
      * @param pool          the ConstantPool that will contain this Constant
      * @param constType     the type of the parameter
      * @param sName         the parameter name
@@ -95,8 +97,8 @@ public class Parameter
         m_constName    = sName == null ? null : pool.ensureStringConstant(sName);
         m_constDefault = constDefault;
 
-        m_iParam       = fReturn ? -1 - index : index;
-        m_fOrdinary    = !fSpecial;
+        f_iParam       = fReturn ? -1 - index : index;
+        f_fOrdinary    = !fSpecial;
         }
 
 
@@ -109,7 +111,7 @@ public class Parameter
      */
     public int getIndex()
         {
-        int iParam = m_iParam;
+        int iParam = f_iParam;
         return iParam >= 0
                 ? iParam
                 : -1 - iParam;
@@ -120,7 +122,7 @@ public class Parameter
      */
     public boolean isParameter()
         {
-        return m_iParam >= 0;
+        return f_iParam >= 0;
         }
 
     /**
@@ -252,7 +254,7 @@ public class Parameter
      */
     public boolean isTypeParameter()
         {
-        return isParameter() && !m_fOrdinary;
+        return isParameter() && !f_fOrdinary;
         }
 
     /**
@@ -261,7 +263,7 @@ public class Parameter
     public TypeParameterConstant asTypeParameterConstant(MethodConstant constMethod)
         {
         assert isTypeParameter();
-        return getConstantPool().ensureRegisterConstant(constMethod, m_iParam, getName());
+        return getConstantPool().ensureRegisterConstant(constMethod, f_iParam, getName());
         }
 
     /**
@@ -278,7 +280,7 @@ public class Parameter
      */
     public boolean isConditionalReturn()
         {
-        return !isParameter() && !m_fOrdinary;
+        return !isParameter() && !f_fOrdinary;
         }
 
     /**
@@ -498,7 +500,7 @@ public class Parameter
     @Override
     public int hashCode()
         {
-        return m_iParam;
+        return f_iParam;
         }
 
     @Override
@@ -515,7 +517,7 @@ public class Parameter
             }
 
         Parameter that = (Parameter) obj;
-        return this.m_iParam == that.m_iParam && this.m_fOrdinary == that.m_fOrdinary
+        return this.f_iParam == that.f_iParam && this.f_fOrdinary == that.f_fOrdinary
                 && this.m_constType.equals(that.m_constType)
                 && Handy.equals(this.m_constName, that.m_constName)
                 && Handy.equals(this.m_constDefault, that.m_constDefault);
@@ -552,13 +554,13 @@ public class Parameter
     /**
      * The parameter index, if {@code (n >= 0)}; otherwise, {@code (-1 - return_value_index)}
      */
-    private int m_iParam;
+    private final int f_iParam;
 
     /**
      * True iff the parameter represents an "ordinary" parameter or return value, and not one of the
      * "formal type parameter" or the boolean "conditional" return value.
      */
-    private boolean m_fOrdinary;
+    private final boolean f_fOrdinary;
 
     /**
      * True if there will be a default value, even if it is not yet known.
