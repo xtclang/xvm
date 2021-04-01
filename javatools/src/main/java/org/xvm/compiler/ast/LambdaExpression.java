@@ -473,9 +473,9 @@ public class LambdaExpression
 
                     if (calculateTypeFitImpl(ctx, atypeTestP, atypeTestR).isFit())
                         {
+                        typeReqFn       = typeFunction;
                         atypeReqParams  = atypeTestP;
                         atypeReqReturns = atypeTestR;
-                        typeReqFn       = pool.buildFunctionType(atypeReqParams, atypeReqReturns);
                         break;
                         }
                     }
