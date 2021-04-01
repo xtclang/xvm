@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
-import org.xvm.compiler.Compiler;
-
 import org.xvm.util.Severity;
 
 
@@ -21,7 +19,7 @@ public class ErrorList
 
     public ErrorList(int cMaxErrors)
         {
-        m_cMaxErrors = cMaxErrors;
+        f_cMaxErrors = cMaxErrors;
         }
 
 
@@ -30,14 +28,14 @@ public class ErrorList
     @Override
     public ErrorListener branch()
         {
-        return new BranchedErrorListener(this, m_cMaxErrors);
+        return new BranchedErrorListener(this, f_cMaxErrors);
         }
 
     @Override
     public boolean log(ErrorInfo err)
         {
-        Object uid = err.genUID();
-        if (m_setUID.add(uid))
+        String uid = err.genUID();
+        if (f_setUID.add(uid))
             {
             // remember the highest severity encountered
             Severity severity = err.getSeverity();
@@ -47,7 +45,7 @@ public class ErrorList
                 }
 
             // accumulate all the errors in a list
-            m_list.add(err);
+            f_list.add(err);
 
             // keep track of the number of serious errors; quit the process once
             // that number grows too large
@@ -63,8 +61,8 @@ public class ErrorList
     @Override
     public boolean isAbortDesired()
         {
-        return m_severity == Severity.FATAL || m_cMaxErrors > 0 &&
-                m_severity.compareTo(Severity.ERROR) >= 0 && m_cErrors >= m_cMaxErrors;
+        return m_severity == Severity.FATAL || f_cMaxErrors > 0 &&
+                m_severity.compareTo(Severity.ERROR) >= 0 && m_cErrors >= f_cMaxErrors;
         }
 
     @Override
@@ -76,7 +74,7 @@ public class ErrorList
     @Override
     public boolean hasError(String sCode)
         {
-        return m_list.stream().anyMatch(info -> info.getCode().equals(sCode));
+        return f_list.stream().anyMatch(info -> info.getCode().equals(sCode));
         }
 
     @Override
@@ -111,7 +109,7 @@ public class ErrorList
      */
     public int getSeriousErrorMax()
         {
-        return m_cMaxErrors;
+        return f_cMaxErrors;
         }
 
     /**
@@ -119,7 +117,7 @@ public class ErrorList
      */
     public boolean hasErrors()
         {
-        return !m_list.isEmpty();
+        return !f_list.isEmpty();
         }
 
     /**
@@ -140,7 +138,7 @@ public class ErrorList
      */
     public List<ErrorInfo> getErrors()
         {
-        return m_list;
+        return f_list;
         }
 
     /**
@@ -148,7 +146,7 @@ public class ErrorList
      */
     public void clear()
         {
-        m_list.clear();
+        f_list.clear();
         m_cErrors  = 0;
         m_severity = Severity.NONE;
         }
@@ -176,7 +174,7 @@ public class ErrorList
 
         return "Count=" + m_cErrors
                 + ", Severity=" +  m_severity.name()
-                + ", Last=" + m_list.get(m_list.size()-1);
+                + ", Last=" + f_list.get(f_list.size()-1);
         }
 
 
@@ -230,7 +228,7 @@ public class ErrorList
     /**
      * Maximum number of serious errors to tolerate before abandoning the process.
      */
-    private int m_cMaxErrors;
+    private final int f_cMaxErrors;
 
     /**
      * The number of serious errors encountered.
@@ -245,10 +243,10 @@ public class ErrorList
     /**
      * The accumulated list of errors.
      */
-    private ArrayList<ErrorInfo> m_list = new ArrayList<>();
+    private final ArrayList<ErrorInfo> f_list = new ArrayList<>();
 
     /**
      * The UIDs of previously logged errors.
      */
-    private HashSet m_setUID = new HashSet();
+    private final HashSet<String> f_setUID = new HashSet<>();
     }

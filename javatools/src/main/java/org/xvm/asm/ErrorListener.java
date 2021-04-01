@@ -345,7 +345,7 @@ public interface ErrorListener
         /**
          * @return an ID that allows redundant errors to be filtered out
          */
-        public Object genUID()
+        public String genUID()
             {
             StringBuilder sb = new StringBuilder();
             sb.append(m_severity.ordinal())
