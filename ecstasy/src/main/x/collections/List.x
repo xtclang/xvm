@@ -1410,7 +1410,7 @@ interface List<Element>
      *
      * @return the sorted list (which may not be the list that was passed in)
      */
-    static <Element> List!<Element> sort(List!<Element> list, List<Element>.Orderer? order = Null)  // TODO GG why "!"
+    static <Element> List<Element> sort(List<Element> list, List<Element>.Orderer? order = Null)
         {
         order ?:= list.naturalOrderer ?: throw new TypeMismatch($"Element type {Element} is not Orderable");
 
