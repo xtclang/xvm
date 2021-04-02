@@ -30,6 +30,26 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
     // ----- DBMap API -----------------------------------------------------------------------------
 
     @Override
+    @RO Int size.get()
+        {
+        val           serverMap = serverDBMap;
+        Int           size      = serverMap.size;
+        ClientChange? change    = change_;
+        if (change != Null)
+            {
+            for (Key key : change.internalAdded.keys)
+                {
+                if (!serverMap.contains(key))
+                    {
+                    size++;
+                    }
+                }
+            size -= change.internalRemoved.size;
+            }
+        return size;
+        }
+
+    @Override
     conditional Value get(Key key)
         {
         ClientChange? change = change_;
