@@ -204,14 +204,9 @@ class OrderedMapSlice<Key extends Orderable, Value>
         }
 
     @Override
-    @Lazy public/private Collection<Entry> entries.calc()
+    @Lazy public/private Collection<Map<Key, Value>.Entry> entries.calc()
         {
-// TODO GG
-//Error: /Users/cameron/Development/xvm/ecstasy/src/main/x/collections/maps/OrderedMapSlice.x [209:16..209:48]
-//COMPILER-43: Type mismatch: Collection<OrderedMapSlice<OrderedMapSlice.Key, OrderedMapSlice.Value>.Entry> expected,
-//KeyEntries<OrderedMapSlice.Key, OrderedMapSlice.Value> found. ("new KeyEntries<Key, Value>(this)")
-// return new KeyEntries<Key, Value>(this);
-        return new KeyEntries<Key, Value>(this).as(Collection<Entry>);
+        return new KeyEntries<Key, Value>(this);
         }
 
     @Override
@@ -446,7 +441,6 @@ class OrderedMapSlice<Key extends Orderable, Value>
     @Override
     OrderedMap<Key, Value> reify()
         {
-// TODO GG try this without the <Key, Value> params ... should they be required (can't they be inferred?)
         return new SkiplistMap<Key, Value>(size, orderer).putAll(this);
         }
 
