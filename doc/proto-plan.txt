@@ -69,3 +69,18 @@ $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
 - is there a way to avoid and auto-generate "T x = this.x" in if/for/switch statements that
   would benefit from type inference; see AnnotationExpression.x#toString(), ImportStatement.x#toString()
+
+- when there are two invocations in the row or a new followed by an invocation, we could analyze the
+  expressions right-to-left and do the type inference if all those expression are "fluent" style
+  For example, consider OrderedMapSlice.reify() method:
+
+    @Override
+    OrderedMap<Key, Value> reify()
+        {
+        return new SkiplistMap<Key, Value>(size, orderer).putAll(this);
+        }
+
+  It would be quite nice if the compiler could infer the return type from the fluent method and
+  allowed as to skip the formal types:
+
+        return new SkiplistMap(size, orderer).putAll(this);
