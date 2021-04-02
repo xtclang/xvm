@@ -852,13 +852,22 @@ public class NewExpression
      */
     private void reportNotNewable(String sType, TypeInfo infoTarget, String sChild, ErrorListener errs)
         {
+        if (!infoTarget.isClass())
+            {
+            log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, infoTarget.getType().getValueString());
+            return;
+            }
+
         if (infoTarget.isExplicitlyAbstract())
             {
             log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_TYPE, infoTarget.getType().getValueString());
+            return;
             }
-        else if (infoTarget.isSingleton())
+
+        if (infoTarget.isSingleton())
             {
             log(errs, Severity.ERROR, Compiler.NEW_SINGLETON_TYPE, infoTarget.getType().getValueString());
+            return;
             }
 
         final int[] aiCount = new int[] {1}; // limit reporting to a small number of errors
