@@ -692,6 +692,7 @@ public class NameResolver
 
         if (m_typeMode != null)
             {
+            boolean fNameMissing = false;
             switch (component.getFormat())
                 {
                 case TYPEDEF:
@@ -701,6 +702,20 @@ public class NameResolver
                         m_node.log(m_errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED);
                         m_stage = Stage.ERROR;
                         return ResolutionResult.ERROR;
+                        }
+                    break;
+
+                case CLASS:
+                case INTERFACE:
+                case MIXIN:
+                    // a virtual child type of a formal type's constraint is allowed in type mode
+                    if (((ClassStructure) component).isVirtualChild())
+                        {
+                        m_typeMode = TypeMode.TYPE;
+                        }
+                    else
+                        {
+                        fNameMissing = true;
                         }
                     break;
 
@@ -717,15 +732,25 @@ public class NameResolver
                             }
 
                         m_typeMode = TypeMode.FORMAL_TYPE;
-                        break;
                         }
-                    // fall through
+                    else
+                        {
+                        fNameMissing = true;
+                        }
+                    break;
+
                 default:
-                    // nothing else is allowed in type mode (can't switch back to a value mode, i.e.
-                    // an "identity mode")
-                    m_node.log(m_errs, Severity.ERROR, Compiler.NAME_MISSING, component.getName(), m_constant);
-                    m_stage = Stage.ERROR;
-                    return ResolutionResult.ERROR;
+                    // nothing else is allowed in type mode (can't switch back to a value mode,
+                    // i.e. an "identity mode")
+                    fNameMissing = true;
+                    break;
+                }
+
+            if (fNameMissing)
+                {
+                m_node.log(m_errs, Severity.ERROR, Compiler.NAME_MISSING, component.getName(), m_constant);
+                m_stage = Stage.ERROR;
+                return ResolutionResult.ERROR;
                 }
             }
         else if (m_fTypeGoal)

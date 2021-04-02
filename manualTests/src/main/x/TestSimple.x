@@ -4,31 +4,17 @@ module TestSimple.test.org
 
     void run()
         {
-        Map<Int, String> map = new Test().calc();
-        if (String s := map.get(1))
-            {
-            console.println(s);
-            }
-        }
+        import ecstasy.collections.SkiplistMap;
 
-    class Test()
-        {
-        Map<Int, String> calc()
-            {
-            return new Map()
-                {
-                @Override
-                conditional Value get(Key key)
-                    {
-                    return True, "Hello";
-                    }
+        Map<Int, String> map1 = new SkiplistMap();
 
-                @Override
-                @Lazy Set<Int> keys.calc()
-                    {
-                    TODO
-                    }
-                };
-            }
+        map1.put(1, "a");
+        map1.put(2, "b");
+
+        Map<Int, String> map2 = new SkiplistMap(2, (k1, k2) -> k2 <=> k1);
+
+        map2.putAll(map1);
+
+        console.println(map1 == map2);
         }
     }

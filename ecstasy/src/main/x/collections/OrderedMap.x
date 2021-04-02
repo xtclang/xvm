@@ -117,17 +117,12 @@ interface OrderedMap<Key extends Orderable, Value>
             }
 
         // compare all of the entries in the two ordered maps, in the order that they appear
-// TODO GG
-//        using (Iterator<CompileType.Entry> iter1 = map1.entries.iterator(),
-//               Iterator<CompileType.Entry> iter2 = map2.entries.iterator())
-        using (Iterator<Map<CompileType.Key, CompileType.Value>.Entry> iter1 = map1.entries.iterator(),
-               Iterator<Map<CompileType.Key, CompileType.Value>.Entry> iter2 = map2.entries.iterator())
+        using (Iterator<CompileType.Entry> iter1 = map1.entries.iterator(),
+               Iterator<CompileType.Entry> iter2 = map2.entries.iterator())
             {
-//            while (CompileType.Entry entry1 := iter1.next())
-            while (Map<CompileType.Key, CompileType.Value>.Entry entry1 := iter1.next())
+            while (CompileType.Entry entry1 := iter1.next())
                 {
-//                if (CompileType.Entry entry2 := iter2.next())
-                if (Map<CompileType.Key, CompileType.Value>.Entry entry2 := iter2.next())
+                if (CompileType.Entry entry2 := iter2.next())
                     {
                     if (entry1 != entry2)
                         {
