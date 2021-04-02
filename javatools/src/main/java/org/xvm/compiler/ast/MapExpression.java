@@ -34,8 +34,11 @@ public class MapExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public MapExpression(TypeExpression type, List<Expression> keys, List<Expression> values, long lEndPos)
+    public MapExpression(TypeExpression type, List<Expression> keys, List<Expression> values,
+                         long lEndPos)
         {
+        assert type != null;
+
         this.type    = type;
         this.keys    = keys;
         this.values  = values;
@@ -69,7 +72,7 @@ public class MapExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        TypeConstant typeExplicit = type == null ? null : type.ensureTypeConstant(ctx);
+        TypeConstant typeExplicit = type.ensureTypeConstant(ctx);
         TypeConstant typeKey      = null;
         TypeConstant typeVal      = null;
         if (typeExplicit != null)
@@ -105,7 +108,6 @@ public class MapExpression
                     aTypes[i] = keys.get(i).getImplicitType(ctx);
                     }
                 typeKey = TypeCollector.inferFrom(aTypes, pool);
-
                 }
 
             if (typeVal == null)
@@ -126,6 +128,52 @@ public class MapExpression
             }
 
         return typeMap;
+        }
+
+    @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        CheckEntries:
+        if (typeRequired != null)
+            {
+            TypeConstant typeMap = pool().typeMap();
+
+            if (!typeRequired.isA(typeMap) || !type.testFit(ctx, typeMap.getType(), null).isFit())
+                {
+                break CheckEntries;
+                }
+
+            TypeConstant typeKey = typeRequired.resolveGenericType("Key");
+            TypeConstant typeVal = typeRequired.resolveGenericType("Value");
+            if (typeKey == null || typeVal == null)
+                {
+                break CheckEntries;
+                }
+
+            TypeFit fit = TypeFit.Fit;
+            for (Expression key : keys)
+                {
+                TypeFit fitKey = key.testFit(ctx, typeKey, null);
+                if (!fitKey.isFit())
+                    {
+                    break CheckEntries;
+                    }
+                fit = fit.combineWith(fitKey);
+                }
+
+            for (Expression val : values)
+                {
+                TypeFit fitVal = val.testFit(ctx, typeVal, null);
+                if (!fitVal.isFit())
+                    {
+                    break CheckEntries;
+                    }
+                fit = fit.combineWith(fitVal);
+                }
+            return fit;
+            }
+
+        return super.testFit(ctx, typeRequired, errs);
         }
 
     @Override
@@ -154,34 +202,31 @@ public class MapExpression
 
         // determine type from the explicitly stated type
         TypeExpression exprOldType = type;
-        if (exprOldType != null)
+        TypeConstant   typeMapType = pool.typeMap().getType();
+        TypeExpression exprNewType = (TypeExpression) exprOldType.validate(ctx, typeMapType, errs);
+        if (exprNewType == null)
             {
-            TypeConstant   typeMapType = pool.typeMap().getType();
-            TypeExpression exprNewType = (TypeExpression) exprOldType.validate(ctx, typeMapType, errs);
-            if (exprNewType == null)
+            fit        = TypeFit.NoFit;
+            fConstKeys = false;
+            }
+        else
+            {
+            if (exprNewType != exprOldType)
                 {
-                fit        = TypeFit.NoFit;
-                fConstKeys = false;
+                type = exprNewType;
                 }
-            else
+            typeActual = exprNewType.ensureTypeConstant(ctx).resolveAutoNarrowingBase();
+
+            TypeConstant typeKeyTemp = typeActual.resolveGenericType("Key");
+            if (typeKeyTemp != null)
                 {
-                if (exprNewType != exprOldType)
-                    {
-                    type = exprNewType;
-                    }
-                typeActual = exprNewType.ensureTypeConstant(ctx).resolveAutoNarrowingBase();
+                typeKey = typeKeyTemp;
+                }
 
-                TypeConstant typeKeyTemp = typeActual.resolveGenericType("Key");
-                if (typeKeyTemp != null)
-                    {
-                    typeKey = typeKeyTemp;
-                    }
-
-                TypeConstant typeValTemp = typeActual.resolveGenericType("Value");
-                if (typeValTemp != null)
-                    {
-                    typeVal = typeValTemp;
-                    }
+            TypeConstant typeValTemp = typeActual.resolveGenericType("Value");
+            if (typeValTemp != null)
+                {
+                typeVal = typeValTemp;
                 }
             }
 
