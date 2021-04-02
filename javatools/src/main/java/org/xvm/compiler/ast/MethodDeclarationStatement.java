@@ -668,16 +668,22 @@ public class MethodDeclarationStatement
             }
 
         // validate accessibility of all generic types
-        ClassStructure clz = method.getContainingClass(false);
+        // Note: most commonly, the top level (not anonymous) class knows what generic types are
+        //       visible; in some scenarios, however, the anonymous parent class knows better
+        ClassStructure clzTop = method.getContainingClass(false);
 
-        org.xvm.asm.Parameter[] aParams = method.getReturnArray();
-        for (org.xvm.asm.Parameter param : aParams)
+        for (org.xvm.asm.Parameter param : method.getParamArray())
             {
-            String sInvalid = clz.checkGenericTypeVisibility(param.getType());
+            String sInvalid = clzTop.checkGenericTypeVisibility(param.getType());
             if (sInvalid != null)
                 {
-                log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, sInvalid);
-                return;
+                ClassStructure clzParent = method.getContainingClass(true);
+                if (clzParent == clzTop ||
+                        clzParent.checkGenericTypeVisibility(param.getType()) != null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, sInvalid);
+                    return;
+                    }
                 }
             }
 
@@ -686,11 +692,16 @@ public class MethodDeclarationStatement
             {
             for (org.xvm.asm.Parameter param : aReturns)
                 {
-                String sInvalid = clz.checkGenericTypeVisibility(param.getType());
+                String sInvalid = clzTop.checkGenericTypeVisibility(param.getType());
                 if (sInvalid != null)
                     {
-                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, sInvalid);
-                    return;
+                    ClassStructure clzParent = method.getContainingClass(true);
+                    if (clzParent == clzTop ||
+                            clzParent.checkGenericTypeVisibility(param.getType()) != null)
+                        {
+                        log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, sInvalid);
+                        return;
+                        }
                     }
                 }
 

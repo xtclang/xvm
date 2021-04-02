@@ -4,23 +4,31 @@ module TestSimple.test.org
 
     void run()
         {
-        Map<Int, String> m1 = new HashMap();
-        m1.put(1, "a");
-        m1.put(2, "b");
-        console.println(m1);
-
-        Map<Int, Test> m2 = new HashMap();
-        m2.put(1, new Test("a"));
-        m2.put(2, new Test("b"));
-        console.println(m2);
+        Map<Int, String> map = new Test().calc();
+        if (String s := map.get(1))
+            {
+            console.println(s);
+            }
         }
 
-    class Test(String s)
+    class Test()
         {
-        @Override
-        String toString()
+        Map<Int, String> calc()
             {
-            return $"Test:{s}";
+            return new Map()
+                {
+                @Override
+                conditional Value get(Key key)
+                    {
+                    return True, "Hello";
+                    }
+
+                @Override
+                @Lazy Set<Int> keys.calc()
+                    {
+                    TODO
+                    }
+                };
             }
         }
     }

@@ -408,7 +408,6 @@ service Client<Schema extends RootSchema>
             return new Map()
                 {
                 @Override
-                // TODO GG this doesn't work: conditional Value get(Key key)
                 conditional DBObject get(String key)
                     {
                     if (DBObjectInfo info := infos.get(key))
