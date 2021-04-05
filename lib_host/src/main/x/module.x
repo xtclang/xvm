@@ -366,7 +366,7 @@ module host.xtclang.org
                     break;
 
                 case Random:
-                    if (name == "random")
+                    if (name == "random" || name == "rnd")
                         {
                         import ecstasy.annotations.InjectedRef;
 
