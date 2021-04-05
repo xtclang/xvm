@@ -234,16 +234,14 @@ module TestLiterals
         FileStore fs = FileStore:/resources/;
         console.println("fs=" + fs);
 
-        // TODO BUGBUG CP StatementExpression requires a "return"
-        console.println($"\n(recursive)\n{{fs.emitListing($); return;}}");
-        console.println($"\n(non-recursive)\n{{fs.emitListing($, False); return;}}");
+        console.println($"\n(recursive)\n{{fs.emitListing($);}}");
+        console.println($"\n(non-recursive)\n{{fs.emitListing($, False);}}");
 
         File file = File:./resources/more/msgs_EN.txt;
         console.println($"File:./resources/more/msgs_EN.txt={file}");
 
         Directory dir = Directory:./resources/;
-        // TODO BUGBUG CP (??) - output didn't look like it recursed into "./more/"
-        console.println($"Directory:./resources/=(recursive)\n{{dir.emitListing($); return;}}");
+        console.println($"Directory:./resources/=(recursive)\n{{dir.emitListing($);}}");
         }
 
     void testDates()

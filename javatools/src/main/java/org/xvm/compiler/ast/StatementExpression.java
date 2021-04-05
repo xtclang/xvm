@@ -189,7 +189,7 @@ public class StatementExpression
             fit = calcFitMulti(ctx, aActualTypes, atypeRequired);
             }
 
-        // clean up temprary stuff
+        // clean up temporary stuff
         m_atypeRequired = null;
         m_collector     = null;
         blockTempOld.discard(true);
@@ -250,7 +250,8 @@ public class StatementExpression
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         m_aLVal = aLVal;
-        if (body.completes(ctx, true, code, errs))
+        if (body.completes(ctx, true, code, errs) &&
+                m_atypeRequired != null && m_atypeRequired.length > 0)
             {
             errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
                     getEndPosition(), getEndPosition());
@@ -261,9 +262,8 @@ public class StatementExpression
     // ----- compilation helpers -------------------------------------------------------------------
 
     /**
-     * TODO
-     *
-     * @return
+     * @return the array of Assignable object representing the L-Value(s) emitted by this
+     *         expression
      */
     Assignable[] getAssignables()
         {

@@ -95,7 +95,7 @@ module TestMaps
             }
 
         // same thing, but using "$" syntax
-        console.println($"keys:{{L: for (val v : map.keys) {$.addAll($"\n[{L.count}]={v}");} return;}}");
+        console.println($"keys:{{L: for (val v : map.keys) {$.addAll($"\n[{L.count}]={v}");}}}");
 
         console.println("values:");
         loop: for (String value : map.values)
