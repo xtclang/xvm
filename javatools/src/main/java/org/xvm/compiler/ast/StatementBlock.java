@@ -328,7 +328,8 @@ public class StatementBlock
 
         if (fCompletes)
             {
-            if (code.getMethodStructure().getReturns().isEmpty())
+            TypeConstant[] atypeReturn = code.getMethodStructure().getReturnTypes();
+            if (atypeReturn.length == 0 || isVoid(atypeReturn))
                 {
                 // a void method has an implicit "return;" at the end of it
                 code.add(new Return_0());

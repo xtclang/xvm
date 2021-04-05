@@ -29,6 +29,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -1670,6 +1671,36 @@ public abstract class AstNode
                 }
             }
         return fit;
+        }
+
+    /**
+     * @return true iff all the specified types are {@link PendingTypeConstant}
+     */
+    protected static boolean isPending(TypeConstant... atype)
+        {
+        for (TypeConstant type : atype)
+            {
+            if (!(type instanceof PendingTypeConstant))
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
+    /**
+     * @return true iff all the specified types are equal to the "void" tuple
+     */
+    protected boolean isVoid(TypeConstant... atype)
+        {
+        for (TypeConstant type : atype)
+            {
+            if (!type.equals(pool().typeTuple0()))
+                {
+                return false;
+                }
+            }
+        return true;
         }
 
 

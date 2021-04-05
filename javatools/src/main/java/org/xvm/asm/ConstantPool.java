@@ -767,7 +767,7 @@ public class ConstantPool
      *
      * @return a constant representing the tuple value
      */
-    public ArrayConstant ensureTupleConstant(TypeConstant constType, Constant[] aconst)
+    public ArrayConstant ensureTupleConstant(TypeConstant constType, Constant... aconst)
         {
         checkElementsNonNull(aconst);
 

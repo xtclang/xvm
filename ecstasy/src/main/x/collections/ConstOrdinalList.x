@@ -390,7 +390,7 @@ const ConstOrdinalList
             assert:arg n >= 0;
 
             // count incidence of values (outside of runs)
-            map.process(n, e -> {e.value = e.exists ? e.value + 1 : 1; return 0;} ); // TODO GG would be nice to not have to return an explicit value from a void lambda .. ideas?
+            map.process(n, e -> {e.value = e.exists ? e.value + 1 : 1;});
 
             // determine highest magnitude value
             if (n > highest)

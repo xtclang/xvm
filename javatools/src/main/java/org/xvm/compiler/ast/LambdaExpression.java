@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -420,8 +421,15 @@ public class LambdaExpression
                 return TypeFit.NoFit;
                 }
 
+            int cReturns = atypeReturns.length;
+            if (cReturns == 0 && isPending(atypeReqReturns))
+                {
+                // the lambda thinks that it's void and the caller didn't have an opinion
+                return TypeFit.Fit;
+                }
+
             int cReqReturns = atypeReqReturns.length;
-            if (cReqReturns <= atypeReturns.length)
+            if (cReqReturns <= cReturns)
                 {
                 for (int i = 0; i < cReqReturns; i++)
                     {
@@ -553,8 +561,18 @@ public class LambdaExpression
             fCond     = false;
             if (cReqReturns > 0)
                 {
-                log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
-                fit = TypeFit.NoFit;
+                if (isPending(atypeReqReturns))
+                    {
+                    // the lambda thinks that it's void and the caller didn't have an opinion;
+                    // make it void indeed
+                    atypeRets = new TypeConstant[cReqReturns];
+                    Arrays.fill(atypeRets, pool.typeTuple0());
+                    }
+                else
+                    {
+                    log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
+                    fit = TypeFit.NoFit;
+                    }
                 }
             }
         else
