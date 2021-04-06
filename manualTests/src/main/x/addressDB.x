@@ -1,27 +1,27 @@
 module AddressBookDB
-        incorporates db.Database
+        incorporates oodb.Database
     {
-    package db import oodb.xtclang.org;
+    package oodb import oodb.xtclang.org;
 
     interface AddressBookSchema
-            extends db.RootSchema
+            extends oodb.RootSchema
         {
         @RO Contacts     contacts;
-        @RO db.DBCounter requestCount;
+        @RO oodb.DBCounter requestCount;
         }
 
     /**
      * This is the interface that will get injected.
      */
-    typedef (db.Connection<AddressBookSchema> + AddressBookSchema) Connection;
+    typedef (oodb.Connection<AddressBookSchema> + AddressBookSchema) Connection;
 
     /**
      * This is the interface that will come back from createTransaction.
      */
-    typedef (db.Transaction<AddressBookSchema> + AddressBookSchema) Transaction;
+    typedef (oodb.Transaction<AddressBookSchema> + AddressBookSchema) Transaction;
 
     mixin Contacts
-            into db.DBMap<String, Contact>
+            into oodb.DBMap<String, Contact>
         {
         void addContact(Contact contact)
             {
@@ -49,7 +49,7 @@ module AddressBookDB
 
     const Contact(String firstName, String lastName, Email[] emails = [], Phone[] phones = [])
         {
-        // @db.PKey
+        // @oodb.PKey
         String rolodexName.get()
             {
             return $"{lastName}, {firstName}";
