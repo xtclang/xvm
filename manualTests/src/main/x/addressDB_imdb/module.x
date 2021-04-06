@@ -1,19 +1,23 @@
 module AddressBookDB_imdb
+        incorporates imdb_.CatalogMetadata<AddressBookSchema_>
     {
-    package db import oodb.xtclang.org;
-    package imdb import imdb;
-    package AddressBookDB import AddressBookDB;
+    package oodb_ import oodb.xtclang.org;
+    package imdb_ import imdb.xtclang.org;
+    package AddressBookDB_ import AddressBookDB;
 
-    import AddressBookDB.AddressBookSchema;
+    import oodb_.DBUser as DBUser_;
+    import AddressBookDB_.AddressBookSchema as AddressBookSchema_;
 
-
-    // ----- Injection support ---------------------------------------------------------------------
-
-    typedef (db.Connection<AddressBookSchema> + AddressBookSchema) Connection;
-
-    Connection createConnection()
+    @Override
+    @RO Module schemaModule.get()
         {
-        Connection connection = ServerAddressBookSchema.createConnection();
-        return &connection.maskAs<Connection>(Connection);
+        assert Module m := AddressBookDB_.isModuleImport();
+        return m;
+        }
+
+    @Override
+    (oodb_.Connection<AddressBookSchema_> + AddressBookSchema_) createConnection()
+        {
+        return ServerAddressBookSchema.createConnection();
         }
     }

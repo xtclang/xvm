@@ -9,8 +9,11 @@ import ecstasy.reflect.PropertyTemplate;
 import ecstasy.reflect.TypeParameter;
 import ecstasy.reflect.TypeTemplate;
 
+import oodb.Connection;
 import oodb.DBObject;
 import oodb.DBObject.DBCategory;
+
+import imdb.CatalogMetadata;
 
 /**
  * Host for imdb-based db module.
@@ -238,12 +241,20 @@ class ImdbHost
         return template.implicitName ?: (appName + '.' + template.displayName);
         }
 
-    @Override
-    oodb.Connection ensureConnection()
+    /**
+     * Cached CatalogMetadata instance.
+     */
+    @Lazy CatalogMetadata meta.calc()
         {
-        private @Lazy oodb.Connection connection.calc()
+        return dbContainer.innerTypeSystem.primaryModule.as(CatalogMetadata);
+        }
+
+    @Override
+    Connection ensureConnection()
+        {
+        private @Lazy Connection connection.calc()
             {
-            return dbContainer.invoke("createConnection", Tuple:())[0].as(oodb.Connection);
+            return meta.createConnection();
             }
 
         return connection;

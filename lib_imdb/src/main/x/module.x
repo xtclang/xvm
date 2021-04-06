@@ -1,4 +1,4 @@
-module imdb
+module imdb.xtclang.org
     {
     package oodb import oodb.xtclang.org;
 

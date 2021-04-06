@@ -1,6 +1,7 @@
 module host.xtclang.org
     {
     package oodb   import oodb.xtclang.org;
+    package imdb   import imdb.xtclang.org;
     package jsondb import jsondb.xtclang.org;
 
     import ecstasy.io.IOException;

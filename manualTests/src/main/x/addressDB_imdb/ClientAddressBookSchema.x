@@ -1,19 +1,21 @@
+import AddressBookDB_.AddressBookSchema as AddressBookSchema_;
+
 class ClientAddressBookSchema
-        extends imdb.ClientRootSchema
-        implements AddressBookDB.AddressBookSchema
-        implements db.Connection<AddressBookDB.AddressBookSchema>
+        extends imdb_.ClientRootSchema
+        implements AddressBookSchema_
+        implements oodb_.Connection<AddressBookSchema_>
     {
     construct()
         {
-        construct imdb.ClientRootSchema(ServerAddressBookSchema);
+        construct imdb_.ClientRootSchema(ServerAddressBookSchema);
         }
 
     // schema properties
-    @Override @Lazy AddressBookDB.Contacts contacts.calc()
+    @Override @Lazy AddressBookDB_.Contacts contacts.calc()
         {
         return new ClientContacts(ServerAddressBookSchema.contacts);
         }
-    @Override @Lazy AddressBookDB.db.DBCounter requestCount.calc()
+    @Override @Lazy AddressBookDB_.db.DBCounter requestCount.calc()
         {
         return new ClientDBCounter(ServerAddressBookSchema.requestCount);
         }
@@ -21,20 +23,20 @@ class ClientAddressBookSchema
 
     // ClientDB* classes
     class ClientContacts
-            extends imdb.ClientDBMap<String, AddressBookDB.Contact>
-            incorporates AddressBookDB.Contacts
+            extends imdb_.ClientDBMap<String, AddressBookDB_.Contact>
+            incorporates AddressBookDB_.Contacts
         {
         construct(ServerAddressBookSchema.ServerContacts dbMap)
             {
-            construct imdb.ClientDBMap(dbMap, checkAutoCommit);
+            construct imdb_.ClientDBMap(dbMap, checkAutoCommit);
             }
 
         // ----- mixin methods ---------------------------------------------------------------------
 
         @Override
-        void addContact(AddressBookDB.Contact contact)
+        void addContact(AddressBookDB_.Contact contact)
             {
-            (Boolean autoCommit, db.Transaction tx) = ensureTransaction();
+            (Boolean autoCommit, oodb_.Transaction tx) = ensureTransaction();
 
             super(contact);
 
@@ -45,9 +47,9 @@ class ClientAddressBookSchema
             }
 
         @Override
-        void addPhone(String name, AddressBookDB.Phone phone)
+        void addPhone(String name, AddressBookDB_.Phone phone)
             {
-            (Boolean autoCommit, db.Transaction tx) = ensureTransaction();
+            (Boolean autoCommit, oodb_.Transaction tx) = ensureTransaction();
 
             super(name, phone);
 
@@ -64,7 +66,7 @@ class ClientAddressBookSchema
             {
             if (fn == "addPhone" && when == Null)
                 {
-                assert args.is(Tuple<String, AddressBookDB.Phone>);
+                assert args.is(Tuple<String, AddressBookDB_.Phone>);
 
                 return addPhone(args[0], args[1]);
                 }
@@ -77,7 +79,7 @@ class ClientAddressBookSchema
             construct()
                 {
                 // TODO CP - would be nice if it read "construct super();"
-                construct imdb.ClientDBMap.ClientChange();
+                construct imdb_.ClientDBMap.ClientChange();
                 }
             finally
                 {
@@ -88,11 +90,11 @@ class ClientAddressBookSchema
             }
         }
     class ClientDBCounter
-            extends imdb.ClientDBCounter
+            extends imdb_.ClientDBCounter
         {
         construct(ServerAddressBookSchema.ServerDBCounter dbCounter)
             {
-            construct imdb.ClientDBCounter(dbCounter, checkAutoCommit);
+            construct imdb_.ClientDBCounter(dbCounter, checkAutoCommit);
             }
         }
 
@@ -100,7 +102,7 @@ class ClientAddressBookSchema
     // ----- internal API support ------------------------------------------------------------------
 
     @Override
-    @Unassigned db.DBUser dbUser;
+    @Unassigned oodb_.DBUser dbUser;
 
     @Override
     public/protected ClientTransaction? transaction;
@@ -108,10 +110,10 @@ class ClientAddressBookSchema
     @Override
     ClientTransaction createTransaction(
                 Duration? timeout = Null, String? name = Null,
-                UInt? id = Null, db.DBTransaction.Priority priority = Normal,
+                UInt? id = Null, oodb_.DBTransaction.Priority priority = Normal,
                 Int retryCount = 0, Boolean readOnly = False)
         {
-        import db.Transaction.TxInfo;
+        import oodb_.Transaction.TxInfo;
         TxInfo txInfo = new TxInfo(timeout, name, id, priority, retryCount, readOnly);
 
         ClientTransaction tx = new ClientTransaction(txInfo);
@@ -119,7 +121,7 @@ class ClientAddressBookSchema
         return tx;
         }
 
-    protected (Boolean, db.Transaction) ensureTransaction()
+    protected (Boolean, oodb_.Transaction) ensureTransaction()
         {
         ClientTransaction? tx = transaction;
         return tx == Null
@@ -133,12 +135,12 @@ class ClientAddressBookSchema
         }
 
     class ClientTransaction
-            extends imdb.ClientTransaction<AddressBookDB.AddressBookSchema>
-            implements AddressBookDB.AddressBookSchema
+            extends imdb_.ClientTransaction<AddressBookSchema_>
+            implements AddressBookSchema_
         {
-        construct(db.Transaction.TxInfo txInfo)
+        construct(oodb_.Transaction.TxInfo txInfo)
             {
-            construct imdb.ClientTransaction(
+            construct imdb_.ClientTransaction(
                 ServerAddressBookSchema,
                 ServerAddressBookSchema.createDBTransaction(),
                 txInfo);
@@ -146,12 +148,12 @@ class ClientAddressBookSchema
 
         // schema properties
         @Override
-        AddressBookDB.Contacts contacts.get()
+        AddressBookDB_.Contacts contacts.get()
             {
             return this.ClientAddressBookSchema.contacts;
             }
         @Override
-        AddressBookDB.db.DBCounter requestCount.get()
+        AddressBookDB_.db.DBCounter requestCount.get()
             {
             return this.ClientAddressBookSchema.requestCount;
             }
@@ -160,13 +162,13 @@ class ClientAddressBookSchema
         // transaction API
 
         @Override
-        db.SystemSchema sys.get()
+        oodb_.SystemSchema sys.get()
             {
             TODO
             }
 
         @Override
-        (db.Connection<AddressBookDB.AddressBookSchema> + AddressBookDB.AddressBookSchema) connection.get()
+        (oodb_.Connection<AddressBookSchema_> + AddressBookSchema_) connection.get()
             {
             return this.ClientAddressBookSchema;
             }

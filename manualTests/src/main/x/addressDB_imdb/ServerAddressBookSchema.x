@@ -1,14 +1,14 @@
-import AddressBookDB.AddressBookSchema;
+import AddressBookDB_.AddressBookSchema as AddressBookSchema_;
 
 /**
  * Singleton schema.
  */
 static service ServerAddressBookSchema
-        extends imdb.ServerRootSchema
+        extends imdb_.ServerRootSchema
     {
     construct()
         {
-        construct imdb.ServerRootSchema();
+        construct imdb_.ServerRootSchema();
         }
     finally
         {
@@ -32,12 +32,12 @@ static service ServerAddressBookSchema
 
     // server classes for DBObjects
     class ServerContacts
-            extends imdb.ServerDBMap<String, AddressBookDB.Contact>
-            incorporates AddressBookDB.Contacts
+            extends imdb_.ServerDBMap<String, AddressBookDB_.Contact>
+            incorporates AddressBookDB_.Contacts
         {
         construct(String name)
             {
-            construct imdb.ServerDBMap(this.ServerAddressBookSchema, name);
+            construct imdb_.ServerDBMap(this.ServerAddressBookSchema, name);
             }
 
         @Override
@@ -48,11 +48,11 @@ static service ServerAddressBookSchema
         }
 
     class ServerDBCounter
-            extends imdb.ServerDBCounter
+            extends imdb_.ServerDBCounter
         {
         construct(String name)
             {
-            construct imdb.ServerDBCounter(this.ServerAddressBookSchema, name);
+            construct imdb_.ServerDBCounter(this.ServerAddressBookSchema, name);
             }
         }
 
@@ -61,12 +61,12 @@ static service ServerAddressBookSchema
 
     @Inject Clock clock;
 
-    (db.Connection<AddressBookSchema> + AddressBookSchema) createConnection()
+    (oodb_.Connection<AddressBookSchema_> + AddressBookSchema_) createConnection()
         {
         return new ClientAddressBookSchema();
         }
 
-    db.DBTransaction createDBTransaction()
+    oodb_.DBTransaction createDBTransaction()
         {
         return new ServerTransaction();
         }
@@ -75,7 +75,7 @@ static service ServerAddressBookSchema
      * TODO how should this be exposed?
      */
     class ServerTransaction
-            implements db.DBTransaction<ServerAddressBookSchema>
+            implements oodb_.DBTransaction<ServerAddressBookSchema>
         {
         construct()
             {
@@ -110,7 +110,7 @@ static service ServerAddressBookSchema
             }
 
         @Override
-        void addCondition(db.Condition condition)
+        void addCondition(oodb_.Condition condition)
             {
             TODO
             }
