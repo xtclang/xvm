@@ -78,7 +78,7 @@ service Client<Schema extends RootSchema>
     // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * The DBUser represented by this Client service.
+     * The JSON db catalog, representing the database on disk.
      */
     public/private Catalog<Schema> catalog;
 
