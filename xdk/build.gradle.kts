@@ -2,29 +2,31 @@
  * Build files for the XDK.
  */
 
-val ecstasy      = project(":ecstasy")
-val javatools    = project(":javatools")
-val bridge       = project(":javatools_bridge")
-val json         = project(":lib_json");
-val oodb         = project(":lib_oodb");
-val imdb         = project(":lib_imdb");
-val jsondb       = project(":lib_jsondb");
-val host         = project(":lib_host");
-val web          = project(":lib_web");
+val ecstasy       = project(":ecstasy")
+val javatools     = project(":javatools")
+val bridge        = project(":javatools_bridge")
+val aggregate     = project(":lib_aggregate");
+val json          = project(":lib_json");
+val oodb          = project(":lib_oodb");
+val imdb          = project(":lib_imdb");
+val jsondb        = project(":lib_jsondb");
+val host          = project(":lib_host");
+val web           = project(":lib_web");
 
-val ecstasyMain  = "${ecstasy.projectDir}/src/main"
-val bridgeMain   = "${bridge.projectDir}/src/main"
-val javatoolsJar = "${javatools.buildDir}/libs/javatools.jar"
-val jsonMain     = "${json.projectDir}/src/main";
-val oodbMain     = "${oodb.projectDir}/src/main";
-val imdbMain     = "${imdb.projectDir}/src/main";
-val jsondbMain   = "${jsondb.projectDir}/src/main";
-val hostMain     = "${host.projectDir}/src/main";
-val webMain      = "${web.projectDir}/src/main";
+val ecstasyMain   = "${ecstasy.projectDir}/src/main"
+val bridgeMain    = "${bridge.projectDir}/src/main"
+val javatoolsJar  = "${javatools.buildDir}/libs/javatools.jar"
+val aggregateMain = "${aggregate.projectDir}/src/main";
+val jsonMain      = "${json.projectDir}/src/main";
+val oodbMain      = "${oodb.projectDir}/src/main";
+val imdbMain      = "${imdb.projectDir}/src/main";
+val jsondbMain    = "${jsondb.projectDir}/src/main";
+val hostMain      = "${host.projectDir}/src/main";
+val webMain       = "${web.projectDir}/src/main";
 
-val libDir       = "$buildDir/xdk/lib"
-val coreLib      = "$libDir/ecstasy.xtc"
-val bridgeLib    = "$buildDir/xdk/javatools/javatools_bridge.xtc"
+val libDir        = "$buildDir/xdk/lib"
+val coreLib       = "$libDir/ecstasy.xtc"
+val bridgeLib     = "$buildDir/xdk/javatools/javatools_bridge.xtc"
 
 val version      = "0.3-alpha"
 
@@ -77,6 +79,22 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
            renameTo(file("$bridgeLib"))
         println("Finished task: compileEcstasy")
     }
+}
+
+val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
+    group       = "Build"
+    description = "Build aggregate.xtc module"
+
+    shouldRunAfter(compileEcstasy)
+
+    classpath(javatoolsJar)
+    args("-verbose",
+            "-o", "$libDir",
+            "-version", "$version",
+            "-L", "$coreLib",
+            "-L", "$bridgeLib",
+            "$aggregateMain/x/module.x")
+    main = "org.xvm.tool.Compiler"
 }
 
 val compileJson = tasks.register<JavaExec>("compileJson") {
@@ -203,6 +221,15 @@ tasks.register("build") {
     } else {
         dependsOn(copyJavatools)
     }
+
+    // compile aggregate.xtclang.org
+    val aggregateSrc = fileTree(aggregateMain).getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val aggregateDest = file("$libDir/aggregate.xtc").lastModified()
+
+    if (aggregateSrc > aggregateDest) {
+        dependsOn(compileAggregate)
+        }
 
     // compile JSON
     val jsonSrc = fileTree(jsonMain).getFiles().stream().
