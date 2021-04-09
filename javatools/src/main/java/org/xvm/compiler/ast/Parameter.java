@@ -54,7 +54,7 @@ public class Parameter
         {
         return type == null
                 ? name.getStartPosition()
-                : type.getStartPosition();
+                : Math.min(type.getStartPosition(), name.getStartPosition());
         }
 
     @Override
@@ -63,7 +63,7 @@ public class Parameter
         return value == null
                 ? name == null
                         ? type.getEndPosition()
-                        : name.getEndPosition()
+                        : Math.max(type.getEndPosition(), name.getEndPosition())
                 : value.getEndPosition();
         }
 
