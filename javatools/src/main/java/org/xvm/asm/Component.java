@@ -3406,13 +3406,25 @@ public abstract class Component
                 }
 
             Contribution that = (Contribution) obj;
-            return this.m_composition == that.m_composition
+            if (this.m_composition == that.m_composition
                     && Handy.equals(this.m_constModule, that.m_constModule)
                     && Handy.equals(this.m_typeContrib, that.m_typeContrib)
                     && Handy.equals(this.m_constProp, that.m_constProp)
-                    && Handy.equals(this.m_annotation, that.m_annotation)
-                    && Handy.equals(this.m_mapParams.keySet().toArray(), that.m_mapParams.keySet().toArray())
-                    && Handy.equals(this.m_mapParams.values().toArray(), that.m_mapParams.values().toArray());
+                    && Handy.equals(this.m_annotation, that.m_annotation))
+                {
+                ListMap<StringConstant, TypeConstant> mapThis = this.m_mapParams;
+                ListMap<StringConstant, TypeConstant> mapThat = that.m_mapParams;
+                if (mapThis == null && mapThat == null)
+                    {
+                    return true;
+                    }
+                if (mapThis != null && mapThat != null)
+                    {
+                    return Handy.equals(mapThis.keySet().toArray(), mapThat.keySet().toArray())
+                        && Handy.equals(mapThis.values().toArray(), mapThat.values().toArray());
+                    }
+                }
+            return false;
             }
 
         @Override
