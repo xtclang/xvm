@@ -90,6 +90,9 @@ interface Collection<Element>
      * An [Orderer] for elements of this Collection that will order the elements in their "natural"
      * order, which is the order defined by the [Orderable] implementation on the Element type
      * itself. If the Element type is not `Orderable`, then the `naturalOrderer` is `Null`.
+     *
+     * This property is generally a "helper", and not related to any particular state of the
+     * Collection, other than the [Element] type itself.
      */
     @RO Orderer? naturalOrderer.get()
         {
@@ -121,7 +124,8 @@ interface Collection<Element>
     conditional Int knownSize()
         {
         // implementations of Collection that do not have a cached size of the collection should
-        // override this method
+        // override this method and return False when the size requires any calculation more
+        // expensive than O(1)
         return True, size;
         }
 
@@ -139,6 +143,8 @@ interface Collection<Element>
      */
     @RO Boolean empty.get()
         {
+        // implementations of Collection that do not have a cached size of the collection should
+        // override this method if a more efficient means of determining emptiness is available
         return size == 0;
         }
 
@@ -165,8 +171,9 @@ interface Collection<Element>
      */
     Boolean containsAll(Collection! values)
         {
-        // this.contains(values) is always True when there are no values to test
-        if (values.empty)
+        // this.contains(values) is always True when there are no values to test, or when the passed
+        // values collection is the same collection as this
+        if (values.empty || &values == &this)
             {
             return True;
             }
@@ -302,6 +309,8 @@ interface Collection<Element>
                                                                 List<Element>? trueList  = Null,
                                                                 List<Element>? falseList = Null)
         {
+        // TODO if passed trueList or falseList is this
+
         trueList  ?:= new Element[];
         falseList ?:= new Element[];
         for (Element e : this)
@@ -415,72 +424,16 @@ interface Collection<Element>
         }
 
     /**
-     * A customizable, parallelizable reduction state machine. The design of the API allows the
-     * `Reducer` to be stateless, which allows a reducer to be immutable (for example, implemented
-     * as a `const`) and passed efficiently to multiple services, if parallel reduction is desired.
+     * Use an [Aggregator] to analyze the contents of the collection to produce a single result,
+     * thus _reducing_ the collection to a single value.
      *
-     * Implementations designed for parallel reduction should either be a `service` or immutable
-     * (such as a `const`), and should produce Accumulator instances that are immutable or that
-     * implement Freezable.
+     * @param aggregator  the mechanism for the reduction
      */
-    static interface Reducer<Element, Result>
+    <Result> Result reduce(Aggregator<Element, Result> aggregator)
         {
-        /**
-         * Metadata: Is this Reducer capable of being used in parallel? A Reducer that can be used
-         * used in parallel across multiple services should override this to return `True`.
-         */
-        @RO Boolean parallel.get()
-            {
-            return False;
-            }
-
-        /**
-         * The Reducer produces one or more Accumulator objects to collect partial results.
-         */
-        typedef Appender<Element> Accumulator;
-
-        /**
-         * Generate an intermediate, mutable data structure that will accumulate intermediate
-         * information as part of the `reduce` implementation. Called at least once; called more
-         * than once if the reduction is performed in parallel.
-         *
-         * @return an `Accumulator` that will be used to accumulate values of the `Collection` that
-         *         is being reduced
-         */
-        Accumulator init();
-
-        /**
-         * Combine multiple `Accumulator`s into one `Accumulator`.
-         *
-         * @param accumulators  two or more `Accumulator` objects produced by this `Reducer`
-         *
-         * @return a single `Accumulator` that represents all of the passed-in information; this
-         *         result may reuse one of the passed-in objects
-         */
-        Accumulator combine(Iterable<Accumulator> accumulators);
-
-        /**
-         * Extract the result from the provided `Accumulator`. This is the last step of the
-         * reduction process.
-         *
-         * @param accumulator  the `Accumulator` to extract the result from
-         *
-         * @return the result of the reduction process
-         */
-        Result finalize(Accumulator accumulator);
-        }
-
-    /**
-     * Analyze the contents of the collection to produce a single result, thus _reducing_ the
-     * collection to a single value.
-     *
-     * @param reducer  the mechanism for the reduction
-     */
-    <Result> Result reduce(Reducer<Element, Result> reducer)
-        {
-        Appender<Element> accumulator = reducer.init();
+        Appender<Element> accumulator = aggregator.init();
         accumulator.addAll(this);
-        return reducer.finalize(accumulator);
+        return aggregator.reduce(accumulator);
         }
 
     /**
