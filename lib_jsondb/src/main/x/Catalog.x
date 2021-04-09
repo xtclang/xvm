@@ -750,14 +750,14 @@ TODO
     /**
      * Create a `Client` that will access the database represented by this `Catalog`  on behalf of
      * the specified user. This method allows a custom (e.g. code-gen) `Client` implementation to
-     * be substituted for the default, whic allows custom schemas and other custom functionality to
+     * be substituted for the default, which allows custom schemas and other custom functionality to
      * be provided in a type-safe manner.
      *
      * @param dbUser    the user that the `Client` will represent
      * @param readOnly  (optional) pass True to indicate that client is not permitted to modify
      *                  any data
      *
-     * @return a ne `Client` instance
+     * @return a new `Client` instance
      */
     Client<Schema> createClient(DBUser dbUser, Boolean readOnly = False)
         {
@@ -791,7 +791,7 @@ TODO
     /**
      * Unregister a Client instance.
      *
-     * @param client  the Client object to register
+     * @param client  the Client object to unregister
      */
     protected void unregisterClient(Client client)
         {
