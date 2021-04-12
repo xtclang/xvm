@@ -300,10 +300,6 @@ public class TerminalTypeConstant
         IdentityConstant idClz;
         switch (constant.getFormat())
             {
-            case Module:
-            case Package:
-                return false;
-
             case Property:
             case TypeParameter:
             case FormalTypeChild:
@@ -314,8 +310,10 @@ public class TerminalTypeConstant
                 idClz = ((NativeRebaseConstant) constant).getClassConstant();
                 break;
 
+            case Module:
+            case Package:
             case Class:
-                idClz = (ClassConstant) constant;
+                idClz = (IdentityConstant) constant;
                 break;
 
             case ThisClass:
@@ -348,10 +346,6 @@ public class TerminalTypeConstant
         IdentityConstant idClz;
         switch (constant.getFormat())
             {
-            case Module:
-            case Package:
-                return null;
-
             case Property:
             case TypeParameter:
             case FormalTypeChild:
@@ -365,8 +359,10 @@ public class TerminalTypeConstant
                 idClz = ((NativeRebaseConstant) constant).getClassConstant();
                 break;
 
+            case Module:
+            case Package:
             case Class:
-                idClz = (ClassConstant) constant;
+                idClz = (IdentityConstant) constant;
                 break;
 
             case ThisClass:
@@ -461,8 +457,6 @@ public class TerminalTypeConstant
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
-            case Module:
-            case Package:
             case Property:
             case TypeParameter:
             case FormalTypeChild:
@@ -472,9 +466,11 @@ public class TerminalTypeConstant
             case NativeClass:
                 constant = ((NativeRebaseConstant) constant).getClassConstant();
                 // fall through
+            case Module:
+            case Package:
             case Class:
                 {
-                ClassConstant constClz = (ClassConstant) constant;
+                IdentityConstant constClz = (IdentityConstant) constant;
 
                 return constClz.getComponent().resolveName(sName, access, collector);
                 }
@@ -645,14 +641,14 @@ public class TerminalTypeConstant
         IdentityConstant idClz;
         switch (constId.getFormat())
             {
-            case Module:
-            case Package:
             case Property:
             case TypeParameter:
             case FormalTypeChild:
             case DynamicFormal:
                 return TypeConstant.NO_TYPES;
 
+            case Module:
+            case Package:
             case Class:
             case NativeClass:
                 idClz = (IdentityConstant) constId;
