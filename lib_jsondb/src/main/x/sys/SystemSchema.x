@@ -42,7 +42,8 @@ class SystemSchema
 //        transactions = new DBLog<DBTransaction>() {};
 //        errors       = new DBLog<String>() {};
 
-        dbChildren   = Map:[
+        dbChildren   = Map:
+                [
                 "info"         = info,
 //                "users"        = users,
 //                "types"        = types,

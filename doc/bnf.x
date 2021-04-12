@@ -893,15 +893,15 @@ BinaryLiteral
 
 TupleLiteral
     "(" ExpressionList "," Expression ")"                       # compile/runtime type is Tuple
-    TypeExpression NoWhitespace ":(" ExpressionList-opt ")"     # type must be a Tuple
+    TypeExpression NoWhitespace ":" "(" ExpressionList-opt ")"  # type must be a Tuple
 
 CollectionLiteral
     "[" ExpressionList-opt "]"                                  # compile/runtime type is Array
-    TypeExpression ":[" ExpressionList-opt "]"                  # type must be Collection, Set, List, or Array
+    TypeExpression NoWhitespace ":" "[" ExpressionList-opt "]"  # type must be Collection, Set, List, or Array
 
 MapLiteral
     "[" Entries-opt "]"                                         # compile/runtime type is Map
-    TypeExpression ":[" Entries-opt "]"                         # type must be Map
+    TypeExpression NoWhitespace ":" "[" Entries-opt "]"         # type must be Map
 
 Entries
     Entry

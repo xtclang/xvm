@@ -3354,9 +3354,16 @@ public class Parser
                         // "SomeClass[]"
                         TypeExpression type = new ArrayTypeExpression(expr.toTypeExpression(), 0,
                                 prev().getEndPosition());
-                        expr = match(Id.COLON) == null
-                                ? type
-                                : parseComplexLiteral(type);
+                        Token tokNext = peek();
+                        if (tokNext.getId() == Id.COLON && !tokNext.hasLeadingWhitespace())
+                            {
+                            expect(Id.COLON);
+                            expr = parseComplexLiteral(type);
+                            }
+                        else
+                            {
+                            expr = type;
+                            }
                         }
                     else if (match(Id.COND) == null)
                         {
@@ -3381,9 +3388,16 @@ public class Parser
                             }
                         TypeExpression type = new ArrayTypeExpression(expr.toTypeExpression(),
                                 cExplicitDims, prev().getEndPosition());
-                        expr = match(Id.COLON) == null
-                                ? type
-                                : parseComplexLiteral(type);
+                        Token tokNext = peek();
+                        if (tokNext.getId() == Id.COLON && !tokNext.hasLeadingWhitespace())
+                            {
+                            expect(Id.COLON);
+                            expr = parseComplexLiteral(type);
+                            }
+                        else
+                            {
+                            expr = type;
+                            }
                         }
                     break;
                     }
@@ -3678,7 +3692,7 @@ public class Parser
                 if (peek().getId() == Id.COLON)
                     {
                     Token colon = expect(Id.COLON);
-                    if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
+                    if (!colon.hasLeadingWhitespace())
                         {
                         switch (peek().getId())
                             {
@@ -4221,16 +4235,16 @@ public class Parser
      *
      * <p/><code><pre>
      * TupleLiteral
-     *     "(" ExpressionList "," Expression ")"                    # compile/runtime type is Tuple
-     *     TypeExpression NoWhitespace ":(" ExpressionList-opt ")"  # type must be a Tuple
+     *     "(" ExpressionList "," Expression ")"                     # compile/runtime type is Tuple
+     *     TypeExpression NoWhitespace ":" "(" ExpressionList-opt ")"# type must be a Tuple
      *
      * CollectionLiteral
-     *     "[" ExpressionList-opt "]"                               # compile/runtime type is Array
-     *     TypeExpression ":[" ExpressionList-opt "]"               # type must be Collection, Set,
-     *                                                              # List, or Array
+     *     "[" ExpressionList-opt "]"                                # compile/runtime type is Array
+     *     TypeExpression NoWhitespace ":" "[" ExpressionList-opt "]"# type must be Collection, Set,
+     *                                                               # List, or Array
      * MapLiteral
-     *     "[" Entries-opt "]"                                      # compile/runtime type is Map
-     *     TypeExpression ":[" Entries-opt "]"                      # type must be Map
+     *     "[" Entries-opt "]"                                       # compile/runtime type is Map
+     *     TypeExpression NoWhitespace ":" "[" Entries-opt "]"       # type must be Map
      *
      * Entries
      *     Entry

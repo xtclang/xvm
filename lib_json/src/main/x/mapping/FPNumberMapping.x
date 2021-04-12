@@ -35,7 +35,8 @@ const FPNumberMapping<Serializable extends FPNumber>
         }
 
     static Map<Type, function FPNumber(FPLiteral)> CONVERSION =
-        Map:[
+        Map:
+            [
             numbers.FPNumber        = (lit) -> lit.toDecN(),
             numbers.DecimalFPNumber = (lit) -> lit.toDecN(),
             numbers.Dec32           = (lit) -> lit.toDec32(),

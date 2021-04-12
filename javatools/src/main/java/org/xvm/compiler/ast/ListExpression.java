@@ -33,10 +33,10 @@ import org.xvm.util.Severity;
  * <pre>
  * ListLiteral
  *     "[" ExpressionList-opt "]"
- *     "Collection:[" ExpressionList-opt "]"
- *     "List:[" ExpressionList-opt "]"
- *     "Array:[" ExpressionList-opt "]"
- *     "Set:[" ExpressionList-opt "]"
+ *     "Collection:" "[" ExpressionList-opt "]"
+ *     "List:" "[" ExpressionList-opt "]"
+ *     "Array:" "[" ExpressionList-opt "]"
+ *     "Set:" "[" ExpressionList-opt "]"
  * </pre>
  */
 public class ListExpression

@@ -35,7 +35,8 @@ const IntNumberMapping<Serializable extends IntNumber>
         }
 
     static Map<Type, function IntNumber(IntLiteral)> CONVERSION =
-        Map:[
+        Map:
+            [
             numbers.IntNumber  = (lit) -> lit.toIntN(),
             numbers.UIntNumber = (lit) -> lit.toUIntN(),
             numbers.Int8       = (lit) -> lit.toInt8(),

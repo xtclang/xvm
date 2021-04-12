@@ -39,7 +39,8 @@ module AddressBookDB_jsondb
     @Override
     Map<String, Type> dbTypes.get()
         {
-        return Map:[
+        return Map:
+            [
             "String"=String,
             "AddressBookDB_:Contact"=AddressBookDB_.Contact,
             ];

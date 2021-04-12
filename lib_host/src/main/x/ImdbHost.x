@@ -266,7 +266,8 @@ class ImdbHost
     static TypeTemplate DBObject_TEMPLATE = DBObject.baseTemplate.type;
 
     static Map<DBCategory, TypeTemplate> DB_TEMPLATES =
-        Map:[
+        Map:
+            [
             DBMap       = oodb.DBMap     .baseTemplate.type,
             DBList      = oodb.DBList    .baseTemplate.type,
             DBQueue     = oodb.DBQueue   .baseTemplate.type,
