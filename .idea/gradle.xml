@@ -14,6 +14,7 @@
             <option value="$PROJECT_DIR$/javatools" />
             <option value="$PROJECT_DIR$/javatools_bridge" />
             <option value="$PROJECT_DIR$/javatools_launcher" />
+            <option value="$PROJECT_DIR$/lib_aggregate" />
             <option value="$PROJECT_DIR$/lib_host" />
             <option value="$PROJECT_DIR$/lib_imdb" />
             <option value="$PROJECT_DIR$/lib_json" />
