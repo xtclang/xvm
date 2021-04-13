@@ -2,86 +2,61 @@ module imdb.xtclang.org
     {
     package oodb import oodb.xtclang.org;
 
-    // ---- server side ----------------------------------------------------------------------------
+    import oodb.DBObject.DBCategory as Category;
 
-    class ServerDBObject
-            implements oodb.DBObject
-        {
-        construct(oodb.DBObject? parent, DBCategory category, String name)
-            {
-            dbParent   = parent;
-            dbCategory = category;
-            dbName     = name;
-            dbChildren = Map:[];
-            }
+    const DBObjectInfo(String   id,
+                       Category category,
+                       Type     type,
+                       String   parentId      = "",
+                       String[] childIds      = [],
+                       Boolean  transactional = True,
+                      )
+          {
+          }
 
-        @Override
-        public/private oodb.DBObject? dbParent;
-
-        @Override
-        public/private String dbName;
-
-        @Override
-        public/private DBCategory dbCategory;
-
-        @Override
-        public/protected Map<String, oodb.DBObject> dbChildren;
-        }
-
+    /**
+     * This is an abstract base class for specific DB implementations that manage data in memory.
+     */
     @Abstract
-    class ServerRootSchema
-            extends ServerDBObject
-            implements oodb.RootSchema
+    class DBObjectStore(DBObjectInfo info, Appender<String> errs)
         {
-        construct()
+        /**
+         * The DBObjectInfo that identifies the configuration of this DBObjectStore.
+         */
+        public/protected DBObjectInfo info;
+
+        /**
+         * The id of the database object for which this storage exists.
+         */
+        String id.get()
             {
-            construct ServerDBObject(Null, DBSchema, "");
+            return info.id;
             }
 
-        @Override
-        @Unassigned
-        public/private oodb.SystemSchema sys; // TODO
-        }
-
-
-    // ---- client side ----------------------------------------------------------------------------
-
-    @Abstract
-    class ClientDBObject
-            implements oodb.DBObject
-            delegates  oodb.DBObject(dbObject_)
-        {
-        construct(ServerDBObject dbObject,
-                  function Boolean() isAutoCommit = () -> False)
+        /**
+         * The `DBCategory` of the `DBObject`.
+         */
+        Category category.get()
             {
-            dbObject_     = dbObject;
-            isAutoCommit_ = isAutoCommit;
+            return info.category;
             }
 
-        protected ServerDBObject     dbObject_;
-        protected function Boolean() isAutoCommit_;
+        /**
+         * An error log that was provided to this storage when it was created, for the purpose of
+         * logging detailed error information encountered in the course of operation.
+         */
+        public/protected Appender<String> errs;
 
-        @Override
-        Map<String, oodb.DBObject> dbChildren.get()
-            {
-            TODO("snapshot of dbObject_.dbChildren");
-            }
-        }
+        /**
+         * TODO
+         */
+        @Abstract
+        void apply(Int clientId);
 
-    @Abstract
-    class ClientRootSchema
-            extends ClientDBObject
-            implements oodb.RootSchema
-        {
-        construct(ServerRootSchema dbSchema)
-            {
-            construct ClientDBObject(dbSchema);
-            }
-
-        @Override
-        oodb.SystemSchema sys.get()
-            {
-            TODO
-            }
+        /**
+         * TODO
+         */
+        @Abstract
+        void discard(Int clientId);
         }
     }

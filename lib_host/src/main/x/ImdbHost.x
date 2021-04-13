@@ -12,6 +12,7 @@ import ecstasy.reflect.TypeTemplate;
 import oodb.Connection;
 import oodb.DBObject;
 import oodb.DBObject.DBCategory;
+import oodb.DBUser;
 
 import imdb.CatalogMetadata;
 
@@ -252,12 +253,9 @@ class ImdbHost
     @Override
     Connection ensureConnection()
         {
-        private @Lazy Connection connection.calc()
-            {
-            return meta.createConnection();
-            }
+        DBUser user = new oodb.model.DBUser(1, "test"); // TODO CP
 
-        return connection;
+        return meta.createConnection(user);
         }
 
 
@@ -265,8 +263,7 @@ class ImdbHost
 
     static TypeTemplate DBObject_TEMPLATE = DBObject.baseTemplate.type;
 
-    static Map<DBCategory, TypeTemplate> DB_TEMPLATES =
-        Map:
+    static Map<DBCategory, TypeTemplate> DB_TEMPLATES = Map:
             [
             DBMap       = oodb.DBMap     .baseTemplate.type,
             DBList      = oodb.DBList    .baseTemplate.type,
