@@ -45,14 +45,6 @@ public class LiteralExpression
         }
 
     /**
-     * @return true iff the LiteralExpression is the result of an empty T0D0 expression
-     */
-    public boolean isTODO()
-        {
-        return literal.getId() == Id.TODO;
-        }
-
-    /**
      * @return the version value
      */
     public Version getVersion()

@@ -9,11 +9,13 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Assert;
 import org.xvm.asm.op.Label;
+import org.xvm.asm.op.New_N;
 import org.xvm.asm.op.Throw;
 
 import org.xvm.compiler.Compiler;
@@ -36,21 +38,31 @@ public class ThrowExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ThrowExpression(Token keyword, Expression expr)
+    public ThrowExpression(Token keyword, Expression expr, Expression message)
         {
         this.keyword = keyword;
         this.expr    = expr;
+        this.message = message;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
-     * @return the expression for the exception being thrown
+     * @return the expression for the exception being thrown, or the assert condition (which must
+     *         evaluate to false), or null
      */
     public Expression getException()
         {
         return expr;
+        }
+
+    /**
+     * @return the optional expression for the message to include in a T0D0 or assert exception
+     */
+    public Expression getMessage()
+        {
+        return message;
         }
 
     @Override
@@ -62,13 +74,33 @@ public class ThrowExpression
     @Override
     public long getEndPosition()
         {
-        return expr == null ? keyword.getEndPosition() : expr.getEndPosition();
+        if (message != null)
+            {
+            return message.getEndPosition();
+            }
+
+        if (expr != null)
+            {
+            return expr.getEndPosition();
+            }
+
+        return keyword.getEndPosition();
         }
 
     @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+    /**
+     * @return true iff this is a T0D0 expression
+     */
+    @Override
+    public boolean isTodo()
+        {
+        // REVIEW should this include "assert:TODO"/"assert:TODO False" for both expression and statement?
+        return keyword.getId() == Token.Id.TODO;
         }
 
 
@@ -145,8 +177,9 @@ public class ThrowExpression
      */
     protected boolean validateThrow(Context ctx, ErrorListener errs)
         {
-        TypeConstant typeRequired;
+        boolean      fValid       = true;
         boolean      fAssert      = false;
+        TypeConstant typeRequired = null;
         switch (keyword.getId())
             {
             case ASSERT:
@@ -164,7 +197,11 @@ public class ThrowExpression
                 // throw requires an exception, but T0D0 and various asserts do not; make sure that
                 // the asserts are guaranteed to fail, since they do not & can not produce a value
                 log(errs, Severity.ERROR, Compiler.ASSERT_EXPRESSION_MUST_THROW);
-                return false;
+                fValid  = false;
+                break;
+
+            case TODO:
+                break;
 
             case THROW:
                 typeRequired = ctx.pool().typeException();
@@ -172,29 +209,44 @@ public class ThrowExpression
 
             default:
                 log(errs, Severity.FATAL, Compiler.FATAL_ERROR, "(throw keyword=" + keyword + ")");
-                return false;
+                fValid = false;
+                break;
             }
 
-        if (expr != null)
+        if (fValid && expr != null)
             {
             // validate the throw value expressions
             Expression exprNew = expr.validate(ctx, typeRequired, errs);
             if (exprNew != expr)
                 {
-                if (exprNew == null)
+                fValid &= exprNew != null;
+                if (exprNew != null)
                     {
-                    return false;
+                    expr = exprNew;
                     }
-                expr = exprNew;
                 }
 
-            if (fAssert && !exprNew.isConstantFalse())
+            if (fAssert && fValid && !exprNew.isConstantFalse())
                 {
                 log(errs, Severity.ERROR, Compiler.ASSERT_EXPRESSION_MUST_THROW);
+                fValid = false;
                 }
             }
 
-        return true;
+        if (message != null)
+            {
+            Expression exprNew = message.validate(ctx, pool().typeString(), errs);
+            if (exprNew != message)
+                {
+                fValid &= exprNew != null;
+                if (exprNew != null)
+                    {
+                    message = exprNew;
+                    }
+                }
+            }
+
+        return fValid;
         }
 
     @Override
@@ -206,9 +258,34 @@ public class ThrowExpression
         }
 
     @Override
+    public boolean isAssignable(Context ctx)
+        {
+        if (isTodo())
+            {
+            // sure, you can use this where an assignable is required
+            return true;
+            }
+
+        return super.isAssignable(ctx);
+        }
+
+    @Override
     public boolean isCompletable()
         {
         return false;
+        }
+
+    @Override
+    protected boolean allowsShortCircuit(AstNode nodeChild)
+        {
+        if (isTodo())
+            {
+            // the message of the T0D0 should not be able to prevent the exception from being thrown by
+            // short-circuiting
+            return false;
+            }
+
+        return super.allowsShortCircuit(nodeChild);
         }
 
     @Override
@@ -267,6 +344,7 @@ public class ThrowExpression
         switch (keyword.getId())
             {
             case THROW:
+                assert message == null;
                 Argument arg = expr.generateArgument(ctx, code, true, true, errs);
                 code.add(new Throw(arg));
                 return;
@@ -284,6 +362,7 @@ public class ThrowExpression
                 break;
 
             case ASSERT_TODO:
+            case TODO:
                 sThrow = "UnsupportedOperation";
                 break;
 
@@ -291,9 +370,21 @@ public class ThrowExpression
                 throw new IllegalStateException("keyword="+keyword);
             }
 
-        ConstantPool   pool   = ctx.pool();
-        MethodConstant constr = AssertStatement.findExceptionConstructor(pool, sThrow, errs);
-        code.add(new Assert(pool.valFalse(), constr));
+        // throw new {sThrow}(message, null)
+        ConstantPool   pool     = pool();
+        ClassConstant  constEx  = pool.ensureEcstasyClassConstant(sThrow);
+        MethodConstant constNew = constEx.findConstructor(pool.typeString१(), pool.typeException१());
+        if (message == null)
+            {
+            code.add(new Assert(pool.valFalse(), constNew));
+            }
+        else
+            {
+            Argument argEx  = new Register(constEx.getType());
+            Argument argMsg = message.generateArgument(ctx, code, false, false, errs);
+            code.add(new New_N(constNew, new Argument[] {argMsg, pool.valNull()}, argEx));
+            code.add(new Throw(argEx));
+            }
         }
 
 
@@ -302,7 +393,30 @@ public class ThrowExpression
     @Override
     public String toString()
         {
-        return keyword + (expr == null ? "" : " " + expr.toString()) + ';';
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(keyword);
+
+        if (expr != null)
+            {
+            sb.append(' ')
+              .append(expr);
+            }
+
+        if (isTodo())
+            {
+            sb.append('(')
+              .append(message == null ? "\"\"" : message)
+              .append(')');
+            }
+        else if (message != null)
+            {
+            sb.append(" as ")
+              .append(message);
+            }
+
+        sb.append(';');
+        return sb.toString();
         }
 
     @Override
@@ -316,6 +430,7 @@ public class ThrowExpression
 
     protected Token      keyword;
     protected Expression expr;
+    protected Expression message;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ThrowExpression.class, "expr");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(ThrowExpression.class, "expr", "message");
     }

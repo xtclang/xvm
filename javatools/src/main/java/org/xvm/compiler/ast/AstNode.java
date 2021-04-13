@@ -588,6 +588,14 @@ public abstract class AstNode
         }
 
     /**
+     * @return true iff the AST node is a T0D0 statement or expression
+     */
+    public boolean isTodo()
+        {
+        return false;
+        }
+
+    /**
      * @return the constant pool
      */
     protected ConstantPool pool()

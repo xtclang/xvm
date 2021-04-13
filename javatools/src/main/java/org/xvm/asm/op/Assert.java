@@ -177,7 +177,7 @@ public class Assert
         }
 
     private int m_nTest;
-    private int m_nConstructor = A_IGNORE;
+    private int m_nConstructor = A_IGNORE;   // important: no constructor means A_IGNORE means DEBUG
 
     private Argument       m_argTest;
     private MethodConstant m_idConstruct;

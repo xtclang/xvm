@@ -478,8 +478,7 @@ public class StatementBlock
 
                 if (fReachable && !fCompletable)
                     {
-                    if (stmt instanceof ExpressionStatement
-                            && ((ExpressionStatement) stmt).expr instanceof TodoExpression)
+                    if (stmt.isTodo())
                         {
                         // T0D0 expression is allowed to have stuff that follows it that is unreachable
                         break;

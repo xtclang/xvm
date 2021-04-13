@@ -387,7 +387,7 @@ LabeledStatement
     Name ":" Whitespace Statement
 
 AssertStatement
-    AssertInstruction ConditionList-opt ";"
+    AssertInstruction ConditionList-opt AssertMessage-opt ";"
 
 AssertInstruction                               # (when active, what gets thrown)
     "assert"                                    # runtime, IllegalState
@@ -398,6 +398,9 @@ AssertInstruction                               # (when active, what gets thrown
     "assert:rnd(" Expression ")"                # runtime (sampling), IllegalState
     "assert:test"                               # test mode (e.g. CI/QC), Assertion
     "assert:debug"                              # debug mode, breakpoint-only (i.e. no throw)
+
+AssertMessage
+    "as" Expression
 
 ForStatement
     "for" "(" ForCondition ")" StatementBlock

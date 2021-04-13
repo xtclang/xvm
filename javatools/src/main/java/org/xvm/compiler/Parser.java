@@ -1489,13 +1489,20 @@ public class Parser
      *     Name ":" Statement
      *
      * AssertStatement
-     *     AssertInstruction expression ";"
+     *     AssertInstruction ConditionList-opt AssertMessage-opt ";"
      *
-     * AssertInstruction
-     *     "assert"
-     *     "assert:once"
-     *     "assert:test"
-     *     "assert:debug"
+     * AssertInstruction                      # (when active, what gets thrown)
+     *     "assert"                           # runtime, IllegalState
+     *     "assert:arg"                       # runtime, IllegalArgument
+     *     "assert:bounds"                    # runtime, OutOfBounds
+     *     "assert:T0D0"                      # runtime, UnsupportedOperation
+     *     "assert:once"                      # runtime, Assertion (only tested "the first time")
+     *     "assert:rnd(" Expression ")"       # runtime (sampling), IllegalState
+     *     "assert:test"                      # test mode (e.g. CI/QC), Assertion
+     *     "assert:debug"                     # debug mode, breakpoint-only (i.e. no throw)
+     *
+     * AssertMessage
+     *     "as" Expression
      *
      * ForStatement
      *     "for" "(" ForCondition ")" StatementBlock
@@ -1621,13 +1628,20 @@ public class Parser
      *
      * <p/><code><pre>
      * AssertStatement
-     *     AssertInstruction ConditionList-opt ";"
+     *     AssertInstruction ConditionList-opt AssertMessage-opt ";"
      *
-     * AssertInstruction
-     *     "assert"
-     *     "assert:once"
-     *     "assert:test"
-     *     "assert:debug"
+     * AssertInstruction                      # (when active, what gets thrown)
+     *     "assert"                           # runtime, IllegalState
+     *     "assert:arg"                       # runtime, IllegalArgument
+     *     "assert:bounds"                    # runtime, OutOfBounds
+     *     "assert:T0D0"                      # runtime, UnsupportedOperation
+     *     "assert:once"                      # runtime, Assertion (only tested "the first time")
+     *     "assert:rnd(" Expression ")"       # runtime (sampling), IllegalState
+     *     "assert:test"                      # test mode (e.g. CI/QC), Assertion
+     *     "assert:debug"                     # debug mode, breakpoint-only (i.e. no throw)
+     *
+     * AssertMessage
+     *     "as" Expression
      * </pre></code>
      *
      * @return an "assert" statement
@@ -1657,14 +1671,21 @@ public class Parser
             }
 
         List<AstNode> conds = null;
-        if (peek().getId() != Id.SEMICOLON)
+        if (peek().getId() != Id.SEMICOLON && peek().getId() != Id.AS)
             {
             conds   = parseConditionList();
             lEndPos = conds.get(conds.size()-1).getEndPosition();
             }
 
+        Expression exprMsg = null;
+        if (match(Id.AS) != null)
+            {
+            exprMsg = parseExpression();
+            lEndPos = exprMsg.getEndPosition();
+            }
+
         expect(Id.SEMICOLON);
-        return new AssertStatement(keyword, exprRate, conds, lEndPos);
+        return new AssertStatement(keyword, exprRate, conds, exprMsg, lEndPos);
         }
 
     /**
@@ -3531,7 +3552,7 @@ public class Parser
                 return parseNewExpression(null);
 
             case THROW:
-                return new ThrowExpression(expect(Id.THROW), parseTernaryExpression());
+                return new ThrowExpression(expect(Id.THROW), parseTernaryExpression(), null);
 
             case ASSERT:
             case ASSERT_RND:
@@ -3546,6 +3567,7 @@ public class Parser
                 Expression expr = null;
                 switch (peek().getId())
                     {
+                    case AS:
                     case SEMICOLON:
                     case COMMA:
                     case COND:
@@ -3560,7 +3582,13 @@ public class Parser
                         break;
                     }
 
-                return new ThrowExpression(keyword, expr);
+                Expression exprMsg = null;
+                if (match(Id.AS) != null)
+                    {
+                    exprMsg = parseTernaryExpression();
+                    }
+
+                return new ThrowExpression(keyword, expr, exprMsg);
                 }
 
             case TODO:
@@ -4086,9 +4114,9 @@ public class Parser
      *     "(" Expression ")"
      * </pre></code>
      *
-     * @return a TodoExpression
+     * @return a ThrowExpression for a T0D0
      */
-    TodoExpression parseTodoExpression()
+    ThrowExpression parseTodoExpression()
         {
         Expression message  = null;
         Token      keyword  = expect(Id.TODO);
@@ -4110,7 +4138,7 @@ public class Parser
             putBack(new Token(keyword.getEndPosition(), keyword.getEndPosition(), Id.SEMICOLON));
             }
 
-        return new TodoExpression(keyword, message);
+        return new ThrowExpression(keyword, null, message);
         }
 
     /**

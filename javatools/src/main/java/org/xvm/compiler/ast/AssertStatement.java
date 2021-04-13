@@ -13,7 +13,9 @@ import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -21,9 +23,15 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Assert;
 import org.xvm.asm.op.AssertM;
 import org.xvm.asm.op.AssertV;
+import org.xvm.asm.op.Jump;
+import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpNCond;
 import org.xvm.asm.op.JumpNFirst;
 import org.xvm.asm.op.JumpNSample;
+import org.xvm.asm.op.JumpTrue;
+import org.xvm.asm.op.Label;
+import org.xvm.asm.op.New_N;
+import org.xvm.asm.op.Throw;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -42,7 +50,7 @@ public class AssertStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public AssertStatement(Token keyword, Expression exprInterval, List<AstNode> conds, long lEndPos)
+    public AssertStatement(Token keyword, Expression exprInterval, List<AstNode> conds, Expression exprMsg, long lEndPos)
         {
         switch (keyword.getId())
             {
@@ -63,6 +71,7 @@ public class AssertStatement
         this.keyword  = keyword;
         this.interval = exprInterval;
         this.conds    = conds == null ? Collections.emptyList() : conds;
+        this.message  = exprMsg;
         this.lEndPos  = lEndPos;
         }
 
@@ -78,9 +87,7 @@ public class AssertStatement
     @Override
     public long getEndPosition()
         {
-        return conds.isEmpty()
-                ? keyword.getEndPosition()
-                : conds.get(conds.size()-1).getEndPosition();
+        return lEndPos;
         }
 
     /**
@@ -167,6 +174,15 @@ public class AssertStatement
         }
 
     /**
+     * @return true iff the assertion is not skipped either by sampling, only-once execution, or by
+     *         being discardable at link-time
+     */
+    public boolean alwaysEvaluated()
+        {
+        return !isNotAlways() && !isLinktimeConditional();
+        }
+
+    /**
      * @return the inverse rate of assertion evaluation; for example "5" means (on average) 1/5 of
      *         the time
      */
@@ -193,16 +209,14 @@ public class AssertStatement
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
-        if (keyword.getId() == Id.ASSERT && conds.isEmpty())
+        boolean fValid = true;
+
+        // break apart complex conditions if possible; this allows the auto-generated messages to be
+        // more precise in the state that they select to display
+        if (message == null)
             {
-            ctx.setReachable(false);
-            return this;
+            demorgan();
             }
-
-        boolean fValid  = true;
-
-        // break apart complex conditions if possible
-        demorgan();
 
         if (interval != null)
             {
@@ -261,7 +275,7 @@ public class AssertStatement
                         conds.set(i, cond);
                         }
 
-                    if (exprNew.isConstantFalse())
+                    if (exprNew.isConstantFalse() && alwaysEvaluated())
                         {
                         ctx.setReachable(false);
                         }
@@ -269,6 +283,25 @@ public class AssertStatement
 
                 ctx = ctx.exit();
                 }
+            }
+
+        if (message != null)
+            {
+            Expression exprNew = message.validate(ctx, pool().typeString(), errs);
+            if (exprNew != message)
+                {
+                fValid &= exprNew != null;
+                if (exprNew != null)
+                    {
+                    message = exprNew;
+                    }
+                }
+            }
+
+        // empty condition is like having a single "False" condition
+        if (conds.isEmpty() && alwaysEvaluated())
+            {
+            ctx.setReachable(false);
             }
 
         return fValid
@@ -296,96 +329,119 @@ public class AssertStatement
                     : new JumpNSample(interval.generateArgument(ctx, code, true, true, errs), getEndLabel()));
             }
 
-        MethodConstant constructException;
+        String sThrow;
         switch (keyword.getId())
             {
             default:
             case ASSERT:
-                constructException = findExceptionConstructor(pool, "IllegalState", errs);
+                sThrow = "IllegalState";
                 break;
 
             case ASSERT_ARG:
-                constructException = findExceptionConstructor(pool, "IllegalArgument", errs);
+                sThrow = "IllegalArgument";
                 break;
 
             case ASSERT_BOUNDS:
-                constructException = findExceptionConstructor(pool, "OutOfBounds", errs);
+                sThrow = "OutOfBounds";
                 break;
 
             case ASSERT_TODO:
-                constructException = findExceptionConstructor(pool, "UnsupportedOperation", errs);
+                sThrow = "UnsupportedOperation";
                 break;
 
             case ASSERT_ONCE:
             case ASSERT_RND:
             case ASSERT_TEST:
-                constructException = findExceptionConstructor(pool, "Assertion", errs);
+                sThrow = "Assertion";
                 break;
 
             case ASSERT_DBG:
-                constructException = null;
+                sThrow = null;
                 break;
             }
+
+        ClassConstant  constEx  = sThrow == null ? null : pool.ensureEcstasyClassConstant(sThrow);
+        MethodConstant constNew = sThrow == null ? null : findExceptionConstructor(pool, sThrow, errs);
 
         int cConds = getConditionCount();
         if (cConds == 0)
             {
-            code.add(new Assert(pool.valFalse(), constructException));
-            return isNotAlways() || isLinktimeConditional();
+            if (message == null || isDebugOnly())
+                {
+                code.add(new Assert(pool.valFalse(), constNew));
+                }
+            else
+                {
+                assert constNew != null;
+
+                // throw new {sThrow}(message, null)
+                Argument argEx  = new Register(constEx.getType());
+                Argument argMsg = message.generateArgument(ctx, code, true, true, errs);
+                code.add(new New_N(constNew, new Argument[]{argMsg, pool.valNull()}, argEx));
+                code.add(new Throw(argEx));
+                }
+
+            return !alwaysEvaluated();
             }
 
-        boolean fCompletes = fReachable;
+        boolean fCompletes   = fReachable;
+        Label   labelMessage = new Label("CustomMessage");
         for (int i = 0; i < cConds; ++i)
             {
-            AstNode cond   = getCondition(i);
-            String  sCond  = m_listTexts.get(i);
-            int     cTrace = 0;
-
-            // add traces (if anything is interesting to trace)
-            Map<String, Expression> mapTrace = new ListMap<>();
-            cond.selectTraceableExpressions(mapTrace);
-            if (!mapTrace.isEmpty())
+            AstNode cond = getCondition(i);
+            StringConstant constText = null;
+            Map<String, Expression> mapTrace = null;
+            if (message == null)
                 {
-                StringBuilder sb = new StringBuilder(sCond);
-                for (Map.Entry<String, Expression> entry : mapTrace.entrySet())
+                String sCond = m_listTexts.get(i);
+                int cTrace = 0;
+
+                // add traces (if anything is interesting to trace)
+                mapTrace = new ListMap<>();
+                cond.selectTraceableExpressions(mapTrace);
+                if (!mapTrace.isEmpty())
                     {
-                    Expression expr = entry.getValue();
-                    expr.requireTrace();
-
-                    sb.append(", ")
-                      .append(entry.getKey())
-                      .append('=');
-
-                    TypeConstant[] aTypes = expr.getTypes();
-                    int            cTypes = aTypes.length;
-                    if (cTypes != 1)
+                    StringBuilder sb = new StringBuilder(sCond);
+                    for (Map.Entry<String, Expression> entry : mapTrace.entrySet())
                         {
-                        sb.append('(');
-                        }
+                        Expression expr = entry.getValue();
+                        expr.requireTrace();
 
-                    for (int iType = 0; iType < cTypes; ++iType)
-                        {
-                        if (iType > 0)
+                        sb.append(", ")
+                            .append(entry.getKey())
+                            .append('=');
+
+                        TypeConstant[] aTypes = expr.getTypes();
+                        int cTypes = aTypes.length;
+                        if (cTypes != 1)
                             {
-                            sb.append(", ");
+                            sb.append('(');
                             }
 
-                        sb.append('{')
-                          .append(cTrace++)
-                          .append('}');
-                        }
+                        for (int iType = 0; iType < cTypes; ++iType)
+                            {
+                            if (iType > 0)
+                                {
+                                sb.append(", ");
+                                }
 
-                    if (cTypes != 1)
-                        {
-                        sb.append(')');
+                            sb.append('{')
+                                .append(cTrace++)
+                                .append('}');
+                            }
+
+                        if (cTypes != 1)
+                            {
+                            sb.append(')');
+                            }
                         }
+                    sCond = sb.toString();
                     }
-                sCond = sb.toString();
-                }
-            StringConstant constText = pool.ensureStringConstant(sCond);
+                constText = pool.ensureStringConstant(sCond);
 
-            // it is possible that the condition was modified by the addition of traces
-            cond = getCondition(i);
+                // it is possible that the condition was modified by the addition of traces
+                cond = getCondition(i);
+                }
 
             Argument argCond;
             if (cond instanceof AssignmentStatement)
@@ -401,7 +457,9 @@ public class AssertStatement
                 // "assert False" always asserts
                 if (exprCond.isConstantFalse())
                     {
-                    code.add(new Assert(pool.valFalse(), constructException));
+                    code.add(message == null
+                            ? new Assert(pool.valFalse(), constNew)
+                            : new Jump(labelMessage));
                     fCompletes = false;
                     continue;
                     }
@@ -416,21 +474,47 @@ public class AssertStatement
                 argCond = exprCond.generateArgument(ctx, code, true, true, errs);
                 }
 
-            if (mapTrace.isEmpty())
+            if (message == null)
                 {
-                code.add(new AssertM(argCond, constructException, constText));
+                if (mapTrace.isEmpty())
+                    {
+                    code.add(new AssertM(argCond, constNew, constText));
+                    }
+                else
+                    {
+                    List<Argument> argV = new ArrayList<>();
+                    for (Expression expr : mapTrace.values())
+                        {
+                        Argument[] aArgs = ((TraceExpression) expr.getParent()).getArguments();
+                        Collections.addAll(argV, aArgs);
+                        }
+                    code.add(new AssertV(
+                            argCond, constNew, constText, argV.toArray(Expression.NO_RVALUES)));
+                    }
                 }
             else
                 {
-                List<Argument> argV = new ArrayList<>();
-                for (Expression expr : mapTrace.values())
+                if (i == cConds - 1)
                     {
-                    Argument[] aArgs = ((TraceExpression) expr.getParent()).getArguments();
-                    Collections.addAll(argV, aArgs);
+                    // last one, so get out of the assertion if everything was true
+                    code.add(new JumpTrue(argCond, getEndLabel()));
                     }
-                code.add(new AssertV(
-                    argCond, constructException, constText, argV.toArray(Expression.NO_RVALUES)));
+                else
+                    {
+                    // in the middle, so check for the current condition to have failed
+                    code.add(new JumpFalse(argCond, labelMessage));
+                    }
                 }
+            }
+
+        if (message != null)
+            {
+            // throw new {sThrow}(message, null)
+            code.add(labelMessage);
+            Argument argEx  = new Register(constEx.getType());
+            Argument argMsg = message.generateArgument(ctx, code, true, true, errs);
+            code.add(new New_N(constNew, new Argument[]{argMsg, pool.valNull()}, argEx));
+            code.add(new Throw(argEx));
             }
 
         return fCompletes;
@@ -595,9 +679,10 @@ public class AssertStatement
     protected Token         keyword;
     protected Expression    interval;
     protected List<AstNode> conds;
+    protected Expression    message;
     protected long          lEndPos;
 
     private List<String> m_listTexts;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "interval", "conds");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "interval", "conds", "message");
     }

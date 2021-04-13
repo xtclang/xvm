@@ -39,7 +39,7 @@ const Exception
         StringBuffer buf = new StringBuffer();
 
         buf.append(exceptionName)
-           .append(' ')
+           .append(": ")
            .append(getMessage())
            .append(stackTrace);
 

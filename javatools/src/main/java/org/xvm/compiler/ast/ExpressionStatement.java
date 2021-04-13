@@ -59,6 +59,12 @@ public class ExpressionStatement
         return CHILD_FIELDS;
         }
 
+    @Override
+    public boolean isTodo()
+        {
+        return expr.isTodo();
+        }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 
