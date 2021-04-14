@@ -544,6 +544,11 @@ interface ClassTemplate
     @RO Boolean singleton;
 
     /**
+     * True iff this class has a default value.
+     */
+    @RO Boolean hasDefault;
+
+    /**
      * The type parameters for the class.
      */
     @RO TypeParameter[] typeParams;

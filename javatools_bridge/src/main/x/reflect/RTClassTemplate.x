@@ -24,6 +24,7 @@ class RTClassTemplate
     @Override @RO MultiMethodTemplate[] multimethods;
     @Override @RO PropertyTemplate[]    properties;
     @Override @RO Boolean               singleton;
+    @Override @RO Boolean               hasDefault;
     @Override @RO SourceCodeInfo?       sourceInfo;
     @Override @RO TypeTemplate          type;
     @Override @RO TypeParameter[]       typeParams;

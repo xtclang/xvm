@@ -75,6 +75,7 @@ public class xClass
         markNativeMethod("implements"            , null, null);
         markNativeMethod("incorporates"          , null, null);
         markNativeMethod("isSingleton"           , null, null);
+        markNativeMethod("defaultValue"          , null, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -172,6 +173,9 @@ public class xClass
 
             case "isSingleton":
                 return invokeIsSingleton(frame, hTarget, aiReturn);
+
+            case "defaultValue":
+                return invokeDefaultValue(frame, hTarget, aiReturn);
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -396,6 +400,21 @@ public class xClass
 
             return frame.assignConditionalDeferredValue(aiReturn,
                     frame.getConstHandle(constInstance));
+            }
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        }
+
+    /**
+     * Implementation for: {@code conditional PublicType defaultValue()}.
+     */
+    public int invokeDefaultValue(Frame frame, ObjectHandle hTarget, int[] aiReturn)
+        {
+        TypeConstant typeClz      = getClassType(hTarget);
+        Constant     constDefault = typeClz.getDefaultValue();
+        if (constDefault != null)
+            {
+            return frame.assignConditionalDeferredValue(aiReturn,
+                    frame.getConstHandle(constDefault));
             }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }

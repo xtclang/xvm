@@ -92,7 +92,8 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     construct(Composition            composition,
               ListMap<String, Type>? canonicalParams = Null,
-              function StructType()? allocateStruct  = Null)
+              function StructType()? allocateStruct  = Null,
+              function StructType()? allocateDefault = Null)
         {
         if (Type[] formalTypes := PublicType.parameterized(), formalTypes.size > 0)
             {
@@ -114,6 +115,7 @@ const Class<PublicType, ProtectedType extends PublicType,
         this.composition     = composition;
         this.canonicalParams = canonicalParams ?: new ListMap();
         this.allocateStruct  = allocateStruct;
+        this.allocateDefault = allocateDefault;
         }
 
 
@@ -383,6 +385,22 @@ const Class<PublicType, ProtectedType extends PublicType,
         }
 
     /**
+     * The factory for default value, if the class has one.
+     */
+    protected function StructType()? allocateDefault;
+
+    /**
+     * The default value instance.
+     */
+    private @Lazy PublicType defaultInstance.calc()
+        {
+        function StructType()? alloc = allocateDefault;
+        assert baseTemplate.hasDefault && alloc != Null;
+        PublicType instance = instantiate(alloc());
+        return instance;
+        }
+
+    /**
      * True iff the class is abstract.
      */
     @RO Boolean abstract.get()
@@ -499,6 +517,9 @@ const Class<PublicType, ProtectedType extends PublicType,
      * that instance is assumed to be instantiated no later than the first time that it is
      * requested).
      *
+     * @return True iff the class defines a singleton
+     * @return (optional) the singleton instance
+
      * @throws IllegalState if the class is not part of the caller's type system, or a type system
      *         of a container nested under the caller's container
      * @throws Exception if an exception occurred instantiating the singleton, it is thrown when an
@@ -508,6 +529,22 @@ const Class<PublicType, ProtectedType extends PublicType,
         {
         return baseTemplate.singleton && allocateStruct != Null
                 ? (True, singletonInstance)
+                : False;
+        }
+
+    /**
+     * Determine if the class defines a default value, and if so, obtain that value.
+     *
+     * @return True iff the class defines a default value
+     * @return (optional) the default value
+
+     * @throws IllegalState if the class is not part of the caller's type system, or a type system
+     *         of a container nested under the caller's container
+     */
+    conditional PublicType defaultValue()
+        {
+        return baseTemplate.hasDefault && allocateDefault != Null
+                ? (True, defaultInstance)
                 : False;
         }
 

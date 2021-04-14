@@ -84,6 +84,7 @@ public class xRTClassTemplate
             markNativeProperty("multimethods");
             markNativeProperty("properties");
             markNativeProperty("singleton");
+            markNativeProperty("hasDefault");
             markNativeProperty("sourceInfo");
             markNativeProperty("type");
             markNativeProperty("typeParams");
@@ -124,6 +125,9 @@ public class xRTClassTemplate
 
             case "singleton":
                 return getPropertySingleton(frame, hComponent, iReturn);
+
+            case "hasDefault":
+                return getPropertyHasDefault(frame, hComponent, iReturn);
 
             case "sourceInfo":
                 return getPropertySourceInfo(frame, hComponent, iReturn);
@@ -360,6 +364,16 @@ public class xRTClassTemplate
         ClassStructure clz        = (ClassStructure) hComponent.getComponent();
         boolean        fSingleton = clz.isSingleton();
         return frame.assignValue(iReturn, xBoolean.makeHandle(fSingleton));
+        }
+
+    /**
+     * Implements property: hasDefault.get()
+     */
+    public int getPropertyHasDefault(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+        {
+        ClassStructure clz      = (ClassStructure) hComponent.getComponent();
+        boolean        fDefault = clz.getCanonicalType().getDefaultValue() != null;
+        return frame.assignValue(iReturn, xBoolean.makeHandle(fDefault));
         }
 
     /**
