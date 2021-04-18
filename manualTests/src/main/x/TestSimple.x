@@ -5,27 +5,12 @@ module TestSimple.test.org
 
     void run()
         {
-        report(Int32);
-        report(String);
-        report(Boolean);
-        report(Point);
-        }
+        Int    n = 3;
+        Byte   b = n.toByte();
+        log.add($"n={n}, b={b}");
 
-    void report(Type t)
-        {
-        if (val c := t.fromClass(), val d := c.defaultValue())
-            {
-            log.add($"default value for {t.DataType} is {d}");
-            }
-        else
-            {
-            log.add($"no default value for {t.DataType}");
-            }
-        }
-
-    const Point(Int x, Int y)
-            default(Origin)
-        {
-        static Point Origin = new Point(0, 0);
+        function Byte(Int) convert = Number.converterFor(Int, Byte);
+        log.add($"convert(3)={convert(3)}");
+        log.add($"convert(45)={convert(45)}");
         }
     }

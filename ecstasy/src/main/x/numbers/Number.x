@@ -285,13 +285,6 @@ const Number
         }
 
     /**
-     * A second name for the [toUInt8] method, to assist with readability. By using a property
-     * to alias the method, instead of creating a second delegating method, this prevents the
-     * potential for accidentally overriding the wrong method.
-     */
-    static Method<Number, <>, <Byte>> toByte = toUInt8;
-
-    /**
      * Obtain the number as an array of bytes, in left-to-right order.
      *
      * @return the number as an array of bytes
@@ -379,6 +372,13 @@ const Number
         {
         return toUIntN().toUInt8();
         }
+
+    /**
+     * A second name for the [toUInt8] method, to assist with readability. By using a property
+     * to alias the method, instead of creating a second delegating method, this prevents the
+     * potential for accidentally overriding the wrong method.
+     */
+    static Method<Number, <>, <Byte>> toByte = toUInt8;
 
     /**
      * Convert the number to an unsigned 16-bit integer.
@@ -550,6 +550,113 @@ const Number
      * @return a floating point literal for this number
      */
     FPLiteral toFPLiteral();
+
+    /**
+     * Obtain a function that converts from this type to the specified numeric type.
+     *
+     * @param to  the type to convert to
+     *
+     * @return a function that converts from this type to the specified numeric type
+     */
+    static <To extends Number> function To (Number) converterTo(Type<To> to)
+        {
+        return switch (to)
+            {
+            case @Unchecked Int8   : n -> n.toInt8()   .toUnchecked().as(to.DataType);
+            case @Unchecked Int16  : n -> n.toInt16()  .toUnchecked().as(to.DataType);
+            case @Unchecked Int32  : n -> n.toInt32()  .toUnchecked().as(to.DataType);
+            case @Unchecked Int64  : n -> n.toInt64()  .toUnchecked().as(to.DataType);
+            case @Unchecked Int128 : n -> n.toInt128() .toUnchecked().as(to.DataType);
+            case @Unchecked IntN   : n -> n.toIntN()   .toUnchecked().as(to.DataType);
+
+            case Int8              : n -> n.toInt8()                 .as(to.DataType);
+            case Int16             : n -> n.toInt16()                .as(to.DataType);
+            case Int32             : n -> n.toInt32()                .as(to.DataType);
+            case Int64             : n -> n.toInt64()                .as(to.DataType);
+            case Int128            : n -> n.toInt128()               .as(to.DataType);
+            case IntN              : n -> n.toIntN()                 .as(to.DataType);
+
+            case @Unchecked UInt8  : n -> n.toUInt8()  .toUnchecked().as(to.DataType);
+            case @Unchecked UInt16 : n -> n.toUInt16() .toUnchecked().as(to.DataType);
+            case @Unchecked UInt32 : n -> n.toUInt32() .toUnchecked().as(to.DataType);
+            case @Unchecked UInt64 : n -> n.toUInt64() .toUnchecked().as(to.DataType);
+            case @Unchecked UInt128: n -> n.toUInt128().toUnchecked().as(to.DataType);
+            case @Unchecked UIntN  : n -> n.toUIntN()  .toUnchecked().as(to.DataType);
+
+            case UInt8             : n -> n.toUInt8()                .as(to.DataType);
+            case UInt16            : n -> n.toUInt16()               .as(to.DataType);
+            case UInt32            : n -> n.toUInt32()               .as(to.DataType);
+            case UInt64            : n -> n.toUInt64()               .as(to.DataType);
+            case UInt128           : n -> n.toUInt128()              .as(to.DataType);
+            case UIntN             : n -> n.toUIntN()                .as(to.DataType);
+
+            case Dec32             : n -> n.toDec32()                .as(to.DataType);
+            case Dec64             : n -> n.toDec64()                .as(to.DataType);
+            case Dec128            : n -> n.toDec128()               .as(to.DataType);
+            case DecN              : n -> n.toDecN()                 .as(to.DataType);
+
+            case BFloat16          : n -> n.toBFloat16()             .as(to.DataType);
+            case Float16           : n -> n.toFloat16()              .as(to.DataType);
+            case Float32           : n -> n.toFloat32()              .as(to.DataType);
+            case Float64           : n -> n.toFloat64()              .as(to.DataType);
+            case Float128          : n -> n.toFloat128()             .as(to.DataType);
+            case FloatN            : n -> n.toFloatN()               .as(to.DataType);
+
+            default: assert as $"unsupported convert-to type: {to}";
+            };
+        }
+
+    /**
+     * Obtain a function that converts from the first specified numeric type to the second
+     * specified numeric type.
+     *
+     * @param from  the type to convert from
+     * @param to    the type to convert to
+     *
+     * @return a function that converts from the `from` type and to the `to` type
+     */
+    static <From extends Number, To extends Number> function To(From) converterFor(Type<From> from, Type<To> to)
+        {
+        // TODO GG: shouldn't this work?
+        // return From.converterTo(to);
+
+        return switch (from)
+            {
+            case IntNumber, @Unchecked IntNumber:   IntNumber      .converterTo(to);
+            case UIntNumber, @Unchecked UIntNumber: UIntNumber     .converterTo(to);
+            case FPNumber:                          FPNumber       .converterTo(to);
+            case DecimalFPNumber:                   DecimalFPNumber.converterTo(to);
+            case BinaryFPNumber:                    BinaryFPNumber .converterTo(to);
+
+            case Int8   , @Unchecked Int8   : Int8   .converterTo(to);
+            case Int16  , @Unchecked Int16  : Int16  .converterTo(to);
+            case Int32  , @Unchecked Int32  : Int32  .converterTo(to);
+            case Int64  , @Unchecked Int64  : Int64  .converterTo(to);
+            case Int128 , @Unchecked Int128 : Int128 .converterTo(to);
+            case IntN   , @Unchecked IntN   : IntN   .converterTo(to);
+
+            case UInt8  , @Unchecked UInt8  : UInt8  .converterTo(to);
+            case UInt16 , @Unchecked UInt16 : UInt16 .converterTo(to);
+            case UInt32 , @Unchecked UInt32 : UInt32 .converterTo(to);
+            case UInt64 , @Unchecked UInt64 : UInt64 .converterTo(to);
+            case UInt128, @Unchecked UInt128: UInt128.converterTo(to);
+            case UIntN  , @Unchecked UIntN  : UIntN  .converterTo(to);
+
+            case Dec32:  Dec32 .converterTo(to);
+            case Dec64:  Dec64 .converterTo(to);
+            case Dec128: Dec128.converterTo(to);
+            case DecN:   DecN  .converterTo(to);
+
+            case BFloat16: BFloat16.converterTo(to);
+            case Float16 : Float16 .converterTo(to);
+            case Float32 : Float32 .converterTo(to);
+            case Float64 : Float64 .converterTo(to);
+            case Float128: Float128.converterTo(to);
+            case FloatN  : FloatN  .converterTo(to);
+
+            default: assert as $"unsupported convert-from type: {from}";
+            };
+        }
 
 
     // ----- Stringable support --------------------------------------------------------------------
