@@ -2462,10 +2462,32 @@ public class InvocationExpression
             return arg;
             }
 
-        // allow for a function on the "left type" to be called (Bjarne'd):
-        //    x.f(y, z) -> X.f(x, y, z), where X is the class of x
-        if (typeLeft.isSingleUnderlyingClass(true) && !isSuppressCall() && !isAnyArgUnbound())
+        if (typeLeft.isFormalTypeType())
             {
+            // allow for a function on a formal type to be called, e.g.:
+            //  CompileType.f(x), where CompileType's constraint type has the function "f(x)"
+            FormalConstant idFormal       = (FormalConstant) typeLeft.getParamType(0).getDefiningConstant();
+            TypeConstant   typeConstraint = idFormal.getConstraintType();
+            TypeInfo       infoConstraint = typeConstraint.ensureTypeInfo(ErrorListener.BLACKHOLE);
+
+            ErrorListener errsAlt = errs.branch();
+
+            arg = findMethod(ctx, typeConstraint, infoConstraint, sName, args, MethodKind.Function,
+                        !fNoCall, false, atypeReturn, errsAlt);
+            if (arg != null)
+                {
+                m_argMethod   = arg;
+                m_method      = getMethod(infoConstraint, arg);
+                m_fBindTarget = false;
+                m_idFormal    = idFormal;
+                errsAlt.merge();
+                return arg;
+                }
+            }
+        else if (typeLeft.isSingleUnderlyingClass(true) && !isSuppressCall() && !isAnyArgUnbound())
+            {
+            // allow for a function on the "left type" to be called (Bjarne'd):
+            //    x.f(y, z) -> X.f(x, y, z), where X is the class of x
             List<Expression> listArgs = new ArrayList<>(args);
             listArgs.add(0, exprLeft);
 

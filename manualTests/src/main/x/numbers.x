@@ -389,4 +389,12 @@ module TestNumbers
             return data.reduce(parallel.elementAggregator);
             }
         }
+
+    void testConverter()
+        {
+        function Byte(Int) convert = Number.converterFor(Int, Byte);
+
+        assert convert(3) == Byte:3;
+        assert convert(45) == Byte:45;
+        }
     }

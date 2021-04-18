@@ -412,7 +412,7 @@ public class CmpExpression
     private void checkFormalType(Context ctx, NameExpression exprTarget, TypeConstant typeType)
         {
         TypeConstant typeTarget = exprTarget.getType();
-        if (typeTarget.isTypeOfType() && typeTarget.getParamType(0).isFormalType())
+        if (typeTarget.isFormalTypeType())
             {
             switch (operator.getId())
                 {

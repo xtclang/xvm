@@ -617,45 +617,7 @@ const Number
      */
     static <From extends Number, To extends Number> function To(From) converterFor(Type<From> from, Type<To> to)
         {
-        // TODO GG: shouldn't this work?
-        // return From.converterTo(to);
-
-        return switch (from)
-            {
-            case IntNumber, @Unchecked IntNumber:   IntNumber      .converterTo(to);
-            case UIntNumber, @Unchecked UIntNumber: UIntNumber     .converterTo(to);
-            case FPNumber:                          FPNumber       .converterTo(to);
-            case DecimalFPNumber:                   DecimalFPNumber.converterTo(to);
-            case BinaryFPNumber:                    BinaryFPNumber .converterTo(to);
-
-            case Int8   , @Unchecked Int8   : Int8   .converterTo(to);
-            case Int16  , @Unchecked Int16  : Int16  .converterTo(to);
-            case Int32  , @Unchecked Int32  : Int32  .converterTo(to);
-            case Int64  , @Unchecked Int64  : Int64  .converterTo(to);
-            case Int128 , @Unchecked Int128 : Int128 .converterTo(to);
-            case IntN   , @Unchecked IntN   : IntN   .converterTo(to);
-
-            case UInt8  , @Unchecked UInt8  : UInt8  .converterTo(to);
-            case UInt16 , @Unchecked UInt16 : UInt16 .converterTo(to);
-            case UInt32 , @Unchecked UInt32 : UInt32 .converterTo(to);
-            case UInt64 , @Unchecked UInt64 : UInt64 .converterTo(to);
-            case UInt128, @Unchecked UInt128: UInt128.converterTo(to);
-            case UIntN  , @Unchecked UIntN  : UIntN  .converterTo(to);
-
-            case Dec32:  Dec32 .converterTo(to);
-            case Dec64:  Dec64 .converterTo(to);
-            case Dec128: Dec128.converterTo(to);
-            case DecN:   DecN  .converterTo(to);
-
-            case BFloat16: BFloat16.converterTo(to);
-            case Float16 : Float16 .converterTo(to);
-            case Float32 : Float32 .converterTo(to);
-            case Float64 : Float64 .converterTo(to);
-            case Float128: Float128.converterTo(to);
-            case FloatN  : FloatN  .converterTo(to);
-
-            default: assert as $"unsupported convert-from type: {from}";
-            };
+        return From.converterTo(to);
         }
 
 

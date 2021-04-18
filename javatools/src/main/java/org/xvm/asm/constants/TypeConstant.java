@@ -5770,6 +5770,14 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff the TypeConstant represents a type of "formal type"
+     */
+    public boolean isFormalTypeType()
+        {
+        return isTypeOfType() && getParamType(0).isFormalType();
+        }
+
+    /**
      * @return true iff the TypeConstant represents a "dynamic type", which is based on a
      *              {@link DynamicFormalConstant}
      */
