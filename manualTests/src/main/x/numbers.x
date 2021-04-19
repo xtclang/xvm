@@ -14,6 +14,7 @@ module TestNumbers
         testDec64();
         testInfinity();
         testAggregator();
+        testConverter();
         }
 
     void testUInt()
