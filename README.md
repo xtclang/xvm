@@ -120,6 +120,18 @@ included Gradle Wrapper from within the `xvm` directory:
 
     ./gradlew build
 
+Or on Windows: 
+
+    gradlew build
+
+Note that Windows may require the `JAVA_TOOLS_OPTIONS` environment variable to be set to
+`-Dfile.encoding=UTF-8` in the Environment Variables window that can be accessed from Control Panel.
+This allows the Java compiler to automatically handle UTF-8 encoded files, and several of the Java
+source files used in the Ecstasy toolchain contain UTF-8 characters. Also, to change the default
+encoding used in Windows, go to the "Administrative" tab of the "Region" settings Window (also
+accessed from Control Panel), click the "Change system locale..." button and check the box labeled
+"Beta: Use UTF-8 for worldwide language support". 
+
 Instructions for getting started can be found in our [Contributing to Ecstasy](CONTRIBUTING.md)
 document.
 
