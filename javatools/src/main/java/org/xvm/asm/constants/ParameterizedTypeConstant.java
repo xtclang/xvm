@@ -667,10 +667,9 @@ public class ParameterizedTypeConstant
             typeActual = typeActual.getUnderlyingType();
             }
 
-        // now simply recurse over the parameter types
         ParameterizedTypeConstant that = (ParameterizedTypeConstant) typeActual;
 
-        // the underlying terminal type for actual type must fit the formal type
+        // the underlying terminal type for the actual type must fit this underlying type
         TypeConstant typeTermThis = this.m_constType;
         TypeConstant typeTermThat = that.m_constType;
         if (!typeTermThat.isA(typeTermThis))
@@ -678,15 +677,50 @@ public class ParameterizedTypeConstant
             return null;
             }
 
-        TypeConstant[] aconstThis = this.m_atypeParams;
-        TypeConstant[] aconstThat = that.m_atypeParams;
+        IdentityConstant idThis  = typeTermThis.getSingleUnderlyingClass(true);
+        IdentityConstant idThat  = typeTermThat.getSingleUnderlyingClass(true);
+        ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
+        int              iParam  = clzThis.indexOfGenericParameter(sFormalName);
 
-        for (int i = 0, c = Math.min(aconstThis.length, aconstThat.length); i < c; ++i)
+        if (iParam >= 0)
             {
-            TypeConstant typeResult = aconstThis[i].resolveTypeParameter(aconstThat[i], sFormalName);
-            if (typeResult != null)
+            return idThis.equals(idThat)
+                    ? typeActual.getParamType(iParam)
+                    : typeActual.resolveGenericType(sFormalName);
+            }
+
+        // the name is not known by this class; recurse over the parameter types
+        if (idThis.equals(idThat))
+            {
+            TypeConstant[] atypeThis = this.m_atypeParams;
+            TypeConstant[] atypeThat = that.m_atypeParams;
+
+            for (int i = 0, c = Math.min(atypeThis.length, atypeThat.length); i < c; ++i)
                 {
-                return typeResult;
+                TypeConstant typeResult = atypeThis[i].resolveTypeParameter(atypeThat[i], sFormalName);
+                if (typeResult != null)
+                    {
+                    return typeResult;
+                    }
+                }
+            }
+        else
+            {
+            // the formal type parameters could have different positions
+            iParam = 0;
+            for (StringConstant constName : clzThis.getTypeParams().keySet())
+                {
+                TypeConstant typeThat = typeActual.resolveGenericType(constName.getValue());
+                if (typeThat != null)
+                    {
+                    TypeConstant typeThis   = m_atypeParams[iParam];
+                    TypeConstant typeResult = typeThis.resolveTypeParameter(typeThat, sFormalName);
+                    if (typeResult != null)
+                        {
+                        return typeResult;
+                        }
+                    }
+                iParam++;
                 }
             }
 
