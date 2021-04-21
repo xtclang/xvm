@@ -17,6 +17,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
 import org.xvm.runtime.TypeComposition;
@@ -207,7 +208,8 @@ public class xFutureVar
             {
             CompletableFuture cf0 = cf.thenRun(() ->
                 frame.f_context.callLater(hRun, Utils.OBJECTS_NONE, false));
-            return frame.assignValue(iReturn, makeHandle(cf0));
+
+            return frame.assignValue(iReturn, makeHandle(hThis.getComposition(), cf0));
             }
         }
 
@@ -248,15 +250,10 @@ public class xFutureVar
             }
         else
             {
-            CompletableFuture cf0 = cf.thenAccept(r ->
-                {
-                ObjectHandle[] ahArg = new ObjectHandle[1];
-                ahArg[0] = r;
-                frame.f_context.callLater(hConsume, ahArg, false);
-                });
+            CompletableFuture cf0 = cf.thenAccept(hR ->
+                frame.f_context.callLater(hConsume, new ObjectHandle[] {hR}, false));
 
-            FutureHandle hf = new FutureHandle(hThis.getComposition(), null, cf0);
-            return frame.assignValue(iReturn, hf);
+            return frame.assignValue(iReturn, makeHandle(hThis.getComposition(), cf0));
             }
         }
 
@@ -268,16 +265,27 @@ public class xFutureVar
         CompletableFuture<ObjectHandle> cf = hThis.m_future;
         if (cf.isDone())
             {
+            if (!cf.isCompletedExceptionally())
+                {
+                return frame.assignValue(iReturn, hThis);
+                }
+
             ObjectHandle[] ahArg = extractResult(frame, cf);
-            switch (hConvert.call1(frame, null, ahArg, Op.A_IGNORE))
+            assert ahArg[0] == xNullable.NULL;
+
+            ahArg[0] = ahArg[1]; // hException
+            ahArg[1] = null;
+
+            switch (hConvert.call1(frame, null, ahArg, Op.A_STACK))
                 {
                 case Op.R_NEXT:
-                    // we can return the same handle since it's completed
-                    return frame.assignValue(iReturn, hThis);
+                    return frame.assignValue(iReturn, makeHandle(hThis.getComposition(),
+                        CompletableFuture.completedFuture(frame.popStack())));
 
                 case Op.R_CALL:
                     frame.m_frameNext.addContinuation(frameCaller ->
-                        frameCaller.assignValue(iReturn, hThis));
+                        frameCaller.assignValue(iReturn, makeHandle(hThis.getComposition(),
+                            CompletableFuture.completedFuture(frameCaller.popStack()))));
                     return Op.R_CALL;
 
                 case Op.R_EXCEPTION:
@@ -289,38 +297,36 @@ public class xFutureVar
             }
         else
             {
-            CompletableFuture cf0 = cf.handle((r, e) ->
+
+            CompletableFuture<ObjectHandle> cf0 = cf.handle((hR, e) ->
                 {
                 if (e == null)
                     {
-                    return r;
+                    return hR;
                     }
 
-                ObjectHandle[] ahArg = new ObjectHandle[]
-                    {((WrapperException) e).getExceptionHandle()};
+                FunctionHandle hf = (FunctionHandle) hConvert.getTemplate().
+                        createProxyHandle(frame.f_context, hConvert, null);
 
-                FunctionHandle hf = (FunctionHandle)
-                    hConvert.getTemplate().createProxyHandle(frame.f_context, hConvert, null);
+                ObjectHandle[] ahArg = new ObjectHandle[]
+                        {((WrapperException) e).getExceptionHandle()};
                 switch (hf.call1(frame, null, ahArg, Op.A_STACK))
                     {
                     case Op.R_NEXT:
-                        return frame.assignValue(iReturn, frame.popStack());
+                        return frame.popStack();
 
                     case Op.R_CALL:
-                        frame.m_frameNext.addContinuation(frameCaller ->
-                            frameCaller.assignValue(iReturn, frameCaller.popStack()));
-                        return Op.R_CALL;
+                        return new DeferredCallHandle(frame.m_frameNext);
 
                     case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
+                        return new DeferredCallHandle(frame.m_hException);
 
                     default:
                         throw new IllegalStateException();
                     }
                 });
 
-            return frame.assignValue(iReturn,
-                new FutureHandle(hThis.getComposition(), null, cf0));
+            return frame.assignValue(iReturn, makeHandle(hThis.getComposition(), cf0));
             }
         }
 
@@ -354,16 +360,16 @@ public class xFutureVar
             }
         else
             {
-            cf = cf.whenComplete((r, x) ->
-                frame.f_context.callLater(hNotify, combineResult(r, x), false));
+            CompletableFuture<ObjectHandle> cf0 = cf.whenComplete((hR, e) ->
+                frame.f_context.callLater(hNotify, combineResult(hR, e), false));
 
-            return frame.assignValue(iReturn, makeHandle(cf));
+            // TODO GG: how to calculate the return handle type composition?
+            return frame.assignValue(iReturn, makeHandle(cf0));
             }
         }
 
     /**
      * Extract the result of the completed future into an ObjectHandle array.
-     *
      *
      * @param frame  the current frame
      * @param cf     the future
@@ -683,6 +689,11 @@ public class xFutureVar
 
     public static FutureHandle makeHandle(CompletableFuture<ObjectHandle> future)
         {
-        return new FutureHandle(INSTANCE.getCanonicalClass(), null, future);
+        return makeHandle(INSTANCE.getCanonicalClass(), future);
+        }
+
+    public static FutureHandle makeHandle(TypeComposition clz, CompletableFuture<ObjectHandle> future)
+        {
+        return new FutureHandle(clz, null, future);
         }
     }
