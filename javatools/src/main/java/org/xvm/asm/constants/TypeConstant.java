@@ -5790,7 +5790,7 @@ public abstract class TypeConstant
      * Check if this type contains a "formal type", which could be either a generic type or a
      * type parameter.
      *
-     * @param fAllowParams  true if type parameters are acceptable
+     * @param fAllowParams  true if type parameters should be checked
      *
      * @return true iff the TypeConstant contains a formal type
      */
@@ -5835,7 +5835,7 @@ public abstract class TypeConstant
     /**
      * Check if this type contains a generic type.
      *
-     * @param fAllowParams  true if type parameters are acceptable
+     * @param fAllowParams  true if type parameters should be checked
      *
      * @return true iff the TypeConstant contains a generic type
      */
@@ -5880,7 +5880,7 @@ public abstract class TypeConstant
     /**
      * Check if this TypeConstant contains a formal type parameter type.
      *
-     * @param fAllowParams  true if type parameters are acceptable
+     * @param fAllowParams  true if type parameters should be checked
      *
      * @return true iff the TypeConstant contains a type parameter type
      */
