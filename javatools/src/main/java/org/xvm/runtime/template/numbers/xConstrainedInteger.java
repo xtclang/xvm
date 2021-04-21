@@ -88,10 +88,10 @@ public abstract class xConstrainedInteger
 
         markNativeMethod("toInt128"      , VOID, new String[]{"numbers.Int128"});
         markNativeMethod("toUInt128"     , VOID, new String[]{"numbers.UInt128"});
-        markNativeMethod("toIntN"      , VOID, new String[]{"numbers.IntN"});
-        markNativeMethod("toUIntN"     , VOID, new String[]{"numbers.UIntN"});
-        markNativeMethod("toFloatN"    , VOID, new String[]{"numbers.FloatN"});
-        markNativeMethod("toDecN"      , VOID, new String[]{"numbers.DecN"});
+        markNativeMethod("toIntN"        , VOID, new String[]{"numbers.IntN"});
+        markNativeMethod("toUIntN"       , VOID, new String[]{"numbers.UIntN"});
+        markNativeMethod("toFloatN"      , VOID, new String[]{"numbers.FloatN"});
+        markNativeMethod("toDecN"        , VOID, new String[]{"numbers.DecN"});
         markNativeMethod("toChar"        , VOID, new String[]{"text.Char"});
         markNativeMethod("toBooleanArray", VOID, null);
         markNativeMethod("toBitArray"    , VOID, null);

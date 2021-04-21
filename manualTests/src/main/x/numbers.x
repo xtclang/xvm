@@ -13,8 +13,8 @@ module TestNumbers
         testFloat16();
         testDec64();
         testInfinity();
-        testAggregator();
         testConverter();
+        testAggregator();
         }
 
     void testUInt()
@@ -169,36 +169,36 @@ module TestNumbers
         {
         console.println("\n** testFloat64()");
 
-        Float n1 = 4.2;
+        Float64 n1 = 4.2;
         console.println("n1=" + n1);
 
-        Byte[] bytes = n1.toByteArray();
-        Float  n11   = new Float(bytes);
+        Byte[]  bytes = n1.toByteArray();
+        Float64 n11   = new Float64(bytes);
         assert n11 == n1;
 
-        Bit[]  bits = n1.toBitArray();
-        Float  n12  = new Float(bits);
+        Bit[]   bits = n1.toBitArray();
+        Float64 n12  = new Float64(bits);
         assert n12 == n1;
 
-        Float n2 = n1 + 1;
+        Float64 n2 = n1 + 1;
         console.println("-1=" + n2);
         console.println("+1=" + (n2 - 1));
 
-        Float n3 = n1*10;
+        Float64 n3 = n1*10;
         console.println("*10=" + n3);
         console.println("/10=" + (n3 / 10));
 
         console.println("PI=" + FPNumber.PI);
-        Float pi64 = FPNumber.PI;
+        Float64 pi64 = FPNumber.PI;
         console.println("pi64=" + pi64);
 
         // see http://www.cplusplus.com/reference/cmath/round/
-        Float[] floats = [2.3, 3.8, 5.5, -2.3, -3.8, -5.5];
+        Float64[] floats = [2.3, 3.8, 5.5, -2.3, -3.8, -5.5];
 
         console.println();
         console.println("value\tround\tfloor\tceil\ttoZero");
         console.println("-----\t-----\t-----\t----\t-----");
-        for (Float f : floats)
+        for (Float64 f : floats)
             {
             console.println($"{f},\t{f.round()},\t{f.floor()},\t{f.ceil()},\t{f.round(TowardZero)}");
             }
@@ -285,8 +285,8 @@ module TestNumbers
         {
         console.println("\n** testInfinity()");
 
-        Float f = -123456789.987654321;
-        Dec   d = f.toDec64();
+        Float64 f = -123456789.987654321;
+        Dec     d = f.toDec64();
         while (True)
             {
             console.println($"f={f} d={d}");
@@ -310,36 +310,129 @@ module TestNumbers
             }
         }
 
+    void testConverter()
+        {
+        function Byte(Int) convert = Number.converterFor(Int, Byte);
+
+        assert convert(3) == Byte:3;
+        assert convert(45) == Byte:45;
+
+        Int     n = 42;
+        Float64 f = n.toFloat64();
+        console.println($"int={n}, float64={f}");
+        function Float64(Int) convert2 = Number.converterFor(Int, Float64);
+        console.println($"using converter: int={n}, float64={convert2(n)}");
+        }
+
     package agg import aggregate.xtclang.org;
 
     void testAggregator()
         {
+        // TODO GG import agg.* does not work
         import agg.Sum;
+        import agg.Average;
+        import agg.Min;
+        import agg.Max;
+        import agg.MinMax;
 
         console.println("\n** testAggregator()");
 
         Partition[] partitions = new Partition[10](i -> new Partition(i));
 
-        Sum<Int> sum = new Sum();
-        val finalAccumulator = sum.finalAggregator.init();
-        Int remain = partitions.size;
+        Sum<Int>             sum = new Sum();
+        Average<Int, Double> avg = new Average();
+        Min<Int>             min = new Min();
+        Max<Int>             max = new Max();
+        MinMax<Int>          mmx = new MinMax();
+
+        val finishSum = sum.finalAggregator.init();
+        Int remainSum = partitions.size;
+        val finishAvg = avg.finalAggregator.init();
+        Int remainAvg = partitions.size;
+        val finishMin = min.finalAggregator.init();
+        Int remainMin = partitions.size;
+        val finishMax = max.finalAggregator.init();
+        Int remainMax = partitions.size;
+        val finishMMx = mmx.finalAggregator.init();
+        Int remainMMx = partitions.size;
+
         Loop: for (Partition partition : partitions)
             {
-            @Future Int pendingPartial = partition.exec(sum);
+            @Future sum.Partial pendingSum = partition.exec(sum);
+            @Future avg.Partial pendingAvg = partition.exec(avg);
+            @Future min.Partial pendingMin = partition.exec(min);
+            @Future max.Partial pendingMax = partition.exec(max);
+            @Future mmx.Partial pendingMMx = partition.exec(mmx);
 
-            &pendingPartial.handle(e ->
-                {
-                console.println($"exception during partition {partition.id} processing: {e}");
-                return 0;
-                })
-            .passTo(partial ->
-                {
-                finalAccumulator.add(partial);
-                if (--remain <= 0)
+            &pendingSum.handle(e ->
                     {
-                    console.println($"final result={sum.finalAggregator.reduce(finalAccumulator)}");
-                    }
-                });
+                    console.println($"exception during partition {partition.id} processing: {e}");
+                    return 0;
+                    })
+                .passTo(partial ->
+                    {
+                    finishSum.add(partial);
+                    if (--remainSum <= 0)
+                        {
+                        console.println($"sum result={sum.finalAggregator.reduce(finishSum)}");
+                        }
+                    });
+
+            &pendingAvg.handle(e ->
+                    {
+                    console.println($"exception during partition {partition.id} processing: {e}");
+                    return avg.elementAggregator.reduce(avg.elementAggregator.init());
+                    })
+                .passTo(partial ->
+                    {
+                    finishAvg.add(partial);
+                    if (--remainAvg <= 0)
+                        {
+                        console.println($"avg result={avg.finalAggregator.reduce(finishAvg)}");
+                        }
+                    });
+
+            &pendingMin.handle(e ->
+                    {
+                    console.println($"exception during partition {partition.id} processing: {e}");
+                    return min.elementAggregator.reduce(min.elementAggregator.init());
+                    })
+                .passTo(partial ->
+                    {
+                    finishMin.add(partial);
+                    if (--remainMin <= 0)
+                        {
+                        console.println($"min result={min.finalAggregator.reduce(finishMin)}");
+                        }
+                    });
+
+            &pendingMax.handle(e ->
+                    {
+                    console.println($"exception during partition {partition.id} processing: {e}");
+                    return max.elementAggregator.reduce(max.elementAggregator.init());
+                    })
+                .passTo(partial ->
+                    {
+                    finishMax.add(partial);
+                    if (--remainMax <= 0)
+                        {
+                        console.println($"max result={max.finalAggregator.reduce(finishMax)}");
+                        }
+                    });
+
+            &pendingMMx.handle(e ->
+                    {
+                    console.println($"exception during partition {partition.id} processing: {e}");
+                    return mmx.elementAggregator.reduce(mmx.elementAggregator.init());
+                    })
+                .passTo(partial ->
+                    {
+                    finishMMx.add(partial);
+                    if (--remainMMx <= 0)
+                        {
+                        console.println($"min/max result={mmx.finalAggregator.reduce(finishMMx)}");
+                        }
+                    });
             }
         }
 
@@ -358,17 +451,9 @@ module TestNumbers
         public/private Int id;
         public/private Int[] data;
 
-        Int exec(ParallelAggregator<Int, Int, Int> parallel)
+        <Partial> Partial exec(ParallelAggregator<Int, Partial> parallel)
             {
             return data.reduce(parallel.elementAggregator);
             }
-        }
-
-    void testConverter()
-        {
-        function Byte(Int) convert = Number.converterFor(Int, Byte);
-
-        assert convert(3) == Byte:3;
-        assert convert(45) == Byte:45;
         }
     }

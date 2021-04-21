@@ -112,13 +112,13 @@ interface Random
     /**
      * @return a random 64-bit binary floating point value in the range `[0..1)`.
      */
-    Float float()
+    Float64 float()
         {
-        static Int   precision = 1 << 53;
-        static Float scalar    = 1.0 / precision.toFloat64();
+        static Int     precision = 1 << 53;
+        static Float64 scalar    = 1.0 / precision.toFloat64();
 
         // initialize only the least significant 53 bits of information; leave [0..10] blank
-        Int n = new Int(new Array<Bit>(64, i -> {return i > 10 ? bit() : 0;}));
+        Int n = new Int(new Bit[64](i -> (i > 10 ? bit() : 0)));
         return n.toFloat64() * scalar;
         }
     }

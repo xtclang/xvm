@@ -13,5 +13,5 @@ service RTRandom
     @Override Int int(Int max)        {TODO("native");}
     @Override UInt uint()             {TODO("native");}
     @Override Dec dec()               {TODO("native");}
-    @Override Float float()           {TODO("native");}
+    @Override Float64 float()         {TODO("native");}
     }

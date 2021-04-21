@@ -4,6 +4,12 @@
 const Sum<Element extends Number>
         implements ParallelAggregator<Element, Element, Element>
     {
+    assert()
+        {
+        assert val clz := Element.fromClass(), clz.defaultValue()
+                as $"Element type \"{Element}\" does not have a default value";
+        }
+
     @Override
     Aggregator<Element, Partial> elementAggregator.get()
         {
@@ -25,23 +31,25 @@ const Sum<Element extends Number>
     @Override
     Accumulator init()
         {
-        return new WorkingSum<Element>();
+        return new WorkingSum();
         }
 
     @Override
     Result reduce(Accumulator accumulator)
         {
-        return accumulator.as(WorkingSum<Element>).sum;
+        return accumulator.as(WorkingSum).sum;
         }
 
+
+    // ----- private inner classes -----------------------------------------------------------------
+
     /**
-     * A stateful summation of the elements provided. Not my most brilliant piece of work, but it
-     * will do.
+     * A stateful summation of the elements provided.
      */
-    private static class WorkingSum<Element extends Number>
+    private class WorkingSum
             implements Appender<Element>
         {
-        Element sum; // REVIEW GG - how is this initialized to zero?
+        Element sum;
 
         @Override
         WorkingSum add(Element v)
