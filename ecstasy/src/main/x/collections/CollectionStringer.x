@@ -14,13 +14,12 @@ mixin CollectionStringer
             count += e.estimateStringLength();
             }
 
-        return size;
+        return count;
         }
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf)
         {
-        Boolean curly = this.is(Set);
-        return join(buf, pre=$"{&this.actualClass}{curly ? '{' : '['}", post=curly ? "}" : "]");
+        return appendTo(buf, ", ", Null, Null, Null, "...", Null);
         }
     }

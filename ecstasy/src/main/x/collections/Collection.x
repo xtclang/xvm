@@ -817,9 +817,9 @@ interface Collection<Element>
     // ----- String formatting ---------------------------------------------------------------------
 
     /**
-     * Join the contents of the `Collection` together using an `Appender`.
+     * Append the contents of the `Collection` to the specified buffer.
      *
-     * @param buf     the optional `Appender` to append to
+     * @param buf     the buffer to append to
      * @param sep     the separator string that will be placed between elements
      * @param pre     the string to precede the elements
      * @param post    the string to follow the elements
@@ -827,19 +827,29 @@ interface Collection<Element>
      * @param trunc   the string that indicates that the maximum number of elements was exceeded
      * @param render  the optional function to use to render each element to a string
      *
-     * @return the resulting `Appender<Char>`
+     * @return the buffer
      */
-    Appender<Char> join(
-            Appender<Char>?           bufN   = Null,
+    Appender<Char> appendTo(
+            Appender<Char>            buf,
             String                    sep    = ", ",
-            String                    pre    = "",
-            String                    post   = "",
+            String?                   pre    = Null,
+            String?                   post   = Null,
             Int?                      limit  = Null,
             String                    trunc  = "...",
             function String(Element)? render = Null)
         {
-        Appender<Char> buf = bufN ?: new StringBuffer();
-        pre.appendTo(buf);
+        if (pre == Null && post == Null)
+            {
+            // TODO GG
+//            (pre, post) = this.is(Set)
+//                    ? ("{", "}")
+//                    : ("[", "]");
+
+            pre  = this.is(Set) ? "{" : "[";
+            post = this.is(Set) ? "}" : "]";
+            }
+
+        pre?.appendTo(buf);
 
         function Appender<Char>(Element) appendElement = switch ()
             {
@@ -869,21 +879,15 @@ interface Collection<Element>
             appendElement(e);
             }
 
-        post.appendTo(buf);
+        post?.appendTo(buf);
         return buf;
         }
 
     @Override
     String toString()
         {
-        if (this.is(Stringable))
-            {
-            StringBuffer buf = new StringBuffer(estimateStringLength());
-            appendTo(buf);
-            return buf.toString();
-            }
-
-        return join(pre=$"{&this.actualClass}[", post="]").toString();
+        // TODO GG: return appendTo(new StringBuffer(this.is(Stringable) ? estimateStringLength() : 0)).toString();
+        return appendTo(new StringBuffer(this.is(Stringable) ? this.as(Stringable).estimateStringLength() : 0)).toString();
         }
 
 

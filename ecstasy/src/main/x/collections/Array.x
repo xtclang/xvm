@@ -1130,41 +1130,7 @@ class Array<Element>
     @Override
     Appender<Char> appendTo(Appender<Char> buf)
         {
-        buf.add('[');
-
-        if (Element.is(Type<Stringable>))
-            {
-            loop: for (Element v : this)
-                {
-                if (!loop.first)
-                    {
-                    buf.addAll(", ");
-                    }
-
-                v.appendTo(buf);
-                }
-            }
-        else
-            {
-            loop: for (Element v : this)
-                {
-                if (!loop.first)
-                    {
-                    buf.addAll(", ");
-                    }
-
-                if (v.is(Stringable))
-                    {
-                    v.appendTo(buf);
-                    }
-                else
-                    {
-                    v.toString().appendTo(buf);
-                    }
-                }
-            }
-
-        return buf.add(']');
+        return appendTo(buf, ", ", Null, Null, Null, "...", Null);
         }
 
 
