@@ -534,7 +534,7 @@ public class xRTFunction
          *
          * @return a fully bound FunctionHandle
          */
-        public FullyBoundHandle bindArguments(ObjectHandle[] ahArg)
+        public FullyBoundHandle bindArguments(ObjectHandle... ahArg)
             {
             return new FullyBoundHandle(this, ahArg);
             }
@@ -598,9 +598,12 @@ public class xRTFunction
          * Place all bounds arguments to the specified array.
          *
          * @param ahVar  the argument array to place the arguments to
+         *
+         * @return the number or arguments that has been added
          */
-        protected void addBoundArguments(ObjectHandle[] ahVar)
+        protected int addBoundArguments(ObjectHandle[] ahVar)
             {
+            return 0;
             }
 
         protected FunctionHandle createProxyHandle(ServiceContext ctx)
@@ -672,9 +675,9 @@ public class xRTFunction
             }
 
         @Override
-        public void addBoundArguments(ObjectHandle[] ahVar)
+        public int addBoundArguments(ObjectHandle[] ahVar)
             {
-            m_hDelegate.addBoundArguments(ahVar);
+            return m_hDelegate.addBoundArguments(ahVar);
             }
 
         @Override
@@ -841,8 +844,9 @@ public class xRTFunction
             }
 
         @Override
-        public void addBoundArguments(ObjectHandle[] ahVar)
+        public int addBoundArguments(ObjectHandle[] ahVar)
             {
+            int cArgs;
             if (m_iArg >= 0)
                 {
                 int cMove = super.getParamCount() - (m_iArg + 1); // number of args to move to the right
@@ -851,9 +855,14 @@ public class xRTFunction
                     System.arraycopy(ahVar, m_iArg, ahVar, m_iArg + 1, cMove);
                     }
                 ahVar[m_iArg] = m_hArg;
+                cArgs = 1;
+                }
+            else
+                {
+                cArgs = 0;
                 }
 
-            super.addBoundArguments(ahVar);
+            return cArgs + super.addBoundArguments(ahVar);
             }
 
         @Override
@@ -932,12 +941,13 @@ public class xRTFunction
             }
 
         @Override
-        public void addBoundArguments(ObjectHandle[] ahVar)
+        public int addBoundArguments(ObjectHandle[] ahVar)
             {
-            super.addBoundArguments(ahVar);
+            int cArgs = super.addBoundArguments(ahVar);
 
             // to avoid extra array creation, the argument array may contain unused null elements
-            System.arraycopy(f_ahArg, 0, ahVar, 0, Math.min(ahVar.length, f_ahArg.length));
+            System.arraycopy(f_ahArg, 0, ahVar, cArgs, Math.min(ahVar.length - cArgs, f_ahArg.length));
+            return ahVar.length;
             }
 
         public FullyBoundHandle chain(FullyBoundHandle handle)

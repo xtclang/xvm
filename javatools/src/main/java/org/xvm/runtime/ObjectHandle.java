@@ -24,6 +24,7 @@ import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 /**
  * Runtime operates on Object handles holding the struct references or the values themselves
@@ -1030,6 +1031,57 @@ public abstract class ObjectHandle
         public String toString()
             {
             return "Deferred array initialization: " + getType();
+            }
+        }
+
+    /**
+     * DeferredSingletonHandle represents a deferred bully bound function call that puts a result
+     * on the calling frame's stack.
+     *
+     * Note: this handle cannot be allocated naturally and must be processed in a special way.
+     */
+    public static class DeferredFunctionCall
+            extends DeferredCallHandle
+        {
+        private final FullyBoundHandle f_hf;
+
+        public DeferredFunctionCall(FullyBoundHandle hf)
+            {
+            super((ExceptionHandle) null);
+
+            f_hf = hf;
+            }
+
+        @Override
+        public void addContinuation(Frame.Continuation continuation)
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        @Override
+        public int proceed(Frame frameCaller, Frame.Continuation continuation)
+            {
+            switch (f_hf.call1(frameCaller, null, Utils.OBJECTS_NONE, Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    return continuation.proceed(frameCaller);
+
+                case Op.R_CALL:
+                    frameCaller.m_frameNext.addContinuation(continuation);
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        @Override
+        public String toString()
+            {
+            return "Deferred function call for " + f_hf;
             }
         }
 

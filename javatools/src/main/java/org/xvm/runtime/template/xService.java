@@ -180,7 +180,17 @@ public class xService
             {
             case "callLater":
                 {
-                return hService.f_context.callLater((FunctionHandle) hArg, Utils.OBJECTS_NONE, false);
+                switch (hService.f_context.callLater((FunctionHandle) hArg, Utils.OBJECTS_NONE, false))
+                    {
+                    case Op.R_NEXT:
+                        return Op.R_NEXT;
+
+                    case Op.R_EXCEPTION:
+                        return frame.raiseException(xException.serviceTerminated(frame, f_sName));
+
+                    default:
+                        throw new IllegalStateException();
+                    }
                 }
 
             case "registerTimeout":

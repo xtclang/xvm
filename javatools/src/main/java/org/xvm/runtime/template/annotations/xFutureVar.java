@@ -17,7 +17,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.ObjectHandle.DeferredFunctionCall;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
 import org.xvm.runtime.TypeComposition;
@@ -297,34 +297,11 @@ public class xFutureVar
             }
         else
             {
-
             CompletableFuture<ObjectHandle> cf0 = cf.handle((hR, e) ->
-                {
-                if (e == null)
-                    {
-                    return hR;
-                    }
-
-                FunctionHandle hf = (FunctionHandle) hConvert.getTemplate().
-                        createProxyHandle(frame.f_context, hConvert, null);
-
-                ObjectHandle[] ahArg = new ObjectHandle[]
-                        {((WrapperException) e).getExceptionHandle()};
-                switch (hf.call1(frame, null, ahArg, Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        return frame.popStack();
-
-                    case Op.R_CALL:
-                        return new DeferredCallHandle(frame.m_frameNext);
-
-                    case Op.R_EXCEPTION:
-                        return new DeferredCallHandle(frame.m_hException);
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                });
+                e == null
+                    ? hR
+                    : new DeferredFunctionCall(hConvert.bindArguments(
+                            ((WrapperException) e).getExceptionHandle())));
 
             return frame.assignValue(iReturn, makeHandle(hThis.getComposition(), cf0));
             }
