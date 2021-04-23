@@ -15,7 +15,27 @@
 interface Map<Key, Value>
         extends Stringable
     {
+    /**
+     * An Orderer is a function that compares two keys for order.
+     */
+    typedef Type<Key>.Orderer Orderer;
+
+
     // ----- metadata ------------------------------------------------------------------------------
+
+    /**
+     * Metadata: Is the Map maintained in a specific order? And if that order is a function
+     * of the keys in the Map, what is the [Type.Orderer] that represents that ordering?
+     *
+     * @return True iff the Entry order within the Map is significant
+     * @return (conditional) the Orderer that determines the order between two map keys; `Null`
+     *         indicates that an order is maintained, but not by the comparison of keys, such as
+     *         when a map stores entries in the order that they are added
+     */
+    conditional Orderer? orderedBy()
+        {
+        return False;
+        }
 
     /**
      * Metadata: Are mutating operations on the map processed in place, or do they result in
@@ -191,28 +211,57 @@ interface Map<Key, Value>
     /**
      * Create a sorted `Map` from this `Map`.
      *
-     * @param orderer  an optional [Orderer] to control the sort order; `Null` means to use the
-     *                 Map Value's natural order
+     * @param order  (optional) [Type.Orderer] to control the sort order of the Map entries; `Null`
+     *               means to use the Map's natural order, which is typically the natural order of
+     *               the Map's keys
      *
      * @return a sorted Map
      *
-     * @throws UnsupportedOperation  if no [Orderer] is provided and [Value] is not [Orderable]
+     * @throws UnsupportedOperation  if no [Type.Orderer] is provided and [Key] is not [Orderable]
      */
-    Map! sorted(function Ordered (Entry, Entry)? orderer = Null)
+    Map! sorted(Orderer? order = Null)
         {
-        return entries.sorted(orderer).associate(entryAssociator());
+        if (order == Null)
+            {
+            assert order := Key.ordered();
+            }
+        return sortedByEntry(orderByKey(order));
         }
 
+    /**
+     * Create a sorted `Map` from this `Map`.
+     *
+     * @param order  [Type.Orderer] to control the sort order of the Map entries
+     *
+     * @return a sorted Map
+     */
+    Map! sortedByEntry(function Ordered (Entry, Entry) order)
+        {
+        return entries.sorted(order).associate(entryAssociator());
+        }
+
+    /**
+     * An implementation of a matching function that operators on entries, whose purpose is to match
+     * on the values in those entries, by delegating to an underlying function that matches only on
+     * the value.
+     */
     function Boolean(Entry) valueMatches(function Boolean(Value) match)
         {
         return e -> match(e.value);
         }
 
-    function Ordered (Entry, Entry) entryOrderer(function Ordered (Value, Value) orderer)
+    /**
+     * A comparison function for entries that delegates to a comparison function on keys.
+     */
+    function Ordered (Entry, Entry) orderByKey(function Ordered (Key, Key) order)
         {
-        return (e1, e2) -> orderer(e1.value, e2.value);
+        return (e1, e2) -> order(e1.key, e2.key);
         }
 
+    /**
+     * An implementation of an associator, as used by [Collection.associate], that splits an [Entry]
+     * into its constituent key and value.
+     */
     function (Key, Value) (Entry) entryAssociator()
         {
         return e -> (e.key, e.value);
