@@ -1549,8 +1549,25 @@ public abstract class AstNode
                 }
             else
                 {
-                boolean fOldBetter = sigMethod.isSubstitutableFor(sigBest, typeTarget);
-                boolean fNewBetter = sigBest.isSubstitutableFor(sigMethod, typeTarget);
+                boolean fOldBetter;
+                boolean fNewBetter;
+
+                int cParamsOld = sigBest.getParamCount();
+                int cParamsNew = sigMethod.getParamCount();
+                if (cParamsOld == cParamsNew)
+                    {
+                    fOldBetter = sigMethod.isSubstitutableFor(sigBest, typeTarget);
+                    fNewBetter = sigBest.isSubstitutableFor(sigMethod, typeTarget);
+                    }
+                else
+                    {
+                    // there are two methods that match, but one has less parameters that the
+                    // other, which means that the one with more parameters has default values;
+                    // therefore, we could safely choose the method with less parameters
+                    fNewBetter = cParamsNew < cParamsOld;
+                    fOldBetter = !fNewBetter;
+                    }
+
                 if (fOldBetter || fNewBetter)
                     {
                     // if both are substitutable to each other, we can take any

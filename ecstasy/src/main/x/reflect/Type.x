@@ -77,7 +77,6 @@ interface Type<DataType, OuterType>
     typedef TypeTemplate.Form Form;
 
     /**
-    /**
      * "Comparer" is a function that compares two objects of this type for equality.
      */
     typedef function Boolean (DataType, DataType) Comparer;
