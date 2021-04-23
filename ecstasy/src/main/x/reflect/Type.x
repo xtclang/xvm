@@ -76,6 +76,17 @@ interface Type<DataType, OuterType>
 
     typedef TypeTemplate.Form Form;
 
+    /**
+    /**
+     * "Comparer" is a function that compares two objects of this type for equality.
+     */
+    typedef function Boolean (DataType, DataType) Comparer;
+
+    /**
+     * "Orderer" is a function that compares two objects of this type for order.
+     */
+    typedef function Ordered (DataType, DataType) Orderer;
+
 
     // ----- state representation ------------------------------------------------------------------
 
@@ -430,6 +441,50 @@ interface Type<DataType, OuterType>
      * @return (conditional) the outer object reference
      */
     conditional OuterType hasOuter(DataType o);
+
+    /**
+     * Obtain a function that can be used to compare objects of this type for equality.
+     *
+     * @return a function that compares two objects of this type, and which returns True iff the
+     *         objects are equal
+     */
+    @RO Comparer comparer.get()
+        {
+        return (DataType o1, DataType o2) -> o1 == o2;
+        }
+
+    /**
+     * Determine if this type is Orderable, and if so, obtain the [Order] for objects of this Type
+     * that will order the elements in their "natural" order, which is the order defined by the
+     * [Orderable] implementation on the underlying type itself.
+     *
+     * @return True iff the type is Orderable
+     * @return (conditional) an Order that implements the natural ordering of objects of this type
+     */
+    conditional Orderer ordered()
+        {
+// TODO GG
+//        return DataType.is(Type!<Orderable>) ? (True, (DataType o1, DataType o2) -> o1 <=> o2) : False;
+
+// TODO GG also try this without the !
+        if (DataType.is(Type!<Orderable>))
+            {
+            return True, (DataType o1, DataType o2) -> o1 <=> o2;
+            }
+
+        return False;
+        }
+
+    /**
+     * Determine if this type is Hashable, and if so, obtain the [Hasher] for objects of this Type.
+     *
+     * @return True iff the type is Hashable
+     * @return (conditional) the natural Hasher for objects of this type
+     */
+    conditional collections.Hasher<DataType> hashed()
+        {
+        return DataType.is(Type!<Hashable>) ? (True, new collections.NaturalHasher<DataType>()) : False;
+        }
 
 
     // ----- operators -----------------------------------------------------------------------------
