@@ -93,7 +93,8 @@ public class Context
      */
     public boolean isMethod()
         {
-        return getOuterContext().isMethod();
+        Context ctx = getOuterContext();
+        return ctx != null && ctx.isMethod();
         }
 
     /**
@@ -103,7 +104,8 @@ public class Context
      */
     public boolean isFunction()
         {
-        return getOuterContext().isFunction();
+        Context ctx = getOuterContext();
+        return ctx != null && ctx.isFunction();
         }
 
     /**
@@ -113,7 +115,8 @@ public class Context
      */
     public boolean isConstructor()
         {
-        return getOuterContext().isConstructor();
+        Context ctx = getOuterContext();
+        return ctx != null && ctx.isConstructor();
         }
 
     /**

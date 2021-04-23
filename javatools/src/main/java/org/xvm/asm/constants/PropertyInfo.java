@@ -1278,7 +1278,7 @@ public class PropertyInfo
                 chain = new MethodBody[] {new MethodBody(idMethod, idMethod.getSignature(),
                         Implementation.Field, getFieldIdentity())};
                 }
-            else
+            else if (isCustomLogic())
                 {
                 int cBodies = chain.length;
                 int ixTail  = cBodies - 1;
