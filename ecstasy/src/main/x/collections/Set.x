@@ -75,17 +75,4 @@ interface Set<Element>
         {
         return new ComplementSet<Element>(this, universalSet);
         }
-
-    @Override
-    String toString()
-        {
-        if (this.is(Stringable))
-            {
-            StringBuffer buf = new StringBuffer(estimateStringLength());
-            appendTo(buf);
-            return buf.toString();
-            }
-
-        return join(pre=$"{&this.actualClass}\{", post="}").toString();
-        }
     }
