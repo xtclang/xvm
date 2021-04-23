@@ -1668,7 +1668,6 @@ public class xRTType
         GenericHandle hMulti = (GenericHandle) hType.getField("multimethods");
         hMulti.setField(GenericHandle.OUTER, hType);
         hMulti.setField("calculate",  xNullable.NULL);
-        hMulti.setField("assignable", xBoolean.FALSE);
 
         return hType;
         }

@@ -33,39 +33,21 @@ mixin LazyVar<Referent>(function Referent ()? calculate = Null)
         into Var<Referent>
     {
     private function Referent ()? calculate;
-    private Boolean assignable = False;
 
     @Override
     Referent get()
         {
         if (!assigned)
             {
-            Referent value = calculate?() : calc();
-            try
-                {
-                assignable = True;
-                set(value);
-                }
-            finally
-                {
-                assignable = False;
-                }
-
-            return value;
+            set(calc());
             }
 
         return super();
         }
 
-    @Override
-    void set(Referent value)
-        {
-        assert !assigned && assignable;
-        super(value);
-        }
-
     protected Referent calc()
         {
-        TODO construct LazyVar with a calculate function, or override the calc() method
+        return calculate?();
+        TODO("construct LazyVar with a calculate function, or override the calc() method");
         }
     }

@@ -87,24 +87,26 @@ public class AssertV
         // pieces
         if (m_asParts == null)
             {
-            String sMsg  = frame.getString(m_nMsgConstId);
-            int    cVals = m_anValue.length;
-            m_asParts = new String[cVals + 1];
+            String   sMsg    = frame.getString(m_nMsgConstId);
+            int      cVals   = m_anValue.length;
+            String[] asParts = new String[cVals + 1];
             for (int i = 0; i < cVals; ++i)
                 {
                 String sReplace = "{" + i + "}";
                 int of = sMsg.indexOf(sReplace);
                 if (of > 0)
                     {
-                    m_asParts[i] = sMsg.substring(0, of);
+                    asParts[i] = sMsg.substring(0, of);
                     sMsg = sMsg.substring(of + sReplace.length());
                     }
                 else
                     {
-                    m_asParts[i] = "";
+                    asParts[i] = "";
                     }
                 }
-            m_asParts[cVals] = sMsg;
+            assert sMsg != null;
+            asParts[cVals] = sMsg;
+            m_asParts = asParts;
             }
 
         // get the trace variable and constant values to display
@@ -192,5 +194,5 @@ public class AssertV
 
     private Argument[] m_aArgValue;
 
-    private transient String[] m_asParts;
+    private volatile transient String[] m_asParts;
     }

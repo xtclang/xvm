@@ -22,10 +22,19 @@ module TestSimple.test.org
         console.println(p1.&hash.get());
         console.println(p2.&hash.get());
 
-        p1.&hash.set(7);
-        console.println($"wrong: {p1.hash}");
-        p2.&hash.set(7);
-        console.println($"wrong: {p2.hash}");
+        try
+            {
+            p1.&hash.set(7);
+            assert;
+            }
+        catch (Exception e) {}
+
+        try
+            {
+            p2.&hash.set(7);
+            assert;
+            }
+        catch (Exception e) {}
         }
 
       const Point1(Int x, Int y)
