@@ -7,7 +7,7 @@ interface Iterator<Element>
     /**
      * An Orderer is a function that compares two objects for order.
      */
-    typedef function Ordered (Element, Element) Orderer;
+    typedef Type<Element>.Orderer Orderer; // TODO GG I would like to use "Element.Orderer" instead
 
     /**
      * Get the next element.
@@ -99,7 +99,7 @@ interface Iterator<Element>
      *
      * This iterator must not be used after this operation.
      *
-     * @param order  (optional) the Orderer to use to compare elements of this iterator; if
+     * @param order  (optional) the [Type.Orderer] to use to compare elements of this iterator; if
      *               none is provided, the Element type must be Orderable
      *
      * @return True iff the iterator is not empty and a minimum value was determined
@@ -146,7 +146,7 @@ interface Iterator<Element>
      *
      * This iterator must not be used after this operation.
      *
-     * @param order  (optional) the Orderer to use to compare elements of this iterator; if
+     * @param order  (optional) the [Type.Orderer] to use to compare elements of this iterator; if
      *               none is provided, the Element type must be Orderable
      *
      * @return True iff the iterator is not empty and a minimum value was determined
@@ -188,7 +188,7 @@ interface Iterator<Element>
      *
      * This iterator must not be used after this operation.
      *
-     * @param order  (optional) the Orderer to use to compare elements of this iterator; if
+     * @param order  (optional) the [Type.Orderer] to use to compare elements of this iterator; if
      *               none is provided, the Element type must be Orderable
      *
      * @return True iff the iterator is not empty and the range of values was determined
@@ -310,7 +310,7 @@ interface Iterator<Element>
 
     /**
      * Metadata: Is the iterator in an order that is a function of its elements? And if so, what is
-     * the Orderer that represents that ordering?
+     * the [Type.Orderer] that represents that ordering?
      *
      * @return True iff the iterator in an order that is a function of its elements
      * @return (conditional) the Orderer that represents the order
@@ -450,8 +450,8 @@ interface Iterator<Element>
      *
      * This iterator must not be used after this operation.
      *
-     * @param order  the `Orderer` to use to sort the iterator's elements, or Null
-     *               (the default) to indicate the natural sort order
+     * @param order  (optional) the [Type.Orderer] to use to sort the iterator's elements, or Null
+     *               to indicate the natural sort order
      *
      * @return a new iterator representing the same elements from this iterator in a sorted order
      */

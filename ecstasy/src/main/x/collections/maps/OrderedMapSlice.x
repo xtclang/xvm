@@ -594,7 +594,7 @@ class OrderedMapSlice<Key extends Orderable, Value>
             }
 
         @Override
-        conditional Orderer? orderedBy()
+        conditional Orderer? ordered()
             {
             return True, outer.orderer;
             }

@@ -657,7 +657,7 @@ class SkiplistMap<Key extends Orderable, Value>
             }
 
         @Override
-        conditional Orderer? orderedBy()
+        conditional Orderer? ordered()
             {
             return True, this.SkiplistMap.orderer;
             }

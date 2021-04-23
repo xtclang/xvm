@@ -29,9 +29,9 @@ class MapSet<Element>
     // ----- read operations -----------------------------------------------------------------------
 
     @Override
-    conditional Orderer? orderedBy()
+    conditional Orderer? ordered()
         {
-        return contents.keys.orderedBy();
+        return contents.keys.ordered();
         }
 
     @Override

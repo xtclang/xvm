@@ -15,7 +15,7 @@ interface List<Element>
     // ----- metadata ------------------------------------------------------------------------------
 
     @Override
-    conditional Orderer? orderedBy()
+    conditional Orderer? ordered()
         {
         // there is an order to a list, but (unless otherwise specified) not based on an Orderer
         return True, Null;
@@ -56,7 +56,7 @@ interface List<Element>
     @Override
     Boolean contains(Element value)
         {
-        if (Orderer? orderer := orderedBy(), orderer != Null)
+        if (Orderer? orderer := ordered(), orderer != Null)
             {
             // binary search
             Int lo = 0;
@@ -259,7 +259,7 @@ interface List<Element>
      */
     conditional Int indexOf(Element value, Int startAt = 0)
         {
-        if (Orderer? orderer := orderedBy(), orderer != Null)
+        if (Orderer? orderer := ordered(), orderer != Null)
             {
             // binary search
             Int lo = startAt;
@@ -359,7 +359,7 @@ interface List<Element>
      */
     conditional Int lastIndexOf(Element value, Int startAt = Int.maxvalue)
         {
-        if (Orderer? orderer := orderedBy(), orderer != Null)
+        if (Orderer? orderer := ordered(), orderer != Null)
             {
             // binary search
             Int lo     = 0;
@@ -606,12 +606,12 @@ interface List<Element>
         }
 
     /**
-     * Sort the contents of this list in the order specified by the optional Orderer.
+     * Sort the contents of this list in the order specified by the optional [Type.Orderer].
      *
-     * @param order    the Orderer to use to sort the list; (optional, defaulting to using the
-     *                 "natural" sort order of the Element type)
-     * @param inPlace  pass `True` to allow the List to sort itself "in place", if the List is able
-     *                 to do so
+     * @param order    (optional) the Orderer to use to sort the list, defaulting to using the
+     *                 "natural" sort order of the Element type
+     * @param inPlace  (optional) pass `True` to allow the List to sort itself "in place", if the
+     *                 List is able to do so
      *
      * @return the resultant list, which is the same as `this` for a mutable list
      */
@@ -625,7 +625,7 @@ interface List<Element>
             return this;
             }
 
-        if (orderer != Null, Orderer? prev := orderedBy(), prev? == orderer)
+        if (orderer != Null, Orderer? prev := ordered(), prev? == orderer)
             {
             // already in the right order
             return inPlace
@@ -1412,7 +1412,14 @@ interface List<Element>
      */
     static <Element> List<Element> sort(List<Element> list, List<Element>.Orderer? order = Null)
         {
-        order ?:= list.naturalOrderer ?: throw new TypeMismatch($"Element type {Element} is not Orderable");
+        if (order == null)
+            {
+            if (order := Element.ordered()) {}
+            else
+                {
+                throw new TypeMismatch($"Element type {Element} is not Orderable");
+                }
+            }
 
         if (list.is(immutable List) || !list.inPlace)
             {

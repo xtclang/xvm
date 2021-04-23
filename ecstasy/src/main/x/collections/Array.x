@@ -539,7 +539,7 @@ class Array<Element>
         }
 // TODO CP?
 //        {
-//        if (orderer != Null && mutability == Null, Orderer? prev := orderedBy(), prev? == orderer)
+//        if (orderer != Null && mutability == Null, Orderer? prev := ordered(), prev? == orderer)
 //            {
 //            return this;
 //            }

@@ -46,6 +46,12 @@ interface Collection<Element>
         extends Iterable<Element>
         extends Appender<Element>
     {
+    /**
+     * An Orderer is a function that compares two elements for order.
+     */
+    typedef Type<Element>.Orderer Orderer; // TODO GG I would like to use "Element.Orderer" instead
+
+
     // ----- abstract methods ----------------------------------------------------------------------
 
     /**
@@ -82,33 +88,15 @@ interface Collection<Element>
         }
 
     /**
-     * An Orderer is a function that compares two elements for order.
-     */
-    typedef function Ordered (Element, Element) Orderer;
-
-    /**
-     * An [Orderer] for elements of this Collection that will order the elements in their "natural"
-     * order, which is the order defined by the [Orderable] implementation on the Element type
-     * itself. If the Element type is not `Orderable`, then the `naturalOrderer` is `Null`.
-     *
-     * This property is generally a "helper", and not related to any particular state of the
-     * Collection, other than the [Element] type itself.
-     */
-    @RO Orderer? naturalOrderer.get()
-        {
-        return Element.is(Type<Orderable>) ? ((Element e1, Element e2) -> e1 <=> e2) : Null;
-        }
-
-    /**
      * Metadata: Is the collection maintained in a specific order? And if that order is a function
-     * of the elements in the collection, what is the [Orderer] that represents that ordering?
+     * of the elements in the collection, what is the [Type.Orderer] that represents that ordering?
      *
      * @return True iff the element order within the collection is significant
-     * @return (conditional) the [Orderer] that determines the order between two elements; `Null`
-     *         indicates that the order is maintained, but not by comparison of elements, such as
-     *         when elements are stored in the order in which they are added to the collection
+     * @return (conditional) the Orderer that determines the order between two elements; `Null`
+     *         indicates that an order is maintained, but not by comparison of elements, for example
+     *         when a collection stores elements in the order that they are added
      */
-    conditional Orderer? orderedBy()
+    conditional Orderer? ordered()
         {
         return False;
         }
@@ -185,7 +173,8 @@ interface Collection<Element>
             }
 
         // if both collections are sorted by the same thing, then a "zipper" algorithm is O(N)
-        if (Orderer? thisOrder := this.orderedBy(), Orderer? thatOrder := values.orderedBy(),
+        if (    Orderer? thisOrder := this.ordered(),
+                Orderer? thatOrder := values.ordered(),
                 thisOrder? == thatOrder?)
             {
             Iterator<Element> iterThat = values.iterator();
@@ -226,7 +215,7 @@ interface Collection<Element>
         // assume that sorted collections have O(N*logN) time with fast e.g. O(logN) look-ups
         // assume that optimizing for small collections is a negative return
         // use hashing as the optimization (requiring elements to be Hashable)
-        if (!this.is(Set) && this.orderedBy() && size > 17 && Element.is(Type<Hashable>))
+        if (!this.is(Set) && this.ordered() && size > 17 && Element.is(Type<Hashable>))
             {
             // it's expensive to create a new HashSet for this purpose, but it turns an O(N^2)
             // operation into an O(2*N) problem
@@ -554,12 +543,13 @@ interface Collection<Element>
     /**
      * Create a sorted `List` from this `Collection`.
      *
-     * @param orderer  an optional [Orderer] to control the sort order; `Null` means to use the
+     * @param orderer  an optional [Type.Orderer] to control the sort order; `Null` means to use the
      *                 element type's natural order
      *
      * @return a sorted list
      *
-     * @throws UnsupportedOperation  if no [Orderer] is provided and [Element] is not [Orderable]
+     * @throws UnsupportedOperation  if no [Type.Orderer] is provided and [Element] is not
+     *                               [Orderable]
      */
     List<Element> sorted(Orderer? orderer = Null)
         {
@@ -915,8 +905,8 @@ interface Collection<Element>
         // check if a once-through zipper algorithm can be used
         Boolean sameOrder = size == 1;
         if (!sameOrder,
-                Collection<CompileType.Element>.Orderer? order1 := collection1.orderedBy(),
-                Collection<CompileType.Element>.Orderer? order2 := collection2.orderedBy(),
+                Collection<CompileType.Element>.Orderer? order1 := collection1.ordered(),
+                Collection<CompileType.Element>.Orderer? order2 := collection2.ordered(),
                 order1? == order2?)
             {
             sameOrder = True;
