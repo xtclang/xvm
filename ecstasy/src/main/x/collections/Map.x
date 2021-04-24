@@ -32,7 +32,7 @@ interface Map<Key, Value>
      *         indicates that an order is maintained, but not by the comparison of keys, such as
      *         when a map stores entries in the order that they are added
      */
-    conditional Orderer? orderedBy()
+    conditional Orderer? ordered()
         {
         return False;
         }
@@ -225,6 +225,12 @@ interface Map<Key, Value>
             {
             assert order := Key.ordered();
             }
+        else if (Orderer? currentOrder := ordered(), order == currentOrder)
+            {
+            // optimization if the requested order is the same as the current order
+            return this;
+            }
+
         return sortedByEntry(orderByKey(order));
         }
 

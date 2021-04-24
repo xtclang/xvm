@@ -19,52 +19,33 @@ class OrderedMapSlice<Key extends Orderable, Value>
         this.map   = map;
         this.range = range;
 
-        Orderer? orderer = map.orderer;
-        if (orderer == Null)
+        assert Orderer compare := map.ordered();
+        Key first = range.first;
+        Key last  = range.last;
+        if (compare(first, last) == Greater)
             {
-            this.include = range.contains(<Key> _);
-            if (range.descending)
+            // the slice is in the reverse order of the underlying map
+            this.descending = True;
+            this.compare    = (k1, k2) -> compare(k2, k1);
+            this.include    = switch (range.lastExclusive, range.firstExclusive)
                 {
-                // the slice is in the reverse order of the underlying map
-                this.compareKeys = (k1, k2) -> k2 <=> k1;
-                this.descending  = True;
-                }
-            else
-                {
-                this.compareKeys = (k1, k2) -> k1 <=> k2;
-                this.descending  = False;
-                }
+                case (False, False): k -> compare(k, last) != Lesser  && compare(k, first) != Greater;
+                case (False, True ): k -> compare(k, last) != Lesser  && compare(k, first) == Lesser ;
+                case (True,  False): k -> compare(k, last) == Greater && compare(k, first) != Greater;
+                case (True,  True ): k -> compare(k, last) == Greater && compare(k, first) == Lesser ;
+                };
             }
         else
             {
-            Key first = range.first;
-            Key last  = range.last;
-            if (orderer(first, last) == Greater)
+            this.descending = False;
+            this.compare    = compare;
+            this.include    = switch (range.firstExclusive, range.lastExclusive)
                 {
-                // the slice is in the reverse order of the underlying map
-                this.descending  = True;
-                this.compareKeys = (k1, k2) -> orderer(k2, k1);
-                this.include    = switch (range.lastExclusive, range.firstExclusive)
-                    {
-                    case (False, False): k -> orderer(k, last) != Lesser  && orderer(k, first) != Greater;
-                    case (False, True ): k -> orderer(k, last) != Lesser  && orderer(k, first) == Lesser ;
-                    case (True,  False): k -> orderer(k, last) == Greater && orderer(k, first) != Greater;
-                    case (True,  True ): k -> orderer(k, last) == Greater && orderer(k, first) == Lesser ;
-                    };
-                }
-            else
-                {
-                this.descending = False;
-                this.include    = switch (range.firstExclusive, range.lastExclusive)
-                    {
-                    case (False, False): k -> orderer(k, first) != Lesser  && orderer(k, last) != Greater;
-                    case (False, True ): k -> orderer(k, first) != Lesser  && orderer(k, last) == Lesser ;
-                    case (True,  False): k -> orderer(k, first) == Greater && orderer(k, last) != Greater;
-                    case (True,  True ): k -> orderer(k, first) == Greater && orderer(k, last) == Lesser ;
-                    };
-                }
-
-            this.compareKeys = orderer;
+                case (False, False): k -> compare(k, first) != Lesser  && compare(k, last) != Greater;
+                case (False, True ): k -> compare(k, first) != Lesser  && compare(k, last) == Lesser ;
+                case (True,  False): k -> compare(k, first) == Greater && compare(k, last) != Greater;
+                case (True,  True ): k -> compare(k, first) == Greater && compare(k, last) == Lesser ;
+                };
             }
 
         findFirst = switch (descending, range.firstExclusive)
@@ -105,12 +86,12 @@ class OrderedMapSlice<Key extends Orderable, Value>
     /**
      * The actual Orderer used internally.
      */
-    protected/private Orderer compareKeys;
+    protected/private Orderer compare;
 
     /**
      * The key range that defines the slice. Note that the order of the range is always based on
      * the natural order of the `Key` type, and so the `Range` logic has to be overridden
-     * (re-implemented here) to use the map's custom `Orderer` if one is specified.
+     * (re-implemented here) to use the map's specified `Orderer`.
      */
     protected/private Range<Key> range;
 
@@ -246,11 +227,9 @@ class OrderedMapSlice<Key extends Orderable, Value>
     // ----- OrderedMap interface ------------------------------------------------------------------
 
     @Override
-    Orderer? orderer.get()
+    conditional Orderer ordered()
         {
-        return descending
-                ? compareKeys
-                : map.orderer;
+        return True, compare;
         }
 
     @Override
@@ -321,107 +300,92 @@ class OrderedMapSlice<Key extends Orderable, Value>
     @Override
     @Op("[..]") OrderedMap<Key, Value> slice(Range<Key> indexes)
         {
-// TODO
-        if (Orderer compare ?= this.orderer)
+        // use the orderer instead of the range's own logic, since the custom key ordering
+        // doesn't necessarily match the natural ordering used by the range
+        Key lower1;
+        Key upper1;
+        Boolean excludeLower1;
+        Boolean excludeUpper1;
+        if (compare(range.first, range.last) == Greater)
             {
-            // use the orderer instead of the range's own logic, since the custom key ordering
-            // doesn't necessarily match the natural ordering used by the range
-            Key lower1;
-            Key upper1;
-            Boolean excludeLower1;
-            Boolean excludeUpper1;
-            if (compare(range.first, range.last) == Greater)
-                {
-                lower1         = range.last;
-                excludeLower1  = range.lastExclusive;
-                upper1         = range.first;
-                excludeUpper1  = range.firstExclusive;
-                }
-            else
-                {
-                lower1         = range.first;
-                excludeLower1  = range.firstExclusive;
-                upper1         = range.last;
-                excludeUpper1  = range.lastExclusive;
-                }
-
-            Key lower2;
-            Key upper2;
-            Boolean excludeLower2;
-            Boolean excludeUpper2;
-            Boolean reverse;
-            if (compare(range.first, range.last) == Greater)
-                {
-                reverse        = True;
-                lower2         = range.last;
-                excludeLower2  = range.lastExclusive;
-                upper2         = range.first;
-                excludeUpper2  = range.firstExclusive;
-                }
-            else
-                {
-                reverse        = False;
-                lower2         = range.first;
-                excludeLower2  = range.firstExclusive;
-                upper2         = range.last;
-                excludeUpper2  = range.lastExclusive;
-                }
-
-            Key lower;
-            Boolean excludeLower;
-            switch (compare(lower1, lower2))
-                {
-                case Lesser:
-                    lower        = lower2;
-                    excludeLower = excludeLower2;
-                    break;
-
-                case Equal:
-                    lower        = lower1;
-                    excludeLower = excludeLower1 | excludeLower2;
-                    break;
-
-                case Greater:
-                    lower        = lower1;
-                    excludeLower = excludeLower1;
-                    break;
-                }
-
-            Key upper;
-            Boolean excludeUpper;
-            switch (compare(upper1, upper2))
-                {
-                case Lesser:
-                    upper        = upper1;
-                    excludeUpper = excludeUpper1;
-                    break;
-
-                case Equal:
-                    upper        = upper1;
-                    excludeUpper = excludeUpper1 | excludeUpper2;
-                    break;
-
-                case Greater:
-                    upper        = upper2;
-                    excludeUpper = excludeUpper2;
-                    break;
-                }
-
-            indexes = reverse
-                    ? upper..lower
-                    : lower..upper;
+            lower1         = range.last;
+            excludeLower1  = range.lastExclusive;
+            upper1         = range.first;
+            excludeUpper1  = range.firstExclusive;
             }
-        else if (!range.contains(indexes))
+        else
             {
-            if (indexes := range.intersection(indexes))
-                {
-                }
-            else
-                {
-                // an empty range
-                indexes = [range.lowerBound..range.lowerBound);
-                }
+            lower1         = range.first;
+            excludeLower1  = range.firstExclusive;
+            upper1         = range.last;
+            excludeUpper1  = range.lastExclusive;
             }
+
+        Key lower2;
+        Key upper2;
+        Boolean excludeLower2;
+        Boolean excludeUpper2;
+        Boolean reverse;
+        if (compare(range.first, range.last) == Greater)
+            {
+            reverse        = True;
+            lower2         = range.last;
+            excludeLower2  = range.lastExclusive;
+            upper2         = range.first;
+            excludeUpper2  = range.firstExclusive;
+            }
+        else
+            {
+            reverse        = False;
+            lower2         = range.first;
+            excludeLower2  = range.firstExclusive;
+            upper2         = range.last;
+            excludeUpper2  = range.lastExclusive;
+            }
+
+        Key lower;
+        Boolean excludeLower;
+        switch (compare(lower1, lower2))
+            {
+            case Lesser:
+                lower        = lower2;
+                excludeLower = excludeLower2;
+                break;
+
+            case Equal:
+                lower        = lower1;
+                excludeLower = excludeLower1 | excludeLower2;
+                break;
+
+            case Greater:
+                lower        = lower1;
+                excludeLower = excludeLower1;
+                break;
+            }
+
+        Key upper;
+        Boolean excludeUpper;
+        switch (compare(upper1, upper2))
+            {
+            case Lesser:
+                upper        = upper1;
+                excludeUpper = excludeUpper1;
+                break;
+
+            case Equal:
+                upper        = upper1;
+                excludeUpper = excludeUpper1 | excludeUpper2;
+                break;
+
+            case Greater:
+                upper        = upper2;
+                excludeUpper = excludeUpper2;
+                break;
+            }
+
+        indexes = reverse
+                ? upper..lower
+                : lower..upper;
 
         return new OrderedMapSlice(map, indexes);
         }
@@ -441,7 +405,7 @@ class OrderedMapSlice<Key extends Orderable, Value>
     @Override
     OrderedMap<Key, Value> reify()
         {
-        return new SkiplistMap<Key, Value>(size, orderer).putAll(this);
+        return new SkiplistMap<Key, Value>(size, compare).putAll(this);
         }
 
 
@@ -596,7 +560,7 @@ class OrderedMapSlice<Key extends Orderable, Value>
         @Override
         conditional Orderer? ordered()
             {
-            return True, outer.orderer;
+            return True, outer.compare;
             }
 
         @Override

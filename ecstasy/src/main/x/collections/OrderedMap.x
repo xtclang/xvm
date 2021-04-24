@@ -6,11 +6,8 @@ interface OrderedMap<Key extends Orderable, Value>
         extends Map<Key, Value>
         extends Sliceable<Key>
     {
-    /**
-     * The Orderer used by this Map, if any. `Null` indicates that the Key's natural ordering is
-     * used by the OrderedMap.
-     */
-    @RO Orderer? orderer; // TODO CP replace with "conditional Orderer ordered()" (note Orderer cannot be Null)
+    @Override
+    conditional Orderer ordered();
 
     /**
      * Obtain the first key in the OrderedMap.

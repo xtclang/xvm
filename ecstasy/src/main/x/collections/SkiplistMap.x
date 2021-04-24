@@ -25,8 +25,12 @@ class SkiplistMap<Key extends Orderable, Value>
      */
     construct(Int initialCapacity = 0, Orderer? orderer = Null)
         {
-        this.orderer      = orderer;
-        this.compareKeys  = orderer ?: (k1, k2) -> k1 <=> k2;
+        if (orderer == Null)
+            {
+            assert orderer := Key.ordered();
+            }
+
+        this.compare      = orderer;
         this.initCapacity = initialCapacity;
         }
     finally
@@ -48,7 +52,7 @@ class SkiplistMap<Key extends Orderable, Value>
     /**
      * The actual Orderer used internally.
      */
-    protected/private Orderer compareKeys;
+    protected/private Orderer compare;
 
     /**
      * Storage for the nodes. The actual storage may be Null, but if it is, it should never be
@@ -229,7 +233,10 @@ class SkiplistMap<Key extends Orderable, Value>
     // ----- OrderedMap interface ------------------------------------------------------------------
 
     @Override
-    public/private Orderer? orderer;
+    conditional Orderer ordered()
+        {
+        return True, compare;
+        }
 
     @Override
     conditional Key first()
@@ -659,7 +666,7 @@ class SkiplistMap<Key extends Orderable, Value>
         @Override
         conditional Orderer? ordered()
             {
-            return True, this.SkiplistMap.orderer;
+            return True, this.SkiplistMap.compare;
             }
 
         @Override
@@ -956,7 +963,7 @@ class SkiplistMap<Key extends Orderable, Value>
                     {
                     // compare the key from the node with the key being searched for
                     height = nodes.heightOf(node);
-                    switch (compareKeys(keyStore.load(node, height), key))
+                    switch (compare(keyStore.load(node, height), key))
                         {
                         case Lesser:
                             // the node's key comes before the desired key, so advance to the next
