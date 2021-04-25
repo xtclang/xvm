@@ -7,6 +7,8 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -91,6 +93,23 @@ public class xException
     public static ExceptionHandle immutableObject(Frame frame)
         {
         return makeHandle(frame, "Immutable object");
+        }
+
+    public static ExceptionHandle notFreezableProperty(Frame frame, String sProp, TypeConstant type)
+        {
+        return makeHandle(frame, "Property \"" + sProp +
+                "\" on an immutable \"" + type.getValueString() + "\" is not freezable");
+        }
+
+    public static ExceptionHandle immutableObjectProperty(Frame frame, String sProp, TypeConstant type)
+        {
+        return makeHandle(frame, "Attempt to modify property \"" + sProp +
+                "\" on an immutable \"" + type.getValueString() + '"');
+        }
+
+    public static ExceptionHandle unknownProperty(Frame frame, String sProp, TypeConstant type)
+        {
+        return makeHandle(frame, "Unknown property: \"" + sProp + "\" on " + type.getValueString());
         }
 
     public static ExceptionHandle serviceTerminated(Frame frame, String sService)

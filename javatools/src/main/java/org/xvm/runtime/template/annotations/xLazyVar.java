@@ -8,8 +8,12 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.SignatureConstant;
+
+import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
@@ -32,6 +36,9 @@ public class xLazyVar
     @Override
     public void initNative()
         {
+        ClassStructure clzFreezable = (ClassStructure) pool().typeFreezable().
+                                        getSingleUnderlyingClass(true).getComponent();
+        SIG_FREEZE = clzFreezable.findMethod("freeze", 1).getIdentityConstant().getSignature();
         }
 
     @Override
@@ -66,31 +73,64 @@ public class xLazyVar
             {
             case "set":
                 {
-                LazyVarHandle hThis = (LazyVarHandle) hTarget;
-
-                if (hThis.isPropertyOnImmutable())
-                    {
-                    synchronized (hThis)
-                        {
-                        boolean fAllowDupe = hThis.unregisterAssign(frame.f_context);
-                        if (hThis.isAssigned())
-                            // TODO GG: prevent mutable state: !hArg.isPassThrough(null))
-                            {
-                            return fAllowDupe
-                                ? Op.R_NEXT
-                                : frame.raiseException(xException.immutableObject(frame));
-                            }
-                        else
-                            {
-                            hThis.setReferent(hArg); // this is exactly what the super call does
-                            return Op.R_NEXT;
-                            }
-                        }
-                    }
+                return invokeSet(frame, (LazyVarHandle) hTarget, hArg);
                 }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    protected int invokeSet(Frame frame, LazyVarHandle hLazy, ObjectHandle hValue)
+        {
+        if (hLazy.isPropertyOnImmutable() && !hValue.isPassThrough(null))
+            {
+            if (hValue.getType().isA(frame.poolContext().typeFreezable()))
+                {
+                CallChain chain = hValue.getComposition().getMethodCallChain(SIG_FREEZE);
+                if (chain.getDepth() > 0)
+                    {
+                    switch (chain.invoke(frame, hValue, Op.A_STACK))
+                        {
+                        case Op.R_NEXT:
+                            return completeInvokeSet(frame, hLazy, frame.popStack());
+
+                        case Op.R_CALL:
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                completeInvokeSet(frameCaller, hLazy, frameCaller.popStack()));
+                            return Op.R_CALL;
+
+                        default:
+                            // throw the "non-freezable" exception below
+                            break;
+                        }
+                    }
+                }
+
+            ObjectHandle hOuter = hLazy.getField(GenericHandle.OUTER);
+            return frame.raiseException(
+                xException.notFreezableProperty(frame, hLazy.getName(), hOuter.getType()));
+            }
+        return completeInvokeSet(frame, hLazy, hValue);
+        }
+
+    protected int completeInvokeSet(Frame frame, LazyVarHandle hLazy, ObjectHandle hValue)
+        {
+        synchronized (hLazy)
+            {
+            boolean fAllowDupe = hLazy.unregisterAssign(frame.f_context);
+            if (hLazy.isAssigned())
+                {
+                return fAllowDupe
+                    ? Op.R_NEXT
+                    : frame.raiseException(xException.immutableObjectProperty(
+                    frame, hLazy.getName(), hLazy.getField(GenericHandle.OUTER).getType()));
+                }
+            else
+                {
+                hLazy.setReferent(hValue); // this is exactly what the super.invokeNative1() call does
+                return Op.R_NEXT;
+                }
+            }
         }
 
 
@@ -160,4 +200,6 @@ public class xLazyVar
             return fAllow;
             }
         }
+
+    private static SignatureConstant SIG_FREEZE;
     }

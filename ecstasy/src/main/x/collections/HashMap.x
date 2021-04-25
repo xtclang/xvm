@@ -408,6 +408,7 @@ class HashMap<Key, Value>
      */
     class EntrySet
             implements Collection<Entry>
+            implements Freezable
         {
         @Override
         Int size.get()
@@ -584,6 +585,13 @@ class HashMap<Key, Value>
                 }
 
             return this, removed;
+            }
+
+        @Override
+        immutable EntrySet freeze(Boolean inPlace = False)
+            {
+            assert this.HashMap.is(immutable HashMap);
+            return makeImmutable();
             }
         }
 

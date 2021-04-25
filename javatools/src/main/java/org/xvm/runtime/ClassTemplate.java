@@ -835,7 +835,8 @@ public abstract class ClassTemplate
 
         if (chain == null)
             {
-            return frame.raiseException("Unknown property: " + idProp.getValueString());
+            return frame.raiseException(
+                xException.unknownProperty(frame, idProp.getValueString(), hTarget.getType()));
             }
 
         if (chain.isNative())
@@ -1050,7 +1051,8 @@ public abstract class ClassTemplate
 
         if (chain == null)
             {
-            return frame.raiseException("Unknown property: " + idProp.getValueString());
+            return frame.raiseException(
+                xException.unknownProperty(frame, idProp.getValueString(), hTarget.getType()));
             }
 
         if (chain.isNative())
@@ -1060,8 +1062,8 @@ public abstract class ClassTemplate
 
         if (!hTarget.isMutable())
             {
-            return frame.raiseException("Attempt to modify property \"" + idProp.getName()
-                + "\" on an immutable \"" + hTarget.getType().getValueString() + '"');
+            return frame.raiseException(
+                xException.immutableObjectProperty(frame, idProp.getName(), hTarget.getType()));
             }
 
         if (chain.isField())
@@ -1520,8 +1522,8 @@ public abstract class ClassTemplate
         if (!hThis.containsField(idProp) &&
                 clzThis.getPropertyGetterChain(idProp) == null)
             {
-            return frame.raiseException("Unknown property: \"" + idProp + "\" on " +
-                    clzThis.getType().getValueString());
+            return frame.raiseException(
+                xException.unknownProperty(frame, idProp.getValueString(), hThis.getType()));
             }
 
         if (hThis.isInflated(idProp))
@@ -1539,8 +1541,8 @@ public abstract class ClassTemplate
         PropertyInfo infoProp = clzThis.getPropertyInfo(idProp);
         if (infoProp == null)
             {
-            return frame.raiseException("Unknown property: \"" + idProp + "\" on " +
-                    clzThis.getType().getValueString());
+            return frame.raiseException(
+                xException.unknownProperty(frame, idProp.getValueString(), hThis.getType()));
             }
 
         TypeComposition clzRef = clzThis.ensurePropertyComposition(infoProp);

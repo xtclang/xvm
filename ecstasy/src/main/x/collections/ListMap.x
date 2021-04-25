@@ -304,6 +304,7 @@ class ListMap<Key, Value>
      */
     class Keys
             implements Set<Key>
+            implements Freezable
         {
         @Override
         Int size.get()
@@ -393,6 +394,13 @@ class ListMap<Key, Value>
         Key[] toArray(Array.Mutability? mutability = Null)
             {
             return listKeys.toArray(mutability);
+            }
+
+        @Override
+        immutable Keys freeze(Boolean inPlace = False)
+            {
+            assert this.ListMap.is(immutable ListMap);
+            return makeImmutable();
             }
         }
 
@@ -559,6 +567,7 @@ class ListMap<Key, Value>
 
     class Entries
             implements Collection<Entry>
+            implements Freezable
         {
         @Override
         Int size.get()
@@ -677,6 +686,13 @@ class ListMap<Key, Value>
 
             return found, index;
             }
+
+        @Override
+        immutable Entries freeze(Boolean inPlace = False)
+            {
+            assert this.ListMap.is(immutable ListMap);
+            return makeImmutable();
+            }
         }
 
 
@@ -684,6 +700,7 @@ class ListMap<Key, Value>
 
     class Values
             implements Collection<Value>
+            implements Freezable
         {
         @Override
         Int size.get()
@@ -773,6 +790,13 @@ class ListMap<Key, Value>
         Value[] toArray(Array.Mutability? mutability = Null)
             {
             return listVals.toArray(mutability);
+            }
+
+        @Override
+        immutable Values freeze(Boolean inPlace = False)
+            {
+            assert this.ListMap.is(immutable ListMap);
+            return makeImmutable();
             }
         }
     }

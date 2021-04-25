@@ -2262,6 +2262,7 @@ public class ConstantPool
     public TypeConstant      typeRange()        {TypeConstant      c = m_typeRange;       if (c == null) {m_typeRange       = c = ensureTerminalTypeConstant(clzRange()                      );} return c;}
     public TypeConstant      typeInterval()     {TypeConstant      c = m_typeInterval;    if (c == null) {m_typeInterval    = c = ensureTerminalTypeConstant(clzInterval()                   );} return c;}
     public TypeConstant      typeHashable()     {TypeConstant      c = m_typeHashable;    if (c == null) {m_typeHashable    = c = ensureTerminalTypeConstant(clzHashable()                   );} return c;}
+    public TypeConstant      typeFreezable()    {TypeConstant      c = m_typeFreezable;   if (c == null) {m_typeFreezable   = c = ensureTerminalTypeConstant(clzFreezable()                  );} return c;}
     public TypeConstant      typeIterable()     {TypeConstant      c = m_typeIterable;    if (c == null) {m_typeIterable    = c = ensureTerminalTypeConstant(clzIterable()                   );} return c;}
     public TypeConstant      typeIterator()     {TypeConstant      c = m_typeIterator;    if (c == null) {m_typeIterator    = c = ensureTerminalTypeConstant(clzIterator()                   );} return c;}
     public TypeConstant      typeTuple()        {TypeConstant      c = m_typeTuple;       if (c == null) {m_typeTuple       = c = ensureTerminalTypeConstant(clzTuple()                      );} return c;}
@@ -2305,46 +2306,47 @@ public class ConstantPool
 
     // ---- internal class helpers -----------------------------------------------------------------
 
-    protected ClassConstant  clzClass()        {return (ClassConstant) getImplicitlyImportedIdentity("Class"         );}
-    protected ClassConstant  clzParameter()    {return (ClassConstant) getImplicitlyImportedIdentity("Parameter"     );}
-    protected ClassConstant  clzBoolean()      {return (ClassConstant) getImplicitlyImportedIdentity("Boolean"       );}
-    protected ClassConstant  clzFalse()        {return (ClassConstant) getImplicitlyImportedIdentity("False"         );}
-    protected ClassConstant  clzTrue()         {return (ClassConstant) getImplicitlyImportedIdentity("True"          );}
-    protected ClassConstant  clzOrdered()      {return (ClassConstant) getImplicitlyImportedIdentity("Ordered"       );}
-    protected ClassConstant  clzLesser()       {return (ClassConstant) getImplicitlyImportedIdentity("Lesser"        );}
-    protected ClassConstant  clzEqual()        {return (ClassConstant) getImplicitlyImportedIdentity("Equal"         );}
-    protected ClassConstant  clzGreater()      {return (ClassConstant) getImplicitlyImportedIdentity("Greater"       );}
-    protected ClassConstant  clzNull()         {return (ClassConstant) getImplicitlyImportedIdentity("Null"          );}
-    protected ClassConstant  clzChar()         {return (ClassConstant) getImplicitlyImportedIdentity("Char"          );}
-    protected ClassConstant  clzRegEx()        {return (ClassConstant) ensureEcstasyClassConstant   ("text.RegEx"    );}
-    protected ClassConstant  clzString()       {return (ClassConstant) getImplicitlyImportedIdentity("String"        );}
-    protected ClassConstant  clzStringable()   {return (ClassConstant) getImplicitlyImportedIdentity("Stringable"    );}
-    protected ClassConstant  clzStringBuffer() {return (ClassConstant) getImplicitlyImportedIdentity("StringBuffer"  );}
-    protected ClassConstant  clzIntLiteral()   {return (ClassConstant) getImplicitlyImportedIdentity("IntLiteral"    );}
-    protected ClassConstant  clzFPLiteral()    {return (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"     );}
-    protected ClassConstant  clzBit()          {return (ClassConstant) getImplicitlyImportedIdentity("Bit"           );}
-    protected ClassConstant  clzByte()         {return (ClassConstant) getImplicitlyImportedIdentity("Byte"          );}
-    protected ClassConstant  clzInt()          {return (ClassConstant) getImplicitlyImportedIdentity("Int"           );}
-    protected ClassConstant  clzIndexed()      {return (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed");}
-    protected ClassConstant  clzInterval()     {return (ClassConstant) getImplicitlyImportedIdentity("Interval"      );}
-    protected ClassConstant  clzIterable()     {return (ClassConstant) getImplicitlyImportedIdentity("Iterable"      );}
-    protected ClassConstant  clzIterator()     {return (ClassConstant) getImplicitlyImportedIdentity("Iterator"      );}
-    protected ClassConstant  clzNumber()       {return (ClassConstant) getImplicitlyImportedIdentity("Number"        );}
-    protected ClassConstant  clzRange()        {return (ClassConstant) getImplicitlyImportedIdentity("Range"         );}
-    protected ClassConstant  clzSequential()   {return (ClassConstant) getImplicitlyImportedIdentity("Sequential"    );}
-    protected ClassConstant  clzHashable()     {return (ClassConstant) getImplicitlyImportedIdentity("Hashable"      );}
-    protected ClassConstant  clzDate()         {return (ClassConstant) getImplicitlyImportedIdentity("Date"          );}
-    protected ClassConstant  clzDateTime()     {return (ClassConstant) getImplicitlyImportedIdentity("DateTime"      );}
-    protected ClassConstant  clzDuration()     {return (ClassConstant) getImplicitlyImportedIdentity("Duration"      );}
-    protected ClassConstant  clzTime()         {return (ClassConstant) getImplicitlyImportedIdentity("Time"          );}
-    protected ClassConstant  clzTimeZone()     {return (ClassConstant) getImplicitlyImportedIdentity("TimeZone"      );}
-    protected ClassConstant  clzPath()         {return (ClassConstant) getImplicitlyImportedIdentity("Path"          );}
-    protected ClassConstant  clzVersion()      {return (ClassConstant) getImplicitlyImportedIdentity("Version"       );}
-    protected ClassConstant  clzDirectory()    {return (ClassConstant) getImplicitlyImportedIdentity("Directory"     );}
-    protected ClassConstant  clzFile()         {return (ClassConstant) getImplicitlyImportedIdentity("File"          );}
-    protected ClassConstant  clzFileNode()     {return                 ensureEcstasyClassConstant   ("fs.FileNode"   );}
-    protected ClassConstant  clzFileStore()    {return (ClassConstant) getImplicitlyImportedIdentity("FileStore"     );}
-    protected ClassConstant  clzFrame()        {return (ClassConstant) getImplicitlyImportedIdentity("Frame"         );}
+    protected ClassConstant  clzClass()        {return (ClassConstant) getImplicitlyImportedIdentity("Class"                );}
+    protected ClassConstant  clzParameter()    {return (ClassConstant) getImplicitlyImportedIdentity("Parameter"            );}
+    protected ClassConstant  clzBoolean()      {return (ClassConstant) getImplicitlyImportedIdentity("Boolean"              );}
+    protected ClassConstant  clzFalse()        {return (ClassConstant) getImplicitlyImportedIdentity("False"                );}
+    protected ClassConstant  clzTrue()         {return (ClassConstant) getImplicitlyImportedIdentity("True"                 );}
+    protected ClassConstant  clzOrdered()      {return (ClassConstant) getImplicitlyImportedIdentity("Ordered"              );}
+    protected ClassConstant  clzLesser()       {return (ClassConstant) getImplicitlyImportedIdentity("Lesser"               );}
+    protected ClassConstant  clzEqual()        {return (ClassConstant) getImplicitlyImportedIdentity("Equal"                );}
+    protected ClassConstant  clzGreater()      {return (ClassConstant) getImplicitlyImportedIdentity("Greater"              );}
+    protected ClassConstant  clzNull()         {return (ClassConstant) getImplicitlyImportedIdentity("Null"                 );}
+    protected ClassConstant  clzChar()         {return (ClassConstant) getImplicitlyImportedIdentity("Char"                 );}
+    protected ClassConstant  clzRegEx()        {return                 ensureEcstasyClassConstant   ("text.RegEx"           );}
+    protected ClassConstant  clzString()       {return (ClassConstant) getImplicitlyImportedIdentity("String"               );}
+    protected ClassConstant  clzStringable()   {return (ClassConstant) getImplicitlyImportedIdentity("Stringable"           );}
+    protected ClassConstant  clzStringBuffer() {return (ClassConstant) getImplicitlyImportedIdentity("StringBuffer"         );}
+    protected ClassConstant  clzIntLiteral()   {return (ClassConstant) getImplicitlyImportedIdentity("IntLiteral"           );}
+    protected ClassConstant  clzFPLiteral()    {return (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"            );}
+    protected ClassConstant  clzBit()          {return (ClassConstant) getImplicitlyImportedIdentity("Bit"                  );}
+    protected ClassConstant  clzByte()         {return (ClassConstant) getImplicitlyImportedIdentity("Byte"                 );}
+    protected ClassConstant  clzInt()          {return (ClassConstant) getImplicitlyImportedIdentity("Int"                  );}
+    protected ClassConstant  clzIndexed()      {return (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed"       );}
+    protected ClassConstant  clzInterval()     {return (ClassConstant) getImplicitlyImportedIdentity("Interval"             );}
+    protected ClassConstant  clzIterable()     {return (ClassConstant) getImplicitlyImportedIdentity("Iterable"             );}
+    protected ClassConstant  clzIterator()     {return (ClassConstant) getImplicitlyImportedIdentity("Iterator"             );}
+    protected ClassConstant  clzNumber()       {return (ClassConstant) getImplicitlyImportedIdentity("Number"               );}
+    protected ClassConstant  clzRange()        {return (ClassConstant) getImplicitlyImportedIdentity("Range"                );}
+    protected ClassConstant  clzSequential()   {return (ClassConstant) getImplicitlyImportedIdentity("Sequential"           );}
+    protected ClassConstant  clzHashable()     {return (ClassConstant) getImplicitlyImportedIdentity("Hashable"             );}
+    protected ClassConstant  clzFreezable()    {return                 ensureEcstasyClassConstant   ("collections.Freezable");}
+    protected ClassConstant  clzDate()         {return (ClassConstant) getImplicitlyImportedIdentity("Date"                 );}
+    protected ClassConstant  clzDateTime()     {return (ClassConstant) getImplicitlyImportedIdentity("DateTime"             );}
+    protected ClassConstant  clzDuration()     {return (ClassConstant) getImplicitlyImportedIdentity("Duration"             );}
+    protected ClassConstant  clzTime()         {return (ClassConstant) getImplicitlyImportedIdentity("Time"                 );}
+    protected ClassConstant  clzTimeZone()     {return (ClassConstant) getImplicitlyImportedIdentity("TimeZone"             );}
+    protected ClassConstant  clzPath()         {return (ClassConstant) getImplicitlyImportedIdentity("Path"                 );}
+    protected ClassConstant  clzVersion()      {return (ClassConstant) getImplicitlyImportedIdentity("Version"              );}
+    protected ClassConstant  clzDirectory()    {return (ClassConstant) getImplicitlyImportedIdentity("Directory"            );}
+    protected ClassConstant  clzFile()         {return (ClassConstant) getImplicitlyImportedIdentity("File"                 );}
+    protected ClassConstant  clzFileNode()     {return                 ensureEcstasyClassConstant   ("fs.FileNode"          );}
+    protected ClassConstant  clzFileStore()    {return (ClassConstant) getImplicitlyImportedIdentity("FileStore"            );}
+    protected ClassConstant  clzFrame()        {return (ClassConstant) getImplicitlyImportedIdentity("Frame"                );}
 
     /**
      * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
@@ -3052,6 +3054,7 @@ public class ConstantPool
         m_typeSequential  = null;
         m_typeNumber      = null;
         m_typeHashable    = null;
+        m_typeFreezable   = null;
         m_typeRange       = null;
         m_typeInterval    = null;
         m_typeIterable    = null;
@@ -3973,6 +3976,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeSequential;
     private transient TypeConstant      m_typeNumber;
     private transient TypeConstant      m_typeHashable;
+    private transient TypeConstant      m_typeFreezable;
     private transient TypeConstant      m_typeRange;
     private transient TypeConstant      m_typeInterval;
     private transient TypeConstant      m_typeIterable;

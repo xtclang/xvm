@@ -423,6 +423,7 @@ class SkiplistMap<Key extends Orderable, Value>
      */
     protected class CollectionImpl<Element>
             implements Collection<Element>
+            implements Freezable
         {
         @Override
         Int size.get()
@@ -635,6 +636,13 @@ class SkiplistMap<Key extends Orderable, Value>
 
                 return that;
                 }
+            }
+
+        @Override
+        immutable CollectionImpl freeze(Boolean inPlace = False)
+            {
+            assert this.SkiplistMap.is(immutable SkiplistMap);
+            return makeImmutable();
             }
         }
 

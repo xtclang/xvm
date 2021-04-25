@@ -121,8 +121,6 @@ public class xConst
 
             HASH_SIG = f_templates.getClassStructure("collections.Hashable").
                 findMethod("hashCode", 2).getIdentityConstant().getSignature();
-
-            TYPE_FREEZABLE = pool.ensureEcstasyTypeConstant("collections.Freezable");
             }
         }
 
@@ -249,7 +247,7 @@ public class xConst
                             }
 
                         String sField = listFieldNames.get(i);
-                        if (hField.getType().isA(TYPE_FREEZABLE))
+                        if (hField.getType().isA(pool().typeFreezable()))
                             {
                             if (listFreezable == null)
                                 {
@@ -261,8 +259,8 @@ public class xConst
                             }
                         else
                             {
-                            return frame.raiseException("Field \"" +
-                                f_sName + '.' + sField + "\" is not freezable");
+                            return frame.raiseException(
+                                xException.notFreezableProperty(frame, sField, hConst.getType()));
                             }
                         }
 
@@ -745,6 +743,4 @@ public class xConst
     private static MethodStructure PATH_CONSTRUCT;
 
     private static SignatureConstant HASH_SIG;
-
-    private static TypeConstant TYPE_FREEZABLE;
     }

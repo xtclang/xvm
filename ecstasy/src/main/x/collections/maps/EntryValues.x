@@ -4,6 +4,7 @@
  */
 class EntryValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
         implements Collection<MapValue>
+        implements Freezable
     {
     public/private Map<MapKey, MapValue> contents;
 
@@ -99,6 +100,13 @@ class EntryValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
         verifyInPlace();
         contents.clear();
         return this;
+        }
+
+    @Override
+    immutable EntryValues freeze(Boolean inPlace = False)
+        {
+        assert contents.is(immutable Map);
+        return makeImmutable();
         }
 
     /**

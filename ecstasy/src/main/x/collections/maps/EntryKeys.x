@@ -4,6 +4,7 @@
  */
 class EntryKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
         implements Set<MapKey>
+        implements Freezable
     {
     public/private Map<MapKey, MapValue> contents;
 
@@ -94,6 +95,13 @@ class EntryKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
         verifyInPlace();
         contents.clear();
         return this;
+        }
+
+    @Override
+    immutable EntryKeys freeze(Boolean inPlace = False)
+        {
+        assert contents.is(immutable Map);
+        return makeImmutable();
         }
 
     /**
