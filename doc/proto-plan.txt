@@ -1,18 +1,12 @@
-- Stack overflow (fiber depth + frame depth within a fiber or cross-fiber frame depth)
-
 - Move op-code: "safe wrapper" logic
 
 - ServiceContext - the "register..." APIs are "fiber local" -- unless called from the outside
-
-- native optimization Stringable methods on xInt*, xUInt*, etc.
 
 -- tuple support
    - InvocationExpression - needs to generate _xT ops (i.e. it must be able to testFit & validate for a tuple type)
    - verify (and test) the logic in ReturnStatement that gens RETURN_T
    - assignment w/ multi-LVal needs to testFit for Tuple if testFit for multi fails
      (and use Expression.packedExpression and unpackedExpressions for code gen?)
-
-- Lazy property on an immutable object must not produce a mutable value
 
 - compiler to verify that const properties are Orderable
 
@@ -42,10 +36,8 @@
         }
     }
 
-- run-time to validate that immutable objects passing through the "membrane" belongs to the
-  recipient's type system
-
-- generic type resolution for a turtle type should be Tuple<Type<A>,Type<B>, ...> instead of Tuple<A, B, ...>
+- generic type resolution for a turtle type should be Tuple<Type<A>,Type<B>, ...>
+  instead of Tuple<A, B, ...>
 
 - When we resolve CompileType.Key (where CompileType is known to be Map), we produce
     FormalTypeChildConstant based on the CompileType formal property.
@@ -59,15 +51,21 @@
 
 - optimize TypeConstant.resolveTypedef()
 
-
-$$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
+- consider annotations for interfaces:
+    @NeverConsumes(types=["Element"])
+    @NeverProduces(types=["Element"])
+    @AlwaysConsumes(types=["Element"])
+    @AlwaysProduces(types=["Element"])
+  which would allow to override the consumes/produces computation by the compiler
+  This then would be used by Appender<Element> to indicate that it doesn't consume Element,
+  which in turn would allow Min/Max aggregators simplification (shelved)
 
 - TemplateRegistry and TypeComposition could be mutated by different threads
     (hence the use of ConcurrentHashMap in TemplateRegistry and synchronization in TypeComposition)
 
 - DelegatingIterator could use delegation, but how to describe the delegating type?
 
-- is there a way to avoid and auto-generate "T x = this.x" in if/for/switch statements that
+- is there a way to auto-generate "T x = this.x" in if/for/switch statements that
   would benefit from type inference; see AnnotationExpression.x#toString(), ImportStatement.x#toString()
 
 - when there are two invocations in the row or a new followed by an invocation, we could analyze the
