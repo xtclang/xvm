@@ -1,8 +1,8 @@
 /**
  * An aggregator that averages numeric values.
  */
-const Average<Element extends Number, Result extends Number>
-        implements ParallelAggregator<Element, CountAndSum<Element>, Result>
+const Average<Element extends Number, Quotient extends Number>
+        implements ParallelAggregator<Element, CountAndSum<Element>, Quotient?>
     {
     assert()
         {
@@ -25,7 +25,7 @@ const Average<Element extends Number, Result extends Number>
     @Override
     @Lazy Aggregator<Partial, Result> finalAggregator.calc()
         {
-        return new FinalAggregator<Element, Result>();
+        return new FinalAggregator<Element, Quotient>();
         }
 
     @Override
@@ -37,7 +37,7 @@ const Average<Element extends Number, Result extends Number>
     @Override
     Result reduce(Accumulator accumulator)
         {
-        return accumulator.as(ElementSummer<Element>).calculateAverage(Result);
+        return accumulator.as(ElementSummer<Element>).calculateAverage(Quotient);
         }
 
 
@@ -75,8 +75,8 @@ const Average<Element extends Number, Result extends Number>
             }
         }
 
-    private static const FinalAggregator<Value extends Number, Result extends Number>
-            implements Aggregator<CountAndSum<Value>, Result>
+    private static const FinalAggregator<Value extends Number, Quotient extends Number>
+            implements Aggregator<CountAndSum<Value>, Quotient?>
         {
         @Override
         Accumulator init()
@@ -87,7 +87,7 @@ const Average<Element extends Number, Result extends Number>
         @Override
         Result reduce(Accumulator accumulator)
             {
-            return accumulator.as(ResultSummer<Value>).calculateAverage(Result);
+            return accumulator.as(ResultSummer<Value>).calculateAverage(Quotient);
             }
         }
 
@@ -102,11 +102,14 @@ const Average<Element extends Number, Result extends Number>
         Int   count;
         Value sum;
 
-        <Result extends Number> Result calculateAverage(Type<Result> resultType)
+        <Quotient extends Number> Quotient? calculateAverage(Type<Quotient> quotientType)
             {
-            function Result(Value) fromSum   = Number.converterFor(Value, Result);
-            function Result(Int)   fromCount = Int.converterTo(Result);
-            return fromSum(sum) / fromCount(count);
+            function Quotient(Value) fromSum   = Number.converterFor(Value, Quotient);
+            function Quotient(Int)   fromCount = Int.converterTo(Quotient);
+
+            return count == 0
+                    ? Null
+                    : fromSum(sum) / fromCount(count);
             }
         }
 

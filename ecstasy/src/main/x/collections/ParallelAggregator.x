@@ -8,7 +8,7 @@
  *
  * The "parallel" aggregation process, represented by this API, is composed of three stages:
  *
- * 1. Each service that is reducing in parallel will be responsible for some "slice" of ELement
+ * 1. Each service that is reducing in parallel will be responsible for some "slice" of Element
  *    values. It will obtain the [elementAggregator] from the ParallelAggregator, and obtain an
  *    `Accumulator` from that. It will then feed its `Element` values into the `Accumulator` and
  *    reduce that into a `Partial` value.

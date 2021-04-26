@@ -337,13 +337,18 @@ module TestNumbers
 
         console.println("\n** testAggregator()");
 
-        Partition[] partitions = new Partition[10](i -> new Partition(i));
-
         Sum<Int>             sum = new Sum();
         Average<Int, Double> avg = new Average();
         Min<Int>             min = new Min();
         Max<Int>             max = new Max();
         MinMax<Int>          mmx = new MinMax();
+
+        Int[] empty = [];
+        assert empty.reduce(sum) == 0;
+        assert empty.reduce(min) == Null;
+        assert empty.reduce(avg) == Null;
+
+        Partition[] partitions = new Partition[10](i -> new Partition(i));
 
         val finishSum = sum.finalAggregator.init();
         Int remainSum = partitions.size;
