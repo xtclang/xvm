@@ -70,6 +70,30 @@ interface OrderedMap<Key extends Orderable, Value>
     conditional Key floor(Key key);
 
 
+    // ----- Entry ---------------------------------------------------------------------------------
+
+    @Override
+    interface Entry
+            extends Orderable
+        {
+        static <CompileType extends Entry> Ordered compare(CompileType value1, CompileType value2)
+            {
+// TODO GG
+//            assert Orderer order  := value1.ordered();
+//            assert Orderer order2 := value2.ordered(), order == order2;
+
+// TODO GG
+//            assert Orderer order  := value1.outer.ordered();
+//            assert Orderer order2 := value2.outer.ordered(), order == order2;
+
+// REVIEW GG will this work?
+            assert val order  := value1.outer.as(OrderedMap).ordered();
+            assert val order2 := value2.outer.as(OrderedMap).ordered(), order == order2;
+            return order(value1.key, value2.key);
+            }
+        }
+
+
     // ----- equality ------------------------------------------------------------------------------
 
     /**
