@@ -1,5 +1,3 @@
-import ecstasy.collections.Hasher;
-
 import ecstasy.io.Reader;
 import ecstasy.io.Writer;
 import ecstasy.io.ObjectInput;
