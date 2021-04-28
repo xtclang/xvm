@@ -3482,7 +3482,17 @@ public class Parser
                 List<Expression> argsTrailing = parseArgumentList(false, false, false);
                 if (argsTrailing != null)
                     {
-                    args.addAll(argsTrailing);
+                    if (!argsTrailing.isEmpty())
+                        {
+                        if (args == Collections.EMPTY_LIST)
+                            {
+                            args = argsTrailing;
+                            }
+                        else
+                            {
+                            args.addAll(argsTrailing);
+                            }
+                        }
                     lEndPos = prev().getEndPosition();
                     }
                 }
