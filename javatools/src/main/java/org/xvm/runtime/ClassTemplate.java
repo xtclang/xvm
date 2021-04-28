@@ -1133,9 +1133,10 @@ public abstract class ClassTemplate
      */
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        if (hTarget.getType().containsGenericParam(sPropName))
+        TypeConstant typeTarget = hTarget.getType();
+        if (typeTarget.containsGenericParam(sPropName))
             {
-            TypeConstant type = hTarget.getType().resolveGenericType(sPropName);
+            TypeConstant type = typeTarget.resolveGenericType(sPropName);
 
             return frame.assignValue(iReturn, type.ensureTypeHandle(frame.poolContext()));
             }

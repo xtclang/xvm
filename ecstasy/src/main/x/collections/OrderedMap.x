@@ -79,10 +79,6 @@ interface OrderedMap<Key extends Orderable, Value>
         static <CompileType extends Entry> Ordered compare(CompileType value1, CompileType value2)
             {
 // TODO GG
-//            assert Orderer order  := value1.ordered();
-//            assert Orderer order2 := value2.ordered(), order == order2;
-
-// TODO GG
 //            assert Orderer order  := value1.outer.ordered();
 //            assert Orderer order2 := value2.outer.ordered(), order == order2;
 

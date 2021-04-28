@@ -39,6 +39,10 @@ public class xOrdered
             LESSER .setField("symbol", xString.makeHandle("<"));
             EQUAL  .setField("symbol", xString.makeHandle("="));
             GREATER.setField("symbol", xString.makeHandle(">"));
+
+            LESSER .setField("reversed", GREATER);
+            EQUAL  .setField("reversed", EQUAL);
+            GREATER.setField("reversed", LESSER);
             }
         }
 

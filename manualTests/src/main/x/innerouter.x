@@ -1,12 +1,13 @@
 module TestInnerOuter
     {
-    @Inject ecstasy.io.Console console;
+    @Inject Console console;
 
     void run()
         {
         testSimple();
         testStaticIface();
         testAnonInner();
+        testFunky();
         }
 
     interface IfaceOuter
@@ -33,6 +34,15 @@ module TestInnerOuter
                 {
                 return outer.text;
                 }
+
+            void testOuter()
+                {
+                val   o1 = outer;
+                Outer o2 = this.Outer;
+                assert &o1 == &o2;
+                // assert &o2 == &outer; // TODO GG: ClassCastException
+                console.println($"this=\"{this}\"; outer=\"{o1}\", type=\"{&o1.Referent}\"");
+                }
             }
 
         @Override
@@ -49,7 +59,6 @@ module TestInnerOuter
                 console.println(" -> fnInner");
                 }
             }
-
 
         @Override
         String toString()
@@ -69,10 +78,12 @@ module TestInnerOuter
         for (Base base : bases)
             {
             Base.Child_V child = base.new Child_V();
-            console.println("Obtaining text from \"" + base + "\" child:");
+            console.println($"Obtaining text from \"{base}\" child:");
             console.println(" -> by-outer=" + child.textByOuter);
             console.println(" -> by-name=" + child.textByName);
             }
+
+        b1.new Child_V().testOuter();
         }
 
     void testStaticIface()
@@ -100,7 +111,7 @@ module TestInnerOuter
             {
             void run()
                 {
-                console.println("in run (i=" + i + ")");
+                console.println($"in run (i={i})");
                 ++i;
                 // foo();
                 }
@@ -108,6 +119,68 @@ module TestInnerOuter
 
         o.run();
 
-        console.println("done (i=" + i + ")");
+        console.println($"done (i={i})");
+        }
+
+    interface FunkyOuter<Element extends Orderable>
+        {
+        String name;
+
+        interface FunkyInner
+                extends Orderable
+            {
+            @RO Element e;
+
+            static <CompileType extends FunkyInner> Ordered
+                    compare(CompileType value1, CompileType value2)
+                {
+                @Inject Console console;
+
+                console.println($"CompileType={CompileType}");
+                console.println($"CompileType.OuterType={CompileType.OuterType}");
+                console.println($"CompileType.OuterType.Element={CompileType.OuterType.Element}");
+                console.println($"value1={value1}");
+                console.println($"value1.outer={value1.outer}");
+//                console.println($"value1.outer.name={value1.outer.name}"); // TODO GG:
+                console.println($"value1.&outer.actualType={value1.&outer.actualType}");
+
+//                return (value1.e <=> value2.e).reversed; // TODO GG: deferred; RT error for now
+                return CompileType.OuterType.Element.compare(value1.e, value2.e).reversed;
+                }
+            }
+        }
+
+    class Parent<Element extends Orderable>(String name)
+            implements FunkyOuter<Element>
+        {
+        @Override
+        String name;
+
+        class Child(Element e)
+                implements FunkyInner
+            {
+            @Override
+            Element e;
+
+            @Override
+            String toString()
+                {
+                return "Child: " + e;
+                }
+            }
+
+        @Override
+        String toString()
+            {
+            return "Parent of " + Element;
+            }
+        }
+
+    void testFunky()
+        {
+        Parent<String> p = new Parent("P1");
+        Parent<String>.Child c1 = p.new Child("hello");
+        Parent<String>.Child c2 = p.new Child("world");
+        assert c1 > c2;
         }
     }

@@ -960,9 +960,10 @@ public class NameExpression
                 {
                 case OuterThis:
                     {
-                    assert getMeaning() == Meaning.Class;
+                    assert getMeaning() == Meaning.Class || getMeaning() == Meaning.Reserved;
 
-                    // TODO: the instanceof ParenClassConstant check will go away (p.this for property p on Map will become this.Map.&p)
+                    // TODO GG: the instanceof ParenClassConstant check will go away
+                    //  (p.this for property p on Map will become this.Map.&p)
                     if (argRaw instanceof ParentClassConstant)
                         {
                         int cSteps = ((ParentClassConstant) argRaw).getDepth();
@@ -973,7 +974,7 @@ public class NameExpression
 
                     if (argRaw instanceof TypeConstant)
                         {
-                        int cSteps = m_targetInfo.getStepsOut();
+                        int cSteps = m_targetInfo == null ? 1 :  m_targetInfo.getStepsOut();
 
                         code.add(new MoveThis(cSteps, argLVal));
                         return;
@@ -1052,9 +1053,23 @@ public class NameExpression
                     PropertyConstant idProp    = (PropertyConstant) argRaw;
                     Argument         argTarget = generateRefTarget(ctx, code, idProp, errs);
 
-                    code.add(m_fAssignable
-                            ? new P_Var(idProp, argTarget, argLVal)
-                            : new P_Ref(idProp, argTarget, argLVal));
+                    if (idProp.getName().equals("outer"))
+                        {
+                        TypeConstant typeTarget = argTarget.getType().resolveConstraints();
+                        TypeConstant typeOuter  = typeTarget.isVirtualChild()
+                                ? typeTarget.getParentType()
+                                : pool().typeObject();
+
+                        Register regOuter = createRegister(typeOuter, true);
+                        code.add(new P_Get(idProp, argTarget, regOuter));
+                        code.add(new MoveRef(regOuter, argLVal));
+                        }
+                    else
+                        {
+                        code.add(m_fAssignable
+                                ? new P_Var(idProp, argTarget, argLVal)
+                                : new P_Ref(idProp, argTarget, argLVal));
+                        }
                     return;
                     }
 
@@ -1134,7 +1149,8 @@ public class NameExpression
 
             case OuterThis:
                 {
-                // TODO: this scenario will go away (p.this for property p on Map will become this.Map.&p)
+                // TODO GG: this scenario will go away
+                //  (p.this for property p on Map will become this.Map.&p)
                 if (argRaw instanceof ThisClassConstant)
                     {
                     // it's just "this" (but note that it results in the public type)
@@ -1146,7 +1162,7 @@ public class NameExpression
                 if (argRaw instanceof TypeConstant)
                     {
                     typeOuter = (TypeConstant) argRaw;
-                    cSteps    = m_targetInfo.getStepsOut();
+                    cSteps    = m_targetInfo == null ? 1 : m_targetInfo.getStepsOut();
                     }
                 else
                     {
@@ -1285,10 +1301,31 @@ public class NameExpression
                 {
                 PropertyConstant idProp    = (PropertyConstant) argRaw;
                 Argument         argTarget = generateRefTarget(ctx, code, idProp, errs);
-                Register         regRef    = createRegister(getType(), fUsedOnce);
-                code.add(m_fAssignable
-                        ? new P_Var(idProp, argTarget, regRef)
-                        : new P_Ref(idProp, argTarget, regRef));
+                Register         regRef;
+
+                if (idProp.getName().equals("outer"))
+                    {
+                    ConstantPool pool       = pool();
+                    TypeConstant typeTarget = argTarget.getType().resolveConstraints();
+                    TypeConstant typeOuter  = typeTarget.isVirtualChild()
+                            ? typeTarget.getParentType()
+                            : pool.typeObject();
+
+                    Register regOuter = createRegister(typeOuter, true);
+                    code.add(new P_Get(idProp, argTarget, regOuter));
+
+                    TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
+                                                pool.typeRef(), typeOuter);
+                    regRef = createRegister(typeRef, fUsedOnce);
+                    code.add(new MoveRef(regOuter, regRef));
+                    }
+                else
+                    {
+                    regRef = createRegister(getType(), fUsedOnce);
+                    code.add(m_fAssignable
+                            ? new P_Var(idProp, argTarget, regRef)
+                            : new P_Ref(idProp, argTarget, regRef));
+                    }
                 return regRef;
                 }
 
@@ -1798,10 +1835,10 @@ public class NameExpression
                     return null;
                     }
 
-                FormalConstant constFormal = null;
                 if (typeLeft.isTypeOfType() && left instanceof NameExpression)
                     {
-                    NameExpression exprLeft = (NameExpression) left;
+                    FormalConstant constFormal = null;
+                    NameExpression exprLeft    = (NameExpression) left;
                     switch (exprLeft.getMeaning())
                         {
                         case Variable:
@@ -1838,6 +1875,8 @@ public class NameExpression
                             TypeConstant typeData = typeLeft.getParamType(0);
                             if (typeData.containsGenericParam(sName))
                                 {
+                                // typeData can be a synthetic union type produced by type inference
+                                // logic, and we cannot simply ask it for the defining constant
                                 Register     argLeft    = (Register) exprLeft.m_arg;
                                 TypeConstant typeFormal = argLeft.getOriginalType().getParamType(0);
                                 if (typeFormal.isFormalType())
@@ -1845,6 +1884,22 @@ public class NameExpression
                                     constFormal = (FormalConstant) typeFormal.getDefiningConstant();
                                     }
                                 typeLeft = typeData;
+                                }
+                            else if (sName.equals("OuterType") && typeData.isFormalType())
+                                {
+                                constFormal = (FormalConstant) typeData.getDefiningConstant();
+                                }
+                            break;
+                            }
+
+                        case FormalChildType:
+                            {
+                            // example: CompileType.OuterType.Element
+                            TypeConstant typeData = typeLeft.getParamType(0);
+                            if (typeData.isFormalType() &&
+                                    typeData.resolveConstraints().containsGenericParam(sName))
+                                {
+                                constFormal = (FormalConstant) typeData.getDefiningConstant();
                                 }
                             break;
                             }
@@ -1876,10 +1931,15 @@ public class NameExpression
                                     idProp.getConstraintType().containsGenericParam(sName))
                                 {
                                 constFormal = idProp;
-                                typeLeft    = typeLeft.getParamType(0);
                                 }
                             break;
                             }
+                        }
+
+                    if (constFormal != null)
+                        {
+                        m_fAssignable = false;
+                        return m_arg  = pool.ensureFormalTypeChildConstant(constFormal, sName);
                         }
                     }
 
@@ -1889,12 +1949,23 @@ public class NameExpression
                 if (idChild == null)
                     {
                     // process the "this.OuterName" construct
-                    if (!fIdMode)
+                    if (!typeLeft.isTypeOfType() && !fIdMode)
                         {
                         Constant constTarget = new NameResolver(this, sName)
                                 .forceResolve(ErrorListener.BLACKHOLE);
                         if (constTarget instanceof IdentityConstant && constTarget.isClass())
                             {
+                            if (constTarget.equals(pool.clzOuter()))
+                                {
+                                // this.Outer
+                                if (!typeLeft.isVirtualChild())
+                                    {
+                                    log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS);
+                                    return null;
+                                    }
+                                return m_arg = typeLeft.getParentType();
+                                }
+
                             // they may choose to emphasize the exact type of "this" by writing:
                             // "this.X", where X is this class itself, a super class or any other
                             // contribution into this class; in all cases we'll treat it as "this"
@@ -1933,23 +2004,15 @@ public class NameExpression
                         break;
 
                     case Property:
-                        if (constFormal == null)
+                        PropertyInfo infoProp = infoLeft.findProperty((PropertyConstant) idChild);
+                        if (infoProp == null)
                             {
-                            PropertyInfo infoProp = infoLeft.findProperty((PropertyConstant) idChild);
-                            if (infoProp == null)
-                                {
-                                // TODO GG: basically an assert; need a better error?
-                                log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
-                                return null;
-                                }
-                            m_arg         = idChild;
-                            m_fAssignable = infoProp.isVar();
+                            // TODO GG: basically an assert; need a better error?
+                            log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
+                            return null;
                             }
-                        else
-                            {
-                            m_arg         = pool.ensureFormalTypeChildConstant(constFormal, sName);
-                            m_fAssignable = false;
-                            }
+                        m_arg         = idChild;
+                        m_fAssignable = infoProp.isVar();
                         break;
 
                     case Method:
@@ -2161,7 +2224,7 @@ public class NameExpression
                             clzTarget.isParameterized() &&
                                 aTypeParams.length <= clzTarget.getTypeParamCount())
                             {
-                            type = pool.ensureParameterizedTypeConstant(type, aTypeParams);
+                            type = type.adoptParameters(pool, aTypeParams);
                             }
                         else
                             {
@@ -2346,9 +2409,16 @@ public class NameExpression
                                 {
                                 boolean fDynamic = false;
 
+                                CheckDynamic:
                                 if (left instanceof NameExpression)
                                     {
                                     NameExpression exprLeft = (NameExpression) left;
+                                    if (exprLeft.isSuppressDeref())
+                                        {
+                                        // this is a Ref property access, e.g.: "&outer.Referent"
+                                        break CheckDynamic;
+                                        }
+
                                     switch (exprLeft.getMeaning())
                                         {
                                         case Variable:

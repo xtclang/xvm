@@ -190,7 +190,10 @@ public class xRTType
         if (idProp instanceof FormalTypeChildConstant)
             {
             TypeConstant typeTarget = hThis.getDataType();
-            TypeConstant typeValue  = typeTarget.resolveFormalType(idProp);
+            TypeConstant typeValue  =
+                idProp.getName().equals("OuterType") && typeTarget.isVirtualChild()
+                    ? typeTarget.getParentType()
+                    : typeTarget.resolveFormalType(idProp);
 
             return typeValue == null
                 ? frame.raiseException(xException.invalidType(frame,

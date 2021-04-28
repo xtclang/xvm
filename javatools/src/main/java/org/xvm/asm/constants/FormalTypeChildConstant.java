@@ -94,6 +94,7 @@ public class FormalTypeChildConstant
             }
 
         FormalConstant idParent = (FormalConstant) getParentConstant();
+        String         sName    = getName();
 
         typeConstraint = idParent.getConstraintType();
 
@@ -102,7 +103,7 @@ public class FormalTypeChildConstant
         // for example, the compiler may know that "CompileType" is an "Array", therefore
         // "CompileType.Element" is represented by a FormalTypeChildConstant, but that knowledge
         // is not encoded into the constant itself
-        if (typeConstraint.containsGenericParam(getName()))
+        if (typeConstraint.containsGenericParam(sName))
             {
             if (typeConstraint.isTuple())
                 {
@@ -116,7 +117,10 @@ public class FormalTypeChildConstant
             PropertyConstant idProp = (PropertyConstant) type.getDefiningConstant();
             return m_typeConstraint = idProp.getConstraintType();
             }
-        return m_typeConstraint = getConstantPool().typeObject();
+
+        return m_typeConstraint = sName.equals("OuterType") && typeConstraint.isVirtualChild()
+                ? typeConstraint.getParentType()
+                : getConstantPool().typeObject();
         }
 
     @Override
