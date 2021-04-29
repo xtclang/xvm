@@ -3502,7 +3502,7 @@ public class Parser
                 lEndPos = prev().getEndPosition();
                 }
 
-            if (peek().getId() == Id.L_CURLY)
+            if (left == null && peek().getId() == Id.L_CURLY)
                 {
                 body    = parseTypeCompositionBody(keyword);
                 lEndPos = prev().getEndPosition();

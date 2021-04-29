@@ -204,8 +204,14 @@ public class AnonInnerClass
     protected void addContribution(TypeExpression exprType)
         {
         TypeConstant type = exprType.ensureTypeConstant().resolveTypedefs();
-        assert !type.containsUnresolved();
-        addContribution(exprType, type);
+        if (type.containsUnresolved())
+            {
+            logError(Compiler.NAME_UNRESOLVABLE, type.getValueString());
+            }
+        else
+            {
+            addContribution(exprType, type);
+            }
         }
 
     /**

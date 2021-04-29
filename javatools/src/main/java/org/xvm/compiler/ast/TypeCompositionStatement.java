@@ -844,7 +844,7 @@ public class TypeCompositionStatement
         // validate and register annotations
         if (annotations != null && !annotations.isEmpty())
             {
-            if (compositions == null)
+            if (compositions == null || compositions == Collections.EMPTY_LIST)
                 {
                 compositions = new ArrayList<>();
                 }
