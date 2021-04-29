@@ -440,9 +440,9 @@ public class AnnotatedTypeConstant
      *
      * @return the first underlying type that follows extracted annotations
      */
-    private TypeConstant extractAnnotation(List<Annotation> listClassAnnos,
-                                           List<Annotation> listMixinAnnos,
-                                           ErrorListener    errs)
+    public TypeConstant extractAnnotation(List<Annotation> listClassAnnos,
+                                          List<Annotation> listMixinAnnos,
+                                          ErrorListener    errs)
         {
         List<Constant> listAnnoClz = new ArrayList<>();
         TypeConstant   typeCurr    = this;

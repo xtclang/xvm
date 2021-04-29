@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -489,11 +490,35 @@ public class NewExpression
                 boolean fNestMate = typeTarget.isNestMateOf(ctx.getThisClass().getIdentityConstant());
                 if (fAnon)
                     {
+                    // strip the annotations and apply them later
+                    Annotation[] annos;
+                    if (typeTarget instanceof AnnotatedTypeConstant)
+                        {
+                        List<Annotation> listClass = new ArrayList<>();
+                        List<Annotation> listMixin = new ArrayList<>();
+
+                        typeSuper = ((AnnotatedTypeConstant) typeTarget).
+                                        extractAnnotation(listClass, listMixin, errs);
+                        if (typeSuper == null)
+                            {
+                            // errors must have been reported
+                            return null;
+                            }
+                        assert listClass.isEmpty() && !listMixin.isEmpty();
+                        annos = listMixin.toArray(Annotation.NO_ANNOTATIONS);
+                        }
+                    else
+                        {
+                        assert !typeTarget.isAnnotated();
+                        typeSuper = typeTarget;
+                        annos     = null;
+                        }
+
                     // since we are going to be extending the specified type, increase visibility from
                     // the public default to protected, which we get when a class "extends" another;
                     // the real target, though, is not the specified type being "new'd", but rather the
                     // anonymous inner class
-                    typeSuper = pool.ensureAccessTypeConstant(typeTarget,
+                    typeSuper = pool.ensureAccessTypeConstant(typeSuper,
                             fNestMate ? Access.PRIVATE : Access.PROTECTED);
 
                     ClassStructure clzAnon = (ClassStructure) anon.getComponent();
@@ -502,6 +527,11 @@ public class NewExpression
                             (ClassConstant) clzAnon.getIdentityConstant());
                     typeResult = typeResult.adoptParameters(pool, clzAnon.getFormalType());
                     typeResult = typeResult.resolveGenerics(pool, typeTarget);
+
+                    if (annos != null)
+                        {
+                        typeResult = pool.ensureAnnotatedTypeConstant(typeResult, annos);
+                        }
                     typeTarget = pool.ensureAccessTypeConstant(typeResult, Access.PRIVATE);
                     }
                 else if (fNestMate)

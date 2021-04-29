@@ -152,7 +152,9 @@ public abstract class AbstractDependantTypeConstant
     @Override
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
         {
-        return null;
+        return typeActual.isVirtualChild() || typeActual.isAnonymousClass()
+                ? getParentType().resolveTypeParameter(typeActual.getParentType(), sFormalName)
+                : null;
         }
 
     @Override

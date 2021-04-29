@@ -2238,6 +2238,7 @@ public abstract class ClassTemplate
         private Annotation[] aAnnoMixin; // annotation mixins to construct
         private int          ixAnno;     // index of the next annotation mixin
         private List<Frame>  listFinalizable;
+        private boolean      fAnonymous;
 
         public Construct(MethodStructure constructor,
                          boolean         fInitStruct,
@@ -2256,6 +2257,7 @@ public abstract class ClassTemplate
             aAnnoMixin = composition.getBaseType().ensureTypeInfo().getMixinAnnotations();
             ixStep     = fInitStruct ? 0 : 4;
             ixAnno     = 0;
+            fAnonymous = constructor != null && constructor.isAnonymousClassWrapperConstructor();
             }
 
         @Override
@@ -2280,10 +2282,10 @@ public abstract class ClassTemplate
                 switch (ixStep++)
                     {
                     case 0: // call an anonymous class "wrapper" constructor first
-                        if (constructor != null && constructor.isAnonymousClassWrapperConstructor())
+                        if (fAnonymous)
                             {
-                            // wrapper constructor calls the initializer itself; skip next three steps
-                            ixStep  = 4;
+                            // wrapper constructor calls the initializer itself; skip steps 1 and 3
+                            ixStep  = 2;
                             iResult = frameCaller.call1(constructor, hStruct, ahVar, Op.A_IGNORE);
                             break;
                             }
@@ -2357,7 +2359,7 @@ public abstract class ClassTemplate
                         }
 
                     case 3: // call the base constructor
-                        if (constructor != null && !constructor.isNoOp())
+                        if (constructor != null && !constructor.isNoOp() && !fAnonymous)
                             {
                             Frame frameCD = frameCaller.createFrame1(
                                     constructor, hStruct, ahVar, Op.A_IGNORE);
@@ -2392,7 +2394,7 @@ public abstract class ClassTemplate
 
                     case 7:
                         {
-                        ObjectHandle hPublic      =  hStruct.ensureAccess(Access.PUBLIC);
+                        ObjectHandle hPublic      = hStruct.ensureAccess(Access.PUBLIC);
                         List<Frame>  listFinalize = listFinalizable;
                         if (listFinalize == null)
                             {

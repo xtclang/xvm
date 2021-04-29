@@ -3109,7 +3109,9 @@ public abstract class Component
             Annotation anno = m_annotation;
             if (anno != null)
                 {
-                if (anno.containsUnresolved())
+                // annotations parameters don't need to be resolved for the compilation to move
+                // forward; they will be checked later as a part of the annotation type resolution
+                if (anno.getAnnotationClass().containsUnresolved())
                     {
                     return true;
                     }
