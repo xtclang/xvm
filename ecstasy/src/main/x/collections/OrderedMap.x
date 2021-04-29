@@ -78,13 +78,9 @@ interface OrderedMap<Key extends Orderable, Value>
         {
         static <CompileType extends Entry> Ordered compare(CompileType value1, CompileType value2)
             {
-// TODO GG
-//            assert Orderer order  := value1.outer.ordered();
-//            assert Orderer order2 := value2.outer.ordered(), order == order2;
+            assert val order  := value1.outer.ordered();
+            assert val order2 := value2.outer.ordered(), order == order2;
 
-// REVIEW GG will this work?
-            assert val order  := value1.outer.as(OrderedMap).ordered();
-            assert val order2 := value2.outer.as(OrderedMap).ordered(), order == order2;
             return order(value1.key, value2.key);
             }
         }

@@ -713,9 +713,16 @@ public class TerminalTypeConstant
                 }
 
             case ParentClass:
-                if (typeTarget != null && typeTarget.isVirtualChild())
+                if (typeTarget != null)
                     {
-                    return typeTarget.getParentType();
+                    if (typeTarget.isFormalType())
+                        {
+                        typeTarget = typeTarget.resolveConstraints();
+                        }
+                    if (typeTarget.isVirtualChild())
+                        {
+                        return typeTarget.getParentType();
+                        }
                     }
                 // fall through
             case ChildClass:

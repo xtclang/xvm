@@ -141,7 +141,7 @@ module TestInnerOuter
                 console.println($"CompileType.OuterType.Element={CompileType.OuterType.Element}");
                 console.println($"value1={value1}");
                 console.println($"value1.outer={value1.outer}");
-//                console.println($"value1.outer.name={value1.outer.name}"); // TODO GG:
+                console.println($"value1.outer.name={value1.outer.name}");
                 console.println($"value1.&outer.actualType={value1.&outer.actualType}");
 
 //                return (value1.e <=> value2.e).reversed; // TODO GG: deferred; RT error for now
