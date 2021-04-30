@@ -739,7 +739,7 @@ public class PropertyInfo
      */
     public boolean isVar()
         {
-        if (m_fSuppressVar || isConstant() || isFormalType() || isInjected() || isExplicitlyReadOnly())
+        if (m_fSuppressVar || isConstant() || isFormalType() || isInjected())
             {
             return false;
             }
