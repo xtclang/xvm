@@ -1,6 +1,6 @@
 import maps.EntryKeys;
 import maps.EntryValues;
-import maps.ReifiedEntry;
+import maps.KeyEntry;
 
 /**
  * HashMap is a hashed implementation of the Map interface. One of two conditions is required:
@@ -318,7 +318,7 @@ class HashMap<Key, Value>
     <Result> Result process(Key key,
             function Result (Map<Key, Value>.Entry) compute)
         {
-        return compute(new ReifiedEntry<Key, Value>(this, key));
+        return compute(reifyEntry(key));
         }
 
 
@@ -396,7 +396,7 @@ class HashMap<Key, Value>
         @Override
         Map<Key, Value>.Entry reify()
             {
-            return new ReifiedEntry<Key, Value>(this.HashMap, key);
+            return reifyEntry(key);
             }
         }
 
@@ -446,7 +446,7 @@ class HashMap<Key, Value>
             private Int          nextBucket;
             private HashEntry?   nextEntry;
             private Int          addSnapshot;
-            private CursorEntry  entry       = new CursorEntry();
+            private CursorEntry  entry = new CursorEntry();
 
             @Override
             conditional Entry next()
@@ -679,6 +679,14 @@ class HashMap<Key, Value>
         this.buckets  = newBuckets;
         this.growAt   = growAt;
         this.shrinkAt = shrinkAt;
+        }
+
+    /**
+     * Instantiate a reified entry, which must be a child of the map.
+     */
+    private Entry reifyEntry(Key key)
+        {
+        return new @KeyEntry(key) Entry() {};
         }
 
     /**

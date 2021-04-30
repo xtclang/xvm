@@ -3,6 +3,7 @@
  */
 class OrderedMapSlice<Key extends Orderable, Value>
         implements OrderedMap<Key, Value>
+        incorporates KeySetBasedMap<Key, Value>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -177,18 +178,6 @@ class OrderedMapSlice<Key extends Orderable, Value>
     @Lazy public/private Set<Key> keys.calc()
         {
         return new KeySet();
-        }
-
-    @Override
-    @Lazy public/private Collection<Value> values.calc()
-        {
-        return new KeyValues<Key, Value>(this);
-        }
-
-    @Override
-    @Lazy public/private Collection<Map<Key, Value>.Entry> entries.calc()
-        {
-        return new KeyEntries<Key, Value>(this);
         }
 
     @Override

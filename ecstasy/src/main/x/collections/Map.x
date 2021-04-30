@@ -177,24 +177,14 @@ interface Map<Key, Value>
      * The returned collection is expected to support mutation operations iff the map is `inPlace`;
      * the returned collection is _not_ expected to support the `add` or `addAll` operations.
      */
-    @RO Collection<Value> values.get()
-        {
-        // this is sub-optimal because a new Collection is instantiated each time; an implementing
-        // class could use this same approach but with @Lazy
-        return new maps.KeyValues<Key, Value>(this);
-        }
+    @RO Collection<Value> values;
 
     /**
      * Obtain the collection of all entries (key/value pairs) in the map.
      *
      * The returned set is expected to support mutation operations iff the map is `inPlace`.
      */
-    @RO Collection<Entry> entries.get()
-        {
-        // this is sub-optimal because a new Collection is instantiated each time; an implementing
-        // class could use this same approach but with @Lazy
-        return new maps.KeyEntries<Key, Value>(this);
-        }
+    @RO Collection<Entry> entries;
 
     /**
      * Filter this `Map` based on its entries' keys and values.
@@ -479,7 +469,7 @@ interface Map<Key, Value>
     <Result> Result process(Key                    key,
                             function Result(Entry) compute)
         {
-        Entry  entry  = new maps.ReifiedEntry<Key, Value>(this, key);
+        Entry  entry  = new @maps.KeyEntry(key) Entry() {};
         Result result = compute(entry);
         return result;
         }

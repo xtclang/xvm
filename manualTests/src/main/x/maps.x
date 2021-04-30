@@ -1,7 +1,5 @@
 module TestMaps
     {
-    import ecstasy.collections.maps.KeyEntries;
-
     @Inject Console console;
     @Inject Timer   timer;
     Log log = new ecstasy.io.ConsoleLog(console);
@@ -108,12 +106,6 @@ module TestMaps
         loop: for (Map<String,String>.Entry entry : map.entries)
             {
             console.println($"[{loop.count}]:{entry.key}={entry.value}");
-            }
-
-        console.println("key-entries:");
-        loop: for (Map<String, String>.Entry entry : new KeyEntries<String, String>(map))
-            {
-            console.println($"[{loop.count}]:{entry}");
             }
 
         // test very bad hashing

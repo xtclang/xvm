@@ -1,6 +1,5 @@
 import maps.EntryValues;
 import maps.OrderedMapSlice;
-import maps.ReifiedEntry;
 
 /**
  * The SkiplistMap is an OrderedMap implementation using a "Skip List" data structure.
@@ -827,9 +826,9 @@ class SkiplistMap<Key extends Orderable, Value>
             }
 
         @Override
-        Map<Key, Value>.Entry reify()
+        SkiplistMap<Key, Value>.Entry reify()
             {
-            return new ReifiedEntry<Key, Value>(this.SkiplistMap, key);
+            return reifyEntry(key);
             }
         }
 
@@ -1267,6 +1266,14 @@ class SkiplistMap<Key extends Orderable, Value>
         // TODO signed/unsigned checked/unchecked Int 8/16/32/64/128
 
         return new ExternalStore<Element>(initCapacity);
+        }
+
+    /**
+     * Instantiate a reified entry, which must be a child of the map.
+     */
+    private Entry reifyEntry(Key key)
+        {
+        return new @maps.KeyEntry(key) Entry() {};
         }
 
     /**

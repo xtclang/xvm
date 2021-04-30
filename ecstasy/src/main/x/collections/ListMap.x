@@ -1,5 +1,3 @@
-import maps.ReifiedEntry;
-
 /**
  * ListMap is an implementation of a Map on top of an Array to maintain the order of insertion.
  *
@@ -539,7 +537,7 @@ class ListMap<Key, Value>
         @Override
         Map<Key, Value>.Entry reify()
             {
-            return new ReifiedEntry(this.ListMap, key);
+            return reifyEntry(key);
             }
 
         /**
@@ -798,5 +796,16 @@ class ListMap<Key, Value>
             assert this.ListMap.is(immutable ListMap);
             return makeImmutable();
             }
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Instantiate a reified entry, which must be a child of the map.
+     */
+    private Entry reifyEntry(Key key)
+        {
+        return new @maps.KeyEntry(key) Entry() {};
         }
     }
