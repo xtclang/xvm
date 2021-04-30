@@ -231,7 +231,7 @@ public class PropertyInfo
             // one of the bodies being added could cause the resulting property to require a field
             for (int i = cAdd - 1; i >= 0; --i)
                 {
-                PropertyBody body = aResult[i];
+                PropertyBody body = aAdd[i];
                 if (body.getImplementation().compareTo(Implementation.Abstract) > 0)
                     {
                     // this is the first body that is "real", so determine whether a field is
@@ -798,11 +798,20 @@ public class PropertyInfo
     public Access calcVarAccess()
         {
         Access access = getVarAccess();
-        if (access == null && isVar())
+        if (access == null && isVar() && !isAdopted())
             {
             access = getRefAccess();
             }
         return access;
+        }
+
+    /**
+     * @return true iff the {@link #finishAdoption} method created a synthetic body for a
+     *         property that originated from an interface and has not been subsequently "layered on"
+     */
+    public boolean isAdopted()
+        {
+        return getHead().getImplementation() == Implementation.SansCode;
         }
 
     /**
