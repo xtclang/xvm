@@ -94,7 +94,7 @@ public class PropertyInfo
         if (this.isFormalType() ^ that.isFormalType())
             {
             constId.log(errs, Severity.ERROR, VE_PROPERTY_ILLEGAL,
-                    constId.getValueString());
+                    that.getIdentity().getValueString());
             return this;
             }
 
@@ -102,7 +102,7 @@ public class PropertyInfo
         if (this.isConstant() || that.isConstant())
             {
             constId.log(errs, Severity.ERROR, VE_CONST_INCOMPATIBLE,
-                    constId.getValueString());
+                    that.getIdentity().getValueString());
             return this;
             }
 
@@ -114,7 +114,8 @@ public class PropertyInfo
         if (!(typeThat.isA(typeThis) || fAllowWidening && typeThis.isA(typeThat)))
             {
             constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
-                    constId.getValueString(), typeThis.getValueString(), typeThat.getValueString());
+                    that.getIdentity().getValueString(),
+                    typeThis.getValueString(), typeThat.getValueString());
             return this;
             }
 
@@ -268,7 +269,7 @@ public class PropertyInfo
                         if (typeAnnoAdd.equals(typeAnnoBase))
                             {
                             constId.log(errs, Severity.WARNING, VE_DUP_ANNOTATION_IGNORED,
-                                    constId.getParentConstant().getValueString(),
+                                    that.getIdentity().getParentConstant().getValueString(),
                                     getName(),
                                     annoAdd.getAnnotationClass().getValueString());
                             break;
@@ -277,7 +278,7 @@ public class PropertyInfo
                         if (typeAnnoAdd.isA(typeAnnoBase))
                             {
                             constId.log(errs, Severity.WARNING, VE_SUP_ANNOTATION_IGNORED,
-                                    constId.getParentConstant().getValueString(),
+                                    that.getIdentity().getParentConstant().getValueString(),
                                     getName(),
                                     typeAnnoAdd.getValueString(),
                                     typeAnnoBase.getValueString());
@@ -299,7 +300,7 @@ public class PropertyInfo
         if (this.isSetterUnreachable() && that.isVar())
             {
             constId.log(errs, Severity.ERROR, VE_PROPERTY_SET_PRIVATE_SUPER,
-                    constId.getParentConstant().getValueString(),
+                    that.getIdentity().getParentConstant().getValueString(),
                     getName());
             }
 
@@ -311,7 +312,7 @@ public class PropertyInfo
                         accessThatVar.isLessAccessibleThan(accessThisVar)))
             {
             constId.log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_LESSENED,
-                    constId.getParentConstant().getValueString(),
+                    that.getIdentity().getParentConstant().getValueString(),
                     getName());
             }
 
