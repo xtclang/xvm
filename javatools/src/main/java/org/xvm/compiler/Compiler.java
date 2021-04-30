@@ -3,6 +3,7 @@ package org.xvm.compiler;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 
@@ -152,7 +153,7 @@ public class Compiler
                 throw new CompilerException("failed to create module");
                 }
             m_structFile = m_stmtModule.getComponent().getFileStructure();
-            m_structFile.setErrorListener(m_errs);
+            m_structFile.setErrorListener(ErrorListener.BLACKHOLE);
             setStage(Stage.Registered);
             }
 
