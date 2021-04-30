@@ -119,7 +119,7 @@ public class FBind
                     {
                     return frame.raiseException("Invalid \"super\" reference");
                     }
-                hFunction = xRTFunction.makeHandle(chain, nDepth).bindTarget(frame.getThis());
+                hFunction = xRTFunction.makeHandle(chain, nDepth).bindTarget(frame, frame.getThis());
                 }
             else if (nFunctionId <= CONSTANT_OFFSET)
                 {

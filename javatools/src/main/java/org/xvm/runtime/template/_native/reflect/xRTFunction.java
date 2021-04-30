@@ -469,13 +469,17 @@ public class xRTFunction
         /**
          * Bind the target.
          *
-         * @param hArg  the argument to bind the target to
+         * @param frame    (optional) the current frame
+         * @param hTarget  the argument to bind the target to
          *
          * @return a bound FunctionHandle
          */
-        public FunctionHandle bindTarget(ObjectHandle hArg)
+        public FunctionHandle bindTarget(Frame frame, ObjectHandle hTarget)
             {
-            return new SingleBoundHandle(f_type, this, -1, hArg);
+            TypeConstant type = frame == null
+                    ? f_type
+                    : f_type.resolveGenerics(frame.poolContext(), hTarget.getType());
+            return new SingleBoundHandle(type, this, -1, hTarget);
             }
 
         /**

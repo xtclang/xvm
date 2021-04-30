@@ -362,7 +362,7 @@ public class xOSStorage
                 Path pathAbsolute = pathDir.resolve(pathRelative);
 
                 FunctionHandle hfnOnEvent =
-                        xRTFunction.makeHandle(s_methodOnEvent).bindTarget(context.hStorage);
+                        xRTFunction.makeHandle(s_methodOnEvent).bindTarget(null, context.hStorage);
 
                 StringHandle hPathDir  = xString.makeHandle(pathDir.toString());
                 StringHandle hPathNode = xString.makeHandle(pathAbsolute.toString());

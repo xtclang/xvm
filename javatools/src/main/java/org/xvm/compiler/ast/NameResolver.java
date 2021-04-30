@@ -21,6 +21,7 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.XvmStructure;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PseudoConstant;
@@ -503,6 +504,13 @@ public class NameResolver
                     {
                     PseudoConstant constClass = (PseudoConstant) id;
                     return constClass.getDeclarationLevelClass().getComponent();
+                    }
+
+                case FormalTypeChild:
+                    {
+                    FormalTypeChildConstant constFormal = (FormalTypeChildConstant) id;
+                    type = constFormal.getConstraintType().getType();
+                    break;
                     }
 
                 default:

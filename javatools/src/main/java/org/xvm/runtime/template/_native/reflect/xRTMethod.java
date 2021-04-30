@@ -256,13 +256,15 @@ public class xRTMethod
     /**
      * Implementation for: {@code Function<ParamTypes, ReturnTypes> bindTarget(Target target)}.
      */
-    public int invokeBindTarget(Frame frame, MethodHandle hMethod, ObjectHandle hArg, int iReturn)
+    public int invokeBindTarget(Frame frame, MethodHandle hMethod, ObjectHandle hTarget, int iReturn)
         {
-        CallChain chain = hMethod.getCallChain(frame, hArg);
+        CallChain chain = hMethod.getCallChain(frame, hTarget);
 
-        return frame.assignValue(iReturn, hArg.isService()
-                ? xRTFunction.makeAsyncHandle(chain).bindTarget(hArg)
-                : xRTFunction.makeHandle(chain, 0).bindTarget(hArg));
+        return frame.assignValue(iReturn,
+                (hTarget.isService()
+                    ? xRTFunction.makeAsyncHandle(chain)
+                    : xRTFunction.makeHandle(chain, 0))
+                .bindTarget(frame, hTarget));
         }
 
     /**
@@ -272,7 +274,7 @@ public class xRTMethod
         {
         ObjectHandle   hTarget = ahArg[0];
         TupleHandle    hTuple  = (TupleHandle) ahArg[1];
-        ObjectHandle[] ahPass  = hTuple.m_ahValue;            // TODO GG+CP do we need to check these?
+        ObjectHandle[] ahPass  = hTuple.m_ahValue;  // TODO GG+CP do we need to check these?
         CallChain      chain   = hMethod.getCallChain(frame, hTarget);
 
         return chain.invokeT(frame, hTarget, ahPass, iReturn);
