@@ -738,7 +738,7 @@ public class PropertyInfo
      */
     public boolean isVar()
         {
-        if (m_fSuppressVar || isConstant() || isFormalType() || isInjected())
+        if (m_fSuppressVar || isConstant() || isFormalType() || isInjected() || isExplicitlyReadOnly())
             {
             return false;
             }
@@ -1182,6 +1182,14 @@ public class PropertyInfo
     public boolean isExplicitlyAbstract()
         {
         return getHead().isExplicitAbstract();
+        }
+
+    /**
+     * @return true if the property is annotated by "@RO"
+     */
+    public boolean isExplicitlyReadOnly()
+        {
+        return getHead().isExplicitReadOnly();
         }
 
     /**
