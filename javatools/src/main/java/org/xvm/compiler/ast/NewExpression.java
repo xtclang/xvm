@@ -574,7 +574,6 @@ public class NewExpression
                         {
                         case 0:
                             // dynamically growing array; go the normal route
-                            assert args.isEmpty();
                             break;
 
                         case 1:
