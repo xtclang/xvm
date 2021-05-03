@@ -13,4 +13,26 @@ interface Freezable
      *                 instead of creating a new immutable copy of itself
      */
     immutable Freezable freeze(Boolean inPlace = False);
+
+    /**
+     * @return True iff the object is Freezable and must be frozen, False iff the object reference
+     *         is already frozen (or a service)
+     *
+     * @throws ConstantRequired if the object is not already frozen, is not a service, and is not
+     *         Freezable
+     */
+    static Boolean requiresFreeze(Object o)
+        {
+        if (&o.isImmutable || &o.isService)
+            {
+            return False;
+            }
+
+        if (o.is(Freezable))
+            {
+            return True;
+            }
+
+        throw new ConstantRequired();
+        }
     }

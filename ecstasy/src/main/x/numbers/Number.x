@@ -132,8 +132,7 @@ const Number
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      * @throws OutOfBounds  if no corresponding negated value is possible to express with this type
      */
-    @Op("-#")
-    Number neg();
+    @Op("-#") Number neg();
 
     /**
      * Addition: Add another number to this number, and return the result.
@@ -145,8 +144,7 @@ const Number
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      * @throws OutOfBounds  if the resulting value is out of range for this type
      */
-    @Op("+")
-    Number add(Number n);
+    @Op("+") Number add(Number n);
 
     /**
      * Subtraction: Subtract another number from this number, and return the result.
@@ -285,13 +283,23 @@ const Number
         }
 
     /**
+     * Obtain the number as an array of nibbles, in left-to-right order.
+     *
+     * @return the number as an array of nibbles
+     */
+    immutable Nibble[] toNibbleArray()
+        {
+        return bits.toNibbleArray();
+        }
+
+    /**
      * Obtain the number as an array of bytes, in left-to-right order.
      *
      * @return the number as an array of bytes
      */
     immutable Byte[] toByteArray()
         {
-        return toBitArray().toByteArray();
+        return bits.toByteArray();
         }
 
     /**

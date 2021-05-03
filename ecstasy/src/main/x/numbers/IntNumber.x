@@ -103,49 +103,42 @@ const IntNumber
     /**
      * Bitwise AND.
      */
-    @Op("&")
-    IntNumber and(IntNumber that);
+    @Op("&") IntNumber and(IntNumber that);
 
     /**
      * Bitwise OR.
      */
-    @Op("|")
-    IntNumber or(IntNumber that);
+    @Op("|") IntNumber or(IntNumber that);
 
     /**
      * Bitwise XOR.
      */
-    @Op("^")
-    IntNumber xor(IntNumber that);
+    @Op("^") IntNumber xor(IntNumber that);
 
     /**
      * Bitwise NOT.
      */
-    @Op("~")
-    IntNumber not();
+    @Op("~") IntNumber not();
 
     /**
      * Shift bits left. This is both a logical left shift and arithmetic left shift, for
      * both signed and unsigned integer values.
      */
-    @Op("<<")
-    IntNumber shiftLeft(Int count);
+    @Op("<<") IntNumber shiftLeft(Int count);
 
     /**
      * Shift bits right. For signed integer values, this is an arithmetic right shift. For
      * unsigned integer values, this is both a logical right shift and arithmetic right
      * shift.
      */
-    @Op(">>")
-    IntNumber shiftRight(Int count);
+    @Op(">>") IntNumber shiftRight(Int count);
 
     /**
      * "Unsigned" shift bits right. For signed integer values, this is an logical right
      * shift. For unsigned integer values, this is both a logical right shift and arithmetic
      * right shift.
      */
-    @Op(">>>")
-    IntNumber shiftAllRight(Int count);
+    @Op(">>>") IntNumber shiftAllRight(Int count);
 
     /**
      * Rotate bits left.
@@ -218,6 +211,16 @@ const IntNumber
         {
         UInt32 nibble = toUnchecked().toUInt32() & 0xF;          // TODO CP sliceByte()
         return nibble <= 9 ? '0' + nibble : 'A' + nibble - 10;
+        }
+
+    /**
+     * Convert the IntNumber to a Nibble.
+     *
+     * @return the hexit for the least significant 4 bits of the integer value
+     */
+    Nibble toNibble()
+        {
+        return new Nibble(toInt64());
         }
 
     /**

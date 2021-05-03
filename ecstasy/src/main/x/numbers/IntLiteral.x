@@ -606,7 +606,7 @@ const IntLiteral(String text)
      */
     @Auto Nibble toNibble()
         {
-        TODO
+        return new Nibble(toInt64());
         }
 
     /**

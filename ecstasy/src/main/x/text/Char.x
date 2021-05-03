@@ -103,11 +103,38 @@ const Char
 
     // ----- properties ----------------------------------------------------------------------------
 
+    /**
+     * The unicode code-point for this character.
+     */
     UInt32 codepoint;
 
 
     // ----- numeric conversion support ------------------------------------------------------------
 
+    /**
+     * Determine if the character represents a nibble value.
+     *
+     * @return True iff the character represents a nibble value
+     * @return (optional) the corresponding Nibble
+     */
+    conditional Nibble isNibble()
+        {
+        return switch (this)
+            {
+            case '0'..'9':
+            case 'A'..'F':
+            case 'a'..'f': (True, Nibble.of(this));
+
+            default: False;
+            };
+        }
+
+    /**
+     * Determine if the character represents a digit (base 10) value.
+     *
+     * @return True iff the character represents a digit value
+     * @return (optional) the Int value of the corresponding digit
+     */
     conditional Int isDigit()
         {
         Int codepoint = this.codepoint;
@@ -116,6 +143,12 @@ const Char
                 : False;
         }
 
+    /**
+     * Determine if the character represents a hexit (base 16) value.
+     *
+     * @return True iff the character represents a hexit value
+     * @return (optional) the Int value of the corresponding hexit
+     */
     conditional Int isHexit()
         {
         Int codepoint = this.codepoint;
