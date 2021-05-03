@@ -646,7 +646,7 @@ interface List<Element>
      *
      * @param inPlace  pass `True` to allow the List to reverse its order in-place, without creating
      *                 a new List; note that the List implementation may still choose to create a
-     *                 new to satisfy the request, so this parameter is only used as a suggestion
+     *                 new List to satisfy the request, so this parameter is only a suggestion
      *
      * @return a List that is in the reverse order as this List
      */
@@ -865,7 +865,7 @@ interface List<Element>
      */
     List insert(Int index, Element value)
         {
-        TODO element addition is not supported
+        throw new ReadOnly("element insertion is not supported");
         }
 
     /**
@@ -915,7 +915,7 @@ interface List<Element>
      */
     List delete(Int index)
         {
-        TODO element removal is not supported
+        throw new ReadOnly("element deletion is not supported");
         }
 
     /**
