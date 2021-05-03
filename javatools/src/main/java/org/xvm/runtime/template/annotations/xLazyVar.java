@@ -19,6 +19,7 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.reflect.xVar;
+
 import org.xvm.runtime.template.xException;
 
 
@@ -73,7 +74,12 @@ public class xLazyVar
             {
             case "set":
                 {
-                return invokeSet(frame, (LazyVarHandle) hTarget, hArg);
+                LazyVarHandle hLazy = (LazyVarHandle) hTarget;
+                if (hLazy.isPropertyOnImmutable())
+                    {
+                    return invokeSet(frame, hLazy, hArg);
+                    }
+                break;
                 }
             }
 
@@ -82,7 +88,7 @@ public class xLazyVar
 
     protected int invokeSet(Frame frame, LazyVarHandle hLazy, ObjectHandle hValue)
         {
-        if (hLazy.isPropertyOnImmutable() && !hValue.isPassThrough(null))
+        if (!hValue.isPassThrough(null))
             {
             if (hValue.getType().isA(frame.poolContext().typeFreezable()))
                 {
@@ -123,7 +129,7 @@ public class xLazyVar
                 return fAllowDupe
                     ? Op.R_NEXT
                     : frame.raiseException(xException.immutableObjectProperty(
-                    frame, hLazy.getName(), hLazy.getField(GenericHandle.OUTER).getType()));
+                        frame, hLazy.getName(), hLazy.getField(GenericHandle.OUTER).getType()));
                 }
             else
                 {
