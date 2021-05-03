@@ -801,9 +801,9 @@ public class Compiler
      */
     public static final String NO_SUPER                           = "COMPILER-53";
     /**
-     * Unexpected redundant return type information.
+     * The contribution type {0} must be parameterized.
      */
-    public static final String UNEXPECTED_REDUNDANT_RETURNS       = "COMPILER-54";
+    public static final String MISSING_TYPE_PARAMETERS            = "COMPILER-54";
     /**
      * Method or function type requires complete parameter and return type information.
      */

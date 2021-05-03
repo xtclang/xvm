@@ -119,28 +119,6 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public boolean isExplicitClassIdentity(boolean fAllowParams)
-        {
-        return isTypeResolved() && getResolvedType().isExplicitClassIdentity(fAllowParams);
-        }
-
-    @Override
-    public TypeConstant getExplicitClassInto()
-        {
-        return isTypeResolved()
-                ? getResolvedType().getExplicitClassInto()
-                : super.getExplicitClassInto();
-        }
-
-    @Override
-    public boolean isIntoClassType()
-        {
-        return isTypeResolved()
-                ? getResolvedType().isIntoClassType()
-                : m_constId.getName().equals("Class");
-        }
-
-    @Override
     public TypeConstant getUnderlyingType()
         {
         if (isTypeResolved())
@@ -167,6 +145,12 @@ public class UnresolvedTypeConstant
                 }
             }
         return false;
+        }
+
+    @Override
+    public boolean isVirtualChild()
+        {
+        return isTypeResolved() && getResolvedType().isVirtualChild();
         }
 
     @Override
@@ -256,6 +240,28 @@ public class UnresolvedTypeConstant
     public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
         return isTypeResolved() && getResolvedType().isSingleUnderlyingClass(fAllowInterface);
+        }
+
+    @Override
+    public boolean isExplicitClassIdentity(boolean fAllowParams)
+        {
+        return isTypeResolved() && getResolvedType().isExplicitClassIdentity(fAllowParams);
+        }
+
+    @Override
+    public TypeConstant getExplicitClassInto()
+        {
+        return isTypeResolved()
+                ? getResolvedType().getExplicitClassInto()
+                : super.getExplicitClassInto();
+        }
+
+    @Override
+    public boolean isIntoClassType()
+        {
+        return isTypeResolved()
+                ? getResolvedType().isIntoClassType()
+                : m_constId.getName().equals("Class");
         }
 
     @Override

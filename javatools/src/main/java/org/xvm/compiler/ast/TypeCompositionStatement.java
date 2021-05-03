@@ -1960,11 +1960,15 @@ public class TypeCompositionStatement
                 }
             }
 
-        if (format == Format.MIXIN && !component.isParameterized())
+        if (component.isParameterized())
             {
-            // mixins naturally imply formal type parameters from their contributions (most likely
-            // the "into"s); there is logic in NameTypeExpression that defers the name resolution
-            // until the implicit type parameters are added by this call (if any)
+            checkImplicitTypeParameters(component, errs);
+            }
+        else if (format == Format.MIXIN)
+            {
+            // mixins naturally imply formal type parameters from their contributions (most
+            // likely the "into" clauses); there is logic in NameTypeExpression that defers the name
+            // resolution until the implicit type parameters are added by this method (if any)
             addImplicitTypeParameters(component, errs);
             }
 
@@ -1990,6 +1994,7 @@ public class TypeCompositionStatement
                 {
                 case Extends:
                 case Implements:
+                case Incorporates:
                 case Into:
                     break;
 
@@ -2049,6 +2054,46 @@ public class TypeCompositionStatement
                 {
                 component.addTypeParam(entry.getKey(), entry.getValue())
                          .setSynthetic(true);
+                }
+            }
+        }
+
+    /**
+     * Check whether all parameterizable contributions are indeed parameterized.
+     */
+    private void checkImplicitTypeParameters(ClassStructure component, ErrorListener errs)
+        {
+        if (component.isParameterized())
+            {
+            for (Contribution contrib : component.getContributionsAsList())
+                {
+                switch (contrib.getComposition())
+                    {
+                    case Extends:
+                    case Implements:
+                    case Incorporates:
+                    case Into:
+                        break;
+
+                    default:
+                        // disregard any other contribution
+                        continue;
+                    }
+
+                TypeConstant typeContrib = contrib.getTypeConstant();
+                if (typeContrib.isParameterizedDeep() ||
+                        !typeContrib.isExplicitClassIdentity(true))
+                    {
+                    continue;
+                    }
+
+                ClassStructure clzContrib = (ClassStructure) typeContrib.
+                        getSingleUnderlyingClass(true).getComponent();
+                if (clzContrib.isParameterizedDeep())
+                    {
+                    log(errs, Severity.ERROR, Compiler.MISSING_TYPE_PARAMETERS,
+                        typeContrib.getValueString());
+                    }
                 }
             }
         }
