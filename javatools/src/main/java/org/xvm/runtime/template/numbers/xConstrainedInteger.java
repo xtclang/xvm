@@ -23,9 +23,10 @@ import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.BitBasedArray;
 import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
+import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xByteArray;
 import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
 
 import org.xvm.runtime.template.text.xChar;
@@ -95,6 +96,7 @@ public abstract class xConstrainedInteger
         markNativeMethod("toChar"        , VOID, new String[]{"text.Char"});
         markNativeMethod("toBooleanArray", VOID, null);
         markNativeMethod("toBitArray"    , VOID, null);
+        markNativeMethod("toByteArray"   , VOID, null);
 
         markNativeMethod("rotateLeft"   , INT , THIS);
         markNativeMethod("rotateRight"  , INT , THIS);
@@ -366,6 +368,7 @@ public abstract class xConstrainedInteger
             case "toChar":
             case "toBooleanArray":
             case "toBitArray":
+            case "toByteArray":
                 {
                 TypeConstant  typeRet  = method.getReturn(0).getType();
                 ClassTemplate template = f_templates.getTemplate(typeRet);
@@ -426,6 +429,13 @@ public abstract class xConstrainedInteger
                         l &= 0x0F_FFFF;
                         }
                     return frame.assignValue(iReturn, xChar.makeHandle(l));
+                    }
+
+                if (template instanceof xByteArray)
+                    {
+                    long l = ((JavaLong) hTarget).getValue();
+                    return frame.assignValue(iReturn, xByteArray.makeHandle(
+                        toByteArray(l, f_cNumBits >>> 3), xArray.Mutability.Constant));
                     }
 
                 if (template instanceof BitBasedArray)

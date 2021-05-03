@@ -16,6 +16,7 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xBitArray;
+import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum.EnumHandle;
@@ -133,6 +134,13 @@ abstract public class BaseBinaryFP
                 byte[] abValue = getBits(d);
                 return frame.assignValue(iReturn,
                     xBitArray.makeHandle(abValue, f_cBits, xArray.Mutability.Constant));
+                }
+
+            case "toByteArray":
+                {
+                byte[] abValue = getBits(d);
+                return frame.assignValue(iReturn,
+                    xByteArray.makeHandle(abValue, xArray.Mutability.Constant));
                 }
 
             case "toInt64":

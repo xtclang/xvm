@@ -20,6 +20,7 @@ import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xBitArray;
+import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -147,6 +148,13 @@ abstract public class BaseDecFP
                 byte[] abValue = dec.toByteArray();
                 return frame.assignValue(iReturn,
                     xBitArray.makeHandle(abValue, f_cBits, xArray.Mutability.Constant));
+                }
+
+            case "toByteArray":
+                {
+                byte[] abValue = dec.toByteArray();
+                return frame.assignValue(iReturn,
+                    xByteArray.makeHandle(abValue, xArray.Mutability.Constant));
                 }
 
             case "toFloat64":

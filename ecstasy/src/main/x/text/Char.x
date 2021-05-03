@@ -4,7 +4,6 @@ import io.IllegalUTF;
 
 const Char
         implements Sequential
-        implements Stringable
         default('\u0000')
     {
     // ----- constructors --------------------------------------------------------------------------

@@ -289,7 +289,7 @@ const Number
      */
     immutable Nibble[] toNibbleArray()
         {
-        return bits.toNibbleArray();
+        return toBitArray().toNibbleArray();
         }
 
     /**
