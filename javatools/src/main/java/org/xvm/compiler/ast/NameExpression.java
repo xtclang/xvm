@@ -962,8 +962,6 @@ public class NameExpression
                     {
                     assert getMeaning() == Meaning.Class || getMeaning() == Meaning.Reserved;
 
-                    // TODO GG: the instanceof ParenClassConstant check will go away
-                    //  (p.this for property p on Map will become this.Map.&p)
                     if (argRaw instanceof ParentClassConstant)
                         {
                         int cSteps = ((ParentClassConstant) argRaw).getDepth();
@@ -1149,14 +1147,6 @@ public class NameExpression
 
             case OuterThis:
                 {
-                // TODO GG: this scenario will go away
-                //  (p.this for property p on Map will become this.Map.&p)
-                if (argRaw instanceof ThisClassConstant)
-                    {
-                    // it's just "this" (but note that it results in the public type)
-                    return generateReserved(code, Op.A_PUBLIC, errs);
-                    }
-
                 TypeConstant typeOuter;
                 int          cSteps;
                 if (argRaw instanceof TypeConstant)
