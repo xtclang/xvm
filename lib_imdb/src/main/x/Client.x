@@ -1,3 +1,4 @@
+import ecstasy.collections.maps.KeySetBasedMap;
 import ecstasy.reflect.Annotation;
 
 import oodb.DBCounter;
@@ -671,6 +672,7 @@ service Client<Schema extends RootSchema>
         (DBMapStore<Key, Value> store_)
             extends DBObjectImpl(store_)
             implements DBMap<Key, Value>
+            incorporates KeySetBasedMap<Key, Value>
         {
         @Override
         DBMapStore<Key, Value> store_.get()
@@ -716,14 +718,6 @@ service Client<Schema extends RootSchema>
             return this.Client.joinTransaction(this)
                 ? store_.keysAt(this.Client.id)
                 : store_.keysSnapshot();
-            }
-
-        @Override
-        Collection<Value> values.get()
-            {
-            return this.Client.joinTransaction(this)
-                ? store_.valuesAt(this.Client.id)
-                : store_.valuesSnapshot();
             }
 
         @Override

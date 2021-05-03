@@ -85,11 +85,6 @@ class DBMapStore<Key extends immutable Const, Value extends immutable Const>
         return keys.makeImmutable();
         }
 
-    Collection<Value> valuesAt(Int clientId)
-        {
-        TODO
-        }
-
     void putAt(Int clientId, Key key, Value value)
         {
         contentsAt.computeIfAbsent(clientId, () -> this.DBMapStore.new TxChange()).put(key, value);

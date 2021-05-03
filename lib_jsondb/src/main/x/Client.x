@@ -1,3 +1,4 @@
+import ecstasy.collections.maps.KeySetBasedMap;
 import ecstasy.reflect.Annotation;
 
 import json.Doc;
@@ -778,6 +779,7 @@ TODO
     class DBMapImpl<Key, Value>(DBObjectInfo info_, MapStore<Key, Value> store_)
             extends DBObjectImpl(info_)
             implements DBMap<Key, Value>
+            incorporates KeySetBasedMap<Key, Value>
         {
         protected MapStore<Key, Value> store_;
 
@@ -803,6 +805,12 @@ TODO
         conditional Value get(Key key)
             {
             return store_.load(baseTxId, key);
+            }
+
+        @Override
+        Set<Key> keys.get()
+            {
+            TODO
             }
         }
     }
