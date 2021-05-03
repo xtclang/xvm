@@ -381,7 +381,7 @@ public abstract class BitBasedArray
      */
     public static int bitMask(int iBit)
         {
-        return 1 << iBit % 8;
+        return 0x80 >>> (iBit & 0x7);
         }
 
     /**
@@ -393,7 +393,7 @@ public abstract class BitBasedArray
      */
     public static byte tailMask(int iBit)
         {
-        return (byte) (0xFF >> (8 - iBit % 8));
+        return (byte) (0x80 >> (iBit & 0x7));
         }
 
 

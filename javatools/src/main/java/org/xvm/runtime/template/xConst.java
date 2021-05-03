@@ -206,7 +206,7 @@ public class xConst
 
         if (constant.getFormat() == Format.Nibble)
             {
-            byte[] abValue = new byte[] {((UInt8Constant) constant).getValue().byteValue()};
+            byte[] abValue = new byte[] {(byte) (((UInt8Constant) constant).getValue().byteValue() << 4)};
 
             ObjectHandle[] ahArg = new ObjectHandle[NIBBLE_CONSTRUCT.getMaxVars()];
             ahArg[0] = xBitArray.makeHandle(abValue, 4, xArray.Mutability.Constant);

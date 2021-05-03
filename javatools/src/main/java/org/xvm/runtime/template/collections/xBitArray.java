@@ -65,9 +65,24 @@ public class xBitArray
             case "toUInt8":
                 {
                 BitArrayHandle hBits = (BitArrayHandle) hTarget;
-                return hBits.m_cSize > 8
-                    ? frame.raiseException(xException.outOfBounds(frame, "Array is too big: " + hBits.m_cSize))
-                    : frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(hBits.m_abValue[0]));
+                int            cBits = hBits.m_cSize;
+                switch (cBits)
+                    {
+                    case 0:
+                        return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(0));
+
+                    case 1: case 2: case 3: case 4: case 5: case 6: case 7:
+                        return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(
+                            (hBits.m_abValue[0] & 0xFF) >>> (8 - cBits)));
+
+                    case 8:
+                        return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(
+                                hBits.m_abValue[0]));
+
+                    default:
+                        return frame.raiseException(xException.outOfBounds(
+                                frame, "Array is too big: " + cBits));
+                    }
                 }
 
             case "toByteArray":
