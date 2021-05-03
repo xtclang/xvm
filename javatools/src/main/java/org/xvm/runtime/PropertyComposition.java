@@ -283,7 +283,7 @@ public class PropertyComposition
         if (idProp.isTopLevel())
             {
             xRef template = (xRef) getTemplate();
-            return f_infoProp.getIdentity().equals(idProp)
+            return f_infoProp.containsBody(idProp)
                     ? template.getReferent(frame, hRef, iReturn)
                     : template.getFieldValue(frame, hRef, idProp, iReturn);
             }
@@ -298,7 +298,7 @@ public class PropertyComposition
         if (idProp.isTopLevel())
             {
             xRef template = (xRef) getTemplate();
-            return f_infoProp.getIdentity().equals(idProp)
+            return f_infoProp.containsBody(idProp)
                     ? template.setReferent(frame, hRef, hValue)
                     : template.setFieldValue(frame, hRef, idProp, hValue);
             }

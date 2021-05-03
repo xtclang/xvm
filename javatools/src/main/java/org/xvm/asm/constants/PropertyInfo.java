@@ -591,13 +591,11 @@ public class PropertyInfo
         {
         if (constId.getName().equals(this.getName()))
             {
-            for (PropertyBody body : m_aBody)
+            if (containsBody(constId))
                 {
-                if (body.getIdentity().equals(constId))
-                    {
-                    return true;
-                    }
+                return true;
                 }
+
             // there is a possibility that the property has been "duck-typeable", which is only
             // allowable for interfaces
             Component parent = constId.getNamespace().getComponent();
