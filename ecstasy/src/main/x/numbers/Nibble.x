@@ -37,7 +37,6 @@ const Nibble
         {
         assert:arg 0 <= n <= 0xF;
         bits = n.toBitArray()[60..64);
-        // TODO GG this should compile (but I don't want it here): assert (n == 0) == (bits == [0,0,0,0]);
         }
 
     /**

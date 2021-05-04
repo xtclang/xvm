@@ -163,6 +163,12 @@ public class CmpExpression
                 {
                 typeRequest = chooseCommonType(pool, fEqual, type1, type2);
                 }
+
+            // if nothing worked, use the left type for the right expression validation
+            if (typeRequest == null)
+                {
+                typeRequest = type1;
+                }
             }
 
         if (fInfer)
