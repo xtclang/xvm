@@ -1,6 +1,10 @@
+/**
+ * A Nibble is half of a byte (bite); basically, a nibble is the number of bits necessary to hold a
+ * hexadecimal value (a _hexit_, akin to a digit).
+ */
 const Nibble
-    implements Sequential
-    default(0)
+        implements Sequential
+        default(0)
     {
     // ----- constants -----------------------------------------------------------------------------
 
@@ -41,7 +45,7 @@ const Nibble
 
     /**
      * Obtain the nibble corresponding to a hex character.
-
+     *
      * @param ch  the character value, one of `0..9`, `A..F`, or `a..f`
      *
      * @return the corresponding Nibble
@@ -53,7 +57,10 @@ const Nibble
             case '0'..'9': ch - '0' + 0x0;
             case 'A'..'F': ch - 'A' + 0xA;
             case 'a'..'f': ch - 'a' + 0xa;
-            default: assert:arg;
+            default: throw new IllegalArgument($|Illegal character {ch.quoted()};\
+                                                | the character value must be in the range\
+                                                | \"0..9\", \"A..F\", or \"a..f\"
+                                              );
             }];
         }
 
@@ -71,22 +78,22 @@ const Nibble
      */
     private static Nibble[] values =
         [
-        new Nibble([0, 0, 0, 0]),
-        new Nibble([0, 0, 0, 1]),
-        new Nibble([0, 0, 1, 0]),
-        new Nibble([0, 0, 1, 1]),
-        new Nibble([0, 1, 0, 0]),
-        new Nibble([0, 1, 0, 1]),
-        new Nibble([0, 1, 1, 0]),
-        new Nibble([0, 1, 1, 1]),
-        new Nibble([1, 0, 0, 0]),
-        new Nibble([1, 0, 0, 1]),
-        new Nibble([1, 0, 1, 0]),
-        new Nibble([1, 0, 1, 1]),
-        new Nibble([1, 1, 0, 0]),
-        new Nibble([1, 1, 0, 1]),
-        new Nibble([1, 1, 1, 0]),
-        new Nibble([1, 1, 1, 1]),
+        new Nibble(0x0),
+        new Nibble(0x1),
+        new Nibble(0x2),
+        new Nibble(0x3),
+        new Nibble(0x4),
+        new Nibble(0x5),
+        new Nibble(0x6),
+        new Nibble(0x7),
+        new Nibble(0x8),
+        new Nibble(0x9),
+        new Nibble(0xA),
+        new Nibble(0xB),
+        new Nibble(0xC),
+        new Nibble(0xD),
+        new Nibble(0xE),
+        new Nibble(0xF),
         ];
 
 
@@ -97,7 +104,6 @@ const Nibble
         {
         if (this < maxvalue)
             {
-            // TODO GG does not compile: console.println($"(this+1)={this+1}");
             return True, values[this.toInt64() + 1];
             }
 
@@ -205,7 +211,7 @@ const Nibble
      * @return the character representation of the nibble, which is the digit `0..9` or the alpha
      *         letter `A..F`
      */
-    @Auto Char toChar()
+    Char toChar()
         {
         UInt32 n = toUInt32();
         return n <= 9 ? '0' + n : 'A' + n - 0xA;
