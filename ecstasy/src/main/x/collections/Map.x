@@ -24,6 +24,20 @@ interface Map<Key, Value>
     // ----- metadata ------------------------------------------------------------------------------
 
     /**
+     * Metadata: Are mutating operations on the map processed in place, or do they result in
+     * a new copy of the map that incorporates any mutations? Any data structure that creates
+     * a new copy to perform a mutation is called a _persistent_ data structure; that term is
+     * generally avoided here because of the multiple meanings in software of the term "persistent".
+     *
+     * It is expected that all mutating operations that do not return a resulting map will
+     * assert that `inPlace` is `True`.
+     */
+    @RO Boolean inPlace.get()
+        {
+        return True;
+        }
+
+    /**
      * Metadata: Is the Map maintained in a specific order? And if that order is a function
      * of the keys in the Map, what is the [Type.Orderer] that represents that ordering?
      *
@@ -38,17 +52,19 @@ interface Map<Key, Value>
         }
 
     /**
-     * Metadata: Are mutating operations on the map processed in place, or do they result in
-     * a new copy of the map that incorporates any mutations? Any data structure that creates
-     * a new copy to perform a mutation is called a _persistent_ data structure; that term is
-     * generally avoided here because of the multiple meanings in software of the term "persistent".
+     * Metadata: Is the Map of a known size? The size is available from the [size] property, but may
+     * require significant effort to compute; this metadata (similar to that available on the
+     * [Iterator] and [Collection] interfaces) provides an indication of whether the size is "free"
+     * to obtain.
      *
-     * It is expected that all mutating operations that do not return a resulting map will
-     * assert that `inPlace` is `True`.
+     * @return True iff the `Map` size is efficiently known
+     * @return (conditional) the `Map` size, if it is efficiently known
      */
-    @RO Boolean inPlace.get()
+    conditional Int knownSize()
         {
-        return True;
+        // implementations of Map that do not have a cached size should override this method and
+        // return False if the size requires any calculation more expensive than O(1)
+        return True, size;
         }
 
 

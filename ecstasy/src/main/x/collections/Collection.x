@@ -39,8 +39,6 @@
  *
  * To implement a read-only collection, one must implement at least the [size] property and the
  * [iterator()] method.
- *
- * TODO is it possible to "extends conditional NumericAggregator<Element extends Number>"
  */
 interface Collection<Element>
         extends Iterable<Element>
@@ -106,8 +104,8 @@ interface Collection<Element>
      * but may require significant effort to compute; this metadata (similar to that available on
      * the [Iterator] interface) provides an indication of whether the size is "free" to obtain.
      *
-     * @return True iff the `List` size is efficiently known
-     * @return (conditional) the `List` size, if it is efficiently known
+     * @return True iff the `Collection` size is efficiently known
+     * @return (conditional) the `Collection` size, if it is efficiently known
      */
     conditional Int knownSize()
         {

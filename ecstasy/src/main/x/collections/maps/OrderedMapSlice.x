@@ -135,6 +135,12 @@ class OrderedMapSlice<Key extends Orderable, Value>
     // ----- Map interface -------------------------------------------------------------------------
 
     @Override
+    conditional Int knownSize()
+        {
+        return empty ? (True, 0) : False;
+        }
+
+    @Override
     Int size.get()
         {
         if (Key first := this.first(), Key last := this.last())

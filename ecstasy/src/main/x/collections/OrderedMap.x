@@ -102,7 +102,7 @@ interface OrderedMap<Key extends Orderable, Value>
         {
         // some simple optimizations: two empty maps are equal, and two maps of different sizes are
         // not equal
-        if (Int size1 := map1.keys.knownSize(), Int size2 := map2.keys.knownSize())
+        if (Int size1 := map1.knownSize(), Int size2 := map2.knownSize())
             {
             if (size1 != size2)
                 {
