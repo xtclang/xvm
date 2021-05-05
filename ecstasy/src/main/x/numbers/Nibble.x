@@ -40,7 +40,7 @@ const Nibble
     construct(Int n)
         {
         assert:arg 0 <= n <= 0xF;
-        bits = n.toBitArray()[60..64);
+        bits = values[n].bits;
         }
 
     /**

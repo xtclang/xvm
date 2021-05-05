@@ -11,7 +11,7 @@ const Dec64
      */
     construct(Bit[] bits)
         {
-        assert bits.size == 64;
+        assert:bounds bits.size == 64;
         construct DecimalFPNumber(bits);
         }
 
@@ -23,7 +23,7 @@ const Dec64
      */
     construct(Byte[] bytes)
         {
-        assert bytes.size == 8;
+        assert:bounds bytes.size == 8;
         construct DecimalFPNumber(bytes);
         }
 

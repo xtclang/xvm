@@ -12,7 +12,7 @@ const BFloat16
      */
     construct(Bit[] bits)
         {
-        assert bits.size == 16;
+        assert:bounds bits.size == 16;
         construct BinaryFPNumber(bits);
         }
 
@@ -24,7 +24,7 @@ const BFloat16
      */
     construct(Byte[] bytes)
         {
-        assert bytes.size == 2;
+        assert:bounds bytes.size == 2;
         construct BinaryFPNumber(bytes);
         }
 

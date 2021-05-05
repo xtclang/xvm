@@ -48,8 +48,8 @@ const IntNumber
     @Abstract @RO IntNumber rightmostBit;
 
     /**
-     * Determine, from left-to-right (most significant to least) the number of bits that are zero
-     * preceding the most significant (left-most) bit.
+     * The number of bits that are zero preceding the most significant (left-most) `1` bit.
+     * This scans from left-to-right (most significant to least significant).
      */
     Int leadingZeroCount.get()
         {
@@ -64,8 +64,8 @@ const IntNumber
         }
 
     /**
-     * Determine, from right-to-left (least significant to most) the number of bits that are zero
-     * following the least significant (right-most) bit.
+     * The number of bits that are zero following the least significant (right-most) `1` bit.
+     * This scans from right-to-left (least significant to most significant).
      *
      * For an integer with `bitCount==1`, this provides the log2 value of the integer.
      */
@@ -82,7 +82,8 @@ const IntNumber
         }
 
     /**
-     * The number of bits that are set (non-zero) in the integer.
+     * The number of bits that are set (non-zero) in the integer. This is also referred to as a
+     * _population count_, or `POPCNT`.
      */
     Int bitCount.get()
         {
@@ -91,7 +92,7 @@ const IntNumber
             {
             if (bit == 1)
                 {
-                return ++count;
+                ++count;
                 }
             }
         return count;
