@@ -78,22 +78,22 @@ const Nibble
      */
     private static Nibble[] values =
         [
-        new Nibble(0x0),
-        new Nibble(0x1),
-        new Nibble(0x2),
-        new Nibble(0x3),
-        new Nibble(0x4),
-        new Nibble(0x5),
-        new Nibble(0x6),
-        new Nibble(0x7),
-        new Nibble(0x8),
-        new Nibble(0x9),
-        new Nibble(0xA),
-        new Nibble(0xB),
-        new Nibble(0xC),
-        new Nibble(0xD),
-        new Nibble(0xE),
-        new Nibble(0xF),
+        new Nibble([0, 0, 0, 0]),
+        new Nibble([0, 0, 0, 1]),
+        new Nibble([0, 0, 1, 0]),
+        new Nibble([0, 0, 1, 1]),
+        new Nibble([0, 1, 0, 0]),
+        new Nibble([0, 1, 0, 1]),
+        new Nibble([0, 1, 1, 0]),
+        new Nibble([0, 1, 1, 1]),
+        new Nibble([1, 0, 0, 0]),
+        new Nibble([1, 0, 0, 1]),
+        new Nibble([1, 0, 1, 0]),
+        new Nibble([1, 0, 1, 1]),
+        new Nibble([1, 1, 0, 0]),
+        new Nibble([1, 1, 0, 1]),
+        new Nibble([1, 1, 1, 0]),
+        new Nibble([1, 1, 1, 1]),
         ];
 
 
