@@ -1333,6 +1333,13 @@ public abstract class Op
             case OP_IIP_SUB:     return new IIP_Sub     (in, aconst);
             case OP_IIP_MUL:     return new IIP_Mul     (in, aconst);
             case OP_IIP_DIV:     return new IIP_Div     (in, aconst);
+            case OP_IIP_MOD:     return new IIP_Mod     (in, aconst);
+            case OP_IIP_SHL:     return new IIP_Shl     (in, aconst);
+            case OP_IIP_SHR:     return new IIP_Shr     (in, aconst);
+            case OP_IIP_USHR:    return new IIP_ShrAll  (in, aconst);
+            case OP_IIP_AND:     return new IIP_And     (in, aconst);
+            case OP_IIP_OR:      return new IIP_Or      (in, aconst);
+            case OP_IIP_XOR:     return new IIP_Xor     (in, aconst);
 
             case OP_CALL_00:     return new Call_00     (in, aconst);
             case OP_CALL_01:     return new Call_01     (in, aconst);
