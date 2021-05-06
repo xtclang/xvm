@@ -411,9 +411,7 @@ public class MethodBody
     public boolean isOp(String sName, String sOp, int cParams)
         {
         // must be a method (not a function)
-        // the number of parameters must match
-        if (isFunction() || isConstructor()
-                || cParams >= 0 && m_id.getRawParams().length != cParams)
+        if (isFunction() || isConstructor())
             {
             return false;
             }
@@ -425,8 +423,22 @@ public class MethodBody
             return false;
             }
 
+        // the number of non-default parameters must match
+        SignatureConstant sig = getSignature();
+        if (cParams >= 0)
+            {
+            MethodStructure struct    = getMethodStructure();
+            int             cRequired = struct == null
+                    ? sig.getParamCount()
+                    : struct.getParamCount() - struct.getDefaultParamCount();
+            if (cRequired != cParams)
+                {
+                return false;
+                }
+            }
+
         // if the method name matches the default method name for the op, then we're ok;
-        if (sName != null && m_id.getName().equals(sName))
+        if (sName != null && sig.getName().equals(sName))
             {
             return true;
             }
@@ -434,7 +446,7 @@ public class MethodBody
         // otherwise we need to get the operator text from the operator annotation
         // (it's the first of the @Op annotation parameters)
         Constant[] aconstParams = annotation.getParams();
-        return sOp != null && aconstParams.length >= 1
+        return aconstParams.length >= 1
                 && aconstParams[0] instanceof StringConstant
                 && ((StringConstant) aconstParams[0]).getValue().equals(sOp);
         }
