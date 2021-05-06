@@ -387,6 +387,8 @@ public class Token
                 sb.append(m_oValue);
                 break;
 
+            case LIT_BIT:
+            case LIT_NIBBLE:
             case LIT_INT8:
             case LIT_INT16:
             case LIT_INT32:
@@ -610,6 +612,8 @@ public class Token
         IDENTIFIER   (null             ),
         EOL_COMMENT  (null             ),
         ENC_COMMENT  (null             ),
+        LIT_BIT      (null             ),
+        LIT_NIBBLE   (null             ),
         LIT_CHAR     (null             ),
         LIT_STRING   (null             ),
         LIT_BINSTR   (null             ),

@@ -74,6 +74,12 @@ public class LiteralExpression
         ConstantPool pool = pool();
         switch (literal.getId())
             {
+            case LIT_BIT:
+                return pool.typeBit();
+
+            case LIT_NIBBLE:
+                return pool.typeNibble();
+
             case LIT_CHAR:
                 return pool.typeChar();
 
@@ -249,6 +255,14 @@ public class LiteralExpression
         Format       format;
         switch (literal.getId())
             {
+            case LIT_BIT:
+                format = Format.Bit;
+                break;
+
+            case LIT_NIBBLE:
+                format = Format.Nibble;
+                break;
+
             case LIT_CHAR:
                 return pool.ensureCharConstant(((Character) literal.getValue()).charValue());
 
@@ -397,6 +411,8 @@ public class LiteralExpression
             case LIT_FLOAT:
                 return String.valueOf(literal.getValue());
 
+            case LIT_BIT:
+            case LIT_NIBBLE:
             case LIT_INT8:
             case LIT_INT16:
             case LIT_INT32:

@@ -688,6 +688,14 @@ public class Lexer
                                 {
                                 switch (name)
                                     {
+                                    case "Bit":
+                                        idNum = Id.LIT_BIT;
+                                        break;
+
+                                    case "Nibble":
+                                        idNum = Id.LIT_NIBBLE;
+                                        break;
+
                                     case "Int8":
                                         idNum = Id.LIT_INT8;
                                         break;

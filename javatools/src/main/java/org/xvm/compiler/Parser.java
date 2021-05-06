@@ -3846,6 +3846,8 @@ public class Parser
             case L_SQUARE:
                 return parseComplexLiteral(null);
 
+            case LIT_BIT:
+            case LIT_NIBBLE:
             case LIT_CHAR:
             case LIT_STRING:
             case LIT_BINSTR:

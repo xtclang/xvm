@@ -423,6 +423,12 @@ public class ConstantPool
             case UInt8:
                 return ensureUInt8Constant(((PackedInteger) oValue).getInt());
 
+            case Bit:
+                return ensureBitConstant(((PackedInteger) oValue).getInt());
+
+            case Nibble:
+                return ensureNibbleConstant(((PackedInteger) oValue).getInt());
+
             default:
                 throw new IllegalStateException("unsupported format: " + format);
             }
@@ -2246,6 +2252,7 @@ public class ConstantPool
     public TypeConstant      typeStringable()   {TypeConstant      c = m_typeStringable;  if (c == null) {m_typeStringable  = c = ensureTerminalTypeConstant(clzStringable()                 );} return c;}
     public TypeConstant      typeStringBuffer() {TypeConstant      c = m_typeStringBuffer;if (c == null) {m_typeStringBuffer= c = ensureTerminalTypeConstant(clzStringBuffer()               );} return c;}
     public TypeConstant      typeBit()          {TypeConstant      c = m_typeBit;         if (c == null) {m_typeBit         = c = ensureTerminalTypeConstant(clzBit()                        );} return c;}
+    public TypeConstant      typeNibble()       {TypeConstant      c = m_typeNibble;      if (c == null) {m_typeNibble      = c = ensureTerminalTypeConstant(clzNibble()                     );} return c;}
     public TypeConstant      typeByte()         {TypeConstant      c = m_typeByte;        if (c == null) {m_typeByte        = c = ensureTerminalTypeConstant(clzByte()                       );} return c;}
     public TypeConstant      typeInt()          {TypeConstant      c = m_typeInt;         if (c == null) {m_typeInt         = c = ensureTerminalTypeConstant(clzInt()                        );} return c;}
     public TypeConstant      typeIndexed()      {TypeConstant      c = m_typeIndexed;     if (c == null) {m_typeIndexed     = c = ensureTerminalTypeConstant(clzIndexed()                    );} return c;}
@@ -2324,6 +2331,7 @@ public class ConstantPool
     protected ClassConstant  clzIntLiteral()   {return (ClassConstant) getImplicitlyImportedIdentity("IntLiteral"           );}
     protected ClassConstant  clzFPLiteral()    {return (ClassConstant) getImplicitlyImportedIdentity("FPLiteral"            );}
     protected ClassConstant  clzBit()          {return (ClassConstant) getImplicitlyImportedIdentity("Bit"                  );}
+    protected ClassConstant  clzNibble()       {return (ClassConstant) getImplicitlyImportedIdentity("Nibble"               );}
     protected ClassConstant  clzByte()         {return (ClassConstant) getImplicitlyImportedIdentity("Byte"                 );}
     protected ClassConstant  clzInt()          {return (ClassConstant) getImplicitlyImportedIdentity("Int"                  );}
     protected ClassConstant  clzIndexed()      {return (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed"       );}
@@ -3037,6 +3045,7 @@ public class ConstantPool
         m_typeStringBuffer= null;
         m_typeString१     = null;
         m_typeBit         = null;
+        m_typeNibble      = null;
         m_typeByte        = null;
         m_typeBitArray    = null;
         m_typeByteArray   = null;
@@ -3959,6 +3968,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeStringBuffer;
     private transient TypeConstant      m_typeString१;
     private transient TypeConstant      m_typeBit;
+    private transient TypeConstant      m_typeNibble;
     private transient TypeConstant      m_typeByte;
     private transient TypeConstant      m_typeBitArray;
     private transient TypeConstant      m_typeByteArray;
