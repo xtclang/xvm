@@ -1193,8 +1193,12 @@ public class TypeCompositionStatement
                         // register the "implements"
                         for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                             {
-                            struct.addContribution(Composition.Implements,
-                                    composition.getType().ensureTypeConstant());
+                            TypeConstant typeImplements = composition.getType().ensureTypeConstant();
+                            if (typeImplements.equals(typeDefaultImpl))
+                                {
+                                typeDefaultImpl = null;
+                                }
+                            struct.addContribution(Composition.Implements, typeImplements);
                             }
                         }
                     break;
