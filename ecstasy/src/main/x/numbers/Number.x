@@ -652,7 +652,7 @@
     @Override
     static conditional Int fixedLength()
         {
-        return From.converterTo(to);
+        return False;
         }
 
     @Override
