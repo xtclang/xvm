@@ -83,6 +83,12 @@ public class Float32Constant
         }
 
     @Override
+    protected Object getLocator()
+        {
+        return getValue();
+        }
+
+    @Override
     protected int compareDetails(Constant that)
         {
         if (!(that instanceof Float32Constant))

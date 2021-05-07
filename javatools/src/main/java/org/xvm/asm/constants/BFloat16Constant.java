@@ -88,6 +88,12 @@ public class BFloat16Constant
         }
 
     @Override
+    protected Object getLocator()
+        {
+        return getValue();
+        }
+
+    @Override
     protected int compareDetails(Constant that)
         {
         if (!(that instanceof BFloat16Constant))

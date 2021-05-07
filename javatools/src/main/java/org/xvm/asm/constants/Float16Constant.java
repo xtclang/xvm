@@ -91,6 +91,12 @@ public class Float16Constant
         }
 
     @Override
+    protected Object getLocator()
+        {
+        return getValue();
+        }
+
+    @Override
     protected int compareDetails(Constant that)
         {
         if (!(that instanceof Float16Constant))

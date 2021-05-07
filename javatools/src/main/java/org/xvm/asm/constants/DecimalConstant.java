@@ -221,6 +221,12 @@ public class DecimalConstant
         }
 
     @Override
+    protected Object getLocator()
+        {
+        return m_dec;
+        }
+
+    @Override
     public Format getFormat()
         {
         switch (m_dec.getBitLength())
