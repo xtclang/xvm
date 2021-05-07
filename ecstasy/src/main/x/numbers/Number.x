@@ -561,12 +561,113 @@
     FPLiteral toFPLiteral();
 
     /**
-     * Obtain a function that converts from this type to the specified numeric type.
+     * Obtain a function that converts from the first specified numeric type to the second
+     * specified numeric type.
      *
-     * @param to  the type to convert to
+     * @param from  the type to convert from
+     * @param to    the type to convert to
      *
-     * @return a function that converts from this type to the specified numeric type
+     * @return a function that converts from the `from` type and to the `to` type
      */
+    static <From extends Number, To extends Number> function To(From) converterFor(Type<From> from, Type<To> to)
+        {
+        return From.converterTo(to);
+        }
+
+
+    // ----- Numeric interface ---------------------------------------------------------------------
+
+    /**
+     * Funky interface for Numbers to expose their metadata without needing an instance.
+     */
+    static interface Numeric
+        {
+        /**
+         * Construct a number from its bitwise machine representation.
+         *
+         * @param bits  an array of bit values that represent this number, ordered from left-to-right,
+         *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
+         */
+        construct(Bit[] bits);
+
+        /**
+         * Construct a number from its network-portable representation.
+         *
+         * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
+         *               as they would appear on the wire or in a file
+         */
+        construct(Byte[] bytes);
+
+        /**
+         * Determine if the numeric type is a fixed length format.
+         *
+         * @return True iff the Numeric type is a fixed length format
+         * @return (conditional) the number of bytes in the format
+         */
+        static conditional Int fixedLength();
+
+        /**
+         * Determine the "zero" value for the numeric type.
+         *
+         * @return the zero value
+         */
+        static Number zero();
+
+        /**
+         * Determine the "one" value (the unit value) for the numeric type.
+         *
+         * @return the unit value
+         */
+        static Number one();
+
+        /**
+         * Obtain a function that converts from this type to the specified numeric type.
+         *
+         * @param to  the type to convert to
+         *
+         * @return a function that converts from this type to the specified numeric type
+         */
+        static <To extends Number> function To (Number) converterTo(Type<To> to);
+
+        /**
+         * Determine if the numeric type is a fixed length floating point format.
+         *
+         * @return True iff the Numeric type is a fixed length floating point format
+         * @return radix      the radix of the significand
+         * @return precision  the precision, in "digits" (of the `radix`) of this floating point
+         *                    format
+         * @return emax       the maximum exponent value for this floating point format
+         * @return emin       the minimum exponent value for the floating point format of this
+         *                    format
+         * @return bias       the exponent bias for the floating point format of this number
+         * @return significandBitLength  the size, in bits, of the significand data in the floating
+         *                    point format
+         * @return exponentBitLength  the size, in bits, of the exponent data
+         */
+        // TODO
+        // static conditional (Int radix, Int precision, Int emax, Int emin, Int bias,
+        //         Int significandBitLength, Int exponentBitLength) fixedLengthFP();
+        }
+
+    @Override
+    static conditional Int fixedLength()
+        {
+        return From.converterTo(to);
+        }
+
+    @Override
+    static Number zero()
+        {
+        assert;
+        }
+
+    @Override
+    static Number one()
+        {
+        assert;
+        }
+
+    @Override
     static <To extends Number> function To (Number) converterTo(Type<To> to)
         {
         return switch (to)
@@ -613,83 +714,6 @@
 
             default: assert as $"unsupported convert-to type: {to}";
             };
-        }
-
-    /**
-     * Obtain a function that converts from the first specified numeric type to the second
-     * specified numeric type.
-     *
-     * @param from  the type to convert from
-     * @param to    the type to convert to
-     *
-     * @return a function that converts from the `from` type and to the `to` type
-     */
-    static <From extends Number, To extends Number> function To(From) converterFor(Type<From> from, Type<To> to)
-        {
-        return From.converterTo(to);
-        }
-
-
-    // ----- Numeric interface ---------------------------------------------------------------------
-
-    static interface Numeric
-        {
-        /**
-         * Construct a number from its bitwise machine representation.
-         *
-         * @param bits  an array of bit values that represent this number, ordered from left-to-right,
-         *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
-         */
-        construct(Bit[] bits);
-
-        /**
-         * Construct a number from its network-portable representation.
-         *
-         * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
-         *               as they would appear on the wire or in a file
-         */
-        construct(Byte[] bytes);
-
-        /**
-         * Determine the default value for the numeric type.
-         *
-         * @return the default value
-         */
-        // TODO
-        // static Number defaultValue();
-
-        /**
-         * Determine if the numeric type is a fixed length format.
-         *
-         * @return True iff the Numeric type is a fixed length format
-         * @return (conditional) the number of bytes in the format
-         */
-        static conditional Int fixedLength();
-
-        /**
-         * Determine if the numeric type is a fixed length floating point format.
-         *
-         * @return True iff the Numeric type is a fixed length floating point format
-         * @return radix      the radix of the significand
-         * @return precision  the precision, in "digits" (of the `radix`) of this floating point
-         *                    format
-         * @return emax       the maximum exponent value for this floating point format
-         * @return emin       the minimum exponent value for the floating point format of this
-         *                    format
-         * @return bias       the exponent bias for the floating point format of this number
-         * @return significandBitLength  the size, in bits, of the significand data in the floating
-         *                    point format
-         * @return exponentBitLength  the size, in bits, of the exponent data
-         */
-        // TODO
-        // static conditional (Int radix, Int precision, Int emax, Int emin, Int bias,
-        //         Int significandBitLength, Int exponentBitLength) fixedLengthFP();
-        }
-
-    @Override
-    static conditional Int fixedLength()
-        {
-        return False;
         }
 
 

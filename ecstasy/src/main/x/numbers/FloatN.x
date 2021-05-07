@@ -30,6 +30,21 @@ const FloatN
         }
 
 
+    // ----- Numeric funky interface ---------------------------------------------------------------
+
+    @Override
+    static FloatN zero()
+        {
+        TODO return 0.0;
+        }
+
+    @Override
+    static FloatN one()
+        {
+        TODO return 1.0;
+        }
+
+
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override

@@ -14,10 +14,25 @@ const Int8
      */
     static IntLiteral maxvalue = 127;
 
+
+    // ----- Numeric funky interface ---------------------------------------------------------------
+
     @Override
     static conditional Int fixedLength()
         {
         return True, 1;
+        }
+
+    @Override
+    static Int8 zero()
+        {
+        return 0;
+        }
+
+    @Override
+    static Int8 one()
+        {
+        return 1;
         }
 
 

@@ -29,12 +29,24 @@ const Float16
         }
 
 
-    // ----- Numberic interface --------------------------------------------------------------------
+    // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
     static conditional Int fixedLength()
         {
         return True, 2;
+        }
+
+    @Override
+    static Float16 zero()
+        {
+        return 0.0;
+        }
+
+    @Override
+    static Float16 one()
+        {
+        return 1.0;
         }
 
 

@@ -30,6 +30,20 @@ const UIntN
         construct UIntNumber(bytes);
         }
 
+    // ----- Numeric funky interface ---------------------------------------------------------------
+
+    @Override
+    static UIntN zero()
+        {
+        return 0;
+        }
+
+    @Override
+    static UIntN one()
+        {
+        return 1;
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 

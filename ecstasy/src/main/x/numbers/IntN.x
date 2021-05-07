@@ -31,6 +31,21 @@ const IntN
         }
 
 
+    // ----- Numeric funky interface ---------------------------------------------------------------
+
+    @Override
+    static IntN zero()
+        {
+        return 0;
+        }
+
+    @Override
+    static IntN one()
+        {
+        return 1;
+        }
+
+
     // ----- properties ----------------------------------------------------------------------------
 
     @Override

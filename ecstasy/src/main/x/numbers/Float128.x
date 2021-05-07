@@ -37,6 +37,18 @@ const Float128
         return True, 16;
         }
 
+    @Override
+    static Float128 zero()
+        {
+        TODO return 0.0;
+        }
+
+    @Override
+    static Float128 one()
+        {
+        TODO return 1.0;
+        }
+
 
     // ----- Number properties ---------------------------------------------------------------------
 

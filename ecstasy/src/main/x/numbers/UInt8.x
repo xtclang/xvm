@@ -17,10 +17,25 @@ const UInt8
      */
     static IntLiteral maxvalue = 0xFF;
 
+
+    // ----- Numeric funky interface ---------------------------------------------------------------
+
     @Override
     static conditional Int fixedLength()
         {
         return True, 1;
+        }
+
+    @Override
+    static UInt8 zero()
+        {
+        return 0;
+        }
+
+    @Override
+    static UInt8 one()
+        {
+        return 1;
         }
 
 
@@ -78,6 +93,22 @@ const UInt8
     UInt8 rightmostBit.get()
         {
         TODO
+        }
+
+    /**
+     * The high nibble of the byte.
+     */
+    Nibble highNibble.get()
+        {
+        TODO return bits[0..4).toNibble();
+        }
+
+    /**
+     * The low nibble of the byte.
+     */
+    Nibble lowNibble.get()
+        {
+        TODO return bits[4..8).toNibble();
         }
 
 

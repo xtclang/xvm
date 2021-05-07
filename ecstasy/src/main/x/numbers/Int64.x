@@ -14,10 +14,25 @@ const Int64
      */
     static IntLiteral maxvalue =  0x7FFF_FFFF_FFFF_FFFF;
 
+
+    // ----- Numeric funky interface ---------------------------------------------------------------
+
     @Override
     static conditional Int fixedLength()
         {
         return True, 8;
+        }
+
+    @Override
+    static Int64 zero()
+        {
+        return 0;
+        }
+
+    @Override
+    static Int64 one()
+        {
+        return 1;
         }
 
 

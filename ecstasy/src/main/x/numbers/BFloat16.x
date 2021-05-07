@@ -60,12 +60,26 @@ const BFloat16
         }
 
 
-    // ----- Numberic interface --------------------------------------------------------------------
+
+
+    // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
     static conditional Int fixedLength()
         {
         return True, 2;
+        }
+
+    @Override
+    static BFloat16 zero()
+        {
+        return 0.0;
+        }
+
+    @Override
+    static BFloat16 one()
+        {
+        return 1.0;
         }
 
 

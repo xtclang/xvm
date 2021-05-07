@@ -28,12 +28,24 @@ const Dec128
         }
 
 
-    // ----- Numberic interface --------------------------------------------------------------------
+    // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
     static conditional Int fixedLength()
         {
         return True, 16;
+        }
+
+    @Override
+    static Dec128 zero()
+        {
+        return 0.0;
+        }
+
+    @Override
+    static Dec128 one()
+        {
+        return 1.0;
         }
 
 

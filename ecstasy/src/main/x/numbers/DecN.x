@@ -30,6 +30,21 @@ const DecN
         }
 
 
+    // ----- Numeric funky interface ---------------------------------------------------------------
+
+    @Override
+    static DecN zero()
+        {
+        TODO return 0.0;
+        }
+
+    @Override
+    static DecN one()
+        {
+        TODO return 1.0;
+        }
+
+
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
