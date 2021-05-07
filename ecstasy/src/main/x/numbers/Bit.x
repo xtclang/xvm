@@ -1,6 +1,9 @@
-const Bit
-    implements Sequential
-    default(0)
+/**
+ * A bit represents the smallest possible unit of storage. It has two states: `0` and `1`.
+ */
+const Bit(IntLiteral literal)
+        implements Sequential
+        default(0)
     {
     construct(IntLiteral literal)
         {
@@ -39,19 +42,19 @@ const Bit
     @Auto UIntN   toUIntN()   {return literal.toUIntN();  }
 
     @Op("&")
-    Bit and(Bit that)
+    Bit and(Bit! that)
         {
         return this.literal == 1 && that.literal == 1 ? 1 : 0;
         }
 
     @Op("|")
-    Bit or(Bit that)
+    Bit or(Bit! that)
         {
         return this.literal == 1 || that.literal == 1 ? 1 : 0;
         }
 
     @Op("^")
-    Bit xor(Bit that)
+    Bit xor(Bit! that)
         {
         return this.literal == 1 ^^ that.literal == 1 ? 1 : 0;
         }
@@ -88,7 +91,7 @@ const Bit
         }
 
     @Override
-    Int stepsTo(Bit that)
+    Int stepsTo(Bit! that)
         {
         return that - this;
         }
