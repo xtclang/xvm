@@ -17,6 +17,12 @@ const UInt8
      */
     static IntLiteral maxvalue = 0xFF;
 
+    @Override
+    static conditional Int fixedLength()
+        {
+        return True, 1;
+        }
+
 
     // ----- constructors --------------------------------------------------------------------------
 

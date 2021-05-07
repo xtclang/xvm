@@ -1,4 +1,9 @@
-const BinaryFPNumber
+/**
+ * An BinaryFPNumber is a Number that represents a binary floating point value, often referred to as
+ * a "float" or "double" in common usage, because of the prevalence of those specific types in C and
+ * subsequent languages, and because decimal floating point types were not standardized until 2008.
+ */
+@Abstract const BinaryFPNumber
         extends FPNumber
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -9,7 +14,7 @@ const BinaryFPNumber
      * @param bits  an array of bit values that represent this number, ordered from left-to-right,
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
-    protected construct(Bit[] bits)
+    construct(Bit[] bits)
         {
         construct FPNumber(bits);
         }
@@ -20,7 +25,7 @@ const BinaryFPNumber
      * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
      *               as they would appear on the wire or in a file
      */
-    protected construct(Byte[] bytes)
+    construct(Byte[] bytes)
         {
         construct FPNumber(bytes);
         }

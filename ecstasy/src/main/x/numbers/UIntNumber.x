@@ -1,4 +1,7 @@
-const UIntNumber
+/**
+ * A UIntNumber is a Number that represents an unsigned integer value.
+ */
+@Abstract const UIntNumber
         extends IntNumber
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -9,7 +12,7 @@ const UIntNumber
      * @param bits  an array of bit values that represent this number, ordered from left-to-right,
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
-    protected construct(Bit[] bits)
+    construct(Bit[] bits)
         {
         construct IntNumber(bits);
         }
@@ -20,7 +23,7 @@ const UIntNumber
      * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
      *               as they would appear on the wire or in a file
      */
-    protected construct(Byte[] bytes)
+    construct(Byte[] bytes)
         {
         construct IntNumber(bytes);
         }

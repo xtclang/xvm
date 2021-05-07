@@ -1,6 +1,6 @@
 /**
- * The Number interface represents the properties and operations available on every
- * numeric type included in Ecstasy.
+ * Number represents the properties and operations available on every numeric type included in
+ * Ecstasy.
  *
  * Numbers are constant values, represented internally as an array of bits; for example, an 8-bit
  * integer value for `3` is represented by the bits `00000011', in which the left-most bit is the
@@ -17,7 +17,8 @@
  * appear when communicated over the network, or as they would be stored in a file. To obtain the
  * bytes from a number in the left-to-right order from a Number, use the `toByteArray()` method.
  */
-const Number
+@Abstract const Number
+        implements Numeric
         implements Orderable
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -28,7 +29,7 @@ const Number
      * @param bits  an array of bit values that represent this number, ordered from left-to-right,
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
-    protected construct(Bit[] bits)
+    construct(Bit[] bits)
         {
         this.bits = bits;
         }
@@ -39,7 +40,7 @@ const Number
      * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
      *               as they would appear on the wire or in a file
      */
-    protected construct(Byte[] bytes)
+    construct(Byte[] bytes)
         {
         construct Number(bytes.toBitArray());
         }
@@ -626,6 +627,69 @@ const Number
     static <From extends Number, To extends Number> function To(From) converterFor(Type<From> from, Type<To> to)
         {
         return From.converterTo(to);
+        }
+
+
+    // ----- Numeric interface ---------------------------------------------------------------------
+
+    static interface Numeric
+        {
+        /**
+         * Construct a number from its bitwise machine representation.
+         *
+         * @param bits  an array of bit values that represent this number, ordered from left-to-right,
+         *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
+         */
+        construct(Bit[] bits);
+
+        /**
+         * Construct a number from its network-portable representation.
+         *
+         * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
+         *               as they would appear on the wire or in a file
+         */
+        construct(Byte[] bytes);
+
+        /**
+         * Determine the default value for the numeric type.
+         *
+         * @return the default value
+         */
+        // TODO
+        // static Number defaultValue();
+
+        /**
+         * Determine if the numeric type is a fixed length format.
+         *
+         * @return True iff the Numeric type is a fixed length format
+         * @return (conditional) the number of bytes in the format
+         */
+        static conditional Int fixedLength();
+
+        /**
+         * Determine if the numeric type is a fixed length floating point format.
+         *
+         * @return True iff the Numeric type is a fixed length floating point format
+         * @return radix      the radix of the significand
+         * @return precision  the precision, in "digits" (of the `radix`) of this floating point
+         *                    format
+         * @return emax       the maximum exponent value for this floating point format
+         * @return emin       the minimum exponent value for the floating point format of this
+         *                    format
+         * @return bias       the exponent bias for the floating point format of this number
+         * @return significandBitLength  the size, in bits, of the significand data in the floating
+         *                    point format
+         * @return exponentBitLength  the size, in bits, of the exponent data
+         */
+        // TODO
+        // static conditional (Int radix, Int precision, Int emax, Int emin, Int bias,
+        //         Int significandBitLength, Int exponentBitLength) fixedLengthFP();
+        }
+
+    @Override
+    static conditional Int fixedLength()
+        {
+        return False;
         }
 
 

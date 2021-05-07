@@ -14,6 +14,12 @@ const Int8
      */
     static IntLiteral maxvalue = 127;
 
+    @Override
+    static conditional Int fixedLength()
+        {
+        return True, 1;
+        }
+
 
     // ----- constructors --------------------------------------------------------------------------
 

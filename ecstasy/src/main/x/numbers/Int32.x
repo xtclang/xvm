@@ -14,6 +14,12 @@ const Int32
      */
     static IntLiteral maxvalue =  0x7FFFFFFF;
 
+    @Override
+    static conditional Int fixedLength()
+        {
+        return True, 4;
+        }
+
 
     // ----- constructors --------------------------------------------------------------------------
 

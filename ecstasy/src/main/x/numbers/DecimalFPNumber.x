@@ -1,4 +1,7 @@
-const DecimalFPNumber
+/**
+ * A DecimalFPNumber is a Number that represents a decimal floating point value.
+ */
+@Abstract const DecimalFPNumber
         extends FPNumber
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -9,7 +12,7 @@ const DecimalFPNumber
      * @param bits  an array of bit values that represent this number, ordered from left-to-right,
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
-    protected construct(Bit[] bits)
+    construct(Bit[] bits)
         {
         construct FPNumber(bits);
         }
@@ -20,7 +23,7 @@ const DecimalFPNumber
      * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
      *               as they would appear on the wire or in a file
      */
-    protected construct(Byte[] bytes)
+    construct(Byte[] bytes)
         {
         construct FPNumber(bytes);
         }

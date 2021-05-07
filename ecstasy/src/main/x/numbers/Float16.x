@@ -29,6 +29,15 @@ const Float16
         }
 
 
+    // ----- Numberic interface --------------------------------------------------------------------
+
+    @Override
+    static conditional Int fixedLength()
+        {
+        return True, 2;
+        }
+
+
     // ----- Number properties ---------------------------------------------------------------------
 
     @Override

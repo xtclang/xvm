@@ -28,6 +28,15 @@ const Dec64
         }
 
 
+    // ----- Numberic interface --------------------------------------------------------------------
+
+    @Override
+    static conditional Int fixedLength()
+        {
+        return True, 8;
+        }
+
+
     // ----- Number operations ---------------------------------------------------------------------
 
     @Override
