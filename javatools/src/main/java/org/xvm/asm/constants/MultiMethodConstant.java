@@ -55,6 +55,7 @@ public class MultiMethodConstant
             case Property:
             case FormalTypeChild:
             case TypeParameter:
+            case DynamicFormal:
                 break;
 
             default:

@@ -1477,6 +1477,7 @@ public class ConstantPool
             case Property:
             case TypeParameter:
             case FormalTypeChild:
+            case DynamicFormal:
                 constMultiMethod = ensureMultiMethodConstant(constParent, constSig.getName());
                 break;
 

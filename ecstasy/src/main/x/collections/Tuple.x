@@ -306,7 +306,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
                 return False;
                 }
 
-            if (!t1.DataType.equals(value1[i], value2[i])) // TODO GG: this is not currently compiling correctly
+            if (!t1.DataType.equals(value1[i], value2[i]))
                 {
                 return False;
                 }

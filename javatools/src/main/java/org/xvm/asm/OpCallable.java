@@ -426,6 +426,7 @@ public abstract class OpCallable extends Op
             case FormalTypeChild:
             case Property:
             case TypeParameter:
+            case DynamicFormal:
                 {
                 GenericTypeResolver resolver   = frame.getGenericsResolver();
                 TypeConstant        typeTarget = ((FormalConstant) idTarget).resolve(resolver);

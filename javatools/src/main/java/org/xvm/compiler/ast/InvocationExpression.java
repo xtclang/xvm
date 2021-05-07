@@ -1299,8 +1299,22 @@ public class InvocationExpression
                         // interface type)
                         if (exprLeft != null)
                             {
-                            Argument argLeft = exprLeft.generateArgument(ctx, code, fLocalPropOk, true, errs);
-                            // TODO GG: replace m_idFormal with DynamicFormalConstant if necessary
+                            TypeConstant typeType = exprLeft.getType();
+                            assert typeType.isTypeOfType();
+                            TypeConstant typeLeft = typeType.getParamType(0);
+                            if (typeLeft.isDynamicType())
+                                {
+                                Register regType = (Register) exprLeft.generateArgument(
+                                                        ctx, code, fLocalPropOk, false, errs);
+                                m_idFormal = pool.ensureDynamicFormal(
+                                                idMethod, regType, m_idFormal, exprName.getName());
+                                }
+                            else
+                                {
+                                // give the expression a chance to generate code even if we don't
+                                // use it (e.g. in a case of TraceExpression)
+                                exprLeft.generateVoid(ctx, code, errs);
+                                }
                             }
                         argFn       = pool.ensureMethodConstant(m_idFormal, idMethod.getSignature());
                         fConstruct  = false;
