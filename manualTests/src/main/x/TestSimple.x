@@ -4,15 +4,15 @@ module TestSimple.test.org
 
     void run()
         {
-        Object o = new Object()
-            {
-            @Override
-            String toString()
-                {
-                return "Hello world!";
-                }
-            };
+        Test<Byte> t = new Test(0);
+        }
 
-        console.println($"o={o}");
+    class Test<Element extends Number>(Element element)
+        {
+        construct(Element e)
+            {
+            assert !Element.fixedLength();
+            element = e;
+            }
         }
     }

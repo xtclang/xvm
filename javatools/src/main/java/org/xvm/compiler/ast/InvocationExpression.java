@@ -1297,8 +1297,13 @@ public class InvocationExpression
                         {
                         // create a synthetic method constant for the formal type (for a funky
                         // interface type)
-                        argFn      = pool.ensureMethodConstant(m_idFormal, idMethod.getSignature());
-                        fConstruct = false;
+                        if (exprLeft != null)
+                            {
+                            Argument argLeft = exprLeft.generateArgument(ctx, code, fLocalPropOk, true, errs);
+                            // TODO GG: replace m_idFormal with DynamicFormalConstant if necessary
+                            }
+                        argFn       = pool.ensureMethodConstant(m_idFormal, idMethod.getSignature());
+                        fConstruct  = false;
                         }
                     }
                 else
