@@ -13,7 +13,7 @@
  * This module is fully and completely self-referential, containing no references to other
  * modules, and no link-time or runtime dependencies.
  *
- * @Copyright 2016-2020 xqiz.it
+ * @Copyright 2016-2021 xqiz.it
  */
 module ecstasy.xtclang.org
     {
