@@ -18,7 +18,7 @@ const Int128
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static conditional Int fixedLength()
+    static conditional Int fixedByteLength()
         {
         return True, 16;
         }

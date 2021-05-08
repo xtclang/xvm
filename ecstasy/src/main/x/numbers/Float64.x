@@ -32,7 +32,7 @@ const Float64
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override
-    static conditional Int fixedLength()
+    static conditional Int fixedByteLength()
         {
         return True, 8;
         }

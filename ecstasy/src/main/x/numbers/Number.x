@@ -604,7 +604,7 @@
          * @return True iff the Numeric type is a fixed length format
          * @return (conditional) the number of bytes in the format
          */
-        static conditional Int fixedLength();
+        static conditional Int fixedByteLength();
 
         /**
          * Determine the "zero" value for the numeric type.
@@ -650,7 +650,7 @@
         }
 
     @Override
-    static conditional Int fixedLength()
+    static conditional Int fixedByteLength()
         {
         return False;
         }
